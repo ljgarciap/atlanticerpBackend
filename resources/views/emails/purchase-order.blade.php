@@ -6,7 +6,7 @@
     <style>
         body { font-family: Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 40px 20px; }
         .card { background: #fff; border-radius: 12px; padding: 32px; max-width: 480px; margin: 0 auto; border: 1px solid #e2e8f0; }
-        .logo { color: #2c8c84; font-size: 20px; font-weight: bold; letter-spacing: 3px; margin-bottom: 4px; }
+        .logo { color: #2B3F73; font-size: 20px; font-weight: bold; letter-spacing: 3px; margin-bottom: 4px; }
         .brand { color: #2a2520; font-size: 11px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px; }
         h2 { color: #2a2520; font-size: 17px; margin: 0 0 10px; }
         p { color: #64748b; font-size: 14px; line-height: 1.6; margin: 0 0 16px; }
