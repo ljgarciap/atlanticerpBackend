@@ -13,7 +13,7 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     version: '1.0.0',
     title: 'AtlanticERP API',
-    description: 'API REST del CRM Illuminations — AtlanticERP Backend (Laravel 12 + JWT)',
+    description: 'API REST del CRM Atlantic — AtlanticERP Backend (Laravel 12 + JWT)',
     contact: new OA\Contact(
         name: 'Grupo Lafayette',
         email: 'dev@atlanticerp.ai'

@@ -13,7 +13,7 @@ return new class extends TenantSchemaMigration
 
     public function up(): void
     {
-        // Primer módulo del schema para el tenant "illuminations" ya existente —
+        // Primer módulo del schema para el tenant "atlantic" ya existente —
         // tenant:create también lo crea de entrada para tenants nuevos (Tenant::schemas()).
         DB::statement('CREATE SCHEMA IF NOT EXISTS "'.$this->schema().'"');
 

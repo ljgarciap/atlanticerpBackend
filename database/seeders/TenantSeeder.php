@@ -9,18 +9,18 @@ use Illuminate\Support\Facades\Artisan;
 class TenantSeeder extends Seeder
 {
     /**
-     * Crea el primer tenant del proyecto (`illuminations`): sus schemas
+     * Crea el primer tenant del proyecto (`atlantic`): sus schemas
      * Postgres, el registro landlord y corre sus migrations de módulo.
      */
     public function run(): void
     {
-        if (Tenant::where('slug', 'illuminations')->exists()) {
+        if (Tenant::where('slug', 'atlantic')->exists()) {
             return;
         }
 
         Artisan::call('tenant:create', [
-            'slug'     => 'illuminations',
-            'name'     => 'Illuminations',
+            'slug'     => 'atlantic',
+            'name'     => 'Atlantic',
             '--domain' => 'atlanticerp.ai',
         ]);
     }

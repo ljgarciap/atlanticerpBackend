@@ -229,7 +229,7 @@ en Solicitud de Ajuste (SCRUM-403).
 ## Permiso nuevo
 
 `compras.zona-libre.approve` — angosto, individual vía `extra_permissions` (no atado a ningún
-`security_level`). Ya concedido a Yirena Teng (`gerencia2@illuminations.com.pa`) vía
+`security_level`). Ya concedido a Yirena Teng (`gerencia2@atlantic.com.pa`) vía
 `SpecialPermissionSeeder`, corre en todos los entornos.
 
 ## Modelo de datos (referencia)

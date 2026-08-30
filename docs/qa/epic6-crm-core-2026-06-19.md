@@ -34,7 +34,7 @@ Note: E2E manual ran against local Docker (port 8090) because Epic 6 commits are
 
 | # | Criterion | Input | Expected | Actual | Result |
 |---|---|---|---|---|---|
-| BE-601 | Project model with schema-per-tenant | GET /projects | getTable() returns illuminations_crm.projects | Response 200 with correct data | ✅ |
+| BE-601 | Project model with schema-per-tenant | GET /projects | getTable() returns atlantic_crm.projects | Response 200 with correct data | ✅ |
 | BE-601 | ProjectActivity model | POST /projects/{id}/activities | created_at auto-filled | 201 with activity id | ✅ |
 | BE-601 | ProjectReminder model | POST /projects/{id}/reminders | created_at auto-filled | 201 with reminder id | ✅ |
 | BE-602 | ProjectService list — management sees all | GET /projects as management | All projects returned | 200, 5 projects visible | ✅ |

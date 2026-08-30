@@ -3,7 +3,7 @@
 **Fecha:** 2026-08-07
 **Commits verificados:** `c1e1a99` + `96ee7b3` (Senior Review 🟢) + `d32e7d2` (fix propio de esta
 pasada de Pre-QA, ver más abajo)
-**Entorno:** stack local (`infra/docker-compose.yml`), `APP_ENV=local`, tenant `illuminations`,
+**Entorno:** stack local (`infra/docker-compose.yml`), `APP_ENV=local`, tenant `atlantic`,
 comando corrido de verdad con `--env-override` (nunca `--force` contra dev/test/production — ver
 "Qué NO hacer" del prompt de activación)
 

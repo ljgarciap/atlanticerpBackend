@@ -14,28 +14,28 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-440 (REQ-370, Bloque B3 Zona Libre de Colón) — decisión de Yirena (Compras) sobre una
- * solicitud generada por Bodega. `gerencia2@illuminations.com.pa` (Yirena, role_key
+ * solicitud generada por Bodega. `gerencia2@atlantic.com.pa` (Yirena, role_key
  * `lider_compras`) ya sale de `SpecialPermissionSeeder` con `compras.zona-libre.approve`
  * concedido — no hace falta otorgarlo a mano.
  */
 class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
 {
-    private const YIRENA_EMAIL = 'gerencia2@illuminations.com.pa';
+    private const YIRENA_EMAIL = 'gerencia2@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantBodega(string $email, array $perms = ['bodega.read', 'bodega.write']): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($perms)]);
     }
 
@@ -147,8 +147,8 @@ class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_bodega_no_puede_aprobar_ni_rechazar(): void
     {
         $zonaLibreRequest = $this->makeRequestWithLine();
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/zona-libre/requests/{$zonaLibreRequest->id}/approve")

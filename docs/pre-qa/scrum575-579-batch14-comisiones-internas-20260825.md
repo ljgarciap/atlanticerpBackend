@@ -74,9 +74,9 @@ Playwright CLI, navegador real, sin caché (contexto nuevo por test, `waitUntil:
 1. **Columnas nuevas en la tabla de detalle** — Fecha pedido, Factura, Fecha factura, Fecha
    cobro y Total facturado, las 5, visibles en la fila expandida de un vendedor con datos reales
    (Idmar Hernandez, agosto 2026). Confirmado por texto de DOM y por captura.
-2. **CRUD de tramos gateado a Mark** — Felix (`conta@illuminations.com.pa`) abre el modal "Tabla
+2. **CRUD de tramos gateado a Mark** — Felix (`conta@atlantic.com.pa`) abre el modal "Tabla
    de comisión escalonada" y ya NO ve los íconos de editar/eliminar por fila ni "+ Agregar
-   tramo" — modal 100% de solo lectura. Mark (`mbekhar@illuminations.com.pa`) abre el mismo
+   tramo" — modal 100% de solo lectura. Mark (`mbekhar@atlantic.com.pa`) abre el mismo
    modal y SÍ ve los 3 controles (editar/eliminar por tramo + agregar). Confirmado por texto de
    DOM y por captura, ambos roles en la misma sesión de verificación.
 

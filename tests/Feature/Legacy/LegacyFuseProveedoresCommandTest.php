@@ -26,7 +26,7 @@ final class LegacyFuseProveedoresCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_corrida_real_promueve_y_registra_sync_run(): void
@@ -35,7 +35,7 @@ final class LegacyFuseProveedoresCommandTest extends FeatureTestCase
         Producto::query()->create(['icg_codarticulo' => 1, 'descripcion' => 'Articulo 1']);
         ProductoCosto::query()->create(['icg_codarticulo' => 1, 'codproveedor' => 4001, 'costo_neto' => 5.0]);
 
-        $this->artisan('legacy:fuse-proveedores', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:fuse-proveedores', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();
@@ -57,7 +57,7 @@ final class LegacyFuseProveedoresCommandTest extends FeatureTestCase
         Producto::query()->create(['icg_codarticulo' => 2, 'descripcion' => 'Articulo 2']);
         ProductoCosto::query()->create(['icg_codarticulo' => 2, 'codproveedor' => 4002, 'costo_neto' => 5.0]);
 
-        $this->artisan('legacy:fuse-proveedores', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:fuse-proveedores', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 

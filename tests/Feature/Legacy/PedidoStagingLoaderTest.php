@@ -26,7 +26,7 @@ final class PedidoStagingLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_load_stagea_pedidos_y_items(): void
@@ -38,7 +38,7 @@ final class PedidoStagingLoaderTest extends FeatureTestCase
         $this->assertSame(1, $counts['pedidos']);
         $this->assertSame(1, $counts['items']);
         $this->assertCount(1, $counts['pedido_ids']);
-        $this->assertDatabaseHas('illuminations_legacy.pedidos', [
+        $this->assertDatabaseHas('atlantic_legacy.pedidos', [
             'icg_numserie' => 'A', 'icg_numpedido' => 2001, 'icg_n' => 1,
         ]);
         $this->assertSame(1, PedidoItem::query()->where('icg_codarticulo', 4321)->count());
@@ -158,8 +158,8 @@ final class PedidoStagingLoaderTest extends FeatureTestCase
         $this->assertSame(600, $counts['pedidos']);
         $this->assertCount(600, $counts['pedido_ids']);
         $this->assertSame(600, Pedido::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.pedidos', ['icg_numpedido' => 1]);
-        $this->assertDatabaseHas('illuminations_legacy.pedidos', ['icg_numpedido' => 600]);
+        $this->assertDatabaseHas('atlantic_legacy.pedidos', ['icg_numpedido' => 1]);
+        $this->assertDatabaseHas('atlantic_legacy.pedidos', ['icg_numpedido' => 600]);
     }
 
     /**

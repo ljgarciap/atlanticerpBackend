@@ -130,7 +130,7 @@ consecutivos del mismo producto antes de que el primero despache):**
 Esto rompe la invariante que el propio `KardexService` declara como su razón de ser ("que cada
 línea cuadre matemáticamente... reflejo fiel de la realidad"). No es un edge case exótico: pasa
 con cualquier producto repartido en más de una bodega física con pedidos consecutivos razonablemente
-cercanos en el tiempo — un escenario de negocio completamente normal para Illuminations
+cercanos en el tiempo — un escenario de negocio completamente normal para Atlantic
 (`Warehouse` ya modela 7 bodegas físicas reales, ver `WarehouseControllerTest`).
 
 `KardexDispatchIntegrationTest` solo cubre el caso de una sola bodega con stock (`Bodega Central`,

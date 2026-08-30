@@ -41,7 +41,7 @@ final class LegacySyncProductosCommand extends Command
 {
     /** @var string */
     protected $signature = 'legacy:sync-productos
-        {--tenant=illuminations : Slug del tenant a sincronizar}
+        {--tenant=atlantic : Slug del tenant a sincronizar}
         {--dry-run : Corre Extractor+staging(Loader-A)+Mapper y reporta conteos, sin cargar a catalog_products ni registrar la corrida}';
 
     /** @var string */

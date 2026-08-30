@@ -20,7 +20,7 @@ final class AlbaranMatcherTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_albaran_con_codcliente_conocido_matchea(): void

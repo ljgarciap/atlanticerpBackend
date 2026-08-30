@@ -316,11 +316,11 @@ no hace falta tocar el catálogo de permisos en sí, solo sembrar filas de
 
 **Resuelto** — el roster real (`memory/project_roster_usuarios_reales_atlanticerp.md`, consolidación
 2026-07-30) ya tiene estas personas/roles:
-- **Aaron / Líder de Servicios** = Aaron Leis (`servicio@illuminations.com.pa`), rol
+- **Aaron / Líder de Servicios** = Aaron Leis (`servicio@atlantic.com.pa`), rol
   `lider_servicios`, Nivel 4 — coincide exacto.
 - **Técnico interno (general)** = Carlos Vergara, Pedro Santos, Agustín Rodríguez, rol
   `tecnico_servicios`, hoy Nivel 1 (Solo lectura).
-- **Técnico interno (Garantías)** = Miguel Castillo (`garantias@illuminations.com.pa`), rol
+- **Técnico interno (Garantías)** = Miguel Castillo (`garantias@atlantic.com.pa`), rol
   `garantias_servicios` — coincide con la distinción "General vs Garantías" de REQ-256 RN2; Miguel
   Castillo es literalmente el técnico usado como ejemplo en varios criterios de aceptación (REQ-238).
 - **Gerencia** = rol `management` ya existente (Daniela, David, Mark).

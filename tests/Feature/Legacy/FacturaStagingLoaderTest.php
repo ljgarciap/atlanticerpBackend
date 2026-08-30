@@ -22,7 +22,7 @@ final class FacturaStagingLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_load_stagea_facturas(): void
@@ -33,7 +33,7 @@ final class FacturaStagingLoaderTest extends FeatureTestCase
 
         $this->assertSame(1, $counts['facturas']);
         $this->assertCount(1, $counts['factura_ids']);
-        $this->assertDatabaseHas('illuminations_legacy.facturas', [
+        $this->assertDatabaseHas('atlantic_legacy.facturas', [
             'icg_numserie' => 'A', 'icg_numfactura' => 9001, 'icg_n' => 'B',
         ]);
     }
@@ -99,8 +99,8 @@ final class FacturaStagingLoaderTest extends FeatureTestCase
         $this->assertSame(600, $counts['facturas']);
         $this->assertCount(600, $counts['factura_ids']);
         $this->assertSame(600, Factura::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.facturas', ['icg_numfactura' => 1]);
-        $this->assertDatabaseHas('illuminations_legacy.facturas', ['icg_numfactura' => 600]);
+        $this->assertDatabaseHas('atlantic_legacy.facturas', ['icg_numfactura' => 1]);
+        $this->assertDatabaseHas('atlantic_legacy.facturas', ['icg_numfactura' => 600]);
     }
 
     private static function facturaRow(

@@ -29,7 +29,7 @@ hereda automáticamente porque compone sobre `formatSummary()`.
 **Test agregado:** `tests/Feature/Servicios/InsumoReservaTest.php`,
 `test_agregar_insumo_crea_setting_y_dispara_solicitud_en_0_disponible` — se agregó una segunda
 mitad al test existente que hace `GET /api/compras/orders/{id}` como usuario de Compras real
-(`designer@illuminations.test` con `compras.read`) y verifica `origin_module` en la respuesta
+(`designer@atlantic.test` con `compras.read`) y verifica `origin_module` en la respuesta
 HTTP real, no solo en el modelo Eloquent — para que una futura regresión de "el campo se guarda
 pero no se expone" se detecte en este nivel, no solo con una lectura directa de BD.
 

@@ -60,7 +60,7 @@ proyecto hoy — es desarrollo 100% nuevo cuando se retome.
    vía join con `PipelineCard.stage`, no una columna simple. Se agrega un filtro nuevo a
    `QuoteListService` en vez de reimplementar la regla en Compras.
 5. **REQ-118, aunque diferido, contiene una regla de negocio que SÍ aplica a Nueva Orden (2H,
-   en alcance):** "Si Tipo de envío = Aéreo y Quién paga = Illuminations → requiere aprobación de
+   en alcance):** "Si Tipo de envío = Aéreo y Quién paga = Atlantic → requiere aprobación de
    Mark". El propio REQ-118 dice literalmente que reutiliza "los mismos campos y reglas" de Nueva
    Orden — es decir, esta regla vive conceptualmente en el wizard que sí estamos construyendo
    (SCRUM-191/192), aunque el texto completo solo aparece escrito en el ticket diferido. Se
@@ -69,7 +69,7 @@ proyecto hoy — es desarrollo 100% nuevo cuando se retome.
    en `ModuleCatalog`, rol `lider_compras` en la tabla `roles`, visibilidad en
    `role_module_visibility`, capacidades en `security_level_module_permissions` (niveles 11-14,
    incluyendo `can_approve` para Gerencia Total), y la usuaria real Yirena Teng
-   (`gerencia2@illuminations.com.pa`) ya con ese rol asignado.
+   (`gerencia2@atlantic.com.pa`) ya con ese rol asignado.
 7. **No existe mock visual de Compras** (solo hay mocks de Ventas & Diseño en
    `Illumination/sprint1/Mock/`). El diseño de pantalla se basa en los criterios de aceptación de
    cada ticket, sin referencia visual del cliente.
@@ -145,7 +145,7 @@ purchase_orders(
           en_transito_local | recibido — mismas 7 etapas ya documentadas en REQ-117/182 aunque
           Ver Órdenes/Logística estén diferidos; default 'por_aprobar'),
   shipping_type (enum: aereo | maritimo | terrestre, nullable),
-  who_pays_shipping (enum: illuminations | proveedor, nullable),
+  who_pays_shipping (enum: atlantic | proveedor, nullable),
   requires_mark_approval (boolean, calculado y guardado al crear — RN3 de REQ-118/hallazgo 5),
   approved_by (FK users, nullable), approved_at (nullable),
   currency, total_amount (decimal 12,2, recalculado por trigger de aplicación al agregar/quitar
@@ -297,7 +297,7 @@ asignados a Backend/Frontend Dev por el PM, fuera de este documento — no se to
 
 ### Respuesta a la pregunta del Senior Review: ¿quién debe tener `compras.settings.configure`?
 
-**Yirena Teng (`gerencia2@illuminations.com.pa`, rol `lider_compras`) es la persona real
+**Yirena Teng (`gerencia2@atlantic.com.pa`, rol `lider_compras`) es la persona real
 identificada** — confirmado en código: `database/seeders/BusinessRoleUserSeeder.php:52` la da de
 alta con ese rol, `database/migrations/tenant/2026_07_11_100000_create_auth_roles_table.php:35`
 define `lider_compras` = "Líder de Compras" (`is_system: true`), y
@@ -318,7 +318,7 @@ real de una persona):
    `compras.edit`/`compras.write` para toda la operación normal del módulo (crear proveedores,
    crear/editar/avanzar órdenes, subir documentos de logística).
 2. **Agregar `compras.settings.configure` a `SpecialPermissionSeeder.php`** para
-   `gerencia2@illuminations.com.pa`, igual patrón que Mark/Felix — este permiso angosto no es
+   `gerencia2@atlantic.com.pa`, igual patrón que Mark/Felix — este permiso angosto no es
    parte del puente `.edit`→`.write` de `effectivePermissionsV2()` (confirmado por B4 del Senior
    Review), así que necesita su propia entrada aunque el fix del punto 1 ya se aplique.
 

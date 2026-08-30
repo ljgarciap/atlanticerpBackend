@@ -16,18 +16,18 @@ use Tests\Feature\FeatureTestCase;
  */
 class TicketBatch2Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
 
-    private const GARANTIAS_SERVICIOS = 'garantias@illuminations.com.pa';
+    private const GARANTIAS_SERVICIOS = 'garantias@atlantic.com.pa';
 
-    private const MANAGEMENT = 'daniela@illuminations.com.pa';
+    private const MANAGEMENT = 'daniela@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /**
@@ -82,7 +82,7 @@ class TicketBatch2Test extends FeatureTestCase
     // posterior a una llamada `withHeaders()->...Json(...)` (mismo patrón que TicketFlowTest).
     private function makeCurrentTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     // ── REQ-222 — tarjetas de estadísticas ──────────────────────────────────────────────────
@@ -303,7 +303,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_agregar_producto_a_ticket_existente(): void
     {
         $ticket  = $this->makeTicket();
-        $product = $this->makeCatalogProduct(['reference' => 'LUM-COL-014', 'name' => 'Colgante LED', 'brand' => 'Illuminations']);
+        $product = $this->makeCatalogProduct(['reference' => 'LUM-COL-014', 'name' => 'Colgante LED', 'brand' => 'Atlantic']);
         $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))

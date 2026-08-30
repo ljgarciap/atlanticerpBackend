@@ -48,7 +48,7 @@ return new class extends TenantSchemaMigration
         'lider_operaciones'        => 1,
     ];
 
-    private const WHIL_EMAIL = 'whil@illuminations.com.pa';
+    private const WHIL_EMAIL = 'whil@atlantic.com.pa';
 
     public function up(): void
     {
@@ -143,7 +143,7 @@ return new class extends TenantSchemaMigration
         // Remapear usuarios de estos 13 roles DE VUELTA solo si su security_level_id coincide con
         // el nuevo default de su rol (la huella de que vino de BusinessRoleUserSeeder bajo el
         // diseño corregido) -- por role_id, no por nivel crudo, para no tocar fixtures no
-        // relacionadas que comparten el mismo número de nivel (ej. 'multi@illuminations.test' en
+        // relacionadas que comparten el mismo número de nivel (ej. 'multi@atlantic.test' en
         // Nivel 8 sin relación con Gerencia Restringida).
         $levelRemapReverse = [11 => 9, 12 => 8, 13 => 4, 14 => 1];
         foreach ($reverseLevelForRole as $roleKey => $oldLevel) {

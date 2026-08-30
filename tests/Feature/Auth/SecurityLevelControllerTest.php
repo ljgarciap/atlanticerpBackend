@@ -18,14 +18,14 @@ class SecurityLevelControllerTest extends FeatureTestCase
      */
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     // ── POST /api/security-levels — ADR-006 Decisión 9 ─────────────────────────
 
     public function test_crear_nivel_nuevo_asigna_el_siguiente_numero_disponible(): void
     {
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/security-levels', [
@@ -46,7 +46,7 @@ class SecurityLevelControllerTest extends FeatureTestCase
 
     public function test_crear_nivel_sin_nombre_retorna_422(): void
     {
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/security-levels', [])
@@ -55,7 +55,7 @@ class SecurityLevelControllerTest extends FeatureTestCase
 
     public function test_crear_nivel_con_permiso_fuera_del_catalogo_retorna_422(): void
     {
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/security-levels', ['name' => 'X', 'permissions' => ['no.existe']])
@@ -64,7 +64,7 @@ class SecurityLevelControllerTest extends FeatureTestCase
 
     public function test_crear_nivel_sin_permiso_security_levels_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/security-levels', ['name' => 'X'])
@@ -75,7 +75,7 @@ class SecurityLevelControllerTest extends FeatureTestCase
 
     public function test_get_permissions_retorna_las_7_filas_del_nivel_9(): void
     {
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->activateTenant();
         $levelId = DB::table('security_levels')->where('level', 9)->value('id');
 
@@ -88,7 +88,7 @@ class SecurityLevelControllerTest extends FeatureTestCase
 
     public function test_update_permissions_hace_upsert_masivo(): void
     {
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->activateTenant();
         $levelId = DB::table('security_levels')->where('level', 4)->value('id');
 
@@ -112,7 +112,7 @@ class SecurityLevelControllerTest extends FeatureTestCase
 
     public function test_update_permissions_sin_permiso_security_levels_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->activateTenant();
         $levelId = DB::table('security_levels')->where('level', 4)->value('id');
 

@@ -21,14 +21,14 @@ class RoleBackfillTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_mark_david_daniela_quedan_en_rol_gerencia_con_flags_transversales(): void
     {
         $gerencia = Role::where('key', 'management')->firstOrFail();
 
-        foreach (['mbekhar@illuminations.com.pa', 'david@grupolafayette.com', 'daniela@illuminations.com.pa'] as $email) {
+        foreach (['mbekhar@atlantic.com.pa', 'david@grupolafayette.com', 'daniela@atlantic.com.pa'] as $email) {
             $user = User::where('email', $email)->firstOrFail();
 
             $this->assertSame($gerencia->id, $user->role_id, "{$email} debería tener role_id=gerencia.");
@@ -41,7 +41,7 @@ class RoleBackfillTest extends FeatureTestCase
     {
         // Corrección 2026-07-10: Nivel 9 ("Admin") YA ES "Gerencia Total" bajo el diseño
         // corregido (reusa la escala 1-10 existente) -- Mark/David/Daniela no se mueven de ahí.
-        foreach (['mbekhar@illuminations.com.pa', 'david@grupolafayette.com', 'daniela@illuminations.com.pa'] as $email) {
+        foreach (['mbekhar@atlantic.com.pa', 'david@grupolafayette.com', 'daniela@atlantic.com.pa'] as $email) {
             $user = User::where('email', $email)->firstOrFail();
             $this->assertSame(9, $user->securityLevel?->level, "{$email} debería permanecer en nivel 9 (Gerencia Total).");
         }
@@ -55,15 +55,15 @@ class RoleBackfillTest extends FeatureTestCase
         // pregunta 7 del daily 2026-07-09) -- role_id=superadmin igual le da el bypass completo
         // sin importar su security_level_id numérico.
         foreach ([
-            'andres.loi@illuminations.com.pa',
-            'luis.garcia@illuminations.com.pa',
+            'andres.loi@atlantic.com.pa',
+            'luis.garcia@atlantic.com.pa',
             'lujogarpin78@gmail.com',
         ] as $email) {
             $user = User::where('email', $email)->firstOrFail();
             $this->assertSame(10, $user->securityLevel?->level, "{$email} debería seguir en nivel 10 (Superadmin).");
         }
 
-        $marly = User::where('email', 'marly.rangel@illuminations.com.pa')->firstOrFail();
+        $marly = User::where('email', 'marly.rangel@atlantic.com.pa')->firstOrFail();
         $this->assertSame(9, $marly->securityLevel?->level, 'Marly debería seguir en nivel 9 (su nivel original, sin relación al mapeo rol→nivel).');
     }
 
@@ -72,7 +72,7 @@ class RoleBackfillTest extends FeatureTestCase
         // Pregunta 7 del daily 2026-07-09: Marly es QA de plataforma, aunque su fila legada en
         // user_roles siga diciendo role='management' — role_id nuevo es superadmin, no gerencia.
         $superadmin = Role::where('key', 'superadmin')->firstOrFail();
-        $marly = User::where('email', 'marly.rangel@illuminations.com.pa')->firstOrFail();
+        $marly = User::where('email', 'marly.rangel@atlantic.com.pa')->firstOrFail();
 
         $this->assertSame($superadmin->id, $marly->role_id);
     }

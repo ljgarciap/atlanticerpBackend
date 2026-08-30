@@ -23,7 +23,7 @@
         <h2>Prueba de configuración SMTP</h2>
         <p>Este correo confirma que la conexión SMTP con Microsoft 365 está funcionando correctamente para el entorno <strong>{{ config('app.env') }}</strong>.</p>
         <div class="check">✅ Conexión verificada — {{ now()->format('d/m/Y H:i:s') }} UTC</div>
-        <div class="footer">AtlanticERP CRM · Illuminations · Correo de prueba automático — no responder</div>
+        <div class="footer">AtlanticERP CRM · Atlantic · Correo de prueba automático — no responder</div>
     </div>
 </body>
 </html>

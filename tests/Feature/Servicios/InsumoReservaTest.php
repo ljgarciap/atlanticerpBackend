@@ -28,25 +28,25 @@ use Tests\Feature\FeatureTestCase;
  */
 class InsumoReservaTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** El cliente HTTP de test resetea el tenant "actual" al final de cada request. */
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($perms)]);
     }
 
@@ -125,8 +125,8 @@ class InsumoReservaTest extends FeatureTestCase
         // en el mismo dispatch (PurchaseOrderController.php + OriginBadge.tsx). Se verifica acá vía
         // el endpoint HTTP real que usa Compras, no solo el modelo, para que una futura regresión de
         // "olvidar exponer el campo" se detecte en este nivel.
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
-        $comprasToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($comprasToken))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200)
@@ -240,8 +240,8 @@ class InsumoReservaTest extends FeatureTestCase
         $orderId = $purchaseRequest->purchase_order_id;
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $comprasToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($comprasToken);
 
         // PENDIENTE_LIQUIDAR -> ORDENADO (la orden nace en pendiente_liquidar porque
@@ -327,8 +327,8 @@ class InsumoReservaTest extends FeatureTestCase
         $orderId = $purchaseRequest->purchase_order_id;
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $comprasToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($comprasToken);
 
         $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200);
@@ -383,8 +383,8 @@ class InsumoReservaTest extends FeatureTestCase
         $product  = $this->makeProduct(['provider_id' => $provider->id]);
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $token   = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $token   = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         // loginAs() ya disparó una request HTTP real, que resetea el search_path/tenant "actual"

@@ -6,8 +6,8 @@
 orders awaiting stock on PO receipt (SCRUM-406)"), diseñado en
 `docs/adr/ADR-SCRUM406-compras-bodega-stock-bridge.md`, ya con Senior Review propio
 (`docs/reviews/scrum-406-stock-bridge-2026-07-24.md`, 🟢 Aprobado).
-**Entorno:** Docker local (puerto 8090), login real `gerencia2@illuminations.com.pa`
-(`lider_compras`) y `almacen@illuminations.com.pa` (`lider_bodega`).
+**Entorno:** Docker local (puerto 8090), login real `gerencia2@atlantic.com.pa`
+(`lider_compras`) y `almacen@atlantic.com.pa` (`lider_bodega`).
 
 ## Veredicto global: 🟢 Pasada limpia — sin hallazgos CRÍTICOS ni MEDIOS bloqueantes
 
@@ -67,8 +67,8 @@ repetido acá por espacio. Ambos tests corrieron limpio DOS veces seguidas tras 
 
 `preqa-scrum406-rn2-cross-module.spec.ts` — **este es el test que estaba rojo a propósito** desde
 el Pre-QA original. Avanza la `PurchaseOrder` real #18 hasta `Recibido` con el botón real de
-Compras (usuario real `gerencia2@illuminations.com.pa`), vuelve al tablero de Bodega con el usuario
-real `almacen@illuminations.com.pa`, y confirma que la tarjeta `VR-9001` **ya no** contiene "Sin
+Compras (usuario real `gerencia2@atlantic.com.pa`), vuelve al tablero de Bodega con el usuario
+real `almacen@atlantic.com.pa`, y confirma que la tarjeta `VR-9001` **ya no** contiene "Sin
 stock". Log de la corrida: `¿la tarjeta sigue en "Sin stock"? false | ¿sigue mostrando ETA? false`
 — el escenario 2 del criterio de aceptación ahora se cumple en vivo, no solo por código.
 

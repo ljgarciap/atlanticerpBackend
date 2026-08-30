@@ -30,9 +30,9 @@ class OrderPickingFlowTest extends FeatureTestCase
     public function test_asignar_picker_mueve_a_picking_pendiente(): void
     {
         $order = $this->makeOrder();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa'); // Esteban, lider_bodega
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa'); // Esteban, lider_bodega
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/assign-picker", ['picker_id' => $pickerId])
@@ -48,8 +48,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     public function test_asignar_picker_sin_elegir_uno_retorna_422(): void
     {
         $order = $this->makeOrder();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/assign-picker", [])
@@ -59,9 +59,9 @@ class OrderPickingFlowTest extends FeatureTestCase
     public function test_asignar_picker_con_usuario_que_no_es_picker_retorna_422(): void
     {
         $order = $this->makeOrder();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $notAPicker = $this->userIdByEmail('logistica@illuminations.com.pa'); // asistente_bodega, no picker
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $notAPicker = $this->userIdByEmail('logistica@atlantic.com.pa'); // asistente_bodega, no picker
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/assign-picker", ['picker_id' => $notAPicker])
@@ -72,9 +72,9 @@ class OrderPickingFlowTest extends FeatureTestCase
     public function test_asignar_picker_con_rol_no_autorizado_retorna_403(): void
     {
         $order = $this->makeOrder();
-        $this->grantBodegaPermissions('apolonio.gonzalez@illuminations.com.pa');
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
-        $token = $this->loginAs('apolonio.gonzalez@illuminations.com.pa', 'apolonio.gonzalez@illuminations.com.pa', 'ayudante_general_bodega');
+        $this->grantBodegaPermissions('apolonio.gonzalez@atlantic.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
+        $token = $this->loginAs('apolonio.gonzalez@atlantic.com.pa', 'apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/assign-picker", ['picker_id' => $pickerId])
@@ -84,9 +84,9 @@ class OrderPickingFlowTest extends FeatureTestCase
     public function test_asignar_picker_en_etapa_incorrecta_retorna_422(): void
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING]);
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/assign-picker", ['picker_id' => $pickerId])
@@ -96,8 +96,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     public function test_iniciar_picking_sin_picker_asignado_retorna_422(): void
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_PICKING_PENDIENTE]);
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/start-picking")
@@ -108,14 +108,14 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         $product = $this->makeCatalogProduct();
         $this->setStock($product, 10);
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
         $order = $this->makeOrder(
             ['stage' => Order::STAGE_PICKING_PENDIENTE, 'picker_id' => $pickerId],
             ['catalog_product_id' => $product->id, 'qty_requested' => 6],
         );
 
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/start-picking")
@@ -146,7 +146,7 @@ class OrderPickingFlowTest extends FeatureTestCase
      */
     public function test_iniciar_picking_con_rol_no_autorizado_retorna_403(): void
     {
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
         $order = $this->makeOrder(['stage' => Order::STAGE_PICKING_PENDIENTE, 'picker_id' => $pickerId]);
         $this->grantBodegaPermissions('arrochagary@gmail.com');
         $token = $this->loginAs('arrochagary@gmail.com', 'arrochagary@gmail.com', 'transporte');
@@ -159,10 +159,10 @@ class OrderPickingFlowTest extends FeatureTestCase
     /** Pre-QA 2026-07-26 (CRÍTICO) — el Picker asignado SÍ puede iniciar su propio picking. */
     public function test_iniciar_picking_con_rol_picker_es_permitido(): void
     {
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
         $order = $this->makeOrder(['stage' => Order::STAGE_PICKING_PENDIENTE, 'picker_id' => $pickerId]);
-        $this->grantBodegaPermissions('apolonio.gonzalez@illuminations.com.pa');
-        $token = $this->loginAs('apolonio.gonzalez@illuminations.com.pa', 'apolonio.gonzalez@illuminations.com.pa', 'ayudante_general_bodega');
+        $this->grantBodegaPermissions('apolonio.gonzalez@atlantic.com.pa');
+        $token = $this->loginAs('apolonio.gonzalez@atlantic.com.pa', 'apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/start-picking")
@@ -172,10 +172,10 @@ class OrderPickingFlowTest extends FeatureTestCase
 
     public function test_iniciar_picking_dos_veces_seguidas_la_segunda_falla(): void
     {
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
         $order = $this->makeOrder(['stage' => Order::STAGE_PICKING_PENDIENTE, 'picker_id' => $pickerId]);
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order->id}/start-picking")->assertStatus(200);
@@ -189,8 +189,8 @@ class OrderPickingFlowTest extends FeatureTestCase
         $order->items()->first()->update(['location_snapshot' => 'Z-99']);
         $order->items()->create(['qty_requested' => 2, 'location_snapshot' => 'B-02', 'reference_snapshot' => 'B']);
 
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/orders/{$order->id}/picking-sheet")
@@ -206,8 +206,8 @@ class OrderPickingFlowTest extends FeatureTestCase
         $product = $this->makeCatalogProduct(['factory_reference' => 'FAB-999']);
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING], ['catalog_product_id' => $product->id]);
 
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/orders/{$order->id}/picking-sheet")
@@ -221,8 +221,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING]);
 
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/orders/{$order->id}/picking-sheet")
@@ -236,8 +236,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING], ['qty_requested' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/bodega/orders/{$order->id}/picking-sheet", [
@@ -254,8 +254,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING], ['qty_requested' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/bodega/orders/{$order->id}/picking-sheet", [
@@ -277,8 +277,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/bodega/orders/{$order->id}/picking-sheet", [
@@ -293,8 +293,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     public function test_hoja_de_picking_no_editable_fuera_de_en_picking(): void
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING]);
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/orders/{$order->id}/picking-sheet")
@@ -323,11 +323,11 @@ class OrderPickingFlowTest extends FeatureTestCase
     /** Pre-QA 2026-07-26 (CRÍTICO) — el Picker asignado SÍ puede editar su propia Hoja de Picking. */
     public function test_actualizar_picking_sheet_con_rol_picker_es_permitido(): void
     {
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $pickerId], ['qty_requested' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('apolonio.gonzalez@illuminations.com.pa');
-        $token = $this->loginAs('apolonio.gonzalez@illuminations.com.pa', 'apolonio.gonzalez@illuminations.com.pa', 'ayudante_general_bodega');
+        $this->grantBodegaPermissions('apolonio.gonzalez@atlantic.com.pa');
+        $token = $this->loginAs('apolonio.gonzalez@atlantic.com.pa', 'apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/bodega/orders/{$order->id}/picking-sheet", [
@@ -340,8 +340,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING], ['qty_requested' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/bodega/orders/{$order->id}/picking-sheet", [
@@ -374,11 +374,11 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         Event::fake([PickingCompleted::class, OrderStageChanged::class, OrderSplit::class]);
 
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $pickerId], ['qty_requested' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('apolonio.gonzalez@illuminations.com.pa');
-        $token = $this->loginAs('apolonio.gonzalez@illuminations.com.pa', 'apolonio.gonzalez@illuminations.com.pa', 'ayudante_general_bodega');
+        $this->grantBodegaPermissions('apolonio.gonzalez@atlantic.com.pa');
+        $token = $this->loginAs('apolonio.gonzalez@atlantic.com.pa', 'apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/complete-picking", [
@@ -392,8 +392,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING]);
         $order->items()->create(['qty_requested' => 2, 'reference_snapshot' => 'B']);
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
         $firstItem = $order->items->first();
 
         $this->withHeaders($this->authHeaders($token))
@@ -409,8 +409,8 @@ class OrderPickingFlowTest extends FeatureTestCase
 
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING], ['qty_requested' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/complete-picking", [
@@ -432,8 +432,8 @@ class OrderPickingFlowTest extends FeatureTestCase
         $product = $this->makeCatalogProduct();
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING], ['catalog_product_id' => $product->id, 'qty_requested' => 10]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/complete-picking", [

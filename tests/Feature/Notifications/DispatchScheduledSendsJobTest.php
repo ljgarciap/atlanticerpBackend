@@ -21,7 +21,7 @@ class DispatchScheduledSendsJobTest extends FeatureTestCase
 
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()->makeCurrent();
     }
 
     protected function tearDown(): void
@@ -49,7 +49,7 @@ class DispatchScheduledSendsJobTest extends FeatureTestCase
 
         $send->update(['scheduled_at' => now()->subMinute()]);
 
-        (new DispatchScheduledSendsJob('illuminations'))->handle(app(NotificationService::class));
+        (new DispatchScheduledSendsJob('atlantic'))->handle(app(NotificationService::class));
 
         $this->activateTenant();
         $this->assertSame(1, Notification::where('user_id', $userId)->count());
@@ -68,7 +68,7 @@ class DispatchScheduledSendsJobTest extends FeatureTestCase
             scheduledAt: now()->addDay(),
         );
 
-        (new DispatchScheduledSendsJob('illuminations'))->handle(app(NotificationService::class));
+        (new DispatchScheduledSendsJob('atlantic'))->handle(app(NotificationService::class));
 
         $this->activateTenant();
         $this->assertSame(0, Notification::where('user_id', $userId)->count());
@@ -85,7 +85,7 @@ class DispatchScheduledSendsJobTest extends FeatureTestCase
             channels: ['in_app'],
         );
 
-        (new DispatchScheduledSendsJob('illuminations'))->handle(app(NotificationService::class));
+        (new DispatchScheduledSendsJob('atlantic'))->handle(app(NotificationService::class));
 
         $this->activateTenant();
         $this->assertSame(1, Notification::where('user_id', $userId)->count());

@@ -39,7 +39,7 @@ Ver "Siguiente paso" al final.
 | **SCRUM-161 RN1/RN2** — personalización por usuario ("Mark, David o Whil, cada uno ve sus propios tipos autorizados") | ❌ **Gap de diseño, no de bug.** Lo implementado es un único `mark_approver_user_id` global (hoy: Mark/`mbekhar`) — todo el que no sea esa persona ve "Solo para aprobadores", confirmado en vivo con Whil. El modelo del ticket (varios aprobadores, uno por tipo de solicitud) no está — sería necesario rediseñar, no es un ajuste menor |
 | **SCRUM-162 RN2** — Aprobar/Rechazar sin salir de Gerencia | ❌ **No implementado.** Solo existe "ir al módulo de origen" (navega a la lista, ej. `/compras/ordenes` — tampoco abre el registro puntual como pide RN3 literal) |
 
-**No verificado en vivo:** el camino feliz completo de aprobar/rechazar como Mark (`mbekhar@illuminations.com.pa`) — su password ya no es el default, no hay credencial disponible en esta sesión para loguearlo. Confirmado por consulta directa a BD que `mark_approver_user_id = 16` (mbekhar) en `illuminations_compras.settings`.
+**No verificado en vivo:** el camino feliz completo de aprobar/rechazar como Mark (`mbekhar@atlantic.com.pa`) — su password ya no es el default, no hay credencial disponible en esta sesión para loguearlo. Confirmado por consulta directa a BD que `mark_approver_user_id = 16` (mbekhar) en `atlantic_compras.settings`.
 
 ## SCRUM-165 (Día/Semana/Mes)
 Sin cambios — el PR no tocó código de calendario. Sigue limpio (pasada de la sesión anterior).

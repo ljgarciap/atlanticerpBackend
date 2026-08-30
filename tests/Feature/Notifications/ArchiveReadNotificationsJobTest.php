@@ -21,7 +21,7 @@ class ArchiveReadNotificationsJobTest extends FeatureTestCase
 
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()->makeCurrent();
     }
 
     protected function tearDown(): void
@@ -38,7 +38,7 @@ class ArchiveReadNotificationsJobTest extends FeatureTestCase
         app(NotificationService::class)->send([$userId], ['subject' => 'Vieja', 'body' => 'x'], ['in_app']);
         Notification::where('user_id', $userId)->update(['read_at' => now()->subDays(31)]);
 
-        (new ArchiveReadNotificationsJob('illuminations'))->handle();
+        (new ArchiveReadNotificationsJob('atlantic'))->handle();
 
         $this->activateTenant();
         $notification = Notification::where('user_id', $userId)->first();
@@ -53,7 +53,7 @@ class ArchiveReadNotificationsJobTest extends FeatureTestCase
         app(NotificationService::class)->send([$userId], ['subject' => 'Reciente', 'body' => 'x'], ['in_app']);
         Notification::where('user_id', $userId)->update(['read_at' => now()->subDay()]);
 
-        (new ArchiveReadNotificationsJob('illuminations'))->handle();
+        (new ArchiveReadNotificationsJob('atlantic'))->handle();
 
         $this->activateTenant();
         $notification = Notification::where('user_id', $userId)->first();
@@ -68,7 +68,7 @@ class ArchiveReadNotificationsJobTest extends FeatureTestCase
         app(NotificationService::class)->send([$userId], ['subject' => 'No leida', 'body' => 'x'], ['in_app']);
         Notification::where('user_id', $userId)->update(['created_at' => now()->subDays(90)]);
 
-        (new ArchiveReadNotificationsJob('illuminations'))->handle();
+        (new ArchiveReadNotificationsJob('atlantic'))->handle();
 
         $this->activateTenant();
         $notification = Notification::where('user_id', $userId)->first();

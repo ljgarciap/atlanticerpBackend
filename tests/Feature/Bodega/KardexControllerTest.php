@@ -18,12 +18,12 @@ class KardexControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantBodega(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['bodega.read'])]);
@@ -41,7 +41,7 @@ class KardexControllerTest extends FeatureTestCase
 
     public function test_index_sin_permiso_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/kardex')
             ->assertStatus(403);
     }
@@ -54,8 +54,8 @@ class KardexControllerTest extends FeatureTestCase
         $service->registrar($product->id, $central->id, InventoryMovement::TIPO_ENTRADA, 20, 'Primero');
         $service->registrar($product->id, $central->id, InventoryMovement::TIPO_SALIDA, -5, 'Segundo');
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/kardex');
 
@@ -76,8 +76,8 @@ class KardexControllerTest extends FeatureTestCase
         $service->registrar($product->id, $merma->id, InventoryMovement::TIPO_DEVOLUCION, 1, 'Devolucion en Merma');
         $service->registrar($product->id, $central->id, InventoryMovement::TIPO_AJUSTE, 2, 'Ajuste en Central');
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/kardex?tipo=Devolución&warehouse_id='.$central->id);
@@ -96,8 +96,8 @@ class KardexControllerTest extends FeatureTestCase
         $service->registrar($productA->id, $central->id, InventoryMovement::TIPO_ENTRADA, 5, 'A');
         $service->registrar($productB->id, $central->id, InventoryMovement::TIPO_ENTRADA, 5, 'B');
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/kardex?search=CRISTAL');
 
@@ -108,8 +108,8 @@ class KardexControllerTest extends FeatureTestCase
 
     public function test_sin_resultados_retorna_data_vacia_no_error(): void
     {
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/kardex?search=ZZZZ_NO_EXISTE');
 
@@ -124,8 +124,8 @@ class KardexControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         (new KardexService())->registrar($product->id, $central->id, InventoryMovement::TIPO_ENTRADA, 5, 'Automatico');
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/kardex');
 

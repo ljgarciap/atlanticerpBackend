@@ -55,7 +55,7 @@ simétrico sin race conditions en doble clic rápido (usa `prev =>` updater).
 
 ## SCRUM-203 — "Ver detalle" con múltiples proyectos en una orden
 
-**Fixtures creadas para esta sesión** (Docker local, tabla `illuminations_compras.purchase_orders`):
+**Fixtures creadas para esta sesión** (Docker local, tabla `atlantic_compras.purchase_orders`):
 - Orden **#221** — 3 líneas: proyecto 290, proyecto 291, 1 línea sin proyecto → 2 proyectos
   DISTINTOS entre sus líneas (el escenario literal del ticket).
 - Orden **#222** — 2 líneas: proyecto 292, 1 línea sin proyecto → 1 solo proyecto distinto
@@ -194,7 +194,7 @@ correr independiente de SCRUM-105 en el mismo proceso (reusa cualquier cotizaci�
 existente). 3 corridas completas consecutivas, 19/19 en verde cada vez (~80s por corrida).
 
 Fixtures de datos dejadas en Docker local (no afectan `dev.atlanticerp.ai`/`test.atlanticerp.ai`):
-- `purchase_orders` #221 (multi-proyecto), #222 (parcial-null) — tabla `illuminations_compras`.
+- `purchase_orders` #221 (multi-proyecto), #222 (parcial-null) — tabla `atlantic_compras`.
 - Múltiples tarjetas Lead + cotizaciones `PreQA SCRUM-105 <timestamp>` — quedan como ruido de
   demo, no afectan ningún reporte real (nombres claramente marcados).
 - Quote 214: `conditions_text` sobrescrito con texto largo (5640 caracteres) para el test de

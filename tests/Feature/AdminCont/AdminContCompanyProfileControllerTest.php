@@ -13,14 +13,14 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-638/639/642 (REQ-561/562/565) — Datos de la Empresa, exclusiva de Mark. */
 class AdminContCompanyProfileControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-public');
-        config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn.illuminations.test']);
+        config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn.atlantic.test']);
     }
 
     private function loginAsMark(): string
@@ -31,8 +31,8 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     public function test_show_devuelve_los_defaults_y_espeja_razon_social_de_fiscal_settings(): void
     {
         AdminContFiscalSettings::current()->update([
-            'razon_social'     => 'Illuminations Panama S.A.',
-            'nombre_comercial' => 'Illuminations',
+            'razon_social'     => 'Atlantic Panama S.A.',
+            'nombre_comercial' => 'Atlantic',
         ]);
 
         $token = $this->loginAsMark();
@@ -41,8 +41,8 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
             ->getJson('/api/admin-contab/company-profile')
             ->assertStatus(200);
 
-        $response->assertJsonPath('razon_social', 'Illuminations Panama S.A.');
-        $response->assertJsonPath('nombre_comercial', 'Illuminations');
+        $response->assertJsonPath('razon_social', 'Atlantic Panama S.A.');
+        $response->assertJsonPath('nombre_comercial', 'Atlantic');
         $response->assertJsonPath('moneda', 'USD');
         $response->assertJsonPath('anio_fiscal', 'Enero-Diciembre');
         $response->assertJsonPath('zona_horaria', 'America/Panama');
@@ -51,10 +51,10 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     public function test_show_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        // `management@illuminations.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@illuminations.test` (Nivel 8) para
+        // `management@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
+        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/company-profile')
@@ -68,13 +68,13 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/company-profile', [
                 'descripcion_corta' => 'Diseño y suministro de iluminación en Panamá.',
-                'sitio_web'         => 'https://illuminations.com.pa',
-                'redes_sociales'    => [['plataforma' => 'Instagram', 'url' => 'https://instagram.com/illuminations']],
+                'sitio_web'         => 'https://atlantic.com.pa',
+                'redes_sociales'    => [['plataforma' => 'Instagram', 'url' => 'https://instagram.com/atlantic']],
             ])
             ->assertStatus(200);
 
         $response->assertJsonPath('descripcion_corta', 'Diseño y suministro de iluminación en Panamá.');
-        $response->assertJsonPath('sitio_web', 'https://illuminations.com.pa');
+        $response->assertJsonPath('sitio_web', 'https://atlantic.com.pa');
         $response->assertJsonPath('redes_sociales.0.plataforma', 'Instagram');
     }
 
@@ -121,7 +121,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $response->assertJsonStructure(['logo_url']);
-        $this->assertStringStartsWith('https://cdn.illuminations.test/public/admin-contab/company/', (string) $response->json('logo_url'));
+        $this->assertStringStartsWith('https://cdn.atlantic.test/public/admin-contab/company/', (string) $response->json('logo_url'));
 
         $show = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/company-profile')
@@ -142,10 +142,10 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     public function test_upload_logo_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        // `management@illuminations.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@illuminations.test` (Nivel 8) para
+        // `management@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
+        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token) + ['Accept' => 'application/json'])
             ->post('/api/admin-contab/company-profile/logo', [

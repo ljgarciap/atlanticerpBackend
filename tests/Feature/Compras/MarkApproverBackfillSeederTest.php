@@ -23,35 +23,35 @@ class MarkApproverBackfillSeederTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_mark_approver_user_id_queda_seteado_tras_el_seeding_normal(): void
     {
-        $mark = User::where('email', 'mbekhar@illuminations.com.pa')->firstOrFail();
+        $mark = User::where('email', 'mbekhar@atlantic.com.pa')->firstOrFail();
 
         $this->assertSame($mark->id, ComprasSettings::current()->mark_approver_user_id);
     }
 
     public function test_el_seeder_rellena_si_esta_en_null(): void
     {
-        $mark = User::where('email', 'mbekhar@illuminations.com.pa')->firstOrFail();
+        $mark = User::where('email', 'mbekhar@atlantic.com.pa')->firstOrFail();
         ComprasSettings::current()->update(['mark_approver_user_id' => null]);
 
         (new MarkApproverBackfillSeeder)->run();
         // El seeder hace Tenant::forgetCurrent() en su finally — restablecer antes de seguir.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->assertSame($mark->id, ComprasSettings::current()->mark_approver_user_id);
     }
 
     public function test_el_seeder_no_pisa_un_approver_ya_reasignado(): void
     {
-        $otroUsuario = User::where('email', '!=', 'mbekhar@illuminations.com.pa')->firstOrFail();
+        $otroUsuario = User::where('email', '!=', 'mbekhar@atlantic.com.pa')->firstOrFail();
         ComprasSettings::current()->update(['mark_approver_user_id' => $otroUsuario->id]);
 
         (new MarkApproverBackfillSeeder)->run();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->assertSame($otroUsuario->id, ComprasSettings::current()->mark_approver_user_id);
     }

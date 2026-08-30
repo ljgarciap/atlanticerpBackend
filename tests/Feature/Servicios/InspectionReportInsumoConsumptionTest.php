@@ -20,17 +20,17 @@ use Tests\Feature\FeatureTestCase;
  */
 class InspectionReportInsumoConsumptionTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** @param array<string, mixed> $overrides */

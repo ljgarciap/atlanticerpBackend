@@ -31,8 +31,8 @@ class AuditActionsScrum791Test extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
         $item  = $order->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-delivery", [
@@ -50,7 +50,7 @@ class AuditActionsScrum791Test extends FeatureTestCase
             ->assertStatus(200)
             ->assertJsonStructure(['url']);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'bodega.order_document.downloaded')
             ->where('entity_id', (string) $document->id)
             ->exists();

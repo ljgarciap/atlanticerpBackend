@@ -58,7 +58,7 @@ final class AdminContSeedRebotesQaCommand extends Command
 
     /** @var string */
     protected $signature = 'admincont:seed-rebotes-qa
-        {--tenant=illuminations : Slug del tenant a sembrar}
+        {--tenant=atlantic : Slug del tenant a sembrar}
         {--force : Requerido para correr en app()->environment(\'production\') — nunca por accidente}';
 
     /** @var string */
@@ -81,9 +81,9 @@ final class AdminContSeedRebotesQaCommand extends Command
         Tenant::forgetCurrent();
         $tenant->makeCurrent();
 
-        $felixId = (int) User::where('email', 'conta@illuminations.com.pa')->value('id');
-        $neilId  = (int) User::where('email', 'neil.quiel@illuminations.com.pa')->value('id');
-        $fefiId  = (int) User::where('email', 'fefi@illuminations.com.pa')->value('id');
+        $felixId = (int) User::where('email', 'conta@atlantic.com.pa')->value('id');
+        $neilId  = (int) User::where('email', 'neil.quiel@atlantic.com.pa')->value('id');
+        $fefiId  = (int) User::where('email', 'fefi@atlantic.com.pa')->value('id');
 
         if ($felixId === 0 || $neilId === 0 || $fefiId === 0) {
             $this->error('Faltan usuarios base del roster real (Felix/Neil/Fefi) — abortando.');
@@ -186,7 +186,7 @@ final class AdminContSeedRebotesQaCommand extends Command
      *  AdminContArchitectCommissionControllerTest::makeArchitectProject()/makeArchitect(). */
     private function makeArchitectProject(string $marker, string $regimenFiscal, int $ownerId, float $amount, float $totalCobrado): PipelineCard
     {
-        $architect = Architect::create(['name' => $marker . ' Arq. ' . uniqid(), 'email' => 'preqa+' . uniqid() . '@illuminations.test']);
+        $architect = Architect::create(['name' => $marker . ' Arq. ' . uniqid(), 'email' => 'preqa+' . uniqid() . '@atlantic.test']);
         ArchitectFiscalProfile::create([
             'architect_id' => $architect->id, 'empresa' => $marker . ' Empresa Arq', 'ruc' => '155-' . random_int(1000, 9999) . '-1-' . random_int(1000, 9999),
             'regimen_fiscal' => $regimenFiscal,

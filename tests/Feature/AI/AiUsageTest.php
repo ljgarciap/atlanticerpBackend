@@ -52,7 +52,7 @@ class AiUsageTest extends FeatureTestCase
             ->postJson('/api/ai/summarize', ['project_id' => $projectId]);
         $create->assertStatus(202);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $analysis = AiAnalysis::query()->findOrFail($create->json('job_id'));
         Tenant::forgetCurrent();
 
@@ -68,7 +68,7 @@ class AiUsageTest extends FeatureTestCase
 
     public function test_job_completado_sin_tarifa_configurada_deja_costo_null(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         AiModelPricing::query()->where('model', 'claude-haiku-4-5-20251001')->delete();
         Tenant::forgetCurrent();
 
@@ -85,7 +85,7 @@ class AiUsageTest extends FeatureTestCase
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ai/summarize', ['project_id' => $projectId]);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $analysis = AiAnalysis::query()->findOrFail($create->json('job_id'));
         Tenant::forgetCurrent();
 
@@ -95,7 +95,7 @@ class AiUsageTest extends FeatureTestCase
 
     public function test_index_requiere_permiso_superadmin(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/ai/usage')
@@ -104,8 +104,8 @@ class AiUsageTest extends FeatureTestCase
 
     public function test_index_retorna_datos_paginados_con_totales_y_documento(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
-        $requester = \App\Models\User::where('email', 'designer@illuminations.test')->firstOrFail();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $requester = \App\Models\User::where('email', 'designer@atlantic.test')->firstOrFail();
 
         AiAnalysis::create([
             'entity_type' => 'project', 'entity_id' => null,
@@ -126,7 +126,7 @@ class AiUsageTest extends FeatureTestCase
         ]);
         Tenant::forgetCurrent();
 
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/ai/usage')

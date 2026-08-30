@@ -29,7 +29,7 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
         Cache::flush();
         config(['services.anthropic.api_key' => 'sk-ant-test-fake-key-for-tests']);
@@ -38,7 +38,7 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
     /** @param list<string> $perms */
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -82,9 +82,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_factura_pdf_detecta_orden_y_producto_reales(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         ['order' => $order, 'product' => $product] = $this->makeEligibleOrderWithProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => (string) $order->id,
@@ -124,9 +124,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_factura_excel_se_extrae_a_texto_y_usa_completewithtool_sin_content_block_binario(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         ['order' => $order] = $this->makeEligibleOrderWithProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => (string) $order->id,
@@ -156,7 +156,7 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_factura_con_un_solo_producto_reconocible_deja_el_otro_sin_detectar(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
         $productA = CatalogProduct::create([
             'reference' => 'LMP-100', 'name' => 'Lampara LED 12W', 'description' => 'Lampara LED 12W',
@@ -172,7 +172,7 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
         ]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $productA->id, 'quantity' => 5, 'unit_cost' => 5, 'subtotal' => 25]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $productB->id, 'quantity' => 3, 'unit_cost' => 10, 'subtotal' => 30]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => (string) $order->id,
@@ -202,9 +202,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_factura_sin_datos_reconocibles_no_detecta_ninguna_orden(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $this->makeEligibleOrderWithProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => null,
@@ -230,9 +230,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_misma_factura_subida_de_nuevo_tras_orden_recibida_avisa_ya_procesada_sin_llamar_de_nuevo_a_claude(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         ['order' => $order] = $this->makeEligibleOrderWithProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => (string) $order->id,
@@ -255,7 +255,7 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
         // El HTTP call anterior resetea el tenant activo (gotcha ya documentado en memoria) —
         // hay que reestablecerlo antes de tocar el modelo directo.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         // La orden llega a "Recibido" — ya no acepta más ingresos.
         $order->update(['status' => PurchaseOrder::STATUS_RECIBIDO]);
@@ -280,9 +280,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_limite_de_10_por_hora_por_usuario_retorna_429(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $this->makeEligibleOrderWithProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => null, 'detected_provider_name' => null,
@@ -306,8 +306,8 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_archivo_mayor_a_10mb_es_rechazado(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts/invoice', [
@@ -318,8 +318,8 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_extension_no_soportada_es_rechazada(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts/invoice', [
@@ -330,8 +330,8 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_subir_factura_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts/invoice', [
@@ -342,8 +342,8 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_poll_de_job_inexistente_retorna_status_null(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/goods-receipts/invoice/00000000-0000-0000-0000-000000000000')
@@ -355,9 +355,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
     public function test_cada_corrida_se_audita_incluyendo_matched_order_id_null(): void
     {
         // Cybersecurity gap #4 (ADR-SCRUM224) — se audita CADA corrida, no solo los matches.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $this->makeEligibleOrderWithProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => null, 'detected_provider_name' => null,
@@ -372,7 +372,7 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
         $jobId = (string) $upload->json('job_id');
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'ai.goods_receipt_invoice.matched')
             ->where('entity_id', $jobId)
             ->first();
@@ -384,9 +384,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
     public function test_documento_hash_queda_persistido_en_ai_analyses(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $this->makeEligibleOrderWithProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => null, 'detected_provider_name' => null,
@@ -399,7 +399,7 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
             ])
             ->assertStatus(202);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $analysis = AiAnalysis::find($upload->json('job_id'));
         $this->assertNotNull($analysis);
         $this->assertSame(hash('sha256', 'contenido-de-prueba'), $analysis->document_hash);

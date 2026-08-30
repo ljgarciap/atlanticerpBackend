@@ -24,12 +24,12 @@ class AuditTrailModulePrefixTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function actingForAudit(): void
     {
-        $user    = User::where('email', 'daniela@illuminations.com.pa')->firstOrFail();
+        $user    = User::where('email', 'daniela@atlantic.com.pa')->firstOrFail();
         $request = Request::create('/');
         $request->attributes->set('jwt', ['sub' => $user->id]);
         $this->app->instance('request', $request);
@@ -40,11 +40,11 @@ class AuditTrailModulePrefixTest extends FeatureTestCase
         $this->actingForAudit();
         $provider = Provider::create(['name' => 'LightCorp Audit Test', 'currency' => 'USD']);
 
-        $correcto = DB::table('illuminations_auth.audit_logs')
+        $correcto = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'compras.provider.created')
             ->where('entity_id', (string) $provider->id)
             ->exists();
-        $viejoBug = DB::table('illuminations_auth.audit_logs')
+        $viejoBug = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'ventas_diseno.provider.created')
             ->where('entity_id', (string) $provider->id)
             ->exists();

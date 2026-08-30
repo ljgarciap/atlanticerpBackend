@@ -26,13 +26,13 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function makeUser(?int $roleId, int $securityLevelId, array $extraPermissions = []): User
     {
         return User::create([
-            'first_name' => 'Test', 'last_name' => 'User', 'email' => uniqid('v2-test-') . '@illuminations.test',
+            'first_name' => 'Test', 'last_name' => 'User', 'email' => uniqid('v2-test-') . '@atlantic.test',
             'password_hash' => 'x', 'security_level_id' => $securityLevelId, 'role_id' => $roleId,
             'extra_permissions' => $extraPermissions,
         ]);
@@ -165,7 +165,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     {
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = User::create([
-            'first_name' => 'Flags', 'last_name' => 'User', 'email' => uniqid('v2-flags-') . '@illuminations.test',
+            'first_name' => 'Flags', 'last_name' => 'User', 'email' => uniqid('v2-flags-') . '@atlantic.test',
             'password_hash' => 'x', 'security_level_id' => $level->id, 'role_id' => null,
             'extra_permissions' => [], 'approve_large_amounts' => true, 'manage_users' => true,
         ]);
@@ -184,7 +184,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
         // ticket) no podia acceder a la administracion de usuarios pese a tener el flag.
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = User::create([
-            'first_name' => 'Manage', 'last_name' => 'Users', 'email' => uniqid('v2-manage-') . '@illuminations.test',
+            'first_name' => 'Manage', 'last_name' => 'Users', 'email' => uniqid('v2-manage-') . '@atlantic.test',
             'password_hash' => 'x', 'security_level_id' => $level->id, 'role_id' => null,
             'extra_permissions' => [], 'manage_users' => true,
         ]);
@@ -196,7 +196,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     {
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = User::create([
-            'first_name' => 'No', 'last_name' => 'Manage', 'email' => uniqid('v2-nomanage-') . '@illuminations.test',
+            'first_name' => 'No', 'last_name' => 'Manage', 'email' => uniqid('v2-nomanage-') . '@atlantic.test',
             'password_hash' => 'x', 'security_level_id' => $level->id, 'role_id' => null,
             'extra_permissions' => [], 'manage_users' => false,
         ]);

@@ -55,7 +55,7 @@ final class QaSeedInvoicedComprasCommand extends Command
 
         $provider = Provider::where('origin', Provider::ORIGIN_INTERNACIONAL)->first();
         $warehouse = Warehouse::first();
-        $user = User::where('email', 'like', '%illuminations.com.pa')->orderBy('id')->first() ?? User::first();
+        $user = User::where('email', 'like', '%atlantic.com.pa')->orderBy('id')->first() ?? User::first();
 
         if ($provider === null || $warehouse === null || $user === null) {
             $this->error('Faltan datos base (provider/warehouse/user) para sembrar.');

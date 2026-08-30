@@ -14,7 +14,7 @@ editable, recordatorio por correo al arquitecto, y el modal de detalle que conso
 
 ```sql
 -- Comprobante de retención (REQ-514) — mismas columnas/patrón que cuenta_cobro_* (Batch 16), la
--- sube Illuminations (no el arquitecto), mecanismo de storage idéntico.
+-- sube Atlantic (no el arquitecto), mecanismo de storage idéntico.
 comprobante_retencion_storage_key, comprobante_retencion_nombre_archivo,
 comprobante_retencion_size_bytes, comprobante_retencion_mime_type,
 comprobante_retencion_uploaded_at, comprobante_retencion_uploaded_by (FK users)

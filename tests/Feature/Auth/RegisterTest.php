@@ -28,7 +28,7 @@ class RegisterTest extends FeatureTestCase
         $this->postJson('/api/auth/register', [
             'first_name'    => 'Juan',
             'last_name'     => 'Pérez',
-            'email'         => 'nuevo@illuminations.test',
+            'email'         => 'nuevo@atlantic.test',
             'department_id' => $deptId,
         ])
         ->assertStatus(201)
@@ -42,16 +42,16 @@ class RegisterTest extends FeatureTestCase
         $this->postJson('/api/auth/register', [
             'first_name'    => 'Ana',
             'last_name'     => 'López',
-            'email'         => 'nueva@illuminations.test',
+            'email'         => 'nueva@atlantic.test',
             'department_id' => $deptId,
         ])->assertStatus(201);
 
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
-            $user = User::where('email', 'nueva@illuminations.test')->firstOrFail();
+            $user = User::where('email', 'nueva@atlantic.test')->firstOrFail();
             $this->assertFalse($user->is_active);
             $this->assertTrue($user->hasRole(User::ROLE_GUEST));
         } finally {
@@ -66,13 +66,13 @@ class RegisterTest extends FeatureTestCase
         $this->postJson('/api/auth/register', [
             'first_name'    => 'Roberto',
             'last_name'     => 'Méndez',
-            'email'         => 'pendiente@illuminations.test',
+            'email'         => 'pendiente@atlantic.test',
             'department_id' => $deptId,
         ])->assertStatus(201);
 
         // Any login attempt is blocked — is_active=false is checked before password
         $this->postJson('/api/auth/login', [
-            'email'    => 'pendiente@illuminations.test',
+            'email'    => 'pendiente@atlantic.test',
             'password' => 'AnyPassword123!',
         ])->assertStatus(401);
     }
@@ -83,7 +83,7 @@ class RegisterTest extends FeatureTestCase
         $payload = [
             'first_name'    => 'Duplicate',
             'last_name'     => 'User',
-            'email'         => 'nuevo@illuminations.test',
+            'email'         => 'nuevo@atlantic.test',
             'department_id' => $deptId,
         ];
 
@@ -96,11 +96,11 @@ class RegisterTest extends FeatureTestCase
     {
         $deptId = $this->firstDepartmentId();
 
-        // designer@illuminations.test is seeded as an active user
+        // designer@atlantic.test is seeded as an active user
         $this->postJson('/api/auth/register', [
             'first_name'    => 'Otro',
             'last_name'     => 'Usuario',
-            'email'         => 'designer@illuminations.test',
+            'email'         => 'designer@atlantic.test',
             'department_id' => $deptId,
         ])->assertStatus(422)
             ->assertJsonStructure(['errors' => ['email']]);
@@ -134,7 +134,7 @@ class RegisterTest extends FeatureTestCase
         $this->postJson('/api/auth/register', [
             'first_name'    => 'Pending',
             'last_name'     => 'User',
-            'email'         => 'pending@illuminations.test',
+            'email'         => 'pending@atlantic.test',
             'department_id' => $deptId,
         ])->assertStatus(201);
 
@@ -162,11 +162,11 @@ class RegisterTest extends FeatureTestCase
         $this->postJson('/api/auth/register', [
             'first_name'    => 'Approve',
             'last_name'     => 'Me',
-            'email'         => 'approve@illuminations.test',
+            'email'         => 'approve@atlantic.test',
             'department_id' => $deptId,
         ])->assertStatus(201);
 
-        $userId = $this->getPendingUserId('approve@illuminations.test');
+        $userId = $this->getPendingUserId('approve@atlantic.test');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/users/{$userId}/approve", [
@@ -184,7 +184,7 @@ class RegisterTest extends FeatureTestCase
         $token = $this->loginAs();
 
         // Get an already-active user from the seeded data
-        $activeId = $this->getActiveUserId('designer@illuminations.test');
+        $activeId = $this->getActiveUserId('designer@atlantic.test');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/users/{$activeId}/approve", [
@@ -201,11 +201,11 @@ class RegisterTest extends FeatureTestCase
         $this->postJson('/api/auth/register', [
             'first_name'    => 'BadRole',
             'last_name'     => 'User',
-            'email'         => 'badrole@illuminations.test',
+            'email'         => 'badrole@atlantic.test',
             'department_id' => $deptId,
         ])->assertStatus(201);
 
-        $userId = $this->getPendingUserId('badrole@illuminations.test');
+        $userId = $this->getPendingUserId('badrole@atlantic.test');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/users/{$userId}/approve", [
@@ -224,11 +224,11 @@ class RegisterTest extends FeatureTestCase
         $this->postJson('/api/auth/register', [
             'first_name'    => 'Reject',
             'last_name'     => 'Me',
-            'email'         => 'reject@illuminations.test',
+            'email'         => 'reject@atlantic.test',
             'department_id' => $deptId,
         ])->assertStatus(201);
 
-        $userId = $this->getPendingUserId('reject@illuminations.test');
+        $userId = $this->getPendingUserId('reject@atlantic.test');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/users/{$userId}/reject")
@@ -243,7 +243,7 @@ class RegisterTest extends FeatureTestCase
     public function test_reject_usuario_activo_retorna_422(): void
     {
         $token    = $this->loginAs();
-        $activeId = $this->getActiveUserId('designer@illuminations.test');
+        $activeId = $this->getActiveUserId('designer@atlantic.test');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/users/{$activeId}/reject")
@@ -339,7 +339,7 @@ class RegisterTest extends FeatureTestCase
     private function getPendingUserId(string $email): int
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -352,7 +352,7 @@ class RegisterTest extends FeatureTestCase
     private function getActiveUserId(string $email): int
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {

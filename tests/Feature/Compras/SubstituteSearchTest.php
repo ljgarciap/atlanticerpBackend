@@ -26,7 +26,7 @@ class SubstituteSearchTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
         Cache::flush(); // limpia también el estado de RateLimiter (usa el cache store default)
         config(['services.anthropic.api_key' => 'sk-ant-test-fake-key-for-tests']);
@@ -35,7 +35,7 @@ class SubstituteSearchTest extends FeatureTestCase
     /** @param list<string> $perms */
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -70,7 +70,7 @@ class SubstituteSearchTest extends FeatureTestCase
 
     public function test_busqueda_por_foto_completa_y_devuelve_resultados_con_stock_y_precio_reales(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
         $candidate = $this->makeProduct(['name' => 'Bombillo genérico E27', 'stock_quantity' => 7, 'category' => 'bombillos']);
         $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
@@ -80,7 +80,7 @@ class SubstituteSearchTest extends FeatureTestCase
             ['catalog_product_id' => $candidate->id, 'similarity_percent' => 87.5, 'reasoning' => 'Mismo tipo de rosca y forma.'],
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $trigger = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
@@ -105,7 +105,7 @@ class SubstituteSearchTest extends FeatureTestCase
         $poll->assertJsonPath('results.0.category', 'bombillos');
         $poll->assertJsonPath('results.0.name', 'Bombillo genérico E27');
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::AI_SUBSTITUTE_COMPARISON_COMPLETED)
             ->where('entity_id', (string) $original->id)
             ->first();
@@ -118,7 +118,7 @@ class SubstituteSearchTest extends FeatureTestCase
 
     public function test_familia_con_mas_de_25_productos_se_recorta_y_queda_auditado(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
         $family = CatalogProductFamily::create(['name' => 'Familia grande', 'is_active' => true]);
 
@@ -135,7 +135,7 @@ class SubstituteSearchTest extends FeatureTestCase
         );
         $this->fakeAnthropicRanking($ranking);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $trigger = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
@@ -144,7 +144,7 @@ class SubstituteSearchTest extends FeatureTestCase
             ])
             ->assertStatus(202);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::AI_SUBSTITUTE_COMPARISON_COMPLETED)
             ->where('entity_id', (string) $original->id)
             ->first();
@@ -157,14 +157,14 @@ class SubstituteSearchTest extends FeatureTestCase
 
     public function test_extension_no_soportada_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
         $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
         $family->products()->attach([$this->makeProduct()->id]);
 
         Http::fake(); // cualquier llamada a Anthropic acá sería un bug.
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
@@ -178,11 +178,11 @@ class SubstituteSearchTest extends FeatureTestCase
 
     public function test_familia_sin_productos_activos_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
         $family = CatalogProductFamily::create(['name' => 'Familia vacía', 'is_active' => true]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
@@ -195,13 +195,13 @@ class SubstituteSearchTest extends FeatureTestCase
     /** Cybersecurity gap #1 (ADR-SCRUM245) — tope de búsquedas por usuario, no por familia/producto. */
     public function test_limite_de_busquedas_por_usuario_retorna_429(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
         $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
         $family->products()->attach([$this->makeProduct()->id]);
 
         $this->fakeAnthropicRanking([]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         for ($i = 0; $i < 10; $i++) {
             $this->withHeaders($this->authHeaders($token))
@@ -224,12 +224,12 @@ class SubstituteSearchTest extends FeatureTestCase
 
     public function test_busqueda_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $original = $this->makeProduct();
         $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
         $family->products()->attach([$this->makeProduct()->id]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
@@ -244,7 +244,7 @@ class SubstituteSearchTest extends FeatureTestCase
         // Cybersecurity — el ranking sigue siendo el que decide tool_choice forzado, nunca texto
         // libre; esto simula que el modelo (correctamente) ignoró una instrucción embebida y
         // devolvió igual un ranking justificado.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
         $candidate = $this->makeProduct();
         $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
@@ -254,7 +254,7 @@ class SubstituteSearchTest extends FeatureTestCase
             ['catalog_product_id' => $candidate->id, 'similarity_percent' => 42.0, 'reasoning' => 'Comparación real, se ignoró texto embebido en la imagen.'],
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $trigger = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,

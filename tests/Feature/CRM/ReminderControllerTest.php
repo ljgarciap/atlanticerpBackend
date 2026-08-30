@@ -57,7 +57,7 @@ class ReminderControllerTest extends FeatureTestCase
     public function test_index_retorna_403_para_usuario_no_asignado(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // Project not assigned to the designer
         $projectId = $this->createProject($mgmtToken);
@@ -118,7 +118,7 @@ class ReminderControllerTest extends FeatureTestCase
     public function test_index_accesible_para_usuario_asignado(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // Get designer's user id via autocomplete users
         $usersResp = $this->withHeaders($this->authHeaders($mgmtToken))
@@ -151,7 +151,7 @@ class ReminderControllerTest extends FeatureTestCase
     public function test_store_retorna_403_para_usuario_no_asignado(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $projectId = $this->createProject($mgmtToken);
 
@@ -258,7 +258,7 @@ class ReminderControllerTest extends FeatureTestCase
     public function test_toggle_retorna_403_para_usuario_no_asignado(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $projectId  = $this->createProject($mgmtToken);
         $reminderId = $this->createReminder($mgmtToken, $projectId);
@@ -326,7 +326,7 @@ class ReminderControllerTest extends FeatureTestCase
     public function test_destroy_retorna_403_para_usuario_no_asignado(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $projectId  = $this->createProject($mgmtToken);
         $reminderId = $this->createReminder($mgmtToken, $projectId);

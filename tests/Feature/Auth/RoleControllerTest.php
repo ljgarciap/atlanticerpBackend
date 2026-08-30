@@ -28,7 +28,7 @@ class RoleControllerTest extends FeatureTestCase
      */
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     // ── GET /api/roles — acceso general ─────────────────────────────────────────
@@ -40,7 +40,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_index_cualquier_autenticado_ve_los_14_roles(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/roles');
 
@@ -52,9 +52,9 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_store_sin_permiso_superadmin_retorna_403(): void
     {
-        // management@illuminations.test tiene nivel 10 (Super Admin, bypass vía superadmin.all
+        // management@atlantic.test tiene nivel 10 (Super Admin, bypass vía superadmin.all
         // en su JSONB plano) -- usamos designer (nivel 3, sin bypass) para probar el 403 real.
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/roles', ['key' => 'nuevo_rol', 'name' => 'Nuevo Rol'])
@@ -63,7 +63,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_store_con_superadmin_crea_rol(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/roles', ['key' => 'nuevo_rol', 'name' => 'Nuevo Rol']);
@@ -78,7 +78,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_store_con_key_duplicada_retorna_422(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/roles', ['key' => 'management', 'name' => 'Otra Gerencia'])
@@ -87,7 +87,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_store_con_key_en_formato_invalido_retorna_422(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/roles', ['key' => 'Rol Con Espacios', 'name' => 'X'])
@@ -98,7 +98,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_update_rol_de_sistema_retorna_403(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::where('key', 'vendedor_disenador')->firstOrFail();
 
@@ -109,7 +109,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_update_rol_no_sistema_actualiza_nombre(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::create(['key' => 'temporal', 'name' => 'Temporal', 'is_system' => false, 'is_active' => true]);
 
@@ -124,7 +124,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_destroy_rol_de_sistema_retorna_403(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::where('key', 'vendedor_disenador')->firstOrFail();
 
@@ -135,7 +135,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_destroy_rol_con_usuarios_asignados_retorna_403(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::where('key', 'management')->firstOrFail();
 
@@ -151,7 +151,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_destroy_rol_sin_uso_retorna_204(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::create(['key' => 'temporal2', 'name' => 'Temporal 2', 'is_system' => false, 'is_active' => true]);
 
@@ -167,7 +167,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_visibility_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::where('key', 'vendedor_disenador')->firstOrFail();
 
@@ -178,7 +178,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_get_visibility_retorna_la_fila_sembrada(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::where('key', 'vendedor_disenador')->firstOrFail();
 
@@ -198,7 +198,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_update_visibility_hace_upsert_masivo(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::where('key', 'lider_compras')->firstOrFail();
 
@@ -222,7 +222,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_update_visibility_con_modulo_invalido_retorna_422(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::where('key', 'lider_compras')->firstOrFail();
 

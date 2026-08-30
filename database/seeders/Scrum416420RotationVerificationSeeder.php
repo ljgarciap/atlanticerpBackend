@@ -35,10 +35,10 @@ final class Scrum416420RotationVerificationSeeder extends Seeder
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command?->warn('Tenant "illuminations" no encontrado — seeder abortado.');
+            $this->command?->warn('Tenant "atlantic" no encontrado — seeder abortado.');
             return;
         }
 

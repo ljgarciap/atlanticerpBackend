@@ -17,7 +17,7 @@ use Illuminate\Database\Seeder;
  * 2026-07-27/28): NO es un bug de query — tanto
  * `BodegaInventoryController::warehouseCounts()` como `warehouseRows()` (el desglose que consume
  * `warehouseBreakdown()`) ya filtran correctamente `quantity > 0`. Confirmado con una query real
- * contra Postgres local: `illuminations_bodega.product_warehouse_stock` tenía CERO filas — nunca
+ * contra Postgres local: `atlantic_bodega.product_warehouse_stock` tenía CERO filas — nunca
  * hubo un seeder que distribuyera el `stock_quantity` de `CatalogProductSeeder` entre las bodegas
  * físicas reales (`WarehouseAssistantMappingSeeder`/Tipo A crea las 7 bodegas, pero ningún Tipo B
  * las llenaba). El caso "SPOT-EMP-010 repartido en 2 bodegas" que Pre-QA validó en vivo el
@@ -45,9 +45,9 @@ class ProductWarehouseStockBackfillSeeder extends Seeder
             return;
         }
 
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
         if ($tenant === null) {
-            $this->command?->warn('Tenant "illuminations" not found — ProductWarehouseStockBackfillSeeder skipped.');
+            $this->command?->warn('Tenant "atlantic" not found — ProductWarehouseStockBackfillSeeder skipped.');
 
             return;
         }

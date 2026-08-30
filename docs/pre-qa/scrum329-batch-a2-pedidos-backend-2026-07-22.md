@@ -18,7 +18,7 @@ A1) — este documento + comentario en Jira son el registro del resultado, sin m
 Stack Docker local real (`infra/docker-compose.yml`), no solo lectura de código:
 
 1. Login real (`POST /api/auth/login`) con los 5 usuarios reales de Bodega
-   (`almacen@`/`almacen2@`/`logistica@`/`apolonio.gonzalez@illuminations.com.pa`,
+   (`almacen@`/`almacen2@`/`logistica@`/`apolonio.gonzalez@atlantic.com.pa`,
    `arrochagary@gmail.com`).
 2. Fixtures de pedidos armados vía `artisan tinker` sobre la BD real (mismo shape del modelo,
    sin pipeline_card por simplicidad — no afecta la lógica de Bodega, que es agnóstica de
@@ -26,9 +26,9 @@ Stack Docker local real (`infra/docker-compose.yml`), no solo lectura de código
 3. Cada transición del Kanban (assign-picker, start-picking, picking-sheet, complete-picking,
    resolve-inventory-review, register-delivery, assign-courier, dispatch, register-signed-guide)
    ejecutada contra el endpoint HTTP real, con verificación de resultado por
-   `docker compose exec postgres psql` directo contra `illuminations_bodega.orders`/
+   `docker compose exec postgres psql` directo contra `atlantic_bodega.orders`/
    `order_items`/`order_stage_history`/`inventory_movements`/`product_warehouse_stock`, y
-   `illuminations_notifications.notification_sends` para REQ-318 RN2.
+   `atlantic_notifications.notification_sends` para REQ-318 RN2.
 4. Suite completa (`infra/test.sh`) y PHPStan Level 8 corridos por mí, dos veces (antes y
    después del fix, ver abajo).
 
@@ -57,10 +57,10 @@ Login real de los 5 usuarios + decodificación del JWT real:
 
 Causa raíz: `bodega.write` se emite solo cuando `SecurityLevelModulePermission.can_edit = true`
 para el módulo `bodega` en el `security_level` del usuario (`User::effectivePermissionsV2()`).
-Confirmé contra `illuminations_auth.security_level_module_permissions` que **solo los niveles
+Confirmé contra `atlantic_auth.security_level_module_permissions` que **solo los niveles
 4/8/9 tienen `can_edit = true` para `bodega`** — el nivel 1 ("Read Only"), que es el
 `default_security_level_id` de los roles `asistente_bodega`/`ayudante_general_bodega`/
-`transporte` en `illuminations_auth.roles` (confirmado con `psql`), NO lo tiene.
+`transporte` en `atlantic_auth.roles` (confirmado con `psql`), NO lo tiene.
 
 Confirmé el efecto real con HTTP: Mariano (Asistente, security_level 1 sin grant) recibía
 `403` en `POST .../assign-picker` — el mismo endpoint que RN3 de SCRUM-383 exige que él SÍ

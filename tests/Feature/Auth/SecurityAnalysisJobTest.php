@@ -43,7 +43,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     private function withTenant(\Closure $fn): mixed
     {
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -71,7 +71,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
      */
     private function dispatchJob(): void
     {
-        $this->withTenant(fn () => SecurityAnalysisJob::dispatchSync('illuminations'));
+        $this->withTenant(fn () => SecurityAnalysisJob::dispatchSync('atlantic'));
     }
 
     /** @param array<string, mixed> $body */
@@ -87,7 +87,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
     /** Por defecto cae a media tarde de ayer — cómodamente dentro de la ventana que analiza el job. */
     private function insertAuditLog(int $userId, string $action, ?string $newValues = null, ?Carbon $createdAt = null): void
     {
-        DB::table('illuminations_auth.audit_logs')->insert([
+        DB::table('atlantic_auth.audit_logs')->insert([
             'user_id'    => $userId,
             'action'     => $action,
             'new_values' => $newValues,
@@ -104,14 +104,14 @@ class SecurityAnalysisJobTest extends FeatureTestCase
         $this->dispatchJob();
 
         Http::assertNothingSent();
-        $this->assertSame(0, DB::table('illuminations_auth.security_anomalies')->count());
+        $this->assertSame(0, DB::table('atlantic_auth.security_anomalies')->count());
     }
 
     public function test_actividad_de_hoy_no_se_analiza_todavia(): void
     {
         // Confirma la semántica del fix: el job mira el día calendario ANTERIOR, no lo que
         // pasó "hoy" hasta el momento en que corre.
-        $user = $this->findUser('designer@illuminations.test');
+        $user = $this->findUser('designer@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED, createdAt: Carbon::today()->setTime(1, 0));
 
         Http::fake();
@@ -119,12 +119,12 @@ class SecurityAnalysisJobTest extends FeatureTestCase
         $this->dispatchJob();
 
         Http::assertNothingSent();
-        $this->assertSame(0, DB::table('illuminations_auth.security_anomalies')->count());
+        $this->assertSame(0, DB::table('atlantic_auth.security_anomalies')->count());
     }
 
     public function test_detecta_anomalia_la_persiste_y_notifica_a_superadmins(): void
     {
-        $user = $this->findUser('designer@illuminations.test');
+        $user = $this->findUser('designer@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED);
 
         $this->fakeClaudeResponse([
@@ -137,7 +137,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
         $this->dispatchJob();
 
-        $row = DB::table('illuminations_auth.security_anomalies')->first();
+        $row = DB::table('atlantic_auth.security_anomalies')->first();
         $this->assertNotNull($row);
         $this->assertSame('high', $row->severity);
         $this->assertSame($user->id, $row->affected_user_id);
@@ -152,7 +152,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_hallazgo_con_user_id_fuera_del_resumen_enviado_se_descarta(): void
     {
-        $user = $this->findUser('designer@illuminations.test');
+        $user = $this->findUser('designer@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED);
 
         // Claude "inventa" un user_id que el job nunca le mandó — debe descartarse.
@@ -166,24 +166,24 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
         $this->dispatchJob();
 
-        $this->assertSame(0, DB::table('illuminations_auth.security_anomalies')->count());
+        $this->assertSame(0, DB::table('atlantic_auth.security_anomalies')->count());
     }
 
     public function test_respuesta_con_schema_invalido_no_crea_filas(): void
     {
-        $user = $this->findUser('designer@illuminations.test');
+        $user = $this->findUser('designer@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED);
 
         $this->fakeClaudeResponse(['unexpected_key' => 'sin anomalies']);
 
         $this->dispatchJob();
 
-        $this->assertSame(0, DB::table('illuminations_auth.security_anomalies')->count());
+        $this->assertSame(0, DB::table('atlantic_auth.security_anomalies')->count());
     }
 
     public function test_upload_a_zona_publica_se_marca_como_hallazgo_deterministico(): void
     {
-        $user = $this->findUser('designer@illuminations.test');
+        $user = $this->findUser('designer@atlantic.test');
         $this->insertAuditLog(
             $user->id,
             AuditService::CRM_DOCUMENT_UPLOADED,
@@ -194,7 +194,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
         $this->dispatchJob();
 
-        $row = DB::table('illuminations_auth.security_anomalies')->first();
+        $row = DB::table('atlantic_auth.security_anomalies')->first();
         $this->assertNotNull($row);
         $this->assertSame('low', $row->severity);
         $rawResponse = json_decode((string) $row->raw_response, true);
@@ -207,7 +207,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
         // re-disparo manual de security:analyze más tarde el mismo día — no dos llamadas en
         // el mismo instante exacto. Avanza el reloj unos minutos entre corridas para probar
         // que el dedupe sigue funcionando (antes del fix, esto SÍ duplicaba).
-        $user = $this->findUser('designer@illuminations.test');
+        $user = $this->findUser('designer@atlantic.test');
         $this->insertAuditLog(
             $user->id,
             AuditService::CRM_DOCUMENT_UPLOADED,
@@ -217,14 +217,14 @@ class SecurityAnalysisJobTest extends FeatureTestCase
         $this->fakeClaudeResponse(['anomalies' => []]);
 
         $this->dispatchJob();
-        $this->assertSame(1, DB::table('illuminations_auth.security_anomalies')->count());
+        $this->assertSame(1, DB::table('atlantic_auth.security_anomalies')->count());
 
         Carbon::setTestNow(Carbon::parse('2026-07-05 03:07:00')); // mismo día, 7 min después
 
         $this->dispatchJob();
         $this->assertSame(
             1,
-            DB::table('illuminations_auth.security_anomalies')->count(),
+            DB::table('atlantic_auth.security_anomalies')->count(),
             'No debe duplicar hallazgos aunque pase tiempo real entre corridas del mismo día',
         );
     }

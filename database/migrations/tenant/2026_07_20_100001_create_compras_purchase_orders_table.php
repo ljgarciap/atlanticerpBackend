@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Schema;
  * (pipeline/kanban) donde vivir ese estado, y Nueva Orden necesita persistirlo al crear la orden.
  *
  * `requires_mark_approval`/`approved_by`/`approved_at` — RN3 de REQ-118 ("aéreo + paga
- * Illuminations requiere aprobación de Mark"), regla que aplica a Nueva Orden (2H) aunque el
+ * Atlantic requiere aprobación de Mark"), regla que aplica a Nueva Orden (2H) aunque el
  * texto completo solo esté escrito en el ticket diferido REQ-118 (ver docs/specs/
  * compras-proveedores-sprint2.md, hallazgo 5).
  *

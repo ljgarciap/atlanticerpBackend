@@ -98,7 +98,7 @@ final class CatalogController extends Controller
 
         $pdf = $this->pdfService->generate($data['mode'], $data['product_ids'] ?? []);
 
-        $filename = 'Catalogo-Illuminations-'.now()->format('Y-m-d').'.pdf';
+        $filename = 'Catalogo-Atlantic-'.now()->format('Y-m-d').'.pdf';
 
         return $pdf->download($filename);
     }

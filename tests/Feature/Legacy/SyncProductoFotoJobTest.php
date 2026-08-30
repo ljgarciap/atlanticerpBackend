@@ -33,7 +33,7 @@ final class SyncProductoFotoJobTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_job_completo_extrae_convierte_sube_y_setea_photo_url(): void
@@ -52,7 +52,7 @@ final class SyncProductoFotoJobTest extends FeatureTestCase
             new FakeArticuloFotoExtractor([4001 => $bmp]),
         );
 
-        SyncProductoFotoJob::dispatchSync($producto->id, 'illuminations');
+        SyncProductoFotoJob::dispatchSync($producto->id, 'atlantic');
         $this->reactivateTenant();
 
         $catalogProduct->refresh();
@@ -76,7 +76,7 @@ final class SyncProductoFotoJobTest extends FeatureTestCase
             new FakeArticuloFotoExtractor(throws: new RuntimeException('no debería llamarse')),
         );
 
-        SyncProductoFotoJob::dispatchSync($producto->id, 'illuminations');
+        SyncProductoFotoJob::dispatchSync($producto->id, 'atlantic');
         $this->reactivateTenant();
 
         $catalogProduct->refresh();
@@ -95,7 +95,7 @@ final class SyncProductoFotoJobTest extends FeatureTestCase
             new FakeArticuloFotoExtractor(throws: new RuntimeException('no debería llamarse')),
         );
 
-        SyncProductoFotoJob::dispatchSync($producto->id, 'illuminations');
+        SyncProductoFotoJob::dispatchSync($producto->id, 'atlantic');
 
         $this->addToAssertionCount(1); // llegar hasta acá sin excepción es la aserción
     }
@@ -107,7 +107,7 @@ final class SyncProductoFotoJobTest extends FeatureTestCase
             new FakeArticuloFotoExtractor(throws: new RuntimeException('no debería llamarse')),
         );
 
-        SyncProductoFotoJob::dispatchSync(999999, 'illuminations');
+        SyncProductoFotoJob::dispatchSync(999999, 'atlantic');
 
         $this->addToAssertionCount(1);
     }

@@ -28,14 +28,14 @@ use Illuminate\Database\Seeder;
  */
 class MarkApproverBackfillSeeder extends Seeder
 {
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command->warn('Tenant "illuminations" not found — MarkApproverBackfillSeeder skipped.');
+            $this->command->warn('Tenant "atlantic" not found — MarkApproverBackfillSeeder skipped.');
 
             return;
         }

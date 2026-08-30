@@ -136,7 +136,7 @@ class AIControllerTest extends FeatureTestCase
     public function test_monthly_analysis_requiere_rol_management(): void
     {
         Bus::fake();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ai/monthly-analysis', ['month' => '2026-06'])

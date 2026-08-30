@@ -17,12 +17,12 @@ class ComprasSettingsControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -30,9 +30,9 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_show_devuelve_el_valor_por_defecto(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/settings')
             ->assertStatus(200);
@@ -57,10 +57,10 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_los_pesos_de_la_formula_de_similitud(): void
     {
-        $this->grantCompras('designer@illuminations.test', [
+        $this->grantCompras('designer@atlantic.test', [
             'compras.read', 'compras.settings.configure',
         ]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', [
@@ -80,10 +80,10 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_los_dias_de_atencion_de_reclamos(): void
     {
-        $this->grantCompras('designer@illuminations.test', [
+        $this->grantCompras('designer@atlantic.test', [
             'compras.read', 'compras.settings.configure',
         ]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['claim_attention_days' => 14])
@@ -98,10 +98,10 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_el_umbral_de_margen_de_sustitutos(): void
     {
-        $this->grantCompras('designer@illuminations.test', [
+        $this->grantCompras('designer@atlantic.test', [
             'compras.read', 'compras.settings.configure',
         ]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['replacement_margin_threshold' => 20])
@@ -116,9 +116,9 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_sin_permiso_configure_retorna_403(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['low_rating_threshold' => 70])
             ->assertStatus(403);
@@ -126,10 +126,10 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_el_umbral_usado_por_el_filtro_de_proveedores(): void
     {
-        $this->grantCompras('designer@illuminations.test', [
+        $this->grantCompras('designer@atlantic.test', [
             'compras.read', 'compras.settings.configure',
         ]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['low_rating_threshold' => 85])

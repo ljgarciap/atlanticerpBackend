@@ -24,18 +24,18 @@ class GeneralCountControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** @param list<string> $perms */
     private function grantBodega(string $email, array $perms = ['bodega.read', 'bodega.write']): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($perms)]);
     }
 
@@ -49,7 +49,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         ]);
     }
 
-    private function markUp(string $email = 'management@illuminations.test'): int
+    private function markUp(string $email = 'management@atlantic.test'): int
     {
         $this->grantBodega($email, ['bodega.approve']);
         $markId = (int) User::where('email', $email)->value('id');
@@ -70,8 +70,8 @@ class GeneralCountControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $conStock->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
         ProductWarehouseStock::create(['catalog_product_id' => $sinStock->id, 'warehouse_id' => $central->id, 'quantity' => 0]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/general-counts', [
             'warehouse_id' => $central->id,
@@ -89,8 +89,8 @@ class GeneralCountControllerTest extends FeatureTestCase
 
     public function test_store_sin_bodega_retorna_422(): void
     {
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/general-counts', [])
             ->assertStatus(422)->assertJsonValidationErrors('warehouse_id');
@@ -106,7 +106,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $existing = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -117,8 +117,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/general-counts', ['warehouse_id' => $central->id]);
@@ -138,7 +138,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $productSinConflicto = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $productConDiferencia->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
         ProductWarehouseStock::create(['catalog_product_id' => $productSinConflicto->id, 'warehouse_id' => $central->id, 'quantity' => 4]);
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $existing = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -149,8 +149,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/general-counts', ['warehouse_id' => $central->id, 'confirm_replace' => true]);
@@ -180,7 +180,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $oldest = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -199,8 +199,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 9, 'diferencia' => -1,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/general-counts', ['warehouse_id' => $central->id, 'confirm_replace' => true]);
@@ -227,7 +227,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $productConDiferencia = $this->makeProduct();
         $productSinRelacion = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $productSinRelacion->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $existing = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -238,8 +238,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/general-counts', ['warehouse_id' => $central->id])
@@ -252,7 +252,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $existing = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -262,8 +262,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'general_count_request_id' => $existing->id, 'catalog_product_id' => $product->id,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/general-counts', ['warehouse_id' => $central->id])
@@ -277,7 +277,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $merma = Warehouse::where('name', 'Merma')->first();
         $product = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $existing = GeneralCountRequest::create([
             'warehouse_id' => $merma->id, 'realizado_por' => $designerId,
@@ -288,8 +288,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/general-counts', ['warehouse_id' => $central->id])
@@ -300,8 +300,8 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/general-counts', ['warehouse_id' => $central->id])
@@ -314,7 +314,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
         $resuelto = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
             'estado' => GeneralCountRequest::ESTADO_APROBADA,
@@ -324,8 +324,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/general-counts', ['warehouse_id' => $central->id])
@@ -344,7 +344,7 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id,
-            'realizado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'realizado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_EVALUACION,
         ]);
         $line = GeneralCountRequestLine::create([
@@ -352,8 +352,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'catalog_product_id' => $product->id,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/evaluate", [
@@ -378,14 +378,14 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id,
-            'realizado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'realizado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_EVALUACION,
         ]);
         $lineA = GeneralCountRequestLine::create(['general_count_request_id' => $generalCount->id, 'catalog_product_id' => $productA->id]);
         GeneralCountRequestLine::create(['general_count_request_id' => $generalCount->id, 'catalog_product_id' => $productB->id]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/evaluate", [
@@ -406,13 +406,13 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id,
-            'realizado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'realizado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_EVALUACION,
         ]);
         $line = GeneralCountRequestLine::create(['general_count_request_id' => $generalCount->id, 'catalog_product_id' => $product->id]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson("/api/bodega/general-counts/{$generalCount->id}/evaluate", [
@@ -437,7 +437,7 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id,
-            'realizado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'realizado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION,
         ]);
         $line = GeneralCountRequestLine::create([
@@ -445,8 +445,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 10, 'diferencia' => 0,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/evaluate", [
@@ -464,12 +464,12 @@ class GeneralCountControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id,
-            'realizado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'realizado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_EVALUACION,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/submit")
@@ -486,7 +486,7 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id,
-            'realizado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'realizado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => GeneralCountRequest::ESTADO_EVALUADO,
         ]);
         GeneralCountRequestLine::create([
@@ -494,8 +494,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 8, 'diferencia' => -2,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/submit");
@@ -513,7 +513,7 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id,
-            'realizado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'realizado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => GeneralCountRequest::ESTADO_EVALUADO,
         ]);
         GeneralCountRequestLine::create([
@@ -523,8 +523,8 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $this->assertNull($generalCount->fresh()->fecha_solicitud_aprobacion);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/submit");
@@ -550,7 +550,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -571,8 +571,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 6, 'diferencia' => -4,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/submit");
@@ -592,7 +592,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
         $otroProducto = $this->makeProduct();
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -611,8 +611,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 5, 'cantidad_contada' => 2, 'diferencia' => -3,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/submit")
@@ -623,7 +623,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -642,8 +642,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 6, 'diferencia' => -4,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/submit", ['confirm_replace' => true]);
@@ -667,7 +667,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $adjustmentRequest = AdjustmentRequest::create(['catalog_product_id' => $product->id, 'solicitado_por' => $solicitanteId]);
         $adjustmentLine = AdjustmentRequestLine::create([
@@ -688,8 +688,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 12, 'diferencia' => 2,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/submit")
@@ -706,7 +706,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
         $product = $this->makeProduct();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $adjustmentRequest = AdjustmentRequest::create(['catalog_product_id' => $product->id, 'solicitado_por' => $solicitanteId]);
         $adjustmentLine = AdjustmentRequestLine::create([
@@ -727,8 +727,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 12, 'diferencia' => 2,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/submit")
@@ -743,7 +743,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $adjustmentRequest = AdjustmentRequest::create(['catalog_product_id' => $product->id, 'solicitado_por' => $solicitanteId]);
         AdjustmentRequestLine::create([
@@ -761,8 +761,8 @@ class GeneralCountControllerTest extends FeatureTestCase
         ]);
         GeneralCountRequestLine::create(['general_count_request_id' => $generalCount->id, 'catalog_product_id' => $product->id]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/general-counts/{$generalCount->id}");
 
@@ -775,7 +775,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
@@ -783,8 +783,8 @@ class GeneralCountControllerTest extends FeatureTestCase
         ]);
         GeneralCountRequestLine::create(['general_count_request_id' => $generalCount->id, 'catalog_product_id' => $product->id]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/general-counts/{$generalCount->id}");
 
@@ -800,13 +800,13 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_index_filtra_por_estado(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $solicitanteId, 'estado' => GeneralCountRequest::ESTADO_APROBADA]);
         GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $solicitanteId, 'estado' => GeneralCountRequest::ESTADO_RECHAZADA]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $all = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/general-counts');
         $all->assertStatus(200);
@@ -827,7 +827,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $productA = $this->makeProduct();
         $productB = $this->makeProduct();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
@@ -842,8 +842,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 10, 'diferencia' => 0,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/general-counts');
 
@@ -858,8 +858,8 @@ class GeneralCountControllerTest extends FeatureTestCase
      */
     public function test_index_expone_can_approve_true_para_mark(): void
     {
-        $this->markUp('management@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->markUp('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/general-counts');
 
@@ -869,9 +869,9 @@ class GeneralCountControllerTest extends FeatureTestCase
 
     public function test_index_expone_can_approve_false_para_bodega(): void
     {
-        $this->markUp('management@illuminations.test');
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->markUp('management@atlantic.test');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/general-counts');
 
@@ -883,7 +883,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
         $generalCount = GeneralCountRequest::create([
@@ -896,7 +896,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         ]);
 
         $this->markUp();
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/approve");
@@ -913,7 +913,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_reject_exige_motivo(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
@@ -921,7 +921,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         ]);
 
         $this->markUp();
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/reject", [])
@@ -931,7 +931,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_reject_con_motivo_pasa_a_rechazada(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
@@ -939,7 +939,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         ]);
 
         $this->markUp();
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/reject", ['motivo_rechazo' => 'Diferencias no justificadas']);
@@ -951,20 +951,20 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_approve_no_siendo_mark_retorna_403(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION,
         ]);
 
-        $this->markUp('management@illuminations.test');
-        // `gerencia@illuminations.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@illuminations.test` (Nivel 8) para
+        $this->markUp('management@atlantic.test');
+        // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
+        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $this->grantBodega('multi@illuminations.test', ['bodega.approve']);
+        $this->grantBodega('multi@atlantic.test', ['bodega.approve']);
 
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/approve")
             ->assertStatus(403);
@@ -976,7 +976,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_approve_conteo_no_pendiente_de_aprobacion_retorna_422(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
@@ -984,7 +984,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         ]);
 
         $this->markUp();
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/approve")
@@ -1001,7 +1001,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $productSobrante = $this->makeProduct();
         $productFaltante = $this->makeProduct();
         $productSinDiferencia = $this->makeProduct();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         ProductWarehouseStock::create(['catalog_product_id' => $productSobrante->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
         ProductWarehouseStock::create(['catalog_product_id' => $productFaltante->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
@@ -1025,8 +1025,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 10, 'diferencia' => 0,
         ]);
 
-        $this->grantBodega('almacen@illuminations.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodega('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/apply");
@@ -1054,15 +1054,15 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_apply_conteo_no_aprobado_retorna_422(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION,
         ]);
 
-        $this->grantBodega('almacen@illuminations.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodega('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/apply")
@@ -1074,7 +1074,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
         $generalCount = GeneralCountRequest::create([
@@ -1086,8 +1086,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 13, 'diferencia' => 3,
         ]);
 
-        $this->grantBodega('almacen@illuminations.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodega('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson("/api/bodega/general-counts/{$generalCount->id}/apply")->assertStatus(200);
@@ -1106,7 +1106,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_apply_siendo_mark_retorna_403(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
@@ -1114,9 +1114,9 @@ class GeneralCountControllerTest extends FeatureTestCase
         ]);
 
         $markId = $this->markUp();
-        $this->grantBodega('management@illuminations.test', ['bodega.approve', 'bodega.write']);
+        $this->grantBodega('management@atlantic.test', ['bodega.approve', 'bodega.write']);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/apply")
             ->assertStatus(403);
@@ -1133,15 +1133,15 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_apply_siendo_asistente_bodega_retorna_403(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
             'estado' => GeneralCountRequest::ESTADO_APROBADA,
         ]);
 
-        $this->grantBodega('logistica@illuminations.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('logistica@illuminations.com.pa', 'logistica@illuminations.com.pa', 'asistente_bodega');
+        $this->grantBodega('logistica@atlantic.com.pa', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('logistica@atlantic.com.pa', 'logistica@atlantic.com.pa', 'asistente_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/apply")
@@ -1159,7 +1159,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     private function makeGeneralCount(array $overrides = []): GeneralCountRequest
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         return GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
@@ -1171,8 +1171,8 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_continue_en_pendiente_evaluacion_devuelve_el_detalle(): void
     {
         $generalCount = $this->makeGeneralCount();
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/continue")
@@ -1189,8 +1189,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'general_count_request_id' => $generalCount->id, 'catalog_product_id' => $product->id,
             'cantidad_sistema' => 10, 'cantidad_contada' => 8, 'diferencia' => -2,
         ]);
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/continue")
@@ -1202,8 +1202,8 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_continue_ya_enviado_a_aprobacion_retorna_422(): void
     {
         $generalCount = $this->makeGeneralCount(['estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION]);
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/continue")
@@ -1213,8 +1213,8 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_eliminar_borrador_en_pendiente_evaluacion(): void
     {
         $generalCount = $this->makeGeneralCount();
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/bodega/general-counts/{$generalCount->id}")
@@ -1232,8 +1232,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'general_count_request_id' => $generalCount->id, 'catalog_product_id' => $product->id,
             'cantidad_sistema' => 10, 'cantidad_contada' => 10, 'diferencia' => 0,
         ]);
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/bodega/general-counts/{$generalCount->id}")
@@ -1246,8 +1246,8 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_eliminar_conteo_ya_enviado_a_aprobacion_retorna_422_y_no_lo_borra(): void
     {
         $generalCount = $this->makeGeneralCount(['estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION]);
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/bodega/general-counts/{$generalCount->id}")
@@ -1260,8 +1260,8 @@ class GeneralCountControllerTest extends FeatureTestCase
     public function test_eliminar_conteo_aprobado_retorna_422(): void
     {
         $generalCount = $this->makeGeneralCount(['estado' => GeneralCountRequest::ESTADO_APROBADA]);
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/bodega/general-counts/{$generalCount->id}")

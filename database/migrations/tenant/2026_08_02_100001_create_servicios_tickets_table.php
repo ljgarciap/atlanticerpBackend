@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * `{tenant}_servicios` (reemplaza `{tenant}_installations`, ver migración hermana
  * `2026_08_02_100000_drop_legacy_installations_schema.php`). Mismo patrón que
  * `2026_07_06_100000_create_notifications_module_tables.php`: el schema no existe todavía para
- * el tenant "illuminations" ya creado, así que esta migración lo crea ella misma
+ * el tenant "atlantic" ya creado, así que esta migración lo crea ella misma
  * (`tenant:create` también lo crea de entrada para tenants nuevos vía `Tenant::schemas()`).
  *
  * `quote_status`/`inspection_report_status` son denormalizados a propósito (ver el ticket de

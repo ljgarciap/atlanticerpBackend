@@ -27,7 +27,7 @@ final class LegacyFuseProveedoresCommand extends Command
 {
     /** @var string */
     protected $signature = 'legacy:fuse-proveedores
-        {--tenant=illuminations : Slug del tenant a procesar}
+        {--tenant=atlantic : Slug del tenant a procesar}
         {--dry-run : Preview real (rollback) — no escribe nada, no registra en legacy.sync_runs}';
 
     /** @var string */

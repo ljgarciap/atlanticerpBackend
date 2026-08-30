@@ -22,9 +22,9 @@ use Tests\TestCase;
  *      incluye la landlord migration que crea la tabla `tenants`.
  *
  *   2. Después del migrate:fresh, el seeder `DatabaseSeeder` llama:
- *      a. TenantSeeder  → ejecuta `tenant:create illuminations` que crea los
- *         schemas Postgres (`illuminations_auth`, `illuminations_crm`,
- *         `illuminations_servicios`, etc. — ver `Tenant::schemas()`) y corre
+ *      a. TenantSeeder  → ejecuta `tenant:create atlantic` que crea los
+ *         schemas Postgres (`atlantic_auth`, `atlantic_crm`,
+ *         `atlantic_servicios`, etc. — ver `Tenant::schemas()`) y corre
  *         las migrations de tenant.
  *      b. AuthUserSeeder → activa el tenant y crea los 4 usuarios de prueba.
  *
@@ -65,7 +65,7 @@ abstract class FeatureTestCase extends TestCase
     }
 
     protected function loginAs(
-        string $email    = 'management@illuminations.test',
+        string $email    = 'management@atlantic.test',
         string $password = 'Password123!',
         string $role     = 'management',
     ): string {

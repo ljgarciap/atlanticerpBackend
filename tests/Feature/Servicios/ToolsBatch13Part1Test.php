@@ -17,25 +17,25 @@ use Tests\Feature\FeatureTestCase;
  */
 class ToolsBatch13Part1Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
 
-    private const MANAGEMENT = 'daniela@illuminations.com.pa';
+    private const MANAGEMENT = 'daniela@atlantic.com.pa';
 
     private const VENDEDOR_DISENADOR = 'milena.e@grupolafayette.com';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reactivateTenant(): void
     {
         // loginAs() ya disparó una request HTTP real, que limpia el search_path que setUp() dejó
         // activo (mismo gotcha documentado en TicketBatch4Test/InternalTechnicianBatch6Test).
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function carlosTechnicianId(): int

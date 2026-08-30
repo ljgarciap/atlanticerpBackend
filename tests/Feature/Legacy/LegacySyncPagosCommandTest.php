@@ -32,18 +32,18 @@ final class LegacySyncPagosCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_dry_run_stagea_pero_no_registra_sync_run(): void
     {
         $this->app->instance(PagoExtractorContract::class, new FakePagoExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-pagos', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-pagos', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
-        $this->assertDatabaseHas('illuminations_legacy.pagos', ['icg_numero' => 9001]);
+        $this->assertDatabaseHas('atlantic_legacy.pagos', ['icg_numero' => 9001]);
         $this->assertSame(0, SyncRun::query()->count());
     }
 
@@ -51,11 +51,11 @@ final class LegacySyncPagosCommandTest extends FeatureTestCase
     {
         $this->app->instance(PagoExtractorContract::class, new FakePagoExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-pagos', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-pagos', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
-        $this->assertDatabaseHas('illuminations_legacy.pagos', ['icg_numero' => 9001]);
+        $this->assertDatabaseHas('atlantic_legacy.pagos', ['icg_numero' => 9001]);
 
         $run = SyncRun::query()->firstOrFail();
         $this->assertSame('pagos', $run->entidad);
@@ -72,9 +72,9 @@ final class LegacySyncPagosCommandTest extends FeatureTestCase
     {
         $this->app->instance(PagoExtractorContract::class, new FakePagoExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-pagos', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-pagos', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
-        $this->artisan('legacy:sync-pagos', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-pagos', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $this->assertSame(1, Pago::query()->where('icg_numero', 9001)->count());
@@ -88,7 +88,7 @@ final class LegacySyncPagosCommandTest extends FeatureTestCase
             new FakePagoExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-pagos', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-pagos', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -104,7 +104,7 @@ final class LegacySyncPagosCommandTest extends FeatureTestCase
             new FakePagoExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-pagos', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-pagos', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -121,7 +121,7 @@ final class LegacySyncPagosCommandTest extends FeatureTestCase
         $extraction = new ExtractedPagos([self::pagoRow(icgOrigen: str_repeat('X', 300))]);
         $this->app->instance(PagoExtractorContract::class, new FakePagoExtractor($extraction));
 
-        $this->artisan('legacy:sync-pagos', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-pagos', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 

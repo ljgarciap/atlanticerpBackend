@@ -19,12 +19,12 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 8/9 de Admin&Cont — Estado de Cuenta (SCRUM-529→538, REQ-452→461). */
 class AdminContAccountStatementControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'conta@illuminations.com.pa';
+    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string
@@ -76,7 +76,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_show_rechaza_a_un_rol_sin_visibilidad_del_modulo(): void
     {
         ['master' => $master] = $this->makeClientWithProject();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")

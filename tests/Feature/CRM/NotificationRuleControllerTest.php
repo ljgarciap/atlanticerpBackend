@@ -13,7 +13,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
     /** NotificationRule::create() se llama fuera de un request HTTP — ver nota en NotificationServiceTest (Fase 1). */
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()->makeCurrent();
     }
 
     protected function tearDown(): void
@@ -45,7 +45,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_designer_no_puede_listar_reglas(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/notification-rules')
             ->assertStatus(403);
@@ -53,7 +53,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_superadmin_puede_crear_regla(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/notification-rules', $this->validPayload());
@@ -65,7 +65,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_crear_regla_con_campo_no_permitido_para_el_modelo_retorna_422(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/notification-rules', $this->validPayload(['field' => 'notas']));
@@ -75,7 +75,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_crear_regla_con_operador_invalido_retorna_422(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/notification-rules', $this->validPayload(['operator' => 'contains']));
@@ -85,7 +85,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_crear_regla_con_modelo_fuera_de_whitelist_retorna_422(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/notification-rules', $this->validPayload(['trigger_model' => 'User']));
@@ -95,7 +95,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_listar_incluye_el_catalogo_de_registry(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/notification-rules');
@@ -107,7 +107,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_actualizar_regla(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $rule  = NotificationRule::create(array_merge($this->validPayload(), ['value' => 'cerrado']));
 
@@ -121,7 +121,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_eliminar_regla(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $rule  = NotificationRule::create(array_merge($this->validPayload(), ['value' => 'cerrado']));
 

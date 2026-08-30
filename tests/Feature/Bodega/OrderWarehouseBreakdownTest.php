@@ -22,8 +22,8 @@ class OrderWarehouseBreakdownTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }

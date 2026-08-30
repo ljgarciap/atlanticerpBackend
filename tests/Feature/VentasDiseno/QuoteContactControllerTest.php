@@ -17,12 +17,12 @@ class QuoteContactControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDisenoEdit(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit'])]);
@@ -30,14 +30,14 @@ class QuoteContactControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
     public function test_agregar_contacto_de_otro_subcliente_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $master  = MasterClient::create(['name' => 'Cliente Test']);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
@@ -46,7 +46,7 @@ class QuoteContactControllerTest extends FeatureTestCase
 
         $quote = Quote::create(['sub_client_id' => $sub->id, 'master_client_id' => $master->id, 'owner_id' => $designerId]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/contacts", ['sub_client_contact_id' => $otherContact->id])
@@ -55,8 +55,8 @@ class QuoteContactControllerTest extends FeatureTestCase
 
     public function test_agregar_y_quitar_contacto_de_la_cotizacion(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $master = MasterClient::create(['name' => 'Cliente Test']);
         $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
@@ -64,7 +64,7 @@ class QuoteContactControllerTest extends FeatureTestCase
 
         $quote = Quote::create(['sub_client_id' => $sub->id, 'master_client_id' => $master->id, 'owner_id' => $designerId]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/contacts", ['sub_client_contact_id' => $contact->id])
@@ -88,15 +88,15 @@ class QuoteContactControllerTest extends FeatureTestCase
 
     public function test_agregar_contacto_a_cotizacion_ajena_retorna_403(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
 
         $master = MasterClient::create(['name' => 'Cliente Test']);
         $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $contact = $sub->contacts()->create(['name' => 'Ana Pérez', 'role' => 'client', 'phone' => '6000-0000']);
         $quote = Quote::create(['sub_client_id' => $sub->id, 'master_client_id' => $master->id, 'owner_id' => $managerId]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/contacts", ['sub_client_contact_id' => $contact->id])

@@ -7,9 +7,9 @@ detectado (correctamente) que los PDFs de Servicios no mostraban el logo. Este p
 checklist **completo desde cero** — no solo el punto del logo — y además audita el ticket de Jira
 completo de SCRUM-781 (9 puntos), no solo el resumen de 7 puntos que traía el brief inicial.
 
-Cuentas reales (password = email): `servicio@illuminations.com.pa` (Aaron Leis, lider_servicios —
+Cuentas reales (password = email): `servicio@atlantic.com.pa` (Aaron Leis, lider_servicios —
 `can_view_cost_breakdown=true`, cubre el gate de Gerencia para costo/margen de cotización),
-`carlos@illuminations.com.pa` (Carlos Vergara, tecnico_servicios).
+`carlos@atlantic.com.pa` (Carlos Vergara, tecnico_servicios).
 
 Spec Playwright: `atlanticerp-frontend/e2e/preqa-scrum777-781-tecnicos-tickets-20260820.spec.ts` (14 tests,
 screenshots en `atlanticerp-frontend/e2e/.tmp/preqa-scrum777-781-20260820/`).
@@ -68,7 +68,7 @@ es navegable en browser) y se renderizó a PNG con `pdftoppm` para inspección v
   totales — OK.
 
 Los 3 documentos válidos: `Content-Type: application/pdf`, tamaños 900KB-1.3MB, dompdf 3.1.5
-+ CPDF. Sin texto plano "ILLUMINATIONS" como sustituto del logo.
++ CPDF. Sin texto plano "ATLANTIC" como sustituto del logo.
 
 ### Punto 2 (REQ-227) — Motivo de cancelación obligatorio: LIMPIO
 

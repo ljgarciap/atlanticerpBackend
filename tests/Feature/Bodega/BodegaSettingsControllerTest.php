@@ -25,8 +25,8 @@ class BodegaSettingsControllerTest extends FeatureTestCase
 
     public function test_show_devuelve_los_valores_por_defecto(): void
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/settings')
@@ -44,10 +44,10 @@ class BodegaSettingsControllerTest extends FeatureTestCase
     {
         // SCRUM-493 (REQ-423 RN1) — mismo umbral que consume el reporte "Capacidad por bodega",
         // ver `BodegaReportsControllerTest::test_capacidad_por_bodega_umbral_configurable`.
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', [
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', [
             'bodega.read', 'bodega.settings.configure',
         ]);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['capacidad_concentracion_pct' => 60])
@@ -63,10 +63,10 @@ class BodegaSettingsControllerTest extends FeatureTestCase
 
     public function test_update_concentracion_por_encima_del_maximo_retorna_422(): void
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', [
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', [
             'bodega.read', 'bodega.settings.configure',
         ]);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['capacidad_concentracion_pct' => 101])
@@ -75,10 +75,10 @@ class BodegaSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_la_ventana_de_urgente_y_persiste(): void
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', [
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', [
             'bodega.read', 'bodega.settings.configure',
         ]);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['urgente_ventana_dias' => 2])
@@ -95,10 +95,10 @@ class BodegaSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_los_umbrales_de_pendientes_y_rotacion(): void
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', [
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', [
             'bodega.read', 'bodega.settings.configure',
         ]);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', [
@@ -124,8 +124,8 @@ class BodegaSettingsControllerTest extends FeatureTestCase
 
     public function test_update_sin_permiso_configure_retorna_403(): void
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['urgente_ventana_dias' => 5])
@@ -136,10 +136,10 @@ class BodegaSettingsControllerTest extends FeatureTestCase
     {
         // Regla dura del ticket: `intSetting()` descarta silenciosamente cualquier valor
         // persistido <= 0 y cae al default — 0 debe rechazarse acá, no devolver 200 confuso.
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', [
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', [
             'bodega.read', 'bodega.settings.configure',
         ]);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['urgente_ventana_dias' => 0])
@@ -154,10 +154,10 @@ class BodegaSettingsControllerTest extends FeatureTestCase
 
     public function test_update_con_valor_negativo_retorna_422(): void
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', [
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', [
             'bodega.read', 'bodega.settings.configure',
         ]);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['rotacion_top_n' => -1])
@@ -166,10 +166,10 @@ class BodegaSettingsControllerTest extends FeatureTestCase
 
     public function test_update_por_encima_del_maximo_retorna_422(): void
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', [
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', [
             'bodega.read', 'bodega.settings.configure',
         ]);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['pendientes_picking_horas' => 200])

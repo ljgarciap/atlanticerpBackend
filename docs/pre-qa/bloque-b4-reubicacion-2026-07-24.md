@@ -20,7 +20,7 @@ proxy `/api` → `:8090`, mismo patrón que el resto de specs en `e2e/`).
 
 `ComprasSettings::mark_approver_user_id` estaba **NULL** en este entorno pese a que la migración
 `2026_07_20_100009_add_mark_approver_to_compras_settings_table.php` intenta backfillearlo
-buscando a `mbekhar@illuminations.com.pa`. Causa raíz: el orden real de deploy es
+buscando a `mbekhar@atlantic.com.pa`. Causa raíz: el orden real de deploy es
 `migrate` → `tenants:artisan migrate` → `db:seed --force` (ver CLAUDE.md, sección
 "Infraestructura AWS" / CI-CD) — en cualquier entorno reprovisionado desde cero, la migración
 corre **antes** de que exista el usuario de Mark, así que el `DB::table(...)->where('email', ...)
@@ -113,10 +113,10 @@ nginx antes de la re-corrida completa del checklist.
 
 ### SCRUM-458 (REQ-388) — Aprobación de Mark
 
-- **Usuario de Bodega sin `bodega.approve`** (`almacen@illuminations.com.pa`, lider_bodega)
+- **Usuario de Bodega sin `bodega.approve`** (`almacen@atlantic.com.pa`, lider_bodega)
   intenta aprobar/rechazar por API directa → 403 del middleware `permission:bodega.approve`,
   nunca llega al controller.
-- **Usuario de Gerencia CON `bodega.approve` pero que NO es Mark** (`daniela@illuminations.com.pa`,
+- **Usuario de Gerencia CON `bodega.approve` pero que NO es Mark** (`daniela@atlantic.com.pa`,
   mismo rol `management` que Mark) intenta aprobar/rechazar por API directa → 403,
   "Solo Mark puede aprobar o rechazar esta solicitud." — el gate específico de persona (no de rol)
   funciona correctamente **una vez configurado** (ver Paso 0 arriba: en este entorno tuve que

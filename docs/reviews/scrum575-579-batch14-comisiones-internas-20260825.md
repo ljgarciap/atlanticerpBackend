@@ -29,7 +29,7 @@ Mismo bug, mismo fix, que SCRUM-771 ya encontró y corrigió para Compras
 - Permiso angosto nuevo `admin_contab.commissions_internal.view` en `permission_catalog`
   (migración `add_admin_contab_commissions_internal_view_permission`), otorgado por persona a los
   10 vendedores reales vía `SpecialPermissionSeeder` (mismo criterio que `compras.limited.view` →
-  `operaciones@illuminations.com.pa`).
+  `operaciones@atlantic.com.pa`).
 - Rutas `/tiers` y `/` (summary) con OR (`permission:admin_contab.read,admin_contab.commissions_internal.view`);
   `/export` y `/vendors` quedan estrictos en `admin_contab.read` (Felix/Mark/Gerencia únicamente).
 

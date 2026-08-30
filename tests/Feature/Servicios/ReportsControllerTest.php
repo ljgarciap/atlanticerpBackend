@@ -22,11 +22,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class ReportsControllerTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const CARLOS = 'carlos@illuminations.com.pa';
+    private const CARLOS = 'carlos@atlantic.com.pa';
 
-    private const MANAGEMENT = 'daniela@illuminations.com.pa';
+    private const MANAGEMENT = 'daniela@atlantic.com.pa';
 
     private const FROZEN_NOW = '2026-08-15 12:00:00';
 
@@ -45,7 +45,7 @@ class ReportsControllerTest extends FeatureTestCase
 
     private function makeCurrentTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function userIdByEmail(string $email): int

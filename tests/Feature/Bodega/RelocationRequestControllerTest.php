@@ -21,18 +21,18 @@ class RelocationRequestControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** @param list<string> $perms */
     private function grantBodega(string $email, array $perms = ['bodega.read', 'bodega.write']): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($perms)]);
     }
 
@@ -53,8 +53,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $merma = Warehouse::where('name', 'Merma')->first();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -76,8 +76,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -99,8 +99,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -119,8 +119,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -140,8 +140,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         // Solo 5 unidades REALES en la bodega de origen, pese a que el stock global es 100.
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -165,8 +165,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $merma = Warehouse::where('name', 'Merma')->first();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -184,8 +184,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -201,8 +201,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -217,8 +217,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -243,15 +243,15 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/approve");
 
@@ -286,15 +286,15 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/reject", ['motivo_rechazo' => 'No corresponde']);
 
@@ -319,15 +319,15 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/reject", [])
             ->assertStatus(422);
@@ -345,19 +345,19 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        // `gerencia@illuminations.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@illuminations.test` (Nivel 8) para
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
+        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $this->grantBodega('multi@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('multi@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/approve")
             ->assertStatus(403);
@@ -384,15 +384,15 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson("/api/bodega/relocations/{$relocationRequest->id}/approve")->assertStatus(200);
@@ -409,7 +409,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
-        $solicitanteId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         RelocationRequest::create([
             'catalog_product_id' => $product->id, 'origin_warehouse_id' => $central->id,
@@ -422,8 +422,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'solicitado_por' => $solicitanteId, 'estado' => RelocationRequest::ESTADO_RECHAZADA,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $all = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/relocations');
         $all->assertStatus(200);
@@ -447,15 +447,15 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_APROBADA,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/reject", ['motivo_rechazo' => 'Tarde'])
             ->assertStatus(422);
@@ -483,15 +483,15 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
-        $this->grantBodega('almacen@illuminations.com.pa', ['bodega.read', 'bodega.write', 'bodega.approve']);
+        $this->grantBodega('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write', 'bodega.approve']);
 
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/approve")
             ->assertStatus(403);
@@ -513,15 +513,15 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
-        $this->grantBodega('almacen@illuminations.com.pa', ['bodega.read', 'bodega.write', 'bodega.approve']);
+        $this->grantBodega('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write', 'bodega.approve']);
 
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/reject", ['motivo_rechazo' => 'No corresponde'])
             ->assertStatus(403);

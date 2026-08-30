@@ -33,7 +33,7 @@ nuevos del fix de permiso) corridos también de forma aislada.
 **`vendor/bin/phpstan analyse` (Level 8):** `[OK] No errors` — sin baseline que esconda deuda (no
 existe `phpstan-baseline.neon` en el repo).
 
-**N+1 — confirmado con `DB::enableQueryLog()` en vivo (`tinker`, tenant `illuminations`), no solo
+**N+1 — confirmado con `DB::enableQueryLog()` en vivo (`tinker`, tenant `atlantic`), no solo
 leído:**
 - `summary(scope=team)` contra datos ya sembrados en `dev`: **33 queries**.
 - Mismo endpoint tras sembrar +15 órdenes en `ASIGNADO` (con su `order_stage_history`) y +15
@@ -109,7 +109,7 @@ guard: `owner_id` fuera de `isBodegaTeamMember()` cae al alcance propio del acto
 objetivo pedido — exactamente el patrón que costó un hallazgo CRÍTICO de Pre-QA en
 `OutlookCalendarController` (2026-07-21, ver memoria del proyecto). Confirmado con test real
 (`test_summary_owner_id_fuera_del_equipo_cae_al_alcance_propio`, usa el usuario
-`management@illuminations.test` como `owner_id` inválido y verifica que el Jefe ve su propio
+`management@atlantic.test` como `owner_id` inválido y verifica que el Jefe ve su propio
 conteo, no el de Gerencia) — no es solo el patrón repetido en un comentario, está verificado en
 runtime. La ruta nueva de calendario (`routes/bodega.php`, `GET /bodega/calendar`) reusa
 `OutlookCalendarController::teamEmails()` genérico por `RoleModuleVisibility(module=bodega)` —

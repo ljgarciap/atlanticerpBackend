@@ -24,12 +24,12 @@ class BodegaSeedUatProjectsCommandTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** @return \Illuminate\Database\Eloquent\Collection<int, PipelineCard> */
@@ -43,7 +43,7 @@ class BodegaSeedUatProjectsCommandTest extends FeatureTestCase
 
     public function test_crea_40_proyectos_aprobados_distribuidos_entre_vendedores_reales_con_order_en_bodega(): void
     {
-        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'illuminations', '--count' => 40])
+        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'atlantic', '--count' => 40])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();
@@ -52,13 +52,13 @@ class BodegaSeedUatProjectsCommandTest extends FeatureTestCase
         $this->assertSame(40, $cards->count());
         $this->assertTrue($cards->every(fn (PipelineCard $card): bool => $card->stage === 'approved'));
 
-        // Distribuido entre más de 1 vendedor real (nunca cuentas demo *@illuminations.test).
+        // Distribuido entre más de 1 vendedor real (nunca cuentas demo *@atlantic.test).
         $distinctOwners = $cards->pluck('owner_id')->unique();
         $this->assertGreaterThan(1, $distinctOwners->count());
 
         $ownerEmails = User::whereIn('id', $distinctOwners)->pluck('email');
         foreach ($ownerEmails as $email) {
-            $this->assertStringEndsNotWith('@illuminations.test', $email);
+            $this->assertStringEndsNotWith('@atlantic.test', $email);
         }
 
         // Los 40 aparecen en Bodega como Order (flujo real, sin inserción manual).
@@ -73,14 +73,14 @@ class BodegaSeedUatProjectsCommandTest extends FeatureTestCase
 
     public function test_correrlo_dos_veces_con_el_mismo_count_no_duplica(): void
     {
-        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'illuminations', '--count' => 40])
+        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'atlantic', '--count' => 40])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();
         $firstRunIds = $this->markedCards()->pluck('id')->sort()->values();
         $this->assertSame(40, $firstRunIds->count());
 
-        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'illuminations', '--count' => 40])
+        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'atlantic', '--count' => 40])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();
@@ -93,14 +93,14 @@ class BodegaSeedUatProjectsCommandTest extends FeatureTestCase
 
     public function test_top_up_de_10_a_40_en_una_segunda_corrida(): void
     {
-        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'illuminations', '--count' => 10])
+        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'atlantic', '--count' => 10])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();
         $this->assertSame(10, $this->markedCards()->count());
         $firstBatchIds = $this->markedCards()->pluck('id')->sort()->values();
 
-        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'illuminations', '--count' => 40])
+        $this->artisan('bodega:seed-uat-projects', ['--tenant' => 'atlantic', '--count' => 40])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();

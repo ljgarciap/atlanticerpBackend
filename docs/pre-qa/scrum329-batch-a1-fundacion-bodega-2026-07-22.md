@@ -19,14 +19,14 @@ corriendo), no solo lectura de código:
    luego la suite completa del repo (`infra/test.sh`, 1080/1080 verde, 4391 assertions) + PHPStan
    Level 8 dentro del contenedor `laravel` (`0 errores`).
 2. Flujo real vía API HTTP contra el stack local (`http://localhost:8090`), no PHPUnit: login real
-   (`POST /api/auth/login`) con `annie@illuminations.com.pa` (password = email, patrón del
+   (`POST /api/auth/login`) con `annie@atlantic.com.pa` (password = email, patrón del
    seeder), fixtures de tarjeta/cotización armados vía `artisan tinker` sobre la BD real (mismo
    shape que usa el módulo, no inventado), y la transición de etapa real
    (`PATCH /api/ventas-diseno/pipeline/{id}/stage`) — el único punto de disparo real de todo este
    batch — ejecutada contra el endpoint real, no simulada.
 3. Verificación de resultado por `docker compose exec postgres psql` directo contra
-   `illuminations_bodega.orders`/`order_items`/`order_stage_history` e
-   `illuminations_notifications.notification_sends`/`notifications`/`notification_deliveries`
+   `atlantic_bodega.orders`/`order_items`/`order_stage_history` e
+   `atlantic_notifications.notification_sends`/`notifications`/`notification_deliveries`
    (no hay pantalla propia de Pedidos todavía).
 
 Todas las tarjetas/cotizaciones de prueba (`pipeline_cards` 6/7/8) y sus `Order` asociados
@@ -40,7 +40,7 @@ requirió limpieza manual.
 - **Escenario "falta de mapeo" (prioridad 1):** los 10 vendedores reales sembrados por
   `BusinessRoleUserSeeder` están los 10 cubiertos por `WarehouseAssistantMappingSeeder` (verificado
   contra la BD real, ver tabla abajo) — no hay ningún vendedor real sin mapeo hoy. Se desactivó
-  temporalmente el mapeo de Annie (`UPDATE illuminations_bodega.warehouse_assistant_mapping SET
+  temporalmente el mapeo de Annie (`UPDATE atlantic_bodega.warehouse_assistant_mapping SET
   is_active=false WHERE id=5`, `seller_user_id=27`) solo para la duración de esta prueba. Restaurado
   automáticamente por el reset de `infra/test.sh` al final de la sesión (confirmado: `is_active=t`
   después de correr la suite).
@@ -53,17 +53,17 @@ requirió limpieza manual.
 ## Verificación de Paso 0 (permisos angostos / valores paramétricos)
 
 - RN3 de SCRUM-377 exige que el mapeo vendedor→asistente sea "configurable, no codificado de forma
-  fija" — confirmado: vive en la tabla `illuminations_bodega.warehouse_assistant_mapping`
+  fija" — confirmado: vive en la tabla `atlantic_bodega.warehouse_assistant_mapping`
   (migración `2026_07_22_100006`), no en un `match()`/array hardcodeado en el servicio.
   `WarehouseAssistantMappingSeeder` es el seed inicial, corre en todos los entornos, idempotente
   por fusión (no pisa reasignaciones manuales).
-- Mapeo real verificado contra la BD (`illuminations_bodega.warehouse_assistant_mapping` join
-  `illuminations_auth.users`), coincide exactamente con RN1/RN2 del ticket:
+- Mapeo real verificado contra la BD (`atlantic_bodega.warehouse_assistant_mapping` join
+  `atlantic_auth.users`), coincide exactamente con RN1/RN2 del ticket:
 
   | Asistente | Vendedores mapeados (confirmado en BD) |
   |---|---|
-  | Mariano Sandoval (`almacen2@illuminations.com.pa`, id 14) | Juan Manuel, Fefi, Neil, Bernardo, Annie |
-  | Osvaldo Santos (`logistica@illuminations.com.pa`, id 13) | Idmar, Vanessa, Paola, Milena, Maribel |
+  | Mariano Sandoval (`almacen2@atlantic.com.pa`, id 14) | Juan Manuel, Fefi, Neil, Bernardo, Annie |
+  | Osvaldo Santos (`logistica@atlantic.com.pa`, id 13) | Idmar, Vanessa, Paola, Milena, Maribel |
 
 - Audiencia de la notificación de "pedido sin asignar" es un ROL (`lider_bodega`), no una persona
   hardcodeada — resuelto vía `Role::where('key', 'lider_bodega')` + `User::where('role_id', ...)`,
@@ -84,12 +84,12 @@ orders: id=8, order_number=PED-2026-0003, pipeline_card_id=8, stage=asignado, as
 Notificación real disparada — verificado en las 3 tablas del módulo Notifications:
 - `notification_sends`: `source=bodega_order_unassigned`, `source_ref=order:8`,
   `channels=["in_app","email"]`, `audience=[12]` (id de Esteban Cardenas,
-  `almacen@illuminations.com.pa`, rol `lider_bodega`).
+  `almacen@atlantic.com.pa`, rol `lider_bodega`).
 - `notifications`: fila in-app real para `user_id=12`, `subject="Pedido PED-2026-0003 sin
   asistente asignado"`.
 - `notification_deliveries`: canal `email`, `status=sent` — el SMTP local es real (Office365, ver
   `memory/feedback_no_real_emails_verification.md`), así que esta prueba disparó un email real a
-  `almacen@illuminations.com.pa` con datos de prueba obvios ("PED-2026-0003 (vendedor: Anelhys
+  `almacen@atlantic.com.pa` con datos de prueba obvios ("PED-2026-0003 (vendedor: Anelhys
   Nuez)... Requiere asignación manual") — señalado acá para que Esteban/Luis lo descarten si lo ven,
   no hay forma de verificar el canal de email real sin disparar el envío real dado que el listener
   no usa `Mail::fake()` en producción.
@@ -115,7 +115,7 @@ PHPUnit.
 Vendedor con mapeo real (Annie → Mariano Sandoval), `pipeline_card_id=6`. Verificado contra BD:
 
 ```
-orders: id=6, order_number=PED-2026-0001, stage=asignado, assistant_id=14 (almacen2@illuminations.com.pa)
+orders: id=6, order_number=PED-2026-0001, stage=asignado, assistant_id=14 (almacen2@atlantic.com.pa)
 customer_name="PreQA Subcliente Annie", delivery_address="Av PreQA 123, Ciudad de Panamá"
 customer_contact="PreQA Contacto (6000-9999)"
 order_items: 1 fila, qty_requested=4, description_snapshot="Lampara PreQA" (coincide con la cotización real generada)

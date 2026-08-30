@@ -29,10 +29,10 @@ class CatalogProductSeeder extends Seeder
             return;
         }
 
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command->warn('Tenant "illuminations" not found — CatalogProductSeeder skipped.');
+            $this->command->warn('Tenant "atlantic" not found — CatalogProductSeeder skipped.');
             return;
         }
 
@@ -52,16 +52,16 @@ class CatalogProductSeeder extends Seeder
         }
 
         $products = [
-            ['reference' => 'LAMP-COL-001', 'description' => 'Lámpara colgante LED 40W, acabado dorado', 'brand' => 'Illuminations Home', 'price_full' => 189.99, 'cost' => 95.00, 'stock_quantity' => 24],
-            ['reference' => 'LAMP-COL-002', 'description' => 'Lámpara colgante industrial, acabado negro mate', 'brand' => 'Illuminations Home', 'price_full' => 149.50, 'cost' => 78.00, 'stock_quantity' => 15],
+            ['reference' => 'LAMP-COL-001', 'description' => 'Lámpara colgante LED 40W, acabado dorado', 'brand' => 'Atlantic Home', 'price_full' => 189.99, 'cost' => 95.00, 'stock_quantity' => 24],
+            ['reference' => 'LAMP-COL-002', 'description' => 'Lámpara colgante industrial, acabado negro mate', 'brand' => 'Atlantic Home', 'price_full' => 149.50, 'cost' => 78.00, 'stock_quantity' => 15],
             ['reference' => 'SPOT-EMP-010', 'description' => 'Spot LED empotrable 12W, luz cálida 3000K', 'brand' => 'LuxTech', 'price_full' => 24.99, 'cost' => 11.50, 'stock_quantity' => 300],
             ['reference' => 'SPOT-EMP-011', 'description' => 'Spot LED empotrable 12W, luz fría 5000K', 'brand' => 'LuxTech', 'price_full' => 24.99, 'cost' => 11.50, 'stock_quantity' => 210],
             ['reference' => 'RIEL-TRK-050', 'description' => 'Riel electrificado 2m, blanco, para spots direccionables', 'brand' => 'LuxTech', 'price_full' => 65.00, 'cost' => 32.00, 'stock_quantity' => 40],
-            ['reference' => 'APLQ-PAR-020', 'description' => 'Aplique de pared LED 8W, difusor opalino', 'brand' => 'Illuminations Home', 'price_full' => 45.75, 'cost' => 21.00, 'stock_quantity' => 60],
+            ['reference' => 'APLQ-PAR-020', 'description' => 'Aplique de pared LED 8W, difusor opalino', 'brand' => 'Atlantic Home', 'price_full' => 45.75, 'cost' => 21.00, 'stock_quantity' => 60],
             ['reference' => 'CAND-SAL-005', 'description' => 'Candelabro de sala 6 luces, cristal y bronce', 'brand' => 'Signature Lighting', 'price_full' => 890.00, 'cost' => 410.00, 'stock_quantity' => 3],
             ['reference' => 'CINT-LED-100', 'description' => 'Cinta LED RGB 5m, control remoto incluido', 'brand' => 'LuxTech', 'price_full' => 32.00, 'cost' => 14.00, 'stock_quantity' => 150],
             ['reference' => 'PISO-LAMP-030', 'description' => 'Lámpara de piso arco, base mármol', 'brand' => 'Signature Lighting', 'price_full' => 320.00, 'cost' => 165.00, 'stock_quantity' => 8],
-            ['reference' => 'MESA-LAMP-015', 'description' => 'Lámpara de mesa táctil, regulable 3 niveles', 'brand' => 'Illuminations Home', 'price_full' => 79.90, 'cost' => 38.00, 'stock_quantity' => 45],
+            ['reference' => 'MESA-LAMP-015', 'description' => 'Lámpara de mesa táctil, regulable 3 niveles', 'brand' => 'Atlantic Home', 'price_full' => 79.90, 'cost' => 38.00, 'stock_quantity' => 45],
 
             // SCRUM-715 — Riel Direccionable (ampliación)
             ['reference' => 'RIEL-TRK-051', 'description' => 'Riel electrificado 2m, negro mate, para spots direccionables', 'brand' => 'LuxTech', 'price_full' => 68.00, 'cost' => 34.00, 'stock_quantity' => 35],
@@ -72,8 +72,8 @@ class CatalogProductSeeder extends Seeder
 
             // SCRUM-715 — Sala Elegante (ampliación)
             ['reference' => 'CAND-SAL-006', 'description' => 'Candelabro moderno esfera 8 luces, acabado cromo', 'brand' => 'Signature Lighting', 'price_full' => 650.00, 'cost' => 305.00, 'stock_quantity' => 5],
-            ['reference' => 'PISO-LAMP-031', 'description' => 'Lámpara de piso trípode, base madera y pantalla de lino', 'brand' => 'Illuminations Home', 'price_full' => 145.00, 'cost' => 68.00, 'stock_quantity' => 18],
-            ['reference' => 'MESA-LAMP-016', 'description' => 'Lámpara de mesa cerámica, pantalla textil crudo', 'brand' => 'Illuminations Home', 'price_full' => 95.50, 'cost' => 44.00, 'stock_quantity' => 22],
+            ['reference' => 'PISO-LAMP-031', 'description' => 'Lámpara de piso trípode, base madera y pantalla de lino', 'brand' => 'Atlantic Home', 'price_full' => 145.00, 'cost' => 68.00, 'stock_quantity' => 18],
+            ['reference' => 'MESA-LAMP-016', 'description' => 'Lámpara de mesa cerámica, pantalla textil crudo', 'brand' => 'Atlantic Home', 'price_full' => 95.50, 'cost' => 44.00, 'stock_quantity' => 22],
 
             // SCRUM-715 — Iluminación LED Básica (ampliación)
             ['reference' => 'PANEL-LED-070', 'description' => 'Panel LED 60x60cm, 40W, luz neutra 4000K', 'brand' => 'LuxTech', 'price_full' => 38.00, 'cost' => 17.50, 'stock_quantity' => 120],
@@ -101,13 +101,13 @@ class CatalogProductSeeder extends Seeder
 
             // SCRUM-715 — Baño & Espejo (familia nueva)
             ['reference' => 'ESP-BAN-500', 'description' => 'Luz LED para espejo de baño, IP44, sensor táctil', 'brand' => 'LuxTech', 'price_full' => 54.00, 'cost' => 24.50, 'stock_quantity' => 45],
-            ['reference' => 'APLQ-BAN-501', 'description' => 'Aplique de baño doble, IP44, acabado cromo', 'brand' => 'Illuminations Home', 'price_full' => 62.00, 'cost' => 28.00, 'stock_quantity' => 30],
-            ['reference' => 'TECHO-BAN-502', 'description' => 'Plafón de techo IP44 para baño, difusor opalino', 'brand' => 'Illuminations Home', 'price_full' => 36.50, 'cost' => 16.50, 'stock_quantity' => 55],
+            ['reference' => 'APLQ-BAN-501', 'description' => 'Aplique de baño doble, IP44, acabado cromo', 'brand' => 'Atlantic Home', 'price_full' => 62.00, 'cost' => 28.00, 'stock_quantity' => 30],
+            ['reference' => 'TECHO-BAN-502', 'description' => 'Plafón de techo IP44 para baño, difusor opalino', 'brand' => 'Atlantic Home', 'price_full' => 36.50, 'cost' => 16.50, 'stock_quantity' => 55],
 
             // SCRUM-715 — Cocina & Bajo Alacena (familia nueva)
             ['reference' => 'BARRA-COC-600', 'description' => 'Barra LED bajo alacena, 30cm, sensor de movimiento', 'brand' => 'LuxTech', 'price_full' => 22.00, 'cost' => 9.80, 'stock_quantity' => 80],
             ['reference' => 'BARRA-COC-601', 'description' => 'Barra LED bajo alacena, 60cm, sensor de movimiento', 'brand' => 'LuxTech', 'price_full' => 32.00, 'cost' => 14.50, 'stock_quantity' => 60],
-            ['reference' => 'COLG-COC-602', 'description' => 'Set de 3 colgantes para isla de cocina, acabado negro mate', 'brand' => 'Illuminations Home', 'price_full' => 175.00, 'cost' => 82.00, 'stock_quantity' => 15],
+            ['reference' => 'COLG-COC-602', 'description' => 'Set de 3 colgantes para isla de cocina, acabado negro mate', 'brand' => 'Atlantic Home', 'price_full' => 175.00, 'cost' => 82.00, 'stock_quantity' => 15],
 
             // SCRUM-715 — Oficina & Comercial (familia nueva)
             ['reference' => 'PANEL-OFI-700', 'description' => 'Panel LED oficina 60x120cm, 48W, luz fría 5000K', 'brand' => 'ProLine Comercial', 'price_full' => 55.00, 'cost' => 25.00, 'stock_quantity' => 70],

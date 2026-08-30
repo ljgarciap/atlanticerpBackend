@@ -29,12 +29,12 @@ class ResolveInventoryReviewConcurrencyTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     protected function tearDown(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         if ($this->orderId !== null) {
             OrderStageHistory::where('order_id', $this->orderId)->delete();
@@ -58,7 +58,7 @@ class ResolveInventoryReviewConcurrencyTest extends FeatureTestCase
 
         $snippet = <<<'PHP'
 $review = \App\Modules\Bodega\Models\Order::find(__ORDER_ID__);
-$actor = \App\Models\User::where('email', 'almacen@illuminations.com.pa')->first();
+$actor = \App\Models\User::where('email', 'almacen@atlantic.com.pa')->first();
 $decisions = [['order_item_id' => __ITEM_ID__, 'found' => true, 'location' => 'A-01']];
 try {
     app(\App\Modules\Bodega\Services\InventoryReviewService::class)->resolve($review, $decisions, $actor);
@@ -77,7 +77,7 @@ PHP;
         $this->assertSame(1, $okCount, "Exactamente 1 de las 2 resoluciones concurrentes debe tener éxito. Resultados: ".implode(' | ', $results));
         $this->assertSame(1, $rejectedCount, "La otra debe ver la revisión ya resuelta y rechazar. Resultados: ".implode(' | ', $results));
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->assertSame(Order::STAGE_EN_PICKING, Order::find($review->id)->stage);
         $this->assertSame(

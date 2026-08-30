@@ -28,7 +28,7 @@ class CatalogUatTestDataSeederTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_skips_seeding_entirely_in_testing_environment(): void

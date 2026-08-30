@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SCRUM-206 (hallazgo QA 2026-07-16): el endpoint de aprobación de orden aérea/Illuminations
+ * SCRUM-206 (hallazgo QA 2026-07-16): el endpoint de aprobación de orden aérea/Atlantic
  * (REQ-143) solo chequeaba el permiso genérico `compras.approve` — cualquier usuario con ese
  * permiso podía aprobar (probado en vivo: Daniela, rol Gerencia, aprobó y quedó registrada como
  * `approved_by`, pero la UI mostraba el texto fijo "Aprobada por Mark"). La spec de REQ-143 dice
@@ -36,7 +36,7 @@ return new class extends TenantSchemaMigration
         $tenant = Tenant::current();
         $authUsersTable = "{$tenant?->slug}_auth.users";
 
-        $mark = DB::table($authUsersTable)->where('email', 'mbekhar@illuminations.com.pa')->first();
+        $mark = DB::table($authUsersTable)->where('email', 'mbekhar@atlantic.com.pa')->first();
         if ($mark !== null) {
             DB::table($this->table('settings'))->where('id', 1)->update(['mark_approver_user_id' => $mark->id]);
         }

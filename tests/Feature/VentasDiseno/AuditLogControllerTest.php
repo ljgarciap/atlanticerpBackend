@@ -20,12 +20,12 @@ class AuditLogControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDiseno(string $email, string $permission): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read', $permission])]);
@@ -38,8 +38,8 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_sin_permiso_audit_retorna_403(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/audit-log')
@@ -48,9 +48,9 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_crear_un_cliente_queda_registrado_en_el_historial(): void
     {
-        $this->grantVentasDiseno('management@illuminations.test', 'ventas_diseno.audit');
+        $this->grantVentasDiseno('management@atlantic.test', 'ventas_diseno.audit');
         $master = MasterClient::create(['name' => '[Audit] Cliente Test']);
-        $token  = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token  = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/audit-log?entity_type=master_client&entity_id={$master->id}")
@@ -64,12 +64,12 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_editar_categoria_de_subcliente_registra_valor_anterior_y_nuevo(): void
     {
-        $this->grantVentasDiseno('management@illuminations.test', 'ventas_diseno.audit');
+        $this->grantVentasDiseno('management@atlantic.test', 'ventas_diseno.audit');
         $master = MasterClient::create(['name' => 'Grupo Delta']);
         $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Delta Residencial', 'tax_id' => '155-0000-1-2026', 'category' => 'a_walkin']);
         $sub->update(['category' => 'b_architect_designer']);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/audit-log?entity_type=sub_client&entity_id={$sub->id}")
             ->assertStatus(200);
@@ -83,13 +83,13 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_filtro_por_usuario(): void
     {
-        $this->grantVentasDiseno('management@illuminations.test', 'ventas_diseno.audit');
-        $managerId = (int) DB::table('illuminations_auth.users')->where('email', 'management@illuminations.test')->value('id');
+        $this->grantVentasDiseno('management@atlantic.test', 'ventas_diseno.audit');
+        $managerId = (int) DB::table('atlantic_auth.users')->where('email', 'management@atlantic.test')->value('id');
 
         // El audit log de "created" atribuye el cambio al usuario del JWT en la
         // request — se necesita loguear PRIMERO y crear el fixture DESPUÉS (vía un
         // endpoint real), no con Eloquent directo (que no tiene contexto de request).
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/master-clients', ['name' => '[Audit] Otro Cliente'])
             ->assertStatus(201);

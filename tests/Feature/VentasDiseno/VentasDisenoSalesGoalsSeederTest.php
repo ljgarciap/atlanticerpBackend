@@ -19,12 +19,12 @@ class VentasDisenoSalesGoalsSeederTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_juanma_tiene_su_meta_real_seeded(): void
     {
-        $juanma = User::where('email', 'juanmanuel@illuminations.com.pa')->firstOrFail();
+        $juanma = User::where('email', 'juanmanuel@atlantic.com.pa')->firstOrFail();
         $goal   = SalesGoal::where('user_id', $juanma->id)->firstOrFail();
 
         $this->assertEquals(4328.87, $goal->goal_amount);
@@ -33,7 +33,7 @@ class VentasDisenoSalesGoalsSeederTest extends FeatureTestCase
 
     public function test_paola_recibe_los_valores_de_mauricio_del_ticket_original(): void
     {
-        $paola = User::where('email', 'paola@illuminations.com.pa')->firstOrFail();
+        $paola = User::where('email', 'paola@atlantic.com.pa')->firstOrFail();
         $goal  = SalesGoal::where('user_id', $paola->id)->firstOrFail();
 
         $this->assertEquals(812.48, $goal->goal_amount);
@@ -42,19 +42,19 @@ class VentasDisenoSalesGoalsSeederTest extends FeatureTestCase
 
     public function test_annie_queda_sin_meta_configurada_pendiente_de_luis(): void
     {
-        $annie = User::where('email', 'annie@illuminations.com.pa')->firstOrFail();
+        $annie = User::where('email', 'annie@atlantic.com.pa')->firstOrFail();
 
         $this->assertNull(SalesGoal::where('user_id', $annie->id)->first());
     }
 
     public function test_no_pisa_una_meta_ya_ajustada_a_mano(): void
     {
-        $idmar = User::where('email', 'idmar@illuminations.com.pa')->firstOrFail();
+        $idmar = User::where('email', 'idmar@atlantic.com.pa')->firstOrFail();
         SalesGoal::where('user_id', $idmar->id)->update(['goal_amount' => 99999.99]);
 
         (new \Database\Seeders\VentasDisenoSalesGoalsSeeder())->run();
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertEquals(99999.99, SalesGoal::where('user_id', $idmar->id)->firstOrFail()->goal_amount);
     }
 }

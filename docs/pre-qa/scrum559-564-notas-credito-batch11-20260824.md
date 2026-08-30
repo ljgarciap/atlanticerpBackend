@@ -17,9 +17,9 @@ timestamp anterior a los archivos fuente del batch). Contenedores `laravel`/`hor
 commit `a402ead` (verificado con `git log` dentro del contenedor). Migraciones y seeders del batch
 ya corridas (`credit_note_folio_counters`, `fiscal_settings.mark_approval_threshold=5000.00`).
 
-Sesión real con **Felix** (`conta@illuminations.com.pa`, `lider_admin_contab`) para los flujos
-principales, y **Neil** (`neil.quiel@illuminations.com.pa`, `vendedor_disenador`) para el chequeo
-negativo de permisos — nunca cuentas `*@illuminations.test`.
+Sesión real con **Felix** (`conta@atlantic.com.pa`, `lider_admin_contab`) para los flujos
+principales, y **Neil** (`neil.quiel@atlantic.com.pa`, `vendedor_disenador`) para el chequeo
+negativo de permisos — nunca cuentas `*@atlantic.test`.
 
 **Fixtures sembradas** (el ambiente local no tenía ningún dato facturable — 0 filas en
 `admin_contab.invoices`/`ventas_diseno.master_clients`, mismo gap de entorno ya documentado en

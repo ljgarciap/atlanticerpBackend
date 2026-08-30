@@ -6,7 +6,7 @@ de transición a QA fue bloqueado por el gate — faltaban los marcadores de Pre
 Review; este review es retroactivo, corrido a pedido de Luis para cerrar el gap).
 **Mockup:** `3__Bodega_Home.html` — adjunto en el ticket, attachment id 10791 (único adjunto,
 sin ambigüedad de versión).
-**Entorno:** `https://dev.atlanticerp.ai`, usuario `almacen@illuminations.com.pa` (Esteban Cárdenas,
+**Entorno:** `https://dev.atlanticerp.ai`, usuario `almacen@atlantic.com.pa` (Esteban Cárdenas,
 Jefe de Bodega — perfil correcto para poder alternar entre scope Inicio/Equipo).
 **Herramienta:** Playwright CLI (`atlanticerp-frontend/e2e/visual-review-scrum368-calendario.spec.ts`,
 script descartable, no se promueve a smoke test permanente).

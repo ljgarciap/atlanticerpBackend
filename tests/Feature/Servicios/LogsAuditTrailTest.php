@@ -26,13 +26,13 @@ class LogsAuditTrailTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** Mismo patrón que TestDataCleanupServiceTest::actingForAudit() — sin esto, resolveUserId() no tiene JWT que leer fuera de un endpoint HTTP real. */
     private function actingForAudit(): void
     {
-        $user    = \App\Models\User::where('email', 'servicio@illuminations.com.pa')->firstOrFail();
+        $user    = \App\Models\User::where('email', 'servicio@atlantic.com.pa')->firstOrFail();
         $request = Request::create('/');
         $request->attributes->set('jwt', ['sub' => $user->id]);
         $this->app->instance('request', $request);
@@ -65,7 +65,7 @@ class LogsAuditTrailTest extends FeatureTestCase
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'servicios.ticket.created')
             ->where('entity_id', (string) $ticket->id)
             ->first();
@@ -95,7 +95,7 @@ class LogsAuditTrailTest extends FeatureTestCase
         $this->actingForAudit();
         $ticket->update(['observaciones' => 'Nota agregada tras inspección']);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'servicios.ticket.updated')
             ->where('entity_id', (string) $ticket->id)
             ->first();

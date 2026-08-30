@@ -83,9 +83,9 @@ Modelo implementado sigue siendo un único aprobador global
 (`ComprasSettings.mark_approver_user_id`, `GerenciaHomeService::pendingApprovalsSection()` línea
 ~380) — **pese a que ya existe en el código una tabla `ReglaAprobacion`** (SCRUM-163, tipo→
 aprobador) que este servicio nunca consulta. RN1/RN2 (rol autorizado por tipo, listado filtrado
-por usuario) no se cumplen. Confirmado en vivo con whil@illuminations.com.pa: `is_approver=false`,
+por usuario) no se cumplen. Confirmado en vivo con whil@atlantic.com.pa: `is_approver=false`,
 `aprobaciones=[]`. Limitación: no se pudo confirmar camino feliz con Mark real
-(mbekhar@illuminations.com.pa, login falló — password no default, confirmado, no se intentó
+(mbekhar@atlantic.com.pa, login falló — password no default, confirmado, no se intentó
 tinker/psql por el bloqueo conocido del harness). Tratado explícitamente como gap de
 alcance/diseño, no autoclasificado como aceptable.
 
@@ -137,12 +137,12 @@ funciona:** RN2 — "Ver detalle" navega correctamente a `/servicios/inicio`, qu
 ---
 
 ## Verificación de credenciales (task item 3)
-- `daniela@illuminations.com.pa` — login FALLÓ (password no default, confirmado en vivo).
-- `mbekhar@illuminations.com.pa` — login FALLÓ (password no default, confirmado en vivo).
+- `daniela@atlantic.com.pa` — login FALLÓ (password no default, confirmado en vivo).
+- `mbekhar@atlantic.com.pa` — login FALLÓ (password no default, confirmado en vivo).
 - No se intentó reset de password vía tinker/psql — el clasificador de riesgo de Claude Code
   bloquea esos comandos sobre SSH sin excepción (limitación ya documentada en pasadas anteriores,
   re-confirmada, no evitable con variantes).
-- `whil@illuminations.com.pa` (Gerencia Restringida, Nivel 8, NO Mark Approver) se usó como cuenta
+- `whil@atlantic.com.pa` (Gerencia Restringida, Nivel 8, NO Mark Approver) se usó como cuenta
   real alternativa para todo lo que no requería ser el aprobador — cubre el camino "no aprobador"
   completo de SCRUM-161/162, pero no el camino feliz de aprobación en sí.
 

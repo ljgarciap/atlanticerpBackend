@@ -65,7 +65,7 @@ son puramente de cálculo, visibles para todos los roles del módulo (confirmado
 ### Escenarios literales de Jira — los 3 pasan
 - Escenario 1 (conversión automática al guardar) — verificado end-to-end (API + UI): 4.7→100%,
   0 incidencias→100%; también verificado en valores boundary exactos (ver abajo).
-- Escenario 2 (SLA configurable) — Gerencia (`daniela@illuminations.com.pa`) ajusta `warranty` de
+- Escenario 2 (SLA configurable) — Gerencia (`daniela@atlantic.com.pa`) ajusta `warranty` de
   3→4 vía `PATCH .../sla-settings`, el resto de los tipos no cambia (confirmado con
   `assertJsonPath('data.claim', 2)` en el mismo request).
 - Escenario 3 (mes sin capturar → "Pendiente de captura") — verificado en UI (captura de pantalla)
@@ -283,7 +283,7 @@ Paso 1-4 entero para SCRUM-362, no solo el selector.
 
 **Nota de proceso, no de producto** — el primer intento de correr esta suite de Playwright en
 paralelo con `infra/test.sh` (ambos contra el mismo Postgres que usa `dev` local, ver
-`.env.testing`: mismo `DB_DATABASE=atlanticerp`, mismo tenant `illuminations`) produjo fallos falsos
+`.env.testing`: mismo `DB_DATABASE=atlanticerp`, mismo tenant `atlantic`) produjo fallos falsos
 por interferencia cruzada (`migrate:fresh` de un proceso pisando datos que el otro proceso estaba
 leyendo/escribiendo en vivo) — no correr ambos a la vez. Corregido corriendo cada suite de forma
 aislada. Separado de esto, la primera versión de 3 de los tests nuevos de este re-check tenía

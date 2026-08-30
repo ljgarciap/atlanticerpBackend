@@ -29,9 +29,9 @@ class DemoProviderAssignmentSeeder extends Seeder
             return;
         }
 
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
         if ($tenant === null) {
-            $this->command->warn('Tenant "illuminations" not found — DemoProviderAssignmentSeeder skipped.');
+            $this->command->warn('Tenant "atlantic" not found — DemoProviderAssignmentSeeder skipped.');
             return;
         }
 

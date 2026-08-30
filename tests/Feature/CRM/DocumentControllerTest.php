@@ -407,8 +407,8 @@ class DocumentControllerTest extends FeatureTestCase
         $v2Id = $this->uploadDocument($token, $projectId, 'plano');
 
         // Query via schema-qualified table — ProjectDocument::find() needs active tenant context
-        $v1 = DB::table('illuminations_crm.project_documents')->where('id', $v1Id)->first();
-        $v2 = DB::table('illuminations_crm.project_documents')->where('id', $v2Id)->first();
+        $v1 = DB::table('atlantic_crm.project_documents')->where('id', $v1Id)->first();
+        $v2 = DB::table('atlantic_crm.project_documents')->where('id', $v2Id)->first();
 
         $this->assertNotNull($v1);
         $this->assertNotNull($v2);
@@ -428,14 +428,14 @@ class DocumentControllerTest extends FeatureTestCase
         $this->uploadDocument($token, $projectId, 'plano'); // v2
         $v3Id = $this->uploadDocument($token, $projectId, 'plano'); // v3
 
-        $v3 = DB::table('illuminations_crm.project_documents')->where('id', $v3Id)->first();
+        $v3 = DB::table('atlantic_crm.project_documents')->where('id', $v3Id)->first();
 
         $this->assertNotNull($v3);
         $this->assertSame(3, (int) $v3->version);
         $this->assertTrue((bool) $v3->is_current);
 
         // Previous two must be non-current
-        $nonCurrent = DB::table('illuminations_crm.project_documents')
+        $nonCurrent = DB::table('atlantic_crm.project_documents')
             ->where('project_id', $projectId)
             ->where('is_current', false)
             ->count();
@@ -612,7 +612,7 @@ class DocumentControllerTest extends FeatureTestCase
             ->assertStatus(204);
 
         // v1 should be promoted back to current
-        $v1 = DB::table('illuminations_crm.project_documents')->where('id', $v1Id)->first();
+        $v1 = DB::table('atlantic_crm.project_documents')->where('id', $v1Id)->first();
         $this->assertNotNull($v1);
         $this->assertTrue((bool) $v1->is_current);
 
@@ -630,7 +630,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_diseñador_no_asignado_no_puede_listar_documentos(): void
     {
         $mgmt      = $this->loginAs();
-        $designer  = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designer  = $this->loginAs('designer@atlantic.test', 'Password123!');
         $projectId = $this->createProject($mgmt);
 
         $this->withHeaders($this->authHeaders($designer))
@@ -641,7 +641,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_diseñador_no_asignado_no_puede_subir_documentos(): void
     {
         $mgmt      = $this->loginAs();
-        $designer  = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designer  = $this->loginAs('designer@atlantic.test', 'Password123!');
         $projectId = $this->createProject($mgmt);
         $file      = UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf');
 
@@ -656,7 +656,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_diseñador_no_asignado_no_puede_descargar_documentos(): void
     {
         $mgmt       = $this->loginAs();
-        $designer   = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designer   = $this->loginAs('designer@atlantic.test', 'Password123!');
         $projectId  = $this->createProject($mgmt);
         $documentId = $this->uploadDocument($mgmt, $projectId);
 
@@ -668,7 +668,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_diseñador_no_asignado_no_puede_eliminar_documentos(): void
     {
         $mgmt       = $this->loginAs();
-        $designer   = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designer   = $this->loginAs('designer@atlantic.test', 'Password123!');
         $projectId  = $this->createProject($mgmt);
         $documentId = $this->uploadDocument($mgmt, $projectId);
 
@@ -682,7 +682,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
         $designerId    = (int) $this->withHeaders($this->authHeaders($designerToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -730,7 +730,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
         $designerId    = (int) $this->withHeaders($this->authHeaders($designerToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -753,7 +753,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
         $designerId    = (int) $this->withHeaders($this->authHeaders($designerToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -773,7 +773,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $readonlyToken = $this->loginAs('readonly@illuminations.test', 'Password123!');
+        $readonlyToken = $this->loginAs('readonly@atlantic.test', 'Password123!');
         $readonlyId    = (int) $this->withHeaders($this->authHeaders($readonlyToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -799,7 +799,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $assigneeToken = $this->loginAs('electrician@illuminations.test', 'Password123!');
+        $assigneeToken = $this->loginAs('electrician@atlantic.test', 'Password123!');
         $assigneeId    = (int) $this->withHeaders($this->authHeaders($assigneeToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -856,7 +856,7 @@ class DocumentControllerTest extends FeatureTestCase
         // Query directly via schema-qualified table — AuditLog::getTable() needs active tenant
         // but in test assertions the tenant context has already been cleared by JWT middleware's
         // forgetCurrent() call when the HTTP response was returned.
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::CRM_DOCUMENT_UPLOADED)
             ->where('entity_id', (string) $documentId)
             ->first();
@@ -872,7 +872,7 @@ class DocumentControllerTest extends FeatureTestCase
         $this->uploadDocument($token, $projectId, 'plano'); // v1
         $v2Id = $this->uploadDocument($token, $projectId, 'plano'); // v2
 
-        $versionLog = DB::table('illuminations_auth.audit_logs')
+        $versionLog = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::CRM_DOCUMENT_VERSION_CREATED)
             ->where('entity_id', (string) $v2Id)
             ->first();
@@ -890,7 +890,7 @@ class DocumentControllerTest extends FeatureTestCase
             ->deleteJson("/api/crm/projects/{$projectId}/documents/{$documentId}")
             ->assertStatus(204);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::CRM_DOCUMENT_DELETED)
             ->where('entity_id', (string) $documentId)
             ->first();
@@ -919,7 +919,7 @@ class DocumentControllerTest extends FeatureTestCase
                 ->assertStatus(503)
                 ->assertJsonFragment(['message' => 'Storage service temporarily unavailable. Please try again in a few minutes.']);
 
-            $this->assertDatabaseMissing('illuminations_crm.project_documents', [
+            $this->assertDatabaseMissing('atlantic_crm.project_documents', [
                 'project_id' => $projectId,
             ]);
         } finally {
@@ -936,7 +936,7 @@ class DocumentControllerTest extends FeatureTestCase
         $knownId = '11111111-1111-1111-1111-111111111111';
         Context::add('request_id', $knownId);
 
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -944,7 +944,7 @@ class DocumentControllerTest extends FeatureTestCase
             $svc->log(AuditService::CRM_DOCUMENT_UPLOADED, 'project_document', 99999);
             $svc->log(AuditService::CRM_DOCUMENT_VERSION_CREATED, 'project_document', 99999);
 
-            $entries = DB::table('illuminations_auth.audit_logs')
+            $entries = DB::table('atlantic_auth.audit_logs')
                 ->where('entity_id', '99999')
                 ->whereIn('action', [
                     AuditService::CRM_DOCUMENT_UPLOADED,
@@ -1012,7 +1012,7 @@ class DocumentControllerTest extends FeatureTestCase
             ])
             ->assertStatus(500);
 
-        $this->assertDatabaseMissing('illuminations_crm.project_documents', [
+        $this->assertDatabaseMissing('atlantic_crm.project_documents', [
             'project_id' => $projectId,
         ]);
     }
@@ -1029,11 +1029,11 @@ class DocumentControllerTest extends FeatureTestCase
         $docId3 = $this->uploadDocument($token, $projectId, 'diseno');
 
         DB::statement(
-            'UPDATE illuminations_crm.project_documents SET created_at = $1 WHERE id = $2',
+            'UPDATE atlantic_crm.project_documents SET created_at = $1 WHERE id = $2',
             [now()->subSeconds(20)->format('Y-m-d H:i:s.u'), $docId1]
         );
         DB::statement(
-            'UPDATE illuminations_crm.project_documents SET created_at = $1 WHERE id = $2',
+            'UPDATE atlantic_crm.project_documents SET created_at = $1 WHERE id = $2',
             [now()->subSeconds(10)->format('Y-m-d H:i:s.u'), $docId2]
         );
 

@@ -25,7 +25,7 @@ final class PurchaseOrderMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: "Illuminations — Orden de Compra #{$this->orderId}");
+        return new Envelope(subject: "Atlantic — Orden de Compra #{$this->orderId}");
     }
 
     public function content(): Content

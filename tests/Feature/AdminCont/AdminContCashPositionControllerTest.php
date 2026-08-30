@@ -19,14 +19,14 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 18 (SCRUM-597→601, REQ-520→524) — ver ADR-SCRUM597-601-batch18-arqueo-caja.md. */
 class AdminContCashPositionControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL  = 'conta@illuminations.com.pa';
-    private const YANETH_EMAIL = 'asistente@illuminations.com.pa';
-    private const MARK_EMAIL   = 'mbekhar@illuminations.com.pa';
+    private const FELIX_EMAIL  = 'conta@atlantic.com.pa';
+    private const YANETH_EMAIL = 'asistente@atlantic.com.pa';
+    private const MARK_EMAIL   = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string
@@ -46,7 +46,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
@@ -113,7 +113,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $proxima  = AdminContInvoice::create(['numero' => 'F-9101', 'order_id' => 910100, 'cliente' => 'Cliente Próximo', 'monto' => 1000]);
         $atrasada = AdminContInvoice::create(['numero' => 'F-9102', 'order_id' => 910101, 'cliente' => 'Cliente Atrasado', 'monto' => 2000]);
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         // vence dentro de la ventana (recién creada, created_at=hoy → vencimiento en `diasCredito` días).
         DB::table("{$slug}_admin_contab.invoices")->where('id', $atrasada->id)
             ->update(['created_at' => now()->subDays($diasCredito + 20)]);

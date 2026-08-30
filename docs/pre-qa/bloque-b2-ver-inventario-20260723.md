@@ -7,8 +7,8 @@ pusheados al momento de esta pasada), `atlanticerp-frontend` rama `dev` (commits
 
 **Entorno de verificación:** stack Docker local (`infra-laravel-1`, `infra-postgres-1`,
 `infra-nginx-1` puerto 8090) + Vite dev server real (`localhost:5173`). Verificación de API con
-`curl` directo contra usuarios reales del roster (`almacen@illuminations.com.pa` = lider_bodega,
-`neil.quiel@illuminations.com.pa` = vendedor_disenador sin `bodega.read`) y verificación de UI con
+`curl` directo contra usuarios reales del roster (`almacen@atlantic.com.pa` = lider_bodega,
+`neil.quiel@atlantic.com.pa` = vendedor_disenador sin `bodega.read`) y verificación de UI con
 **Playwright real** (`e2e/preqa-scrum329-batchb2-ver-inventario.spec.ts`, 17 tests, headless
 Chromium) — el tooling de navegador interactivo (claude-in-chrome) no estaba disponible en esta
 sesión (permiso denegado por el harness), así que la corrida en navegador real se hizo con
@@ -46,11 +46,11 @@ No aplica: ningún criterio de este batch menciona una persona puntual con capac
 la lista de familias vía `ventasDisenoApi.catalogProductFamilies.list()` →
 `GET /ventas-diseno/catalog-product-families`, gateado con `permission:ventas_diseno.read`.
 **Ningún rol de Bodega tiene ese permiso** (confirmado con el JWT real de
-`almacen@illuminations.com.pa`: `ventas_diseno.view=false`). El backend ya construyó el endpoint
+`almacen@atlantic.com.pa`: `ventas_diseno.view=false`). El backend ya construyó el endpoint
 correcto para esto (`GET /bodega/inventory/families`, `bodega.read`,
 `BodegaInventoryController::families()`) pero el frontend nunca lo usó.
 
-**Cómo se reprodujo:** `curl` directo con el JWT de `almacen@illuminations.com.pa` contra
+**Cómo se reprodujo:** `curl` directo con el JWT de `almacen@atlantic.com.pa` contra
 `/api/ventas-diseno/catalog-product-families` → `403 {"message":"No tienes permiso..."}`. En
 Playwright real, clic en pestaña "Familias" → lista completamente vacía (`- list` sin items en el
 snapshot de accesibilidad), timeout esperando cualquier nombre de familia.
@@ -81,7 +81,7 @@ abrir el modal. `useConfirmPhysicalArrival` invalida correctamente la query de l
 mostrar la nota de espera, tal como exige RN2 ("una vez que Bodega confirma, el botón desaparece y
 aparece nota de espera").
 
-**Cómo se reprodujo:** Playwright real — login `almacen@illuminations.com.pa`, abrir detalle de
+**Cómo se reprodujo:** Playwright real — login `almacen@atlantic.com.pa`, abrir detalle de
 `LAMP-COL-001` (10u "por ingresar" reales, nunca reportadas), confirmar con cantidad exacta (10),
 esperar 1.5s, tomar captura (`e2e/.tmp/scrum427-04b-1500ms-after-click.png`, revisada visualmente):
 el modal seguía mostrando "Confirmar llegada física" — sin nota de espera, sin mensaje de éxito.
@@ -213,7 +213,7 @@ reactivarlo." (sin ningún botón), + campo "Familia (opcional)" con texto de ay
 - Confirmar llegada física: reparto FIFO correcto, rechazo 422 estructural si excede lo pendiente,
   idempotencia correcta (confirmar 2 veces la MISMA línea falla con mensaje claro), persiste
   correctamente tras recargar la página.
-- Rol sin `bodega.read` (`neil.quiel@illuminations.com.pa`, vendedor/diseñador): la ruta
+- Rol sin `bodega.read` (`neil.quiel@atlantic.com.pa`, vendedor/diseñador): la ruta
   `/bodega/inventario` no muestra la tabla real — bloqueado de verdad, no solo un botón escondido.
 
 ## Cómo correr esta suite de nuevo

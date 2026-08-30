@@ -37,8 +37,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $entregado = $this->makeOrder(['order_number' => 'PED-2026-991001', 'stage' => Order::STAGE_ENTREGADO, 'customer_name' => 'Cliente Uno']);
         $this->makeOrder(['order_number' => 'PED-2026-991002', 'stage' => Order::STAGE_ASIGNADO, 'customer_name' => 'Cliente Dos']);
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/returns/search-orders?q=991001');
         $response->assertStatus(200);
@@ -59,8 +59,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         // segundo ítem sin entregar (qty_delivered = 0) — no debe aparecer en la respuesta.
         $order->items()->create(['qty_requested' => 4, 'qty_delivered' => 0, 'reference_snapshot' => 'REF-DEV-2', 'description_snapshot' => 'No entregado']);
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/returns/search-orders?q=Cliente Búsqueda');
         $response->assertStatus(200);
@@ -79,8 +79,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         );
         $item = $order->items->first();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id'      => $order->id,
@@ -115,8 +115,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         );
         $item = $order->items->first();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id'      => $order->id,
@@ -144,8 +144,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $item = $order->items->first();
         $this->assertNull($item->unit_price);
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id'      => $order->id,
@@ -168,8 +168,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $order = $this->makeOrder(['stage' => Order::STAGE_ENTREGADO], ['qty_requested' => 10, 'qty_delivered' => 8]);
         $item = $order->items->first();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id'      => $order->id,
@@ -198,8 +198,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_ENTREGADO]);
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id'      => $order->id,
@@ -215,8 +215,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $order = $this->makeOrder(['stage' => Order::STAGE_ENTREGADO], ['qty_requested' => 10, 'qty_delivered' => 3]);
         $item = $order->items->first();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id'      => $order->id,
@@ -245,8 +245,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $order = $this->makeOrder(['stage' => Order::STAGE_ENTREGADO], ['qty_requested' => 10, 'qty_delivered' => 3]);
         $item = $order->items->first();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // primera devolución: pide 2 de las 3 entregadas — debe pasar.
         $first = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
@@ -296,8 +296,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $order = $this->makeOrder(['stage' => Order::STAGE_ENTREGADO], ['qty_requested' => 10, 'qty_delivered' => 3]);
         $item = $order->items->first();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $first = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id'      => $order->id,
@@ -329,8 +329,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $order = $this->makeOrder(['stage' => Order::STAGE_ENTREGADO], ['qty_requested' => 10, 'qty_delivered' => 8]);
         $item = $order->items->first();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id' => $order->id,
@@ -346,8 +346,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
     {
         $customerReturn = $this->makeCustomerReturn();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/returns/{$customerReturn->id}/signed-document", [
@@ -370,8 +370,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
     {
         $customerReturn = $this->makeCustomerReturn();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)
@@ -391,8 +391,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
     {
         $customerReturn = $this->makeCustomerReturn();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/returns/{$customerReturn->id}/signed-document")
@@ -405,8 +405,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $customerReturn = $this->makeCustomerReturn();
         $warehouse = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $line = $customerReturn->lines->first();
         $this->withHeaders($this->authHeaders($token))
@@ -433,8 +433,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $warehouse = Warehouse::where('name', 'Bodega Central')->first();
         $this->setStock($product, 2, 'Bodega Central');
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // carga el documento firmado primero (precondición).
         $this->withHeaders($this->authHeaders($token))
@@ -481,8 +481,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
 
         // Solo bodega.write, SIN bodega.approve ni ComprasSettings::mark_approver_user_id —
         // a diferencia de Reubicación/Ajuste, rechazar una devolución no exige a Mark.
-        $this->grantBodegaPermissions('designer@illuminations.test', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/returns/{$customerReturn->id}/reject", ['rejection_reason' => 'Cliente desistió']);
@@ -500,8 +500,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
     {
         $customerReturn = $this->makeCustomerReturn();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/returns/{$customerReturn->id}/reject", [])
@@ -515,8 +515,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $rejected = $this->makeCustomerReturn();
         $rejected->update(['status' => CustomerReturn::STATUS_RECHAZADA]);
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $all = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/returns');
         $all->assertJsonCount(2, 'data');
@@ -531,8 +531,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
     {
         $customerReturn = $this->makeCustomerReturn();
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/returns/{$customerReturn->id}");
 
@@ -549,9 +549,9 @@ class CustomerReturnControllerTest extends FeatureTestCase
      */
     public function test_index_y_show_exponen_el_proyecto_del_pedido_origen(): void
     {
-        $this->grantBodegaPermissions('designer@illuminations.test');
+        $this->grantBodegaPermissions('designer@atlantic.test');
         $order = $this->makeOrderWithPipelineCard(
-            ownerId: $this->userIdByEmail('designer@illuminations.test'),
+            ownerId: $this->userIdByEmail('designer@atlantic.test'),
             orderOverrides: ['stage' => Order::STAGE_ENTREGADO],
             itemOverrides: ['qty_requested' => 5, 'qty_delivered' => 5],
         );
@@ -564,14 +564,14 @@ class CustomerReturnControllerTest extends FeatureTestCase
             'status'        => CustomerReturn::STATUS_PENDIENTE,
             'contact_name'  => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'created_by'    => $this->userIdByEmail('designer@illuminations.test'),
+            'created_by'    => $this->userIdByEmail('designer@atlantic.test'),
         ]);
         $customerReturn->lines()->create([
             'order_item_id' => $item->id, 'reference_snapshot' => $item->reference_snapshot,
             'description_snapshot' => $item->description_snapshot, 'qty_requested' => 3, 'reason' => 'danado_defectuoso',
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $index = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/returns');
         $index->assertJsonPath('data.0.project', $project);
@@ -589,8 +589,8 @@ class CustomerReturnControllerTest extends FeatureTestCase
             ['qty_requested' => 5, 'qty_delivered' => 5, 'catalog_product_id' => $product->id],
         );
 
-        $this->grantBodegaPermissions('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/returns/search-orders?q=991020');
         $response->assertJsonPath('data.0.items.0.factory_reference', 'REF-FAB-DEV');
@@ -606,7 +606,7 @@ class CustomerReturnControllerTest extends FeatureTestCase
             ['qty_requested' => 10, 'qty_delivered' => 8, ...$itemOverrides],
         );
         $item = $order->items->first();
-        $creatorId = $this->userIdByEmail('management@illuminations.test');
+        $creatorId = $this->userIdByEmail('management@atlantic.test');
 
         $customerReturn = CustomerReturn::create([
             'return_number' => 'DEV-2026-'.random_int(1000, 999999),

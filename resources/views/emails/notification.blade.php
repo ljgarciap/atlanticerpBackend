@@ -18,13 +18,13 @@
 <body>
     <div class="card">
         <div class="logo">ATLANTICERP</div>
-        <div class="brand">ILLUMINATIONS</div>
+        <div class="brand">ATLANTIC</div>
         <h2>{{ $subject }}</h2>
         <div class="body-text">{{ $body }}</div>
         @if($ctaUrl)
             <a href="{{ $ctaUrl }}" class="btn">Ver en AtlanticERP</a>
         @endif
-        <div class="footer">AtlanticERP CRM · Illuminations · No respondas a este correo</div>
+        <div class="footer">AtlanticERP CRM · Atlantic · No respondas a este correo</div>
     </div>
 </body>
 </html>

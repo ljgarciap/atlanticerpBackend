@@ -7,7 +7,7 @@ ni del diff de implementación — probado como caja negra contra la app real, c
 (`QuotePartCard.tsx`/`CatalogPage.tsx`) solo consultado para ubicar selectores, no para sesgar el
 resultado. Verificación de datos vía `tinker` (solo lectura) para confirmar magnitudes/precios
 exactos al investigar hallazgos.
-Usuario usado: `designer@illuminations.test` (Vendedor/Diseñador real, `ventas_diseno.write`) — a
+Usuario usado: `designer@atlantic.test` (Vendedor/Diseñador real, `ventas_diseno.write`) — a
 propósito, no `management` (superadmin), para no enmascarar un problema de permisos.
 Datos de prueba: 3 cotizaciones borrador en blanco (`Designer Demo`, sin cliente) creadas para
 ejercitar el picker dentro de una cotización real — **borradas al final de la sesión** junto con

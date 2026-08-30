@@ -13,8 +13,8 @@ ese override real prueba el stack local, no dev; se detectó esto en el camino c
 usuario del DOM no coincidían con los reales de `dev.atlanticerp.ai`) + curl directo contra la API real
 con tokens de Felix/Mark/Milena (vendedora real) + SSH/tinker de solo lectura para inspeccionar
 datos reales y sembrar temporalmente un `compartido_con` de prueba (despoblado al terminar).
-Usuarios reales, nunca demo — Felix (`conta@illuminations.com.pa`), Mark
-(`mbekhar@illuminations.com.pa`), Milena (`milena.e@grupolafayette.com`, vendedora real).
+Usuarios reales, nunca demo — Felix (`conta@atlantic.com.pa`), Mark
+(`mbekhar@atlantic.com.pa`), Milena (`milena.e@grupolafayette.com`, vendedora real).
 
 ## SCRUM-580 (REQ-503) — Notas de crédito restan la base de comisión — LIMPIO
 

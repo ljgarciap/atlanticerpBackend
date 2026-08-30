@@ -18,12 +18,12 @@ class ReportsConfigControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantReportsConfigure(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read', 'ventas_diseno.reports.configure'])]);
@@ -31,7 +31,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     private function grantVentasDisenoRead(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
@@ -39,7 +39,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -47,8 +47,8 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_goals_sin_permiso_reports_configure_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/goals')
@@ -57,11 +57,11 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_listar_goals_incluye_todos_los_disenadores(): void
     {
-        $this->grantReportsConfigure('management@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantReportsConfigure('management@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         SalesGoal::create(['user_id' => $designerId, 'goal_amount' => 15000, 'goal_plus_amount' => 25000]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/goals')
             ->assertStatus(200);
@@ -79,8 +79,8 @@ class ReportsConfigControllerTest extends FeatureTestCase
         // (role='designer'), que los 9 vendedor_disenador reales (BusinessRoleUserSeeder, con
         // role_id nuevo, sin fila en user_roles) nunca tuvieron. La pantalla "Meta por vendedor"
         // los mostraba a cero — imposible editar su Meta desde la UI.
-        $this->grantReportsConfigure('management@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantReportsConfigure('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/goals')
@@ -92,9 +92,9 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_upsert_goal_crea_y_actualiza(): void
     {
-        $this->grantReportsConfigure('management@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantReportsConfigure('management@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/reports/goals/{$designerId}", ['goal_amount' => 10000])
@@ -106,7 +106,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
             ->assertStatus(200)
             ->assertJsonPath('goal_amount', 12000);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(1, SalesGoal::where('user_id', $designerId)->count());
     }
 
@@ -114,9 +114,9 @@ class ReportsConfigControllerTest extends FeatureTestCase
     {
         // Pre-QA 2026-07-16: sales_goals.goal_amount es decimal(12,2) -- sin el max:,
         // el valor llegaba intacto a Postgres y causaba 500 en vez de 422 (mismo patron SCRUM-81).
-        $this->grantReportsConfigure('management@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantReportsConfigure('management@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/reports/goals/{$designerId}", ['goal_amount' => 999999999999999])
@@ -126,9 +126,9 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_goal_amount_negativo_retorna_422(): void
     {
-        $this->grantReportsConfigure('management@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantReportsConfigure('management@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/reports/goals/{$designerId}", ['goal_amount' => -500])
@@ -140,8 +140,8 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_get_settings_es_legible_solo_con_ventas_diseno_read(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/settings')
@@ -155,8 +155,8 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_actualizar_settings_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/ventas-diseno/reports/settings', ['low_sales_threshold' => 30000])
@@ -165,8 +165,8 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_actualizar_settings_con_permiso(): void
     {
-        $this->grantReportsConfigure('management@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantReportsConfigure('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/ventas-diseno/reports/settings', ['low_sales_months' => 4])
@@ -174,7 +174,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
             ->assertJsonPath('low_sales_months', 4)
             ->assertJsonPath('low_sales_threshold', 20000);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(4, ReportSettings::current()->low_sales_months);
     }
 }

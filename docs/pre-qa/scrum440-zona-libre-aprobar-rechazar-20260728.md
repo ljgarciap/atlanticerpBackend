@@ -10,7 +10,7 @@ misma sesión, y quedó pendiente de este Pre-QA propio antes de pasar a QA.
 
 ## Paso 0 — permisos angostos
 `compras.zona-libre.approve`, `bodega.read`, `compras.settings.configure` ya están en
-`SpecialPermissionSeeder.php` para `gerencia2@illuminations.com.pa` (Yirena) — no es grant manual.
+`SpecialPermissionSeeder.php` para `gerencia2@atlantic.com.pa` (Yirena) — no es grant manual.
 No hay hallazgo.
 
 ## Criterios de aceptación

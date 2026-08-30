@@ -103,7 +103,7 @@ palabra por palabra en este batch — sin conflicto que reconciliar.
 - Las 4 verificadas en vivo contra `dev.atlanticerp.ai`.
 
 ### Genérico (Paso 3)
-- **Rol sin `bodega.read` por URL directa**: `designer@illuminations.test` (sin `bodega.read`)
+- **Rol sin `bodega.read` por URL directa**: `designer@atlantic.test` (sin `bodega.read`)
   navegando a `/bodega/reportes` es redirigido a `/dashboard` — bloquea de verdad (`RequirePermission`
   en `App.tsx`), no solo esconde el link del sidebar. Mismo gate confirmado a nivel API con
   `test_reportes_requieren_bodega_read` (403 en los 4 endpoints).

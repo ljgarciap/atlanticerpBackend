@@ -6,7 +6,7 @@
 subida, mismo tamaño 182521 bytes; SCRUM-416 attachment id 10891, SCRUM-420 attachment id 10900 —
 no hay versiones distintas, se usó una sola descarga como referencia).
 **Entorno:** Docker local (`http://localhost:8090` — nginx del proyecto AtlanticERP mapeado a 8090 en
-este host, puerto 80 ocupado por otro proyecto del workspace), usuario `management@illuminations.test`.
+este host, puerto 80 ocupado por otro proyecto del workspace), usuario `management@atlantic.test`.
 **Herramienta:** Playwright CLI (`atlanticerp-frontend/e2e/vr_scrum416_420.spec.ts`, script descartable,
 no se promueve a smoke test permanente — se borra al cerrar esta revisión).
 

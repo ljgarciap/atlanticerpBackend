@@ -15,7 +15,7 @@ class SecurityBlockedLoginTest extends FeatureTestCase
     /** Setea security_blocked_at directo en BD — requiere tenant activo, como el resto del modelo. */
     private function blockUser(string $email): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -29,10 +29,10 @@ class SecurityBlockedLoginTest extends FeatureTestCase
 
     public function test_usuario_bloqueado_por_seguridad_no_puede_hacer_login(): void
     {
-        $this->blockUser('designer@illuminations.test');
+        $this->blockUser('designer@atlantic.test');
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ])->assertStatus(401);
     }
@@ -40,7 +40,7 @@ class SecurityBlockedLoginTest extends FeatureTestCase
     public function test_usuario_activo_y_no_bloqueado_puede_hacer_login(): void
     {
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ])->assertStatus(200);
     }
@@ -48,12 +48,12 @@ class SecurityBlockedLoginTest extends FeatureTestCase
     public function test_refresh_token_falla_si_usuario_fue_bloqueado_despues_de_loguearse(): void
     {
         $login = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ]);
         $refreshToken = (string) $login->json('refresh_token');
 
-        $this->blockUser('designer@illuminations.test');
+        $this->blockUser('designer@atlantic.test');
 
         $this->postJson('/api/auth/refresh', ['refresh_token' => $refreshToken])
             ->assertStatus(401);

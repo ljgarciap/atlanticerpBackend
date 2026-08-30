@@ -21,32 +21,32 @@ class DemoCleanupControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
     public function test_deletes_orphan_quote_drafts_without_folio_or_items(): void
     {
-        $ownerId = $this->userIdByEmail('designer@illuminations.test');
+        $ownerId = $this->userIdByEmail('designer@atlantic.test');
 
         $orphan = Quote::create(['owner_id' => $ownerId]);
 
-        $token    = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/admin/demo/cleanup');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $response->assertOk();
         $response->assertJsonPath('deleted_quotes', 1);
         $this->assertNull(Quote::find($orphan->id));
-        // no real quote left referencing designer@illuminations.test — safe to delete too
-        $this->assertSame(0, $this->userIdByEmail('designer@illuminations.test'));
+        // no real quote left referencing designer@atlantic.test — safe to delete too
+        $this->assertSame(0, $this->userIdByEmail('designer@atlantic.test'));
     }
 
     /**
@@ -56,19 +56,19 @@ class DemoCleanupControllerTest extends FeatureTestCase
      */
     public function test_keeps_quotes_with_a_folio_and_their_owner(): void
     {
-        $ownerId = $this->userIdByEmail('designer@illuminations.test');
+        $ownerId = $this->userIdByEmail('designer@atlantic.test');
 
         $generated = Quote::create(['owner_id' => $ownerId, 'folio' => 'COT-2026-TEST1']);
 
-        $token    = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/admin/demo/cleanup');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $response->assertOk();
         $response->assertJsonPath('deleted_quotes', 0);
         $this->assertNotNull(Quote::find($generated->id));
-        $this->assertSame($ownerId, $this->userIdByEmail('designer@illuminations.test'));
+        $this->assertSame($ownerId, $this->userIdByEmail('designer@atlantic.test'));
     }
 
     /**
@@ -83,9 +83,9 @@ class DemoCleanupControllerTest extends FeatureTestCase
      */
     public function test_deletes_rows_owned_by_a_demo_user_in_tables_added_after_the_hardcoded_list(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
-        $assistantId = $this->userIdByEmail('electrician@illuminations.test');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
+        $assistantId = $this->userIdByEmail('electrician@atlantic.test');
 
         $mappingId = DB::table("{$slug}_bodega.warehouse_assistant_mapping")->insertGetId([
             'seller_user_id'    => $sellerId,
@@ -95,20 +95,20 @@ class DemoCleanupControllerTest extends FeatureTestCase
             'updated_at'        => now(),
         ]);
 
-        $token    = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/admin/demo/cleanup');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $response->assertOk();
         $this->assertNull(DB::table("{$slug}_bodega.warehouse_assistant_mapping")->find($mappingId));
-        $this->assertSame(0, $this->userIdByEmail('designer@illuminations.test'));
-        $this->assertSame(0, $this->userIdByEmail('electrician@illuminations.test'));
+        $this->assertSame(0, $this->userIdByEmail('designer@atlantic.test'));
+        $this->assertSame(0, $this->userIdByEmail('electrician@atlantic.test'));
     }
 
     public function test_keeps_folioless_drafts_that_have_a_real_item_and_their_owner(): void
     {
-        $ownerId = $this->userIdByEmail('designer@illuminations.test');
+        $ownerId = $this->userIdByEmail('designer@atlantic.test');
 
         $inProgress = Quote::create(['owner_id' => $ownerId]);
         $part       = QuotePart::create(['quote_id' => $inProgress->id, 'name' => 'Partida 1', 'position' => 1]);
@@ -121,14 +121,14 @@ class DemoCleanupControllerTest extends FeatureTestCase
             'unit_price'    => 100,
         ]);
 
-        $token    = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/admin/demo/cleanup');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $response->assertOk();
         $response->assertJsonPath('deleted_quotes', 0);
         $this->assertNotNull(Quote::find($inProgress->id));
-        $this->assertSame($ownerId, $this->userIdByEmail('designer@illuminations.test'));
+        $this->assertSame($ownerId, $this->userIdByEmail('designer@atlantic.test'));
     }
 }

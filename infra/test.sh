@@ -49,8 +49,8 @@ done < "$ENV_TESTING"
 #
 # `RefreshDatabase` (usado por FeatureTestCase) solo hace `migrate:fresh` sobre
 # la conexión por defecto (`pgsql`, search_path=public) — ahí vive la tabla
-# landlord `tenants`. Los schemas de tenant reales (illuminations_auth,
-# illuminations_crm, etc.) los crea `TenantSeeder` → `tenant:create` →
+# landlord `tenants`. Los schemas de tenant reales (atlantic_auth,
+# atlantic_crm, etc.) los crea `TenantSeeder` → `tenant:create` →
 # `CREATE SCHEMA IF NOT EXISTS` + migrate del path `database/migrations/tenant`,
 # y ESO nunca se dropea entre corridas: el Postgres de este compose es el mismo
 # que usa el desarrollo local real, persistente entre corridas de test.

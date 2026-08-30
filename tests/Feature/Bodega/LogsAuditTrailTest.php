@@ -22,12 +22,12 @@ class LogsAuditTrailTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function actingForAudit(): void
     {
-        $user    = User::where('email', 'daniela@illuminations.com.pa')->firstOrFail();
+        $user    = User::where('email', 'daniela@atlantic.com.pa')->firstOrFail();
         $request = Request::create('/');
         $request->attributes->set('jwt', ['sub' => $user->id]);
         $this->app->instance('request', $request);
@@ -38,7 +38,7 @@ class LogsAuditTrailTest extends FeatureTestCase
         $this->actingForAudit();
         $warehouse = Warehouse::create(['name' => 'Bodega de prueba — audit trail']);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'bodega.warehouse.created')
             ->where('entity_id', (string) $warehouse->id)
             ->first();
@@ -55,7 +55,7 @@ class LogsAuditTrailTest extends FeatureTestCase
         $this->actingForAudit();
         $warehouse->update(['responsable' => 'Nuevo responsable']);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'bodega.warehouse.updated')
             ->where('entity_id', (string) $warehouse->id)
             ->first();

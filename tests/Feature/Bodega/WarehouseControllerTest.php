@@ -20,18 +20,18 @@ class WarehouseControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** El cliente HTTP de test resetea el tenant "actual" al final de cada request. */
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantBodega(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['bodega.read', 'bodega.write'])]);
@@ -55,8 +55,8 @@ class WarehouseControllerTest extends FeatureTestCase
      */
     public function test_index_lista_las_8_bodegas_fisicas(): void
     {
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/warehouses');
 
@@ -68,7 +68,7 @@ class WarehouseControllerTest extends FeatureTestCase
 
     public function test_index_sin_permiso_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/warehouses')
             ->assertStatus(403);
     }
@@ -84,8 +84,8 @@ class WarehouseControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $otherProduct->id, 'warehouse_id' => $central->id, 'ubicacion' => 'A-1-04', 'quantity' => 0]);
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $merma->id, 'ubicacion' => 'M-1-01', 'quantity' => 2]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$central->id}");
 
@@ -114,8 +114,8 @@ class WarehouseControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'ubicacion' => 'A-1-03', 'quantity' => 20]);
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $merma->id, 'ubicacion' => 'M-1-01', 'quantity' => 10]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $fromCentral = $this->withHeaders($headers)->getJson("/api/bodega/warehouses/{$central->id}")->json('data.0');
@@ -134,8 +134,8 @@ class WarehouseControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $zonaLibre->id, 'ubicacion' => null, 'quantity' => 5]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$zonaLibre->id}");
 
@@ -153,8 +153,8 @@ class WarehouseControllerTest extends FeatureTestCase
             'cliente_id' => $cliente->id, 'quantity' => 1,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$showroomCliente->id}");
 
@@ -167,8 +167,8 @@ class WarehouseControllerTest extends FeatureTestCase
     {
         $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$zonaLibre->id}");
 
@@ -187,8 +187,8 @@ class WarehouseControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $matching->id, 'warehouse_id' => $central->id, 'ubicacion' => 'A-1-03', 'quantity' => 5]);
         ProductWarehouseStock::create(['catalog_product_id' => $other->id, 'warehouse_id' => $central->id, 'ubicacion' => 'A-1-04', 'quantity' => 5]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/warehouses/{$central->id}?categoria={$family->id}");
@@ -206,8 +206,8 @@ class WarehouseControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $productA->id, 'warehouse_id' => $central->id, 'ubicacion' => 'A-1-03', 'quantity' => 5]);
         ProductWarehouseStock::create(['catalog_product_id' => $productB->id, 'warehouse_id' => $central->id, 'ubicacion' => 'B-2-01', 'quantity' => 5]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/warehouses/{$central->id}?ubicacion=A-1-03");
@@ -233,8 +233,8 @@ class WarehouseControllerTest extends FeatureTestCase
         // A-1-02 está ocupada (quantity > 0) -> no debe aparecer como libre.
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'ubicacion' => 'A-1-02', 'quantity' => 5]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/warehouses/{$central->id}?chip=espacio_libre");
@@ -252,8 +252,8 @@ class WarehouseControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         WarehouseLocation::create(['warehouse_id' => $central->id, 'codigo' => 'A-1-01', 'is_active' => false]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/warehouses/{$central->id}?chip=espacio_libre");
@@ -268,8 +268,8 @@ class WarehouseControllerTest extends FeatureTestCase
         $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
         WarehouseLocation::create(['warehouse_id' => $zonaLibre->id, 'codigo' => 'X-1', 'is_active' => true]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/warehouses/{$zonaLibre->id}?chip=espacio_libre");
@@ -281,8 +281,8 @@ class WarehouseControllerTest extends FeatureTestCase
 
     public function test_show_bodega_inexistente_retorna_404(): void
     {
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/warehouses/9999')
             ->assertStatus(404);
@@ -306,8 +306,8 @@ class WarehouseControllerTest extends FeatureTestCase
             ]);
         }
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/warehouses/{$central->id}?per_page=10&page=1");
@@ -333,8 +333,8 @@ class WarehouseControllerTest extends FeatureTestCase
             WarehouseLocation::create(['warehouse_id' => $central->id, 'codigo' => 'A-1-'.str_pad((string) $i, 2, '0', STR_PAD_LEFT), 'is_active' => true]);
         }
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/warehouses/{$central->id}?chip=espacio_libre&per_page=10&page=1");

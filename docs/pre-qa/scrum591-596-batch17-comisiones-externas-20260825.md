@@ -3,8 +3,8 @@
 Despacho consolidado (Visual Reviewer + Pre-QA fusionados en un solo pase, mismo criterio ya
 formalizado 2026-08-15). Verificación en vivo contra `dev.atlanticerp.ai` recién desplegado — no local,
 para probar el flujo real de extremo a extremo (backend + frontend + Postgres real). Usuarios
-reales: `mbekhar@illuminations.com.pa` (Mark Approver real, contraseña real distinta del default
-email) y `conta@illuminations.com.pa` (Felix, lider_admin_contab, password = email). Playwright CLI
+reales: `mbekhar@atlantic.com.pa` (Mark Approver real, contraseña real distinta del default
+email) y `conta@atlantic.com.pa` (Felix, lider_admin_contab, password = email). Playwright CLI
 (`atlanticerp-frontend/e2e/preqa-batch17-scrum591-596-20260825.spec.ts`, spec permanente).
 
 ## Resumen de veredicto

@@ -12,7 +12,7 @@ aprobación explícita de Luis. Gate real ya corrido y verificado en
 ## 0. Ambiente de prueba
 
 Local (`localhost:5173` vía Vite dev, proxy a `localhost:8090`), sesión real con Felix
-(`conta@illuminations.com.pa`, `lider_admin_contab`) y con `designer@illuminations.test` para el
+(`conta@atlantic.com.pa`, `lider_admin_contab`) y con `designer@atlantic.test` para el
 chequeo negativo de permisos. Sin sembrar fixtures nuevos — el roster real de 40 usuarios y el
 catálogo de 3 tasas de ITBMS (Configuración Fiscal) ya estaban en la BD local. `credit_notes` queda
 vacía a propósito (nada escribe todavía, es Batch 11) — verificado que el estado vacío se ve
@@ -69,7 +69,7 @@ mercancía" nunca es alcanzable desde el flujo manual (punto 1).
 
 ## 7. Permisos (Matriz de Permisos por Rol del cliente)
 
-`designer@illuminations.test` (Vendedor/Diseñador) **no ve la pantalla** y los 2 endpoints de
+`designer@atlantic.test` (Vendedor/Diseñador) **no ve la pantalla** y los 2 endpoints de
 lectura devuelven `403` — verificado por HTTP directo, no solo por ausencia de link en el sidebar.
 Screenshot: `04-designer-sin-acceso.png`.
 

@@ -37,7 +37,7 @@ return new class extends TenantSchemaMigration
             $table->id();
             // Senior Review 2026-07-13, sugerencia #1 — nombradas explícitas: el
             // nombre autogenerado por Laravel incluye el schema calificado
-            // ("illuminations_ventas_diseno_catalog_product_family_items_family_id_
+            // ("atlantic_ventas_diseno_catalog_product_family_items_family_id_
             // foreign"), supera los 63 bytes de Postgres y trunca en silencio (ver
             // memory/feedback_tenant_migration_constraint_name_truncation.md).
             $table->foreignId('family_id')

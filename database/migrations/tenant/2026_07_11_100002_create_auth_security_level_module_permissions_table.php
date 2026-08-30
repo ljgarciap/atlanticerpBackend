@@ -23,7 +23,7 @@ return new class extends TenantSchemaMigration
         Schema::create($this->table('security_level_module_permissions'), function (Blueprint $table): void {
             $table->id();
             // Nombres de constraint explícitos y cortos: el nombre autogenerado por Laravel se
-            // deriva del nombre de tabla completo con schema ("illuminations_auth.security_level_
+            // deriva del nombre de tabla completo con schema ("atlantic_auth.security_level_
             // module_permissions"), que para esta tabla es lo bastante largo como para que el FK
             // ("..._security_level_id_foreign") y el UNIQUE ("..._security_level_id_module_unique")
             // trunquen al mismo string de 63 bytes (NAMEDATALEN de Postgres) y colisionen.

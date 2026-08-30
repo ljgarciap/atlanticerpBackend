@@ -18,7 +18,7 @@ firmada-sin firmar/contacto y dirección poblados/ETA de proveedor. Suite promov
 Los 16 tickets corren detrás de `permission:bodega.read` (lectura, todo el batch es solo-lectura).
 No hay `extra_permissions` angostos involucrados — es permiso de rol (`bodega.view`/`bodega.read`),
 ya concedido de verdad vía `RoleBackfillSeeder`/roster real (`CoreUserSeeder`), confirmado con login
-real de Esteban (`lider_bodega`, `almacen@illuminations.com.pa`) trayendo `bodega.view/read/view_team/edit`
+real de Esteban (`lider_bodega`, `almacen@atlantic.com.pa`) trayendo `bodega.view/read/view_team/edit`
 en el JWT. Nada que agregar a `SpecialPermissionSeeder`.
 
 ## Veredicto global: 🔴 Rebota — 1 hallazgo CRÍTICO real en SCRUM-400, resto limpio

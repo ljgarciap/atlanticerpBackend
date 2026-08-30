@@ -20,16 +20,16 @@ use Tests\Feature\FeatureTestCase;
  */
 class TicketBatch3Part2Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
 
     private const VENDEDOR_DISENADOR = 'milena.e@grupolafayette.com';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** @return array{master: MasterClient, sub: SubClient, project: SalesProject} */
@@ -56,7 +56,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_crear_ticket_con_requerimientos_y_productos(): void
     {
         $hierarchy = $this->makeClientHierarchy();
-        $product   = $this->makeCatalogProduct('LUM-COL-014', 'Colgante LED', 'Illuminations');
+        $product   = $this->makeCatalogProduct('LUM-COL-014', 'Colgante LED', 'Atlantic');
         $token     = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))

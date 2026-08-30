@@ -104,7 +104,7 @@ vía REQ-184).
 
 **Diferencia clave de superficie de confianza respecto a SCRUM-211:** ahí el documento binario
 venía de un tercero externo (el proveedor) — acá, de los ~26 content blocks que entran a una
-llamada, 25 son fotos del catálogo propio de Illuminations (`catalog_products.photo_url`, subidas
+llamada, 25 son fotos del catálogo propio de Atlantic (`catalog_products.photo_url`, subidas
 por personal interno vía Catálogo) y solo **1** es la foto/ficha que Yirena sube en el momento.
 El universo de "contenido no confiable" es más chico que en SCRUM-211, no inexistente — sigue
 siendo razonable tratarlo igual (defensa en profundidad, más barato que mantener 2 prompts

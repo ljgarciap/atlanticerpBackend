@@ -25,7 +25,7 @@ final class ProductoStagingLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_load_stagea_productos_precios_y_costos(): void
@@ -35,7 +35,7 @@ final class ProductoStagingLoaderTest extends FeatureTestCase
         $counts = $loader->load(self::sampleExtraction());
 
         $this->assertSame(['productos' => 1, 'precios' => 2, 'costos' => 2], $counts);
-        $this->assertDatabaseHas('illuminations_legacy.productos', ['icg_codarticulo' => 1001, 'descripcion' => 'Lámpara LED']);
+        $this->assertDatabaseHas('atlantic_legacy.productos', ['icg_codarticulo' => 1001, 'descripcion' => 'Lámpara LED']);
         $this->assertSame(2, ProductoPrecio::query()->where('icg_codarticulo', 1001)->count());
         $this->assertSame(2, ProductoCosto::query()->where('icg_codarticulo', 1001)->count());
     }
@@ -116,8 +116,8 @@ final class ProductoStagingLoaderTest extends FeatureTestCase
         $this->assertSame(['productos' => 600, 'precios' => 600, 'costos' => 0], $counts);
         $this->assertSame(600, Producto::query()->count());
         $this->assertSame(600, ProductoPrecio::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.productos', ['icg_codarticulo' => 1, 'descripcion' => 'Producto 1']);
-        $this->assertDatabaseHas('illuminations_legacy.productos', ['icg_codarticulo' => 600, 'descripcion' => 'Producto 600']);
+        $this->assertDatabaseHas('atlantic_legacy.productos', ['icg_codarticulo' => 1, 'descripcion' => 'Producto 1']);
+        $this->assertDatabaseHas('atlantic_legacy.productos', ['icg_codarticulo' => 600, 'descripcion' => 'Producto 600']);
     }
 
     private static function sampleExtraction(): ExtractedProductos

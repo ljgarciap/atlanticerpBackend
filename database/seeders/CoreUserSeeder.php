@@ -17,22 +17,22 @@ class CoreUserSeeder extends Seeder
      */
     private const USERS = [
         // Owners / Super Admins — level 10
-        ['first_name' => 'Andres',   'last_name' => 'Loi',      'email' => 'andres.loi@illuminations.com.pa', 'roles' => ['superadmin'], 'level' => 10],
-        ['first_name' => 'Luis',     'last_name' => 'Garcia',   'email' => 'luis.garcia@illuminations.com.pa','roles' => ['superadmin'], 'level' => 10],
+        ['first_name' => 'Andres',   'last_name' => 'Loi',      'email' => 'andres.loi@atlantic.com.pa', 'roles' => ['superadmin'], 'level' => 10],
+        ['first_name' => 'Luis',     'last_name' => 'Garcia',   'email' => 'luis.garcia@atlantic.com.pa','roles' => ['superadmin'], 'level' => 10],
         ['first_name' => 'Luis J',   'last_name' => 'Garcia P', 'email' => 'lujogarpin78@gmail.com',          'roles' => ['superadmin'], 'level' => 10],
         // Managers — level 9
-        ['first_name' => 'Daniela',  'last_name' => 'Amaya',    'email' => 'daniela@illuminations.com.pa',    'roles' => ['management'], 'level' => 9],
+        ['first_name' => 'Daniela',  'last_name' => 'Amaya',    'email' => 'daniela@atlantic.com.pa',    'roles' => ['management'], 'level' => 9],
         ['first_name' => 'David',    'last_name' => 'Bresler',  'email' => 'david@grupolafayette.com',        'roles' => ['management'], 'level' => 9],
-        ['first_name' => 'Mark',     'last_name' => 'Bekhar',   'email' => 'mbekhar@illuminations.com.pa',    'roles' => ['management'], 'level' => 9],
-        ['first_name' => 'Marly',    'last_name' => 'Rangel',   'email' => 'marly.rangel@illuminations.com.pa','roles' => ['management'], 'level' => 9],
+        ['first_name' => 'Mark',     'last_name' => 'Bekhar',   'email' => 'mbekhar@atlantic.com.pa',    'roles' => ['management'], 'level' => 9],
+        ['first_name' => 'Marly',    'last_name' => 'Rangel',   'email' => 'marly.rangel@atlantic.com.pa','roles' => ['management'], 'level' => 9],
     ];
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command->warn('Tenant "illuminations" not found — CoreUserSeeder skipped.');
+            $this->command->warn('Tenant "atlantic" not found — CoreUserSeeder skipped.');
             return;
         }
 

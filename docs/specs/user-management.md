@@ -161,8 +161,8 @@ Un actor en **Nivel N** solo puede crear o actualizar usuarios en **Niveles 1..N
 ```json
 {
   "sub": 1,
-  "tenant": "illuminations",
-  "email": "user@illuminations.test",
+  "tenant": "atlantic",
+  "email": "user@atlantic.test",
   "role": "management",
   "roles": ["management", "designer"],
   "permissions": ["crm.read", "crm.write", "security.users"],
@@ -231,7 +231,7 @@ POST /api/auth/login  { email, password }
 {
   "first_name": "Juan",
   "last_name": "García",
-  "email": "juan@illuminations.test",
+  "email": "juan@atlantic.test",
   "phone": "+507 6000-0000",
   "roles": ["designer"],
   "department_id": 2,
@@ -250,7 +250,7 @@ POST /api/auth/login  { email, password }
   "id": 5,
   "first_name": "Juan",
   "last_name": "García",
-  "email": "juan@illuminations.test",
+  "email": "juan@atlantic.test",
   "phone": null,
   "is_active": true,
   "notes": null,
@@ -314,7 +314,7 @@ El payload omite `extra_permissions` si el actor no es superadmin (gate doble: U
 ## Acceptance criteria (QA aprobado 2026-06-20)
 
 ### Backend
-- [x] Columna `extra_permissions jsonb NOT NULL DEFAULT '[]'` en `illuminations_auth.users`
+- [x] Columna `extra_permissions jsonb NOT NULL DEFAULT '[]'` en `atlantic_auth.users`
 - [x] 10 security levels con vocabulario de 11 permisos module-scoped
 - [x] `permission_groups` y `permission_group_id` eliminados de BD y codebase
 - [x] `effectivePermissions()` = union deduplicada de `level.permissions` + `extra_permissions`

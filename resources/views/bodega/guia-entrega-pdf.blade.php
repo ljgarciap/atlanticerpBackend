@@ -5,7 +5,7 @@
 <style>
     {{-- Lote 4 (SCRUM-395, rebote 2026-08-16) — rediseño contra mockup: mismo patrón visual ya
          validado con el cliente en `estatus-pedido-pdf.blade.php` (SCRUM-411/REQ-341) — ícono +
-         ILLUMINATIONS + "Powered by AtlanticERP", título grande, datos generales en 2 columnas por
+         ATLANTIC + "Powered by AtlanticERP", título grande, datos generales en 2 columnas por
          posición absoluta, pie de página institucional. Agrega sección "Datos de entrega" (RN1:
          nunca precios, ya respetado abajo) para firma física al imprimir — no existía antes. --}}
 
@@ -33,7 +33,7 @@
 
     .doc-header { position: fixed; top: -55px; left: 0; right: 0; height: 34px; }
 
-    /* Marca (ícono + ILLUMINATIONS + Powered by AtlanticERP) — igual a estatus-pedido-pdf.blade.php */
+    /* Marca (ícono + ATLANTIC + Powered by AtlanticERP) — igual a estatus-pedido-pdf.blade.php */
     .brand-row { position: relative; height: 30px; margin-bottom: 4px; }
     .brand-icon { position: absolute; left: 0; top: 2px; width: 22px; height: 22px; }
     .brand-icon span { position: absolute; width: 14px; height: 14px; border-radius: 50%; opacity: 0.85; }
@@ -88,7 +88,7 @@
                 <span class="c1"></span><span class="c2"></span><span class="c3"></span>
             </div>
             <div class="brand-text">
-                <div class="brand-name">ILLUMINATIONS</div>
+                <div class="brand-name">ATLANTIC</div>
                 <div class="brand-sub">Powered by AtlanticERP</div>
             </div>
         </div>
@@ -160,7 +160,7 @@
     <script type="text/php">
         if (isset($pdf)) {
             $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $footerText = "Illuminations · Panamá · Powered by AtlanticERP";
+            $footerText = "Atlantic · Panamá · Powered by AtlanticERP";
             $w = $fontMetrics->getTextWidth($footerText, $font, 8.5);
             $pdf->page_text((612 - $w) / 2, 770, $footerText, $font, 8.5, array(0.61, 0.64, 0.69));
         }

@@ -20,10 +20,10 @@ class DepartmentSeeder extends Seeder
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command->warn('Tenant "illuminations" not found — DepartmentSeeder skipped.');
+            $this->command->warn('Tenant "atlantic" not found — DepartmentSeeder skipped.');
             return;
         }
 

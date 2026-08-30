@@ -19,9 +19,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class InternalTechnicianBatch6Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
 
     // 2026-08-10 15:00:00 UTC == 2026-08-10 10:00:00 America/Panama (UTC-5).
     private const FROZEN_NOW = '2026-08-10 15:00:00';
@@ -29,7 +29,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Carbon::setTestNow(Carbon::parse(self::FROZEN_NOW, 'UTC'));
     }
 
@@ -223,7 +223,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
 
         // loginAs() ya disparó una request HTTP real, que limpia el search_path que setUp() dejó
         // activo (mismo gotcha documentado en TicketBatch4Test/ExternalTechnicianBatch5Test).
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $id = InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail()->id;
 
         $this->withHeaders($this->authHeaders($token))
@@ -360,7 +360,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             ])->assertStatus(201);
 
         // Miguel Castillo (seed real) ya tiene ámbar — el nuevo NO debe recibir el mismo color.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertNotSame(
             InternalTechnician::where('nombre', 'Miguel Castillo')->firstOrFail()->color,
             $r1->json('color'),

@@ -23,23 +23,23 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantBodega(string $email, array $perms = ['bodega.read', 'bodega.write']): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($perms)]);
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($perms)]);
     }
 
@@ -65,8 +65,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_provider_devuelve_id_y_nombre_del_proveedor_configurado(): void
     {
         $providerId = ComprasSettings::current()->zona_libre_provider_id;
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/zona-libre/provider');
 
@@ -77,7 +77,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
 
     public function test_provider_sin_permiso_bodega_read_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/zona-libre/provider')
@@ -87,8 +87,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_store_crea_solicitud_con_folio_consecutivo_y_status_pendiente(): void
     {
         $product = $this->makeZonaLibreProduct();
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/zona-libre/requests', [
             'lines' => [['catalog_product_id' => $product->id, 'quantity' => 3]],
@@ -103,8 +103,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
 
     public function test_store_con_cero_lineas_retorna_422(): void
     {
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/zona-libre/requests', ['lines' => []])
@@ -114,8 +114,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_store_con_cantidad_cero_retorna_422(): void
     {
         $product = $this->makeZonaLibreProduct();
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/zona-libre/requests', [
@@ -133,8 +133,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
             'price_full' => 50, 'cost' => 30, 'provider_id' => $otherProvider->id, 'is_active' => true,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/zona-libre/requests', [
@@ -146,8 +146,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_folio_es_consecutivo_entre_dos_solicitudes(): void
     {
         $product = $this->makeZonaLibreProduct();
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $first = $this->withHeaders($headers)->postJson('/api/bodega/zona-libre/requests', [
@@ -167,8 +167,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
         $rejected = BodegaZonaLibreRequest::create(['order_number' => 2, 'status' => BodegaZonaLibreRequest::STATUS_RECHAZADA, 'rejection_reason' => 'No aplica']);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/zona-libre/requests?status=rechazada');
@@ -187,8 +187,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         ]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}");
@@ -202,8 +202,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     {
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}/remind");
@@ -213,7 +213,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $this->reMakeCurrent();
         $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ZONA_LIBRE_REMINDER)->first();
         $this->assertNotNull($send);
-        $yirenaId = (int) DB::table('illuminations_auth.users')->where('email', 'gerencia2@illuminations.com.pa')->value('id');
+        $yirenaId = (int) DB::table('atlantic_auth.users')->where('email', 'gerencia2@atlantic.com.pa')->value('id');
         $this->assertContains($yirenaId, $send->audience);
     }
 
@@ -221,8 +221,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     {
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_APROBADA]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}/remind")
@@ -232,8 +232,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_store_sin_permiso_write_retorna_403(): void
     {
         $product = $this->makeZonaLibreProduct();
-        $this->grantBodega('designer@illuminations.test', ['bodega.read']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test', ['bodega.read']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/zona-libre/requests', [
@@ -251,8 +251,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_bodega_puede_buscar_productos_del_proveedor_zona_libre(): void
     {
         $product = $this->makeZonaLibreProduct();
-        $this->grantBodega('designer@illuminations.test', ['bodega.read']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test', ['bodega.read']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/products?provider_id='.$product->provider_id);
@@ -266,8 +266,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_compras_no_puede_crear_via_endpoint_de_bodega(): void
     {
         $product = $this->makeZonaLibreProduct();
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/bodega/zona-libre/requests', [
@@ -285,8 +285,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        // almacen@illuminations.com.pa = Esteban Cardenas, role_key lider_bodega real (BusinessRoleUserSeeder).
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        // almacen@atlantic.com.pa = Esteban Cardenas, role_key lider_bodega real (BusinessRoleUserSeeder).
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -307,10 +307,10 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        // gerencia2@illuminations.com.pa = Yirena Teng, ya tiene compras.zona-libre.approve real
+        // gerencia2@atlantic.com.pa = Yirena Teng, ya tiene compras.zona-libre.approve real
         // (SpecialPermissionSeeder) — sin bodega.write, así que el gate amplio de la ruta también
         // se ejercita acá (permission:bodega.write,compras.zona-libre.approve).
-        $token = $this->loginAs('gerencia2@illuminations.com.pa', 'gerencia2@illuminations.com.pa', 'lider_compras');
+        $token = $this->loginAs('gerencia2@atlantic.com.pa', 'gerencia2@atlantic.com.pa', 'lider_compras');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -327,8 +327,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -343,7 +343,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_APROBADA]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -360,7 +360,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         ]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -381,7 +381,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
             'price_full' => 50, 'cost' => 30, 'provider_id' => $otherProvider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [

@@ -14,17 +14,17 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 20 de Admin&Cont (SCRUM-612→617, REQ-535→540) — Caja Chica. */
 class AdminContPettyCashControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'conta@illuminations.com.pa';
+    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
 
-    private const YANETH_EMAIL = 'asistente@illuminations.com.pa';
+    private const YANETH_EMAIL = 'asistente@atlantic.com.pa';
 
     /** Mismo email real que `AdminContCreditNoteControllerTest`/`AdminContInvoiceControllerTest`. */
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
     }
 
@@ -45,7 +45,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
@@ -55,7 +55,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
      *  `Tenant::current()` puede perderse entre el request simulado y el resto del test. */
     private function tableFqn(string $table): string
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return "{$slug}_admin_contab.{$table}";
     }

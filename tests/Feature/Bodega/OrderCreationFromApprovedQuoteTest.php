@@ -34,18 +34,18 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** @param list<string> $extra */
     private function grantVentasDisenoEdit(string $email, array $extra = []): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $permissions = array_merge(['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit'], $extra);
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
@@ -54,7 +54,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -113,9 +113,9 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
 
     public function test_aprobar_cotizacion_crea_pedido_en_bodega_asignado_al_asistente_correcto(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
-        $assistantId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
+        $assistantId = $this->userIdByEmail('management@atlantic.test');
 
         WarehouseAssistantMapping::create([
             'seller_user_id' => $sellerId, 'assistant_user_id' => $assistantId, 'is_active' => true,
@@ -124,7 +124,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
         $card = $this->makeCardInProposal($sellerId);
         $this->makeGeneratedQuoteForCard($card);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'approved'])
@@ -170,9 +170,9 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
      */
     public function test_unit_price_del_pedido_refleja_tipo_de_precio_y_descuento_de_la_cotizacion(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
-        $assistantId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
+        $assistantId = $this->userIdByEmail('management@atlantic.test');
         WarehouseAssistantMapping::create([
             'seller_user_id' => $sellerId, 'assistant_user_id' => $assistantId, 'is_active' => true,
         ]);
@@ -197,7 +197,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
             'quantity' => 1, 'unit_price' => 250, 'cost' => 150,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'approved'])
             ->assertStatus(200);
@@ -218,15 +218,15 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
      */
     public function test_aprobar_cotizacion_sin_mapeo_de_asistente_crea_pedido_sin_asignar_y_notifica_al_jefe_de_bodega(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
-        $bodegaLeadId = $this->userIdByEmail('almacen@illuminations.com.pa');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
+        $bodegaLeadId = $this->userIdByEmail('almacen@atlantic.com.pa');
 
         // Sin WarehouseAssistantMapping activo para este vendedor.
         $card = $this->makeCardInProposal($sellerId);
         $this->makeGeneratedQuoteForCard($card);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // El cambio de etapa en Pipeline debe seguir funcionando aunque Bodega no pueda asignar
         // asistente — REQ-308 es un efecto secundario, no debe bloquear la aprobación real.
@@ -258,9 +258,9 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
 
     public function test_no_dispara_creacion_de_pedido_en_transicion_que_no_es_hacia_aprobado(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
-        $assistantId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
+        $assistantId = $this->userIdByEmail('management@atlantic.test');
 
         WarehouseAssistantMapping::create([
             'seller_user_id' => $sellerId, 'assistant_user_id' => $assistantId, 'is_active' => true,
@@ -282,7 +282,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
             'size_bytes' => 100, 'mime_type' => 'application/pdf', 'uploaded_by' => $sellerId,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'proposal'])
@@ -305,9 +305,9 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
     {
         // ventas_diseno.edit.approved: PipelineCard::RESTRICTED_EDIT_PERMISSION — necesario para
         // la segunda llamada, que ocurre con la tarjeta ya en etapa "approved".
-        $this->grantVentasDisenoEdit('designer@illuminations.test', ['ventas_diseno.edit.approved']);
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
-        $assistantId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test', ['ventas_diseno.edit.approved']);
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
+        $assistantId = $this->userIdByEmail('management@atlantic.test');
 
         WarehouseAssistantMapping::create([
             'seller_user_id' => $sellerId, 'assistant_user_id' => $assistantId, 'is_active' => true,
@@ -316,7 +316,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
         $card = $this->makeCardInProposal($sellerId);
         $this->makeGeneratedQuoteForCard($card);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)
@@ -349,9 +349,9 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
     {
         Log::spy();
 
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
-        $assistantId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
+        $assistantId = $this->userIdByEmail('management@atlantic.test');
 
         WarehouseAssistantMapping::create([
             'seller_user_id' => $sellerId, 'assistant_user_id' => $assistantId, 'is_active' => true,
@@ -371,7 +371,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
             'assistant_id'     => $assistantId,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'approved'])

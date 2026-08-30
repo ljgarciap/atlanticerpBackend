@@ -294,7 +294,7 @@ class DashboardControllerTest extends FeatureTestCase
 
         // Designer may see reminders from demo-seeded projects they are assigned to,
         // but must NOT see the reminder from this unassigned project.
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($designerToken))
             ->getJson('/api/crm/dashboard/reminders');

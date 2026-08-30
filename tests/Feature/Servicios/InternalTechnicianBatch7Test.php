@@ -17,11 +17,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class InternalTechnicianBatch7Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
 
-    private const MANAGEMENT = 'daniela@illuminations.com.pa';
+    private const MANAGEMENT = 'daniela@atlantic.com.pa';
 
     // 2026-08-10 15:00:00 UTC == 2026-08-10 10:00:00 America/Panama (UTC-5), dentro de horario laboral.
     private const FROZEN_NOW = '2026-08-10 15:00:00';
@@ -29,7 +29,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Carbon::setTestNow(Carbon::parse(self::FROZEN_NOW, 'UTC'));
     }
 
@@ -49,7 +49,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
         // Cualquier request HTTP previa (loginAs()) limpia el search_path que setUp() dejó
         // activo — reactivar siempre acá, sea o no la primera llamada del test (mismo gotcha
         // documentado en TicketBatch4Test/ExternalTechnicianBatch5Test).
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         return InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail()->id;
     }
@@ -172,7 +172,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
             ->assertStatus(200)
             ->assertJsonPath('data.updated_by', 'Daniela');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(1, CommissionCapture::where('internal_technician_id', $id)->count());
     }
 
@@ -193,7 +193,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
     public function test_tecnico_sin_plan_de_bonificacion_retorna_422(): void
     {
         $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $miguelId = InternalTechnician::where('nombre', 'Miguel Castillo')->firstOrFail()->id;
 
         $this->withHeaders($this->authHeaders($token))

@@ -20,7 +20,7 @@ adicionales de ruptura del protocolo Pre-QA (doble clic, producto inactivo, rol 
 | 3 | "Enviar seleccionados" con 0 productos marcados | Botón queda `disabled` (verificado con assertion Playwright + captura), no se puede disparar el request. |
 | 4 | "Enviar seleccionados" con 3 productos marcados | PDF con **exactamente 3** productos, ninguno de más ni de menos. |
 | 5 | Doble clic rápido en "Enviar catálogo completo" | Solo **1** descarga disparada — el segundo clic golpea el botón ya `disabled` por el `loading` state (`Button.tsx`: `disabled={disabled || loading}`). |
-| 6 | Usuario autenticado sin `ventas_diseno.read` (carlos@illuminations.com.pa, rol `tecnico_servicios`) llamando `POST /api/ventas-diseno/catalog/send-pdf` directo | **403** — bloqueo real de middleware, no solo botón oculto. En navegador, la pantalla de Catálogo ni siquiera carga contenido para este rol (queda en blanco bajo "Ventas & Diseño · Inicio"). |
+| 6 | Usuario autenticado sin `ventas_diseno.read` (carlos@atlantic.com.pa, rol `tecnico_servicios`) llamando `POST /api/ventas-diseno/catalog/send-pdf` directo | **403** — bloqueo real de middleware, no solo botón oculto. En navegador, la pantalla de Catálogo ni siquiera carga contenido para este rol (queda en blanco bajo "Ventas & Diseño · Inicio"). |
 | 7 | Producto marcado `is_active=false` en BD (SPOT-EMP-011, id 4) — sembrado a mano vía SSH y revertido al terminar | No aparece en el listado filtrado ni en el PDF de modo completo (81 productos, no 82). Confirmado y revertido: `is_active=true` de nuevo al cerrar el test. |
 
 ## Inspección directa del PDF (no solo content-type — se abrió el archivo con `pdftotext`)

@@ -25,14 +25,14 @@ class PipelineControllerTest extends FeatureTestCase
         // request HTTP vía AuthenticateJwt (que lo activa y lo olvida por request).
         // Se activa una sola vez acá porque los fixtures siempre se crean antes de
         // la primera llamada HTTP de cada test.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private function grantVentasDisenoRead(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
@@ -41,7 +41,7 @@ class PipelineControllerTest extends FeatureTestCase
     /** @param list<string> $extra */
     private function grantVentasDisenoEdit(string $email, array $extra = []): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $permissions = array_merge(['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit'], $extra);
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
@@ -50,7 +50,7 @@ class PipelineControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -83,12 +83,12 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_listar_pipeline_sin_permiso_retorna_403(): void
     {
-        // designer@illuminations.test (role_id=vendedor_disenador) YA tiene acceso real desde el
+        // designer@atlantic.test (role_id=vendedor_disenador) YA tiene acceso real desde el
         // puente de vocabulario (2026-07-10, ver User::effectivePermissionsV2()) sin necesitar
         // extra_permissions -- para probar el 403 real hace falta alguien sin rol mapeado y sin
-        // grant individual. supervisor@illuminations.test (role_key=null en AuthUserSeeder) sigue
+        // grant individual. supervisor@atlantic.test (role_key=null en AuthUserSeeder) sigue
         // sin ningún acceso a Ventas & Diseño por ninguna vía.
-        $token = $this->loginAs('supervisor@illuminations.test', 'Password123!', 'supervisor');
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline')
@@ -102,7 +102,7 @@ class PipelineControllerTest extends FeatureTestCase
      */
     public function test_disenador_con_rol_pero_sin_extra_permissions_ya_tiene_acceso(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline')
@@ -111,14 +111,14 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_disenador_solo_ve_sus_propias_tarjetas(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $mine   = $this->makeCard($designerId);
         $theirs = $this->makeCard($managerId);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline')
@@ -131,15 +131,15 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_gerencia_ve_todas_las_tarjetas_con_alcance_equipo(): void
     {
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $card1 = $this->makeCard($designerId);
         $card2 = $this->makeCard($managerId);
 
-        // management@illuminations.test ya tiene superadmin en el seed demo,
+        // management@atlantic.test ya tiene superadmin en el seed demo,
         // así que pasa CheckPermission sin necesidad de grant explícito.
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline?scope=team')
@@ -154,13 +154,13 @@ class PipelineControllerTest extends FeatureTestCase
     {
         // Grupo 3 (REQ-056): dentro de "Equipo", Líder/Gerencia puede filtrar a un
         // vendedor puntual — reusado por la pantalla Inicio, ver HomeControllerTest.
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $card1 = $this->makeCard($designerId);
         $card2 = $this->makeCard($managerId);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/pipeline?scope=team&owner_id={$designerId}")
@@ -173,13 +173,13 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_tarjeta_estancada_se_marca_is_stagnant(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $stagnant = $this->makeCard($designerId, 'design', Carbon::now()->subDays(20));
         $fresh    = $this->makeCard($designerId, 'lead', Carbon::now()->subDays(2));
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline')
@@ -192,13 +192,13 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_chip_estancados_filtra_solo_tarjetas_con_mas_de_15_dias(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $stagnant = $this->makeCard($designerId, 'design', Carbon::now()->subDays(16));
         $fresh    = $this->makeCard($designerId, 'lead', Carbon::now()->subDays(2));
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline?chip=stagnant')
@@ -211,13 +211,13 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_chip_final_stage_filtra_solo_etapa_propuesta(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $proposal = $this->makeCard($designerId, 'proposal');
         $lead     = $this->makeCard($designerId, 'lead');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline?chip=final_stage')
@@ -237,13 +237,13 @@ class PipelineControllerTest extends FeatureTestCase
      */
     public function test_stage_filtra_por_etapa_literal_incluidas_lead_y_lost(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $lead = $this->makeCard($designerId, 'lead');
         $lost = $this->makeCard($designerId, 'lost');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $responseLead = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline?stage=lead')
@@ -262,11 +262,11 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_stage_con_valor_invalido_se_ignora_sin_error(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lead');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline?stage=no-existe')
@@ -286,15 +286,15 @@ class PipelineControllerTest extends FeatureTestCase
      */
     public function test_tag_filtra_por_etiqueta_del_proyecto(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $design   = $this->makeCard($designerId, 'lead', tag: 'design');
         $quote    = $this->makeCard($designerId, 'lead', tag: 'quote');
         $both     = $this->makeCard($designerId, 'lead', tag: 'both');
         $untagged = $this->makeCard($designerId, 'lead', tag: null);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/pipeline?tag=both')
@@ -319,8 +319,8 @@ class PipelineControllerTest extends FeatureTestCase
         // supervisor@ (role_key=null) no tiene ningún alcance de rol sobre ventas_diseno -- a
         // diferencia de designer@ (vendedor_disenador real, nivel 4 desde SCRUM-83), así que un
         // extra_permissions de solo lectura no queda pisado por el bridge rol+nivel.
-        $this->grantVentasDisenoRead('supervisor@illuminations.test');
-        $token = $this->loginAs('supervisor@illuminations.test', 'Password123!');
+        $this->grantVentasDisenoRead('supervisor@atlantic.test');
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/pipeline', ['type' => 'lead', 'name' => 'Proyecto Nuevo'])
@@ -338,7 +338,7 @@ class PipelineControllerTest extends FeatureTestCase
      */
     public function test_disenador_crea_pipeline_solo_con_su_rol_seedeado_sin_grant_manual(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/pipeline', ['type' => 'lead', 'name' => 'Lead SCRUM-83'])
@@ -347,9 +347,9 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_crear_lead_sin_cliente_queda_en_columna_lead_con_cliente_vacio(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/pipeline', ['type' => 'lead', 'name' => 'Lead Manual'])
@@ -367,8 +367,8 @@ class PipelineControllerTest extends FeatureTestCase
         // SCRUM-88 (REQ-019) — observations existía en $fillable de PipelineCard y en la
         // columna real, pero StorePipelineCardRequest/PipelineService::create() nunca lo
         // aceptaban en el alta manual desde el modal "+ Nuevo Proyecto".
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/pipeline', [
@@ -385,8 +385,8 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_crear_diseno_sin_sub_client_id_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/pipeline', ['type' => 'design', 'name' => 'Proyecto Diseño'])
@@ -395,7 +395,7 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_crear_diseno_vinculado_a_subcliente_existente_hereda_master_client_y_nace_en_diseno(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
 
         $master = MasterClient::create(['name' => 'Cliente Existente']);
         $sub    = SubClient::create([
@@ -404,7 +404,7 @@ class PipelineControllerTest extends FeatureTestCase
             'tax_id'            => '155-1111-1-2026',
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/pipeline', [
@@ -419,14 +419,14 @@ class PipelineControllerTest extends FeatureTestCase
         // REQ-020: una única tarjeta final en Diseño, sin duplicado en Lead. El
         // request anterior "olvidó" el tenant activo al terminar (ver nota en
         // setUp()), así que se reactiva antes de esta consulta directa por Eloquent.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(1, PipelineCard::where('sub_client_id', $sub->id)->count());
     }
 
     public function test_crear_con_tipo_invalido_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/pipeline', ['type' => 'approved', 'name' => 'X'])
@@ -437,13 +437,13 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_ver_detalle_incluye_contactos_fechas_y_aviso_de_arquitecto(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId);
         $card->contacts()->create(['name' => 'Cliente Uno', 'role' => 'client', 'phone' => '6000-0000']);
         $card->deliveryDates()->create(['date' => '2026-08-01']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/pipeline/{$card->id}")
@@ -460,11 +460,11 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_ver_detalle_de_tarjeta_ajena_sin_alcance_equipo_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $card = $this->makeCard($managerId);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/pipeline/{$card->id}")
@@ -475,11 +475,11 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_actualizar_nombre_etiqueta_y_observaciones(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
@@ -496,10 +496,10 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_actualizar_superficie_negativa_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['worked_area_m2' => -50])
@@ -513,10 +513,10 @@ class PipelineControllerTest extends FeatureTestCase
      */
     public function test_actualizar_superficie_fuera_de_rango_retorna_422_no_500(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['worked_area_m2' => 999999999])
@@ -525,12 +525,12 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_actualizar_reemplaza_fechas_de_entrega(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId);
         $card->deliveryDates()->create(['date' => '2026-01-01']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
@@ -545,8 +545,8 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_vincular_subcliente_de_otro_master_client_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId);
 
         $otherMaster = MasterClient::create(['name' => 'Otro Cliente']);
@@ -556,7 +556,7 @@ class PipelineControllerTest extends FeatureTestCase
             'tax_id'            => '155-9999-1-2026',
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['sub_client_id' => $otherSub->id])
@@ -565,11 +565,11 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_no_se_puede_editar_tarjeta_en_etapa_lost(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lost');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['observations' => 'intento de edición'])
@@ -578,11 +578,11 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_no_se_puede_editar_tarjeta_aprobada_sin_permiso_elevado(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'approved');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['observations' => 'intento de edición'])
@@ -591,11 +591,11 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_se_puede_editar_tarjeta_aprobada_con_permiso_elevado(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test', ['ventas_diseno.edit.approved']);
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test', ['ventas_diseno.edit.approved']);
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'approved');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['observations' => 'Mark editando'])
@@ -606,11 +606,11 @@ class PipelineControllerTest extends FeatureTestCase
     {
         // Ver comentario de test_crear_pipeline_sin_permiso_write_retorna_403 -- supervisor@ en
         // vez de designer@ (SCRUM-83).
-        $this->grantVentasDisenoRead('supervisor@illuminations.test');
-        $supervisorId = $this->userIdByEmail('supervisor@illuminations.test');
+        $this->grantVentasDisenoRead('supervisor@atlantic.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
         $card = $this->makeCard($supervisorId);
 
-        $token = $this->loginAs('supervisor@illuminations.test', 'Password123!');
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['observations' => 'x'])
@@ -622,11 +622,11 @@ class PipelineControllerTest extends FeatureTestCase
     public function test_subir_archivo_de_diseno_en_etapa_diseno(): void
     {
         \Illuminate\Support\Facades\Storage::fake('s3-private');
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/ventas-diseno/pipeline/{$card->id}/files", [
@@ -642,11 +642,11 @@ class PipelineControllerTest extends FeatureTestCase
         // vía ventas_diseno.edit.approved: los archivos de diseño quedan de solo
         // lectura una vez Aprobado, sin importar el permiso.
         \Illuminate\Support\Facades\Storage::fake('s3-private');
-        $this->grantVentasDisenoEdit('designer@illuminations.test', ['ventas_diseno.edit.approved']);
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test', ['ventas_diseno.edit.approved']);
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'approved');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/ventas-diseno/pipeline/{$card->id}/files", [
@@ -661,11 +661,11 @@ class PipelineControllerTest extends FeatureTestCase
         // El gate incondicional de REQ-013/015 es específico de "design"/"proposal" — otras
         // categorías de archivo siguen la regla general (isEditableBy + permiso).
         \Illuminate\Support\Facades\Storage::fake('s3-private');
-        $this->grantVentasDisenoEdit('designer@illuminations.test', ['ventas_diseno.edit.approved']);
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test', ['ventas_diseno.edit.approved']);
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'approved');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/ventas-diseno/pipeline/{$card->id}/files", [
@@ -683,11 +683,11 @@ class PipelineControllerTest extends FeatureTestCase
         // Foto fallaba 100% del tiempo con el SQLSTATE crudo expuesto en la UI. Ver
         // migración 2026_07_29_100000_add_photo_to_ventas_diseno_pipeline_card_files_type.
         \Illuminate\Support\Facades\Storage::fake('s3-private');
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lead');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/ventas-diseno/pipeline/{$card->id}/files", [
@@ -702,11 +702,11 @@ class PipelineControllerTest extends FeatureTestCase
     public function test_subir_archivo_de_propuesta_en_etapa_propuesta(): void
     {
         \Illuminate\Support\Facades\Storage::fake('s3-private');
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'proposal');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/ventas-diseno/pipeline/{$card->id}/files", [
@@ -722,11 +722,11 @@ class PipelineControllerTest extends FeatureTestCase
         // los archivos de propuesta quedan de solo lectura una vez Aprobado, sin importar
         // el permiso ventas_diseno.edit.approved.
         \Illuminate\Support\Facades\Storage::fake('s3-private');
-        $this->grantVentasDisenoEdit('designer@illuminations.test', ['ventas_diseno.edit.approved']);
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test', ['ventas_diseno.edit.approved']);
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'approved');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/ventas-diseno/pipeline/{$card->id}/files", [

@@ -26,7 +26,7 @@ final class LegacyFuseClientesCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_corrida_real_promueve_y_registra_sync_run(): void
@@ -37,7 +37,7 @@ final class LegacyFuseClientesCommandTest extends FeatureTestCase
             'legacy_cliente_id' => $cliente->id, 'orphan' => false,
         ]);
 
-        $this->artisan('legacy:fuse-clientes', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:fuse-clientes', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();
@@ -64,7 +64,7 @@ final class LegacyFuseClientesCommandTest extends FeatureTestCase
             'legacy_cliente_id' => $cliente->id, 'orphan' => false,
         ]);
 
-        $this->artisan('legacy:fuse-clientes', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:fuse-clientes', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -77,7 +77,7 @@ final class LegacyFuseClientesCommandTest extends FeatureTestCase
 
     public function test_sin_candidatos_registra_sync_run_en_cero(): void
     {
-        $this->artisan('legacy:fuse-clientes', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:fuse-clientes', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();

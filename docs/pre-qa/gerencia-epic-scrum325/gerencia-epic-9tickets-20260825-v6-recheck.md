@@ -103,7 +103,7 @@ cierra limpio). **8 de 9 siguen sin pasar.**
 ### SCRUM-161 — Aprobaciones (listado) — ❌ NO PASA — GAP DE DISEÑO, sin cambio
 El commit `9f82409` no tocó `pendingApprovalsSection()` — sigue siendo un único aprobador global
 (`ComprasSettings.mark_approver_user_id`), sin consultar la tabla `ReglaAprobacion` (SCRUM-163)
-que ya existe en el código. Confirmado en vivo con `whil@illuminations.com.pa`:
+que ya existe en el código. Confirmado en vivo con `whil@atlantic.com.pa`:
 `is_approver=false`, `aprobaciones=[]`. Mismo hallazgo estructural que v3/v4/v5, sin variación.
 - **Sugerencia de fix concreta:** `GerenciaHomeService::pendingApprovalsSection()`, línea ~380 —
   reemplazar el chequeo `$userId === $markApproverId` por una consulta a `ReglaAprobacion` que
@@ -214,12 +214,12 @@ confirmada `B1n4X_2026?` — login exitoso, `is_approver=true`, `pending_total=2
 ---
 
 ## Verificación de credenciales (esta pasada)
-- `whil@illuminations.com.pa` — password default (su propio email) — OK, usado en todos los tests.
-- `mbekhar@illuminations.com.pa` (Mark, aprobador real) — password `B1n4X_2026?` — **login exitoso
+- `whil@atlantic.com.pa` — password default (su propio email) — OK, usado en todos los tests.
+- `mbekhar@atlantic.com.pa` (Mark, aprobador real) — password `B1n4X_2026?` — **login exitoso
   esta vez** (a diferencia de v5, que falló por asumir password default). Permitió confirmar
   SCRUM-162 con datos reales (`is_approver=true`, 22 aprobaciones pendientes reales) en vez de solo
   por lectura de código — evidencia más fuerte que en cualquier pasada anterior.
-- `daniela@illuminations.com.pa` — no se necesitó para este batch (no hay tickets que dependan de
+- `daniela@atlantic.com.pa` — no se necesitó para este batch (no hay tickets que dependan de
   su rol específico en los 9 de este batch).
 
 ---

@@ -31,17 +31,17 @@ class MultiRoleLoginTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     // ── Login — nunca requiere selección, incluso con roles legados múltiples ──────────────────
 
     public function test_login_nunca_requiere_seleccion_aunque_el_usuario_tenga_multiples_roles_legados(): void
     {
-        // management@illuminations.test tiene ['management', 'superadmin'] en user_roles (legado) —
+        // management@atlantic.test tiene ['management', 'superadmin'] en user_roles (legado) —
         // antes del cutover esto disparaba requires_role_selection.
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'management@illuminations.test',
+            'email'    => 'management@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -53,7 +53,7 @@ class MultiRoleLoginTest extends FeatureTestCase
     public function test_login_un_solo_rol_retorna_jwt_directo(): void
     {
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -72,13 +72,13 @@ class MultiRoleLoginTest extends FeatureTestCase
 
         $user = User::create([
             'first_name' => 'MultiRol', 'last_name' => 'V2',
-            'email' => 'multirol-v2@illuminations.test', 'password_hash' => 'Password123!',
+            'email' => 'multirol-v2@atlantic.test', 'password_hash' => 'Password123!',
             'is_active' => true, 'security_level_id' => $level->id, 'role_id' => $base->id,
         ]);
         UserAdditionalRole::create(['user_id' => $user->id, 'role_id' => $additional->id]);
 
         $response = $this->postJson('/api/auth/login', [
-            'email' => 'multirol-v2@illuminations.test', 'password' => 'Password123!',
+            'email' => 'multirol-v2@atlantic.test', 'password' => 'Password123!',
         ]);
 
         $response->assertStatus(200);
@@ -95,8 +95,8 @@ class MultiRoleLoginTest extends FeatureTestCase
 
     public function test_select_role_valido_retorna_jwt(): void
     {
-        $user = User::where('email', 'management@illuminations.test')->firstOrFail();
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $selectionToken = app(JwtService::class)->encodeSelectionToken($user->id, ['management', 'superadmin'], $tenant->slug);
 
         $response = $this->postJson('/api/auth/select-role', [
@@ -111,8 +111,8 @@ class MultiRoleLoginTest extends FeatureTestCase
 
     public function test_select_role_con_rol_no_disponible_retorna_403(): void
     {
-        $user = User::where('email', 'management@illuminations.test')->firstOrFail();
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $selectionToken = app(JwtService::class)->encodeSelectionToken($user->id, ['management'], $tenant->slug);
 
         $this->postJson('/api/auth/select-role', [
@@ -136,8 +136,8 @@ class MultiRoleLoginTest extends FeatureTestCase
 
     public function test_switch_role_valido_retorna_nuevo_token(): void
     {
-        $user = User::where('email', 'management@illuminations.test')->firstOrFail();
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $selectionToken = app(JwtService::class)->encodeSelectionToken($user->id, ['management', 'designer'], $tenant->slug);
 
         $selectResponse = $this->postJson('/api/auth/select-role', [
@@ -157,8 +157,8 @@ class MultiRoleLoginTest extends FeatureTestCase
 
     public function test_switch_role_con_rol_no_disponible_retorna_403(): void
     {
-        $user = User::where('email', 'management@illuminations.test')->firstOrFail();
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $selectionToken = app(JwtService::class)->encodeSelectionToken($user->id, ['management'], $tenant->slug);
 
         $selectResponse = $this->postJson('/api/auth/select-role', [
@@ -186,7 +186,7 @@ class MultiRoleLoginTest extends FeatureTestCase
      */
     public function test_switch_role_con_jwt_de_login_normal_sin_roles_retorna_403_no_500(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/auth/switch-role', ['role' => 'management'])

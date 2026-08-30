@@ -282,7 +282,7 @@ docker compose -f infra/docker-compose.prod.yml ps
 docker compose -f infra/docker-compose.prod.yml exec laravel php artisan migrate --force
 
 # Crear primer tenant
-docker compose -f infra/docker-compose.prod.yml exec laravel php artisan tenant:create illuminations
+docker compose -f infra/docker-compose.prod.yml exec laravel php artisan tenant:create atlantic
 
 # Verificar logs si algo falla
 docker compose -f infra/docker-compose.prod.yml logs laravel
@@ -432,7 +432,7 @@ Target:   EC2 StartInstances → instancia crm-illumination-qa
 □ Elastic IP asignada y anotada
 □ docker compose ps → todos los contenedores en estado "healthy"
 □ curl http://<elastic-ip>/health → 200 OK
-□ php artisan tenant:create illuminations → sin errores
+□ php artisan tenant:create atlantic → sin errores
 □ Backup script probado manualmente → archivo en S3
 □ CloudWatch alarms activas y visibles en consola
 □ AWS Backup plan configurado con el volumen correcto

@@ -22,8 +22,8 @@ class OrderExportControllerTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -94,7 +94,7 @@ class OrderExportControllerTest extends FeatureTestCase
     public function test_export_sin_permiso_bodega_read_retorna_403(): void
     {
         $order = $this->makeOrder();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->get("/api/bodega/orders/{$order->id}/picking-sheet/export")

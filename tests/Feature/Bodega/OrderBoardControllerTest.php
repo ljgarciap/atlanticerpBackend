@@ -30,8 +30,8 @@ class OrderBoardControllerTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -114,10 +114,10 @@ class OrderBoardControllerTest extends FeatureTestCase
     /** REQ-306 — panel de carga por asistente, % del total del equipo. */
     public function test_panel_de_carga_por_asistente(): void
     {
-        $assistantId = $this->userIdByEmail('almacen2@illuminations.com.pa');
+        $assistantId = $this->userIdByEmail('almacen2@atlantic.com.pa');
         $this->makeOrder(['assistant_id' => $assistantId]);
         $this->makeOrder(['assistant_id' => $assistantId]);
-        $this->makeOrder(['assistant_id' => $this->userIdByEmail('logistica@illuminations.com.pa')]);
+        $this->makeOrder(['assistant_id' => $this->userIdByEmail('logistica@atlantic.com.pa')]);
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson('/api/bodega/orders/assistant-load')
@@ -136,8 +136,8 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_panel_de_carga_siempre_muestra_los_2_asistentes_incluso_con_cero_pedidos(): void
     {
-        $mariano = $this->userIdByEmail('almacen2@illuminations.com.pa');
-        $osvaldo = $this->userIdByEmail('logistica@illuminations.com.pa');
+        $mariano = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $osvaldo = $this->userIdByEmail('logistica@atlantic.com.pa');
         // Solo Mariano tiene pedidos asignados — Osvaldo se queda en 0.
         $this->makeOrder(['assistant_id' => $mariano]);
         $this->makeOrder(['assistant_id' => $mariano]);
@@ -198,7 +198,7 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_ver_detalle_expone_cliente_master_y_subcliente_independientes(): void
     {
-        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('neil.quiel@illuminations.com.pa'));
+        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('neil.quiel@atlantic.com.pa'));
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson("/api/bodega/orders/{$order->id}")
@@ -215,7 +215,7 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_ver_detalle_expone_telefono_y_correo_del_contacto_por_separado(): void
     {
-        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('neil.quiel@illuminations.com.pa'));
+        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('neil.quiel@atlantic.com.pa'));
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson("/api/bodega/orders/{$order->id}")

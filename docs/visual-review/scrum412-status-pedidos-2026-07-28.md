@@ -14,10 +14,10 @@ fila REQ-342 (hoja "Requerimientos Ventas&Diseño") + fila "Ver y descargar Stat
 "Matriz de Permisos por Rol").
 
 **Entorno:** `https://dev.atlanticerp.ai`, tres usuarios reales:
-- `almacen@illuminations.com.pa` (Esteban Cárdenas, Líder de Bodega) — ve todo.
-- `idmar@illuminations.com.pa` (Idmar Hernandez, Vendedor/Diseñador) — 1 pedido propio real
+- `almacen@atlantic.com.pa` (Esteban Cárdenas, Líder de Bodega) — ve todo.
+- `idmar@atlantic.com.pa` (Idmar Hernandez, Vendedor/Diseñador) — 1 pedido propio real
   (`PED-2026-0013`).
-- `neil.quiel@illuminations.com.pa` (Neil Quiel, Vendedor/Diseñador) — 0 pedidos propios hoy.
+- `neil.quiel@atlantic.com.pa` (Neil Quiel, Vendedor/Diseñador) — 0 pedidos propios hoy.
 
 **Herramienta:** Playwright CLI, `atlanticerp-frontend/e2e/visual-review-scrum412-status-pedidos.spec.ts`
 (script descartable, no se promueve — el smoke test funcional permanente de este batch ya existe

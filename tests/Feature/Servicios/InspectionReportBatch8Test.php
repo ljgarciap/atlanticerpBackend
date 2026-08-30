@@ -25,12 +25,12 @@ use Tests\Feature\FeatureTestCase;
  */
 class InspectionReportBatch8Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** @param array<string, mixed> $overrides */
@@ -123,7 +123,7 @@ class InspectionReportBatch8Test extends FeatureTestCase
 
         // El request HTTP anterior corre en su propio ciclo de tenancy — reestablecer el tenant
         // actual antes de consultar directo con Eloquent (mismo patrón que TicketFlowTest).
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         self::assertSame(1, InspectionReport::where('ticket_id', $ticket->id)->count());
     }
 
@@ -138,7 +138,7 @@ class InspectionReportBatch8Test extends FeatureTestCase
             ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", ['conclusion' => 'Listo'])
             ->assertStatus(200);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $ticket->refresh();
         self::assertSame(Ticket::INSPECTION_STATUS_COMPLETED, $ticket->inspection_report_status);
 

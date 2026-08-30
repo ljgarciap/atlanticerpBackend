@@ -15,8 +15,8 @@ use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-490→495 (REQ-420→425, "Reportes de Bodega"). Mariano Sandoval (almacen2@illuminations.com.pa)
- * y Osvaldo Santos (logistica@illuminations.com.pa) son los 2 Asistentes de Bodega reales
+ * SCRUM-490→495 (REQ-420→425, "Reportes de Bodega"). Mariano Sandoval (almacen2@atlantic.com.pa)
+ * y Osvaldo Santos (logistica@atlantic.com.pa) son los 2 Asistentes de Bodega reales
  * sembrados por `BusinessRoleUserSeeder` en todos los entornos (ver `BodegaOrderTestHelpers`).
  */
 class BodegaReportsControllerTest extends FeatureTestCase
@@ -31,8 +31,8 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -41,8 +41,8 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_productividad_rankea_por_pedidos_gestionados_en_el_periodo(): void
     {
-        $marianoId = $this->userIdByEmail('almacen2@illuminations.com.pa');
-        $osvaldoId = $this->userIdByEmail('logistica@illuminations.com.pa');
+        $marianoId = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
 
         $this->makeOrder(['assistant_id' => $marianoId]);
         $this->makeOrder(['assistant_id' => $marianoId]);
@@ -72,8 +72,8 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_productividad_incluye_asistentes_activos_sin_pedidos(): void
     {
-        $marianoId = $this->userIdByEmail('almacen2@illuminations.com.pa');
-        $osvaldoId = $this->userIdByEmail('logistica@illuminations.com.pa');
+        $marianoId = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
 
         $this->makeOrder(['assistant_id' => $marianoId]);
 
@@ -102,9 +102,9 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_productividad_excluye_asistente_inactivo(): void
     {
-        $marianoId = $this->userIdByEmail('almacen2@illuminations.com.pa');
-        $osvaldoId = $this->userIdByEmail('logistica@illuminations.com.pa');
-        $slug = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'illuminations')->value('slug');
+        $marianoId = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $slug = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('id', $osvaldoId)->update(['is_active' => false]);
 
         $this->makeOrder(['assistant_id' => $marianoId]);
@@ -129,7 +129,7 @@ class BodegaReportsControllerTest extends FeatureTestCase
         $line = AdjustmentRequestLine::create([
             'adjustment_request_id' => AdjustmentRequest::create([
                 'catalog_product_id' => $product->id,
-                'solicitado_por'     => $this->userIdByEmail('almacen@illuminations.com.pa'),
+                'solicitado_por'     => $this->userIdByEmail('almacen@atlantic.com.pa'),
             ])->id,
             'warehouse_id' => $warehouse->id,
             'tipo'         => AdjustmentRequestLine::TIPO_SUMAR,
@@ -223,8 +223,8 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_capacidad_por_bodega_umbral_configurable(): void
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read', 'bodega.settings.configure']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read', 'bodega.settings.configure']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['capacidad_concentracion_pct' => 50])
@@ -301,7 +301,7 @@ class BodegaReportsControllerTest extends FeatureTestCase
     {
         // designer@ (Ventas & Diseño) no tiene ningún permiso bodega.* — mismo usuario "sin
         // permiso" que ya usan WarehouseControllerTest/BodegaInventoryControllerTest.
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/reports/productivity')

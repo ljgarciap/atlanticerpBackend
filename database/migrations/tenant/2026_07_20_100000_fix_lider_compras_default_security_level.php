@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  * 2026_07_18_100002_reuse_existing_levels_for_role_defaults.php fijó `lider_compras` en
  * Nivel 1 ("Read Only", `can_edit=false` en todos los módulos) — decisión válida en su
  * momento (2026-07-10), porque el módulo Compras todavía no existía. Ahora que Compras se
- * construyó (rama `sprint2`), Yirena Teng (`gerencia2@illuminations.com.pa`, única persona
+ * construyó (rama `sprint2`), Yirena Teng (`gerencia2@atlantic.com.pa`, única persona
  * con este rol, ver `BusinessRoleUserSeeder.php`) necesita poder escribir. Los otros 4 roles
  * "líder de área" (`lider_admin_contab`, `lider_bodega`, `lider_servicios`,
  * `vendedor_disenador`) ya están en Nivel 4 ("Power User", `can_edit=true`,

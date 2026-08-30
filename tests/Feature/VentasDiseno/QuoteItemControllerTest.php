@@ -19,12 +19,12 @@ class QuoteItemControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDisenoEdit(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit'])]);
@@ -32,7 +32,7 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -61,10 +61,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_crear_item_calcula_total_linea(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", $this->validItemPayload())
@@ -83,10 +83,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_descuento_por_linea_afecta_el_total(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -104,11 +104,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_referencia_personalizada_duplicada_en_otra_partida_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $otherPart = $fixture['quote']->parts()->create(['name' => 'Partida 2']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", $this->validItemPayload('ref-abc'))
@@ -125,10 +125,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_crear_item_con_precio_que_viola_margen_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // unit_price=60, cost=50 -> margen (60-50)/60=16.7% (< 30% default).
         $this->withHeaders($this->authHeaders($token))
@@ -140,10 +140,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_actualizar_precio_que_viola_margen_retorna_422_y_no_persiste(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -165,10 +165,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_descuento_de_linea_que_viola_margen_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // unit_price=100, cost=50 (margen sano 50%). 80% de descuento de línea -> precio 20, margen negativo.
         $this->withHeaders($this->authHeaders($token))
@@ -180,10 +180,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_tipo_de_precio_individual_que_viola_margen_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // Público: (100-65)/100=35% ok. Override "project" (-15%): precio 85, margen (85-65)/85=23.5% (<30%).
         $this->withHeaders($this->authHeaders($token))
@@ -197,14 +197,14 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_agregar_item_ok_individualmente_pero_que_rompe_el_margen_global_con_descuento_de_totales_ya_aplicado_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create([
             'owner_id' => $designerId,
             'discount_totals_type' => 'percent', 'discount_totals_value' => 15,
         ]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // unit_price=100, cost=65 -> margen individual 35% (ok por sí solo), pero
         // con el 15% de descuento de Totales YA aplicado a la cotización, el
@@ -219,16 +219,16 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_mark_puede_crear_item_por_debajo_del_margen_sin_bloqueo(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@illuminations.com.pa')
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@atlantic.com.pa')
             ->update(['extra_permissions' => json_encode([
                 'ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.override_min_margin',
             ])]);
-        $markId = $this->userIdByEmail('mbekhar@illuminations.com.pa');
+        $markId = $this->userIdByEmail('mbekhar@atlantic.com.pa');
         $fixture = $this->makeQuoteWithPart($markId);
         // CoreUserSeeder: password default = el propio email (nunca sobreescrito si
-        // ya se cambió), a diferencia de los usuarios *@illuminations.test de fixtures.
-        $token = $this->loginAs('mbekhar@illuminations.com.pa', 'mbekhar@illuminations.com.pa', 'management');
+        // ya se cambió), a diferencia de los usuarios *@atlantic.test de fixtures.
+        $token = $this->loginAs('mbekhar@atlantic.com.pa', 'mbekhar@atlantic.com.pa', 'management');
 
         // Mismo escenario que test_crear_item_con_precio_que_viola_margen_retorna_422
         // (16.7% < 30%) pero con el permiso de excepción — no bloquea.
@@ -242,11 +242,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_unit_price_override_en_producto_de_catalogo_no_modifica_el_precio_maestro(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $product = $this->makeCatalogProduct(['price_full' => 200, 'cost' => 100]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -257,16 +257,16 @@ class QuoteItemControllerTest extends FeatureTestCase
 
         // El middleware de tenancy resetea el contexto al terminar el request HTTP
         // simulado de arriba — hay que reestablecerlo antes de volver a consultar.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(200.0, $product->fresh()->price_full, 'el precio maestro del catálogo no debe cambiar');
     }
 
     public function test_producto_personalizado_sin_costo_no_aplica_validacion_de_margen(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // Sin costo -> no hay referencia contra la cual medir margen (REQ-040 criterio 3),
         // incluso un precio absurdamente bajo debe pasar.
@@ -279,10 +279,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_editar_item_sin_cambiar_referencia_no_choca_consigo_mismo(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", $this->validItemPayload())
@@ -299,10 +299,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_borrar_item(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", $this->validItemPayload())
@@ -316,10 +316,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_tipo_precio_override_no_acepta_partner(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -332,11 +332,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_precio_proyecto_es_15_por_ciento_menos_que_publico(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $fixture['quote']->update(['price_type' => 'project']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -354,11 +354,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_precio_especial_es_5_por_ciento_adicional_sobre_proyecto(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $fixture['quote']->update(['price_type' => 'special']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -376,11 +376,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_tarifa_premium_es_costo_dividido_065(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $fixture['quote']->update(['price_type' => 'premium']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -401,11 +401,11 @@ class QuoteItemControllerTest extends FeatureTestCase
         // cambiar PricingSettings debe cambiar el cálculo real, sin deploy.
         PricingSettings::current()->update(['project_discount_percent' => 20]);
 
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $fixture['quote']->update(['price_type' => 'project']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -423,15 +423,15 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_precio_socio_es_costo_dividido_085(): void
     {
-        $this->grantVentasDisenoEdit('management@illuminations.test');
-        $managementId = $this->userIdByEmail('management@illuminations.test');
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $this->grantVentasDisenoEdit('management@atlantic.test');
+        $managementId = $this->userIdByEmail('management@atlantic.test');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('id', $managementId)
             ->update(['extra_permissions' => json_encode([
                 'ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.select_partner_price',
             ])]);
         $fixture = $this->makeQuoteWithPart($managementId);
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}", ['price_type' => 'partner'])
@@ -453,11 +453,11 @@ class QuoteItemControllerTest extends FeatureTestCase
     {
         // Sin costo cargado no se puede derivar Premium — no debe reventar el
         // cálculo del documento, se usa unit_price tal cual.
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $fixture['quote']->update(['price_type' => 'premium']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -476,12 +476,12 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_override_de_item_cambia_solo_ese_item(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         // Cotización en Público — el ítem con override "project" debe verse
         // afectado igual, sin depender del tipo de precio general.
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -505,10 +505,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_override_de_item_no_cambia_si_cambia_el_tipo_de_precio_general(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -533,11 +533,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_seleccionar_producto_de_catalogo_copia_datos_y_bloquea_descripcion(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $product = $this->makeCatalogProduct(['reference' => 'LAMP-050', 'name' => 'Lámpara colgante LED']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -558,11 +558,11 @@ class QuoteItemControllerTest extends FeatureTestCase
         // REQ-039: stock_quantity viaja en la respuesta del ítem (store, update y el
         // detalle de la cotización) para que el frontend compare contra `quantity`
         // sin pedir el producto aparte.
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $product = $this->makeCatalogProduct(['reference' => 'STOCK-001', 'stock_quantity' => 5]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -583,10 +583,10 @@ class QuoteItemControllerTest extends FeatureTestCase
     {
         // REQ-039 AC implícito: un ítem sin catalog_product_id (personalizado)
         // no tiene ninguna fuente de stock — nunca debe disparar la alerta.
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", $this->validItemPayload())
@@ -600,11 +600,11 @@ class QuoteItemControllerTest extends FeatureTestCase
         // Aunque el cliente mande unit_price/cost "falsos" junto con
         // catalog_product_id, el servidor los resuelve del producto real —
         // nunca confía en lo que venga del cliente para un ítem de catálogo.
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $product = $this->makeCatalogProduct(['price_full' => 200, 'cost' => 100]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -618,10 +618,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_producto_de_catalogo_inexistente_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -634,11 +634,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_mismo_producto_de_catalogo_duplicado_en_la_misma_partida_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $product = $this->makeCatalogProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -658,12 +658,12 @@ class QuoteItemControllerTest extends FeatureTestCase
         // REQ-038: a diferencia de la referencia personalizada (toda la
         // cotización), el producto de catálogo se valida por PARTIDA — la
         // misma lámpara en "Sala" y en "Cocina" es un caso real, no un error.
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $otherPart = $fixture['quote']->parts()->create(['name' => 'Partida 2']);
         $product = $this->makeCatalogProduct();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -682,12 +682,12 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_bulk_agrega_todos_los_productos_sin_duplicar(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $p1 = $this->makeCatalogProduct(['reference' => 'BULK-001']);
         $p2 = $this->makeCatalogProduct(['reference' => 'BULK-002']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -711,13 +711,13 @@ class QuoteItemControllerTest extends FeatureTestCase
     // creaba igual. Mismo tratamiento que un duplicado: se saltea, no falla todo.
     public function test_bulk_saltea_productos_que_violan_el_margen_sin_fallar_el_resto(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         // (60-50)/60=16.7% < 30% default.
         $lowMargin = $this->makeCatalogProduct(['reference' => 'BULK-020', 'price_full' => 60, 'cost' => 50]);
         $healthy   = $this->makeCatalogProduct(['reference' => 'BULK-021', 'price_full' => 200, 'cost' => 100]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -732,8 +732,8 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_bulk_saltea_producto_que_viola_el_margen_global_aunque_sea_sano_individualmente(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create([
             'owner_id' => $designerId,
             'discount_totals_type' => 'percent', 'discount_totals_value' => 15,
@@ -742,7 +742,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         // Individualmente 35% (ok), pero con el 15% de Totales ya aplicado el
         // margen global cae a 23.5% (mismo escenario que el test equivalente de store()).
         $product = $this->makeCatalogProduct(['reference' => 'BULK-030', 'price_full' => 100, 'cost' => 65]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}/items/bulk", [
@@ -756,15 +756,15 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_bulk_saltea_por_margen_no_aplica_con_permiso_de_excepcion(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@illuminations.com.pa')
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@atlantic.com.pa')
             ->update(['extra_permissions' => json_encode([
                 'ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.override_min_margin',
             ])]);
-        $markId = $this->userIdByEmail('mbekhar@illuminations.com.pa');
+        $markId = $this->userIdByEmail('mbekhar@atlantic.com.pa');
         $fixture = $this->makeQuoteWithPart($markId);
         $lowMargin = $this->makeCatalogProduct(['reference' => 'BULK-040', 'price_full' => 60, 'cost' => 50]);
-        $token = $this->loginAs('mbekhar@illuminations.com.pa', 'mbekhar@illuminations.com.pa', 'management');
+        $token = $this->loginAs('mbekhar@atlantic.com.pa', 'mbekhar@atlantic.com.pa', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -778,12 +778,12 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_bulk_saltea_productos_ya_en_la_partida_sin_fallar_el_resto(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $existing = $this->makeCatalogProduct(['reference' => 'BULK-010']);
         $newOne   = $this->makeCatalogProduct(['reference' => 'BULK-011']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
@@ -805,10 +805,10 @@ class QuoteItemControllerTest extends FeatureTestCase
     {
         // supervisor@ en vez de designer@ -- ver SCRUM-83. Sin ningún extra_permissions ni rol
         // mapeado a ventas_diseno, no alcanza ni lectura ni edición.
-        $supervisorId = $this->userIdByEmail('supervisor@illuminations.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
         $fixture = $this->makeQuoteWithPart($supervisorId);
         $product = $this->makeCatalogProduct();
-        $token = $this->loginAs('supervisor@illuminations.test', 'Password123!');
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -822,13 +822,13 @@ class QuoteItemControllerTest extends FeatureTestCase
         // Senior Review 2026-07-13, sugerencia #4 — bulkStore() usa el mismo
         // canAccess() que store()/update(), pero no había un test dedicado que
         // lo probara (a diferencia de QuoteController/QuotePartController).
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $product = $this->makeCatalogProduct();
 
-        $this->grantVentasDisenoEdit('supervisor@illuminations.test');
-        $otherToken = $this->loginAs('supervisor@illuminations.test', 'Password123!', 'supervisor');
+        $this->grantVentasDisenoEdit('supervisor@atlantic.test');
+        $otherToken = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
 
         $this->withHeaders($this->authHeaders($otherToken))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -839,10 +839,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_bulk_con_producto_inexistente_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -853,11 +853,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_bulk_items_creados_traen_cantidad_uno_por_defecto(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $product = $this->makeCatalogProduct(['reference' => 'BULK-020']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -873,13 +873,13 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_preview_price_sin_violar_margen_no_marca_nada(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $itemId = $fixture['part']->items()->create([
             'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 50,
         ])->id;
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$itemId}/preview-price", [
@@ -893,13 +893,13 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_preview_price_violando_margen_marca_y_no_persiste(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $itemId = $fixture['part']->items()->create([
             'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 50,
         ])->id;
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // costo 50, precio 60 -> margen 16.7%, por debajo del 30% default.
         $response = $this->withHeaders($this->authHeaders($token))
@@ -913,19 +913,19 @@ class QuoteItemControllerTest extends FeatureTestCase
         $response->assertJsonPath('can_override', false);
 
         // No persiste nada — el precio real del ítem sigue siendo el original.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertEquals(100, QuoteItem::find($itemId)?->unit_price);
     }
 
     public function test_preview_price_no_expone_el_costo_real(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $itemId = $fixture['part']->items()->create([
             'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 50,
         ])->id;
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$itemId}/preview-price", [
@@ -938,15 +938,15 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_preview_price_con_permiso_de_excepcion_marca_can_override(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@illuminations.com.pa')
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@atlantic.com.pa')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.override_min_margin'])]);
-        $markId = $this->userIdByEmail('mbekhar@illuminations.com.pa');
+        $markId = $this->userIdByEmail('mbekhar@atlantic.com.pa');
         $fixture = $this->makeQuoteWithPart($markId);
         $itemId = $fixture['part']->items()->create([
             'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 50,
         ])->id;
-        $token = $this->loginAs('mbekhar@illuminations.com.pa', 'mbekhar@illuminations.com.pa', 'management');
+        $token = $this->loginAs('mbekhar@atlantic.com.pa', 'mbekhar@atlantic.com.pa', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$itemId}/preview-price", [
@@ -960,10 +960,10 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_preview_price_item_inexistente_retorna_404(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/999999/preview-price", [
@@ -979,11 +979,11 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_crear_item_en_cotizacion_confirmada_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $fixture['quote']->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", $this->validItemPayload())
@@ -992,12 +992,12 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_editar_item_en_cotizacion_confirmada_retorna_422_y_no_persiste(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $item = $fixture['part']->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100]);
         $fixture['quote']->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson(
@@ -1007,18 +1007,18 @@ class QuoteItemControllerTest extends FeatureTestCase
             ->assertStatus(422);
 
         $this->assertStringContainsString('no se puede editar directamente', (string) $response->json('message'));
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertEquals(100, $item->fresh()?->unit_price);
     }
 
     public function test_bulk_store_en_cotizacion_confirmada_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $product = $this->makeCatalogProduct();
         $fixture['quote']->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -1029,18 +1029,18 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_borrar_item_en_cotizacion_confirmada_retorna_422_y_no_borra(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $item = $fixture['part']->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100]);
         $fixture['quote']->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}")
             ->assertStatus(422);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertNotNull($item->fresh());
     }
 
@@ -1048,12 +1048,12 @@ class QuoteItemControllerTest extends FeatureTestCase
     {
         // previewPrice() nunca persiste — no hace falta bloquearlo, y el frontend
         // podría querer mostrar el precio de una versión histórica de solo lectura.
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $item = $fixture['part']->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100]);
         $fixture['quote']->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}/preview-price", [

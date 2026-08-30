@@ -17,7 +17,7 @@ return new class extends TenantSchemaMigration
 {
     protected string $module = 'bodega';
 
-    private const NAMES = ['Illuminations', 'Mermas', 'Préstamo Zona Libre', 'Reserva', 'Llano Bonito'];
+    private const NAMES = ['Atlantic', 'Mermas', 'Préstamo Zona Libre', 'Reserva', 'Llano Bonito'];
 
     public function up(): void
     {

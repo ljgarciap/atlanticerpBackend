@@ -39,7 +39,7 @@
     @endphp
 
     <div class="header">
-        <div class="brand">ILLUMINATIONS</div>
+        <div class="brand">ATLANTIC</div>
         <div class="sub">Formulario de Devolución</div>
     </div>
 

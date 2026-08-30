@@ -26,19 +26,19 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
     /** Ver nota equivalente en RoleControllerTest — search_path se resetea entre requests. */
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function designerId(): int
     {
-        return (int) User::where('email', 'designer@illuminations.test')->value('id');
+        return (int) User::where('email', 'designer@atlantic.test')->value('id');
     }
 
     // ── GET/PUT /api/admin/users/{id}/module-visibility ─────────────────────────
 
     public function test_module_visibility_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
         $this->activateTenant();
 
         $this->withHeaders($this->authHeaders($token))
@@ -48,7 +48,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
     public function test_get_sin_overrides_devuelve_el_default_del_rol_para_los_7_modulos(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -68,7 +68,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
     public function test_put_que_coincide_con_el_default_del_rol_no_persiste_override(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -93,7 +93,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
     public function test_put_que_amplia_un_modulo_persiste_override_y_se_refleja_en_modulesPayload(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -129,7 +129,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
     public function test_put_que_restringe_un_modulo_del_rol_lo_saca_de_modulesPayload(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -156,7 +156,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
     public function test_put_menu_items_oculta_item_explicito_ausente_sigue_visible(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -195,7 +195,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
     public function test_put_con_modulo_invalido_retorna_422(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 

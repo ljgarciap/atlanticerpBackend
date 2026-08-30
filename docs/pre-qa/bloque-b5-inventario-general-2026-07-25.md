@@ -187,11 +187,11 @@ número, no el placeholder.
 - Filtro por chip de estado (`?estado=rechazada`) → solo devuelve filas de ese estado; sin filtro
   (`todas`/ausente) devuelve todo. ✅
 - **Gate de aprobación — dos variantes, no solo una:**
-  1. Usuario SIN el permiso `bodega.approve` en absoluto (`almacen@illuminations.com.pa`) intenta
+  1. Usuario SIN el permiso `bodega.approve` en absoluto (`almacen@atlantic.com.pa`) intenta
      `approve`/`reject` vía curl directo → **403 a nivel de MIDDLEWARE** (`permission:bodega.approve`
      bloquea antes de llegar al controller). ✅
   2. Usuario CON `bodega.approve` concedido pero que NO es el `mark_approver_user_id` configurado
-     (grant temporal a `gerencia@illuminations.test`, revertido al cierre) → pasa el middleware,
+     (grant temporal a `gerencia@atlantic.test`, revertido al cierre) → pasa el middleware,
      pero `resolveMarkAccess()` responde 403 "Solo Mark puede aprobar o rechazar esta solicitud".
      ✅ Esta es la variante que realmente prueba el gate de negocio (no solo el de permisos), y
      coincide con el mismo mecanismo de `AdjustmentRequestController`/`RelocationRequestController`.

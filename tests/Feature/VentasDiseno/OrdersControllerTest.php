@@ -34,12 +34,12 @@ class OrdersControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDisenoRead(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
@@ -47,7 +47,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -125,8 +125,8 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_solo_lista_pedidos_de_cotizaciones_aprobadas(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $approved = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-APROBADO');
@@ -142,7 +142,7 @@ class OrdersControllerTest extends FeatureTestCase
         ]);
         Quote::create(['owner_id' => $designerId, 'sales_project_id' => $project2->id, 'folio' => 'COT-PROPUESTA', 'generated_at' => now()]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
             ->assertStatus(200);
@@ -156,15 +156,15 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_vendedor_solo_ve_sus_propios_pedidos(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-MIO');
         $this->makeApprovedOrder($managerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-AJENO');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
             ->assertStatus(200);
@@ -176,14 +176,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_gerencia_ve_los_pedidos_de_todo_el_equipo(): void
     {
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-A');
         $this->makeApprovedOrder($managerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-B');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders?scope=team')
             ->assertStatus(200);
@@ -200,14 +200,14 @@ class OrdersControllerTest extends FeatureTestCase
     // quedaba viendo solo lo suyo — este test replica el request real del frontend (sin `scope`).
     public function test_gerencia_ve_todo_el_equipo_sin_mandar_scope_explicito_como_hace_el_frontend_real(): void
     {
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-SINSCOPE-A');
         $this->makeApprovedOrder($managerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-SINSCOPE-B');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
             ->assertStatus(200);
@@ -219,7 +219,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_pedidos_sin_permiso_retorna_403(): void
     {
-        $token = $this->loginAs('supervisor@illuminations.test', 'Password123!', 'supervisor');
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
@@ -228,14 +228,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_vendedor_no_puede_ver_el_detalle_de_un_pedido_ajeno(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $ajeno = $this->makeApprovedOrder($managerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-AJENO');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/orders/{$ajeno['quote']->id}")
             ->assertStatus(404);
@@ -245,14 +245,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_margen_cotizado_disponible_de_inmediato_sin_factura(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         // precio 100, costo 60 -> margen 40%.
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
             ->assertStatus(200);
@@ -265,8 +265,8 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_margen_facturado_mixto_y_parcial_con_productos_pendientes(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $p1 = $this->makeCatalogProduct(60, 'CAT-001');
         $p2 = $this->makeCatalogProduct(60, 'CAT-002');
 
@@ -277,7 +277,7 @@ class OrdersControllerTest extends FeatureTestCase
         // p1 se compró más caro de lo cotizado: 60 -> 80.
         $this->invoiceProduct($order['project'], $p1, 80);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $detail = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/orders/{$order['quote']->id}")
             ->assertStatus(200);
@@ -296,14 +296,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_margen_facturado_definitivo_cuando_todos_los_productos_ya_facturaron(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
         $this->invoiceProduct($order['project'], $product, 60); // exactamente lo cotizado -> sin variación.
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $detail = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/orders/{$order['quote']->id}")
             ->assertStatus(200);
@@ -316,14 +316,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_diferencia_de_margen_por_producto_en_puntos_porcentuales(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60); // costo cotizado 60 -> margen 40% a precio 100.
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
         $this->invoiceProduct($order['project'], $product, 66); // margen facturado 34% -> diff -6.0 pts.
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $detail = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/orders/{$order['quote']->id}")
             ->assertStatus(200);
@@ -338,14 +338,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_estado_margen_bajo_cuando_la_caida_supera_el_umbral(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60); // margen cotizado 40%.
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
         $this->invoiceProduct($order['project'], $product, 67); // margen facturado 33% -> caída de 7pts > umbral 5pts.
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
             ->assertStatus(200);
@@ -356,14 +356,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_estado_margen_mejoro_cuando_la_caida_no_supera_el_umbral(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60); // margen cotizado 40%.
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
         $this->invoiceProduct($order['project'], $product, 62); // margen facturado 38% -> caída de 2pts < umbral 5pts.
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
             ->assertStatus(200);
@@ -377,14 +377,14 @@ class OrdersControllerTest extends FeatureTestCase
         // Baja el umbral a 1pt -> una caída de 2pts (que antes era "mejoró") ahora es "bajó".
         OrdersSettings::current()->update(['margin_drop_threshold_pts' => 1.0]);
 
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
         $this->invoiceProduct($order['project'], $product, 62); // caída de 2pts.
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
             ->assertStatus(200);
@@ -397,14 +397,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_kpis_no_cambian_con_los_filtros_de_busqueda_activos(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-UNO');
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-DOS');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders?search=UNO')
             ->assertStatus(200);
@@ -415,8 +415,8 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_margen_facturado_promedio_solo_cuenta_pedidos_100_facturados(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $p1 = $this->makeCatalogProduct(60, 'CAT-A');
         $p2 = $this->makeCatalogProduct(60, 'CAT-B');
 
@@ -425,7 +425,7 @@ class OrdersControllerTest extends FeatureTestCase
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $p2]], 'COT-PENDIENTE');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
             ->assertStatus(200);
@@ -439,15 +439,15 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_filtro_de_estado_acota_la_tabla(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-PENDIENTE');
         $facturado = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-IGUAL');
         $this->invoiceProduct($facturado['project'], $product, 60);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders?estado=igual')
             ->assertStatus(200);
@@ -459,14 +459,14 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_busqueda_por_folio_cliente_o_proyecto(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-9001');
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-9002');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders?search=9001')
             ->assertStatus(200);
@@ -484,9 +484,9 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_producto_compartido_entre_2_pedidos_en_la_misma_po_queda_pendiente_para_ambos(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $orderA = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 5, 'product' => $product]], 'COT-COMPARTIDO-A');
@@ -513,12 +513,12 @@ class OrdersControllerTest extends FeatureTestCase
             'quantity' => 8, 'unit_cost' => 90, 'warehouse_id' => $warehouse->id, 'confirmed_at' => now(),
         ]);
 
-        $tokenDesigner = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $tokenDesigner = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $detailA = $this->withHeaders($this->authHeaders($tokenDesigner))
             ->getJson("/api/ventas-diseno/orders/{$orderA['quote']->id}")
             ->assertStatus(200);
 
-        $tokenManager = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $tokenManager = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $detailB = $this->withHeaders($this->authHeaders($tokenManager))
             ->getJson("/api/ventas-diseno/orders/{$orderB['quote']->id}")
             ->assertStatus(200);
@@ -535,8 +535,8 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_dos_recepciones_confirmadas_para_el_mismo_producto_usa_la_mas_antigua_de_forma_determinista(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
@@ -557,7 +557,7 @@ class OrdersControllerTest extends FeatureTestCase
         $receiptEarlier = PurchaseOrderReceipt::create(['purchase_order_id' => $poEarlier->id]);
         PurchaseOrderReceiptLine::create(['purchase_order_receipt_id' => $receiptEarlier->id, 'catalog_product_id' => $product->id, 'quantity' => 1, 'unit_cost' => 65, 'warehouse_id' => $warehouse->id, 'confirmed_at' => Carbon::now()]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $detail = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/orders/{$order['quote']->id}")
             ->assertStatus(200);

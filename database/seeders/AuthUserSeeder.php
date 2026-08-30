@@ -24,8 +24,8 @@ class AuthUserSeeder extends Seeder
      * @var list<array{first_name: string, last_name: string, email: string, roles: list<string>, level: int, role_key: string|null}>
      */
     private const USERS = [
-        ['first_name' => 'Management', 'last_name' => 'Demo', 'email' => 'management@illuminations.test', 'roles' => ['management', 'superadmin'], 'level' => 10, 'role_key' => 'management'],
-        ['first_name' => 'Gerencia',   'last_name' => 'Demo', 'email' => 'gerencia@illuminations.test',   'roles' => ['management', 'superadmin'], 'level' => 10, 'role_key' => 'management'],
+        ['first_name' => 'Management', 'last_name' => 'Demo', 'email' => 'management@atlantic.test', 'roles' => ['management', 'superadmin'], 'level' => 10, 'role_key' => 'management'],
+        ['first_name' => 'Gerencia',   'last_name' => 'Demo', 'email' => 'gerencia@atlantic.test',   'roles' => ['management', 'superadmin'], 'level' => 10, 'role_key' => 'management'],
         // level 4 -- SCRUM-83: debe coincidir con roles.default_security_level_id real de
         // vendedor_disenador (migración 2026_07_18_100002), que es el único nivel con fila de
         // capacidad ventas_diseno.can_edit=true. Antes estaba en nivel 3 (sin fila en
@@ -34,18 +34,18 @@ class AuthUserSeeder extends Seeder
         // reportó. Los tests de VentasDiseno no lo detectaron porque cada uno otorga
         // extra_permissions manualmente vía grantVentasDisenoEdit(), sin pasar por el bridge
         // rol+nivel real.
-        ['first_name' => 'Designer',   'last_name' => 'Demo', 'email' => 'designer@illuminations.test',   'roles' => ['designer'],                  'level' => 4, 'role_key' => 'vendedor_disenador'],
-        ['first_name' => 'Supervisor', 'last_name' => 'Demo', 'email' => 'supervisor@illuminations.test', 'roles' => ['supervisor'],                 'level' => 5, 'role_key' => null],
-        ['first_name' => 'Electrician','last_name' => 'Demo', 'email' => 'electrician@illuminations.test','roles' => ['electrician'],                'level' => 2, 'role_key' => null],
-        ['first_name' => 'Multi',      'last_name' => 'Role', 'email' => 'multi@illuminations.test',      'roles' => ['management', 'designer'],    'level' => 8, 'role_key' => null],
-        ['first_name' => 'Readonly',   'last_name' => 'Demo', 'email' => 'readonly@illuminations.test',   'roles' => ['electrician'],               'level' => 1, 'role_key' => null],
+        ['first_name' => 'Designer',   'last_name' => 'Demo', 'email' => 'designer@atlantic.test',   'roles' => ['designer'],                  'level' => 4, 'role_key' => 'vendedor_disenador'],
+        ['first_name' => 'Supervisor', 'last_name' => 'Demo', 'email' => 'supervisor@atlantic.test', 'roles' => ['supervisor'],                 'level' => 5, 'role_key' => null],
+        ['first_name' => 'Electrician','last_name' => 'Demo', 'email' => 'electrician@atlantic.test','roles' => ['electrician'],                'level' => 2, 'role_key' => null],
+        ['first_name' => 'Multi',      'last_name' => 'Role', 'email' => 'multi@atlantic.test',      'roles' => ['management', 'designer'],    'level' => 8, 'role_key' => null],
+        ['first_name' => 'Readonly',   'last_name' => 'Demo', 'email' => 'readonly@atlantic.test',   'roles' => ['electrician'],               'level' => 1, 'role_key' => null],
     ];
 
     /** @var array{first_name: string, last_name: string, email: string, roles: list<string>, level: int, role_key: string|null} */
     private const SUPERADMIN = [
         'first_name' => 'Super',
         'last_name'  => 'Admin',
-        'email'      => 'superadmin@illuminations.test',
+        'email'      => 'superadmin@atlantic.test',
         'roles'      => ['superadmin'],
         'level'      => 10,
         'role_key'   => 'superadmin',
@@ -53,10 +53,10 @@ class AuthUserSeeder extends Seeder
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command->warn('Tenant "illuminations" not found — AuthUserSeeder skipped.');
+            $this->command->warn('Tenant "atlantic" not found — AuthUserSeeder skipped.');
             return;
         }
 

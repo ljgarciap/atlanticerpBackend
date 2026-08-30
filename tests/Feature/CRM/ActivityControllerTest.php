@@ -170,7 +170,7 @@ class ActivityControllerTest extends FeatureTestCase
         $activityId = $this->createActivity($mgmtToken, $projectId);
 
         // Designer tries to delete management's activity (project not assigned to designer)
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($designerToken))
             ->deleteJson("/api/crm/projects/{$projectId}/activities/{$activityId}")

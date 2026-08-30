@@ -28,9 +28,9 @@
     <div class="header">
         <div class="brand-row">
             <div class="brand-cell" style="width: 28px;">
-                <img src="{{ $logoDataUri }}" width="26" height="26" alt="Illuminations">
+                <img src="{{ $logoDataUri }}" width="26" height="26" alt="Atlantic">
             </div>
-            <div class="brand-cell brand">ILLUMINATIONS</div>
+            <div class="brand-cell brand">ATLANTIC</div>
         </div>
         <div class="sub">Plantilla en blanco — Informe de Inspección — Ticket {{ $ticket->numero }} — {{ $tipoLabel }}{{ $subtipoLabel ? ' — '.$subtipoLabel : '' }}</div>
         <div class="sub">Generado el {{ $generatedAt->format('d/m/Y H:i') }}</div>
@@ -84,7 +84,7 @@
     </div>
 
     <div class="footer">
-        Illuminations · Panamá · Plantilla para completar en campo — el informe digital se guarda en el sistema.
+        Atlantic · Panamá · Plantilla para completar en campo — el informe digital se guarda en el sistema.
     </div>
 </body>
 </html>

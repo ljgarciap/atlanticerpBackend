@@ -13,7 +13,7 @@ return new class extends TenantSchemaMigration
     {
         // Primer módulo agregado después del bootstrap inicial de tenant (auth/crm/
         // installations se crean en tenant:create) — el schema no existe todavía para el
-        // tenant "illuminations" ya creado, así que esta migración lo crea ella misma.
+        // tenant "atlantic" ya creado, así que esta migración lo crea ella misma.
         // tenant:create también lo crea de entrada para tenants nuevos (Tenant::schemas()).
         DB::statement('CREATE SCHEMA IF NOT EXISTS "'.$this->schema().'"');
 

@@ -23,12 +23,12 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -36,7 +36,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
 
     private function makeQuote(string $projectName, ?string $stage, bool $withFolio = true): Quote
     {
-        $owner = User::where('email', 'designer@illuminations.test')->firstOrFail();
+        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
         $master = MasterClient::create(['name' => "Cliente {$projectName}"]);
         $sub = SubClient::create([
             'master_client_id' => $master->id, 'business_name' => "Cliente {$projectName} SA", 'tax_id' => uniqid(),
@@ -68,12 +68,12 @@ class ApprovedProjectControllerTest extends FeatureTestCase
 
     public function test_solo_incluye_pedidos_aprobados(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $this->makeQuote('Proyecto Aprobado', 'approved');
         $this->makeQuote('Proyecto Enviado', 'quote');
         $this->makeQuote('Proyecto Sin Folio', 'approved', withFolio: false);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);
@@ -87,10 +87,10 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     public function test_usuario_de_compras_sin_ventas_diseno_read_puede_buscar(): void
     {
         // El propio caso que motivó este endpoint: rol lider_compras no tiene ventas_diseno.read.
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $this->makeQuote('Proyecto Compras', 'approved');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);
@@ -99,10 +99,10 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     public function test_respuesta_no_incluye_monto(): void
     {
         // Mismo criterio que "el costo nunca viaja al buscador" (CatalogProductController).
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $this->makeQuote('Proyecto Aprobado', 'approved');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);
@@ -119,8 +119,8 @@ class ApprovedProjectControllerTest extends FeatureTestCase
      */
     public function test_proyecto_con_varias_cotizaciones_aprobadas_aparece_una_sola_vez(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
-        $owner = User::where('email', 'designer@illuminations.test')->firstOrFail();
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
         $master = MasterClient::create(['name' => 'Cliente Duplicado']);
         $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Cliente Duplicado SA', 'tax_id' => uniqid()]);
         $salesProject = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Con Versiones']);
@@ -140,7 +140,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
             'folio' => 'COT-2222', 'confirmed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);

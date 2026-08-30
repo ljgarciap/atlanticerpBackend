@@ -40,8 +40,8 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
 
     private function authHeadersForLiderBodega(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -52,7 +52,7 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->firstOrFail();
         $this->setStock($product, 15, 'Bodega Central');
 
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
         $courierId = $this->userIdByEmail('arrochagary@gmail.com');
         $order = $this->makeOrder([], ['catalog_product_id' => $product->id, 'qty_requested' => 5]);
         $item = $order->items->first();
@@ -191,7 +191,7 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
         $this->setStock($product, 10, 'Bodega Central');
         $this->setStock($product, 5, 'Merma');
 
-        $pickerId  = $this->userIdByEmail('apolonio.gonzalez@illuminations.com.pa');
+        $pickerId  = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
         $courierId = $this->userIdByEmail('arrochagary@gmail.com');
         $headers   = $this->authHeadersForLiderBodega();
         $this->makeCurrentTenant(); // authHeadersForLiderBodega() hace un login HTTP real, que deja el tenant sin "current" al volver.

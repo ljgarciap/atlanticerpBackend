@@ -18,13 +18,13 @@ class PipelineStageTransitionTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** @param list<string> $extra */
     private function grantVentasDisenoEdit(string $email, array $extra = []): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $permissions = array_merge(['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit'], $extra);
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
@@ -33,7 +33,7 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -53,11 +53,11 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_desde_lead_sin_contacto_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lead');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'design'])
@@ -66,11 +66,11 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_desde_lead_a_perdido_no_requiere_contacto(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lead');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])
@@ -80,12 +80,12 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_desde_lead_con_contacto_y_cliente_reinicia_dias_en_etapa(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lead');
         $card->contacts()->create(['name' => 'Cliente', 'role' => 'client', 'phone' => '6000-0000']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'design'])
@@ -97,14 +97,14 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_desde_lead_sin_subcliente_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lead');
         $card->contacts()->create(['name' => 'Cliente', 'role' => 'client', 'phone' => '6000-0000']);
         // Master vinculado, pero sin Subcliente — REQ-011 exige ambos.
         $card->update(['sub_client_id' => null]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'design'])
@@ -113,12 +113,12 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_no_se_puede_saltear_etapas(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lead');
         $card->contacts()->create(['name' => 'Cliente', 'role' => 'client', 'phone' => '6000-0000']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // Lead tiene contacto + Master + Subcliente (todo lo que pide su propio gate),
         // pero saltar directo a Aprobado se saltea los gates de Cotización/Propuesta.
@@ -131,11 +131,11 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_de_diseno_a_cotizacion_sin_superficie_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'quote'])
@@ -144,12 +144,12 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_de_diseno_a_cotizacion_sin_archivo_de_diseno_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
         $card->update(['worked_area_m2' => 45.5]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'quote'])
@@ -162,8 +162,8 @@ class PipelineStageTransitionTest extends FeatureTestCase
     // que a propósito no pasa por este gate (ver docblock de confirm()).
     public function test_mover_de_diseno_a_cotizacion_via_endpoint_generico_siempre_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
         $card->update(['worked_area_m2' => 45.5]);
         $card->files()->create([
@@ -171,7 +171,7 @@ class PipelineStageTransitionTest extends FeatureTestCase
             'size_bytes' => 100, 'mime_type' => 'application/pdf', 'uploaded_by' => $designerId,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'quote'])
@@ -183,12 +183,12 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_de_cotizacion_a_propuesta_sin_cotizacion_firmada_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'quote');
         $card->update(['worked_area_m2' => 30]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'proposal'])
@@ -199,15 +199,15 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_de_propuesta_a_aprobado_sin_fecha_de_entrega_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'proposal');
         $card->files()->create([
             'type' => 'approval_proof', 'file_name' => 'aprobacion.pdf', 'storage_key' => 'x/y.pdf',
             'size_bytes' => 100, 'mime_type' => 'application/pdf', 'uploaded_by' => $designerId,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'approved'])
@@ -216,8 +216,8 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_mover_de_propuesta_a_aprobado_con_fecha_y_comprobante_ok(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'proposal');
         $card->deliveryDates()->create(['date' => '2026-12-01']);
         $card->files()->create([
@@ -225,7 +225,7 @@ class PipelineStageTransitionTest extends FeatureTestCase
             'size_bytes' => 100, 'mime_type' => 'application/pdf', 'uploaded_by' => $designerId,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'approved'])
@@ -237,11 +237,11 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_reactivar_tarjeta_perdida_a_lead(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lost');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lead'])
@@ -251,11 +251,11 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_tarjeta_perdida_no_puede_moverse_a_otra_etapa_que_no_sea_lead(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'lost');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'design'])
@@ -264,11 +264,11 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_cualquier_etapa_activa_puede_marcarse_perdida_sin_gate(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'proposal');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])
@@ -282,11 +282,11 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_tarjeta_aprobada_no_puede_marcarse_perdida_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@illuminations.test', ['ventas_diseno.edit.approved']);
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoEdit('designer@atlantic.test', ['ventas_diseno.edit.approved']);
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'approved');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])

@@ -70,7 +70,7 @@ class PurchaseOrder extends Model
     public const SHIPPING_MARITIMO = 'maritimo';
     public const SHIPPING_TERRESTRE = 'terrestre';
 
-    public const PAYS_ILLUMINATIONS = 'illuminations';
+    public const PAYS_ATLANTIC = 'atlantic';
     public const PAYS_PROVIDER = 'proveedor';
 
     public const MODALITY_DIRECTO = 'directo';
@@ -309,11 +309,11 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * RN3 (REQ-118, aplica a Nueva Orden): aéreo + paga Illuminations requiere aprobación de Mark.
+     * RN3 (REQ-118, aplica a Nueva Orden): aéreo + paga Atlantic requiere aprobación de Mark.
      */
     public static function computeRequiresMarkApproval(?string $shippingType, ?string $whoPaysShipping): bool
     {
-        return $shippingType === self::SHIPPING_AEREO && $whoPaysShipping === self::PAYS_ILLUMINATIONS;
+        return $shippingType === self::SHIPPING_AEREO && $whoPaysShipping === self::PAYS_ATLANTIC;
     }
 
     /**

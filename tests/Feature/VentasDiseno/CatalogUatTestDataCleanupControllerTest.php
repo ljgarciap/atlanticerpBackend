@@ -25,7 +25,7 @@ class CatalogUatTestDataCleanupControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function makeUatProduct(string $suffix): CatalogProduct
@@ -49,11 +49,11 @@ class CatalogUatTestDataCleanupControllerTest extends FeatureTestCase
         $family = CatalogProductFamily::create(['name' => '[PRUEBA UAT] Familia Test', 'is_active' => true]);
         $family->products()->attach([$a->id, $b->id]);
 
-        $token    = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/admin/catalog/uat-test-data/cleanup');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $response->assertOk();
         $response->assertJsonPath('deleted_products', 2);
         $response->assertJsonPath('deleted_families', 1);
@@ -64,7 +64,7 @@ class CatalogUatTestDataCleanupControllerTest extends FeatureTestCase
 
     public function test_reports_no_data_found_when_nothing_to_clean(): void
     {
-        $token    = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/admin/catalog/uat-test-data/cleanup');
 
@@ -78,7 +78,7 @@ class CatalogUatTestDataCleanupControllerTest extends FeatureTestCase
         $blocked   = $this->makeUatProduct('BLOCKED');
         $deletable = $this->makeUatProduct('OK');
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         $requestId = DB::table("{$slug}_compras.bodega_zona_libre_requests")->insertGetId([
             'order_number' => 900001, 'status' => 'pendiente', 'created_at' => now(), 'updated_at' => now(),
@@ -93,11 +93,11 @@ class CatalogUatTestDataCleanupControllerTest extends FeatureTestCase
             'updated_at'                   => now(),
         ]);
 
-        $token    = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/admin/catalog/uat-test-data/cleanup');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $response->assertOk();
         $response->assertJsonPath('deleted_products', 1);
         $response->assertJsonPath('skipped_products', [$blocked->id]);

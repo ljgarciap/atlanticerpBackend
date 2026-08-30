@@ -161,7 +161,7 @@ frontend para que la UI sea consistente con eso.
   `direccion_fiscal` estaban vacíos en el Docker local antes de este pase (nunca se habían editado
   desde que existe la pantalla), lo que bloqueaba el guardado del formulario completo (son
   `required` a nivel de todo el form). No es un bug de este batch — es un gap de seed local. Se
-  completaron con datos de placeholder (`Illuminations, S.A.`, etc.) durante la verificación del
+  completaron con datos de placeholder (`Atlantic, S.A.`, etc.) durante la verificación del
   campo de Caja Chica para poder ejercitar el guardado real; quedan así en el ambiente local salvo
   que alguien los pise después.
 

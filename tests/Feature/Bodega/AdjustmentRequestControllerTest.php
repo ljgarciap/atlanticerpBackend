@@ -25,18 +25,18 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantBodega(string $email, array $perms = ['bodega.read', 'bodega.write']): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($perms)]);
     }
 
@@ -56,8 +56,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/adjustment-requests', [
             'catalog_product_id' => $product->id,
@@ -80,8 +80,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/adjustment-requests', [
             'catalog_product_id' => $product->id,
@@ -106,8 +106,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/adjustment-requests', [
             'catalog_product_id' => $product->id,
@@ -131,8 +131,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/bodega/adjustment-requests', [
@@ -174,8 +174,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $first = $this->withHeaders($headers)->postJson('/api/bodega/adjustment-requests', [
@@ -218,7 +218,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     {
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -229,8 +229,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/adjustment-requests', [
             'catalog_product_id' => $product->id,
@@ -267,7 +267,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $otroProducto = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $designerId,
@@ -278,8 +278,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/adjustment-requests', [
             'catalog_product_id' => $product->id,
@@ -296,8 +296,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/adjustment-requests', [
             'catalog_product_id' => $product->id,
@@ -314,8 +314,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/adjustment-requests', [
             'catalog_product_id' => $product->id,
@@ -331,17 +331,17 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $line = AdjustmentRequestLine::create([
             'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
-                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
             'evidencia_storage_key' => 'bodega/test.jpg', 'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/adjustment-requests/lines/{$line->id}/approve");
 
@@ -363,17 +363,17 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $line = AdjustmentRequestLine::create([
             'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
-                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
             'evidencia_storage_key' => 'bodega/test.jpg', 'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/adjustment-requests/lines/{$line->id}/reject", ['motivo_rechazo' => 'No corresponde']);
 
@@ -392,17 +392,17 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $line = AdjustmentRequestLine::create([
             'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
-                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
             'evidencia_storage_key' => 'bodega/test.jpg', 'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/adjustment-requests/lines/{$line->id}/reject", [])
             ->assertStatus(422);
@@ -415,21 +415,21 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $line = AdjustmentRequestLine::create([
             'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
-                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
             'evidencia_storage_key' => 'bodega/test.jpg', 'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        // `gerencia@illuminations.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@illuminations.test` (Nivel 8) para
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
+        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $this->grantBodega('multi@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('multi@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/adjustment-requests/lines/{$line->id}/approve")
             ->assertStatus(403);
@@ -445,17 +445,17 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $line = AdjustmentRequestLine::create([
             'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
-                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
             'evidencia_storage_key' => 'bodega/test.jpg', 'estado' => AdjustmentRequestLine::ESTADO_APROBADA,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/adjustment-requests/lines/{$line->id}/approve")
             ->assertStatus(422);
@@ -467,7 +467,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
         $adjustmentRequest = \App\Modules\Bodega\Models\AdjustmentRequest::create([
-            'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+            'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
         ]);
         AdjustmentRequestLine::create([
             'adjustment_request_id' => $adjustmentRequest->id, 'warehouse_id' => $central->id,
@@ -480,8 +480,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
             'estado' => AdjustmentRequestLine::ESTADO_RECHAZADA,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $all = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/adjustment-requests');
         $all->assertStatus(200);
@@ -498,11 +498,11 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
      */
     public function test_index_expone_can_approve_true_para_mark(): void
     {
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/adjustment-requests');
 
         $response->assertStatus(200);
@@ -511,12 +511,12 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
     public function test_index_expone_can_approve_false_para_bodega(): void
     {
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
-        $this->grantBodega('designer@illuminations.test');
+        $this->grantBodega('designer@atlantic.test');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/adjustment-requests');
 
         $response->assertStatus(200);
@@ -528,8 +528,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $this->makeProduct(['reference' => 'CRISTAL-IMPERIAL']);
         $this->makeProduct(['reference' => 'BAUHAUS']);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/adjustment-requests/products/search?search=CRISTAL');
@@ -541,8 +541,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
     public function test_search_products_vacio_sin_termino(): void
     {
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/adjustment-requests/products/search')
@@ -556,8 +556,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/adjustment-requests', [
             'catalog_product_id' => $product->id,
@@ -578,8 +578,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 12]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/adjustment-requests/products/{$product->id}/warehouse-stock");
@@ -608,8 +608,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
             'quantity' => 4, 'unit_cost' => 10, 'subtotal' => 40, 'sales_project_id' => $salesProject->id,
         ]);
 
-        $this->grantBodega('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodega('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/adjustment-requests/products/{$product->id}/warehouse-stock");
@@ -635,17 +635,17 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $line = AdjustmentRequestLine::create([
             'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
-                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@illuminations.test')->first()->id,
+                'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo',
             'evidencia_storage_key' => 'x.jpg', 'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
         ]);
 
-        $this->grantBodega('management@illuminations.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantBodega('management@atlantic.test', ['bodega.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson("/api/bodega/adjustment-requests/lines/{$line->id}/approve")->assertStatus(200);

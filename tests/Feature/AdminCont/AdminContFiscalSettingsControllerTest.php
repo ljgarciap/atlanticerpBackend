@@ -9,16 +9,16 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-632/633/634/637 (REQ-555/556/557/560) — Configuración Fiscal, exclusiva de Mark
- * (`mbekhar@illuminations.com.pa`, sembrado por CoreUserSeeder, password default = email).
+ * (`mbekhar@atlantic.com.pa`, sembrado por CoreUserSeeder, password default = email).
  */
 class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsMark(): string
@@ -44,7 +44,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_show_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/fiscal-settings')
@@ -55,7 +55,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
      *  diferencia de Gerencia genérica, que sigue bloqueada (test de arriba). */
     public function test_show_permite_a_superadmin_aunque_no_sea_mark(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/fiscal-settings')
@@ -68,13 +68,13 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
-                'razon_social'     => 'Illuminations Panama S.A.',
+                'razon_social'     => 'Atlantic Panama S.A.',
                 'ruc'              => '155646789-2-2019',
                 'regimen_tributario' => 'pequeno_contribuyente',
             ])
             ->assertStatus(200);
 
-        $response->assertJsonPath('razon_social', 'Illuminations Panama S.A.');
+        $response->assertJsonPath('razon_social', 'Atlantic Panama S.A.');
         $response->assertJsonPath('regimen_tributario', 'pequeno_contribuyente');
     }
 
@@ -121,7 +121,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_update_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', ['razon_social' => 'Otra cosa'])

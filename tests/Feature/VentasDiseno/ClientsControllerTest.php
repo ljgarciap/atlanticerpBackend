@@ -19,12 +19,12 @@ class ClientsControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDiseno(string $email, string ...$permissions): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(array_merge(['ventas_diseno.read'], $permissions))]);
@@ -47,8 +47,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_listar_clientes_retorna_metricas_agregadas_desde_pipeline(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('Metricas'))
@@ -73,8 +73,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_filtro_por_categoria_solo_muestra_clientes_con_esa_categoria(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $payloadA = $this->validClientPayload('CatA');
         $payloadA['category'] = 'a_walkin';
@@ -95,8 +95,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_filtro_por_multiples_categorias_combina_con_or_scrum_93(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $payloadA = $this->validClientPayload('MultiA');
         $payloadA['category'] = 'a_walkin';
@@ -121,8 +121,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_pastillas_de_categoria_son_union_de_subclientes(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $payload = $this->validClientPayload('Union');
         $payload['category'] = 'b_architect_designer';
@@ -148,8 +148,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_filtro_sin_contacto_60_dias_incluye_clientes_con_stage_changed_at_antiguo(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('Stale'))
@@ -158,7 +158,7 @@ class ClientsControllerTest extends FeatureTestCase
         // AuthenticateJwt hace Tenant::forgetCurrent() en su finally al terminar cada
         // request — hay que reactivar el tenant antes de cualquier consulta directa a
         // un modelo de tenant entre dos llamadas HTTP (ver PipelineFileUploadTest).
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         PipelineCard::where('master_client_id', $create->json('id'))
             ->update(['stage_changed_at' => now()->subDays(90)]);
 
@@ -174,8 +174,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_crear_cliente_crea_master_subcliente_contactos_y_lead_automatico(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('Lead'))
@@ -186,7 +186,7 @@ class ClientsControllerTest extends FeatureTestCase
         $this->assertNotNull($subClientId);
         $response->assertJsonPath('sub_clients.0.contacts.0.name', 'Ana Pérez');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $card = PipelineCard::where('master_client_id', $response->json('id'))->first();
         $this->assertNotNull($card);
         $this->assertSame('lead', $card->stage);
@@ -197,8 +197,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_crear_cliente_sin_contactos_retorna_422(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $payload = $this->validClientPayload('SinContacto');
         $payload['contacts'] = [];
@@ -210,8 +210,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_crear_cliente_con_precio_socio_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $payload = $this->validClientPayload('SocioNegado');
         $payload['default_price_type'] = 'partner';
@@ -223,8 +223,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_crear_cliente_con_precio_socio_y_permiso_retorna_201(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write', 'ventas_diseno.select_partner_price');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.select_partner_price');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $payload = $this->validClientPayload('SocioOk');
         $payload['default_price_type'] = 'partner';
@@ -239,8 +239,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_crear_subcliente_adicional_tambien_crea_lead_automatico(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('MasterExistente'))
@@ -258,7 +258,7 @@ class ClientsControllerTest extends FeatureTestCase
             ->assertStatus(201);
 
         $subClientId = $response->json('id');
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $card = PipelineCard::where('sub_client_id', $subClientId)->first();
         $this->assertNotNull($card);
         $this->assertSame('lead', $card->stage);
@@ -269,8 +269,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_ver_detalle_de_cliente_incluye_subclientes_y_contactos(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('Detalle'))
@@ -289,8 +289,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_actualizar_categoria_de_subcliente(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write', 'ventas_diseno.edit');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('Categoria'))
@@ -307,8 +307,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_ver_proyectos_devuelve_tarjetas_de_todos_los_subclientes(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('Proyectos'))
@@ -339,8 +339,8 @@ class ClientsControllerTest extends FeatureTestCase
     {
         // REQ-031 (Cotización-A): el buscador de contactos de una cotización reusa
         // este mismo endpoint, acotado al Subcliente de la cotización.
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write', 'ventas_diseno.edit');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('BuscarContacto'))
@@ -364,8 +364,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_agregar_contacto_sin_telefono_ni_correo_retorna_422(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write', 'ventas_diseno.edit');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('ContactoInvalido'))
@@ -382,8 +382,8 @@ class ClientsControllerTest extends FeatureTestCase
     public function test_agregar_contacto_con_nombre_puramente_numerico_retorna_422(): void
     {
         // SCRUM-96 (hallazgo Marly 2026-07-15): antes se aceptaba y guardaba sin aviso.
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write', 'ventas_diseno.edit');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('NombreNumerico'))
@@ -401,8 +401,8 @@ class ClientsControllerTest extends FeatureTestCase
     public function test_agregar_contacto_con_telefono_con_letras_retorna_422(): void
     {
         // SCRUM-96 (hallazgo Marly 2026-07-15): antes se aceptaba y guardaba sin aviso.
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write', 'ventas_diseno.edit');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('TelefonoInvalido'))
@@ -419,8 +419,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_agregar_contacto_a_subcliente_existente(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write', 'ventas_diseno.edit');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('Contactos'))
@@ -444,8 +444,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_editar_contacto_de_subcliente_no_lo_duplica(): void
     {
-        $this->grantVentasDiseno('designer@illuminations.test', 'ventas_diseno.write', 'ventas_diseno.edit');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('EditarContacto'))
@@ -472,8 +472,8 @@ class ClientsControllerTest extends FeatureTestCase
         // supervisor@ en vez de designer@ -- ver SCRUM-83. El escenario necesita write SIN edit;
         // con designer@ (rol real vendedor_disenador desde el fix) el bridge rol+nivel otorga
         // ambos juntos, invalidando el test.
-        $this->grantVentasDiseno('supervisor@illuminations.test', 'ventas_diseno.write');
-        $token = $this->loginAs('supervisor@illuminations.test', 'Password123!');
+        $this->grantVentasDiseno('supervisor@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('BorrarContacto'))

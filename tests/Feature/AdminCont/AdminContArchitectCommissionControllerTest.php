@@ -32,13 +32,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContArchitectCommissionControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL  = 'mbekhar@illuminations.com.pa';
-    private const FELIX_EMAIL = 'conta@illuminations.com.pa';
+    private const MARK_EMAIL  = 'mbekhar@atlantic.com.pa';
+    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
     }
 
@@ -61,7 +61,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
      *  gotcha ya documentado en ToolsBatch13Part1Test/TicketBatch4Test. */
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function makeArchitect(): Architect
@@ -649,7 +649,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/mark-paid")
             ->assertStatus(200);
 
-        $slug     = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug     = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $movement = \Illuminate\Support\Facades\DB::table("{$slug}_admin_contab.bank_movements")
             ->where('source_type', 'architect_commission')->first();
 

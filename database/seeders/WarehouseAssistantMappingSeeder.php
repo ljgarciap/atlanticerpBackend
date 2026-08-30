@@ -28,25 +28,25 @@ class WarehouseAssistantMappingSeeder extends Seeder
 {
     /** @var array<string, string> seller email => assistant email */
     private const MAPPING = [
-        'juanmanuel@illuminations.com.pa' => 'almacen2@illuminations.com.pa', // Mariano Sandoval
-        'fefi@illuminations.com.pa'       => 'almacen2@illuminations.com.pa',
-        'neil.quiel@illuminations.com.pa' => 'almacen2@illuminations.com.pa',
-        'bernardo@illuminations.com.pa'   => 'almacen2@illuminations.com.pa',
-        'annie@illuminations.com.pa'      => 'almacen2@illuminations.com.pa',
+        'juanmanuel@atlantic.com.pa' => 'almacen2@atlantic.com.pa', // Mariano Sandoval
+        'fefi@atlantic.com.pa'       => 'almacen2@atlantic.com.pa',
+        'neil.quiel@atlantic.com.pa' => 'almacen2@atlantic.com.pa',
+        'bernardo@atlantic.com.pa'   => 'almacen2@atlantic.com.pa',
+        'annie@atlantic.com.pa'      => 'almacen2@atlantic.com.pa',
 
-        'idmar@illuminations.com.pa'      => 'logistica@illuminations.com.pa', // Osvaldo Santos
-        'vanessa@illuminations.com.pa'    => 'logistica@illuminations.com.pa',
-        'paola@illuminations.com.pa'      => 'logistica@illuminations.com.pa',
-        'milena.e@grupolafayette.com'     => 'logistica@illuminations.com.pa',
-        'maribel@illuminations.com.pa'    => 'logistica@illuminations.com.pa',
+        'idmar@atlantic.com.pa'      => 'logistica@atlantic.com.pa', // Osvaldo Santos
+        'vanessa@atlantic.com.pa'    => 'logistica@atlantic.com.pa',
+        'paola@atlantic.com.pa'      => 'logistica@atlantic.com.pa',
+        'milena.e@grupolafayette.com'     => 'logistica@atlantic.com.pa',
+        'maribel@atlantic.com.pa'    => 'logistica@atlantic.com.pa',
     ];
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command?->warn('Tenant "illuminations" not found — WarehouseAssistantMappingSeeder skipped.');
+            $this->command?->warn('Tenant "atlantic" not found — WarehouseAssistantMappingSeeder skipped.');
             return;
         }
 

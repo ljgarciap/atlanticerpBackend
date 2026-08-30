@@ -25,7 +25,7 @@ class SessionInactivityTest extends FeatureTestCase
     }
 
     /** @return array{token: string, refresh_token: string} */
-    private function login(string $email = 'designer@illuminations.test'): array
+    private function login(string $email = 'designer@atlantic.test'): array
     {
         $response = $this->postJson('/api/auth/login', [
             'email'    => $email,
@@ -42,7 +42,7 @@ class SessionInactivityTest extends FeatureTestCase
 
     private function setSessionInactivityHours(int $hours): void
     {
-        $token = $this->loginAs('gerencia@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@atlantic.test', 'Password123!', 'management');
 
         $this->patchJson('/api/settings/system', ['session_inactivity_hours' => $hours], $this->authHeaders($token))
             ->assertStatus(200)
@@ -152,7 +152,7 @@ class SessionInactivityTest extends FeatureTestCase
 
     public function test_session_inactivity_hours_0_es_rechazado(): void
     {
-        $token = $this->loginAs('gerencia@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@atlantic.test', 'Password123!', 'management');
 
         $this->patchJson('/api/settings/system', ['session_inactivity_hours' => 0], $this->authHeaders($token))
             ->assertStatus(422);
@@ -160,7 +160,7 @@ class SessionInactivityTest extends FeatureTestCase
 
     public function test_session_inactivity_hours_negativo_es_rechazado(): void
     {
-        $token = $this->loginAs('gerencia@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@atlantic.test', 'Password123!', 'management');
 
         $this->patchJson('/api/settings/system', ['session_inactivity_hours' => -5], $this->authHeaders($token))
             ->assertStatus(422);
@@ -168,7 +168,7 @@ class SessionInactivityTest extends FeatureTestCase
 
     public function test_session_inactivity_hours_por_encima_del_maximo_es_rechazado(): void
     {
-        $token = $this->loginAs('gerencia@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@atlantic.test', 'Password123!', 'management');
 
         $this->patchJson('/api/settings/system', ['session_inactivity_hours' => 721], $this->authHeaders($token))
             ->assertStatus(422);
@@ -176,7 +176,7 @@ class SessionInactivityTest extends FeatureTestCase
 
     public function test_valor_invalido_no_altera_el_default_persistido(): void
     {
-        $token = $this->loginAs('gerencia@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@atlantic.test', 'Password123!', 'management');
 
         $this->patchJson('/api/settings/system', ['session_inactivity_hours' => 0], $this->authHeaders($token))
             ->assertStatus(422);

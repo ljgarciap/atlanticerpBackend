@@ -48,7 +48,7 @@ final class LegacySyncAlbaranesCommand extends Command
 {
     /** @var string */
     protected $signature = 'legacy:sync-albaranes
-        {--tenant=illuminations : Slug del tenant a sincronizar}
+        {--tenant=atlantic : Slug del tenant a sincronizar}
         {--dry-run : Corre Extractor+staging(Loader-A)+Matcher y reporta conteos, sin registrar la corrida en legacy.sync_runs}';
 
     /** @var string */

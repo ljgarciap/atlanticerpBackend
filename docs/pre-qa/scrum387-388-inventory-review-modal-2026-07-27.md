@@ -107,7 +107,7 @@ corregido en esta sesión, ver checklist de ruptura abajo.
 
 ---
 
-## Fixtures usados (Docker local, `illuminations_bodega.orders`)
+## Fixtures usados (Docker local, `atlantic_bodega.orders`)
 
 Sembrados/reconstruidos a mano vía tinker durante esta sesión — IDs reales de esta corrida,
 cambian si se resetea el schema de tenant (`infra/test.sh` comparte Postgres con el Docker local):

@@ -21,13 +21,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class HomeControllerTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const CARLOS = 'carlos@illuminations.com.pa';
+    private const CARLOS = 'carlos@atlantic.com.pa';
 
-    private const MIGUEL = 'garantias@illuminations.com.pa';
+    private const MIGUEL = 'garantias@atlantic.com.pa';
 
-    private const MANAGEMENT = 'daniela@illuminations.com.pa';
+    private const MANAGEMENT = 'daniela@atlantic.com.pa';
 
     protected function setUp(): void
     {
@@ -43,7 +43,7 @@ class HomeControllerTest extends FeatureTestCase
 
     private function makeCurrentTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function userIdByEmail(string $email): int

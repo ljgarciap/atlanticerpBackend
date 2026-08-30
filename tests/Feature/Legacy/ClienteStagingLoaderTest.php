@@ -23,7 +23,7 @@ final class ClienteStagingLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_load_stagea_clientes_y_contactos(): void
@@ -33,7 +33,7 @@ final class ClienteStagingLoaderTest extends FeatureTestCase
         $counts = $loader->load(self::sampleExtraction());
 
         $this->assertSame(['clientes' => 1, 'contactos' => 1], $counts);
-        $this->assertDatabaseHas('illuminations_legacy.clientes', ['icg_codcliente' => 1001, 'razon_social' => 'Cliente Legal SA']);
+        $this->assertDatabaseHas('atlantic_legacy.clientes', ['icg_codcliente' => 1001, 'razon_social' => 'Cliente Legal SA']);
         $this->assertSame(1, ContactoCliente::query()->where('icg_id', 501)->count());
     }
 
@@ -135,8 +135,8 @@ final class ClienteStagingLoaderTest extends FeatureTestCase
         $this->assertSame(['clientes' => 600, 'contactos' => 600], $counts);
         $this->assertSame(600, Cliente::query()->count());
         $this->assertSame(600, ContactoCliente::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.clientes', ['icg_codcliente' => 1]);
-        $this->assertDatabaseHas('illuminations_legacy.clientes', ['icg_codcliente' => 600]);
+        $this->assertDatabaseHas('atlantic_legacy.clientes', ['icg_codcliente' => 1]);
+        $this->assertDatabaseHas('atlantic_legacy.clientes', ['icg_codcliente' => 600]);
     }
 
     private static function clienteRow(int $icgCodcliente): ClienteRow

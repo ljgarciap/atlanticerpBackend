@@ -21,13 +21,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class ServiceQuoteBatch12Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa'; // Aaron Leis
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa'; // Aaron Leis
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa'; // Carlos Vergara
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa'; // Carlos Vergara
 
     private const OTRO_TECNICO = 'santopedro181994@gmail.com'; // Pedro Santos
 
-    private const MANAGEMENT = 'mbekhar@illuminations.com.pa'; // Mark — Gerencia
+    private const MANAGEMENT = 'mbekhar@atlantic.com.pa'; // Mark — Gerencia
 
     // SCRUM-300 (rebote QA 2026-08-13) — texto real del RN3 (ver docblock del constant en
     // ServiciosSettingsService), no el texto de ejemplo del mockup que se sembraba antes.
@@ -46,7 +46,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
 
     private function makeCurrentTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function makeSalesProject(): SalesProject
@@ -416,12 +416,12 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
         $this->assertStringContainsString('Información de pago', $html);
         $this->assertStringContainsString('Cheque a nombre de', $html);
         $this->assertStringNotContainsString('Designe', $html);
-        $this->assertStringContainsString('Illuminations · Panamá', $html);
+        $this->assertStringContainsString('Atlantic · Panamá', $html);
         $this->assertStringContainsString('-$100.00', $html);
     }
 
     /**
-     * SCRUM-781 (punto 9, REQ-235) — el encabezado mostraba "ILLUMINATIONS" como texto plano sin
+     * SCRUM-781 (punto 9, REQ-235) — el encabezado mostraba "ATLANTIC" como texto plano sin
      * logo. El primer intento reusó el SVG inline de ventas-diseno/quote-pdf.blade.php, pero
      * dompdf en este entorno no renderiza `<svg>` inline en absoluto (verificado con un render
      * real) — mecanismo real: `<img src="data:...">` vía App\Shared\Support\PdfLogo.
@@ -443,7 +443,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
         $html          = view('servicios.service-quote-pdf', $pdfService->viewData($quote, $ticket, $ticketService->detail($ticket)))->render();
 
         $this->assertStringContainsString('<img src="data:image/png;base64,', $html);
-        $this->assertStringContainsString('ILLUMINATIONS', $html);
+        $this->assertStringContainsString('ATLANTIC', $html);
     }
 
     public function test_pdf_firma_simulada_solo_si_aprobada(): void

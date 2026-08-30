@@ -23,14 +23,14 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContInternalCommissionControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL     = 'mbekhar@illuminations.com.pa';
-    private const FELIX_EMAIL    = 'conta@illuminations.com.pa';
-    private const DESIGNER_EMAIL = 'designer@illuminations.test';
+    private const MARK_EMAIL     = 'mbekhar@atlantic.com.pa';
+    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsMark(): string
@@ -44,7 +44,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     }
 
     /**
-     * `designer@illuminations.test` es la cuenta demo (AuthUserSeeder, solo local/dev/testing) —
+     * `designer@atlantic.test` es la cuenta demo (AuthUserSeeder, solo local/dev/testing) —
      * los 10 vendedores REALES reciben `admin_contab.commissions_internal.view` vía
      * `SpecialPermissionSeeder` (que no corre acá, ver docblock: "son personas y permisos reales,
      * no datos demo"), así que el fixture de test lo otorga directo, mismo patrón que el resto de
@@ -460,7 +460,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_summary_tarjetas_de_resumen_ignoran_el_filtro_de_vendedor(): void
     {
         $vendorA = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $vendorB = $this->userIdByEmail('neil.quiel@illuminations.com.pa');
+        $vendorB = $this->userIdByEmail('neil.quiel@atlantic.com.pa');
 
         $this->makeCommissionableOrder($vendorA, 10000.0, 10000.0);
         $this->makeCommissionableOrder($vendorB, 8000.0, 4000.0);

@@ -2,8 +2,8 @@ Feature: Oleada 1 completa (Agencias de Liquidación SCRUM-254→256, Pagos a Pr
 SCRUM-250→253, Garantías y Reclamos SCRUM-257→261, Sustitutos sin IA SCRUM-248/249) — 14 tickets
 Date: 2026-07-18
 Pre-QA: pasada real contra `dev` local (Docker: nginx+laravel+postgres+redis+horizon), stack
-completo — API real vía curl con JWT de usuarios reales seedeados (`management@illuminations.test`,
-`designer@illuminations.test`), Postgres real (`illuminations_compras`), S3 real (`atlanticerp-dev`
+completo — API real vía curl con JWT de usuarios reales seedeados (`management@atlantic.test`,
+`designer@atlantic.test`), Postgres real (`atlantic_compras`), S3 real (`atlanticerp-dev`
 bucket, comprobantes/fotos con presigned URLs reales), PDF real generado con dompdf y verificado
 visualmente. Pantallas verificadas en navegador real (Chrome vía claude-in-chrome) tras detectar y
 corregir que nginx servía un build de frontend desactualizado (`atlanticerp-frontend/dist/` no se

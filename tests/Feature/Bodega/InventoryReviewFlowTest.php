@@ -36,8 +36,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -54,8 +54,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -76,8 +76,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
         $item->update(['location_snapshot' => 'A-01-03']);
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -117,8 +117,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
         $review->refresh();
         [$itemA, $itemB] = $review->items->all();
 
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -142,8 +142,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -173,8 +173,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
         $review->refresh();
         [$itemA, $itemB] = $review->items->all();
 
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -204,8 +204,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('apolonio.gonzalez@illuminations.com.pa');
-        $token = $this->loginAs('apolonio.gonzalez@illuminations.com.pa', 'apolonio.gonzalez@illuminations.com.pa', 'ayudante_general_bodega');
+        $this->grantBodegaPermissions('apolonio.gonzalez@atlantic.com.pa');
+        $token = $this->loginAs('apolonio.gonzalez@atlantic.com.pa', 'apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -218,8 +218,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['order_type' => Order::ORDER_TYPE_PEDIDO, 'stage' => Order::STAGE_ASIGNADO]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/resolve-inventory-review", [
@@ -239,8 +239,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa');
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
         $headers = $this->authHeaders($token);
         $payload = ['decisions' => [['order_item_id' => $item->id, 'found' => true, 'location' => 'A-01']]];
 

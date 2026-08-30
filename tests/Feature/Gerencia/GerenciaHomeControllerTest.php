@@ -25,25 +25,25 @@ class GerenciaHomeControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     // La UserFactory del proyecto está rota (referencia columnas legadas `rol`/`nombre`/`activo`
-    // que ya no existen en `illuminations_auth.users`, ver ADR-004/006) — se inserta el owner
+    // que ya no existen en `atlantic_auth.users`, ver ADR-004/006) — se inserta el owner
     // directo por query builder, reusando el security_level_id de un usuario real ya sembrado,
     // en vez de depender de esa factory (fuera de alcance de este ticket arreglarla).
     private function createOwner(): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         $securityLevelId = DB::table("{$slug}_auth.users")
-            ->where('email', 'superadmin@illuminations.test')
+            ->where('email', 'superadmin@atlantic.test')
             ->value('security_level_id');
 
         return DB::table("{$slug}_auth.users")->insertGetId([
             'first_name'        => 'Owner',
             'last_name'         => 'SCRUM-160',
-            'email'             => 'owner-scrum-160@illuminations.test',
+            'email'             => 'owner-scrum-160@atlantic.test',
             'password_hash'     => bcrypt('irrelevant'),
             'security_level_id' => $securityLevelId,
             'created_at'        => Carbon::now(),
@@ -76,7 +76,7 @@ class GerenciaHomeControllerTest extends FeatureTestCase
 
         // loginAs() hace un round-trip HTTP real que olvida el tenant "actual" al terminar
         // (mismo gotcha que AdminContInvoiceControllerTest) — fixtures cross-schema antes de loguear.
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/gerencia/home?desde=2026-06-01&hasta=2026-08-31&vendedor_id={$ownerId}")

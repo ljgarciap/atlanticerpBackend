@@ -34,7 +34,7 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
         config(['services.anthropic.api_key' => 'sk-ant-test-fake-key-for-tests']);
         // Ninguno de estos tests le interesa el resultado de la validación con IA, solo que el
@@ -56,7 +56,7 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -78,11 +78,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
 
     public function test_subir_confirmacion_proveedor_bloqueada_mientras_por_aprobar(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => 'confirmacion_proveedor',
@@ -95,11 +95,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
 
     public function test_subir_confirmacion_proveedor_permitida_fuera_de_por_aprobar(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => 'confirmacion_proveedor',
@@ -111,11 +111,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
     /** El gate es específico de confirmacion_proveedor — el resto del checklist (REQ-155) no tiene esa regla. */
     public function test_subir_otra_categoria_de_documento_no_se_bloquea_por_aprobar(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => 'factura_comercial',

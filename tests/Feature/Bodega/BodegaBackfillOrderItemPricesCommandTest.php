@@ -30,17 +30,17 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
@@ -48,7 +48,7 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
     /** @return array{card: PipelineCard, quote: Quote} */
     private function makeCardWithGeneratedQuote(): array
     {
-        $ownerId = $this->userIdByEmail('management@illuminations.test');
+        $ownerId = $this->userIdByEmail('management@atlantic.test');
         $master  = MasterClient::create(['name' => 'Cliente Backfill '.uniqid()]);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.uniqid()]);
@@ -99,14 +99,14 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
         $customerReturn = CustomerReturn::create([
             'return_number' => 'DEV-2026-'.random_int(1000, 999999), 'order_id' => $order->id,
             'status' => CustomerReturn::STATUS_PENDIENTE, 'contact_name' => 'Ana', 'contact_phone' => '6000-0000',
-            'created_by' => $this->userIdByEmail('management@illuminations.test'),
+            'created_by' => $this->userIdByEmail('management@atlantic.test'),
         ]);
         $line = $customerReturn->lines()->create([
             'order_item_id' => $item->id, 'reference_snapshot' => $item->reference_snapshot,
             'description_snapshot' => $item->description_snapshot, 'qty_requested' => 2, 'reason' => 'excedente',
         ]);
 
-        $this->artisan('bodega:backfill-order-item-prices', ['--tenant' => 'illuminations'])
+        $this->artisan('bodega:backfill-order-item-prices', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();
@@ -141,7 +141,7 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
             'reference_snapshot' => $product->reference, 'description_snapshot' => $product->description,
         ]);
 
-        $this->artisan('bodega:backfill-order-item-prices', ['--tenant' => 'illuminations'])
+        $this->artisan('bodega:backfill-order-item-prices', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();
@@ -168,7 +168,7 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
             'reference_snapshot' => $product->reference, 'description_snapshot' => $product->description,
         ]);
 
-        $this->artisan('bodega:backfill-order-item-prices', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('bodega:backfill-order-item-prices', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();

@@ -104,7 +104,7 @@ para los números, tal como promete el docblock.
   ("stream") es sobre el transporte HTTP (headers antes de enviar el body), no sobre construcción
   incremental fila-por-fila — todo el archivo vive en memoria PHP antes de mandarse. No es un bug
   hoy: no hay ningún límite de artículos por pedido en el código (confirmé con grep, no hay
-  `MAX_ITEMS` ni similar), pero en la práctica un pedido de Illuminations son decenas de líneas, no
+  `MAX_ITEMS` ni similar), pero en la práctica un pedido de Atlantic son decenas de líneas, no
   miles — el volumen real no compromete memoria. Lo marco como sugerencia no bloqueante: si algún
   día se permite un pedido con cientos/miles de líneas, esto debería reescribirse para escribir el
   `Xlsx` directo a `php://output` (soportado por PhpSpreadsheet) en vez de por archivo temporal +

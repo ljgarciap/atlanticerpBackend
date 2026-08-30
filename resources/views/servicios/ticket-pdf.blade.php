@@ -29,9 +29,9 @@
     <div class="header">
         <div class="brand-row">
             <div class="brand-cell" style="width: 28px;">
-                <img src="{{ $logoDataUri }}" width="26" height="26" alt="Illuminations">
+                <img src="{{ $logoDataUri }}" width="26" height="26" alt="Atlantic">
             </div>
-            <div class="brand-cell brand">ILLUMINATIONS</div>
+            <div class="brand-cell brand">ATLANTIC</div>
         </div>
         <div class="sub">Ticket de Servicio {{ $ticket->numero }} — {{ $tipoLabel }}{{ $subtipoLabel ? ' — '.$subtipoLabel : '' }}</div>
         <div class="sub">Generado el {{ $generatedAt->format('d/m/Y H:i') }}</div>
@@ -117,7 +117,7 @@
     </div>
 
     <div class="footer">
-        Illuminations · Panamá · Nota: el diagnóstico y la firma del responsable se registran en el documento de Informe de Inspección, no en este ticket.
+        Atlantic · Panamá · Nota: el diagnóstico y la firma del responsable se registran en el documento de Informe de Inspección, no en este ticket.
     </div>
 </body>
 </html>

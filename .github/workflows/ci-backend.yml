@@ -117,9 +117,9 @@ jobs:
       - name: Crear schemas PostgreSQL
         run: |
           PGPASSWORD=ci_password psql -h 127.0.0.1 -U atlanticerp -d atlanticerp \
-            -c "CREATE SCHEMA IF NOT EXISTS illuminations_auth;
-                CREATE SCHEMA IF NOT EXISTS illuminations_crm;
-                CREATE SCHEMA IF NOT EXISTS illuminations_installations;"
+            -c "CREATE SCHEMA IF NOT EXISTS atlantic_auth;
+                CREATE SCHEMA IF NOT EXISTS atlantic_crm;
+                CREATE SCHEMA IF NOT EXISTS atlantic_installations;"
 
       - name: Correr migrations
         env:
@@ -129,7 +129,7 @@ jobs:
           DB_DATABASE: atlanticerp
           DB_USERNAME: atlanticerp
           DB_PASSWORD: ci_password
-          TENANT_DEFAULT: illuminations
+          TENANT_DEFAULT: atlantic
         run: php artisan migrate --force
 
       # PHPStan corre ANTES de PHPUnit: retroalimentación estática rápida sin
@@ -160,7 +160,7 @@ jobs:
           DB_PASSWORD: ci_password
           APP_ENV: testing
           JWT_SECRET: ci-local-jwt-secret-not-for-production
-          TENANT_DEFAULT: illuminations
+          TENANT_DEFAULT: atlantic
           FILESYSTEM_DISK: local
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379

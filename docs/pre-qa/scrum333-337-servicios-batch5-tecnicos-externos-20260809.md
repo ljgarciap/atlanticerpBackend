@@ -90,8 +90,8 @@ mecanismo `role:` ya usado en el resto del archivo para restricciones más angos
 de módulo). Re-verificado en vivo tras el fix:
 - `vendedor_disenador` (`milena.e@grupolafayette.com`) → `403` en index y show.
 - `vendedor_disenador` conserva `200` en `GET /api/servicios/tickets` (módulo no afectado).
-- `tecnico_servicios` (`carlos@illuminations.com.pa`) y `garantias_servicios`
-  (`garantias@illuminations.com.pa`) conservan `200` (RN5 — técnico interno solo-consulta).
+- `tecnico_servicios` (`carlos@atlantic.com.pa`) y `garantias_servicios`
+  (`garantias@atlantic.com.pa`) conservan `200` (RN5 — técnico interno solo-consulta).
 - `lider_servicios`/`management` conservan `200` y todas las operaciones de escritura intactas.
 
 Se agregaron 2 tests de regresión permanentes a
@@ -193,7 +193,7 @@ de endurecimiento transversal del módulo (decisión de Arquitecto, no de Pre-QA
 - Frontend: `npm run test` (Vitest) completo → **985/985 OK**.
 - Playwright: `preqa-scrum333-337-servicios-batch5-tecnicos-externos-20260809.spec.ts` → **6/6 OK**
   contra el stack local real (Vite + Docker), con los 3 usuarios reales del roster
-  (`servicio@illuminations.com.pa`, `carlos@illuminations.com.pa`).
+  (`servicio@atlantic.com.pa`, `carlos@atlantic.com.pa`).
 
 ## Archivos tocados por Pre-QA
 

@@ -21,7 +21,7 @@ final class ProductoMapperTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_mapea_articulo_con_precio_publico_y_costo(): void

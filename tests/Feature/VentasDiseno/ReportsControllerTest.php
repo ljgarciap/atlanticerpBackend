@@ -22,12 +22,12 @@ class ReportsControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDisenoRead(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
@@ -35,7 +35,7 @@ class ReportsControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -62,15 +62,15 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_superficie_trabajada_suma_solo_tarjetas_aprobadas_del_periodo(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $this->makeApprovedCard($designerId, 50.0, now());
         $this->makeApprovedCard($designerId, 30.0, now());
         // Fuera del período (mes pasado) — no debe sumar.
         $this->makeApprovedCard($designerId, 999.0, now()->subMonths(2));
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary?scope=own&period=month')
@@ -82,8 +82,8 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_diseñador_no_puede_pedir_alcance_equipo(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary?scope=team')
@@ -95,10 +95,10 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_gerencia_puede_pedir_alcance_equipo(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'management@illuminations.test')
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_auth.users")->where('email', 'management@atlantic.test')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary?scope=team')
@@ -111,13 +111,13 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_mejores_clientes_ordena_de_mayor_a_menor(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $this->makeApprovedCard($designerId, 10, now(), 500, 'Cliente Chico');
         $this->makeApprovedCard($designerId, 10, now(), 5000, 'Cliente Grande');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary')
             ->assertStatus(200);
@@ -132,12 +132,12 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_meta_panel_usa_el_valor_configurado_no_un_promedio(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $this->makeApprovedCard($designerId, 10, now(), 3000);
         SalesGoal::create(['user_id' => $designerId, 'goal_amount' => 8000]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary')
             ->assertStatus(200);
@@ -150,8 +150,8 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_meta_panel_sin_meta_configurada_es_null(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary')
@@ -164,8 +164,8 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_top_vendedores_solo_aparece_en_alcance_equipo(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary?scope=own')
@@ -176,17 +176,17 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_top_vendedores_marca_alerta_tras_3_meses_consecutivos_bajos(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'management@illuminations.test')
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_auth.users")->where('email', 'management@atlantic.test')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         // 3 meses consecutivos por debajo de $20,000 (umbral por defecto).
         $this->makeApprovedCard($designerId, 10, now(), 5000);
         $this->makeApprovedCard($designerId, 10, now()->subMonth(), 5000);
         $this->makeApprovedCard($designerId, 10, now()->subMonths(2), 5000);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary?scope=team')
             ->assertStatus(200);
@@ -199,16 +199,16 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_top_vendedores_sin_alerta_si_un_mes_supera_el_umbral(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'management@illuminations.test')
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_auth.users")->where('email', 'management@atlantic.test')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $this->makeApprovedCard($designerId, 10, now(), 25000); // mes actual por encima del umbral
         $this->makeApprovedCard($designerId, 10, now()->subMonth(), 5000);
         $this->makeApprovedCard($designerId, 10, now()->subMonths(2), 5000);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary?scope=team')
             ->assertStatus(200);
@@ -223,8 +223,8 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_forecast_solo_aparece_en_alcance_equipo(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary?scope=own')
@@ -235,11 +235,11 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_forecast_pondera_cotizacion_y_propuesta_con_las_probabilidades_configuradas(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'management@illuminations.test')
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_auth.users")->where('email', 'management@atlantic.test')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         // Forecast es agregado de TODO el equipo (por diseño, REQ-076) — puede
         // haber datos demo sembrados en el entorno de testing (CrmDemoSeeder),
@@ -249,7 +249,7 @@ class ReportsControllerTest extends FeatureTestCase
             ->getJson('/api/ventas-diseno/reports/summary?scope=team')
             ->json('forecast');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->makeApprovedCard($designerId, 10, now(), 1000); // ya cerrado
 
         $master  = MasterClient::create(['name' => 'Cliente Quote']);
@@ -282,10 +282,10 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_forecast_incluye_detalle_por_etapa_con_probabilidad_configurada(): void
     {
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $master  = MasterClient::create(['name' => 'Cliente Breakdown']);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Breakdown', 'tax_id' => '155-2222-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Breakdown']);
@@ -308,10 +308,10 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_falta_para_la_meta_ignora_el_pipeline_ponderado(): void
     {
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         // Meta bien por encima de cualquier dato demo ambiente, para que "remaining" no
         // toque el piso de 0 en ninguno de los 2 escenarios comparados (delta, no absoluto
         // — mismo criterio que test_forecast_pondera_..., puede haber datos demo sembrados).
@@ -321,7 +321,7 @@ class ReportsControllerTest extends FeatureTestCase
             ->getJson('/api/ventas-diseno/reports/summary?scope=team')
             ->json('forecast');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->makeApprovedCard($designerId, 5, now(), 100); // closed += 100
 
         $master  = MasterClient::create(['name' => 'Cliente Remaining']);

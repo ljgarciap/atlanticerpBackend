@@ -12,14 +12,14 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-610→611 (REQ-533→534) — Movimientos. */
 class AdminContBankMovementControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL  = 'conta@illuminations.com.pa';
-    private const YANETH_EMAIL = 'asistente@illuminations.com.pa';
-    private const MARK_EMAIL   = 'mbekhar@illuminations.com.pa';
+    private const FELIX_EMAIL  = 'conta@atlantic.com.pa';
+    private const YANETH_EMAIL = 'asistente@atlantic.com.pa';
+    private const MARK_EMAIL   = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string

@@ -43,7 +43,7 @@
     @endphp
     <div class="header">
         <div class="col">
-            <div class="titulo">Illuminations — Reporte de Caja Chica</div>
+            <div class="titulo">Atlantic — Reporte de Caja Chica</div>
         </div>
         <div class="col right">
             <div class="reporte-numero">{{ $numero }}</div>

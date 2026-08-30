@@ -33,7 +33,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="brand">ILLUMINATIONS</div>
+        <div class="brand">ATLANTIC</div>
         <div class="sub">Catálogo — generado el {{ $generatedAt->format('d/m/Y') }}</div>
     </div>
 
@@ -84,7 +84,7 @@
     @endforelse
 
     <div class="footer">
-        Illuminations · Panamá · Documento generado automáticamente desde el Catálogo — precios sujetos a cambio sin previo aviso.
+        Atlantic · Panamá · Documento generado automáticamente desde el Catálogo — precios sujetos a cambio sin previo aviso.
     </div>
 </body>
 </html>

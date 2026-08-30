@@ -18,14 +18,14 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 5 de Admin&Cont (SCRUM-539→544, REQ-462→467) — Cobros. */
 class AdminContPaymentControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL  = 'conta@illuminations.com.pa';
-    private const MARK_EMAIL   = 'mbekhar@illuminations.com.pa';
-    private const YANETH_EMAIL = 'asistente@illuminations.com.pa';
+    private const FELIX_EMAIL  = 'conta@atlantic.com.pa';
+    private const MARK_EMAIL   = 'mbekhar@atlantic.com.pa';
+    private const YANETH_EMAIL = 'asistente@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string
@@ -176,9 +176,9 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         // El postJson anterior es un round-trip HTTP real — spatie/laravel-multitenancy olvida el
         // tenant "actual" al terminar cada request (mismo gotcha ya documentado en
         // AdminContInvoiceControllerTest) — re-establecer antes de cualquier Eloquent directo.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(6200.0, (float) $invoice->refresh()->saldo_aplicado);
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas("{$slug}_admin_contab.bank_movements", [
             'bank_account_id' => $account->id, 'tipo' => 'cobro', 'monto' => 6200,
         ]);
@@ -201,7 +201,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $this->assertSame(5700.0, (float) $response->json('monto_recibido'));
         $this->assertSame(500.0, (float) $response->json('saldo_favor_aplicado'));
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(0.0, (float) AdminContCustomerCreditBalance::where('master_client_id', $master->id)->value('saldo'));
     }
 
@@ -218,7 +218,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
         $this->assertSame(0.0, (float) $response->json('monto_recibido'));
         $this->assertNull($response->json('bank_account_id'));
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseCount("{$slug}_admin_contab.bank_movements", 0);
     }
 
@@ -275,9 +275,9 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
         // REQ-469 RN5 — mientras espera confirmación, no reduce el saldo pendiente de la factura
         // ni deja movimiento en el ledger bancario (ambos se aplican recién al confirmar, Batch 7).
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(0.0, (float) $invoice->refresh()->saldo_aplicado);
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseCount("{$slug}_admin_contab.bank_movements", 0);
     }
 
@@ -382,8 +382,8 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'comprobante' => $file,
         ])->assertStatus(201);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas("{$slug}_admin_contab.payment_attachments", [
             'payment_id' => $response->json('id'), 'nombre_archivo' => 'comprobante.pdf',
         ]);
@@ -508,7 +508,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'monto_recibido_estimado' => 6200,
         ])->assertStatus(201);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(4000.0, (float) $invoiceA->refresh()->saldo_aplicado);
         $this->assertSame(2200.0, (float) $invoiceB->refresh()->saldo_aplicado);
     }
@@ -640,10 +640,10 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $this->assertMatchesRegularExpression('/^CONF-\d{3}$/', (string) $response->json('confirmacion.numero_confirmacion'));
         $this->assertSame('Felix Campos', $response->json('confirmacion.confirmado_por'));
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(6200.0, (float) $invoice->refresh()->saldo_aplicado);
         $this->assertSame(0.0, (float) AdminContCustomerCreditBalance::where('master_client_id', $master->id)->value('saldo'));
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas("{$slug}_admin_contab.bank_movements", [
             'bank_account_id' => $account->id, 'tipo' => 'cobro', 'monto' => 5700,
         ]);
@@ -732,7 +732,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             ->assertStatus(201);
 
         $this->assertSame('constancia.pdf', $first->json('nombre_archivo'));
-        $this->assertDatabaseCount('illuminations_admin_contab.payment_retention_attachments', 1);
+        $this->assertDatabaseCount('atlantic_admin_contab.payment_retention_attachments', 1);
 
         // reemplazo real — sigue habiendo 1 sola fila, con el archivo nuevo.
         $second = $this->withHeaders($this->authHeaders($token))
@@ -742,7 +742,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             ->assertStatus(201);
 
         $this->assertSame('constancia-v2.pdf', $second->json('nombre_archivo'));
-        $this->assertDatabaseCount('illuminations_admin_contab.payment_retention_attachments', 1);
+        $this->assertDatabaseCount('atlantic_admin_contab.payment_retention_attachments', 1);
     }
 
     public function test_retention_attachment_rechaza_cobro_con_otro_metodo(): void

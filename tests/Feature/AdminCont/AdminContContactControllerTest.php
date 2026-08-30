@@ -10,12 +10,12 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-641 (REQ-564) — Contactos generales por área. */
 class AdminContContactControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsMark(): string
@@ -30,7 +30,7 @@ class AdminContContactControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/contacts', [
                 'area'     => 'Soporte',
-                'email'    => 'soporte@illuminations.com.pa',
+                'email'    => 'soporte@atlantic.com.pa',
                 'telefono' => '+507 6000-0000',
             ])
             ->assertStatus(201);
@@ -50,7 +50,7 @@ class AdminContContactControllerTest extends FeatureTestCase
 
     public function test_store_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/contacts', [
@@ -65,7 +65,7 @@ class AdminContContactControllerTest extends FeatureTestCase
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/contacts', [
-                'area' => 'Ventas', 'email' => 'ventas@illuminations.com.pa', 'telefono' => '6111-1111',
+                'area' => 'Ventas', 'email' => 'ventas@atlantic.com.pa', 'telefono' => '6111-1111',
             ])->json();
 
         $response = $this->withHeaders($this->authHeaders($token))

@@ -8,7 +8,7 @@
 
 ## Contexto
 
-El módulo Auth tiene: login JWT, refresh tokens, RBAC multi-rol, security levels, user management, preferences, system settings. SMTP Office365 configurado y probado (`atlanticerp@illuminations.com.pa`). Esta fase agrega tres features de seguridad fundamentales.
+El módulo Auth tiene: login JWT, refresh tokens, RBAC multi-rol, security levels, user management, preferences, system settings. SMTP Office365 configurado y probado (`atlanticerp@atlantic.com.pa`). Esta fase agrega tres features de seguridad fundamentales.
 
 ---
 

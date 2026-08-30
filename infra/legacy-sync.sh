@@ -121,7 +121,7 @@
 #   infra/legacy-sync.sh prod --fix-productos-referencia --force
 #
 # Requiere: misma clave SSH para los 3 entornos (ver memory/reference_ssh_dev.md),
-# ~/.ssh/atlanticerp/atlanticerp-key.pem. Tenant fijo `illuminations` — único tenant real hoy.
+# ~/.ssh/atlanticerp/atlanticerp-key.pem. Tenant fijo `atlantic` — único tenant real hoy.
 #
 # Cada corrida queda en docs/legacy-sync-logs/<env>-<timestamp>.log (gitignored — son logs
 # operativos con datos reales de negocio, nunca se commitean) para poder comparar corridas entre
@@ -159,7 +159,7 @@ ENV="${1:-}"
 shift || true
 
 SSH_KEY="$HOME/.ssh/atlanticerp/atlanticerp-key.pem"
-TENANT="illuminations"
+TENANT="atlantic"
 REMOTE_REPO="/var/www/backend"
 
 case "$ENV" in

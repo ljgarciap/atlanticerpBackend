@@ -43,15 +43,15 @@ class Scrum711SalesForceDemoSeeder extends Seeder
     /** @var list<string> */
     private const VENDOR_EMAILS = [
         'milena.e@grupolafayette.com',
-        'neil.quiel@illuminations.com.pa',
-        'fefi@illuminations.com.pa',
-        'vanessa@illuminations.com.pa',
-        'paola@illuminations.com.pa',
-        'annie@illuminations.com.pa',
-        'maribel@illuminations.com.pa',
-        'juanmanuel@illuminations.com.pa',
-        'bernardo@illuminations.com.pa',
-        'idmar@illuminations.com.pa',
+        'neil.quiel@atlantic.com.pa',
+        'fefi@atlantic.com.pa',
+        'vanessa@atlantic.com.pa',
+        'paola@atlantic.com.pa',
+        'annie@atlantic.com.pa',
+        'maribel@atlantic.com.pa',
+        'juanmanuel@atlantic.com.pa',
+        'bernardo@atlantic.com.pa',
+        'idmar@atlantic.com.pa',
     ];
 
     /** Primer vendedor de la lista — cumple "3 meses sin superar $20,000" (REQ-075). */
@@ -139,9 +139,9 @@ class Scrum711SalesForceDemoSeeder extends Seeder
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
         if ($tenant === null) {
-            $this->command?->warn('Tenant "illuminations" not found — Scrum711SalesForceDemoSeeder skipped.');
+            $this->command?->warn('Tenant "atlantic" not found — Scrum711SalesForceDemoSeeder skipped.');
             return;
         }
 
@@ -272,7 +272,7 @@ class Scrum711SalesForceDemoSeeder extends Seeder
 
     /**
      * SCRUM-499 sembró 13 tarjetas 'approved' + 1 SalesGoal sobre el usuario legado
-     * "designer@illuminations.test" (rol 'designer', ver QaTicketsBatch20260725Seeder,
+     * "designer@atlantic.test" (rol 'designer', ver QaTicketsBatch20260725Seeder,
      * que no está commiteado en esta rama — corrió a mano vía tinker). Se retira acá
      * porque Daniela (QA) no podía ver Ventas&Diseño con ese usuario y el propio
      * ticket 711 §6.1 pide la misma data sobre los vendedores reales.
@@ -280,7 +280,7 @@ class Scrum711SalesForceDemoSeeder extends Seeder
     private function retireScrum499DesignerDemoSeed(string $slug): void
     {
         $designerId = DB::table("{$slug}_auth.users")
-            ->where('email', 'designer@illuminations.test')
+            ->where('email', 'designer@atlantic.test')
             ->value('id');
 
         if ($designerId === null) {
@@ -291,7 +291,7 @@ class Scrum711SalesForceDemoSeeder extends Seeder
         $removedGoals = SalesGoal::where('user_id', $designerId)->delete();
 
         if ($removedCards > 0 || $removedGoals > 0) {
-            $this->command?->info("Retirado seed SCRUM-499 de designer@illuminations.test: {$removedCards} tarjetas, {$removedGoals} metas.");
+            $this->command?->info("Retirado seed SCRUM-499 de designer@atlantic.test: {$removedCards} tarjetas, {$removedGoals} metas.");
         }
     }
 

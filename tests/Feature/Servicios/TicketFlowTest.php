@@ -21,13 +21,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class TicketFlowTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
 
-    private const GARANTIAS_SERVICIOS = 'garantias@illuminations.com.pa';
+    private const GARANTIAS_SERVICIOS = 'garantias@atlantic.com.pa';
 
-    private const MANAGEMENT = 'daniela@illuminations.com.pa';
+    private const MANAGEMENT = 'daniela@atlantic.com.pa';
 
     private const VENDEDOR_DISENADOR = 'milena.e@grupolafayette.com';
 
@@ -39,7 +39,7 @@ class TicketFlowTest extends FeatureTestCase
 
     private function makeCurrentTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** Batch 3 parte 2 — `sales_project_id` es obligatorio en POST /tickets desde REQ-246 RN6. */

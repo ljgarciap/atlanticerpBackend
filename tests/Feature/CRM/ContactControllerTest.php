@@ -275,7 +275,7 @@ class ContactControllerTest extends FeatureTestCase
 
     public function test_import_retorna_403_para_designer(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/crm/contacts/import')

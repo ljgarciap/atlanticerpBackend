@@ -26,16 +26,16 @@ pero el criterio central de SCRUM-412 (`bodega.read` para Bodega, `ventas_diseno
 Ventas & Diseño, filtro por `owner_id`) sí depende de permisos por rol — verificado que **ambos
 ya están realmente concedidos en el entorno** vía `RoleModuleVisibility` (rol `lider_bodega` →
 `bodega.view/.read/.view_team`, rol `vendedor_disenador` → `ventas_diseno.view/.read`), confirmado
-con un login real (no grant manual, no `extra_permissions` ad-hoc) contra `almacen@illuminations.com.pa`
-y `neil.quiel@illuminations.com.pa`. No hay hallazgo acá.
+con un login real (no grant manual, no `extra_permissions` ad-hoc) contra `almacen@atlantic.com.pa`
+y `neil.quiel@atlantic.com.pa`. No hay hallazgo acá.
 
 ## Datos sembrados para esta pasada (vía tinker, `Order`/`PipelineCard` reales)
 
 | Fixture | order_number | owner | Detalle |
 |---|---|---|---|
-| Familia A (2 tarjetas) | `PREQA-FAM2-9247` (root id 128, hija id 129) | Neil Quiel (`neil.quiel@illuminations.com.pa`) | Root: producto compartido 6/6 entregado. Hija: mismo producto 4/0 + producto propio 2/2. Total esperado: solicitada 10, entregado 6, pendiente 4 (producto compartido) — sin duplicar el producto compartido en 2 líneas. |
+| Familia A (2 tarjetas) | `PREQA-FAM2-9247` (root id 128, hija id 129) | Neil Quiel (`neil.quiel@atlantic.com.pa`) | Root: producto compartido 6/6 entregado. Hija: mismo producto 4/0 + producto propio 2/2. Total esperado: solicitada 10, entregado 6, pendiente 4 (producto compartido) — sin duplicar el producto compartido en 2 líneas. |
 | Familia B (3 tarjetas) | `PREQA-FAM3-7805` (root id 130, hijas 131/132) | Neil Quiel | 3 tarjetas, mismo producto, 3+3+4 solicitadas = 3+3+4 entregadas → 100% entregado, pendiente debe ser 0. |
-| Pedido de otro vendedor | `PREQA-FEFI-8660` (id 133) | Maria F. Bonvini (`fefi@illuminations.com.pa`) | Para el escenario adversarial de ownership cruzado. |
+| Pedido de otro vendedor | `PREQA-FEFI-8660` (id 133) | Maria F. Bonvini (`fefi@atlantic.com.pa`) | Para el escenario adversarial de ownership cruzado. |
 
 ## Resultado real de verificación (corrido yo mismo)
 
@@ -128,7 +128,7 @@ dejo anotado para que PM decida si vale la pena una mejora futura transversal a 
   "guardar"/"editar"/"eliminar" en el DOM) — Playwright.
 - Botón de entrada desde `PipelinePage` navega al mismo lugar que el de `PedidosPage` — confirmado
   (ver SCRUM-407 arriba).
-- **Foco de ruptura — rol sin ninguno de los 2 permisos:** logueado como `supervisor@illuminations.test`
+- **Foco de ruptura — rol sin ninguno de los 2 permisos:** logueado como `supervisor@atlantic.test`
   (rol `supervisor`, sin `bodega.read` ni `ventas_diseno.read`) — la API devuelve 403 real en
   `GET /bodega/orders/status`, y en la UI el gate de ruta (`RequirePermission`) redirige a
   `/dashboard` de verdad (confirmado con captura de pantalla, el usuario aterriza en el Dashboard

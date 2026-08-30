@@ -17,7 +17,7 @@ use Barryvdh\DomPDF\PDF as PdfDocument;
  *
  * Logo embebido (rebote SCRUM-781 2026-08-24) — este PDF (botón "Ver/Imprimir" del detalle del
  * ticket, distinto de la Hoja de Reclamo/Informe/Cotización) se quedó fuera del fix de logo de
- * `dbefecc` (solo tocó esos 3 servicios), aunque comparte la misma marca "ILLUMINATIONS" en texto
+ * `dbefecc` (solo tocó esos 3 servicios), aunque comparte la misma marca "ATLANTIC" en texto
  * plano — mismo `PdfLogo::dataUri()` ya usado ahí.
  */
 final class TicketPdfService

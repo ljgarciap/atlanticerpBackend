@@ -124,7 +124,7 @@ final class InsumoService
      * (`catalog_products.provider_id`), mismo dato que ya usa Compras para reordenar este
      * producto. `shipping_type`/`who_pays_shipping` quedan NULL a propósito — sin esos datos
      * `PurchaseOrder::computeRequiresMarkApproval()` siempre da `false` (RN3/REQ-118 solo aplica a
-     * envíos aéreos pagados por Illuminations, que este flujo interno nunca captura), así que la
+     * envíos aéreos pagados por Atlantic, que este flujo interno nunca captura), así que la
      * orden nace directo en "Pendiente/Por liquidar", sin bloquear en un gate de aprobación de
      * Mark que este formulario no tiene forma de satisfacer.
      *

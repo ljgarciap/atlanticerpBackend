@@ -24,7 +24,7 @@ class RolesSeedTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_se_siembran_14_roles_13_de_negocio_mas_superadmin(): void
@@ -131,7 +131,7 @@ class RolesSeedTest extends FeatureTestCase
         //   Nivel 5 "Team Lead" + servicios       (tecnico_servicios/garantias_servicios, can_edit=true)
         //   Nivel 6 "Supervisor" + ventas_diseno  (vendedor_disenador, can_edit=true, preserva su capacidad actual)
         //   Nivel 6 "Supervisor" + servicios      (vendedor_disenador, can_edit=false — el punto de crear este nivel)
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $count = DB::table("{$slug}_auth.security_level_module_permissions")->count();
         $this->assertSame(38, $count);
     }
@@ -143,7 +143,7 @@ class RolesSeedTest extends FeatureTestCase
         // RN3 de SCRUM-383 (los Asistentes también pueden asignar el picking). En vez de subirlos
         // al Nivel 4 (over-grant: can_edit en los 7 módulos), se reusa el Nivel 3 (sin uso previo)
         // con can_edit=true SOLO en bodega.
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $levelId = DB::table("{$slug}_auth.security_levels")->where('level', 3)->value('id');
 
         $rows = DB::table("{$slug}_auth.security_level_module_permissions")
@@ -175,7 +175,7 @@ class RolesSeedTest extends FeatureTestCase
 
     public function test_gerencia_restringida_aprueba_solo_ventas_diseno(): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $levelId = DB::table("{$slug}_auth.security_levels")->where('level', 8)->value('id');
 
         $rows = DB::table("{$slug}_auth.security_level_module_permissions")

@@ -79,9 +79,9 @@
     <div class="doc-header">
         <div class="brand-row">
             <div class="brand-cell" style="width: 40px;">
-                <img src="{{ $logoDataUri }}" width="36" height="36" alt="Illuminations">
+                <img src="{{ $logoDataUri }}" width="36" height="36" alt="Atlantic">
             </div>
-            <div class="brand-cell brand-name">ILLUMINATIONS</div>
+            <div class="brand-cell brand-name">ATLANTIC</div>
         </div>
         <div class="brand-line"></div>
     </div>
@@ -188,7 +188,7 @@
                 <div class="block-value">{{ $quote['observations_preview'] ?: '—' }}</div>
 
                 <div class="block-title">Instrucciones de pago</div>
-                <div class="block-value">Cheque a nombre de: Illuminations<br>Pagos ACH: consultar con su diseñador</div>
+                <div class="block-value">Cheque a nombre de: Atlantic<br>Pagos ACH: consultar con su diseñador</div>
 
                 <div class="block-title">Condiciones</div>
                 <div class="block-value">{{ $quote['conditions_text'] ?: '—' }}</div>
@@ -229,7 +229,7 @@
     <script type="text/php">
         if (isset($pdf)) {
             $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $companyText = "ILLUMINATIONS USA CORP - Calle 57 Este, Times Square Plaza - Obarrio, Panama - www.illuminations.com.pa";
+            $companyText = "ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza - Obarrio, Panama - www.atlantic.com.pa";
             $w1 = $fontMetrics->getTextWidth($companyText, $font, 7);
             $pdf->page_text((612 - $w1) / 2, 762, $companyText, $font, 7, array(0.55, 0.55, 0.55));
 

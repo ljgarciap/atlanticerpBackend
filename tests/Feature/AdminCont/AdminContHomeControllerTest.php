@@ -24,16 +24,16 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContHomeControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@illuminations.com.pa';
-    private const YANETH_EMAIL   = 'asistente@illuminations.com.pa';
-    private const DESIGNER_EMAIL = 'designer@illuminations.test';
+    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const YANETH_EMAIL   = 'asistente@atlantic.com.pa';
+    private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     private const URL = '/api/admin-contab/home/resumen-mes';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string

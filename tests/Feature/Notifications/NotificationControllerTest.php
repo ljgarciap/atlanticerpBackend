@@ -21,7 +21,7 @@ class NotificationControllerTest extends FeatureTestCase
     /** Ver nota en NotificationServiceTest — el tenant no queda activo fuera de una request HTTP. */
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()->makeCurrent();
     }
 
     protected function tearDown(): void
@@ -40,7 +40,7 @@ class NotificationControllerTest extends FeatureTestCase
         $mgmtToken = $this->loginAs();
         $mgmtId    = $this->currentUserId($mgmtToken);
 
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
         $designerId    = $this->currentUserId($designerToken);
 
         $this->activateTenant();
@@ -101,7 +101,7 @@ class NotificationControllerTest extends FeatureTestCase
         $mgmtToken = $this->loginAs();
         $mgmtId    = $this->currentUserId($mgmtToken);
 
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
 
         $this->activateTenant();
         app(NotificationService::class)->send([$mgmtId], ['subject' => 'X', 'body' => 'x'], ['in_app']);

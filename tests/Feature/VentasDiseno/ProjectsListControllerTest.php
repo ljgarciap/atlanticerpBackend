@@ -22,12 +22,12 @@ class ProjectsListControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDisenoRead(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
@@ -35,7 +35,7 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -76,14 +76,14 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_vendedor_solo_ve_sus_propios_proyectos(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $mine   = $this->makeCard($designerId);
         $theirs = $this->makeCard($managerId);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects')
@@ -99,13 +99,13 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_gerencia_ve_los_proyectos_de_todo_el_equipo(): void
     {
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $card1 = $this->makeCard($designerId);
         $card2 = $this->makeCard($managerId);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects?scope=team')
@@ -120,13 +120,13 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_gerencia_puede_acotar_a_un_responsable_especifico(): void
     {
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $card1 = $this->makeCard($designerId);
         $card2 = $this->makeCard($managerId);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/projects?scope=team&owner_id={$designerId}")
@@ -141,12 +141,12 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_fila_incluye_los_datos_esperados_y_null_cuando_falta(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $lead = $this->makeCard($designerId, 'lead');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects')
@@ -165,15 +165,15 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_proxima_fecha_de_entrega_pendiente_se_prioriza_sobre_fechas_vencidas(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $card = $this->makeCard($designerId, 'approved');
         $card->deliveryDates()->create(['date' => Carbon::today()->subDays(10)]);
         $card->deliveryDates()->create(['date' => Carbon::today()->addDays(5)]);
         $card->deliveryDates()->create(['date' => Carbon::today()->addDays(20)]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects')
@@ -185,14 +185,14 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_si_todas_las_fechas_ya_vencieron_muestra_la_mas_reciente(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $card = $this->makeCard($designerId, 'approved');
         $card->deliveryDates()->create(['date' => Carbon::today()->subDays(20)]);
         $card->deliveryDates()->create(['date' => Carbon::today()->subDays(3)]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects')
@@ -206,13 +206,13 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_busqueda_de_texto_filtra_por_nombre_de_proyecto_o_cliente(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $match     = $this->makeCard($designerId, 'lead', null, ['name' => 'Torre Marbella']);
         $otherName = $this->makeCard($designerId, 'lead', null, ['name' => 'Residencial Costa']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects?search=marbella')
@@ -225,13 +225,13 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_filtro_de_etapa_acota_la_tabla(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $lead   = $this->makeCard($designerId, 'lead');
         $design = $this->makeCard($designerId, 'design');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects?stage=design')
@@ -244,13 +244,13 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_filtro_de_etiqueta_acota_la_tabla(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $both   = $this->makeCard($designerId, 'lead', null, ['tag' => 'both']);
         $design = $this->makeCard($designerId, 'lead', null, ['tag' => 'design']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects?tag=both')
@@ -264,14 +264,14 @@ class ProjectsListControllerTest extends FeatureTestCase
     public function test_filtro_de_responsable_no_tiene_efecto_para_vendedor(): void
     {
         // RN4: sin scope=team, owner_id se ignora — el vendedor ya está limitado a lo suyo.
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $mine = $this->makeCard($designerId);
         $this->makeCard($managerId);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/projects?owner_id={$managerId}")
@@ -290,15 +290,15 @@ class ProjectsListControllerTest extends FeatureTestCase
     // cubierto de forma permanente, no solo verificado ad-hoc.
     public function test_vendedor_no_puede_forzar_scope_team_ni_owner_id_de_otro_mandandolo_directo(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $mine       = $this->makeCard($designerId);
         $theirs     = $this->makeCard($managerId, 'lead', null, ['name' => 'Proyecto Ajeno Del Manager']);
         $theirsName = $theirs->fresh()->salesProject->name;
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // Intento de bypass: forzar scope=team Y owner_id del manager directo en el query string,
         // sin pasar por ningún control de UI.
@@ -326,15 +326,15 @@ class ProjectsListControllerTest extends FeatureTestCase
     // mismo scope pero ignorando search/stage/tag) son dos números distintos.
     public function test_total_unfiltered_ignora_filtros_de_busqueda_pero_respeta_el_scope(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         $this->makeCard($designerId, 'lead', null, ['name' => 'Torre Marbella']);
         $this->makeCard($designerId, 'design', null, ['name' => 'Otro Proyecto']);
         $this->makeCard($managerId); // fuera de scope 'own' del designer
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects?search=marbella')
@@ -349,14 +349,14 @@ class ProjectsListControllerTest extends FeatureTestCase
     public function test_listado_pagina_desde_el_backend(): void
     {
         // SCRUM-754: 5 ya no es una opción válida de per_page (10/20/50/100/todas) — se usa 10.
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         for ($i = 0; $i < 12; $i++) {
             $this->makeCard($designerId);
         }
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects?per_page=10')
@@ -371,13 +371,13 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_exportar_csv_respeta_los_filtros_aplicados(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $this->makeCard($designerId, 'lead', null, ['name' => 'Proyecto Filtrado']);
         $this->makeCard($designerId, 'design', null, ['name' => 'Proyecto Excluido']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get('/api/ventas-diseno/projects/export?stage=lead');
@@ -392,11 +392,11 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_exportar_csv_tiene_exactamente_las_10_columnas_visibles(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $this->makeCard($designerId);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get('/api/ventas-diseno/projects/export');
@@ -428,7 +428,7 @@ class ProjectsListControllerTest extends FeatureTestCase
 
     public function test_listar_proyectos_sin_permiso_retorna_403(): void
     {
-        $token = $this->loginAs('supervisor@illuminations.test', 'Password123!', 'supervisor');
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/projects')

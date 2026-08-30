@@ -30,7 +30,7 @@ en verde tras las correcciones de este documento, corridos contra el stack local
 El prompt de despacho traía una contraseña específica para Mark (`B1n4X_2026?`) marcada como
 "excepción al patrón default", con la advertencia de que un despacho previo se había colgado en el
 login. Verificado con `Hash::check()` contra la BD real del stack local: esa contraseña **no es
-válida** — el usuario Mark (`mbekhar@illuminations.com.pa`, id 6, coincide con
+válida** — el usuario Mark (`mbekhar@atlantic.com.pa`, id 6, coincide con
 `fiscal_settings.mark_approver_user_id`) sigue con el password default (su propio email), igual que
 el resto del roster. No es un bug de código — es una desactualización de la nota de despacho/
 memoria del proyecto. Recomendación: corregir esa nota en `memory/` o `reference_ssh_dev.md` para
@@ -166,7 +166,7 @@ Arquitecto los limpie (`git worktree remove` + `git branch -D`), no es bloqueant
 ## Datos de prueba sembrados (quedan en el stack local, prefijo `[PREQA-B13]`)
 
 6 clientes/facturas fixture + 7 notas de crédito (NC-0007→NC-0013, ids 26-32) en el schema
-`illuminations_admin_contab` local. No se limpiaron — mismo criterio que sesiones de Pre-QA
+`atlantic_admin_contab` local. No se limpiaron — mismo criterio que sesiones de Pre-QA
 anteriores (datos locales, sin impacto en `dev`/`test`/`prod`).
 
 ## Veredicto

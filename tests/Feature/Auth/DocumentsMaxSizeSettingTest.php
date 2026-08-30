@@ -23,7 +23,7 @@ class DocumentsMaxSizeSettingTest extends FeatureTestCase
 
     public function test_cualquier_usuario_autenticado_puede_leer_max_size(): void
     {
-        $designer = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designer = $this->loginAs('designer@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($designer))
             ->getJson('/api/settings/documents/max-size')
@@ -57,7 +57,7 @@ class DocumentsMaxSizeSettingTest extends FeatureTestCase
 
     public function test_usuario_sin_superadmin_all_no_puede_actualizar_max_size(): void
     {
-        $designer = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $designer = $this->loginAs('designer@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($designer))
             ->putJson('/api/settings/documents/max-size', ['max_size_mb' => 100])

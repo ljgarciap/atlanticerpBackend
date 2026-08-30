@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Shared\Support;
 
 /**
- * SCRUM-781 (punto 5/8/9) — isólogo de Illuminations embebido como data URI para PDFs generados
+ * SCRUM-781 (punto 5/8/9) — isólogo de Atlantic embebido como data URI para PDFs generados
  * con dompdf. dompdf en este entorno NO renderiza `<svg>` inline (verificado: un SVG mínimo aislado
  * produce una página en blanco) — el patrón que ya usaba `ventas-diseno/quote-pdf.blade.php` nunca
  * funcionó de verdad, solo estaba en el código sin verificación visual. `<img src="data:...">` sí

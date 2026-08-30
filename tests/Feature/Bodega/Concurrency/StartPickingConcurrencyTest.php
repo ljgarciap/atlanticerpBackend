@@ -30,12 +30,12 @@ class StartPickingConcurrencyTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     protected function tearDown(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         if ($this->orderId !== null) {
             OrderStageHistory::where('order_id', $this->orderId)->delete();
@@ -48,7 +48,7 @@ class StartPickingConcurrencyTest extends FeatureTestCase
 
     public function test_dos_inicios_de_picking_concurrentes_solo_uno_avanza_a_en_picking(): void
     {
-        $pickerId = (int) DB::table('illuminations_auth.users')->where('email', 'apolonio.gonzalez@illuminations.com.pa')->value('id');
+        $pickerId = (int) DB::table('atlantic_auth.users')->where('email', 'apolonio.gonzalez@atlantic.com.pa')->value('id');
 
         $order = Order::create([
             'order_number' => 'PED-CONC-'.random_int(10000, 999999),
@@ -62,7 +62,7 @@ class StartPickingConcurrencyTest extends FeatureTestCase
 
         $snippet = <<<'PHP'
 $order = \App\Modules\Bodega\Models\Order::find(__ORDER_ID__);
-$actor = \App\Models\User::where('email', 'almacen@illuminations.com.pa')->first();
+$actor = \App\Models\User::where('email', 'almacen@atlantic.com.pa')->first();
 try {
     app(\App\Modules\Bodega\Services\PickingService::class)->startPicking($order, $actor);
     file_put_contents($outFile, 'OK');
@@ -80,7 +80,7 @@ PHP;
         $this->assertSame(1, $okCount, "Exactamente 1 de los 2 inicios de picking concurrentes debe tener éxito. Resultados: ".implode(' | ', $results));
         $this->assertSame(1, $rejectedCount, "El otro debe ver el pedido ya En picking y rechazar. Resultados: ".implode(' | ', $results));
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->assertSame(Order::STAGE_EN_PICKING, Order::find($order->id)->stage);
         $this->assertSame(

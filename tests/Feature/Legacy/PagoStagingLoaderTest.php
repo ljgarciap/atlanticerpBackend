@@ -21,7 +21,7 @@ final class PagoStagingLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_load_stagea_pagos(): void
@@ -31,7 +31,7 @@ final class PagoStagingLoaderTest extends FeatureTestCase
         $counts = $loader->load(self::sampleExtraction());
 
         $this->assertSame(['pagos' => 1], $counts);
-        $this->assertDatabaseHas('illuminations_legacy.pagos', [
+        $this->assertDatabaseHas('atlantic_legacy.pagos', [
             'icg_origen' => 'V', 'icg_tipodocumento' => 'F', 'icg_serie' => 'A',
             'icg_numero' => 9001, 'icg_n' => 'B', 'icg_posicion' => 1,
         ]);
@@ -77,8 +77,8 @@ final class PagoStagingLoaderTest extends FeatureTestCase
 
         $this->assertSame(['pagos' => 2], $counts);
         $this->assertSame(2, Pago::query()->where('icg_numero', 9001)->count());
-        $this->assertDatabaseHas('illuminations_legacy.pagos', ['icg_posicion' => 1, 'importe' => '100.00']);
-        $this->assertDatabaseHas('illuminations_legacy.pagos', ['icg_posicion' => 2, 'importe' => '200.00']);
+        $this->assertDatabaseHas('atlantic_legacy.pagos', ['icg_posicion' => 1, 'importe' => '100.00']);
+        $this->assertDatabaseHas('atlantic_legacy.pagos', ['icg_posicion' => 2, 'importe' => '200.00']);
     }
 
     /**
@@ -97,8 +97,8 @@ final class PagoStagingLoaderTest extends FeatureTestCase
 
         $this->assertSame(['pagos' => 600], $counts);
         $this->assertSame(600, Pago::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.pagos', ['icg_numero' => 1]);
-        $this->assertDatabaseHas('illuminations_legacy.pagos', ['icg_numero' => 600]);
+        $this->assertDatabaseHas('atlantic_legacy.pagos', ['icg_numero' => 1]);
+        $this->assertDatabaseHas('atlantic_legacy.pagos', ['icg_numero' => 600]);
     }
 
     // ── loadPaginated() — hallazgo real 2026-08-27 (ver docblock de PagoExtractor) ─────────────
@@ -122,8 +122,8 @@ final class PagoStagingLoaderTest extends FeatureTestCase
 
         $this->assertSame(['pagos' => 250], $counts);
         $this->assertSame(250, Pago::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.pagos', ['icg_numero' => 1]);
-        $this->assertDatabaseHas('illuminations_legacy.pagos', ['icg_numero' => 250]);
+        $this->assertDatabaseHas('atlantic_legacy.pagos', ['icg_numero' => 1]);
+        $this->assertDatabaseHas('atlantic_legacy.pagos', ['icg_numero' => 250]);
     }
 
     public function test_load_paginated_el_fetcher_se_llama_con_offsets_crecientes_hasta_pagina_vacia(): void

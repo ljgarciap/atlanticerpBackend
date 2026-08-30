@@ -33,7 +33,7 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_dry_run_stagea_y_matchea_pero_no_registra_sync_run(): void
@@ -41,7 +41,7 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
         $cliente = Cliente::query()->create(['icg_codcliente' => 555, 'razon_social' => 'Cliente Legal SA']);
         $this->app->instance(FacturaExtractorContract::class, new FakeFacturaExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-facturas', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -56,7 +56,7 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
         Cliente::query()->create(['icg_codcliente' => 555, 'razon_social' => 'Cliente Legal SA']);
         $this->app->instance(FacturaExtractorContract::class, new FakeFacturaExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-facturas', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -76,9 +76,9 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
         Cliente::query()->create(['icg_codcliente' => 555, 'razon_social' => 'Cliente Legal SA']);
         $this->app->instance(FacturaExtractorContract::class, new FakeFacturaExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-facturas', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
-        $this->artisan('legacy:sync-facturas', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $this->assertSame(1, Factura::query()->where('icg_numfactura', 9001)->count());
@@ -97,7 +97,7 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
         ]);
         $this->app->instance(FacturaExtractorContract::class, new FakeFacturaExtractor($extraction));
 
-        $this->artisan('legacy:sync-facturas', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();
@@ -116,7 +116,7 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
             new FakeFacturaExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-facturas', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -132,7 +132,7 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
             new FakeFacturaExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-facturas', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -146,7 +146,7 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
         ]);
         $this->app->instance(FacturaExtractorContract::class, new FakeFacturaExtractor($extraction));
 
-        $this->artisan('legacy:sync-facturas', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 

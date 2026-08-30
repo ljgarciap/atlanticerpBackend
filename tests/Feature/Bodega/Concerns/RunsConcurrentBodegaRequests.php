@@ -36,7 +36,7 @@ trait RunsConcurrentBodegaRequests
 {
     /**
      * @param list<string> $phpSnippets sentencias PHP completas (con `;` final), una por
-     *        proceso. Cada snippet corre con el tenant `illuminations` ya activo
+     *        proceso. Cada snippet corre con el tenant `atlantic` ya activo
      *        (`Tenant::current()`) y debe dejar su resultado en la variable `$outFile` ya
      *        definida por el wrapper (`file_put_contents($outFile, ...)`).
      * @return list<string> contenido de cada archivo de salida, en el mismo orden que $phpSnippets.
@@ -120,7 +120,7 @@ require '{$basePath}/vendor/autoload.php';
 \$app = require '{$basePath}/bootstrap/app.php';
 \$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-\App\Shared\Multitenancy\Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+\App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
 \$outFile = '{$outFile}';
 

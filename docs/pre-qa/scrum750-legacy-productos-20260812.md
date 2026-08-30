@@ -3,7 +3,7 @@
 **Fecha:** 2026-08-12
 **Commit verificado:** `8d56def` — "feat(legacy): add ICG Productos extraction pipeline
 (SCRUM-750)" (commiteado localmente en `dev`, **no pusheado a origin todavía**)
-**Entorno:** stack local (`infra/docker-compose.yml`), Postgres local, tenant `illuminations`.
+**Entorno:** stack local (`infra/docker-compose.yml`), Postgres local, tenant `atlantic`.
 **Nada de SQL Server real** — la Tarea 6 (corrida real contra el gateway VPN) es explícitamente
 fuera de este alcance, confirmado con Luis/Arquitecto en el prompt de activación.
 
@@ -103,7 +103,7 @@ propio de ICG (los IDs numéricos de sus 5 tarifas, fijos en su base de datos) y
 interno de AtlanticERP — no es un porcentaje, margen, ni divisor configurable por el negocio (como sí lo
 es, por ejemplo, un margen mínimo de venta). Es del mismo tipo que cualquier otro cruce
 código-externo→enum-interno ya presente en otras integraciones del proyecto: cambia solo si ICG
-cambia su propio esquema de tarifas (un evento técnico, no una decisión operativa de Illuminations
+cambia su propio esquema de tarifas (un evento técnico, no una decisión operativa de Atlantic
 que alguien deba poder ajustar sin deploy), y exponerlo como tabla editable por superadmin
 introduciría el riesgo real de que alguien lo reconfigure mal y silenciosamente rompa el mapeo de
 precios de toda una corrida, sin ningún síntoma inmediato. Mi criterio: dejarlo como constante de

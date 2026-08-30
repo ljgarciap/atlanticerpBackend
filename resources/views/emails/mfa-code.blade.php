@@ -34,7 +34,7 @@
         <div class="warning">
             ⚠️ Si no solicitaste este código, alguien intentó acceder a tu cuenta. Cambia tu contraseña inmediatamente.
         </div>
-        <div class="footer">AtlanticERP CRM · Illuminations · No compartas este código con nadie</div>
+        <div class="footer">AtlanticERP CRM · Atlantic · No compartas este código con nadie</div>
     </div>
 </body>
 </html>

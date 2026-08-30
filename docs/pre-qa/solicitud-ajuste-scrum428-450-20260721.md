@@ -46,7 +46,7 @@ El texto literal del criterio ("cuando se presiona agregar, entonces el sistema 
 - **RN2/RN4** — carrito multi-línea: cada línea tiene su propio tipo/cantidad/motivo/evidencia; se puede editar o quitar antes de enviar.
 - **RN3** — agregar una bodega la saca del selector; quitar esa línea la hace reaparecer. Verificado en ambas direcciones en navegador real.
 - **SCRUM-429 Escenario 1** — enviar una solicitud con 2 líneas crea exactamente 2 registros Pendiente independientes (1 `AdjustmentRequest` + 2 `AdjustmentRequestLine`).
-- **SCRUM-430 Escenario 1 + PERMISOS** — `gerencia@illuminations.test` (tiene `bodega.approve` pero NO es Mark) recibe `403 "Solo Mark puede aprobar o rechazar esta solicitud."` tanto en approve como en reject — el gate es server-side real, no solo un botón escondido. `resuelto_por`/`resolvedBy` queda registrado correctamente en ambos casos.
+- **SCRUM-430 Escenario 1 + PERMISOS** — `gerencia@atlantic.test` (tiene `bodega.approve` pero NO es Mark) recibe `403 "Solo Mark puede aprobar o rechazar esta solicitud."` tanto en approve como en reject — el gate es server-side real, no solo un botón escondido. `resuelto_por`/`resolvedBy` queda registrado correctamente en ambos casos.
 - **SCRUM-447 RN1/Escenario 1** — una solicitud de 2 bodegas aparece como 2 filas totalmente independientes en el historial, cada una con su propio estado (una quedó Pendiente mientras su hermana ya estaba Aprobada). Verificado en navegador con datos reales.
 - Chips de filtro (Todas/Pendientes/Aprobadas/Rechazadas) filtran correctamente contra la API.
 - **SCRUM-448 RN1** — rechazar sin motivo bloqueado (`422`, "El campo motivo rechazo es obligatorio.") vía API y en UI.
@@ -55,7 +55,7 @@ El texto literal del criterio ("cuando se presiona agregar, entonces el sistema 
 - **SCRUM-449 Escenario 2** — rechazar una línea no modifica el inventario en absoluto (verificado stock idéntico antes/después).
 - Validaciones de formulario: motivo solo-espacios bloqueado (`TrimStrings` + `required` → 422), evidencia faltante bloqueada (422), extensión inválida (`.exe`) bloqueada por la regla `extensions:` (422, coincide con la convención del proyecto de no usar `mimes:`), `cantidad=0` bloqueada por `min:1`.
 - Designer (sin `bodega.approve`) recibe `403` a nivel de middleware de ruta, ni siquiera llega al controller.
-- Sin iconografía de emoji en ninguna pantalla — cumple la regla de marca de Illuminations.
+- Sin iconografía de emoji en ninguna pantalla — cumple la regla de marca de Atlantic.
 - SCRUM-450 — badge de rol en TopBar coherente con el resto de la app (`GERENCIA`, `VENDEDOR/DISEÑADOR`), nada específico de esta pantalla roto.
 
 ## Estado y próximos pasos

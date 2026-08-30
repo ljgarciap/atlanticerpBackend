@@ -17,13 +17,13 @@ use Tests\Feature\FeatureTestCase;
  *  (4M1, agrupación 'dia') y "Mensual por cliente — acumulado" (4M2, agrupación 'mes'). */
 class AdminContClientReportsControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@illuminations.com.pa';
-    private const DESIGNER_EMAIL = 'designer@illuminations.test';
+    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string

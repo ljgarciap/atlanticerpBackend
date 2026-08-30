@@ -16,7 +16,7 @@
 </style>
 </head>
 <body>
-    <div class="brand-name">ILLUMINATIONS</div>
+    <div class="brand-name">ATLANTIC</div>
     <div class="brand-line"></div>
     <h1>Comisiones Internas — {{ $data['mes'] }}</h1>
     <div class="sub">Comisión escalonada por vendedor, calculada sobre el total de pedidos cerrados en el mes · USD</div>

@@ -25,7 +25,7 @@ final class LegacyFixProductosReferenciaCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function migratedProduct(int $codigo, string $reference, ?string $factoryReference): void
@@ -44,7 +44,7 @@ final class LegacyFixProductosReferenciaCommandTest extends FeatureTestCase
     {
         $this->migratedProduct(1001, 'ICG-1001', '42016B-WH');
 
-        $this->artisan('legacy:fix-productos-referencia', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:fix-productos-referencia', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();
@@ -60,7 +60,7 @@ final class LegacyFixProductosReferenciaCommandTest extends FeatureTestCase
     {
         $this->migratedProduct(1002, 'ICG-1002', '99-XYZ');
 
-        $this->artisan('legacy:fix-productos-referencia', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:fix-productos-referencia', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -74,7 +74,7 @@ final class LegacyFixProductosReferenciaCommandTest extends FeatureTestCase
         $this->migratedProduct(1003, 'ICG-1003', 'DUP');
         $this->migratedProduct(1004, 'ICG-1004', 'DUP');
 
-        $this->artisan('legacy:fix-productos-referencia', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:fix-productos-referencia', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();
@@ -84,7 +84,7 @@ final class LegacyFixProductosReferenciaCommandTest extends FeatureTestCase
 
     public function test_sin_candidatos_registra_sync_run_en_cero(): void
     {
-        $this->artisan('legacy:fix-productos-referencia', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:fix-productos-referencia', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();

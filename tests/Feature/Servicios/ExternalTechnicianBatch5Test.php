@@ -16,16 +16,16 @@ use Tests\Feature\FeatureTestCase;
  */
 class ExternalTechnicianBatch5Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
 
-    private const MANAGEMENT = 'daniela@illuminations.com.pa';
+    private const MANAGEMENT = 'daniela@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** Escenario REQ-264 — alta con campos obligatorios/opcionales, valores default. */
@@ -111,7 +111,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
     /** RN5 (REQ-263) — garantias_servicios (también técnico interno) conserva el acceso de solo consulta. */
     public function test_garantias_servicios_puede_listar(): void
     {
-        $garantiasToken = $this->loginAs('garantias@illuminations.com.pa', 'garantias@illuminations.com.pa', 'garantias_servicios');
+        $garantiasToken = $this->loginAs('garantias@atlantic.com.pa', 'garantias@atlantic.com.pa', 'garantias_servicios');
 
         $this->withHeaders($this->authHeaders($garantiasToken))
             ->getJson('/api/servicios/external-technicians')
@@ -216,7 +216,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
         // El valor real sigue ahí — la ocultación es puramente visual (RN3). Re-activar el
         // tenant explícitamente: la request HTTP anterior ya limpió el search_path (mismo
         // gotcha documentado en TicketBatch4Test).
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $technician = ExternalTechnician::find($id);
         $this->assertNotNull($technician);
         $this->assertSame('25.00', $technician->tarifa_dia);
@@ -392,7 +392,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
                 'nombre' => 'X', 'empresa' => 'Y', 'tarifa_dia' => 10,
             ])->assertStatus(201)->json('id');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $technician = ExternalTechnician::find($id);
         $this->assertNotNull($technician);
         $this->assertSame(0, $service->activeProjectsCount($technician));

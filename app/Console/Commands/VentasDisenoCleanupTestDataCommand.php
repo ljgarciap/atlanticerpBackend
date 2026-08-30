@@ -30,8 +30,8 @@ final class VentasDisenoCleanupTestDataCommand extends Command
 {
     /** @var string */
     protected $signature = 'ventas-diseno:cleanup-test-data
-        {--tenant=illuminations : Slug del tenant a limpiar}
-        {--user=daniela@illuminations.com.pa : Email del usuario cuya data de prueba se identifica}
+        {--tenant=atlantic : Slug del tenant a limpiar}
+        {--user=daniela@atlantic.com.pa : Email del usuario cuya data de prueba se identifica}
         {--force : Ejecuta el borrado real — sin esta opción el comando SIEMPRE corre en modo reporte}
         {--json : Emite el reporte en JSON en vez de tablas de consola}
         {--env-override : Permite correr fuera de app()->environment("qa") — SOLO para testing local/CI}';

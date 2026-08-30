@@ -8,8 +8,8 @@ Mockup: `4G__Admin_Contabilidad_ArqueoCaja.html` (cubre este batch y Batch 19 �
 REQ-520→524; cerrar arqueo, historial, aprobación de Gerencia y constancia de retención son
 Batch 19, fuera de alcance).
 
-Credenciales usadas: Felix (`conta@illuminations.com.pa`), Yaneth
-(`asistente@illuminations.com.pa`), Mark (`mbekhar@illuminations.com.pa` /
+Credenciales usadas: Felix (`conta@atlantic.com.pa`), Yaneth
+(`asistente@atlantic.com.pa`), Mark (`mbekhar@atlantic.com.pa` /
 `B1n4X_2026?`, real de Gerencia).
 
 ## Resumen ejecutivo

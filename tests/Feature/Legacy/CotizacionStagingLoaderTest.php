@@ -25,7 +25,7 @@ final class CotizacionStagingLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_load_stagea_cotizaciones_y_items(): void
@@ -37,7 +37,7 @@ final class CotizacionStagingLoaderTest extends FeatureTestCase
         $this->assertSame(1, $counts['cotizaciones']);
         $this->assertSame(1, $counts['items']);
         $this->assertCount(1, $counts['cotizacion_ids']);
-        $this->assertDatabaseHas('illuminations_legacy.cotizaciones', [
+        $this->assertDatabaseHas('atlantic_legacy.cotizaciones', [
             'icg_numserie' => 'A', 'icg_numpresupuesto' => 1001, 'icg_n' => 1, 'icg_version' => 2,
         ]);
         $this->assertSame(1, CotizacionItem::query()->where('icg_codarticulo', 4321)->count());
@@ -158,8 +158,8 @@ final class CotizacionStagingLoaderTest extends FeatureTestCase
         $this->assertSame(600, $counts['cotizaciones']);
         $this->assertCount(600, $counts['cotizacion_ids']);
         $this->assertSame(600, Cotizacion::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.cotizaciones', ['icg_numpresupuesto' => 1]);
-        $this->assertDatabaseHas('illuminations_legacy.cotizaciones', ['icg_numpresupuesto' => 600]);
+        $this->assertDatabaseHas('atlantic_legacy.cotizaciones', ['icg_numpresupuesto' => 1]);
+        $this->assertDatabaseHas('atlantic_legacy.cotizaciones', ['icg_numpresupuesto' => 600]);
     }
 
     /**

@@ -20,7 +20,7 @@
 
 | # | Criterio | Input / Verificación | Esperado | Actual | Resultado |
 |---|---|---|---|---|---|
-| AC-01 | `extra_permissions jsonb NOT NULL DEFAULT '[]'` en `illuminations_auth.users` | `information_schema.columns` | type=jsonb, default='[]'::jsonb | type=jsonb default='[]'::jsonb | ✅ |
+| AC-01 | `extra_permissions jsonb NOT NULL DEFAULT '[]'` en `atlantic_auth.users` | `information_schema.columns` | type=jsonb, default='[]'::jsonb | type=jsonb default='[]'::jsonb | ✅ |
 | AC-02 | 10 niveles con vocabulario de 11 permisos module-scoped | `security_levels` table | Level 1: 1 perm, Level 10: 11 perms incl. `superadmin.all` | Level 1: 1 perm, Level 10: 11 perms ✓ | ✅ |
 | AC-03 | `permission_groups` y `permission_group_id` eliminados | `information_schema.tables/columns` | Tabla y columna no existen | Ambos dropped | ✅ |
 | AC-04 | `effectivePermissions()` = union deduplicada de level.permissions + extra_permissions | Superadmin con extra perm duplicada | Sin duplicados | `array_unique` confirma dedup | ✅ |

@@ -22,8 +22,8 @@ use Illuminate\Http\Request;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-735. Daniela (daniela@illuminations.com.pa, seedeada por CoreUserSeeder en TODOS
- * los entornos, incl. `testing`) y Neil (neil.quiel@illuminations.com.pa, seedeado por
+ * SCRUM-735. Daniela (daniela@atlantic.com.pa, seedeada por CoreUserSeeder en TODOS
+ * los entornos, incl. `testing`) y Neil (neil.quiel@atlantic.com.pa, seedeado por
  * BusinessRoleUserSeeder, rol vendedor_disenador real) son usuarios reales — no hace falta
  * ningún fixture de usuario propio.
  */
@@ -35,10 +35,10 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        $this->daniela = User::where('email', 'daniela@illuminations.com.pa')->firstOrFail();
-        $this->neil    = User::where('email', 'neil.quiel@illuminations.com.pa')->firstOrFail();
+        $this->daniela = User::where('email', 'daniela@atlantic.com.pa')->firstOrFail();
+        $this->neil    = User::where('email', 'neil.quiel@atlantic.com.pa')->firstOrFail();
     }
 
     /**
@@ -120,7 +120,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $daniela = $this->seedFullPipeline($this->daniela, '[Daniela QA]');
         $neil    = $this->seedFullPipeline($this->neil, '[Neil Real]');
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@illuminations.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
 
         $this->assertContains($daniela['master']->id, $report['candidates']['master_client']);
         $this->assertContains($daniela['sub']->id, $report['candidates']['sub_client']);
@@ -144,7 +144,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($this->daniela);
         $master = MasterClient::create(['name' => '[DEMO-711] Cliente de Daniela', 'default_price_type' => 'project']);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@illuminations.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
 
         $this->assertNotContains($master->id, $report['candidates']['master_client']);
         $excludedIds = collect($report['excluded'])->where('entity_type', 'master_client')->pluck('id')->all();
@@ -162,7 +162,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $part   = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida', 'position' => 1]);
         $item   = QuoteItem::create(['quote_part_id' => $part->id, 'is_custom' => true, 'reference' => 'REF-X', 'name' => 'Item sin marcador propio', 'description' => 'Item sin marcador propio', 'quantity' => 1, 'unit_price' => 5.0]);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@illuminations.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
 
         $this->assertNotContains($quote->id, $report['candidates']['quote']);
         $this->assertNotContains($part->id, $report['candidates']['quote_part']);
@@ -178,7 +178,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($this->daniela);
         $master->update(['default_price_type' => 'special']);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@illuminations.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
 
         $this->assertNotContains($master->id, $report['candidates']['master_client']);
     }
@@ -187,7 +187,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         $daniela = $this->seedFullPipeline($this->daniela, '[Daniela Inferido]');
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@illuminations.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
 
         // SalesProject nunca tiene su propia fila en audit_logs (no usa LogsAuditTrail) —
         // si aparece como candidato, es porque la inferencia por sub_client_id + ventana
@@ -204,7 +204,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($this->neil);
         $subNeil = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Neil', 'tax_id' => '155-2222-1-2026']);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@illuminations.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
 
         // El subcliente de Daniela sigue siendo candidato en sí mismo...
         $this->assertContains($subDaniela->id, $report['candidates']['sub_client']);
@@ -253,7 +253,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
             'quantity' => 5, 'unit_cost' => 60.0, 'subtotal' => 300.0,
         ]);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@illuminations.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
 
         $this->assertNotContains($product->id, $report['candidates']['catalog_product']);
         $excludedIds = collect($report['excluded'])->where('entity_type', 'catalog_product')->pluck('id')->all();
@@ -284,7 +284,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         ]);
 
         $service = app(TestDataCleanupService::class);
-        $report  = $service->buildReport('daniela@illuminations.com.pa');
+        $report  = $service->buildReport('daniela@atlantic.com.pa');
 
         $this->assertContains($product->id, $report['candidates']['catalog_product']);
 
@@ -303,7 +303,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $neil = $this->seedFullPipeline($this->neil, '[Neil Force]');
 
         $service = app(TestDataCleanupService::class);
-        $report  = $service->buildReport('daniela@illuminations.com.pa');
+        $report  = $service->buildReport('daniela@atlantic.com.pa');
         $service->execute($report);
 
         $this->assertNull(MasterClient::find($daniela['master']->id));
@@ -341,7 +341,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $daniela = $this->seedFullPipeline($this->daniela, '[Daniela Cascade Count]');
 
         $service = app(TestDataCleanupService::class);
-        $report  = $service->buildReport('daniela@illuminations.com.pa');
+        $report  = $service->buildReport('daniela@atlantic.com.pa');
         $this->assertContains($daniela['sub']->id, $report['candidates']['sub_client']);
         $this->assertContains($daniela['project']->id, $report['candidates']['sales_project']);
 
@@ -365,7 +365,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
         // El command hace Tenant::forgetCurrent() en su finally al terminar — hay que
         // volver a activar el tenant antes de poder resolver el schema correcto.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->assertNotNull(MasterClient::find($daniela['master']->id));
         $this->assertNotNull(Quote::find($daniela['quote']->id));
@@ -378,7 +378,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->artisan('ventas-diseno:cleanup-test-data', ['--env-override' => true, '--force' => true])
             ->assertExitCode(0);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->assertNull(MasterClient::find($daniela['master']->id));
         $this->assertNull(Quote::find($daniela['quote']->id));
@@ -395,7 +395,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         $this->artisan('ventas-diseno:cleanup-test-data', [
             '--env-override' => true,
-            '--user'         => 'no-existe@illuminations.com.pa',
+            '--user'         => 'no-existe@atlantic.com.pa',
         ])->assertExitCode(1);
     }
 }

@@ -35,7 +35,7 @@ final class LegacySyncCotizacionesCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_dry_run_stagea_y_matchea_pero_no_registra_sync_run(): void
@@ -43,7 +43,7 @@ final class LegacySyncCotizacionesCommandTest extends FeatureTestCase
         $cliente = Cliente::query()->create(['icg_codcliente' => 555, 'razon_social' => 'Cliente Legal SA']);
         $this->app->instance(CotizacionExtractorContract::class, new FakeCotizacionExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -60,7 +60,7 @@ final class LegacySyncCotizacionesCommandTest extends FeatureTestCase
         Cliente::query()->create(['icg_codcliente' => 555, 'razon_social' => 'Cliente Legal SA']);
         $this->app->instance(CotizacionExtractorContract::class, new FakeCotizacionExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -85,9 +85,9 @@ final class LegacySyncCotizacionesCommandTest extends FeatureTestCase
         Cliente::query()->create(['icg_codcliente' => 555, 'razon_social' => 'Cliente Legal SA']);
         $this->app->instance(CotizacionExtractorContract::class, new FakeCotizacionExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
-        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $this->assertSame(1, Cotizacion::query()->where('icg_numpresupuesto', 1001)->count());
@@ -110,7 +110,7 @@ final class LegacySyncCotizacionesCommandTest extends FeatureTestCase
         );
         $this->app->instance(CotizacionExtractorContract::class, new FakeCotizacionExtractor($extraction));
 
-        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();
@@ -129,7 +129,7 @@ final class LegacySyncCotizacionesCommandTest extends FeatureTestCase
             new FakeCotizacionExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -145,7 +145,7 @@ final class LegacySyncCotizacionesCommandTest extends FeatureTestCase
             new FakeCotizacionExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -167,7 +167,7 @@ final class LegacySyncCotizacionesCommandTest extends FeatureTestCase
         );
         $this->app->instance(CotizacionExtractorContract::class, new FakeCotizacionExtractor($extraction));
 
-        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-cotizaciones', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 

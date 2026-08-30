@@ -6,9 +6,9 @@
 (`docs/reviews/batch-b1-home-bodega-{backend,frontend}-2026-07-23.md`).
 Verificación corrida contra el stack Docker local (`infra-laravel-1`, `infra-postgres-1`,
 `infra-nginx-1`, puerto `8090`), usuarios reales de `BusinessRoleUserSeeder` (Esteban Cardenas
-`almacen@illuminations.com.pa`/lider_bodega, Osvaldo Santos `logistica@illuminations.com.pa`/
-asistente_bodega, Mariano Sandoval `almacen2@illuminations.com.pa`/asistente_bodega, Apolonio
-Gonzalez `apolonio.gonzalez@illuminations.com.pa`/ayudante_general_bodega), login real vía
+`almacen@atlantic.com.pa`/lider_bodega, Osvaldo Santos `logistica@atlantic.com.pa`/
+asistente_bodega, Mariano Sandoval `almacen2@atlantic.com.pa`/asistente_bodega, Apolonio
+Gonzalez `apolonio.gonzalez@atlantic.com.pa`/ayudante_general_bodega), login real vía
 `POST /api/auth/login` (password = email), llamadas `curl` directas a la API — no solo lectura de
 código.
 
@@ -62,7 +62,7 @@ completo.
 `BodegaHomeService`/`BodegaHomeController` usan `User::canViewTeamV2(ModuleCatalog::BODEGA)`, el
 mismo mecanismo genérico ya aprobado y en uso por Ventas & Diseño Home y Compras Home (reutilización
 correcta del patrón arquitectónico, no una implementación paralela). Ese mecanismo lee
-`role_module_visibility.can_view_team` (schema `illuminations_auth`). Confirmado en la base real:
+`role_module_visibility.can_view_team` (schema `atlantic_auth`). Confirmado en la base real:
 
 ```
 role_id=6 (lider_bodega)      can_view_team=true

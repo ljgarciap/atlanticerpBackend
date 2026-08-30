@@ -24,12 +24,12 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -52,18 +52,18 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     /** El cliente HTTP de test resetea el tenant "actual" al final de cada request. */
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     // ── REQ-141: secuencia de estados según origen ──────────────────────────
 
     public function test_proveedor_internacional_pasa_por_transito_y_aduana(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_INTERNACIONAL]);
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(200);
@@ -74,11 +74,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_proveedor_local_salta_transito_y_aduana(): void
     {
         // REQ-141 Escenario 1.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(200);
@@ -93,11 +93,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_secuencia_completa_pasa_por_pendiente_liquidar_antes_de_ordenado(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_INTERNACIONAL]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->patchJson("/api/compras/orders/{$order->id}/advance")
@@ -110,11 +110,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     /** Mismo comportamiento para proveedor local — pendiente_liquidar tampoco se salta ahí. */
     public function test_secuencia_local_tambien_pasa_por_pendiente_liquidar(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(200)->assertJsonPath('status', PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR);
@@ -122,11 +122,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_avanzar_orden_ya_recibida_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(422);
@@ -139,14 +139,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_avanzar_a_recibido_bloqueado_con_remanente_pendiente(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL,
             'pending_remainder_status' => PurchaseOrder::REMAINDER_EN_ADUANA,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(422);
@@ -158,14 +158,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_avanzar_a_recibido_permitido_sin_remanente_pendiente(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL,
             'pending_remainder_status' => null,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(200)
@@ -182,7 +182,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_avanzar_a_recibido_bloqueado_sin_ingreso_registrado(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $product = CatalogProduct::create([
             'reference' => 'SCRUM347-1', 'name' => 'Producto', 'description' => 'Producto', 'cost' => 10, 'price_full' => 20,
@@ -197,7 +197,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(422);
@@ -217,11 +217,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_cada_transicion_setea_su_columna_de_fecha_correcta(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_INTERNACIONAL]);
         $order = $this->makeOrder($provider->id);
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         // ordenado -> en_transito
@@ -250,11 +250,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     /** REQ-153/154 RN3 — Recibido auto-llena `actual_arrival_date` con la fecha real de hoy, sin ninguna escritura manual. */
     public function test_avanzar_a_recibido_autollena_llegada_real(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(200);
@@ -266,11 +266,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     /** REQ-154 RN1 Escenario 2 — proveedor local nunca setea en_transito_at/en_aduana_at (saltea esas 2 etapas). */
     public function test_secuencia_local_no_setea_columnas_de_etapas_saltadas(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $order = $this->makeOrder($provider->id);
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         // ordenado -> en_transito_local (nunca pasa por en_transito/en_aduana)
@@ -287,33 +287,33 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_avanzar_bloqueado_sin_aprobacion_de_mark(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_POR_APROBAR, 'requires_mark_approval' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(422);
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $status = DB::table("{$slug}_compras.purchase_orders")->where('id', $order->id)->value('status');
         $this->assertSame(PurchaseOrder::STATUS_POR_APROBAR, $status);
     }
 
     public function test_avanzar_permitido_tras_aprobacion_de_mark(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
-        $approver = \App\Models\User::where('email', 'designer@illuminations.test')->firstOrFail();
+        $approver = \App\Models\User::where('email', 'designer@atlantic.test')->firstOrFail();
         $order = $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_POR_APROBAR, 'requires_mark_approval' => true,
             'approved_by' => $approver->id, 'approved_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         // SCRUM-204 (2026-08-06, hallazgo Daniela Amaya): "Pendiente/Por liquidar" ahora es parte
         // de la secuencia automática entre "Por aprobar" y "Ordenado" — el primer avance tras la
         // aprobación de Mark ya no salta directo a "Ordenado".
@@ -331,7 +331,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_avanzar_orden_a_recibido_confirma_pendientes_de_ingreso_automaticamente(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $product = CatalogProduct::create([
             'reference' => 'REC-AUTO-1', 'name' => 'Producto', 'description' => 'Producto', 'cost' => 10, 'price_full' => 20,
@@ -342,9 +342,9 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 7, 'unit_cost' => 10, 'subtotal' => 70,
         ]);
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $warehouseId = (int) DB::table("{$slug}_bodega.warehouses")->value('id');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         // Orden local: 1er advance ORDENADO -> EN_TRANSITO_LOCAL (todavía no Recibido).
@@ -391,7 +391,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_confirmar_pendientes_dos_veces_no_duplica_stock(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $product = CatalogProduct::create([
             'reference' => 'RACE-NO-DUP-1', 'name' => 'Producto', 'description' => 'Producto', 'cost' => 10, 'price_full' => 20,
@@ -402,9 +402,9 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 7, 'unit_cost' => 10, 'subtotal' => 70,
         ]);
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $warehouseId = (int) DB::table("{$slug}_bodega.warehouses")->value('id');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->patchJson("/api/compras/orders/{$order->id}/advance")
@@ -443,9 +443,9 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_avanzar_orden_a_recibido_confirma_producto_creado_sin_stock_inicial_null(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         // Camino real: producto creado a través de Nueva Orden (new_product), no CatalogProduct::create()
@@ -466,7 +466,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         $this->reMakeCurrent();
         $this->assertNull(CatalogProduct::find($productId)->stock_quantity);
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $warehouseId = (int) DB::table("{$slug}_bodega.warehouses")->value('id');
 
         $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200); // por_aprobar -> ordenado
@@ -487,14 +487,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_orden_critica_por_3_o_mas_dias_por_aprobar(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_POR_APROBAR,
             'status_changed_at' => now()->subDays(3),
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?chip=critical')
             ->assertStatus(200);
@@ -505,14 +505,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_orden_critica_por_llegada_estimada_vencida(): void
     {
         // REQ-139 Escenario 2.
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_EN_TRANSITO,
             'estimated_arrival_date' => now()->subDay()->toDateString(),
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?chip=critical')
             ->assertStatus(200);
@@ -522,13 +522,13 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_orden_no_critica_no_aparece_en_el_chip(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_POR_APROBAR, 'status_changed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?chip=critical')
             ->assertStatus(200);
@@ -541,14 +541,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_filtro_combinado_por_proveedor_y_estado(): void
     {
         // REQ-138 Escenario 1.
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $lightCorp = $this->makeProvider(['name' => 'LightCorp']);
         $other = $this->makeProvider(['name' => 'Otro']);
         $this->makeOrder($lightCorp->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
         $this->makeOrder($lightCorp->id, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
         $this->makeOrder($other->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders?provider_id={$lightCorp->id}&status=".PurchaseOrder::STATUS_EN_TRANSITO)
             ->assertStatus(200);
@@ -559,13 +559,13 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     /** SCRUM-201 (hallazgo QA 2026-07-16): faltaba el buscador de texto — número de orden o proveedor. */
     public function test_busqueda_por_numero_de_orden_o_proveedor(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $lightCorp = $this->makeProvider(['name' => 'LightCorp']);
         $other = $this->makeProvider(['name' => 'Otro']);
         $order1 = $this->makeOrder($lightCorp->id);
         $this->makeOrder($other->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $byName = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?search=LightCorp')
@@ -582,14 +582,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     /** SCRUM-201 — responsables reales para el filtro, no un input de texto libre. */
     public function test_index_expone_lista_de_responsables_reales(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = \App\Modules\VentasDiseno\Models\CatalogProduct::create([
             'reference' => 'RESP-1', 'name' => 'Producto', 'description' => 'Producto', 'cost' => 10, 'price_full' => 20,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -617,11 +617,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_status_es_identico_entre_ver_ordenes_logistica_y_detalle(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_INTERNACIONAL]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         // Avanza el estado (simula lo que pasaría al corregir algo en cualquier pantalla futura).
         $this->withHeaders($this->authHeaders($token))
@@ -657,12 +657,12 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_liquidar_orden_zona_libre_asigna_agencia_y_dispara_evento(): void
     {
         Event::fake([OrderLiquidationAssigned::class]);
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_ZONA_LIBRE]);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/liquidate", ['agency_id' => $agency->id])
             ->assertStatus(200);
@@ -678,12 +678,12 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_liquidar_orden_no_zona_libre_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_DIRECTO]);
         $agency = LiquidationAgency::create(['name' => 'Agencia X']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/liquidate", ['agency_id' => $agency->id])
             ->assertStatus(422);
@@ -691,11 +691,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_liquidar_con_agencia_inexistente_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_ZONA_LIBRE]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/liquidate", ['agency_id' => 999999])
             ->assertStatus(422);
@@ -703,12 +703,12 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_liquidar_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_ZONA_LIBRE]);
         $agency = LiquidationAgency::create(['name' => 'Agencia X']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/liquidate", ['agency_id' => $agency->id])
             ->assertStatus(403);
@@ -717,7 +717,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_cambiar_agencia_de_liquidacion_ya_asignada(): void
     {
         // El ticket pide "asignar (o cambiar)" — reasignar debe funcionar, no solo la primera vez.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $agencyA = LiquidationAgency::create(['name' => 'Agencia A']);
         $agencyB = LiquidationAgency::create(['name' => 'Agencia B']);
@@ -725,7 +725,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'modality' => PurchaseOrder::MODALITY_ZONA_LIBRE, 'liquidation_agency_id' => $agencyA->id,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/liquidate", ['agency_id' => $agencyB->id])
             ->assertStatus(200);
@@ -736,12 +736,12 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_chip_zona_libre_filtra_por_modalidad(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_ZONA_LIBRE]);
         $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_DIRECTO]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?chip=zona_libre')
             ->assertStatus(200);
@@ -754,7 +754,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_no_se_puede_editar_una_orden_ya_ordenada(): void
     {
         // REQ-144 Escenario 1.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $product = CatalogProduct::create([
             'reference' => 'REF-1', 'name' => 'Producto', 'description' => 'Producto', 'price_full' => 10, 'cost' => 5,
@@ -762,7 +762,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         ]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/orders/{$order->id}", [
                 'provider_id' => $provider->id,
@@ -774,7 +774,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_editar_orden_por_aprobar_actualiza_modalidad_y_lineas(): void
     {
         // REQ-144 Escenario 2.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $product = CatalogProduct::create([
             'reference' => 'REF-1', 'name' => 'Producto', 'description' => 'Producto', 'price_full' => 10, 'cost' => 5,
@@ -782,7 +782,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         ]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/orders/{$order->id}", [
                 'provider_id' => $provider->id,
@@ -799,7 +799,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_editar_orden_con_referencia_repetida_retorna_422(): void
     {
         // REQ-144 Escenario 3 / RN6.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'EXISTENTE', 'name' => 'Ya existe', 'description' => 'Ya existe', 'price_full' => 10, 'cost' => 5,
@@ -807,7 +807,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         ]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/orders/{$order->id}", [
                 'provider_id' => $provider->id,
@@ -826,8 +826,8 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_advance_remainder_404_sin_orden(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson('/api/compras/orders/999999/advance-remainder')
             ->assertStatus(404);
@@ -835,11 +835,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_advance_remainder_422_sin_remanente_pendiente(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['pending_remainder_status' => null]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance-remainder")
             ->assertStatus(422);
@@ -847,11 +847,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_advance_remainder_avanza_por_su_propia_secuencia_de_etapas(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['pending_remainder_status' => PurchaseOrder::REMAINDER_ORDENADO]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->patchJson("/api/compras/orders/{$order->id}/advance-remainder")
@@ -876,11 +876,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_advance_remainder_422_en_la_ultima_etapa(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['pending_remainder_status' => PurchaseOrder::REMAINDER_EN_TRANSITO_LOCAL]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance-remainder")
             ->assertStatus(422);
@@ -889,14 +889,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_advance_remainder_no_toca_el_status_de_la_orden(): void
     {
         // El remanente avanza independiente del status de la orden — no deben pisarse.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL,
             'pending_remainder_status' => PurchaseOrder::REMAINDER_ORDENADO,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance-remainder")
             ->assertStatus(200)
@@ -916,7 +916,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_confirm_pending_receipts_acredita_stock_sin_esperar_status_recibido(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $product = CatalogProduct::create([
             'reference' => 'PARCIAL-1', 'name' => 'Producto', 'description' => 'Producto', 'cost' => 10, 'price_full' => 20,
@@ -927,9 +927,9 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100,
         ]);
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $warehouseId = (int) DB::table("{$slug}_bodega.warehouses")->value('id');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         // Recepción parcial: 1 de 10. La orden sigue en_transito_local (lejos de Recibido).
@@ -959,11 +959,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     public function test_confirm_pending_receipts_422_sin_lineas_pendientes(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/confirm-pending-receipts")
             ->assertStatus(422);
@@ -976,7 +976,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      */
     public function test_confirm_pending_receipts_no_confirma_lineas_de_otra_orden(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $product = CatalogProduct::create([
             'reference' => 'MULTI-ORDEN-1', 'name' => 'Producto', 'description' => 'Producto', 'cost' => 10, 'price_full' => 20,
@@ -990,9 +990,9 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
                 'quantity' => 5, 'unit_cost' => 10, 'subtotal' => 50,
             ]);
         }
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $warehouseId = (int) DB::table("{$slug}_bodega.warehouses")->value('id');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $receiptA = $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [

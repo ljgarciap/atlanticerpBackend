@@ -33,9 +33,9 @@
     <div class="header">
         <div class="brand-row">
             <div class="brand-cell" style="width: 28px;">
-                <img src="{{ $logoDataUri }}" width="26" height="26" alt="Illuminations">
+                <img src="{{ $logoDataUri }}" width="26" height="26" alt="Atlantic">
             </div>
-            <div class="brand-cell brand">ILLUMINATIONS</div>
+            <div class="brand-cell brand">ATLANTIC</div>
         </div>
         <div class="sub">Hoja de Reclamo — Ticket {{ $ticket->numero }}</div>
         <div class="sub">Generado el {{ $generatedAt->format('d/m/Y H:i') }}</div>
@@ -106,7 +106,7 @@
     </div>
 
     <div class="footer">
-        Illuminations · Panamá · Documento generado automáticamente desde el sistema.
+        Atlantic · Panamá · Documento generado automáticamente desde el sistema.
     </div>
 </body>
 </html>

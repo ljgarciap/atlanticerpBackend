@@ -22,12 +22,12 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function makeProduct(): CatalogProduct
@@ -42,7 +42,7 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $r1 = GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $designerId, 'estado' => GeneralCountRequest::ESTADO_EVALUADO]);
         $l1 = GeneralCountRequestLine::create(['general_count_request_id' => $r1->id, 'catalog_product_id' => $product->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 8, 'diferencia' => -2]);
@@ -55,7 +55,7 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
         $r3 = GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $designerId, 'estado' => GeneralCountRequest::ESTADO_EVALUADO]);
         $l3 = GeneralCountRequestLine::create(['general_count_request_id' => $r3->id, 'catalog_product_id' => $product->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3]);
 
-        $this->artisan('bodega:backfill-general-count-replaced-lines', ['--tenant' => 'illuminations'])
+        $this->artisan('bodega:backfill-general-count-replaced-lines', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();
@@ -69,7 +69,7 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $productSinDiferencia = $this->makeProduct();
         $productYaReemplazado = $this->makeProduct();
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $r1 = GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $designerId, 'estado' => GeneralCountRequest::ESTADO_EVALUADO]);
         $sinDiferencia = GeneralCountRequestLine::create(['general_count_request_id' => $r1->id, 'catalog_product_id' => $productSinDiferencia->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 10, 'diferencia' => 0]);
@@ -81,7 +81,7 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
         $yaReemplazadoNuevaLinea = GeneralCountRequestLine::create(['general_count_request_id' => $r4->id, 'catalog_product_id' => $productYaReemplazado->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 6, 'diferencia' => -4]);
         $yaReemplazado = GeneralCountRequestLine::create(['general_count_request_id' => $r3->id, 'catalog_product_id' => $productYaReemplazado->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 6, 'diferencia' => -4, 'replaced_by_id' => $yaReemplazadoNuevaLinea->id]);
 
-        $this->artisan('bodega:backfill-general-count-replaced-lines', ['--tenant' => 'illuminations'])
+        $this->artisan('bodega:backfill-general-count-replaced-lines', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();
@@ -93,14 +93,14 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $designerId = User::where('email', 'designer@illuminations.test')->first()->id;
+        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
 
         $r1 = GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $designerId, 'estado' => GeneralCountRequest::ESTADO_EVALUADO]);
         $l1 = GeneralCountRequestLine::create(['general_count_request_id' => $r1->id, 'catalog_product_id' => $product->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 8, 'diferencia' => -2]);
         $r2 = GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $designerId, 'estado' => GeneralCountRequest::ESTADO_EVALUADO]);
         GeneralCountRequestLine::create(['general_count_request_id' => $r2->id, 'catalog_product_id' => $product->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 7, 'diferencia' => -3]);
 
-        $this->artisan('bodega:backfill-general-count-replaced-lines', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('bodega:backfill-general-count-replaced-lines', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
 
         $this->reMakeCurrent();

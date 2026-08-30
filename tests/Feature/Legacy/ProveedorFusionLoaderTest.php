@@ -21,7 +21,7 @@ final class ProveedorFusionLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_crea_provider_nuevo_cuando_no_hay_match_por_nombre(): void

@@ -17,7 +17,7 @@ botón Reabrir dedicado" — probado con Mark (Gerencia, correcto que no lo vea)
 ## Investigación de causa raíz (antes de esta pasada)
 
 Descartado en vivo contra `dev.atlanticerp.ai`:
-- **Permisos de la cuenta de prueba** — `qa@illuminations.com.pa` (id 57) tiene `role_key =
+- **Permisos de la cuenta de prueba** — `qa@atlantic.com.pa` (id 57) tiene `role_key =
   lider_admin_contab`, idéntico a Felix. `isFelixOrYaneth()` la reconoce correctamente.
 - **Build de frontend desactualizado** — el bundle servido en dev ya incluía el código de
   `puede_reabrir`/Reabrir, construido antes de que QA probara.

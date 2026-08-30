@@ -20,7 +20,7 @@ final class CatalogProductLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_crea_catalog_product_nuevo_y_linkea_legacy_productos(): void

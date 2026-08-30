@@ -29,7 +29,7 @@ class NotificationServiceTest extends FeatureTestCase
      */
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()->makeCurrent();
     }
 
     protected function tearDown(): void

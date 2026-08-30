@@ -27,15 +27,15 @@ use Tests\Feature\FeatureTestCase;
  *  home de Reportes. */
 class AdminContReportsControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@illuminations.com.pa';
-    private const YANETH_EMAIL   = 'asistente@illuminations.com.pa';
-    private const MARK_EMAIL     = 'mbekhar@illuminations.com.pa';
-    private const DESIGNER_EMAIL = 'designer@illuminations.test';
+    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const YANETH_EMAIL   = 'asistente@atlantic.com.pa';
+    private const MARK_EMAIL     = 'mbekhar@atlantic.com.pa';
+    private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string

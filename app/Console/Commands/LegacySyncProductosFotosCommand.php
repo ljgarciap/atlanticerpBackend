@@ -49,7 +49,7 @@ final class LegacySyncProductosFotosCommand extends Command
 {
     /** @var string */
     protected $signature = 'legacy:sync-productos-fotos
-        {--tenant=illuminations : Slug del tenant a sincronizar}
+        {--tenant=atlantic : Slug del tenant a sincronizar}
         {--dry-run : Extrae+decodifica cada fila del worklist para medir, sin subir a S3 ni escribir en Postgres, sin despachar Jobs}
         {--limit= : Corta el worklist a las primeras N filas (por id ascendente)}';
 

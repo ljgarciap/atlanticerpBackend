@@ -41,25 +41,25 @@ class RoleBackfillSeeder extends Seeder
 {
     /** @var list<string> */
     private const GERENCIA_EMAILS = [
-        'mbekhar@illuminations.com.pa',    // Mark
+        'mbekhar@atlantic.com.pa',    // Mark
         'david@grupolafayette.com',        // David
-        'daniela@illuminations.com.pa',    // Daniela — pregunta 6/7 del daily 2026-07-09
+        'daniela@atlantic.com.pa',    // Daniela — pregunta 6/7 del daily 2026-07-09
     ];
 
     /** @var list<string> */
     private const SUPERADMIN_EMAILS = [
-        'andres.loi@illuminations.com.pa',
-        'luis.garcia@illuminations.com.pa',
+        'andres.loi@atlantic.com.pa',
+        'luis.garcia@atlantic.com.pa',
         'lujogarpin78@gmail.com',
-        'marly.rangel@illuminations.com.pa', // pregunta 7 — técnico, no rol de negocio
+        'marly.rangel@atlantic.com.pa', // pregunta 7 — técnico, no rol de negocio
     ];
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command?->warn('Tenant "illuminations" not found — RoleBackfillSeeder skipped.');
+            $this->command?->warn('Tenant "atlantic" not found — RoleBackfillSeeder skipped.');
             return;
         }
 

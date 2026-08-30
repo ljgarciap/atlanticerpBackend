@@ -91,7 +91,7 @@ final class OutlookCalendarService
             }
 
             // Senior Review 2026-07-21 — confirmado contra el tenant real: un email sin buzón de
-            // Microsoft 365 (ej. las cuentas demo *@illuminations.test, que no son cuentas reales
+            // Microsoft 365 (ej. las cuentas demo *@atlantic.test, que no son cuentas reales
             // del tenant de Outlook) responde 404 `ErrorInvalidUser`, no una falla del servicio.
             // No cuenta como degradación — nunca va a tener calendario, no es un fallo transitorio.
             if ($response->status() === 404) {

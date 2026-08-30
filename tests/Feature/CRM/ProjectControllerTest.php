@@ -199,7 +199,7 @@ class ProjectControllerTest extends FeatureTestCase
     public function test_actualizar_proyecto_ajeno_sin_ser_management_retorna_403(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $id = $this->createProject($mgmtToken, '_rbac');
 
@@ -251,7 +251,7 @@ class ProjectControllerTest extends FeatureTestCase
     public function test_eliminar_proyecto_con_rol_designer_retorna_403(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $id = $this->createProject($mgmtToken, '_del_rbac');
 
@@ -307,7 +307,7 @@ class ProjectControllerTest extends FeatureTestCase
 
     private function createLevel1Token(): string
     {
-        // readonly@illuminations.test existe en AuthUserSeeder (level 1, role electrician)
-        return $this->loginAs('readonly@illuminations.test', 'Password123!');
+        // readonly@atlantic.test existe en AuthUserSeeder (level 1, role electrician)
+        return $this->loginAs('readonly@atlantic.test', 'Password123!');
     }
 }

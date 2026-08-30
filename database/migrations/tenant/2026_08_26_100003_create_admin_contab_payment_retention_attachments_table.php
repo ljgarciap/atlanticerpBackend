@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
  * "reemplazar" es un caso de uso explícito del REQ, no solo "subir una vez".
  *
  * Nombres de constraint EXPLÍCITOS y cortos (gotcha ya documentado en `atlanticerp/CLAUDE.md`, checklist
- * de pre-flight): el nombre de tabla+schema por default (`illuminations_admin_contab_payment_
+ * de pre-flight): el nombre de tabla+schema por default (`atlantic_admin_contab_payment_
  * retention_attachments_payment_id_...`) supera los 63 bytes que Postgres soporta para un
  * identificador — truncado, el índice único y la FK colisionan en el mismo nombre.
  */

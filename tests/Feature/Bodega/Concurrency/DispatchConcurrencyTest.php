@@ -45,13 +45,13 @@ class DispatchConcurrencyTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
     }
 
     protected function tearDown(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         if ($this->orderId !== null) {
             OrderStageHistory::where('order_id', $this->orderId)->delete();
@@ -81,7 +81,7 @@ class DispatchConcurrencyTest extends FeatureTestCase
         $this->warehouseId = $warehouse->id;
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'quantity' => 20]);
 
-        $courierId = (int) DB::table('illuminations_auth.users')->where('email', 'arrochagary@gmail.com')->value('id');
+        $courierId = (int) DB::table('atlantic_auth.users')->where('email', 'arrochagary@gmail.com')->value('id');
 
         $order = Order::create([
             'order_number' => 'PED-CONC-'.random_int(10000, 999999),
@@ -100,7 +100,7 @@ class DispatchConcurrencyTest extends FeatureTestCase
 
         $snippet = <<<'PHP'
 $order = \App\Modules\Bodega\Models\Order::find(__ORDER_ID__);
-$actor = \App\Models\User::where('email', 'almacen@illuminations.com.pa')->first();
+$actor = \App\Models\User::where('email', 'almacen@atlantic.com.pa')->first();
 try {
     app(\App\Modules\Bodega\Services\DeliveryService::class)->dispatch($order, $actor);
     file_put_contents($outFile, 'OK');
@@ -119,7 +119,7 @@ PHP;
         $this->assertSame(1, $okCount, "Exactamente 1 de los 2 despachos concurrentes debe tener éxito. Resultados: ".implode(' | ', $results));
         $this->assertSame(1, $rejectedCount, "El otro debe ver el pedido ya despachado y rechazar. Resultados: ".implode(' | ', $results));
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->assertSame(
             Order::STAGE_DESPACHADO,

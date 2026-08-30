@@ -31,7 +31,7 @@ final class GerenciaBackfillCorruptedApprovalsCommand extends Command
 {
     /** @var string */
     protected $signature = 'gerencia:backfill-corrupted-approvals
-        {--tenant=illuminations : Slug del tenant a corregir}
+        {--tenant=atlantic : Slug del tenant a corregir}
         {--dry-run : Solo reporta lo que corregiría, sin escribir}';
 
     /** @var string */

@@ -10,9 +10,9 @@ Mockup: `4G__Admin_Contabilidad_ArqueoCaja.html` (mismo mockup que Batch 18 — 
 que Batch 18 dejó fuera: cerrar, cola de atrasados, historial+aprobación, retención, ver/descargar).
 
 Credenciales usadas — **LOCAL**, password = email para todos (distinto de dev/test.atlanticerp.ai, donde
-Mark/Daniela usan `B1n4X_2026?`): Felix (`conta@illuminations.com.pa`), Yaneth
-(`asistente@illuminations.com.pa`), Mark (`mbekhar@illuminations.com.pa`), Daniela
-(`daniela@illuminations.com.pa`).
+Mark/Daniela usan `B1n4X_2026?`): Felix (`conta@atlantic.com.pa`), Yaneth
+(`asistente@atlantic.com.pa`), Mark (`mbekhar@atlantic.com.pa`), Daniela
+(`daniela@atlantic.com.pa`).
 
 ## Resumen ejecutivo
 

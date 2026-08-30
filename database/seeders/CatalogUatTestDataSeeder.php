@@ -20,7 +20,7 @@ use Illuminate\Database\Seeder;
  * Identificable a propósito (criterio de aceptación del ticket, decisión de
  * Luis 2026-08-11): `reference` con prefijo `UAT-`, `description` con prefijo
  * `[PRUEBA UAT] `, familias con `name` prefijado igual — mismo criterio de
- * "texto marcador" que `[DEMO]` en CRM o `*@illuminations.test` en Auth, sin
+ * "texto marcador" que `[DEMO]` en CRM o `*@atlantic.test` en Auth, sin
  * columna nueva. Idempotente: si ya existe algún producto `UAT-%`, no repite
  * el seed (evita duplicar en cada deploy). Limpieza real vía
  * CatalogUatTestDataCleanupController (POST /api/admin/catalog/uat-test-data/cleanup,
@@ -82,10 +82,10 @@ class CatalogUatTestDataSeeder extends Seeder
             return;
         }
 
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command->warn('Tenant "illuminations" not found — CatalogUatTestDataSeeder skipped.');
+            $this->command->warn('Tenant "atlantic" not found — CatalogUatTestDataSeeder skipped.');
             return;
         }
 

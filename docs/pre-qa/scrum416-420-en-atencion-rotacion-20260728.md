@@ -38,7 +38,7 @@ actual, cada uno de esos productos con `rotation=NULL` y stock bajo/sin stock cu
 atención" — exactamente lo que marly reportó ("En atención" = "Bajo stock" + "Sin stock" sin
 descontar nada).
 
-## Verificación en vivo (Docker local, `illuminations_ventas_diseno.catalog_products`)
+## Verificación en vivo (Docker local, `atlantic_ventas_diseno.catalog_products`)
 
 Local tiene 13 productos, los 13 con `rotation = NULL` (mismo patrón que dev, donde marly
 reportó 43/43 en "Compra única"). Con ese dataset `kpis()` da `in_attention=0` porque

@@ -21,8 +21,8 @@ class PickingConsolidationTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -31,7 +31,7 @@ class PickingConsolidationTest extends FeatureTestCase
     public function test_consolida_el_mismo_producto_de_varios_pedidos_del_mismo_picker(): void
     {
         $product = $this->makeCatalogProduct(['reference' => 'REF-CONSOL']);
-        $pickerId = $this->userIdByEmail('almacen2@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('almacen2@atlantic.com.pa');
 
         $orderA = $this->makeOrder(
             ['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $pickerId],
@@ -64,7 +64,7 @@ class PickingConsolidationTest extends FeatureTestCase
     public function test_expone_ubicacion_priorizando_found_location_sobre_la_original(): void
     {
         $product = $this->makeCatalogProduct(['reference' => 'REF-LOC']);
-        $pickerId = $this->userIdByEmail('almacen2@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('almacen2@atlantic.com.pa');
 
         $this->makeOrder(
             ['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $pickerId],
@@ -82,7 +82,7 @@ class PickingConsolidationTest extends FeatureTestCase
     public function test_expone_ubicacion_original_cuando_no_hay_found_location(): void
     {
         $product = $this->makeCatalogProduct(['reference' => 'REF-LOC2']);
-        $pickerId = $this->userIdByEmail('almacen2@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('almacen2@atlantic.com.pa');
 
         $this->makeOrder(
             ['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $pickerId],
@@ -100,7 +100,7 @@ class PickingConsolidationTest extends FeatureTestCase
     public function test_pedidos_en_picking_pendiente_no_se_incluyen(): void
     {
         $product = $this->makeCatalogProduct();
-        $pickerId = $this->userIdByEmail('almacen2@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('almacen2@atlantic.com.pa');
 
         $this->makeOrder(
             ['stage' => Order::STAGE_PICKING_PENDIENTE, 'picker_id' => $pickerId],
@@ -118,7 +118,7 @@ class PickingConsolidationTest extends FeatureTestCase
     /** Ítems personalizados (sin catalog_product_id) de pedidos distintos nunca se consolidan entre sí. */
     public function test_items_personalizados_sin_catalogo_no_se_consolidan_entre_pedidos(): void
     {
-        $pickerId = $this->userIdByEmail('almacen2@illuminations.com.pa');
+        $pickerId = $this->userIdByEmail('almacen2@atlantic.com.pa');
 
         $this->makeOrder(
             ['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $pickerId],

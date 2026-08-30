@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * docs/adr/ADR-SCRUM591-596-batch17-comisiones-externas.md.
  *
  * - Comprobante de retención (REQ-514): mismas columnas que `cuenta_cobro_*` (Batch 16), mismo
- *   patrón — la sube Illuminations, no el arquitecto, pero el mecanismo de storage es idéntico.
+ *   patrón — la sube Atlantic, no el arquitecto, pero el mecanismo de storage es idéntico.
  * - `bank_account_id` (REQ-517): FK real (mismo schema `admin_contab`, mismo criterio que
  *   `bank_movements.bank_account_id`) — RN1 default "Banco General — Cuenta Corriente" se resuelve
  *   en runtime (mismo query que `PaymentService::defaultBankAccountFor()`), nunca se siembra un

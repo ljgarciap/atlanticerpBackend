@@ -1,6 +1,6 @@
-# AtlanticERP — Backend (CRM Illuminations)
+# AtlanticERP — Backend (CRM Atlantic)
 
-API backend del CRM comercial para **Illuminations** (empresa de diseño y suministro de
+API backend del CRM comercial para **Atlantic** (empresa de diseño y suministro de
 iluminación). Reemplaza un mock HTML+Supabase con una plataforma real, **multi-tenant**,
 construida como **monolito modular en Laravel 12 (PHP 8.3)**.
 
@@ -143,7 +143,7 @@ Cada tenant tiene **3 schemas de PostgreSQL**, todos con el mismo prefijo (`slug
 {tenant}_installations    → módulo Installations (casos, fotos, comentarios)
 ```
 
-El primer tenant es `illuminations` (`TENANT_DEFAULT` en `.env`). Al crear un tenant nuevo con
+El primer tenant es `atlantic` (`TENANT_DEFAULT` en `.env`). Al crear un tenant nuevo con
 `php artisan tenant:create {slug} {nombre}` se crean sus 3 schemas, se registra en la tabla
 landlord de tenants y se corren sobre él las migrations de `database/migrations/tenant`.
 El aislamiento de datos se garantiza a nivel de base de datos (schemas separados), no por

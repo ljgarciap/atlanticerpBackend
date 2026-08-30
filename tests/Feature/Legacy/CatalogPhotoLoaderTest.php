@@ -23,7 +23,7 @@ final class CatalogPhotoLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-public');
     }
 
@@ -40,18 +40,18 @@ final class CatalogPhotoLoaderTest extends FeatureTestCase
         $bmp = self::makeBmpBytes(100, 80);
 
         $result = (new CatalogPhotoLoader(new ProductoFotoConverter()))
-            ->load($producto, 'illuminations', $bmp);
+            ->load($producto, 'atlantic', $bmp);
 
         $this->assertSame('uploaded', $result['action']);
 
         $catalogProduct->refresh();
         $this->assertNotNull($catalogProduct->photo_url);
         $this->assertSame(
-            CatalogPhotoLoader::buildPhotoUrl(CatalogPhotoLoader::storageKey('illuminations', 2001)),
+            CatalogPhotoLoader::buildPhotoUrl(CatalogPhotoLoader::storageKey('atlantic', 2001)),
             $catalogProduct->photo_url,
         );
 
-        Storage::disk('s3-public')->assertExists(CatalogPhotoLoader::storageKey('illuminations', 2001));
+        Storage::disk('s3-public')->assertExists(CatalogPhotoLoader::storageKey('atlantic', 2001));
 
         $this->assertSame(1, ProductoFotoHash::query()->where('hash', hash('sha256', $bmp))->count());
     }
@@ -67,7 +67,7 @@ final class CatalogPhotoLoaderTest extends FeatureTestCase
         ]);
 
         $result = (new CatalogPhotoLoader(new ProductoFotoConverter()))
-            ->load($producto, 'illuminations', null);
+            ->load($producto, 'atlantic', null);
 
         $this->assertSame('skipped_no_photo', $result['action']);
         $catalogProduct->refresh();
@@ -88,7 +88,7 @@ final class CatalogPhotoLoaderTest extends FeatureTestCase
         $bmp = self::makeBmpBytes(100, 80);
 
         $result = (new CatalogPhotoLoader(new ProductoFotoConverter()))
-            ->load($producto, 'illuminations', $bmp);
+            ->load($producto, 'atlantic', $bmp);
 
         $this->assertSame('skipped_already_set', $result['action']);
 
@@ -110,7 +110,7 @@ final class CatalogPhotoLoaderTest extends FeatureTestCase
         ]);
 
         $result = (new CatalogPhotoLoader(new ProductoFotoConverter()))
-            ->load($producto, 'illuminations', random_bytes(32));
+            ->load($producto, 'atlantic', random_bytes(32));
 
         $this->assertSame('failed', $result['action']);
         $this->assertNotNull($result['reason']);
@@ -141,8 +141,8 @@ final class CatalogPhotoLoaderTest extends FeatureTestCase
 
         $loader = new CatalogPhotoLoader(new ProductoFotoConverter());
 
-        $resultA = $loader->load($productoA, 'illuminations', $bmp);
-        $resultB = $loader->load($productoB, 'illuminations', $bmp);
+        $resultA = $loader->load($productoA, 'atlantic', $bmp);
+        $resultB = $loader->load($productoB, 'atlantic', $bmp);
 
         $this->assertSame('uploaded', $resultA['action']);
         $this->assertSame('reused_dedup', $resultB['action']);
@@ -153,8 +153,8 @@ final class CatalogPhotoLoaderTest extends FeatureTestCase
         // Mismo s3_key para ambos — reusa la foto de A, nunca sube un segundo objeto para B.
         $this->assertSame($catalogA->photo_url, $catalogB->photo_url);
 
-        Storage::disk('s3-public')->assertExists(CatalogPhotoLoader::storageKey('illuminations', 3001));
-        Storage::disk('s3-public')->assertMissing(CatalogPhotoLoader::storageKey('illuminations', 3002));
+        Storage::disk('s3-public')->assertExists(CatalogPhotoLoader::storageKey('atlantic', 3001));
+        Storage::disk('s3-public')->assertMissing(CatalogPhotoLoader::storageKey('atlantic', 3002));
 
         $this->assertSame(1, ProductoFotoHash::query()->where('hash', hash('sha256', $bmp))->count());
     }

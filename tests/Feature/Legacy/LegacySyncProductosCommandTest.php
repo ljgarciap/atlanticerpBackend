@@ -35,18 +35,18 @@ final class LegacySyncProductosCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_dry_run_stagea_pero_no_toca_catalog_products_ni_sync_runs(): void
     {
         $this->app->instance(ProductoExtractorContract::class, new FakeProductoExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-productos', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-productos', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
-        $this->assertDatabaseHas('illuminations_legacy.productos', ['icg_codarticulo' => 1001]);
+        $this->assertDatabaseHas('atlantic_legacy.productos', ['icg_codarticulo' => 1001]);
         $this->assertSame(0, CatalogProduct::query()->count());
         $this->assertSame(0, SyncRun::query()->count());
     }
@@ -55,13 +55,13 @@ final class LegacySyncProductosCommandTest extends FeatureTestCase
     {
         $this->app->instance(ProductoExtractorContract::class, new FakeProductoExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-productos', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-productos', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
         // SCRUM-799 (2026-08-27) — `reference` pasa a ser el código real de fabricante
         // (`refProveedor` en `sampleExtraction()`, "55"), no el ID sintético "ICG-1001".
-        $this->assertDatabaseHas('illuminations_ventas_diseno.catalog_products', ['reference' => '55', 'factory_reference' => null]);
+        $this->assertDatabaseHas('atlantic_ventas_diseno.catalog_products', ['reference' => '55', 'factory_reference' => null]);
 
         $run = SyncRun::query()->firstOrFail();
         $this->assertSame('productos', $run->entidad);
@@ -78,9 +78,9 @@ final class LegacySyncProductosCommandTest extends FeatureTestCase
     {
         $this->app->instance(ProductoExtractorContract::class, new FakeProductoExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-productos', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-productos', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
-        $this->artisan('legacy:sync-productos', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-productos', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $this->assertSame(1, CatalogProduct::query()->where('reference', '55')->count());
@@ -102,7 +102,7 @@ final class LegacySyncProductosCommandTest extends FeatureTestCase
         );
         $this->app->instance(ProductoExtractorContract::class, new FakeProductoExtractor($extraction));
 
-        $this->artisan('legacy:sync-productos', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-productos', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $run = SyncRun::query()->firstOrFail();
@@ -119,7 +119,7 @@ final class LegacySyncProductosCommandTest extends FeatureTestCase
             new FakeProductoExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-productos', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-productos', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -135,7 +135,7 @@ final class LegacySyncProductosCommandTest extends FeatureTestCase
             new FakeProductoExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-productos', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-productos', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -161,7 +161,7 @@ final class LegacySyncProductosCommandTest extends FeatureTestCase
         );
         $this->app->instance(ProductoExtractorContract::class, new FakeProductoExtractor($extraction));
 
-        $this->artisan('legacy:sync-productos', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-productos', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 

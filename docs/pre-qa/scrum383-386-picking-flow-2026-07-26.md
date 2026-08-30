@@ -82,7 +82,7 @@ Pedidos y pruebe el botón. No bloqueante para el flujo del Jefe/Asistente (que 
 poblado), pero sí un hallazgo de UX real que vale la pena corregir: ocultar el botón para roles sin
 `CAN_OPERATE`, o al menos no ofrecer un selector vacío sin explicación.
 
-Repro: login como `apolonio.gonzalez@illuminations.com.pa`, ir a Pedidos, abrir "Asignar Picker" en
+Repro: login como `apolonio.gonzalez@atlantic.com.pa`, ir a Pedidos, abrir "Asignar Picker" en
 cualquier tarjeta en Asignado → selector solo con "Selecciona un picker...". Test:
 `preqa-scrum383-386-adversarial.spec.ts:36`.
 
@@ -126,7 +126,7 @@ pedido que no acaba de completar él mismo en esa misma sesión de navegador. Es
 real de uso: Empaque/supervisores/auditoría no tienen forma de revisar qué se recogió realmente en
 un pedido ya despachado.
 
-Repro: login como `almacen@illuminations.com.pa` (Jefe de Bodega, con todos los permisos), abrir un
+Repro: login como `almacen@atlantic.com.pa` (Jefe de Bodega, con todos los permisos), abrir un
 pedido en Packing → sin botón de picking en la tarjeta, sin acceso desde el detalle. Test:
 `preqa-scrum383-386-adversarial.spec.ts:156` (asserts la ausencia del modal y confirma vía API
 directa que el backend sí tiene `editable: false` listo para servir).
@@ -276,7 +276,7 @@ Recomiendo pasar SCRUM-383→386 a `QA`.
 
 ### Fixtures de esta pasada
 
-Sembrados vía `tinker` (`illuminations_bodega.orders`, todos borrados al cerrar la sesión, entorno
+Sembrados vía `tinker` (`atlantic_bodega.orders`, todos borrados al cerrar la sesión, entorno
 Docker local — no afecta lo que verifica marly en `dev.atlanticerp.ai`):
 
 | Fixture | Etapa | Detalle |

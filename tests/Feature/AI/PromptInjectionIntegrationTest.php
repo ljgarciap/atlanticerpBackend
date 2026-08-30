@@ -94,7 +94,7 @@ class PromptInjectionIntegrationTest extends FeatureTestCase
 
     private function assertSuspiciousPatternAudited(string $analysisId): void
     {
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::AI_PROMPT_SUSPICIOUS_PATTERN_DETECTED)
             ->where('entity_id', $analysisId)
             ->first();
@@ -177,12 +177,12 @@ class PromptInjectionIntegrationTest extends FeatureTestCase
     {
         $token = $this->loginAs();
 
-        DB::table('illuminations_auth.users')
-            ->where('email', 'designer@illuminations.test')
+        DB::table('atlantic_auth.users')
+            ->where('email', 'designer@atlantic.test')
             ->update(['first_name' => self::INJECTION]);
 
-        $designerId = DB::table('illuminations_auth.users')
-            ->where('email', 'designer@illuminations.test')
+        $designerId = DB::table('atlantic_auth.users')
+            ->where('email', 'designer@atlantic.test')
             ->value('id');
 
         $this->createProject($token, 'Proyecto normal, sin notas sospechosas.', [(int) $designerId]);

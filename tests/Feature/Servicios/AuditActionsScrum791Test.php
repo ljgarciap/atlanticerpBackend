@@ -22,12 +22,12 @@ use Tests\Feature\FeatureTestCase;
  */
 class AuditActionsScrum791Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function makeTicket(array $overrides = []): Ticket
@@ -63,7 +63,7 @@ class AuditActionsScrum791Test extends FeatureTestCase
             ->assertStatus(200)
             ->assertHeader('content-type', 'application/pdf');
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'servicios.claim_sheet.pdf_downloaded')
             ->where('entity_id', (string) $sheet->id)
             ->exists();
@@ -93,7 +93,7 @@ class AuditActionsScrum791Test extends FeatureTestCase
             ->assertStatus(200)
             ->assertHeader('content-type', 'application/pdf');
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'servicios.inspection_report.pdf_downloaded')
             ->where('entity_id', (string) $report->id)
             ->exists();

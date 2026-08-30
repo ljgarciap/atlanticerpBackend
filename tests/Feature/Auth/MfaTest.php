@@ -19,7 +19,7 @@ class MfaTest extends FeatureTestCase
         $this->setMfaMode('required');
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ])
         ->assertStatus(200)
@@ -35,7 +35,7 @@ class MfaTest extends FeatureTestCase
         Mail::shouldReceive('send')->andThrow(new \RuntimeException('SMTP rejected: RFC 2606 reserved domain'));
 
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -51,7 +51,7 @@ class MfaTest extends FeatureTestCase
         $this->setMfaMode('disabled');
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ])
         ->assertStatus(200)
@@ -69,10 +69,10 @@ class MfaTest extends FeatureTestCase
     {
         Mail::fake();
         $this->setMfaMode('disabled');
-        $this->enableMfaForUser('designer@illuminations.test');
+        $this->enableMfaForUser('designer@atlantic.test');
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ])
         ->assertStatus(200)
@@ -87,7 +87,7 @@ class MfaTest extends FeatureTestCase
         Mail::fake();
         $this->setMfaMode('required');
 
-        [$challengeId, $code] = $this->createChallenge('designer@illuminations.test');
+        [$challengeId, $code] = $this->createChallenge('designer@atlantic.test');
 
         $this->postJson('/api/auth/mfa/verify', [
             'mfa_challenge_id' => $challengeId,
@@ -102,7 +102,7 @@ class MfaTest extends FeatureTestCase
         Mail::fake();
         $this->setMfaMode('required');
 
-        [$challengeId] = $this->createChallenge('designer@illuminations.test');
+        [$challengeId] = $this->createChallenge('designer@atlantic.test');
 
         $this->postJson('/api/auth/mfa/verify', [
             'mfa_challenge_id' => $challengeId,
@@ -115,7 +115,7 @@ class MfaTest extends FeatureTestCase
         Mail::fake();
         $this->setMfaMode('required');
 
-        [$challengeId, $code] = $this->createChallenge('designer@illuminations.test');
+        [$challengeId, $code] = $this->createChallenge('designer@atlantic.test');
 
         $this->expireChallenge($challengeId);
 
@@ -130,7 +130,7 @@ class MfaTest extends FeatureTestCase
         Mail::fake();
         $this->setMfaMode('required');
 
-        [$challengeId, $code] = $this->createChallenge('designer@illuminations.test');
+        [$challengeId, $code] = $this->createChallenge('designer@atlantic.test');
 
         // Use it once
         $this->postJson('/api/auth/mfa/verify', [
@@ -167,7 +167,7 @@ class MfaTest extends FeatureTestCase
         Mail::fake();
         $this->setMfaMode('required');
 
-        [$originalId] = $this->createChallenge('designer@illuminations.test');
+        [$originalId] = $this->createChallenge('designer@atlantic.test');
 
         $response = $this->postJson('/api/auth/mfa/resend', [
             'mfa_challenge_id' => $originalId,
@@ -268,11 +268,11 @@ class MfaTest extends FeatureTestCase
     public function test_mfa_enable_confirm_con_challenge_de_otro_usuario_retorna_403(): void
     {
         // designer genera su propio challenge de enrolamiento...
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         [$challengeId, $code] = $this->createEnableChallenge($designerToken);
 
         // ...pero otro usuario autenticado intenta confirmarlo con el código correcto
-        $otherToken = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $otherToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($otherToken))
             ->postJson('/api/auth/mfa/enable/confirm', ['mfa_challenge_id' => $challengeId, 'code' => $code])
@@ -321,7 +321,7 @@ class MfaTest extends FeatureTestCase
         $code = '654321';
 
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -352,7 +352,7 @@ class MfaTest extends FeatureTestCase
         $code = '654321';
 
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -368,7 +368,7 @@ class MfaTest extends FeatureTestCase
     private function enableMfaForUser(string $email): void
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -381,7 +381,7 @@ class MfaTest extends FeatureTestCase
     private function expireChallenge(string $challengeId): void
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -394,7 +394,7 @@ class MfaTest extends FeatureTestCase
     private function setMfaMode(string $mode): void
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {

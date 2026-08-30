@@ -23,7 +23,7 @@ class AuditLogControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function actingForAudit(string $email): void
@@ -41,7 +41,7 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/audit/logs')
@@ -50,7 +50,7 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_muestra_filas_de_cualquier_modulo_no_solo_ventas_diseno(): void
     {
-        $this->actingForAudit('management@illuminations.test');
+        $this->actingForAudit('management@atlantic.test');
         $ticket = Ticket::create([
             'numero' => 'INS-2026-'.static::uniqueTestNumber(), 'tipo' => Ticket::TIPO_INSTALLATION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL, 'descripcion' => 'Ticket SCRUM-792',
@@ -58,10 +58,10 @@ class AuditLogControllerTest extends FeatureTestCase
             'quote_status' => Ticket::QUOTE_STATUS_PENDING, 'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
 
-        $this->actingForAudit('management@illuminations.test');
+        $this->actingForAudit('management@atlantic.test');
         MasterClient::create(['name' => '[SCRUM-792] Cliente Test']);
 
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/audit/logs')
             ->assertStatus(200);
@@ -73,17 +73,17 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_filtro_por_modulo(): void
     {
-        $this->actingForAudit('management@illuminations.test');
+        $this->actingForAudit('management@atlantic.test');
         Ticket::create([
             'numero' => 'INS-2026-'.static::uniqueTestNumber(), 'tipo' => Ticket::TIPO_INSTALLATION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL, 'descripcion' => 'Ticket SCRUM-792',
             'cliente' => 'Cliente de prueba', 'estado' => Ticket::ESTADO_REPORTED,
             'quote_status' => Ticket::QUOTE_STATUS_PENDING, 'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
-        $this->actingForAudit('management@illuminations.test');
+        $this->actingForAudit('management@atlantic.test');
         MasterClient::create(['name' => '[SCRUM-792] Cliente Test 2']);
 
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/audit/logs?module=servicios')
             ->assertStatus(200);
@@ -96,7 +96,7 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_filtro_por_tipo_cambio_dato_vs_accion(): void
     {
-        $this->actingForAudit('management@illuminations.test');
+        $this->actingForAudit('management@atlantic.test');
         $ticket = Ticket::create([
             'numero' => 'INS-2026-'.static::uniqueTestNumber(), 'tipo' => Ticket::TIPO_INSTALLATION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL, 'descripcion' => 'Ticket SCRUM-792',
@@ -111,7 +111,7 @@ class AuditLogControllerTest extends FeatureTestCase
             entityId:   $ticket->id,
         );
 
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
 
         $cambiosDato = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/audit/logs?tipo=cambio_dato&entity_type=ticket&entity_id='.$ticket->id)
@@ -128,14 +128,14 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_filtro_por_entity_type_y_entity_id(): void
     {
-        $this->actingForAudit('management@illuminations.test');
+        $this->actingForAudit('management@atlantic.test');
         $ticketA = Ticket::create([
             'numero' => 'INS-2026-'.static::uniqueTestNumber(), 'tipo' => Ticket::TIPO_INSTALLATION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL, 'descripcion' => 'Ticket A',
             'cliente' => 'Cliente A', 'estado' => Ticket::ESTADO_REPORTED,
             'quote_status' => Ticket::QUOTE_STATUS_PENDING, 'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
-        $this->actingForAudit('management@illuminations.test');
+        $this->actingForAudit('management@atlantic.test');
         Ticket::create([
             'numero' => 'INS-2026-'.static::uniqueTestNumber(), 'tipo' => Ticket::TIPO_INSTALLATION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL, 'descripcion' => 'Ticket B',
@@ -143,7 +143,7 @@ class AuditLogControllerTest extends FeatureTestCase
             'quote_status' => Ticket::QUOTE_STATUS_PENDING, 'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
 
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin/audit/logs?entity_type=ticket&entity_id={$ticketA->id}")
             ->assertStatus(200);
@@ -155,12 +155,12 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_filtro_por_usuario(): void
     {
-        $managerId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $managerId = (int) User::where('email', 'management@atlantic.test')->value('id');
 
-        $this->actingForAudit('management@illuminations.test');
+        $this->actingForAudit('management@atlantic.test');
         MasterClient::create(['name' => '[SCRUM-792] Cliente por usuario']);
 
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin/audit/logs?user_id={$managerId}")
             ->assertStatus(200);

@@ -36,7 +36,7 @@ ticket (ver abajo).
 
 ### 1. Camino feliz
 Producto creado desde `Crear producto nuevo` con los 12 campos técnicos completos
-(`PREQA-HAPPY-*`, management@illuminations.test). Al reabrir el detalle y pulsar "Ver ficha
+(`PREQA-HAPPY-*`, management@atlantic.test). Al reabrir el detalle y pulsar "Ver ficha
 técnica", los 12 valores mostrados coinciden exactamente con los ingresados, en el mismo orden y
 etiquetas del mockup (Voltaje, Potencia, Tipo de casquillo / socket, Temperatura de color, Flujo
 luminoso, Dimensiones, Peso, Material / acabado, Índice de protección (IP), Vida útil estimada,
@@ -98,7 +98,7 @@ Unicode de emoji — sin coincidencias. El botón usa `IcoFileText` (SVG outline
 mismo set de `atlanticerp-frontend/src/components/icons/`), no un glyph 📄. Cumple la regla de cliente.
 
 ### 7. Modo restringido (Ventas & Diseño)
-Con `designer@illuminations.test` (rol `vendedor_disenador`, nivel 4), el botón "Ver ficha técnica"
+Con `designer@atlantic.test` (rol `vendedor_disenador`, nivel 4), el botón "Ver ficha técnica"
 SÍ es visible en el detalle del producto — confirma la decisión de diseño documentada en el código
 (`InventarioPage.tsx:309-312`, `InventoryController::format()` línea del comentario SCRUM-425). El
 texto del modal de ficha técnica no contiene costo/margen/símbolo `$` en ningún campo — confirmado

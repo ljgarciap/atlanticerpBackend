@@ -93,7 +93,7 @@ class DirectoryControllerTest extends FeatureTestCase
     public function test_designer_solo_ve_contactos_de_sus_proyectos(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $designerId = $this->userIdFromToken($designerToken);
 

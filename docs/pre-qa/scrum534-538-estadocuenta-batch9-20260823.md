@@ -15,7 +15,7 @@ MasterClient "Playwright EC Batch9" (id 670), 2 SalesProject (Norte id 604, Sur 
 F-190237 $1,500 abierta en Sur), 1 `AdminContPayment` confirmado de $4,000 aplicado a F-338600,
 1 `AdminContBankAccount` activa (Banco General/Corriente ****8901),
 `fiscal_settings.responsable_administracion_user_id` apuntando a Felix. 6 escenarios corridos con
-**Playwright CLI** (regla dura del proyecto) contra una cuenta real (`conta@illuminations.com.pa`,
+**Playwright CLI** (regla dura del proyecto) contra una cuenta real (`conta@atlantic.com.pa`,
 Felix, `lider_admin_contab`, password = email).
 
 ## 1. SCRUM-534 / REQ-457 — Tarjeta de saldo

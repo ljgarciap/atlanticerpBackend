@@ -21,13 +21,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class ServiceQuoteBatch11Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa'; // Aaron Leis
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa'; // Aaron Leis
 
-    private const TECNICO_SERVICIOS = 'carlos@illuminations.com.pa'; // Carlos Vergara
+    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa'; // Carlos Vergara
 
     private const OTRO_TECNICO = 'santopedro181994@gmail.com'; // Pedro Santos
 
-    private const MANAGEMENT = 'mbekhar@illuminations.com.pa'; // Mark — desglose de costos
+    private const MANAGEMENT = 'mbekhar@atlantic.com.pa'; // Mark — desglose de costos
 
     protected function setUp(): void
     {
@@ -37,7 +37,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
     private function makeCurrentTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function makeSalesProject(): SalesProject

@@ -41,7 +41,7 @@ final class LegacySyncPagosCommand extends Command
 {
     /** @var string */
     protected $signature = 'legacy:sync-pagos
-        {--tenant=illuminations : Slug del tenant a sincronizar}
+        {--tenant=atlantic : Slug del tenant a sincronizar}
         {--dry-run : Corre Extractor+staging(Loader-A) y reporta conteos, sin registrar la corrida en legacy.sync_runs}';
 
     /** @var string */

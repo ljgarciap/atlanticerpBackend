@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 class DemoCleanupController
 {
-    private const DEMO_EMAIL_DOMAIN = '@illuminations.test';
+    private const DEMO_EMAIL_DOMAIN = '@atlantic.test';
     private const DEMO_PROJECT_PREFIX = '[DEMO]';
 
     public function __invoke(Request $request): JsonResponse

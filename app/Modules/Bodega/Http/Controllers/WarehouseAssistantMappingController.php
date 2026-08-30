@@ -50,7 +50,7 @@ final class WarehouseAssistantMappingController extends Controller
         }
 
         // "users" SIN calificar — el search_path del tenant ya resuelve el schema correcto; una
-        // tabla calificada ("illuminations_auth.users") rompe la regla `exists:` porque Laravel
+        // tabla calificada ("atlantic_auth.users") rompe la regla `exists:` porque Laravel
         // interpreta lo que va antes del punto como nombre de CONEXIÓN, no de schema (mismo gotcha
         // ya documentado para `Rule::unique`, ver memory/feedback_rule_unique_schema_qualified_table.md).
         $validated = $request->validate([

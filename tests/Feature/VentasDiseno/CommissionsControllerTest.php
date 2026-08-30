@@ -21,12 +21,12 @@ class CommissionsControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDisenoRead(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
@@ -34,7 +34,7 @@ class CommissionsControllerTest extends FeatureTestCase
 
     private function grantMarkPaid(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read', 'ventas_diseno.commissions.mark_paid'])]);
@@ -42,7 +42,7 @@ class CommissionsControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -66,8 +66,8 @@ class CommissionsControllerTest extends FeatureTestCase
 
     public function test_mes_cerrado_fija_el_porcentaje_y_queda_pendiente(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         // Mes bien atrás (no solo el pasado) para minimizar la chance de que ya
         // exista una cohorte de datos demo cerrada ahí (CrmDemoSeeder tiende a
         // concentrar actividad reciente, no hace 5 meses) — igual el aserto de
@@ -77,7 +77,7 @@ class CommissionsControllerTest extends FeatureTestCase
         $targetMonth = now()->subMonths(5);
         $this->makeApprovedCard($designerId, 25000, $targetMonth);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/commissions?scope=own&period=year')
             ->assertStatus(200);
@@ -97,14 +97,14 @@ class CommissionsControllerTest extends FeatureTestCase
         // user_roles (role='designer'), que los 10 vendedor_disenador reales (BusinessRoleUserSeeder,
         // role_id nuevo, sin fila en user_roles) nunca tuvieron. Gerencia veía $0/"Sin comisiones"
         // en alcance Equipo pese a comisiones reales pendientes por vendedor.
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $juanManuelId = $this->userIdByEmail('juanmanuel@illuminations.com.pa');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $juanManuelId = $this->userIdByEmail('juanmanuel@atlantic.com.pa');
         $this->assertGreaterThan(0, $juanManuelId, 'Juan Manuel Brustein debe existir (BusinessRoleUserSeeder).');
 
         $targetMonth = now()->subMonths(5);
         $this->makeApprovedCard($juanManuelId, 25000, $targetMonth);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/commissions?scope=team&period=year')
             ->assertStatus(200);
@@ -117,11 +117,11 @@ class CommissionsControllerTest extends FeatureTestCase
 
     public function test_mes_en_curso_no_se_persiste(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $this->makeApprovedCard($designerId, 10000, now());
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/commissions?scope=own&period=month')
             ->assertStatus(200);
@@ -131,21 +131,21 @@ class CommissionsControllerTest extends FeatureTestCase
         $this->assertNotNull($row);
         $this->assertNull($row['id']); // mes en curso -> no persistido todavía
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(0, CommissionCohort::where('month', now()->startOfMonth()->toDateString())->count());
     }
 
     public function test_marcar_como_pagada_mueve_de_pendiente_a_pagada(): void
     {
-        $this->grantMarkPaid('management@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantMarkPaid('management@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $before = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/reports/commissions?scope=own&period=year&owner_id={$designerId}")
             ->json();
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->makeApprovedCard($designerId, 25000, now()->subMonths(2));
 
         $afterCreate = $this->withHeaders($this->authHeaders($token))
@@ -170,13 +170,13 @@ class CommissionsControllerTest extends FeatureTestCase
 
     public function test_marcar_como_pagada_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $cohort = CommissionCohort::create([
             'owner_id' => $designerId, 'month' => now()->subMonth()->startOfMonth()->toDateString(),
             'total_amount' => 25000, 'commission_percent' => 2, 'commission_amount' => 500,
         ]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/reports/commissions/{$cohort->id}/mark-paid")
@@ -185,8 +185,8 @@ class CommissionsControllerTest extends FeatureTestCase
 
     public function test_marcar_como_pagada_id_inexistente_retorna_404(): void
     {
-        $this->grantMarkPaid('management@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantMarkPaid('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson('/api/ventas-diseno/reports/commissions/999999/mark-paid')

@@ -22,7 +22,7 @@ class PermissionCatalogTest extends FeatureTestCase
         // Batch 14 Admin&Cont (2026-08-25): admin_contab.commissions_internal.view agrega el
         // módulo `admin_contab` nuevo (mismo patrón que compras.limited.view/SCRUM-771 — ver
         // 2026_08_25_100004_add_admin_contab_commissions_internal_view_permission.php).
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/permission-catalog');
@@ -75,7 +75,7 @@ class PermissionCatalogTest extends FeatureTestCase
 
     public function test_permission_catalog_sin_rol_management_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/permission-catalog')

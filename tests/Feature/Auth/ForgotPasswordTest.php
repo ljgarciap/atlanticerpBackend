@@ -16,7 +16,7 @@ class ForgotPasswordTest extends FeatureTestCase
         Mail::fake();
 
         $this->postJson('/api/auth/forgot-password', [
-            'email' => 'designer@illuminations.test',
+            'email' => 'designer@atlantic.test',
         ])
         ->assertStatus(200)
         ->assertJsonStructure(['message']);
@@ -27,8 +27,8 @@ class ForgotPasswordTest extends FeatureTestCase
         // Anti-enumeration: same response regardless of whether email exists
         Mail::fake();
 
-        $r1 = $this->postJson('/api/auth/forgot-password', ['email' => 'noexiste@illuminations.test']);
-        $r2 = $this->postJson('/api/auth/forgot-password', ['email' => 'designer@illuminations.test']);
+        $r1 = $this->postJson('/api/auth/forgot-password', ['email' => 'noexiste@atlantic.test']);
+        $r2 = $this->postJson('/api/auth/forgot-password', ['email' => 'designer@atlantic.test']);
 
         $r1->assertStatus(200);
         $r2->assertStatus(200);
@@ -55,10 +55,10 @@ class ForgotPasswordTest extends FeatureTestCase
     {
         Mail::fake();
 
-        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@illuminations.test'])
+        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@atlantic.test'])
             ->assertStatus(200);
 
-        $token = $this->stealResetToken('designer@illuminations.test');
+        $token = $this->stealResetToken('designer@atlantic.test');
 
         $this->postJson('/api/auth/reset-password', [
             'token'                 => $token,
@@ -71,10 +71,10 @@ class ForgotPasswordTest extends FeatureTestCase
     {
         Mail::fake();
 
-        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@illuminations.test'])
+        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@atlantic.test'])
             ->assertStatus(200);
 
-        $token = $this->stealResetToken('designer@illuminations.test');
+        $token = $this->stealResetToken('designer@atlantic.test');
 
         $this->postJson('/api/auth/reset-password', [
             'token'                 => $token,
@@ -83,12 +83,12 @@ class ForgotPasswordTest extends FeatureTestCase
         ])->assertStatus(200);
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'NuevoPass99!',
         ])->assertStatus(200);
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ])->assertStatus(401);
     }
@@ -97,10 +97,10 @@ class ForgotPasswordTest extends FeatureTestCase
     {
         Mail::fake();
 
-        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@illuminations.test'])
+        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@atlantic.test'])
             ->assertStatus(200);
 
-        $token = $this->stealResetToken('designer@illuminations.test');
+        $token = $this->stealResetToken('designer@atlantic.test');
 
         $this->postJson('/api/auth/reset-password', [
             'token'                 => $token,
@@ -129,12 +129,12 @@ class ForgotPasswordTest extends FeatureTestCase
     {
         Mail::fake();
 
-        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@illuminations.test'])
+        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@atlantic.test'])
             ->assertStatus(200);
 
-        $token = $this->stealResetToken('designer@illuminations.test');
+        $token = $this->stealResetToken('designer@atlantic.test');
 
-        $this->expireResetTokens('designer@illuminations.test');
+        $this->expireResetTokens('designer@atlantic.test');
 
         $this->postJson('/api/auth/reset-password', [
             'token'                 => $token,
@@ -154,10 +154,10 @@ class ForgotPasswordTest extends FeatureTestCase
     {
         Mail::fake();
 
-        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@illuminations.test'])
+        $this->postJson('/api/auth/forgot-password', ['email' => 'designer@atlantic.test'])
             ->assertStatus(200);
 
-        $token = $this->stealResetToken('designer@illuminations.test');
+        $token = $this->stealResetToken('designer@atlantic.test');
 
         $this->postJson('/api/auth/reset-password', [
             'token'                 => $token,
@@ -178,7 +178,7 @@ class ForgotPasswordTest extends FeatureTestCase
         $plain = 'test-reset-token-known';
 
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -195,7 +195,7 @@ class ForgotPasswordTest extends FeatureTestCase
     private function expireResetTokens(string $email): void
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {

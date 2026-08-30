@@ -23,14 +23,14 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 2 de Facturación (SCRUM-513→518, REQ-436→441). */
 class AdminContInvoiceControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'conta@illuminations.com.pa';
+    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
 
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string
@@ -171,7 +171,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         // Eloquent directo después de eso rompe con "relation orders does not exist" (mismo
         // gotcha ya resuelto arriba en `makeFacturableOrder`). Se verifica por SQL calificado en
         // vez de re-establecer el tenant, mismo criterio que `userIdByEmail()` en este archivo.
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertTrue((bool) DB::table("{$slug}_bodega.orders")->where('id', $order->id)->value('invoice_ready'));
         $this->assertDatabaseHas("{$slug}_admin_contab.invoices", ['order_id' => $order->id, 'numero' => 'F-0001']);
     }
@@ -195,7 +195,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_store_rechaza_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/invoices', ['order_ids' => [1]])
@@ -262,7 +262,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->assertEquals(200.0, $response->json('invoices.0.saldo_aplicado'));
         $this->assertEquals(300.0, $response->json('invoices.0.total_a_pagar'));
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas("{$slug}_admin_contab.customer_credit_balances", ['master_client_id' => $masterClientId, 'saldo' => 0]);
     }
 
@@ -302,7 +302,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_export_rechaza_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->get('/api/admin-contab/invoices/export?format=excel')
@@ -340,7 +340,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
         // El postJson anterior es un round-trip HTTP real — spatie/laravel-multitenancy olvida el
         // tenant "actual" al terminar cada request (mismo gotcha de `makeFacturableOrder` arriba).
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $order->documents()->create(['tipo' => OrderDocument::TIPO_GUIA_ENTREGA, 'storage_key' => 'guia-test.pdf']);
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -548,7 +548,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($felix))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta']);
 
-        $superadmin = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $superadmin = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
 
         $detail = $this->withHeaders($this->authHeaders($superadmin))
             ->getJson("/api/admin-contab/invoices/{$order->id}/detail")
@@ -573,7 +573,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
 
         // vencida hace 45 días (dentro del plazo de crédito + 45) — debe caer en el rango 31-60.
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_admin_contab.invoices")->where('order_id', $order->id)
             ->update(['created_at' => now()->subDays($diasCredito + 45)]);
 
@@ -604,7 +604,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$orderVigente->id]]);
         $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$orderVieja->id]]);
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_admin_contab.invoices")->where('order_id', $orderVieja->id)
             ->update(['created_at' => now()->subDays($diasCredito + 95)]);
 
@@ -640,7 +640,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
         // No hay flujo real todavía para anular (depende de Notas de Crédito, batch futuro) —
         // se simula el campo directamente, mismo criterio que el saldo a favor de Batch 3.
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_admin_contab.invoices")->where('order_id', $order->id)->update(['anulada_at' => now()]);
 
         $this->withHeaders($this->authHeaders($token))
@@ -662,7 +662,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** Rol sin acceso → 403 en los endpoints nuevos del batch. */
     public function test_detail_y_aging_rechazan_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/invoices/1/detail')
@@ -675,7 +675,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return (int) \Illuminate\Support\Facades\DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }

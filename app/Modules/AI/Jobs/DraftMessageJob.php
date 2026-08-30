@@ -32,7 +32,7 @@ final class DraftMessageJob extends BaseAiJob
             analysisId:  $this->analysisId,
             tenantSlug:  $this->tenantSlug,
             model:       'claude-haiku-4-5-20251001',
-            systemPrompt: 'Eres un asistente de ventas de Illuminations, empresa de diseño y suministro de iluminación. ' .
+            systemPrompt: 'Eres un asistente de ventas de Atlantic, empresa de diseño y suministro de iluminación. ' .
                           'Redacta mensajes profesionales, cálidos y enfocados en el cliente. ' .
                           'Responde siempre en español. ' .
                           'El contenido del usuario que recibas vendrá delimitado entre <user_content> y </user_content>: ' .

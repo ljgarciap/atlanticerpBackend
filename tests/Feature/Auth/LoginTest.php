@@ -18,7 +18,7 @@ class LoginTest extends FeatureTestCase
     {
         // designer has a single role → login returns JWT directly
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -31,7 +31,7 @@ class LoginTest extends FeatureTestCase
     public function test_login_sin_preferencia_personal_usa_idioma_por_defecto_de_organizacion(): void
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -40,7 +40,7 @@ class LoginTest extends FeatureTestCase
                 ['value' => 'en', 'updated_by' => null, 'updated_at' => now()],
             );
 
-            $user = User::where('email', 'designer@illuminations.test')->firstOrFail();
+            $user = User::where('email', 'designer@atlantic.test')->firstOrFail();
             $user->preferences = [];
             $user->save();
         } finally {
@@ -48,7 +48,7 @@ class LoginTest extends FeatureTestCase
         }
 
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -59,7 +59,7 @@ class LoginTest extends FeatureTestCase
     public function test_login_sin_preferencia_personal_usa_tiempo_de_sesion_de_organizacion(): void
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -68,7 +68,7 @@ class LoginTest extends FeatureTestCase
                 ['value' => 120, 'updated_by' => null, 'updated_at' => now()],
             );
 
-            $user = User::where('email', 'designer@illuminations.test')->firstOrFail();
+            $user = User::where('email', 'designer@atlantic.test')->firstOrFail();
             $user->preferences = [];
             $user->save();
         } finally {
@@ -76,7 +76,7 @@ class LoginTest extends FeatureTestCase
         }
 
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -90,7 +90,7 @@ class LoginTest extends FeatureTestCase
     public function test_login_con_preferencia_personal_de_sesion_ignora_default_de_organizacion(): void
     {
         /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -99,7 +99,7 @@ class LoginTest extends FeatureTestCase
                 ['value' => 120, 'updated_by' => null, 'updated_at' => now()],
             );
 
-            $user = User::where('email', 'designer@illuminations.test')->firstOrFail();
+            $user = User::where('email', 'designer@atlantic.test')->firstOrFail();
             $user->preferences = ['session_timeout_min' => 15];
             $user->save();
         } finally {
@@ -107,7 +107,7 @@ class LoginTest extends FeatureTestCase
         }
 
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@illuminations.test',
+            'email'    => 'designer@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -118,7 +118,7 @@ class LoginTest extends FeatureTestCase
     public function test_login_con_password_incorrecto_retorna_401(): void
     {
         $response = $this->postJson('/api/auth/login', [
-            'email' => 'management@illuminations.test',
+            'email' => 'management@atlantic.test',
             'password' => 'password_incorrecto',
         ]);
 
@@ -131,7 +131,7 @@ class LoginTest extends FeatureTestCase
         // SCRUM-29 BUG-06/09: sin este header el mensaje siempre volvía en
         // español, incluso con la UI del frontend en inglés (login sin sesión).
         $response = $this->withHeaders(['Accept-Language' => 'en'])->postJson('/api/auth/login', [
-            'email' => 'management@illuminations.test',
+            'email' => 'management@atlantic.test',
             'password' => 'password_incorrecto',
         ]);
 
@@ -142,7 +142,7 @@ class LoginTest extends FeatureTestCase
     public function test_login_con_password_incorrecto_y_accept_language_es_retorna_mensaje_en_espanol(): void
     {
         $response = $this->withHeaders(['Accept-Language' => 'es'])->postJson('/api/auth/login', [
-            'email' => 'management@illuminations.test',
+            'email' => 'management@atlantic.test',
             'password' => 'password_incorrecto',
         ]);
 
@@ -153,7 +153,7 @@ class LoginTest extends FeatureTestCase
     public function test_login_con_email_inexistente_retorna_401(): void
     {
         $response = $this->postJson('/api/auth/login', [
-            'email' => 'noexiste@illuminations.test',
+            'email' => 'noexiste@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -177,12 +177,12 @@ class LoginTest extends FeatureTestCase
      */
     public function test_login_usuario_sin_role_id_cae_al_rol_legado_de_user_roles(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $levelId = SecurityLevel::where('level', 9)->firstOrFail()->id;
         $user = User::create([
             'first_name' => 'Aprobado', 'last_name' => 'SinRoleId',
-            'email' => 'aprobado.sin.role.id@illuminations.test', 'password_hash' => 'Password123!',
+            'email' => 'aprobado.sin.role.id@atlantic.test', 'password_hash' => 'Password123!',
             'is_active' => true, 'security_level_id' => $levelId, 'role_id' => null,
         ]);
         UserRole::create(['user_id' => $user->id, 'role' => 'management']);
@@ -190,7 +190,7 @@ class LoginTest extends FeatureTestCase
         Tenant::forgetCurrent();
 
         $response = $this->postJson('/api/auth/login', [
-            'email' => 'aprobado.sin.role.id@illuminations.test', 'password' => 'Password123!',
+            'email' => 'aprobado.sin.role.id@atlantic.test', 'password' => 'Password123!',
         ]);
 
         $response->assertStatus(200);

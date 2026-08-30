@@ -30,10 +30,10 @@
 </style>
 </head>
 <body>
-    <div class="brand-name">ILLUMINATIONS</div>
+    <div class="brand-name">ATLANTIC</div>
     <div class="brand-line"></div>
     <h1>Estado de cuenta de comisiones — {{ $data['mes'] }}{{ $data['mes_cerrado'] ? ' (liquidado)' : ' (en curso)' }}</h1>
-    <div class="sub">Illuminations Diseño e Iluminación, S.A. · Panamá City, Panamá</div>
+    <div class="sub">Atlantic Diseño e Iluminación, S.A. · Panamá City, Panamá</div>
 
     <div class="party">
         <div class="party-label">Vendedor</div>
@@ -103,6 +103,6 @@
         @endif
     </div>
 
-    <div class="footer">Illuminations Diseño e Iluminación, S.A. · Documento generado por AtlanticERP · illuminations.com.pa</div>
+    <div class="footer">Atlantic Diseño e Iluminación, S.A. · Documento generado por AtlanticERP · atlantic.com.pa</div>
 </body>
 </html>

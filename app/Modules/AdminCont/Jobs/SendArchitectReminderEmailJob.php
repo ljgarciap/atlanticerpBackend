@@ -47,7 +47,7 @@ final class SendArchitectReminderEmailJob implements ShouldQueue
         }
 
         Mail::to($architect->email)->send(new NotificationMail(
-            'Illuminations — recordatorio de cuenta de cobro pendiente',
+            'Atlantic — recordatorio de cuenta de cobro pendiente',
             "Hola {$architect->name},\n\n".
             "Te escribimos para recordarte que el pago de tu comisión por el proyecto \"{$this->cliente}\" ".
             "(pedido {$this->numeroPedido}) está pendiente de tu cuenta de cobro.\n\n".

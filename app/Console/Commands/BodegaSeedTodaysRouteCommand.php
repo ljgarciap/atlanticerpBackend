@@ -31,7 +31,7 @@ final class BodegaSeedTodaysRouteCommand extends Command
 
     /** @var string */
     protected $signature = 'bodega:seed-todays-route
-        {--tenant=illuminations : Slug del tenant a sembrar}
+        {--tenant=atlantic : Slug del tenant a sembrar}
         {--force : Requerido para correr en app()->environment(\'production\') — nunca por accidente}';
 
     /** @var string */

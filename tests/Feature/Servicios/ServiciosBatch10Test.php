@@ -21,16 +21,16 @@ use Tests\Feature\FeatureTestCase;
  */
 class ServiciosBatch10Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
-    private const TECNICO_CARLOS = 'carlos@illuminations.com.pa';
+    private const TECNICO_CARLOS = 'carlos@atlantic.com.pa';
 
-    private const MANAGEMENT = 'daniela@illuminations.com.pa';
+    private const MANAGEMENT = 'daniela@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         // Mismo motivo que TicketBatch4Test — sin esto, saveMobile() intenta escribir a S3 real
         // (el disco s3-private no está configurado en CI, solo en local contra el bucket real
         // atlanticerp-dev, ver CLAUDE.md "Local S3 conectado").
@@ -39,7 +39,7 @@ class ServiciosBatch10Test extends FeatureTestCase
 
     private function carlos(): InternalTechnician
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         return InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail();
     }
@@ -139,7 +139,7 @@ class ServiciosBatch10Test extends FeatureTestCase
 
         $response->assertJsonPath('data.total', 127.06);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $desglose = collect($response->json('data.desglose'))->keyBy('criterio');
         $this->assertSame(0, $desglose['puntualidad']['pct_obtenido']);
         $this->assertSame(117.65, $desglose['calidad']['monto_max']);
@@ -177,7 +177,7 @@ class ServiciosBatch10Test extends FeatureTestCase
             ->assertStatus(200)
             ->assertJsonFragment(['key' => 'commission_monto_max_calidad', 'value' => 200]);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(200, app(ServiciosSettingsService::class)->commissionMontoMax('calidad'));
     }
 
@@ -238,7 +238,7 @@ class ServiciosBatch10Test extends FeatureTestCase
         $response->assertJsonPath('firma_cliente_nombre', 'Cliente de prueba');
         $this->assertNotNull($response->json('firma_cliente_imagen_url'));
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $ticket->refresh();
         $this->assertSame(Ticket::INSPECTION_STATUS_COMPLETED, $ticket->inspection_report_status);
     }
@@ -273,7 +273,7 @@ class ServiciosBatch10Test extends FeatureTestCase
             ]);
         $response->assertStatus(409);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $report = \App\Modules\Servicios\Models\InspectionReport::where('ticket_id', $ticket->id)->firstOrFail();
         $this->assertSame('Cliente Original', $report->firma_cliente_nombre);
     }

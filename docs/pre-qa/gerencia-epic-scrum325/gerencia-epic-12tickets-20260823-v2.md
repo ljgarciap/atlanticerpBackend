@@ -4,8 +4,8 @@
 **Ambiente:** `dev.atlanticerp.ai` — backend `9676a3a0f578...` (verificado idéntico al HEAD local de
 `dev`, ver sesión), frontend en sync con `origin/dev` (`a878725...`), **cero commits relacionados
 a Gerencia entre la primera pasada y esta**.
-**Cuenta usada:** `whil@illuminations.com.pa` (Gerencia Restringida, Nivel 8). `daniela@
-illuminations.com.pa` ya no acepta password por defecto (401) — no se pudo repetir la comparación
+**Cuenta usada:** `whil@atlantic.com.pa` (Gerencia Restringida, Nivel 8). `daniela@
+atlantic.com.pa` ya no acepta password por defecto (401) — no se pudo repetir la comparación
 cruzada de usuarios que sí funcionó el 2026-08-22; no fue necesaria para el hallazgo principal (ver
 abajo, confirmado por código).
 **Spec (histórico, superado por la v3 post-merge):** `preqa-scrum-gerencia-12tickets-20260823-v2.spec.ts`

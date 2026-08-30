@@ -25,20 +25,20 @@ class JwtMiddlewareTest extends FeatureTestCase
 
     public function test_ruta_protegida_con_jwt_valido_retorna_200(): void
     {
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders(['Authorization' => 'Bearer '.$token])
             ->getJson('/api/auth/me')
             ->assertStatus(200)
             ->assertJsonStructure(['id', 'email', 'role', 'tenant'])
-            ->assertJsonPath('email', 'management@illuminations.test')
+            ->assertJsonPath('email', 'management@atlantic.test')
             ->assertJsonPath('role', 'management')
-            ->assertJsonPath('tenant', 'illuminations');
+            ->assertJsonPath('tenant', 'atlantic');
     }
 
     public function test_middleware_inicializa_tenant_en_ruta_protegida(): void
     {
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders(['Authorization' => 'Bearer '.$token])
             ->getJson('/api/auth/me')

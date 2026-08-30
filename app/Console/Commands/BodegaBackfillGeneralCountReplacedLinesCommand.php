@@ -32,7 +32,7 @@ final class BodegaBackfillGeneralCountReplacedLinesCommand extends Command
 {
     /** @var string */
     protected $signature = 'bodega:backfill-general-count-replaced-lines
-        {--tenant=illuminations : Slug del tenant a corregir}
+        {--tenant=atlantic : Slug del tenant a corregir}
         {--dry-run : Solo reporta lo que backfillearía, sin escribir}';
 
     /** @var string */

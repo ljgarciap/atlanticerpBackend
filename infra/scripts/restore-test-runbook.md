@@ -60,7 +60,7 @@ la restauración misma sale mal.
    docker exec -i restore-test psql -U postgres -d atlanticerp_restore_test < <archivo>.sql
    ```
 3. **Criterio de validación antes de promover** (no alcanza con "restauró sin error"):
-   - Los schemas del tenant existen (`illuminations_auth`, `illuminations_crm`, `illuminations_servicios`, etc. — ver `Tenant::schemas()`).
+   - Los schemas del tenant existen (`atlantic_auth`, `atlantic_crm`, `atlantic_servicios`, etc. — ver `Tenant::schemas()`).
    - Conteos de filas razonables en tablas clave (`users`, `projects`, `tickets`) — no vacíos, no
      sospechosamente iguales a un ambiente distinto.
    - Timestamp del dump coincide con la ventana de pérdida de datos aceptada para este incidente.

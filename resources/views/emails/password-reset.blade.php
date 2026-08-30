@@ -30,7 +30,7 @@
         <div class="warning">
             ⚠️ Este enlace expira en 1 hora. Si no solicitaste restablecer tu contraseña, ignora este correo.
         </div>
-        <div class="footer">AtlanticERP CRM · Illuminations · No respondas a este correo</div>
+        <div class="footer">AtlanticERP CRM · Atlantic · No respondas a este correo</div>
     </div>
 </body>
 </html>

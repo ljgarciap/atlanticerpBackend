@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Collection;
  * Crea N proyectos de Ventas & Diseño válidos (con todos los campos obligatorios de la etapa
  * "proposal" completos — contacto, fecha de entrega, comprobante de aprobación), distribuidos
  * round-robin entre los vendedores REALES del roster (`BusinessRoleUserSeeder`,
- * `role_key=vendedor_disenador` — nunca cuentas demo `*@illuminations.test`, regla dura del
+ * `role_key=vendedor_disenador` — nunca cuentas demo `*@atlantic.test`, regla dura del
  * proyecto), y los transiciona a "approved" a través del mecanismo REAL
  * (`PipelineService::changeStage()`, el mismo que dispara `PATCH .../pipeline/{id}/stage`) — NO
  * se crea el `PipelineCard` directo en `approved` (eso no dispara `QuoteApproved`, ver
@@ -53,7 +53,7 @@ final class BodegaSeedUatProjectsCommand extends Command
 
     /** @var string */
     protected $signature = 'bodega:seed-uat-projects
-        {--tenant=illuminations : Slug del tenant a sembrar}
+        {--tenant=atlantic : Slug del tenant a sembrar}
         {--count=40 : Cantidad total de proyectos aprobados marcados [UAT-BODEGA] que debe haber al terminar (top-up, no duplica)}
         {--force : Requerido para correr en app()->environment(\'production\') — nunca por accidente}';
 
@@ -93,13 +93,13 @@ final class BodegaSeedUatProjectsCommand extends Command
 
         // Regla dura del proyecto (feedback_testing_uses_real_users_not_demo.md): nunca cuentas
         // demo, aunque compartan role_key por conveniencia de fixtures — ej.
-        // designer@illuminations.test (AuthUserSeeder) tiene role_key=vendedor_disenador en
+        // designer@atlantic.test (AuthUserSeeder) tiene role_key=vendedor_disenador en
         // local/dev/testing para no inflar el roster de FeatureTestCase, pero no es un vendedor
         // real. Exclusión explícita en vez de confiar en que qa (target real de este comando)
         // nunca corre AuthUserSeeder — así el comando es correcto en cualquier entorno.
         /** @var Collection<int, User> $vendedores */
         $vendedores = User::whereHas('role', fn ($q) => $q->where('key', 'vendedor_disenador'))
-            ->where('email', 'not like', '%@illuminations.test')
+            ->where('email', 'not like', '%@atlantic.test')
             ->orderBy('id')
             ->get();
 

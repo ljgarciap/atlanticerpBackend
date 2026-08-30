@@ -32,8 +32,8 @@ class OrderStatusControllerTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -41,7 +41,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     /** @param list<string> $extra */
     private function grantVentasDisenoRead(string $email, array $extra = []): void
     {
-        $slug = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->value('slug');
         $permissions = array_merge(['ventas_diseno.read'], $extra);
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($permissions)]);
     }
@@ -49,7 +49,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     /** REQ-338 — un pedido dividido en varias tarjetas (familia) aparece como UNA sola fila. */
     public function test_lista_consolida_familia_en_una_sola_fila(): void
     {
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
         $root = $this->makeOrderWithPipelineCard($sellerId, ['order_number' => 'PED-2026-FAM01']);
         $this->makeOrder(['order_number' => 'PED-2026-FAM01', 'family_id' => $root->id, 'pipeline_card_id' => $root->pipeline_card_id]);
 
@@ -65,7 +65,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     /** REQ-338 — columnas exactas: N° pedido, N° cotización, Subcliente, Fecha de pedido, Vendedor. */
     public function test_lista_expone_las_columnas_requeridas(): void
     {
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
         $order = $this->makeOrderWithPipelineCard($sellerId, ['order_number' => 'PED-2026-COLS']);
 
         Quote::create([
@@ -89,7 +89,7 @@ class OrderStatusControllerTest extends FeatureTestCase
 
     public function test_buscador_encuentra_por_numero_de_cotizacion(): void
     {
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
         $order = $this->makeOrderWithPipelineCard($sellerId, ['order_number' => 'PED-2026-QSEARCH']);
         Quote::create([
             'sales_project_id' => $order->pipelineCard->sales_project_id,
@@ -111,7 +111,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     public function test_detalle_consolida_pendiente_por_producto_a_traves_de_la_familia(): void
     {
         $product = $this->makeCatalogProduct(['reference' => 'REF-CONSOL']);
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
 
         $root = $this->makeOrderWithPipelineCard(
             $sellerId,
@@ -147,7 +147,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     public function test_detalle_pendiente_es_cero_cuando_familia_completa_esta_entregada(): void
     {
         $product = $this->makeCatalogProduct(['reference' => 'REF-DONE']);
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
 
         $root = $this->makeOrderWithPipelineCard(
             $sellerId,
@@ -166,7 +166,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     /** REQ-339 — datos del modal: proyecto, diseñador (=owner_id), cliente, contacto, teléfono. */
     public function test_detalle_expone_datos_generales_del_modal(): void
     {
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
         $order = $this->makeOrderWithPipelineCard($sellerId, ['order_number' => 'PED-2026-DETAIL']);
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
@@ -183,8 +183,8 @@ class OrderStatusControllerTest extends FeatureTestCase
     /** REQ-342 — Bodega ve TODOS los pedidos, sin filtro de dueño. */
     public function test_bodega_ve_todos_los_pedidos(): void
     {
-        $sellerA = $this->userIdByEmail('designer@illuminations.test');
-        $sellerB = $this->userIdByEmail('management@illuminations.test');
+        $sellerA = $this->userIdByEmail('designer@atlantic.test');
+        $sellerB = $this->userIdByEmail('management@atlantic.test');
         $this->makeOrderWithPipelineCard($sellerA, ['order_number' => 'PED-2026-SELLERA']);
         $this->makeOrderWithPipelineCard($sellerB, ['order_number' => 'PED-2026-SELLERB']);
 
@@ -200,14 +200,14 @@ class OrderStatusControllerTest extends FeatureTestCase
     /** REQ-342 — Ventas & Diseño ve SOLO los pedidos propios (owner_id), nunca los de otro vendedor. */
     public function test_vendedor_ve_solo_sus_propios_pedidos(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $sellerA = $this->userIdByEmail('designer@illuminations.test');
-        $sellerB = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $sellerA = $this->userIdByEmail('designer@atlantic.test');
+        $sellerB = $this->userIdByEmail('management@atlantic.test');
 
         $ownOrder   = $this->makeOrderWithPipelineCard($sellerA, ['order_number' => 'PED-2026-MINE']);
         $otherOrder = $this->makeOrderWithPipelineCard($sellerB, ['order_number' => 'PED-2026-OTHERS']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $response = $this->withHeaders($headers)
@@ -238,16 +238,16 @@ class OrderStatusControllerTest extends FeatureTestCase
      */
     public function test_vendedor_pierde_acceso_cuando_bodega_esta_oculto_por_uat(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $sellerA = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $sellerA = $this->userIdByEmail('designer@atlantic.test');
         $this->makeOrderWithPipelineCard($sellerA, ['order_number' => 'PED-2026-UATHIDDEN']);
 
-        $superToken = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $superToken = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->withHeaders($this->authHeaders($superToken))
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['bodega'], 'menuItems' => [], 'action' => 'hide'])
             ->assertStatus(200);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/orders/status')
             ->assertStatus(403);
@@ -256,7 +256,7 @@ class OrderStatusControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($superToken))
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['bodega'], 'menuItems' => [], 'action' => 'restore'])
             ->assertStatus(200);
-        $restoredToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $restoredToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($restoredToken))
             ->getJson('/api/bodega/orders/status')
             ->assertStatus(200);
@@ -270,10 +270,10 @@ class OrderStatusControllerTest extends FeatureTestCase
      */
     public function test_bodega_read_pierde_acceso_cuando_bodega_esta_oculto_por_uat(): void
     {
-        $sellerA = $this->userIdByEmail('designer@illuminations.test');
+        $sellerA = $this->userIdByEmail('designer@atlantic.test');
         $this->makeOrderWithPipelineCard($sellerA, ['order_number' => 'PED-2026-BODEGAHIDDEN']);
 
-        $superToken = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $superToken = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->withHeaders($this->authHeaders($superToken))
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['bodega'], 'menuItems' => [], 'action' => 'hide'])
             ->assertStatus(200);
@@ -298,12 +298,12 @@ class OrderStatusControllerTest extends FeatureTestCase
     {
         $this->makeOrder(['order_number' => 'PED-2026-SUPERADMIN']);
 
-        $superToken = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $superToken = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->withHeaders($this->authHeaders($superToken))
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['bodega'], 'menuItems' => [], 'action' => 'hide'])
             ->assertStatus(200);
 
-        $freshSuperToken = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $freshSuperToken = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $response = $this->withHeaders($this->authHeaders($freshSuperToken))
             ->getJson('/api/bodega/orders/status')
             ->assertStatus(200);
@@ -313,8 +313,8 @@ class OrderStatusControllerTest extends FeatureTestCase
 
     /**
      * Un usuario sin ningún permiso de Bodega ni de Ventas & Diseño no tiene acceso.
-     * `supervisor@illuminations.test` (level 5, `role_key` null — sin `RoleModuleVisibility` ni
-     * `superadmin.all`, a diferencia de `management@illuminations.test`/`gerencia@...` que en
+     * `supervisor@atlantic.test` (level 5, `role_key` null — sin `RoleModuleVisibility` ni
+     * `superadmin.all`, a diferencia de `management@atlantic.test`/`gerencia@...` que en
      * este fixture están en level 10 = Super Admin y por lo tanto SIEMPRE traen `superadmin.all`
      * vía `plainEscapeHatchPermissions()`, sin importar el rol elegido al loguear).
      */
@@ -322,7 +322,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['order_number' => 'PED-2026-NOPERM']);
 
-        $token = $this->loginAs('supervisor@illuminations.test', 'Password123!', 'supervisor');
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/orders/status')
             ->assertStatus(403);
@@ -346,7 +346,7 @@ class OrderStatusControllerTest extends FeatureTestCase
      */
     public function test_genera_documento_estatus_pedido_con_tipo_correcto(): void
     {
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
         $root = $this->makeOrderWithPipelineCard($sellerId, ['order_number' => 'PED-2026-DOC']);
         $child = $this->makeOrder(['order_number' => 'PED-2026-DOC', 'family_id' => $root->id, 'pipeline_card_id' => $root->pipeline_card_id]);
 
@@ -372,7 +372,7 @@ class OrderStatusControllerTest extends FeatureTestCase
      */
     public function test_listado_no_escala_en_queries_de_cotizacion_con_mas_pedidos(): void
     {
-        $sellerId = $this->userIdByEmail('designer@illuminations.test');
+        $sellerId = $this->userIdByEmail('designer@atlantic.test');
 
         for ($i = 1; $i <= 5; $i++) {
             $order = $this->makeOrderWithPipelineCard($sellerId, ['order_number' => "PED-2026-SCALE-{$i}"]);

@@ -282,7 +282,7 @@ invalida la lista, no el objeto en memoria del drawer) — resuelto con un espej
 
 ### Verificado end-to-end en navegador (Playwright, no solo `npm test`)
 
-Login real (`management@illuminations.test`), navegación a `/security/roles` (14 roles listados),
+Login real (`management@atlantic.test`), navegación a `/security/roles` (14 roles listados),
 apertura de `RoleFormModal` y `RoleVisibilityModal`, navegación a `/security/levels` y apertura de
 `SecurityLevelPermissionsModal`, navegación a `/security/users` (filtro de rol con 4 opciones),
 apertura del drawer de edición confirmando "Rol base", "Permisos transversales" y "Roles

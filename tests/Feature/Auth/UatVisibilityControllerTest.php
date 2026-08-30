@@ -28,17 +28,17 @@ class UatVisibilityControllerTest extends FeatureTestCase
 
     private function activateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function designerId(): int
     {
-        return (int) User::where('email', 'designer@illuminations.test')->value('id');
+        return (int) User::where('email', 'designer@atlantic.test')->value('id');
     }
 
     public function test_bulk_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
         $this->activateTenant();
 
         $this->withHeaders($this->authHeaders($token))
@@ -51,7 +51,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
 
     public function test_get_arranca_vacio_y_hide_lo_refleja(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
 
         $this->withHeaders($this->authHeaders($token))
@@ -79,7 +79,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
 
     public function test_hide_oculta_el_modulo_para_no_superadmin_y_nunca_toca_superadmin(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -91,13 +91,13 @@ class UatVisibilityControllerTest extends FeatureTestCase
         $designer = User::find($designerId);
         $this->assertFalse($designer->modulesPayload()['ventas_diseno']['view']);
 
-        $superadmin = User::where('email', 'superadmin@illuminations.test')->first();
+        $superadmin = User::where('email', 'superadmin@atlantic.test')->first();
         $this->assertTrue($superadmin->modulesPayload()['ventas_diseno']['view']);
     }
 
     public function test_hide_nunca_escribe_en_user_module_visibility(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
 
         $this->withHeaders($this->authHeaders($token))
@@ -115,7 +115,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
      */
     public function test_restore_no_borra_un_override_individual_preexistente_del_mismo_modulo(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -153,7 +153,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
 
     public function test_restore_saca_el_modulo_de_la_lista_y_el_usuario_vuelve_a_ver_lo_que_su_rol_le_daba(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -172,7 +172,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
 
     public function test_hide_de_configuracion_via_menuItems_oculta_para_designer(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -188,7 +188,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
         $designer = User::find($designerId);
         $this->assertSame(['configuracion' => ['root' => false]], $designer->menuVisibilityPayload());
 
-        $superadmin = User::where('email', 'superadmin@illuminations.test')->first();
+        $superadmin = User::where('email', 'superadmin@atlantic.test')->first();
         $this->assertSame([], $superadmin->menuVisibilityPayload());
     }
 
@@ -206,7 +206,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
      */
     public function test_hide_de_modulo_de_negocio_emite_senal_module_en_menu_visibility(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
         $designerId = $this->designerId();
 
@@ -227,7 +227,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
         // Pero menuVisibilityPayload() ahora sí trae la señal separada que el Sidebar necesita.
         $this->assertSame(false, $designer->menuVisibilityPayload()['servicios']['__module__'] ?? null);
 
-        $superadmin = User::where('email', 'superadmin@illuminations.test')->first();
+        $superadmin = User::where('email', 'superadmin@atlantic.test')->first();
         $this->assertArrayNotHasKey('servicios', $superadmin->menuVisibilityPayload());
 
         // Restore saca la señal, igual que saca el resto de la máscara.
@@ -246,7 +246,7 @@ class UatVisibilityControllerTest extends FeatureTestCase
 
     public function test_bulk_con_modulo_invalido_retorna_422(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
 
         $this->withHeaders($this->authHeaders($token))

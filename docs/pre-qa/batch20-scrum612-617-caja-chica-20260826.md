@@ -26,7 +26,7 @@ el runtime real del backend no cumple ese contrato — el mismatch nunca lo agar
 los tests de backend solo verifican `numero`/`estado` (correcto para su propio alcance) y los tests
 de frontend mockeados le dan al mock el shape completo en vez del shape real y mínimo del backend.
 
-**Cómo reproducir:** login Mark (`mbekhar@illuminations.com.pa`) → Caja chica → Reportes → Ver un
+**Cómo reproducir:** login Mark (`mbekhar@atlantic.com.pa`) → Caja chica → Reportes → Ver un
 reporte `pendiente_aprobacion` → Aprobar reporte → confirmar. Pantalla en blanco.
 
 **Evidencia:** `docs/visual-review/screenshots/SCRUM-617-1.png` (estado en blanco tras aprobar) +

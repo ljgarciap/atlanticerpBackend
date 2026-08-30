@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-07-17
 **Entorno:** dev.atlanticerp.ai (backend `64b6a6f` + `e79e2eb` en el fix de aprobación, frontend `af16ed8` + `e79e2eb`)
-**Método:** navegador real (Chrome, Claude in Chrome) contra dev.atlanticerp.ai, sesión como `gerencia@illuminations.test`. Verificación previa: 853/853 tests backend, 326/326 tests frontend, PHPStan Level 8 limpio, tsc/build limpios.
+**Método:** navegador real (Chrome, Claude in Chrome) contra dev.atlanticerp.ai, sesión como `gerencia@atlantic.test`. Verificación previa: 853/853 tests backend, 326/326 tests frontend, PHPStan Level 8 limpio, tsc/build limpios.
 
 Todos los 7 tickets tenían comentario de rechazo de marly.rangel del 2026-07-16/17 con repro exacto. Protocolo de triage-de-comentario-de-Marly ya se documentó en cada ticket al reasignar (ver comentarios previos en Jira). Este documento es la re-verificación EN VIVO tras el fix.
 
@@ -10,8 +10,8 @@ Todos los 7 tickets tenían comentario de rechazo de marly.rangel del 2026-07-16
 
 CRÍTICO — trazabilidad falsa del aprobador. CONFIRMADO Y CORREGIDO.
 
-- Verificado en DB (SSH): `compras_settings.mark_approver_user_id = 16` (mbekhar@illuminations.com.pa), poblado correctamente por la migración corregida.
-- Probado en vivo: `gerencia@illuminations.test` (rol Gerencia, NO es Mark) intenta aprobar orden #8 → **403**, banner rojo "Solo Mark puede aprobar esta orden." (mensaje real del backend, no genérico).
+- Verificado en DB (SSH): `compras_settings.mark_approver_user_id = 16` (mbekhar@atlantic.com.pa), poblado correctamente por la migración corregida.
+- Probado en vivo: `gerencia@atlantic.test` (rol Gerencia, NO es Mark) intenta aprobar orden #8 → **403**, banner rojo "Solo Mark puede aprobar esta orden." (mensaje real del backend, no genérico).
 - Camino positivo (Mark aprueba de verdad) no se pudo probar en vivo — no tengo ni debo pedir la contraseña real de Mark. Cubierto por 2 tests automatizados nuevos (`test_aprobar_orden_siendo_el_mark_configurado_es_exitosa`, `test_aprobar_orden_no_siendo_el_mark_configurado_retorna_403`).
 - **Hallazgo nuevo encontrado en esta misma sesión de Pre-QA** (no estaba en la lista de Marly, es consecuencia directa del fix): el 403 llegaba bien pero la UI no mostraba ningún error — el botón "Aprobar orden" no hacía nada visible. Corregido en el momento (commit `e79e2eb`), re-desplegado, re-verificado en vivo con el mismo passo — ahora muestra el mensaje real.
 

@@ -81,7 +81,7 @@ No se corrió contra `dev.atlanticerp.ai`.
 ## Paso 0 — permisos/valores paramétricos (antes de tocar el navegador)
 - REQ-259 RN5 menciona un rol puntual ("solo Aaron/Líder de Servicios") pero es un **rol**
   (`lider_servicios`), no un `extra_permissions` angosto por persona — no aplica el patrón de
-  `SpecialPermissionSeeder.php`. Confirmado con el usuario real `servicio@illuminations.com.pa`
+  `SpecialPermissionSeeder.php`. Confirmado con el usuario real `servicio@atlantic.com.pa`
   (rol `lider_servicios`) ya provisto en el roster — sin gap de grant.
 - No hay umbral/margen/porcentaje de negocio en este batch (los 5 tickets, sin contar SCRUM-321
   que sí los tiene y queda diferido).

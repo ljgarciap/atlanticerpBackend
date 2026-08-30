@@ -19,12 +19,12 @@ class QuoteConditionsSettingsControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantEditConditions(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read', 'ventas_diseno.edit.conditions'])]);
@@ -32,7 +32,7 @@ class QuoteConditionsSettingsControllerTest extends FeatureTestCase
 
     private function grantVentasDisenoRead(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
@@ -40,8 +40,8 @@ class QuoteConditionsSettingsControllerTest extends FeatureTestCase
 
     public function test_get_settings_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/quote-conditions-settings')
@@ -50,8 +50,8 @@ class QuoteConditionsSettingsControllerTest extends FeatureTestCase
 
     public function test_get_settings_retorna_el_texto_fijo_por_defecto(): void
     {
-        $this->grantEditConditions('management@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantEditConditions('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/quote-conditions-settings')
@@ -61,8 +61,8 @@ class QuoteConditionsSettingsControllerTest extends FeatureTestCase
 
     public function test_actualizar_settings_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/ventas-diseno/quote-conditions-settings', ['text' => 'Nuevo texto'])
@@ -71,22 +71,22 @@ class QuoteConditionsSettingsControllerTest extends FeatureTestCase
 
     public function test_actualizar_settings_con_permiso(): void
     {
-        $this->grantEditConditions('management@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantEditConditions('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/ventas-diseno/quote-conditions-settings', ['text' => 'Condiciones globales nuevas'])
             ->assertStatus(200)
             ->assertJsonPath('text', 'Condiciones globales nuevas');
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame('Condiciones globales nuevas', QuoteConditionsSettings::current()->text);
     }
 
     public function test_actualizar_settings_rechaza_texto_vacio(): void
     {
-        $this->grantEditConditions('management@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantEditConditions('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/ventas-diseno/quote-conditions-settings', ['text' => ''])

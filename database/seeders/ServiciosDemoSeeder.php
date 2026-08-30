@@ -35,10 +35,10 @@ class ServiciosDemoSeeder extends Seeder
             return;
         }
 
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command->warn('Tenant "illuminations" not found — ServiciosDemoSeeder skipped.');
+            $this->command->warn('Tenant "atlantic" not found — ServiciosDemoSeeder skipped.');
             return;
         }
 

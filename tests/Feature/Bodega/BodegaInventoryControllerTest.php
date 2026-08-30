@@ -30,16 +30,16 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
     private function readerHeaders(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
 
     private function writerHeaders(): array
     {
-        $this->grantBodegaPermissions('almacen@illuminations.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('almacen@illuminations.com.pa', 'almacen@illuminations.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -50,7 +50,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     {
         // designer@ (Ventas & Diseño) no tiene ningún permiso bodega.* — mismo usuario "sin
         // permiso" que ya usan WarehouseControllerTest/KardexControllerTest.
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/inventory')
@@ -63,8 +63,8 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
         // Usuario con bodega.read pero SIN bodega.write — el gate de escritura debe rechazarlo
         // aunque sí pueda leer el resto de la pantalla.
-        $this->grantBodegaPermissions('designer@illuminations.test', ['bodega.read']);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('designer@atlantic.test', ['bodega.read']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/inventory/{$product->id}/confirm-arrival", ['cantidad_entregada' => 5])
@@ -169,7 +169,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         $providerA = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
         $providerB = Provider::create(['name' => 'QA Prov Gamma', 'currency' => 'USD']);
 
-        $this->makeCatalogProduct(['brand' => 'Illuminations Home', 'provider_id' => $providerA->id]);
+        $this->makeCatalogProduct(['brand' => 'Atlantic Home', 'provider_id' => $providerA->id]);
         $this->makeCatalogProduct(['brand' => 'LuxTech', 'provider_id' => $providerB->id]);
         // Mismo proveedor/marca repetido en un segundo producto — no debe duplicarse en la faceta.
         $this->makeCatalogProduct(['brand' => 'LuxTech', 'provider_id' => $providerB->id]);
@@ -193,7 +193,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         $this->assertContains($providerB->id, array_column($providers, 'id'));
 
         $this->assertCount(2, $brands);
-        $this->assertContains('Illuminations Home', $brands);
+        $this->assertContains('Atlantic Home', $brands);
         $this->assertContains('LuxTech', $brands);
     }
 
@@ -230,7 +230,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         $providerB = Provider::create(['name' => 'Iluminex SA', 'currency' => 'USD']);
 
         $this->makeCatalogProduct([
-            'brand' => 'Illuminations Home', 'provider_id' => $providerA->id,
+            'brand' => 'Atlantic Home', 'provider_id' => $providerA->id,
             'rotation' => CatalogProduct::ROTATION_ALTA,
         ]);
         $this->makeCatalogProduct([
@@ -289,7 +289,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     public function test_commitment_detail_lista_cliente_proyecto_pedido_y_estado(): void
     {
         $product = $this->makeCatalogProduct();
-        $ownerId = $this->userIdByEmail('almacen@illuminations.com.pa');
+        $ownerId = $this->userIdByEmail('almacen@atlantic.com.pa');
         $order = $this->makeOrderWithPipelineCard(
             $ownerId,
             ['stage' => Order::STAGE_EN_PICKING],

@@ -20,13 +20,13 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -48,10 +48,10 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
 
     public function test_registrar_pago_sin_comprobante_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $order = $this->makeOrder($this->makeProvider()->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/payments", ['amount' => 500])
             ->assertStatus(422);
@@ -61,9 +61,9 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     {
         // REQ-189 Escenario 2 — saldo 1000: pago de 600 -> parcial ($400 pendiente); segundo
         // pago de 400 -> completo.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/payments", [
@@ -95,9 +95,9 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     public function test_registrar_pago_que_excede_el_saldo_retorna_422(): void
     {
         // REQ-189 Escenario 3 — saldo 1000, intento de pagar 1500.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/payments", [
@@ -109,9 +109,9 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
 
     public function test_historial_de_pagos_acumula_cada_registro_por_separado(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/payments", [
@@ -131,19 +131,19 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     }
 
     /**
-     * REQ-189 Escenario 4. Usa `management@illuminations.test` como "Mark" configurado (mismo
+     * REQ-189 Escenario 4. Usa `management@atlantic.test` como "Mark" configurado (mismo
      * criterio que PurchaseOrderControllerTest::test_aprobar_orden_siendo_el_mark_configurado_es_exitosa
      * — la cuenta real de Mark no tiene password fijo en testing).
      */
     public function test_cambio_de_monto_antes_del_primer_pago_requiere_aprobacion_de_mark(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
-        $this->grantCompras('management@illuminations.test', ['compras.edit']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('management@atlantic.test', ['compras.edit']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/request-amount-change", ['new_amount' => 1200])
@@ -151,7 +151,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->assertJsonPath('pending_amount_change', 1200);
 
         // El monto real todavía no cambió — queda pendiente de Mark.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertEquals(1000.0, PurchaseOrder::find($order->id)?->total_amount);
 
         // Un usuario que no es Mark no puede aprobarlo.
@@ -159,7 +159,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->patchJson("/api/compras/orders/{$order->id}/approve-amount-change")
             ->assertStatus(403);
 
-        $markToken = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $markToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($markToken))
             ->patchJson("/api/compras/orders/{$order->id}/approve-amount-change")
             ->assertStatus(200)
@@ -168,9 +168,9 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
 
     public function test_no_se_puede_cambiar_el_monto_si_ya_hay_pagos_registrados(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/payments", [
@@ -191,9 +191,9 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
      */
     public function test_registrar_pago_bloqueado_mientras_hay_cambio_de_monto_pendiente(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/request-amount-change", ['new_amount' => 1200])
@@ -205,16 +205,16 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ])
             ->assertStatus(422);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(0, PurchaseOrder::find($order->id)?->payments()->count());
     }
 
     /** SCRUM-252 — mismo bloqueo real para "Enviar a pago". */
     public function test_enviar_a_pago_bloqueado_mientras_hay_cambio_de_monto_pendiente(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/request-amount-change", ['new_amount' => 1200])
@@ -228,13 +228,13 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     /** SCRUM-252 — "Rechazar cambio": el monto anterior se conserva, la orden queda desbloqueada. */
     public function test_rechazar_cambio_de_monto_conserva_el_monto_anterior_y_desbloquea(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
-        $this->grantCompras('management@illuminations.test', ['compras.edit']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('management@atlantic.test', ['compras.edit']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/request-amount-change", ['new_amount' => 1200])
@@ -245,13 +245,13 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->patchJson("/api/compras/orders/{$order->id}/reject-amount-change")
             ->assertStatus(403);
 
-        $markToken = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $markToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($markToken))
             ->patchJson("/api/compras/orders/{$order->id}/reject-amount-change")
             ->assertStatus(200)
             ->assertJsonPath('total_amount', 1000);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $fresh = PurchaseOrder::find($order->id);
         $this->assertEquals(1000.0, $fresh->total_amount);
         $this->assertNull($fresh->pending_amount_change);
@@ -273,30 +273,30 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
      */
     public function test_aprobar_cambio_de_monto_obsoleto_por_pago_registrado_en_el_medio_se_descarta(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
-        $this->grantCompras('management@illuminations.test', ['compras.edit']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('management@atlantic.test', ['compras.edit']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/request-amount-change", ['new_amount' => 1200])
             ->assertStatus(200);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         \App\Modules\Compras\Models\PurchaseOrderPayment::create([
             'purchase_order_id' => $order->id, 'amount' => 100,
             'payment_proof_storage_key' => 'compras/test/fake.pdf',
         ]);
 
-        $markToken = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $markToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($markToken))
             ->patchJson("/api/compras/orders/{$order->id}/approve-amount-change")
             ->assertStatus(422);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $fresh = PurchaseOrder::find($order->id);
         $this->assertEquals(1000.0, $fresh->total_amount);
         $this->assertNull($fresh->pending_amount_change);
@@ -305,9 +305,9 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     public function test_enviar_a_pago_no_bloquea_el_registro_del_pago(): void
     {
         // RN de REQ-189 — puramente informativo (sin cambio de monto pendiente de por medio).
-        $this->grantCompras('designer@illuminations.test', ['compras.edit']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $order = $this->makeOrder($this->makeProvider()->id);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/request-payment")
@@ -323,12 +323,12 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     public function test_listado_de_ordenes_con_payment_pending_excluye_ordenadas(): void
     {
         // REQ-187 — "todavía no llegan a Ordenado".
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?payment_pending=1')
             ->assertStatus(200);
@@ -345,11 +345,11 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         //
         // SCRUM-250 (hallazgo de Daniela Amaya 2026-08-09) — el chip "pendiente" se dividió en
         // "sin_enviar" (nunca se usó "Enviar a pago") y "por_pagar" (ya enviado, sigue sin pagos).
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
         $pending = $this->makeOrder($provider->id, ['total_amount' => 500]);
         $paid = $this->makeOrder($provider->id, ['total_amount' => 500]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$paid->id}/payments", [
@@ -370,11 +370,11 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     /** SCRUM-250 (hallazgo de Daniela Amaya) — "por_pagar" es un estado DISTINTO de "sin_enviar". */
     public function test_filtro_por_pagar_distinto_de_sin_enviar(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
         $sinEnviar = $this->makeOrder($provider->id, ['total_amount' => 500]);
         $porPagar = $this->makeOrder($provider->id, ['total_amount' => 500]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$porPagar->id}/request-payment")
@@ -402,13 +402,13 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
      */
     public function test_kpis_de_pagos_a_proveedores(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
         $sinEnviar = $this->makeOrder($provider->id, ['total_amount' => 100]);
         $porPagar = $this->makeOrder($provider->id, ['total_amount' => 200]);
         $parcial = $this->makeOrder($provider->id, ['total_amount' => 300]);
         $completo = $this->makeOrder($provider->id, ['total_amount' => 400]);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$porPagar->id}/request-payment")

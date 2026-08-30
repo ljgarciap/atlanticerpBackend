@@ -20,7 +20,7 @@ build OK.
 Verificado en vivo contra **dev.atlanticerp.ai real** vía Playwright CLI
 (`playwright.dev-remote.config.ts`), spec `e2e/preqa-scrum359-focused-views-20260820.spec.ts` (4
 tests, evidencia en `e2e/.tmp/preqa-scrum359-focused-views-20260820/`). Cuenta real (password =
-email): `servicio@illuminations.com.pa` (Aaron Leis, lider_servicios).
+email): `servicio@atlantic.com.pa` (Aaron Leis, lider_servicios).
 
 ---
 

@@ -17,14 +17,14 @@ class ReglaAprobacionControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_superadmin_crea_lista_edita_y_elimina_una_regla(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
-        $aprobador = $this->userIdByEmail('management@illuminations.test');
+        $aprobador = $this->userIdByEmail('management@atlantic.test');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/gerencia/reglas-aprobacion', [
@@ -67,7 +67,7 @@ class ReglaAprobacionControllerTest extends FeatureTestCase
 
     public function test_store_sin_aprobadores_falla_validacion(): void
     {
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/gerencia/reglas-aprobacion', [
@@ -80,7 +80,7 @@ class ReglaAprobacionControllerTest extends FeatureTestCase
 
     public function test_actor_no_superadmin_no_puede_ver_ni_configurar_reglas(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/gerencia/reglas-aprobacion')
@@ -95,7 +95,7 @@ class ReglaAprobacionControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return (int) \Illuminate\Support\Facades\DB::table("{$slug}_auth.users")
             ->where('email', $email)

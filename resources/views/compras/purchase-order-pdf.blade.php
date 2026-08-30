@@ -20,7 +20,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="brand">ILLUMINATIONS</div>
+        <div class="brand">ATLANTIC</div>
         <div class="sub">Powered by AtlanticERP</div>
     </div>
 

@@ -33,18 +33,18 @@ final class LegacySyncProveedoresCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_dry_run_stagea_pero_no_registra_sync_run(): void
     {
         $this->app->instance(ProveedorExtractorContract::class, new FakeProveedorExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
-        $this->assertDatabaseHas('illuminations_legacy.proveedores', ['icg_codproveedor' => 55]);
+        $this->assertDatabaseHas('atlantic_legacy.proveedores', ['icg_codproveedor' => 55]);
         $this->assertSame(0, SyncRun::query()->count());
     }
 
@@ -52,11 +52,11 @@ final class LegacySyncProveedoresCommandTest extends FeatureTestCase
     {
         $this->app->instance(ProveedorExtractorContract::class, new FakeProveedorExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
-        $this->assertDatabaseHas('illuminations_legacy.proveedores', ['icg_codproveedor' => 55]);
+        $this->assertDatabaseHas('atlantic_legacy.proveedores', ['icg_codproveedor' => 55]);
 
         $run = SyncRun::query()->firstOrFail();
         $this->assertSame('proveedores', $run->entidad);
@@ -78,9 +78,9 @@ final class LegacySyncProveedoresCommandTest extends FeatureTestCase
     {
         $this->app->instance(ProveedorExtractorContract::class, new FakeProveedorExtractor(self::sampleExtraction()));
 
-        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
-        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'illuminations'])->assertExitCode(0);
+        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'atlantic'])->assertExitCode(0);
         $this->reactivateTenant();
 
         $this->assertSame(1, Proveedor::query()->where('icg_codproveedor', 55)->count());
@@ -94,7 +94,7 @@ final class LegacySyncProveedoresCommandTest extends FeatureTestCase
             new FakeProveedorExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -110,7 +110,7 @@ final class LegacySyncProveedoresCommandTest extends FeatureTestCase
             new FakeProveedorExtractor(throws: new RuntimeException('SQL Server no disponible')),
         );
 
-        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(1);
         $this->reactivateTenant();
 
@@ -131,7 +131,7 @@ final class LegacySyncProveedoresCommandTest extends FeatureTestCase
         ]);
         $this->app->instance(ProveedorExtractorContract::class, new FakeProveedorExtractor($extraction));
 
-        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-proveedores', ['--tenant' => 'atlantic'])
             ->assertExitCode(1);
         $this->reactivateTenant();
 

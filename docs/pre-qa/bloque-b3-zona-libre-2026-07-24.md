@@ -8,7 +8,7 @@
 en `atlanticerp-frontend`, 0 CRÍTICOs).
 **Método:** app real, Docker local (`infra-*`) + Vite dev server (`localhost:5173`). Backend:
 `infra/test.sh --filter=ZonaLibre` (22 tests) + `curl` directo contra la API real con JWT de
-`almacen@illuminations.com.pa` (lider_bodega) y `gerencia2@illuminations.com.pa` (lider_compras,
+`almacen@atlantic.com.pa` (lider_bodega) y `gerencia2@atlantic.com.pa` (lider_compras,
 Yirena) para los caminos de ruptura que el feature-test no puede ejercitar en el entorno real
 (rutas HTTP method-not-allowed, 403 en runtime). Frontend: `npx vitest run` (18 tests, incl. 2
 nuevos de esta sesión) + `npx playwright test e2e/preqa-bloque-b3-zona-libre.spec.ts` (4 specs,
@@ -21,7 +21,7 @@ corrida de tests backend, ver nota de memoria `feedback_local_test_db_no_es_fres
 ## Paso 0 — permisos angostos y valores paramétricos
 
 - `compras.zona-libre.approve` (aprobar/rechazar) es un grant individual vía `extra_permissions`
-  a `gerencia2@illuminations.com.pa` (Yirena), **ya presente en `SpecialPermissionSeeder.php`**
+  a `gerencia2@atlantic.com.pa` (Yirena), **ya presente en `SpecialPermissionSeeder.php`**
   — no hace falta grant manual. Confirmado que Yirena tiene también `role_key = lider_compras`
   (`BusinessRoleUserSeeder`), que es el rol que usa `remind()` para resolver la audiencia del
   recordatorio — hoy ambos mecanismos apuntan a la misma persona, camino feliz funciona sin

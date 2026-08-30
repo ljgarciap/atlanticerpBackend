@@ -11,13 +11,13 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-607→609 (REQ-530→532) — Cuentas Bancarias. */
 class AdminContBankAccountControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL   = 'conta@illuminations.com.pa';
-    private const YANETH_EMAIL  = 'asistente@illuminations.com.pa';
+    private const FELIX_EMAIL   = 'conta@atlantic.com.pa';
+    private const YANETH_EMAIL  = 'asistente@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string
@@ -46,7 +46,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_index_rechaza_a_un_rol_sin_visibilidad_del_modulo(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/bank-accounts')
@@ -82,7 +82,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_store_rechaza_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [

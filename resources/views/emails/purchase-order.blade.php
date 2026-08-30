@@ -16,11 +16,11 @@
 <body>
     <div class="card">
         <div class="logo">ATLANTICERP</div>
-        <div class="brand">ILLUMINATIONS</div>
+        <div class="brand">ATLANTIC</div>
         <h2>Orden de Compra #{{ $orderId }}</h2>
         <p>Hola {{ $providerName }},</p>
         <p>Adjuntamos la orden de compra #{{ $orderId }} en PDF.</p>
-        <div class="footer">Illuminations · Este correo fue generado automáticamente</div>
+        <div class="footer">Atlantic · Este correo fue generado automáticamente</div>
     </div>
 </body>
 </html>

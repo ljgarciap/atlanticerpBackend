@@ -33,8 +33,8 @@ class StorePurchaseOrderRequest extends FormRequest
             'provider_id'                       => ['required', 'integer', Rule::exists('providers', 'id')],
             'shipping_type'                      => ['nullable', 'string', Rule::in(['aereo', 'maritimo', 'terrestre'])],
             // SCRUM-197 (REQ-134, hallazgo de Daniela Amaya 2026-07-30): el mockup solo contempla
-            // Cliente/Illuminations — 'proveedor' no existe en el requerimiento, se corrige acá.
-            'who_pays_shipping'                  => ['nullable', 'string', Rule::in(['illuminations', 'cliente'])],
+            // Cliente/Atlantic — 'proveedor' no existe en el requerimiento, se corrige acá.
+            'who_pays_shipping'                  => ['nullable', 'string', Rule::in(['atlantic', 'cliente'])],
             // SCRUM-197 — RN de REQ-134: envío aéreo captura costo y quién lo paga.
             'shipping_cost'                       => ['nullable', 'numeric', 'min:0'],
             'modality'                           => ['nullable', 'string', Rule::in(['directo', 'zona_libre'])],

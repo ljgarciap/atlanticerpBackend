@@ -18,12 +18,12 @@ class SpecialPermissionSeederTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_mark_tiene_el_permiso_de_editar_aprobado(): void
     {
-        $mark = User::where('email', 'mbekhar@illuminations.com.pa')->firstOrFail();
+        $mark = User::where('email', 'mbekhar@atlantic.com.pa')->firstOrFail();
 
         $this->assertContains('ventas_diseno.edit.approved', $mark->extra_permissions ?? []);
     }
@@ -32,7 +32,7 @@ class SpecialPermissionSeederTest extends FeatureTestCase
     {
         // SCRUM-725 — el ticket nombra a Mark y David explícitamente por email para la
         // excepción de margen mínimo (30%) en cotizaciones.
-        $mark = User::where('email', 'mbekhar@illuminations.com.pa')->firstOrFail();
+        $mark = User::where('email', 'mbekhar@atlantic.com.pa')->firstOrFail();
         $david = User::where('email', 'david@grupolafayette.com')->firstOrFail();
 
         $this->assertContains('ventas_diseno.override_min_margin', $mark->extra_permissions ?? []);
@@ -43,7 +43,7 @@ class SpecialPermissionSeederTest extends FeatureTestCase
     {
         // SCRUM-440 — sin esto, RequirePermission("bodega.read") en el frontend la redirige al
         // dashboard antes de poder llegar a /bodega/ordenes-zona-libre a aprobar/rechazar.
-        $yirena = User::where('email', 'gerencia2@illuminations.com.pa')->firstOrFail();
+        $yirena = User::where('email', 'gerencia2@atlantic.com.pa')->firstOrFail();
 
         $this->assertContains('bodega.read', $yirena->extra_permissions ?? []);
         $this->assertContains('compras.zona-libre.approve', $yirena->extra_permissions ?? []);
@@ -54,13 +54,13 @@ class SpecialPermissionSeederTest extends FeatureTestCase
         // Mark ya tiene otros 2 grants propios (select_partner_price/edit.conditions,
         // REQ-034/046) — este test verifica que un extra_permissions ajeno al catálogo de
         // GRANTS (ej. asignado a mano desde la pantalla de administración) sobrevive la corrida.
-        $mark = User::where('email', 'mbekhar@illuminations.com.pa')->firstOrFail();
+        $mark = User::where('email', 'mbekhar@atlantic.com.pa')->firstOrFail();
         $mark->update(['extra_permissions' => ['ventas_diseno.reports.configure']]);
 
         (new \Database\Seeders\SpecialPermissionSeeder())->run();
         // El seeder hace Tenant::forgetCurrent() en su finally al terminar — restablecer
         // el tenant antes de seguir usando Eloquent en el resto del test.
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $mark->refresh();
         $this->assertContains('ventas_diseno.reports.configure', $mark->extra_permissions ?? []);
@@ -78,10 +78,10 @@ class SpecialPermissionSeederTest extends FeatureTestCase
     {
         // SCRUM-295 (REQ-232) — desglose de costo real/margen del ítem Subcontratado, personas
         // puntuales nombradas por el ticket (no un rol).
-        $aaron = User::where('email', 'servicio@illuminations.com.pa')->firstOrFail();
-        $mark  = User::where('email', 'mbekhar@illuminations.com.pa')->firstOrFail();
+        $aaron = User::where('email', 'servicio@atlantic.com.pa')->firstOrFail();
+        $mark  = User::where('email', 'mbekhar@atlantic.com.pa')->firstOrFail();
         $david = User::where('email', 'david@grupolafayette.com')->firstOrFail();
-        $whil  = User::where('email', 'whil@illuminations.com.pa')->firstOrFail();
+        $whil  = User::where('email', 'whil@atlantic.com.pa')->firstOrFail();
 
         foreach ([$aaron, $mark, $david, $whil] as $user) {
             $this->assertContains('servicios.quotes.view_cost_breakdown', $user->extra_permissions ?? []);

@@ -27,7 +27,7 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
         Cache::flush(); // limpia también el estado de RateLimiter (usa el cache store default)
         config(['services.anthropic.api_key' => 'sk-ant-test-fake-key-for-tests']);
@@ -36,7 +36,7 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
     /** @param list<string> $perms */
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -91,9 +91,9 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
 
     public function test_validar_documento_completa_sincronicamente_y_reporta_discrepancias(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'matches_order' => false,
@@ -121,7 +121,7 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
         $poll->assertJsonPath('result.confidence', 'alta');
         $this->assertCount(1, $poll->json('result.discrepancies'));
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::AI_PROVIDER_CONFIRMATION_VALIDATED)
             ->where('entity_id', (string) $documentId)
             ->first();
@@ -134,9 +134,9 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
         // type:"document" al armar el content block, aunque SUPPORTED_MEDIA_TYPES incluye
         // image/png|jpeg|webp|gif — la API de Anthropic rechaza un media_type de imagen dentro
         // de un content block "document".
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse(['matches_order' => true, 'discrepancies' => [], 'confidence' => 'alta']);
 
@@ -163,10 +163,10 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
         // Regresión Senior Review 20260718 — validation() buscaba el AiAnalysis solo por
         // documentId, ignorando el orderId de la URL; un documentId real bajo OTRA orden
         // devolvía igual el resultado.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
         $otherOrder = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->fakeToolUseResponse(['matches_order' => true, 'discrepancies' => [], 'confidence' => 'alta']);
         $documentId = $this->uploadConfirmationDocument($token, $order->id);
 
@@ -179,9 +179,9 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
     {
         // Hallazgo QA 2026-07-20 (SCRUM-211): el documento se subía y "no pasaba nada" — la
         // validación solo corría detrás de un botón manual, pero el ticket la pide automática.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse(['matches_order' => true, 'discrepancies' => [], 'confidence' => 'alta']);
 
@@ -201,9 +201,9 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
     {
         // Un documento de categoría distinta a confirmación nunca despacha validación — el poll
         // debe devolver status null, y el upload no debe tocar la API de Anthropic.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         Http::fake(); // cualquier llamada a Anthropic acá sería un bug — no debe dispararse.
         $documentId = $this->uploadConfirmationDocument($token, $order->id, 'factura.pdf', 'application/pdf', PurchaseOrderDocument::CATEGORY_FACTURA_COMERCIAL);
@@ -220,14 +220,14 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
     {
         // `permissions` va embebido en el JWT en login (effectivePermissionsV2()) — un cambio en
         // extra_permissions después de emitido el token no lo afecta, hay que re-loguear.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
-        $uploaderToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $uploaderToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->fakeToolUseResponse(['matches_order' => true, 'discrepancies' => [], 'confidence' => 'alta']);
         $documentId = $this->uploadConfirmationDocument($uploaderToken, $order->id);
 
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
-        $readOnlyToken = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $readOnlyToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($readOnlyToken))
             ->postJson("/api/compras/orders/{$order->id}/documents/{$documentId}/validate")
@@ -236,9 +236,9 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
 
     public function test_poll_sin_permiso_read_retorna_403(): void
     {
-        $this->grantCompras('designer@illuminations.test', []);
+        $this->grantCompras('designer@atlantic.test', []);
         $order = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}/documents/999/validation")
@@ -249,9 +249,9 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
     {
         // ZIP pasa el whitelist de extensiones del upload (mismo catálogo para toda categoría),
         // pero el Job de validación solo soporta PDF/imagen — debe fallar limpio, no romper.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         Http::fake(); // cualquier llamada a Anthropic acá sería un bug — no debe dispararse.
 
@@ -276,9 +276,9 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
         // Hallazgo QA 2026-07-20 (SCRUM-211/224): con la API devolviendo 400 (ej. créditos
         // agotados), el Job reintentaba con backoff [5s, 30s, 120s] y el usuario quedaba mirando
         // "Validando…" minutos. Un 4xx ≠ 429 no es transitorio: debe fallar al primer intento.
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         Http::fake([
             'api.anthropic.com/*' => Http::response([
@@ -299,9 +299,9 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
 
     public function test_limite_de_reintentos_por_orden_retorna_429(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $order = $this->makeOrderWithLine();
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse(['matches_order' => true, 'discrepancies' => [], 'confidence' => 'alta']);
 

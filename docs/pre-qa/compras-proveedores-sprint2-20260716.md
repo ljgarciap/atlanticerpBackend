@@ -13,8 +13,8 @@ tests automatizados.
 `sprint2`, nada pusheado a ningún remoto, ningún ticket transicionado a `QA` en Jira (se deja
 comentario pero el status queda en `Dev Testing`).
 
-Usuarios reales usados: `gerencia2@illuminations.com.pa` (Yirena Teng, lider_compras),
-`mbekhar@illuminations.com.pa` (Mark, management, aprobador), `designer@illuminations.test`
+Usuarios reales usados: `gerencia2@atlantic.com.pa` (Yirena Teng, lider_compras),
+`mbekhar@atlantic.com.pa` (Mark, management, aprobador), `designer@atlantic.test`
 (vendedor_disenador, rol sin ningún acceso a Compras — negativo).
 
 ---
@@ -32,7 +32,7 @@ bloqueante de esta pasada.
 
 ## Gap de datos entre ramas — resuelto para poder probar
 
-`gerencia2@illuminations.com.pa` (Yirena, única persona real con rol `lider_compras`) estaba en
+`gerencia2@atlantic.com.pa` (Yirena, única persona real con rol `lider_compras`) estaba en
 `security_level_id` Nivel 1 en `sprint2` (el fix a Nivel 4, commit `c09fcb4`, solo existía en
 `dev`). Sin este fix, Yirena no tenía `compras.edit`/`compras.write` reales y no se podía probar su
 camino feliz. Se cherry-pickeó `c09fcb4` a `sprint2` (commit `06eadc4`, ya commiteado, sin push) y
@@ -152,7 +152,7 @@ falta de datos de Ventas & Diseño en el Postgres local en este momento — se c
 automatizado, que sí ejercita el camino de ruptura (pedido "Enviado" no aparece en el buscador).
 
 ### SCRUM-197 (REQ-134) + SCRUM-198/199
-Confirmado en vivo: crear una orden con `shipping_type=aereo` + `who_pays_shipping=illuminations`
+Confirmado en vivo: crear una orden con `shipping_type=aereo` + `who_pays_shipping=atlantic`
 devuelve `requires_mark_approval:true` de inmediato en la respuesta (backend, consumido por el
 frontend para el aviso). PDF con costo y sin costo generados y verificados **a nivel de bytes**
 (`pdftotext` sobre el PDF real): la versión sin costo no contiene ningún monto, la versión con
@@ -186,7 +186,7 @@ solo cosmético en la UI.
 ### SCRUM-206 (REQ-143) — el texto de Jira está desactualizado, el bloqueo YA es real
 El ticket de Jira dice literalmente: *"comportamiento deseado, todavía no aplicado en el mockup...
 el aviso es solo informativo"*. Esto ya no es cierto en el código actual — se probó en vivo:
-1. Orden nueva aérea/Illuminations (#53) queda `por_aprobar`, `blocked_by_mark_approval:true`.
+1. Orden nueva aérea/Atlantic (#53) queda `por_aprobar`, `blocked_by_mark_approval:true`.
 2. Intentar `PATCH /advance` con el token de Yirena (compras.edit, sin compras.approve) → **422**:
    `"Esta orden requiere la aprobación de Mark antes de avanzar."` — bloqueo real, no solo aviso.
 3. Con el token de Mark, `PATCH /approve` → pasa a `ordenado`, `blocked_by_mark_approval:false`.
@@ -344,7 +344,7 @@ mismo patrón que `PricingSettingsPanel`/`ReportsConfigPanel`. Default de la mig
 tinker: `low_rating_threshold = 40`).
 
 Verificado en vivo (Playwright real contra `localhost:5173`, no solo los tests unitarios):
-- Yirena (`gerencia2@illuminations.com.pa`, `compras.settings.configure` real vía
+- Yirena (`gerencia2@atlantic.com.pa`, `compras.settings.configure` real vía
   `SpecialPermissionSeeder`) abre el panel "Ajustes de Compras" en `/compras/proveedores`, ve `40`
   cargado, lo cambia a `55`, guarda (el botón Guardar desaparece tras el `onSuccess`), **recarga la
   página completa** y el valor sigue en `55` — no era solo estado local de React. Restaurado a `40`
@@ -352,7 +352,7 @@ Verificado en vivo (Playwright real contra `localhost:5173`, no solo los tests u
 - Input vacío, `-5` y `150` dejan el botón Guardar visible pero **deshabilitado** (validación de
   cliente), confirmado en el DOM real, no solo leído en código.
 - Backend confirmado independientemente con curl + tokens JWT reales:
-  - `GET`/`PUT /api/compras/settings` con `designer@illuminations.test` (sin el permiso) → **403**
+  - `GET`/`PUT /api/compras/settings` con `designer@atlantic.test` (sin el permiso) → **403**
     en los dos verbos (el `GET` también, por `permission:compras.read`, que designer tampoco tiene).
   - `PUT` con `-5`, `101`, `"abc"` y `""` → **422** los 4 casos.
   - `PUT` con el campo ausente (`{}`) → 200 no-op (regla `sometimes`), esperado.
@@ -387,7 +387,7 @@ el proveedor).
 Fix: 3 tests nuevos en `PurchaseOrderLogisticsTest.php` (commit `deb26ee`) — 403 sin permiso para
 `PATCH .../shipping-info`, `POST .../documents`, `GET .../documents`.
 
-Re-verificado en vivo con el token real de `designer@illuminations.test` (sin
+Re-verificado en vivo con el token real de `designer@atlantic.test` (sin
 `compras.read`/`compras.edit`) contra la API corriendo en Docker local, no solo la aserción del
 test nuevo:
 - `GET /api/compras/orders/1/documents` → 403

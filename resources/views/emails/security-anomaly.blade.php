@@ -42,7 +42,7 @@
         <div class="warning">
             ⚠️ Este es un análisis automático. Verificá el contexto antes de confirmar cualquier bloqueo.
         </div>
-        <div class="footer">AtlanticERP CRM · Illuminations · No respondas a este correo</div>
+        <div class="footer">AtlanticERP CRM · Atlantic · No respondas a este correo</div>
     </div>
 </body>
 </html>

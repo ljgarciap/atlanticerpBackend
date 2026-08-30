@@ -14,14 +14,14 @@ use Tests\Feature\FeatureTestCase;
  */
 class TechnicianControllerTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@illuminations.com.pa';
+    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
 
     private const VENDEDOR_DISENADOR = 'milena.e@grupolafayette.com';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_devuelve_los_4_tecnicos_internos_reales(): void

@@ -10,12 +10,12 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-635/636 (REQ-558/559) — catálogo de tasas de ITBMS. */
 class AdminContItbmsRateControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsMark(): string
@@ -39,7 +39,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_index_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/itbms-rates')

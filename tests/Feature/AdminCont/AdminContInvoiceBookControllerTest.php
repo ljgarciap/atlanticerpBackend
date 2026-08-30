@@ -18,13 +18,13 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 23 Grupo 3 de Admin&Cont (SCRUM-661→664, REQ-584→587) — "Libro de Facturas" (4M3). */
 class AdminContInvoiceBookControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@illuminations.com.pa';
-    private const DESIGNER_EMAIL = 'designer@illuminations.test';
+    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string

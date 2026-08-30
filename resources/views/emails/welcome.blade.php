@@ -35,7 +35,7 @@
         <div class="warning">
             🔒 Tu contraseña temporal es tu dirección de correo electrónico. Cámbiala en cuanto ingreses desde tu perfil.
         </div>
-        <div class="footer">AtlanticERP CRM · Illuminations · No respondas a este correo</div>
+        <div class="footer">AtlanticERP CRM · Atlantic · No respondas a este correo</div>
     </div>
 </body>
 </html>

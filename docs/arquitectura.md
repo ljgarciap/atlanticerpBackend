@@ -1,5 +1,5 @@
 # Documento de Arquitectura
-## AtlanticERP — CRM Illuminations
+## AtlanticERP — CRM Atlantic
 
 **Versión:** 2.0
 **Fecha:** 2026-06-16
@@ -14,7 +14,7 @@
 
 ## 1. Resumen ejecutivo
 
-Illuminations requiere una plataforma digital que centralice la gestión comercial de proyectos
+Atlantic requiere una plataforma digital que centralice la gestión comercial de proyectos
 de iluminación y la operación de su equipo de servicios en campo. La solución propuesta reemplaza
 un sistema prototipo (HTML + Supabase) por una plataforma robusta, multi-tenant y preparada para
 crecer con el negocio.
@@ -175,10 +175,10 @@ provisionando un nuevo set de schemas.
 
 ```
 PostgreSQL
-└── tenant: illuminations (primer tenant)
-    ├── schema: illuminations_auth          → usuarios, tokens
-    ├── schema: illuminations_crm           → proyectos, actividades, documentos, contactos
-    └── schema: illuminations_installations → casos, fotos, comentarios
+└── tenant: atlantic (primer tenant)
+    ├── schema: atlantic_auth          → usuarios, tokens
+    ├── schema: atlantic_crm           → proyectos, actividades, documentos, contactos
+    └── schema: atlantic_installations → casos, fotos, comentarios
 ```
 
 Las migraciones se gestionan con el sistema de migraciones de Laravel, prefijadas por módulo

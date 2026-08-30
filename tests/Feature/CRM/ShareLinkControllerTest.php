@@ -49,12 +49,12 @@ class ShareLinkControllerTest extends FeatureTestCase
 
     private function levelId(int $level): int
     {
-        return (int) DB::table('illuminations_auth.security_levels')->where('level', $level)->value('id');
+        return (int) DB::table('atlantic_auth.security_levels')->where('level', $level)->value('id');
     }
 
     private function userId(string $email): int
     {
-        return (int) DB::table('illuminations_auth.users')->where('email', $email)->value('id');
+        return (int) DB::table('atlantic_auth.users')->where('email', $email)->value('id');
     }
 
     /** Documento en zona pública, insertado directo (sin pasar por el endpoint de upload
@@ -62,11 +62,11 @@ class ShareLinkControllerTest extends FeatureTestCase
      * público respeta storage_zone en vez de forzar siempre el disco s3-private. */
     private function createPublicDocument(int $projectId, string $publicUrl): int
     {
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
-            $userId = DB::table('illuminations_auth.users')->value('id');
+            $userId = DB::table('atlantic_auth.users')->value('id');
 
             $doc = ProjectDocument::create([
                 'project_id'     => $projectId,
@@ -138,7 +138,7 @@ class ShareLinkControllerTest extends FeatureTestCase
         $projectId  = $this->createProject($adminToken);
         $docId      = $this->uploadDocument($adminToken, $projectId);
 
-        $readonlyToken = $this->loginAs('readonly@illuminations.test', 'Password123!', 'electrician');
+        $readonlyToken = $this->loginAs('readonly@atlantic.test', 'Password123!', 'electrician');
 
         $this->withHeaders($this->authHeaders($readonlyToken))
             ->postJson("/api/crm/projects/{$projectId}/documents/{$docId}/share-links")
@@ -243,14 +243,14 @@ class ShareLinkControllerTest extends FeatureTestCase
     }
 
     // Revoke es destructivo/irreversible — gateado por crm.delete, no crm.write (a
-    // diferencia de crear/listar). designer@illuminations.test (nivel 3, "Standard User")
+    // diferencia de crear/listar). designer@atlantic.test (nivel 3, "Standard User")
     // tiene crm.write+crm.edit pero NO crm.delete.
     public function test_revocar_share_link_requiere_crm_delete_no_solo_crm_write(): void
     {
         // electrician@ (nivel 2: crm.read+crm.write, sin crm.delete) en vez de designer@ -- ver
         // SCRUM-83, designer@ ahora es un vendedor_disenador real en nivel 4 con crm.delete.
         $mgmtToken     = $this->loginAs();
-        $assigneeId    = $this->userId('electrician@illuminations.test');
+        $assigneeId    = $this->userId('electrician@atlantic.test');
         $projectId     = $this->createProject($mgmtToken, [$assigneeId]);
         $docId         = $this->uploadDocument($mgmtToken, $projectId);
 
@@ -258,7 +258,7 @@ class ShareLinkControllerTest extends FeatureTestCase
             ->postJson("/api/crm/projects/{$projectId}/documents/{$docId}/share-links");
         $linkId = (int) $create->json('id');
 
-        $assigneeToken = $this->loginAs('electrician@illuminations.test', 'Password123!');
+        $assigneeToken = $this->loginAs('electrician@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($assigneeToken))
             ->deleteJson("/api/crm/share-links/{$linkId}")
@@ -277,7 +277,7 @@ class ShareLinkControllerTest extends FeatureTestCase
             ->postJson("/api/crm/projects/{$projectId}/documents/{$docId}/share-links");
         $linkId = (int) $create->json('id');
 
-        $outsiderEmail = 'share-link-outsider@illuminations.test';
+        $outsiderEmail = 'share-link-outsider@atlantic.test';
         $this->withHeaders($this->authHeaders($mgmtToken))
             ->postJson('/api/users', [
                 'first_name'        => 'Outsider',
@@ -299,7 +299,7 @@ class ShareLinkControllerTest extends FeatureTestCase
 
     private function withTenant(callable $callback): mixed
     {
-        $tenant = Tenant::where('slug', 'illuminations')->firstOrFail();
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
         $tenant->makeCurrent();
 
         try {
@@ -444,7 +444,7 @@ class ShareLinkControllerTest extends FeatureTestCase
             ->postJson("/api/crm/projects/{$projectId}/documents/{$docId}/share-links")
             ->assertStatus(201);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'crm.share_link.created')
             ->where('entity_id', (string) $docId)
             ->first();
@@ -466,7 +466,7 @@ class ShareLinkControllerTest extends FeatureTestCase
             ->deleteJson("/api/crm/share-links/{$linkId}")
             ->assertStatus(204);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'crm.share_link.revoked')
             ->where('entity_id', (string) $docId)
             ->first();
@@ -486,7 +486,7 @@ class ShareLinkControllerTest extends FeatureTestCase
 
         $this->get("/public/share/{$rawToken}")->assertStatus(302);
 
-        $log = DB::table('illuminations_auth.audit_logs')
+        $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'crm.document.downloaded')
             ->where('entity_id', (string) $docId)
             ->first();

@@ -19,12 +19,12 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -42,7 +42,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_respuesta_incluye_costo_y_referencia_de_fabrica(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'NORDIC-40', 'factory_reference' => 'LMP-001',
@@ -50,7 +50,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/products')
             ->assertStatus(200);
@@ -62,7 +62,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     public function test_filtra_solo_productos_del_proveedor_elegido(): void
     {
         // REQ-130 Escenario 1.
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $lightCorp = $this->makeProvider(['name' => 'LightCorp']);
         $iluminex = $this->makeProvider(['name' => 'Iluminex SA']);
         CatalogProduct::create([
@@ -74,7 +74,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $iluminex->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?provider_id={$lightCorp->id}")
             ->assertStatus(200);
@@ -91,7 +91,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
      */
     public function test_con_original_catalog_product_id_expone_similarity_percent_de_un_candidato_muy_parecido(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
             'reference' => 'ORIG-01', 'name' => 'Bombillo LED E27 blanco cálido', 'description' => 'Bombillo LED 9W',
@@ -104,7 +104,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?search=Bombillo&original_catalog_product_id={$original->id}")
             ->assertStatus(200);
@@ -118,7 +118,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_sin_candidatos_en_la_misma_categoria_amplia_a_todas_con_penalizacion(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
             'reference' => 'ORIG-02', 'name' => 'Bombillo LED E27 blanco cálido', 'description' => 'Bombillo LED 9W',
@@ -131,7 +131,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $withoutOriginal = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?search=Bombillo")
             ->assertStatus(200);
@@ -151,7 +151,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_candidato_bajo_el_umbral_minimo_se_descarta_silenciosamente(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
             'reference' => 'ORIG-03', 'name' => 'Bombillo LED E27 blanco cálido', 'description' => 'Bombillo LED 9W',
@@ -165,7 +165,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?search=Poste&original_catalog_product_id={$original->id}")
             ->assertStatus(200);

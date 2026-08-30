@@ -20,7 +20,7 @@ final class ProveedorStagingLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_load_stagea_proveedores(): void
@@ -30,7 +30,7 @@ final class ProveedorStagingLoaderTest extends FeatureTestCase
         $counts = $loader->load(self::sampleExtraction());
 
         $this->assertSame(['proveedores' => 1], $counts);
-        $this->assertDatabaseHas('illuminations_legacy.proveedores', [
+        $this->assertDatabaseHas('atlantic_legacy.proveedores', [
             'icg_codproveedor' => 55,
             'nombre'           => 'Iluminación Panamá S.A.',
             'nombre_comercial' => 'Ilumipan',
@@ -78,8 +78,8 @@ final class ProveedorStagingLoaderTest extends FeatureTestCase
 
         $this->assertSame(['proveedores' => 600], $counts);
         $this->assertSame(600, Proveedor::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.proveedores', ['icg_codproveedor' => 1, 'nombre' => 'Proveedor 1']);
-        $this->assertDatabaseHas('illuminations_legacy.proveedores', ['icg_codproveedor' => 600, 'nombre' => 'Proveedor 600']);
+        $this->assertDatabaseHas('atlantic_legacy.proveedores', ['icg_codproveedor' => 1, 'nombre' => 'Proveedor 1']);
+        $this->assertDatabaseHas('atlantic_legacy.proveedores', ['icg_codproveedor' => 600, 'nombre' => 'Proveedor 600']);
     }
 
     private static function sampleExtraction(): ExtractedProveedores

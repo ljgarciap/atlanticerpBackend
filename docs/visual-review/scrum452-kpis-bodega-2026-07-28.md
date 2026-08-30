@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-07-28
 **Entorno:** dev.atlanticerp.ai
-**Usuario de prueba:** almacen@illuminations.com.pa (Esteban, rol Bodega/Líder de Bodega)
+**Usuario de prueba:** almacen@atlantic.com.pa (Esteban, rol Bodega/Líder de Bodega)
 **Mockup:** `3F__Bodega_Bodegas.html` (Jira attachment 10981)
 **Spec:** `3__Requerimientos_Bodega.xlsx` (Jira attachment 10982) — HU-382/REQ-382
 

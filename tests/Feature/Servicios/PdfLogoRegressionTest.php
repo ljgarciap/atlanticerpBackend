@@ -17,7 +17,7 @@ use App\Shared\Support\PdfLogo;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-781 (punto 5/8) — 3 PDFs de Tickets mostraban "ILLUMINATIONS" como texto plano en vez del
+ * SCRUM-781 (punto 5/8) — 3 PDFs de Tickets mostraban "ATLANTIC" como texto plano en vez del
  * logo. El primer intento reusó el SVG inline de `ventas-diseno/quote-pdf.blade.php`, pero dompdf
  * en este entorno NO renderiza `<svg>` inline en absoluto (verificado con un render real: un SVG
  * mínimo aislado produce una página en blanco — ese patrón nunca funcionó de verdad, solo estaba
@@ -29,7 +29,7 @@ class PdfLogoRegressionTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function makeTicket(array $overrides = []): Ticket
@@ -67,7 +67,7 @@ class PdfLogoRegressionTest extends FeatureTestCase
         ])->render();
 
         $this->assertStringContainsString('<img src="data:image/png;base64,', $html);
-        $this->assertStringContainsString('ILLUMINATIONS', $html);
+        $this->assertStringContainsString('ATLANTIC', $html);
     }
 
     public function test_informe_de_inspeccion_completado_muestra_el_logo(): void
@@ -90,7 +90,7 @@ class PdfLogoRegressionTest extends FeatureTestCase
         ])->render();
 
         $this->assertStringContainsString('<img src="data:image/png;base64,', $html);
-        $this->assertStringContainsString('ILLUMINATIONS', $html);
+        $this->assertStringContainsString('ATLANTIC', $html);
     }
 
     public function test_hoja_de_reclamo_muestra_el_logo(): void
@@ -113,7 +113,7 @@ class PdfLogoRegressionTest extends FeatureTestCase
         ])->render();
 
         $this->assertStringContainsString('<img src="data:image/png;base64,', $html);
-        $this->assertStringContainsString('ILLUMINATIONS', $html);
+        $this->assertStringContainsString('ATLANTIC', $html);
     }
 
     /**
@@ -138,7 +138,7 @@ class PdfLogoRegressionTest extends FeatureTestCase
         ])->render();
 
         $this->assertStringContainsString('<img src="data:image/png;base64,', $html);
-        $this->assertStringContainsString('ILLUMINATIONS', $html);
+        $this->assertStringContainsString('ATLANTIC', $html);
     }
 
     public function test_pdf_logo_data_uri_lee_el_archivo_real(): void

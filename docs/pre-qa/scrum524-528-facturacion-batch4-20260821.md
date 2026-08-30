@@ -84,7 +84,7 @@ Verificado tanto por API directa (adversarial) como con Playwright en el navegad
   - Por **API directa**: Felix (`PUT /uncollectible-decision`) → **403** real
     (`{"message":"Esta pantalla es exclusiva de Mark."}`), gateado por el middleware
     `EnsureIsMarkApprover` (fail-closed contra `AdminContFiscalSettings.mark_approver_user_id`, que
-    en este tenant apunta correctamente a `mbekhar@illuminations.com.pa`).
+    en este tenant apunta correctamente a `mbekhar@atlantic.com.pa`).
   - Por **navegador real**: logueado como Felix, el modal de Cliente G (pendiente de aprobación)
     **no muestra los botones Aprobar/Rechazar** (`scrum524-528-req448-felix-sin-botones.png`).
     Logueado como Mark, el mismo modal **sí** los muestra (`scrum524-528-req448-mark-con-botones.png`)

@@ -10,12 +10,12 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-640 (REQ-563) — Ubicaciones: combina Warehouse (Bodega, solo lectura) + AdminContLocation. */
 class AdminContLocationControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsMark(): string
@@ -47,7 +47,7 @@ class AdminContLocationControllerTest extends FeatureTestCase
 
     public function test_index_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/locations')

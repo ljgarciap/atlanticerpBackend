@@ -31,24 +31,24 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     /** El cliente HTTP de test resetea el tenant "actual" al final de cada request. */
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($perms)]);
     }
 
     private function warehouseId(): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return (int) DB::table("{$slug}_bodega.warehouses")->value('id');
     }
@@ -116,7 +116,7 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
      */
     public function test_libera_pedido_de_un_solo_producto_con_cobertura_total(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
         $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD', 'origin' => Provider::ORIGIN_LOCAL]);
         $product  = $this->makeProduct('SCRUM406-A1', 0);
 
@@ -129,7 +129,7 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
             'quantity' => 5, 'unit_cost' => 10, 'subtotal' => 50,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->advanceLocalPurchaseOrderToReceived($this->authHeaders($token), $po, $product->id, 5);
 
         $this->reMakeCurrent();
@@ -148,13 +148,13 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
      */
     public function test_stock_insuficiente_para_2_pedidos_libera_solo_el_mas_antiguo_fifo(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
         $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD', 'origin' => Provider::ORIGIN_LOCAL]);
         $product  = $this->makeProduct('SCRUM406-A2', 0);
 
         $older = $this->makeAwaitingStockOrder(['assistant_id' => null]);
         $this->makeShortageItem($older, $product->id, 5);
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_bodega.orders")->where('id', $older->id)->update(['updated_at' => now()->subMinutes(30)]);
 
         $newer = $this->makeAwaitingStockOrder(['assistant_id' => null]);
@@ -167,7 +167,7 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
             'quantity' => 5, 'unit_cost' => 10, 'subtotal' => 50,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->advanceLocalPurchaseOrderToReceived($this->authHeaders($token), $po, $product->id, 5);
 
         $this->reMakeCurrent();
@@ -185,7 +185,7 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
      */
     public function test_pedido_con_2_productos_faltantes_no_se_libera_si_solo_llega_uno(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
         $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD', 'origin' => Provider::ORIGIN_LOCAL]);
         $productA = $this->makeProduct('SCRUM406-A3-PA', 0);
         $productB = $this->makeProduct('SCRUM406-A3-PB', 0);
@@ -201,7 +201,7 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
             'quantity' => 3, 'unit_cost' => 10, 'subtotal' => 30,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->advanceLocalPurchaseOrderToReceived($this->authHeaders($token), $po, $productA->id, 3);
 
         $this->reMakeCurrent();
@@ -217,7 +217,7 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
     /** Un pedido normal ("pedido"/no faltante) nunca debe tocarse aunque comparta producto. */
     public function test_no_afecta_pedidos_que_no_estan_esperando_stock(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
         $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD', 'origin' => Provider::ORIGIN_LOCAL]);
         $product  = $this->makeProduct('SCRUM406-A4', 0);
 
@@ -235,7 +235,7 @@ class StockReleaseOnPurchaseOrderReceivedTest extends FeatureTestCase
             'quantity' => 2, 'unit_cost' => 10, 'subtotal' => 20,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->advanceLocalPurchaseOrderToReceived($this->authHeaders($token), $po, $product->id, 2);
 
         $this->reMakeCurrent();

@@ -33,7 +33,7 @@ class ChangePasswordTest extends FeatureTestCase
 
         // El nuevo password debe permitir login
         $this->postJson('/api/auth/login', [
-            'email'    => 'management@illuminations.test',
+            'email'    => 'management@atlantic.test',
             'password' => 'NuevoPass99!',
         ])->assertStatus(200);
     }
@@ -51,7 +51,7 @@ class ChangePasswordTest extends FeatureTestCase
             ->assertStatus(204);
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'management@illuminations.test',
+            'email'    => 'management@atlantic.test',
             'password' => 'Password123!',
         ])->assertStatus(401);
     }

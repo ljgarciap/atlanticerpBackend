@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <style>
     {{-- SCRUM-411 (REQ-341, rebote de Daniela Amaya 2026-08-12) — rediseño completo contra el
-         mockup: ícono + ILLUMINATIONS + "Powered by AtlanticERP" como marca (antes solo texto, sin
+         mockup: ícono + ATLANTIC + "Powered by AtlanticERP" como marca (antes solo texto, sin
          ícono, con "Estatus de Pedido" como subtítulo — RN1), título grande "ESTATUS DE PEDIDO"
          como encabezado principal en vez del "Pedido {numero}" secundario que usaba antes (RN2),
          datos generales en 2 columnas por posición absoluta en vez de la cuadrícula de 3 columnas
@@ -13,7 +13,7 @@
          negocio que trajo el cliente estaba en rojo, decisión explícita de no replicarlo. --}}
     body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #2a2520; }
 
-    /* Marca (ícono + ILLUMINATIONS + Powered by AtlanticERP) */
+    /* Marca (ícono + ATLANTIC + Powered by AtlanticERP) */
     .brand-row { position: relative; height: 30px; margin-bottom: 4px; }
     .brand-icon { position: absolute; left: 0; top: 2px; width: 22px; height: 22px; }
     .brand-icon span { position: absolute; width: 14px; height: 14px; border-radius: 50%; opacity: 0.85; }
@@ -55,7 +55,7 @@
             <span class="c1"></span><span class="c2"></span><span class="c3"></span>
         </div>
         <div class="brand-text">
-            <div class="brand-name">ILLUMINATIONS</div>
+            <div class="brand-name">ATLANTIC</div>
             <div class="brand-sub">Powered by AtlanticERP</div>
         </div>
     </div>
@@ -106,6 +106,6 @@
         </tbody>
     </table>
 
-    <div class="doc-footer">Illuminations · Panamá · Powered by AtlanticERP</div>
+    <div class="doc-footer">Atlantic · Panamá · Powered by AtlanticERP</div>
 </body>
 </html>

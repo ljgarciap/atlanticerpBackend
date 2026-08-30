@@ -63,10 +63,10 @@ final class QaTicketsBatch20260725Seeder extends Seeder
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
 
         if ($tenant === null) {
-            $this->command?->warn('Tenant "illuminations" no encontrado — batch abortado.');
+            $this->command?->warn('Tenant "atlantic" no encontrado — batch abortado.');
             return;
         }
 
@@ -203,10 +203,10 @@ final class QaTicketsBatch20260725Seeder extends Seeder
             return;
         }
 
-        $esteban  = $this->resolveUser('almacen@illuminations.com.pa', 'lider_bodega');
-        $osvaldo  = $this->resolveUser('logistica@illuminations.com.pa', 'asistente_bodega');
-        $mariano  = $this->resolveUser('almacen2@illuminations.com.pa', 'asistente_bodega');
-        $apolonio = $this->resolveUser('apolonio.gonzalez@illuminations.com.pa', 'ayudante_general_bodega');
+        $esteban  = $this->resolveUser('almacen@atlantic.com.pa', 'lider_bodega');
+        $osvaldo  = $this->resolveUser('logistica@atlantic.com.pa', 'asistente_bodega');
+        $mariano  = $this->resolveUser('almacen2@atlantic.com.pa', 'asistente_bodega');
+        $apolonio = $this->resolveUser('apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
         $gary     = $this->resolveUser('arrochagary@gmail.com', 'transporte');
 
         if ($osvaldo === null || $mariano === null || $apolonio === null || $gary === null) {
@@ -385,9 +385,9 @@ final class QaTicketsBatch20260725Seeder extends Seeder
             return;
         }
 
-        $osvaldo = $this->resolveUser('logistica@illuminations.com.pa', 'asistente_bodega');
-        $mariano = $this->resolveUser('almacen2@illuminations.com.pa', 'asistente_bodega');
-        $yirena  = $this->resolveUser('gerencia2@illuminations.com.pa', 'lider_compras');
+        $osvaldo = $this->resolveUser('logistica@atlantic.com.pa', 'asistente_bodega');
+        $mariano = $this->resolveUser('almacen2@atlantic.com.pa', 'asistente_bodega');
+        $yirena  = $this->resolveUser('gerencia2@atlantic.com.pa', 'lider_compras');
 
         if ($osvaldo === null || $mariano === null || $yirena === null) {
             $this->command?->warn('SCRUM-670: falta Osvaldo/Mariano/Yirena — skip.');
@@ -483,9 +483,9 @@ final class QaTicketsBatch20260725Seeder extends Seeder
             return;
         }
 
-        $osvaldo  = $this->resolveUser('logistica@illuminations.com.pa', 'asistente_bodega');
-        $apolonio = $this->resolveUser('apolonio.gonzalez@illuminations.com.pa', 'ayudante_general_bodega');
-        $yirena   = $this->resolveUser('gerencia2@illuminations.com.pa', 'lider_compras');
+        $osvaldo  = $this->resolveUser('logistica@atlantic.com.pa', 'asistente_bodega');
+        $apolonio = $this->resolveUser('apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
+        $yirena   = $this->resolveUser('gerencia2@atlantic.com.pa', 'lider_compras');
 
         if ($osvaldo === null || $apolonio === null || $yirena === null) {
             $this->command?->warn('SCRUM-406: falta algún usuario (Osvaldo/Apolonio/Yirena) — skip.');
@@ -593,7 +593,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         // Idmar Hernandez (vendedor_disenador) — vendedora real con WarehouseAssistantMapping
         // real ya sembrado (-> Osvaldo Santos, ver WarehouseAssistantMappingSeeder), para que el
         // Order nazca con assistant_id asignado sin disparar la notificación de "sin asistente".
-        $owner = User::where('email', 'idmar@illuminations.com.pa')->first();
+        $owner = User::where('email', 'idmar@atlantic.com.pa')->first();
 
         if ($owner === null) {
             $ownerId = $this->userIdByRole(['designer']) ?? $this->userIdByRole(['management', 'superadmin']);

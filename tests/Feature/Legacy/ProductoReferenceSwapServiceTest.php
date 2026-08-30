@@ -20,7 +20,7 @@ final class ProductoReferenceSwapServiceTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function migratedProduct(int $codigo, string $reference, ?string $factoryReference): Producto

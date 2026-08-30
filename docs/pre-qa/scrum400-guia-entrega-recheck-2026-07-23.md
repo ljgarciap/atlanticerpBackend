@@ -35,7 +35,7 @@ resultado, solo al tiempo de la sesión.
 ## Paso 0 — permisos
 
 `bodega.read`/`bodega.write` **no** requirieron ningún grant manual: el rol `lider_bodega`
-(Esteban, `almacen@illuminations.com.pa`) ya los trae nativos vía el rol (confirmado en el JWT:
+(Esteban, `almacen@atlantic.com.pa`) ya los trae nativos vía el rol (confirmado en el JWT:
 `modules.bodega = {view:true, view_team:true, edit:true}`, sin `extra_permissions`). Intenté
 otorgarlos manualmente por las dudas al principio de la sesión y confirmé después que era
 redundante — revertido a `extra_permissions: []` antes de terminar, entorno queda limpio, nada que
@@ -140,7 +140,7 @@ el Senior Review ya había señalado como corregido de rebote — confirmado en 
   acceso — **resultó ser un supuesto mío incorrecto**, no un bug: el rol `transporte` SÍ trae
   `bodega.view/edit` nativos (confirmado en el JWT, sin `extra_permissions`), tiene sentido de
   negocio (un repartidor necesita ver sus pedidos). Corregí el test con un rol que de verdad no
-  tiene ningún permiso de Bodega (`vendedor_disenador`, `neil.quiel@illuminations.com.pa` —
+  tiene ningún permiso de Bodega (`vendedor_disenador`, `neil.quiel@atlantic.com.pa` —
   `modules.bodega` todo en `false`): navegar a `/bodega/pedidos` **nunca llama a la API** (el
   router del frontend bloquea antes), termina en el Dashboard genérico ("Selecciona un módulo").
   Verificado también a nivel API directo: `GET /api/bodega/orders` con su JWT → `403`. Gate real,

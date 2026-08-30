@@ -29,15 +29,15 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 10 de Admin&Cont (SCRUM-553→558, REQ-476→481) — apertura de Notas Crédito y Devoluciones. */
 class AdminContCreditNoteControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'conta@illuminations.com.pa';
+    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
 
     /** Batch 13 — mismo email real que `AdminContInvoiceControllerTest`/`AdminContFiscalSettingsControllerTest`. */
-    private const MARK_EMAIL = 'mbekhar@illuminations.com.pa';
+    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
 
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function loginAsFelix(): string
@@ -52,7 +52,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
@@ -259,7 +259,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_summary_y_itbms_treatment_rechazan_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/notas-credito/summary')
@@ -631,7 +631,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     {
         $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/notas-credito/clientes/{$invoice->master_client_id}/facturas")
@@ -862,7 +862,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     private function tableFqn(string $table): string
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
         return "{$slug}_admin_contab.{$table}";
     }

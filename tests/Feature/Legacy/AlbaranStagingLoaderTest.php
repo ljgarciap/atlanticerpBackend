@@ -26,7 +26,7 @@ final class AlbaranStagingLoaderTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_load_stagea_albaranes_y_items(): void
@@ -38,7 +38,7 @@ final class AlbaranStagingLoaderTest extends FeatureTestCase
         $this->assertSame(1, $counts['albaranes']);
         $this->assertSame(1, $counts['items']);
         $this->assertCount(1, $counts['albaran_ids']);
-        $this->assertDatabaseHas('illuminations_legacy.albaranes', [
+        $this->assertDatabaseHas('atlantic_legacy.albaranes', [
             'icg_numserie' => 'A', 'icg_numalbaran' => 5001, 'icg_n' => 'B',
         ]);
         $this->assertSame(1, AlbaranItem::query()->where('icg_codarticulo', 4321)->count());
@@ -170,8 +170,8 @@ final class AlbaranStagingLoaderTest extends FeatureTestCase
         $this->assertSame(600, $counts['albaranes']);
         $this->assertCount(600, $counts['albaran_ids']);
         $this->assertSame(600, Albaran::query()->count());
-        $this->assertDatabaseHas('illuminations_legacy.albaranes', ['icg_numalbaran' => 1]);
-        $this->assertDatabaseHas('illuminations_legacy.albaranes', ['icg_numalbaran' => 600]);
+        $this->assertDatabaseHas('atlantic_legacy.albaranes', ['icg_numalbaran' => 1]);
+        $this->assertDatabaseHas('atlantic_legacy.albaranes', ['icg_numalbaran' => 600]);
     }
 
     /**

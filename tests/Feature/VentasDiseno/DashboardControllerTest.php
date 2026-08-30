@@ -23,17 +23,17 @@ class DashboardControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function reMakeCurrent(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantVentasDisenoRead(string $email): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
@@ -41,7 +41,7 @@ class DashboardControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -82,8 +82,8 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_designer_no_puede_acceder_al_dashboard(): void
     {
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
@@ -92,8 +92,8 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_management_puede_acceder_al_dashboard(): void
     {
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
@@ -102,8 +102,8 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_superadmin_puede_acceder_al_dashboard(): void
     {
-        $this->grantVentasDisenoRead('superadmin@illuminations.test');
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $this->grantVentasDisenoRead('superadmin@atlantic.test');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
@@ -114,15 +114,15 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_stage_counts_y_totales_reflejan_los_datos_reales(): void
     {
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
 
         $this->makeCard($managerId, 'quote', amount: 1000, projectName: 'REQ605 Cotizacion');
         $this->makeCard($managerId, 'proposal', amount: 2000, projectName: 'REQ605 Propuesta');
         $this->makeCard($managerId, 'approved', amount: 5000, projectName: 'REQ605 Aprobado');
         $this->makeCard($managerId, 'lost', amount: 9999, projectName: 'REQ605 Perdido');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
             ->assertStatus(200);
@@ -147,11 +147,11 @@ class DashboardControllerTest extends FeatureTestCase
         // Aísla la aserción negativa creando el ÚNICO dato posible con un monto
         // improbable de colisionar con el seeder demo, y confirma que ese monto
         // específico no aparece sumado en ninguno de los 2 totales.
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $this->makeCard($managerId, 'lost', amount: 123456.78, projectName: 'REQ605 Perdido Aislado');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
             ->assertStatus(200);
@@ -165,12 +165,12 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_alerta_propuesta_vencida_lista_proyectos_con_mas_de_15_dias(): void
     {
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $this->makeCard($managerId, 'proposal', Carbon::now()->subDays(20), projectName: 'REQ604 Vencida');
         $this->makeCard($managerId, 'proposal', Carbon::now()->subDays(3), projectName: 'REQ604 Reciente');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
             ->assertStatus(200);
@@ -189,11 +189,11 @@ class DashboardControllerTest extends FeatureTestCase
      */
     public function test_alerta_propuesta_vencida_incluye_card_id_navegable(): void
     {
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $card = $this->makeCard($managerId, 'proposal', Carbon::now()->subDays(20), projectName: 'REQ796 Vencida Con Id');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
             ->assertStatus(200);
@@ -210,11 +210,11 @@ class DashboardControllerTest extends FeatureTestCase
         // Aísla verificando que NINGUNA tarjeta propia esta vez cae en la ventana
         // vencida — no se puede asertar null global porque el seeder demo puede
         // tener sus propias tarjetas estancadas.
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $this->makeCard($managerId, 'proposal', Carbon::now()->subDays(2), projectName: 'REQ604 Nunca Vencida');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
             ->assertStatus(200);
@@ -237,15 +237,15 @@ class DashboardControllerTest extends FeatureTestCase
      */
     public function test_clientes_sin_contacto_reciente_conteo_colapsa_pero_lista_no(): void
     {
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $master = MasterClient::create(['name' => 'Cliente REQ604 Duplicado']);
 
         // 2 tarjetas distintas, mismo Cliente Master, ambas estancadas en etapas activas.
         $cardA = $this->makeCard($managerId, 'design', Carbon::now()->subDays(18), projectName: 'REQ604 Dup A', masterClientId: $master->id);
         $cardB = $this->makeCard($managerId, 'quote', Carbon::now()->subDays(25), projectName: 'REQ604 Dup B', masterClientId: $master->id);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
             ->assertStatus(200);
@@ -262,12 +262,12 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_clientes_sin_contacto_reciente_excluye_aprobado_y_perdido(): void
     {
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $master = MasterClient::create(['name' => 'Cliente REQ604 Aprobado Aislado']);
         $this->makeCard($managerId, 'approved', Carbon::now()->subDays(30), projectName: 'REQ604 Aprobado Viejo', masterClientId: $master->id);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
             ->assertStatus(200);
@@ -281,14 +281,14 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_by_tag_excluye_tarjetas_sin_etiqueta_del_conteo(): void
     {
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $this->makeCard($managerId, 'quote', tag: 'design', projectName: 'REQ607 Diseno');
         $this->makeCard($managerId, 'quote', tag: 'quote', projectName: 'REQ607 Cotizacion');
         $this->makeCard($managerId, 'quote', tag: 'both', projectName: 'REQ607 Ambos');
         $this->makeCard($managerId, 'quote', tag: null, projectName: 'REQ607 Sin Etiqueta');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
             ->assertStatus(200);
@@ -305,16 +305,16 @@ class DashboardControllerTest extends FeatureTestCase
     public function test_remind_notifica_solo_al_responsable_de_sus_propios_proyectos_vencidos(): void
     {
         Mail::fake();
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $this->grantVentasDisenoRead('designer@illuminations.test');
-        $managerId  = $this->userIdByEmail('management@illuminations.test');
-        $designerId = $this->userIdByEmail('designer@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $managerId  = $this->userIdByEmail('management@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $this->makeCard($designerId, 'proposal', Carbon::now()->subDays(20), projectName: 'REQ604 Remind Designer');
         $this->makeCard($managerId, 'proposal', Carbon::now()->subDays(20), projectName: 'REQ604 Remind Manager');
         $this->makeCard($designerId, 'proposal', Carbon::now()->subDays(2), projectName: 'REQ604 Remind No Vencida');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/dashboard/remind')
             ->assertStatus(200);
@@ -341,8 +341,8 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_remind_sin_propuestas_vencidas_responde_422(): void
     {
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         // Solo tarjetas recientes propias — no se puede garantizar 0 global por el
         // seeder demo, así que este test solo tiene sentido si el seeder demo NO deja
         // ninguna propuesta vencida propia; se confirma indirectamente vía el 422 en sí
@@ -350,7 +350,7 @@ class DashboardControllerTest extends FeatureTestCase
         // forma visible y habría que revisar la nota, no ignorarla).
         $this->makeCard($managerId, 'proposal', Carbon::now()->subDays(1), projectName: 'REQ604 Remind Nada');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/dashboard/remind')
             ->assertStatus(422);
@@ -368,11 +368,11 @@ class DashboardControllerTest extends FeatureTestCase
     public function test_remind_no_duplica_el_envio_si_se_llama_dos_veces_el_mismo_dia(): void
     {
         Mail::fake();
-        $this->grantVentasDisenoRead('management@illuminations.test');
-        $managerId = $this->userIdByEmail('management@illuminations.test');
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
         $this->makeCard($managerId, 'proposal', Carbon::now()->subDays(20), projectName: 'REQ604 Remind Doble Clic');
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $first = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/dashboard/remind')

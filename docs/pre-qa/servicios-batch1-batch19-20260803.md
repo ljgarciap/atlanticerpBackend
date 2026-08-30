@@ -44,7 +44,7 @@ puede ejercitar desde la app real hoy. Bloquea Escenario 1, 2, 3, 4, 6 de REQ-21
 de REQ-221 tal como los define el ticket ("cuando el usuario cambia su estado... desde la tabla" /
 "arrastra su tarjeta").
 
-**Cómo reproducir:** login como `servicio@illuminations.com.pa` → Tickets → cambiar cualquier
+**Cómo reproducir:** login como `servicio@atlantic.com.pa` → Tickets → cambiar cualquier
 select de "Estado" en una fila → Network tab: `PATCH /api/servicios/tickets/{id}/status` → 404.
 
 **Fix esperado:** una línea — alinear la ruta en `serviciosApi.ts` (`/status` → `/estado`) o en

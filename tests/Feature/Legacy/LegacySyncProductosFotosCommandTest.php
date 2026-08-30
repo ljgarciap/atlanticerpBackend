@@ -31,7 +31,7 @@ final class LegacySyncProductosFotosCommandTest extends FeatureTestCase
 
     private function reactivateTenant(): void
     {
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     public function test_worklist_solo_incluye_productos_con_catalog_product_id_y_sin_photo_url(): void
@@ -63,7 +63,7 @@ final class LegacySyncProductosFotosCommandTest extends FeatureTestCase
             'icg_codarticulo' => 5003, 'descripcion' => 'C', 'descatalogado' => false,
         ]);
 
-        $this->artisan('legacy:sync-productos-fotos', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-productos-fotos', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -90,7 +90,7 @@ final class LegacySyncProductosFotosCommandTest extends FeatureTestCase
             ]);
         }
 
-        $this->artisan('legacy:sync-productos-fotos', ['--tenant' => 'illuminations', '--limit' => 2])
+        $this->artisan('legacy:sync-productos-fotos', ['--tenant' => 'atlantic', '--limit' => 2])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -115,7 +115,7 @@ final class LegacySyncProductosFotosCommandTest extends FeatureTestCase
         $bmp = self::makeBmpBytes(100, 50);
         $this->app->instance(ArticuloFotoExtractorContract::class, new FakeArticuloFotoExtractor([7001 => $bmp]));
 
-        $this->artisan('legacy:sync-productos-fotos', ['--tenant' => 'illuminations', '--dry-run' => true])
+        $this->artisan('legacy:sync-productos-fotos', ['--tenant' => 'atlantic', '--dry-run' => true])
             ->assertExitCode(0);
         $this->reactivateTenant();
 
@@ -131,7 +131,7 @@ final class LegacySyncProductosFotosCommandTest extends FeatureTestCase
         Queue::fake();
         $this->app->instance(ArticuloFotoExtractorContract::class, new FakeArticuloFotoExtractor());
 
-        $this->artisan('legacy:sync-productos-fotos', ['--tenant' => 'illuminations'])
+        $this->artisan('legacy:sync-productos-fotos', ['--tenant' => 'atlantic'])
             ->assertExitCode(0);
         $this->reactivateTenant();
 

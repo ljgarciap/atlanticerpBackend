@@ -24,15 +24,15 @@ class InternalTechnicianSeeder extends Seeder
     /** @var list<array{email: string, especialidad: string, color: string, has_bonus_plan: bool}> */
     private const TECHNICIANS = [
         // Batch 7 (REQ-258 RN7) — Carlos Vergara es hoy el único con plan de bonificación activo.
-        ['email' => 'carlos@illuminations.com.pa', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#3B82F6', 'has_bonus_plan' => true],
+        ['email' => 'carlos@atlantic.com.pa', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#3B82F6', 'has_bonus_plan' => true],
         ['email' => 'santopedro181994@gmail.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#8B5CF6', 'has_bonus_plan' => false],
         ['email' => 'agustinrodriguez141985@gmail.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#EC4899', 'has_bonus_plan' => false],
-        ['email' => 'garantias@illuminations.com.pa', 'especialidad' => InternalTechnician::ESPECIALIDAD_WARRANTY, 'color' => '#F59E0B', 'has_bonus_plan' => false],
+        ['email' => 'garantias@atlantic.com.pa', 'especialidad' => InternalTechnician::ESPECIALIDAD_WARRANTY, 'color' => '#F59E0B', 'has_bonus_plan' => false],
     ];
 
     public function run(): void
     {
-        $tenant = Tenant::where('slug', 'illuminations')->first();
+        $tenant = Tenant::where('slug', 'atlantic')->first();
         if ($tenant === null) {
             return;
         }

@@ -27,12 +27,12 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
     private function grantCompras(string $email, array $perms): void
     {
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
             ->update(['extra_permissions' => json_encode($perms)]);
@@ -60,7 +60,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      */
     private function makeApprovedSalesProject(string $projectName): SalesProject
     {
-        $owner = User::where('email', 'designer@illuminations.test')->firstOrFail();
+        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
         $master = MasterClient::create(['name' => "Cliente {$projectName}"]);
         $sub = SubClient::create([
             'master_client_id' => $master->id, 'business_name' => "Cliente {$projectName} SA", 'tax_id' => uniqid(),
@@ -88,11 +88,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     {
         // REQ-130 Escenario 2 — sin unit_cost explícito (compatibilidad), se usa el costo real
         // del producto del catálogo.
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id, ['cost' => 12.50]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -118,11 +118,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      */
     public function test_crear_orden_con_producto_existente_respeta_unit_cost_editado(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id, ['cost' => 12.50]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -142,10 +142,10 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         // REQ-130 Escenario 1: implícito — un producto de OTRO proveedor no es válido acá.
         // La regla real vive en el buscador (CatalogProductController?provider_id=), pero el
         // wizard igual debe rechazar un catalog_product_id inexistente/inactivo.
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -157,10 +157,10 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_crear_producto_nuevo_lo_agrega_al_catalogo_y_a_la_orden(): void
     {
         // REQ-131: creación simultánea en Inventario (catalog_products) y en la orden.
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -177,7 +177,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $response->assertJsonPath('lines.0.reference', 'NORDIC-40');
         $response->assertJsonPath('lines.0.subtotal', 200);
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas(
             "{$slug}_ventas_diseno.catalog_products",
             ['reference' => 'NORDIC-40', 'provider_id' => $provider->id],
@@ -187,11 +187,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_referencia_de_fabrica_repetida_mismo_proveedor_retorna_422(): void
     {
         // REQ-131 Escenario 1.
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $this->makeCatalogProduct($provider->id, ['factory_reference' => 'LMP-001']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -211,12 +211,12 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_referencia_de_fabrica_repetida_proveedor_distinto_si_se_permite(): void
     {
         // REQ-131 Escenario 2.
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $lightCorp = $this->makeProvider(['name' => 'LightCorp']);
         $iluminex = $this->makeProvider(['name' => 'Iluminex SA']);
         $this->makeCatalogProduct($lightCorp->id, ['factory_reference' => 'LMP-001']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $iluminex->id,
@@ -234,12 +234,12 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_referencia_publica_repetida_cualquier_proveedor_retorna_422(): void
     {
         // REQ-131 Escenario 3: sin excepción.
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $other = $this->makeProvider(['name' => 'Otro proveedor']);
         $this->makeCatalogProduct($other->id, ['reference' => 'NORDIC-40']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -264,10 +264,10 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      */
     public function test_dos_productos_nuevos_con_misma_referencia_publica_en_la_misma_orden_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -284,16 +284,16 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['lines.1.new_product.reference']);
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseCount("{$slug}_ventas_diseno.catalog_products", 0);
     }
 
     public function test_dos_productos_nuevos_con_misma_referencia_de_fabrica_en_la_misma_orden_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -316,10 +316,10 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     /** SCRUM-194 (REQ-131, mockup 2H) — Categoría + Rotación esperada, ausentes hasta ahora. */
     public function test_crear_producto_nuevo_persiste_categoria_y_rotacion(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -333,7 +333,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             ])
             ->assertStatus(201);
 
-        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas(
             "{$slug}_ventas_diseno.catalog_products",
             ['reference' => 'CAT-001', 'category' => 'bombillos', 'rotation' => 'unica'],
@@ -342,10 +342,10 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     public function test_crear_producto_nuevo_categoria_invalida_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -363,11 +363,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     /** SCRUM-194 (REQ-131, mockup 2H) — toggle $ monto / % del costo, sustituye el % único de antes. */
     public function test_costo_adicional_estimado_por_monto(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id, ['cost' => 100]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -385,10 +385,10 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     public function test_linea_sin_producto_ni_producto_nuevo_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -397,19 +397,19 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_envio_aereo_pagado_por_illuminations_requiere_aprobacion_de_mark(): void
+    public function test_envio_aereo_pagado_por_atlantic_requiere_aprobacion_de_mark(): void
     {
         // REQ-118 RN3 (hallazgo 5) / Escenario 1.
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
                 'shipping_type' => 'aereo',
-                'who_pays_shipping' => 'illuminations',
+                'who_pays_shipping' => 'atlantic',
                 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1]],
             ])
             ->assertStatus(201);
@@ -423,16 +423,16 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     public function test_envio_maritimo_no_requiere_aprobacion(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
                 'shipping_type' => 'maritimo',
-                'who_pays_shipping' => 'illuminations',
+                'who_pays_shipping' => 'atlantic',
                 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1]],
             ])
             ->assertStatus(201);
@@ -442,14 +442,14 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $response->assertJsonPath('status', PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR);
     }
 
-    /** SCRUM-197 (REQ-134, hallazgo de Daniela Amaya 2026-07-30): el mockup solo contempla Cliente/Illuminations. */
+    /** SCRUM-197 (REQ-134, hallazgo de Daniela Amaya 2026-07-30): el mockup solo contempla Cliente/Atlantic. */
     public function test_envio_aereo_pagado_por_cliente_no_requiere_aprobacion(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -465,11 +465,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     public function test_who_pays_shipping_proveedor_ya_no_es_un_valor_valido(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -482,13 +482,13 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     public function test_aprobar_orden_sin_permiso_approve_retorna_403(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write', 'compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/approve")
             ->assertStatus(403);
@@ -496,13 +496,13 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     public function test_aprobar_orden_que_no_requiere_aprobacion_retorna_422(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.approve']);
+        $this->grantCompras('designer@atlantic.test', ['compras.approve']);
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => false,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/approve")
             ->assertStatus(422);
@@ -517,8 +517,8 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      */
     public function test_aprobar_orden_exitosa(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.approve']);
-        $markId = (int) User::where('email', 'designer@illuminations.test')->value('id');
+        $this->grantCompras('designer@atlantic.test', ['compras.approve']);
+        $markId = (int) User::where('email', 'designer@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
         $provider = $this->makeProvider();
@@ -526,7 +526,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/approve")
             ->assertStatus(200);
@@ -537,11 +537,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_solo_pedidos_aprobados_pueden_asignarse_a_una_linea(): void
     {
         // REQ-133 Escenario 1.
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id);
 
-        $owner = User::where('email', 'designer@illuminations.test')->firstOrFail();
+        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
         $master = MasterClient::create(['name' => 'Cliente Test']);
         $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Cliente Test SA', 'tax_id' => '1-1-1']);
         $salesProject = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
@@ -551,7 +551,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         ]);
         // Sin folio -> documentStatus() = 'draft', nunca 'approved'.
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -567,12 +567,12 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_asignacion_de_proyecto_es_independiente_por_linea(): void
     {
         // REQ-133 Escenario 2.
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product1 = $this->makeCatalogProduct($provider->id, ['reference' => 'A1']);
         $product2 = $this->makeCatalogProduct($provider->id, ['reference' => 'A2']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -591,13 +591,13 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     {
         // Política global de paginación (memory/feedback_pagination_sorting_policy.md).
         // SCRUM-754 (2026-08-18): default subió de 5 a 20 — 21 filas para ejercitar el corte real.
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         foreach (range(1, 21) as $i) {
             PurchaseOrder::create(['provider_id' => $provider->id, 'currency' => 'USD']);
         }
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders')
             ->assertStatus(200);
@@ -611,11 +611,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     {
         // REQ-140/146 (SCRUM-203/209): ninguna línea con sales_project_id -> resumen vacío,
         // sin ningún string hardcodeado tipo "Sin proyecto" del lado del backend.
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -635,13 +635,13 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_index_orden_con_un_proyecto_expone_su_nombre(): void
     {
         // REQ-140/146: todas las líneas de la orden comparten el mismo proyecto -> resumen = nombre.
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product1 = $this->makeCatalogProduct($provider->id, ['reference' => 'B1']);
         $product2 = $this->makeCatalogProduct($provider->id, ['reference' => 'B2']);
         $project = $this->makeApprovedSalesProject('Torre Norte');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -665,14 +665,14 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     {
         // REQ-140 Escenario 1 / REQ-146: 2+ proyectos distintos entre líneas -> resumen null,
         // has_multiple_projects=true — el frontend decide cómo mostrar "Ver detalle".
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product1 = $this->makeCatalogProduct($provider->id, ['reference' => 'C1']);
         $product2 = $this->makeCatalogProduct($provider->id, ['reference' => 'C2']);
         $projectA = $this->makeApprovedSalesProject('Torre Norte');
         $projectB = $this->makeApprovedSalesProject('Torre Sur');
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -694,18 +694,18 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-206 (hallazgo QA 2026-07-16): cualquier usuario con `compras.approve` podía aprobar,
-     * no solo Mark — usa `gerencia@illuminations.test` como "no-Mark" en vez de la cuenta real de
+     * no solo Mark — usa `gerencia@atlantic.test` como "no-Mark" en vez de la cuenta real de
      * Mark (CoreUserSeeder, password no fijo en testing) para no depender de esa credencial.
      */
     public function test_aprobar_orden_no_siendo_el_mark_configurado_retorna_403(): void
     {
-        $this->grantCompras('management@illuminations.test', ['compras.approve']);
-        // `gerencia@illuminations.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@illuminations.test` (Nivel 8) para
+        $this->grantCompras('management@atlantic.test', ['compras.approve']);
+        // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
+        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $this->grantCompras('multi@illuminations.test', ['compras.approve']);
+        $this->grantCompras('multi@atlantic.test', ['compras.approve']);
 
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
         $provider = $this->makeProvider();
@@ -713,12 +713,12 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
         ]);
 
-        $token = $this->loginAs('multi@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/approve")
             ->assertStatus(403);
 
-        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertNull(PurchaseOrder::find($order->id)?->approved_by);
     }
 
@@ -726,7 +726,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      *  Gerencia genérica sin ser el Mark configurado (test de arriba, sigue en 403). */
     public function test_aprobar_orden_superadmin_bypassa_el_gate_de_mark(): void
     {
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
         $provider = $this->makeProvider();
@@ -734,7 +734,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
         ]);
 
-        $token = $this->loginAs('superadmin@illuminations.test', 'Password123!', 'superadmin');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/approve")
             ->assertStatus(200);
@@ -742,8 +742,8 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     public function test_aprobar_orden_siendo_el_mark_configurado_es_exitosa(): void
     {
-        $this->grantCompras('management@illuminations.test', ['compras.approve']);
-        $markId = (int) User::where('email', 'management@illuminations.test')->value('id');
+        $this->grantCompras('management@atlantic.test', ['compras.approve']);
+        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
 
         $provider = $this->makeProvider();
@@ -751,7 +751,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
         ]);
 
-        $token = $this->loginAs('management@illuminations.test', 'Password123!', 'management');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/approve")
             ->assertStatus(200)
@@ -762,19 +762,19 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     /** SCRUM-197 — la RN de REQ-134 pide capturar costo del envío aéreo, no solo quién lo paga. */
     public function test_crear_orden_persiste_costo_de_envio_aereo(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $provider = $this->makeProvider();
         $product = CatalogProduct::create([
             'reference' => 'SHIP-1', 'name' => 'Producto', 'description' => 'Producto', 'cost' => 10, 'price_full' => 20,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
                 'shipping_type' => 'aereo',
-                'who_pays_shipping' => 'illuminations',
+                'who_pays_shipping' => 'atlantic',
                 'shipping_cost' => 125.50,
                 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1]],
             ])
@@ -790,16 +790,16 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      */
     public function test_index_expone_tipo_de_envio_y_costo_de_envio(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
                 'shipping_type' => 'aereo',
-                'who_pays_shipping' => 'illuminations',
+                'who_pays_shipping' => 'atlantic',
                 'shipping_cost' => 200,
                 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1]],
             ])
@@ -820,11 +820,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      */
     public function test_index_expone_responsable_y_fecha_de_orden(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = $this->makeCatalogProduct($provider->id);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
                 'provider_id' => $provider->id,
@@ -847,11 +847,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      */
     public function test_index_sin_pagos_expone_fecha_de_pago_null(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         PurchaseOrder::create(['provider_id' => $provider->id, 'currency' => 'USD']);
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders')
             ->assertStatus(200);
@@ -866,7 +866,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      */
     public function test_index_con_pagos_expone_fecha_del_pago_mas_reciente(): void
     {
-        $this->grantCompras('designer@illuminations.test', ['compras.read']);
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create(['provider_id' => $provider->id, 'currency' => 'USD', 'total_amount' => 1000]);
 
@@ -880,7 +880,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             'payment_proof_storage_key' => 'compras/payments/proof-2.pdf',
         ])->forceFill(['created_at' => now()->subDay()])->save();
 
-        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders')
             ->assertStatus(200);
