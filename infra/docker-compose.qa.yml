@@ -20,11 +20,23 @@
 #     depende de un repo hermano "../../atlanticerp-frontend/dist" en disco.
 #   - postgres/redis siguen sin publicar puertos al host: solo acceso desde
 #     la red interna del compose (no se necesita acceso externo directo).
+#
+# ⚠️  AISLAMIENTO (agregado 2026-08-30, tras un incidente real en local — ver
+#     Atlantic/CLAUDE.md): este EC2 debe ser EXCLUSIVO de AtlanticERP, nunca
+#     compartido con el de binax. `/data/postgres/pgdata`, `/var/www/static`
+#     y `/etc/letsencrypt` son rutas ABSOLUTAS del host — si este compose
+#     alguna vez corre en el mismo host/Docker daemon que el de binax
+#     (mismas rutas), los dos postgres escribirían sobre el mismo directorio
+#     real en disco. `name: atlanticerp-qa` (abajo) separa contenedores/red,
+#     pero NO separa estas rutas de host — verificar que el EC2 destino sea
+#     nuevo y dedicado antes de desplegar.
 
 # Fase 0 — propuesta de logs/backups aprobada 2026-08-20 (ver atlanticerp/CLAUDE.md § Infraestructura
 # AWS, memory/project_propuesta_logs_backups_aprobada_20260820.md): límite de tamaño de logs por
 # contenedor, para eliminar el riesgo de disco lleno por acumulación (driver json-file de Docker
 # no tiene límite por defecto).
+name: atlanticerp-qa
+
 x-logging: &default-logging
   driver: json-file
   options:

@@ -2,6 +2,14 @@
 # AWS, memory/project_propuesta_logs_backups_aprobada_20260820.md): límite de tamaño de logs por
 # contenedor, para eliminar el riesgo de disco lleno por acumulación (driver json-file de Docker
 # no tiene límite por defecto).
+#
+# name: fijado explícito (2026-08-30) — sin esto, Compose usa el nombre de la carpeta contenedora
+# como nombre de proyecto, y esta carpeta se llama "infra" igual que la de binax. Sin `name:`,
+# Atlantic terminó compartiendo el namespace de contenedores Y el volumen de datos de Postgres con
+# el stack real de binax (incidente detectado y revertido el mismo día, sin pérdida de datos —
+# binax nunca llegó a aceptar una conexión de Atlantic por credenciales distintas). No quitar.
+name: atlanticerp
+
 x-logging: &default-logging
   driver: json-file
   options:
@@ -13,7 +21,7 @@ services:
     image: postgres:16-alpine
     logging: *default-logging
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DB_PORT_HOST:-5434}:5432"
     environment:
       POSTGRES_DB: ${DB_DATABASE}
       POSTGRES_USER: ${DB_USERNAME}
