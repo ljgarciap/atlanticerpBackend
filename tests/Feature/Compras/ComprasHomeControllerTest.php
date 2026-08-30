@@ -1,0 +1,279 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Compras;
+
+use App\Modules\Compras\Models\Provider;
+use App\Modules\Compras\Models\PurchaseOrder;
+use App\Modules\Compras\Models\PurchaseOrderLine;
+use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Shared\Multitenancy\Tenant;
+use Illuminate\Support\Facades\DB;
+use Tests\Feature\FeatureTestCase;
+
+/** SCRUM-175→182 (REQ-111→118) — Inicio de Compras. */
+class ComprasHomeControllerTest extends FeatureTestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+        // SCRUM-177 — summary() ahora llama a OutlookCalendarService (events_today_count).
+        $this->fakeOutlookCalendar();
+    }
+
+    /** El cliente HTTP de test resetea el tenant "actual" al final de cada request. */
+    private function reMakeCurrent(): void
+    {
+        Tenant::where('slug', 'illuminations')->first()?->makeCurrent();
+    }
+
+    private function grantCompras(string $email): void
+    {
+        $slug = (string) Tenant::where('slug', 'illuminations')->value('slug');
+        DB::table("{$slug}_auth.users")
+            ->where('email', $email)
+            ->update(['extra_permissions' => json_encode(['compras.read', 'compras.write'])]);
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function makeProvider(array $overrides = []): Provider
+    {
+        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function makeProduct(array $overrides = []): CatalogProduct
+    {
+        return CatalogProduct::create([
+            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo E27', 'description' => 'Bombillo E27',
+            'price_full' => 20, 'cost' => 12, 'stock_quantity' => 10, 'is_active' => true,
+            ...$overrides,
+        ]);
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function makeOrder(int $providerId, array $overrides = []): PurchaseOrder
+    {
+        return PurchaseOrder::create([
+            'provider_id' => $providerId, 'currency' => 'USD',
+            'status' => PurchaseOrder::STATUS_ORDENADO, 'status_changed_at' => now(),
+            'total_amount' => 100, ...$overrides,
+        ]);
+    }
+
+    public function test_summary_sin_autenticar_retorna_401(): void
+    {
+        $this->getJson('/api/compras/home/summary')->assertStatus(401);
+    }
+
+    public function test_summary_sin_permiso_read_retorna_403(): void
+    {
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(403);
+    }
+
+    public function test_resumen_mes_comprado_incluye_todas_las_ordenes_del_mes_sin_importar_estado(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider();
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 500]);
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_RECIBIDO, 'total_amount' => 300]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $response->assertJsonPath('resumen_mes.comprado_mes', 800);
+    }
+
+    public function test_resumen_mes_entregado_a_tiempo_null_sin_ordenes_recibidas_este_mes(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $response->assertJsonPath('resumen_mes.entregado_a_tiempo_percent', null);
+    }
+
+    public function test_resumen_mes_entregado_a_tiempo_calcula_porcentaje_real(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider();
+        // A tiempo: llego el mismo dia estimado.
+        $this->makeOrder($provider->id, [
+            'status' => PurchaseOrder::STATUS_RECIBIDO, 'status_changed_at' => now(),
+            'estimated_arrival_date' => now()->subDays(1), 'actual_arrival_date' => now()->subDays(1),
+        ]);
+        // Tarde: llego despues de lo estimado.
+        $this->makeOrder($provider->id, [
+            'status' => PurchaseOrder::STATUS_RECIBIDO, 'status_changed_at' => now(),
+            'estimated_arrival_date' => now()->subDays(5), 'actual_arrival_date' => now()->subDays(1),
+        ]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $response->assertJsonPath('resumen_mes.entregado_a_tiempo_percent', 50);
+    }
+
+    public function test_pendientes_orden_3_dias_exactos_genera_alerta(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider();
+        $this->makeOrder($provider->id, [
+            'status' => PurchaseOrder::STATUS_POR_APROBAR,
+            'status_changed_at' => now()->subDays(3),
+        ]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $pendientes = $response->json('pendientes');
+        $this->assertCount(1, $pendientes);
+        $this->assertSame('orden_sin_aprobar', $pendientes[0]['type']);
+    }
+
+    public function test_pendientes_orden_antes_de_3_dias_no_genera_alerta(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider();
+        $this->makeOrder($provider->id, [
+            'status' => PurchaseOrder::STATUS_POR_APROBAR,
+            'status_changed_at' => now()->subDays(2),
+        ]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $this->assertCount(0, $response->json('pendientes'));
+    }
+
+    public function test_ordenes_criticas_coincide_con_chip_criticas_de_ver_ordenes(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider();
+        $this->makeOrder($provider->id, [
+            'status' => PurchaseOrder::STATUS_POR_APROBAR, 'status_changed_at' => now()->subDays(4),
+        ]);
+        $this->makeOrder($provider->id, [
+            'status' => PurchaseOrder::STATUS_EN_TRANSITO, 'estimated_arrival_date' => now()->subDays(1),
+        ]);
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]); // no critica
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $headers = $this->authHeaders($token);
+
+        $home = $this->withHeaders($headers)->getJson('/api/compras/home/summary')->assertStatus(200);
+        $chip = $this->withHeaders($headers)->getJson('/api/compras/orders?chip=critical')->assertStatus(200);
+
+        $this->assertCount(2, $home->json('ordenes_criticas'));
+        $this->assertCount(2, $chip->json('data'));
+        $this->assertSame(
+            collect($home->json('ordenes_criticas'))->pluck('order_id')->sort()->values()->all(),
+            collect($chip->json('data'))->pluck('id')->sort()->values()->all(),
+        );
+    }
+
+    public function test_estado_compras_agrupa_las_7_etapas_con_conteo_y_valor(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider();
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO, 'total_amount' => 100]);
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO, 'total_amount' => 200]);
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_RECIBIDO, 'total_amount' => 50]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $stages = collect($response->json('estado_compras'))->keyBy('stage');
+        $this->assertCount(7, $stages);
+        $this->assertSame(2, $stages[PurchaseOrder::STATUS_ORDENADO]['count']);
+        $this->assertEquals(300.0, $stages[PurchaseOrder::STATUS_ORDENADO]['amount']);
+        $this->assertSame(1, $stages[PurchaseOrder::STATUS_RECIBIDO]['count']);
+        $this->assertSame(0, $stages[PurchaseOrder::STATUS_EN_ADUANA]['count']);
+    }
+
+    public function test_por_reordenar_producto_sin_orden_activa_aparece(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $this->makeProduct(['reference' => 'REORDER-1', 'stock_quantity' => 2, 'reorder_point' => 5]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $refs = collect($response->json('por_reordenar'))->pluck('reference');
+        $this->assertTrue($refs->contains('REORDER-1'));
+    }
+
+    public function test_por_reordenar_producto_con_orden_activa_no_aparece(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider();
+        $product = $this->makeProduct(['reference' => 'REORDER-2', 'stock_quantity' => 2, 'reorder_point' => 5]);
+        $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
+        PurchaseOrderLine::create([
+            'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
+            'quantity' => 10, 'unit_cost' => 5, 'subtotal' => 50,
+        ]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $refs = collect($response->json('por_reordenar'))->pluck('reference');
+        $this->assertFalse($refs->contains('REORDER-2'));
+    }
+
+    public function test_por_reordenar_se_libera_cuando_la_orden_llega_a_recibido(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider();
+        $product = $this->makeProduct(['reference' => 'REORDER-3', 'stock_quantity' => 2, 'reorder_point' => 5]);
+        $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
+        PurchaseOrderLine::create([
+            'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
+            'quantity' => 10, 'unit_cost' => 5, 'subtotal' => 50,
+        ]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $headers = $this->authHeaders($token);
+
+        $before = $this->withHeaders($headers)->getJson('/api/compras/home/summary')->assertStatus(200);
+        $this->assertFalse(collect($before->json('por_reordenar'))->pluck('reference')->contains('REORDER-3'));
+
+        $this->reMakeCurrent();
+        $order->update(['status' => PurchaseOrder::STATUS_RECIBIDO]);
+
+        $after = $this->withHeaders($headers)->getJson('/api/compras/home/summary')->assertStatus(200);
+        $this->assertTrue(collect($after->json('por_reordenar'))->pluck('reference')->contains('REORDER-3'));
+    }
+
+    public function test_por_reordenar_expone_cantidad_sugerida_y_proveedor(): void
+    {
+        $this->grantCompras('designer@illuminations.test');
+        $provider = $this->makeProvider(['name' => 'ProveedorSugerido']);
+        $this->makeProduct([
+            'reference' => 'REORDER-4', 'stock_quantity' => 2, 'reorder_point' => 5,
+            'provider_id' => $provider->id, 'cost' => 15,
+        ]);
+
+        $token = $this->loginAs('designer@illuminations.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/summary')->assertStatus(200);
+
+        $item = collect($response->json('por_reordenar'))->firstWhere('reference', 'REORDER-4');
+        $this->assertNotNull($item);
+        $this->assertSame(3, $item['suggested_quantity']); // 5 - 2
+        $this->assertSame('ProveedorSugerido', $item['provider_name']);
+    }
+}

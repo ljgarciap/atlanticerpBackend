@@ -1,0 +1,26 @@
+# Fase 0 — propuesta de logs/backups aprobada 2026-08-20 (ver atlanticerp/CLAUDE.md § Infraestructura
+# AWS, memory/project_propuesta_logs_backups_aprobada_20260820.md).
+#
+# /var/log/nginx-crowdsec/access.log es un archivo del HOST (bind mount, ver docker-compose.*.yml
+# servicio "nginx") — el límite json-file de Docker (agregado en este mismo batch) no lo cubre,
+# porque CrowdSec (proceso nativo del host, no en Docker) necesita leerlo como archivo real.
+# Necesita su propia rotación a nivel de host.
+#
+# Instalación (una vez por instancia EC2 — dev/test/prod):
+#   sudo cp infra/logrotate/atlanticerp-nginx-crowdsec /etc/logrotate.d/atlanticerp-nginx-crowdsec
+#   sudo logrotate -d /etc/logrotate.d/atlanticerp-nginx-crowdsec   # dry-run, valida sintaxis
+#
+# copytruncate porque nginx corre dentro de un contenedor con el archivo abierto — reenviarle una
+# señal de reload para que reabra el archivo tras un rename es más frágil que truncar en el lugar;
+# el riesgo aceptado es perder unas pocas líneas de log durante la copia (log de auditoría/WAF, no
+# dato transaccional).
+
+/var/log/nginx-crowdsec/access.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

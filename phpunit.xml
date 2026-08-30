@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <!--
+            Suite Unit: sin base de datos.
+            Puede correrse en cualquier entorno con:
+              php artisan test -testsuite=Unit
+        -->
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <!--
+            Suite Feature: requiere PostgreSQL real (multi-tenant schema-per-tenant).
+            Debe correrse DENTRO del contenedor infra-laravel-1:
+              docker exec infra-laravel-1 php artisan test -testsuite=Feature
+            No se sobreescriben DB_* aqui para preservar la configuracion del contenedor.
+        -->
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+        <exclude>
+            <!-- Comandos CLI y bootstrapping: sin lógica de negocio que testear. -->
+            <directory>app/Console</directory>
+            <directory>app/Providers</directory>
+            <!-- Módulo AI: dependen de la API de Claude, sin mocks en CI todavía. -->
+            <directory>app/Modules/AI/Jobs</directory>
+            <directory>app/Modules/AI/Events</directory>
+            <!-- Middleware sin lógica propia (el resto del directorio sí tiene guardias reales). -->
+            <file>app/Shared/Http/Middleware/AssignRequestId.php</file>
+            <file>app/Shared/Http/Middleware/SwaggerProductionGuard.php</file>
+            <!-- Modelos boilerplate: solo getTable()/casts, sin métodos propios. -->
+            <file>app/Modules/Auth/Models/Department.php</file>
+            <file>app/Modules/Auth/Models/GlobalSetting.php</file>
+            <file>app/Modules/Auth/Models/SystemSetting.php</file>
+            <file>app/Modules/Auth/Models/PermissionCatalog.php</file>
+            <file>app/Modules/Auth/Models/SecurityLevel.php</file>
+            <file>app/Modules/CRM/Models/Contact.php</file>
+        </exclude>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+    </php>
+</phpunit>

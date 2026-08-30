@@ -1,0 +1,563 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Bodega\Http\Controllers;
+
+use App\Models\User;
+use App\Modules\Bodega\Models\ProductWarehouseStock;
+use App\Modules\Bodega\Services\ArrivalConfirmationService;
+use App\Modules\Bodega\Services\BodegaInventoryKpiService;
+use App\Modules\Bodega\Services\OrderCommitmentService;
+use App\Modules\Compras\Models\Provider;
+use App\Modules\Compras\Services\InventoryKpiService;
+use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Modules\VentasDiseno\Models\CatalogProductFamily;
+use App\Modules\VentasDiseno\Services\FuzzySearchService;
+use App\Shared\Http\Pagination;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
+
+/**
+ * SCRUM-329 Bloque B2 (REQ-344→362, SCRUM-414→432) — "Ver Inventario" de Bodega: pantalla de
+ * SOLO LECTURA sobre el mismo catálogo que administra Compras (`CatalogProduct`, ninguna tabla
+ * nueva). Endpoint propio (no `Compras\Http\Controllers\InventoryController`) porque el gate real
+ * es distinto (`bodega.read`/`bodega.write`, un string simple, a diferencia del OR de 2 permisos
+ * que ya fuerza a `InventoryController::resolveAccess()` a ser un método aparte) y porque los
+ * campos expuestos tampoco calzan ni con el modo "completo" de Compras (nunca precio/costo) ni con
+ * el modo "restringido" de Ventas & Diseño (ese sí oculta `rotation`, que Bodega SÍ debe ver —
+ * REQ-344/351/416).
+ *
+ * "Por servir"/"Disponible"/"Estado" de ESTA pantalla usan `OrderCommitmentService` (compromiso a
+ * PEDIDOS de Bodega en curso — REQ-353 RN1/Escenario 1), NO `InventoryKpiService::porServirMap()`
+ * (reservas de Ventas & Diseño al momento de comprar, un concepto distinto) — ver docblock de
+ * `OrderCommitmentService`/`BodegaInventoryKpiService`. "Por ingresar"/"En camino" SÍ reusan
+ * `InventoryKpiService::porIngresarMap()`/`enCaminoMap()` tal cual (mismo concepto, ya construido
+ * sobre Ingreso de Mercancía real).
+ *
+ * REQ-361/AC — nunca se expone `price_full`/`cost`/`import_cost`/`freight_cost`/`handling_cost`/
+ * `other_cost`/`cost_total`/`margin_percent`, ni ninguna acción de escritura sobre el producto
+ * (crear/inactivar/editar) — eso sigue siendo exclusivo de Compras.
+ *
+ * NOTA de alcance (actualizada 2026-08-15) — REQ-361 pedía "código de barras" en el detalle de
+ * producto; en su momento `CatalogProduct` no tenía ese campo. La migración
+ * `2026_08_11_100001_add_barcode_to_ventas_diseno_catalog_products_table` lo agregó (ya expuesto
+ * por Compras en `InventoryController::format()`), así que el rebote de REQ-361/SCRUM-431
+ * (2026-08-13) lo expone también acá — solo lectura, igual que el resto de este endpoint.
+ */
+final class BodegaInventoryController extends Controller
+{
+    /**
+     * SCRUM-237/240 — `description` reemplazado por `name` (nombre visible real del producto, ver
+     * migración `2026_08_15_100000_...`).
+     *
+     * @var list<string>
+     */
+    private const ALLOWED_SORTS = ['reference', 'name', 'stock_quantity', 'created_at'];
+
+    public function __construct(
+        private readonly FuzzySearchService $fuzzySearch,
+        private readonly InventoryKpiService $inventoryKpis,
+        private readonly OrderCommitmentService $commitments,
+        private readonly BodegaInventoryKpiService $bodegaKpis,
+        private readonly ArrivalConfirmationService $arrivalConfirmation,
+    ) {}
+
+    /** REQ-344/346/349/350/351/362 — listado principal, KPIs, filtros combinables, chips y deep-link. */
+    public function index(Request $request): JsonResponse
+    {
+        $chip = (string) $request->query('chip', 'todos');
+
+        /** @var list<CatalogProduct> $products */
+        $products = CatalogProduct::query()
+            ->with(['families', 'provider'])
+            ->when($chip !== 'inactivos', fn ($q) => $q->where('is_active', true))
+            ->when($chip === 'inactivos', fn ($q) => $q->where('is_active', false))
+            ->get()->all();
+
+        $search = trim((string) $request->query('search', ''));
+        $fuzzy = false;
+        if ($search !== '') {
+            [$products, $fuzzy] = $this->fuzzySearch->search(
+                $products,
+                $search,
+                fn (CatalogProduct $p): string => "{$p->reference} {$p->name} {$p->provider?->name}",
+            );
+        }
+
+        $productIds = array_map(fn (CatalogProduct $p): int => $p->id, $products);
+        $committedMap = $this->commitments->committedMap($productIds);
+        $porIngresarMap = $this->inventoryKpis->porIngresarMap($productIds);
+        $enCaminoMap = $this->inventoryKpis->enCaminoMap($productIds);
+        $arrivalMap = $this->arrivalConfirmation->bulkPendingSummary($productIds);
+        $warehouseCounts = $this->warehouseCounts($productIds);
+
+        // REQ-350 — chips rápidos, combinables con el resto de filtros (RN1).
+        if ($chip === 'por_ingresar') {
+            $products = array_values(array_filter(
+                $products,
+                fn (CatalogProduct $p): bool => ($porIngresarMap[$p->id] ?? 0) > 0,
+            ));
+        } elseif ($chip === 'en_atencion') {
+            // REQ-350/SCRUM-420 — mismo criterio ALLOWLIST del KPI "En atención" (REQ-346 RN1,
+            // ver docblock de `BodegaInventoryKpiService::isInAttentionBodega()`), NO el
+            // blocklist de `InventoryKpiService::isInAttention()` (Compras/REQ-169).
+            $products = array_values(array_filter(
+                $products,
+                fn (CatalogProduct $p): bool => $this->bodegaKpis->isInAttentionBodega($p, $committedMap[$p->id] ?? 0),
+            ));
+        } elseif ($chip === 'rotacion') {
+            // REQ-362 RN1 (SCRUM-432) — deep-link desde "Mayor rotación" de Home. Decisión de Luis
+            // 2026-07-23 (Pre-QA bloqueante): reusa el campo `rotation` que ESTA pantalla ya
+            // expone/filtra (`rotation=alta`), no el top-N por `InventoryMovement` de
+            // `BodegaHomeService::mayorRotacion()` — son 2 conceptos parecidos pero no forzados a
+            // coincidir 1:1; ese cálculo queda exclusivo del panel de Home.
+            $products = array_values(array_filter(
+                $products,
+                fn (CatalogProduct $p): bool => $p->rotation === CatalogProduct::ROTATION_ALTA,
+            ));
+        } elseif ($chip === 'criticos') {
+            // REQ-362 RN1 (SCRUM-432) — deep-link desde "Artículos críticos" de Home. Misma
+            // decisión: reusa `OrderCommitmentService::committedMap()` (el "por servir" que ESTA
+            // pantalla ya usa para su propia columna, ver docblock de la clase), NO
+            // `InventoryKpiService::porServirMap()` que usa `BodegaHomeService::articulosCriticos()`
+            // — evita que el mismo chip mezcle 2 definiciones de compromiso dentro de una sola
+            // pantalla.
+            $products = array_values(array_filter(
+                $products,
+                fn (CatalogProduct $p): bool => in_array(
+                    $this->inventoryKpis->stockState($p, $committedMap[$p->id] ?? 0),
+                    [InventoryKpiService::STOCK_BAJO_STOCK, InventoryKpiService::STOCK_SIN_STOCK],
+                    true,
+                ),
+            ));
+        }
+
+        // REQ-349 — filtros combinables: estado, rotación, proveedor, marca, categoría (familia).
+        $estado = $request->query('estado');
+        if (is_string($estado) && $estado !== '' && $estado !== 'todos') {
+            $products = array_values(array_filter(
+                $products,
+                fn (CatalogProduct $p): bool => $this->inventoryKpis->stockState($p, $committedMap[$p->id] ?? 0) === $estado,
+            ));
+        }
+
+        $rotation = $request->query('rotation');
+        if (is_string($rotation) && $rotation !== '') {
+            $products = array_values(array_filter($products, fn (CatalogProduct $p): bool => $p->rotation === $rotation));
+        }
+
+        $providerId = $request->query('provider_id');
+        if (is_string($providerId) && $providerId !== '') {
+            $products = array_values(array_filter($products, fn (CatalogProduct $p): bool => (int) $p->provider_id === (int) $providerId));
+        }
+
+        $brand = $request->query('brand');
+        if (is_string($brand) && $brand !== '') {
+            $products = array_values(array_filter($products, fn (CatalogProduct $p): bool => strcasecmp((string) $p->brand, $brand) === 0));
+        }
+
+        // "Categoría" (REQ-349/351) = `CatalogProductFamily` — mismo concepto que `family_id`/
+        // `family_name` ya usado por Compras (InventoryController::format()), la etiqueta de
+        // negocio del Excel/Jira es "Categoría" pero el dato es la misma tabla.
+        $familyId = $request->query('family_id');
+        if (is_string($familyId) && $familyId !== '') {
+            $products = array_values(array_filter(
+                $products,
+                fn (CatalogProduct $p): bool => $p->families->pluck('id')->contains((int) $familyId),
+            ));
+        }
+
+        // REQ-349 RN2 — filtrar por bodega muestra SOLO productos con stock registrado en ESA bodega.
+        //
+        // SCRUM-361 (rebote QA 2026-08-20/21) — este filtro solo decidía QUÉ FILAS aparecían; la
+        // columna "Disponible" seguía viniendo de `format()` como `stock_quantity` (total del
+        // producto en TODAS las bodegas) menos comprometido GLOBAL, nunca de la cantidad real en
+        // la bodega filtrada. Con eso, filtrar por "Reserva Servicios" y comparar contra Servicios
+        // → Insumos (que sí lee `product_warehouse_stock` para esa bodega puntual, ver
+        // `InsumoService::list()`) daba dos números distintos para el mismo producto+ubicación
+        // (8 vs 10 en el caso real reportado) — violación directa de RN5 ("misma ubicación, mismo
+        // número"), no una corrupción de datos: los datos siempre fueron correctos, el cálculo
+        // mostrado no correspondía a la ubicación que el filtro decía estar mostrando.
+        // Fix: cuando hay `warehouse_id`, `$warehouseScopedQtyMap` lleva la cantidad real de ESA
+        // bodega (mismo query que ya usa `InsumoService::list()` para Reserva Servicios, sin
+        // ajuste de comprometido) y `format()` la usa para `disponible` en vez del total global.
+        $warehouseId = $request->query('warehouse_id');
+        $warehouseScopedQtyMap = [];
+        if (is_string($warehouseId) && $warehouseId !== '') {
+            $stockInWarehouse = ProductWarehouseStock::where('warehouse_id', (int) $warehouseId)
+                ->where('quantity', '>', 0)
+                ->pluck('quantity', 'catalog_product_id');
+            $warehouseScopedQtyMap = $stockInWarehouse->map(fn ($q) => (int) $q)->all();
+            $withStock = array_keys($warehouseScopedQtyMap);
+            $products = array_values(array_filter($products, fn (CatalogProduct $p): bool => in_array($p->id, $withStock, true)));
+        }
+
+        $pagination = Pagination::params($request, self::ALLOWED_SORTS, 'reference');
+        usort($products, function (CatalogProduct $a, CatalogProduct $b) use ($pagination): int {
+            /** @var string $field */
+            $field = $pagination['sort_by'];
+            $cmp = match ($field) {
+                'created_at' => $a->created_at <=> $b->created_at,
+                'stock_quantity' => $a->{$field} <=> $b->{$field},
+                default => strcasecmp((string) $a->{$field}, (string) $b->{$field}),
+            };
+
+            return $pagination['sort_dir'] === 'desc' ? -$cmp : $cmp;
+        });
+        $paginator = Pagination::ofArray($products, $pagination['per_page'], $pagination['page']);
+
+        return response()->json([
+            'fuzzy'     => $fuzzy,
+            'kpis'      => $this->bodegaKpis->kpis(),
+            // REQ-349 (SCRUM-419) — hallazgo de QA 2026-07-24: los filtros "Proveedor"/"Marca"
+            // aparecían vacíos porque no había ningún endpoint de catálogo accesible con solo
+            // `bodega.read` (`ProviderController` exige `compras.read`, que ningún rol de Bodega
+            // tiene). Facetas calculadas server-side sobre el universo COMPLETO de productos
+            // activos (no solo la página/filtro actual — mismo criterio que `kpis` arriba), para
+            // que el dropdown no se vacíe/encoja a medida que se aplican otros filtros.
+            'providers' => $this->distinctActiveProviders(),
+            'brands'    => $this->distinctActiveBrands(),
+            'data'      => array_map(
+                fn (CatalogProduct $p) => $this->format(
+                    $p,
+                    $committedMap[$p->id] ?? 0,
+                    $porIngresarMap[$p->id] ?? 0,
+                    $enCaminoMap[$p->id] ?? 0,
+                    $arrivalMap[$p->id] ?? ['pending_bodega_action' => false, 'awaiting_compras' => false, 'confirmed_quantity' => 0, 'confirmed_by_name' => null],
+                    $warehouseCounts[$p->id] ?? 0,
+                    $warehouseScopedQtyMap[$p->id] ?? null,
+                ),
+                $paginator->items(),
+            ),
+            'meta' => Pagination::meta($paginator),
+        ]);
+    }
+
+    /** REQ-361 — modal "Ver detalle", solo lectura, sin precio/costo. */
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $product = CatalogProduct::with(['families', 'provider'])->find($id);
+        if ($product === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $committed = $this->commitments->committedMap([$id])[$id] ?? 0;
+        $porIngresar = $this->inventoryKpis->porIngresarMap([$id])[$id] ?? 0;
+        $enCamino = $this->inventoryKpis->enCaminoMap([$id])[$id] ?? 0;
+        $arrival = $this->arrivalConfirmation->pendingSummary($id);
+        $warehouseCount = $this->warehouseCounts([$id])[$id] ?? 0;
+
+        return response()->json($this->format($product, $committed, $porIngresar, $enCamino, $arrival, $warehouseCount));
+    }
+
+    /** REQ-352/422 — desglose de stock por bodega física; solo bodegas con stock > 0. */
+    public function warehouseBreakdown(Request $request, int $id): JsonResponse
+    {
+        if (CatalogProduct::find($id) === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json(['data' => $this->warehouseRows($id)]);
+    }
+
+    /**
+     * REQ-353/423 — drill-down de "Por servir": a qué cliente/proyecto/pedido corresponde cada
+     * unidad comprometida. `[]` cuando no hay nada comprometido — el frontend muestra "sin
+     * compromisos activos" en vez de un modal vacío (Escenario 2).
+     */
+    public function commitmentDetail(Request $request, int $id): JsonResponse
+    {
+        if (CatalogProduct::find($id) === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json(['data' => $this->commitments->committedDetail($id)]);
+    }
+
+    /**
+     * REQ-354/424 — drill-down de "En camino": proveedor, cantidad y fecha estimada por orden de
+     * compra real. `[]` cuando no hay nada en camino (Escenario 2).
+     */
+    public function enCaminoDetail(Request $request, int $id): JsonResponse
+    {
+        if (CatalogProduct::find($id) === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json(['data' => $this->inventoryKpis->enCaminoDetail($id)]);
+    }
+
+    /**
+     * REQ-347/417 — toggle "Familias": listado agrupado, SIN valor total ni costo (a diferencia de
+     * `Compras\Http\Controllers\InventoryController::familyDetail()`, que sí expone `cost`/
+     * `total_value` — ver REQ-348 PERMISOS, "Bodega: solo consulta").
+     */
+    public function families(Request $request): JsonResponse
+    {
+        $families = CatalogProductFamily::where('is_active', true)
+            ->withCount(['products' => fn ($q) => $q->where('is_active', true)])
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'data' => $families->map(fn (CatalogProductFamily $f) => [
+                'id'            => $f->id,
+                'name'          => $f->name,
+                'description'   => $f->description,
+                'product_count' => $f->products_count,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * REQ-348/418 — detalle de una familia para Bodega. SIN `cost`/`total_value` y SIN el botón
+     * "Generar compra" (ese endpoint — `generateFamilyPurchase()` — simplemente no se expone bajo
+     * el prefijo `bodega/`, ver `routes/bodega.php`).
+     *
+     * Reescrito 2026-08-15 (rebote de Daniela Amaya 2026-08-12, RN3): antes devolvía una lista
+     * reducida (id/reference/description/stock_quantity/provider_id) sin ninguna de las columnas
+     * operativas de la vista "Productos" — el criterio de agrupación por Familia REAL
+     * (`CatalogProductFamily`, ya usado acá desde el principio, no por `category` como asumía el
+     * rebote) ya era correcto; el gap real es que el detalle nunca reusaba `format()`, el mismo
+     * método que ya arma las 14 columnas para `index()`/`show()`. Reusarlo acá es lo que da
+     * "exactamente la misma tabla" que RN3 exige, sin duplicar el cálculo de KPIs por producto.
+     */
+    public function familyDetail(Request $request, int $id): JsonResponse
+    {
+        $family = CatalogProductFamily::where('is_active', true)->find($id);
+        if ($family === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        /** @var \Illuminate\Support\Collection<int, CatalogProduct> $products */
+        $products = $family->products()->where('is_active', true)->with(['families', 'provider'])->orderBy('name')->get();
+
+        /** @var list<int> $productIds */
+        $productIds = array_values($products->map(fn (CatalogProduct $p): int => $p->id)->all());
+        $committedMap = $this->commitments->committedMap($productIds);
+        $porIngresarMap = $this->inventoryKpis->porIngresarMap($productIds);
+        $enCaminoMap = $this->inventoryKpis->enCaminoMap($productIds);
+        $arrivalMap = $this->arrivalConfirmation->bulkPendingSummary($productIds);
+        $warehouseCounts = $this->warehouseCounts($productIds);
+
+        return response()->json([
+            'id'             => $family->id,
+            'name'           => $family->name,
+            'description'    => $family->description,
+            'product_count'  => $products->count(),
+            'products'       => $products->map(fn (CatalogProduct $p) => $this->format(
+                $p,
+                $committedMap[$p->id] ?? 0,
+                $porIngresarMap[$p->id] ?? 0,
+                $enCaminoMap[$p->id] ?? 0,
+                $arrivalMap[$p->id] ?? ['pending_bodega_action' => false, 'awaiting_compras' => false, 'confirmed_quantity' => 0, 'confirmed_by_name' => null],
+                $warehouseCounts[$p->id] ?? 0,
+            ))->values(),
+        ]);
+    }
+
+    /**
+     * REQ-357/427 — "Confirmar llegada física" (Paso 1 de Bodega). NO factura al inventario (eso
+     * sigue siendo `GoodsReceiptController::confirm()`, exclusivo de Compras) — ver docblock de
+     * `ArrivalConfirmationService`.
+     */
+    public function confirmArrival(Request $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        if (CatalogProduct::find($id) === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'cantidad_entregada' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $result = $this->arrivalConfirmation->confirmArrival($id, (int) $validated['cantidad_entregada'], $user->id);
+
+        if ($result['status'] !== 200) {
+            return response()->json(['message' => $result['message'] ?? 'Error'], $result['status']);
+        }
+
+        return response()->json([
+            'confirmed_lines'    => $result['confirmed_lines'] ?? [],
+            'confirmed_quantity' => $result['confirmed_quantity'] ?? 0,
+        ]);
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    /**
+     * REQ-349 (SCRUM-419) — proveedores distintos entre los productos activos del catálogo. Deriva
+     * el dato del propio `CatalogProduct` (ya accesible con `bodega.read`) en vez de listar TODOS
+     * los proveedores de `Compras\Models\Provider` — evita requerir `compras.read` y evita ofrecer
+     * proveedores que ni siquiera tienen un producto asociado en este catálogo.
+     *
+     * Devuelve {id, name} (no solo el nombre, fix SCRUM-419/422 2026-07-28): el filtro real
+     * (`index()` línea ~145-147) exige `provider_id` (entero) porque un producto se asocia por FK,
+     * no por nombre — un selector que solo tuviera el nombre no tenía forma de armar ese id.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    private function distinctActiveProviders(): array
+    {
+        $providerIds = CatalogProduct::where('is_active', true)
+            ->whereNotNull('provider_id')
+            ->distinct()
+            ->pluck('provider_id');
+
+        if ($providerIds->isEmpty()) {
+            return [];
+        }
+
+        return array_values(
+            Provider::whereIn('id', $providerIds)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (Provider $p): array => ['id' => $p->id, 'name' => $p->name])
+                ->all(),
+        );
+    }
+
+    /** @return list<string> */
+    private function distinctActiveBrands(): array
+    {
+        /** @var list<string> $brands */
+        $brands = CatalogProduct::where('is_active', true)
+            ->whereNotNull('brand')
+            ->where('brand', '!=', '')
+            ->distinct()
+            ->orderBy('brand')
+            ->pluck('brand')
+            ->values()
+            ->all();
+
+        return $brands;
+    }
+
+    /** @return list<array{warehouse_id: int, name: string|null, quantity: int}> */
+    private function warehouseRows(int $productId): array
+    {
+        $rows = ProductWarehouseStock::with('warehouse')
+            ->where('catalog_product_id', $productId)
+            ->where('quantity', '>', 0)
+            ->get();
+
+        return array_values($rows->map(fn (ProductWarehouseStock $r) => [
+            'warehouse_id' => $r->warehouse_id,
+            'name'         => $r->warehouse?->name,
+            'quantity'     => $r->quantity,
+        ])->values()->all());
+    }
+
+    /**
+     * @param list<int> $productIds
+     * @return array<int, int> catalog_product_id => cantidad de bodegas distintas con stock > 0
+     */
+    private function warehouseCounts(array $productIds): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        return ProductWarehouseStock::whereIn('catalog_product_id', $productIds)
+            ->where('quantity', '>', 0)
+            ->get()
+            ->groupBy('catalog_product_id')
+            ->map(fn ($rows) => $rows->count())
+            ->all();
+    }
+
+    /**
+     * @param array{pending_bodega_action: bool, awaiting_compras: bool, confirmed_quantity: int, confirmed_by_name: string|null} $arrival
+     * @return array<string, mixed>
+     */
+    private function format(
+        CatalogProduct $product,
+        int $committed,
+        int $porIngresar,
+        int $enCamino,
+        array $arrival,
+        int $warehouseCount,
+        ?int $warehouseScopedQty = null,
+    ): array {
+        // REQ-351 RN1/RN2, Escenario 1 — "Disponible"/"Stock Total"/"Estado" de esta pantalla usan
+        // el compromiso a PEDIDOS de Bodega (`$committed`), no el de Ventas & Diseño.
+        //
+        // SCRUM-361 — cuando la vista está filtrada por `warehouse_id` ($warehouseScopedQty !==
+        // null), "Disponible" pasa a ser la cantidad real en ESA bodega puntual (misma fuente,
+        // `product_warehouse_stock`, sin ajuste de comprometido — mismo criterio exacto que
+        // `InsumoService::list()` usa para "Reserva Servicios"), para que ambos módulos lean
+        // siempre el mismo número en la misma ubicación (RN5 de REQ-291). Sin filtro de bodega,
+        // sigue siendo el total del producto en todas las ubicaciones menos comprometido, como
+        // siempre fue.
+        $disponible = $warehouseScopedQty ?? (($product->stock_quantity ?? 0) - $committed);
+        $estado = $this->inventoryKpis->stockState($product, $committed);
+        $family = $product->relationLoaded('families') ? $product->families->first() : null;
+
+        return [
+            'id'                  => $product->id,
+            'reference'           => $product->reference,
+            // REQ-361 — expuesto también en el listado (no solo en `show()`), para que
+            // `ProductDetailModal` (frontend) lo arme con los datos que YA trae la fila de la
+            // tabla, sin necesitar un fetch aparte por producto.
+            'factory_reference'   => $product->factory_reference,
+            'barcode'             => $product->barcode,
+            'name'                => $product->name,
+            'description'         => $product->description,
+            'category'            => $product->category,
+            'brand'               => $product->brand,
+            'photo_url'           => $product->photo_url,
+            'stock_quantity'      => $product->stock_quantity,
+            'stock_total'         => $disponible + $committed,
+            'por_servir'          => $committed,
+            'disponible'          => $disponible,
+            'por_ingresar'        => $porIngresar,
+            'en_camino'           => $enCamino,
+            'reorder_point'       => $product->reorder_point,
+            'estado'              => $estado,
+            'rotation'            => $product->rotation,
+            'provider_id'         => $product->provider_id,
+            'provider_name'       => $product->provider?->name,
+            'family_id'           => $family?->id,
+            'family_name'         => $family?->name,
+            'is_active'           => $product->is_active,
+            // SCRUM-425 (REQ-355, RN1) — ficha técnica de solo lectura, mismo campo/shape que
+            // `Compras\Http\Controllers\InventoryController::format()` (misma columna JSONB de
+            // `CatalogProduct`), para que `TechnicalSpecModal.tsx` (compartido entre Compras y
+            // Bodega) lo reciba sin cambios. `null` para productos creados antes de SCRUM-426 —
+            // el frontend muestra el estado "no disponible" en ese caso.
+            'technical_spec'      => $product->technical_spec,
+            'warehouse_count'     => $warehouseCount,
+            'arrival_confirmation' => [
+                // REQ-427 RN2 — el frontend muestra el botón "Confirmar llegada física" solo
+                // cuando `pending_bodega_action` es true, y la nota de espera cuando
+                // `awaiting_compras` es true (ambos pueden ser true a la vez si un reparto parcial
+                // dejó una línea sin tocar — ver `ArrivalConfirmationService::confirmArrival()`).
+                'pending_bodega_action' => $arrival['pending_bodega_action'],
+                'awaiting_compras'      => $arrival['awaiting_compras'],
+                // Rebote REQ-427 (Daniela Amaya 2026-08-13) — la nota de espera debe mostrar
+                // cantidad + quién confirmó, no un genérico "esperando a Compras".
+                'confirmed_quantity'    => $arrival['confirmed_quantity'],
+                'confirmed_by_name'     => $arrival['confirmed_by_name'],
+            ],
+        ];
+    }
+
+    private function resolveUser(Request $request): ?User
+    {
+        /** @var array{sub?: int}|null $payload */
+        $payload = $request->attributes->get('jwt');
+
+        if ($payload === null || ! isset($payload['sub'])) {
+            return null;
+        }
+
+        return User::find((int) $payload['sub']);
+    }
+}

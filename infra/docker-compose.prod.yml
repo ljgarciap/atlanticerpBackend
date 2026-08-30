@@ -1,0 +1,122 @@
+# Docker Compose — entorno Producción (EC2 dedicado: crm-illumination-prod)
+#
+# Mismo patrón que infra/docker-compose.qa.yml: repo ya clonado en el host EC2
+# (/var/www/backend), build de "laravel"/"horizon" desde ese checkout, frontend
+# servido desde una ruta fija del host (/var/www/static) y restart: unless-stopped.
+#
+# Diferencia relevante respecto a QA: este compose corre 24/7 (sin EventBridge
+# de auto-stop, que solo aplica a QA — ver docs/aws-ec2-setup-walkthrough.md
+# Paso 19). El resto del stack de contenedores es idéntico a QA para minimizar
+# divergencias entre entornos.
+#
+# postgres/redis siguen sin publicar puertos al host: solo acceso por red
+# interna del compose. Si en el futuro se necesita acceso externo directo
+# (ej. herramientas de administración), publicar el puerto explícitamente
+# y restringir por Security Group de EC2 (nunca 0.0.0.0/0).
+
+# Fase 0 — propuesta de logs/backups aprobada 2026-08-20 (ver atlanticerp/CLAUDE.md § Infraestructura
+# AWS, memory/project_propuesta_logs_backups_aprobada_20260820.md): límite de tamaño de logs por
+# contenedor, para eliminar el riesgo de disco lleno por acumulación (driver json-file de Docker
+# no tiene límite por defecto).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /data/postgres/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  laravel:
+    build:
+      context: ./php
+    restart: unless-stopped
+    logging: *default-logging
+    working_dir: /var/www/html
+    command: php-fpm
+    env_file:
+      - ../.env
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan --version > /dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
+
+  horizon:
+    build:
+      context: ./php
+    restart: unless-stopped
+    logging: *default-logging
+    working_dir: /var/www/html
+    command: php artisan horizon
+    env_file:
+      - ../.env
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    logging: *default-logging
+    # Startup delegado a entrypoint.sh (montado abajo) para evitar que
+    # docker-compose interpole variables de shell del script.
+    command: ["/entrypoint.sh"]
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - ../.env
+    volumes:
+      - ./nginx/entrypoint.sh:/entrypoint.sh:ro
+      - ./nginx/default-ssl.conf.template:/etc/nginx/conf.d/ssl.conf.template:ro
+      - ./nginx/default-http.conf.template:/etc/nginx/conf.d/http.conf.template:ro
+      - ../:/var/www/html:ro
+      - /var/www/static:/var/www/frontend:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Epic 11 — Seguridad Agéntica: copia del access log como archivo real en el host,
+      # para que CrowdSec (corre nativo en el host, no en Docker) pueda leerlo. access.log
+      # sigue yendo a stdout también (docker logs), esto es un log_format adicional.
+      - /var/log/nginx-crowdsec:/var/log/nginx-crowdsec
+    depends_on:
+      - laravel

@@ -1,0 +1,86 @@
+# Fase 0 — propuesta de logs/backups aprobada 2026-08-20 (ver atlanticerp/CLAUDE.md § Infraestructura
+# AWS, memory/project_propuesta_logs_backups_aprobada_20260820.md): límite de tamaño de logs por
+# contenedor, para eliminar el riesgo de disco lleno por acumulación (driver json-file de Docker
+# no tiene límite por defecto).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    logging: *default-logging
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  laravel:
+    build:
+      context: ./php
+    logging: *default-logging
+    working_dir: /var/www/html
+    command: php-fpm
+    env_file:
+      - ../.env
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  horizon:
+    build:
+      context: ./php
+    logging: *default-logging
+    working_dir: /var/www/html
+    command: php artisan horizon
+    env_file:
+      - ../.env
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    logging: *default-logging
+    ports:
+      - "${NGINX_PORT:-8090}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../:/var/www/html:ro
+      - ../../atlanticerp-frontend/dist:/var/www/frontend:ro
+      - ./nginx-logs:/var/log/nginx-crowdsec
+    depends_on:
+      - laravel
+
+volumes:
+  postgres_data:

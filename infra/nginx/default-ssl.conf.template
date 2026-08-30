@@ -1,0 +1,94 @@
+# HTTP → HTTPS redirect
+server {
+    listen 80 default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+# HTTPS — sirve React estático + proxea /api/* a Laravel
+server {
+    listen 443 ssl default_server;
+    server_name ${NGINX_DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${NGINX_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${NGINX_DOMAIN}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    client_max_body_size 520M;
+
+    # Epic 11 — Seguridad Agéntica: copia del access log como archivo real (además del
+    # destino por defecto a stdout vía nginx.conf) para que CrowdSec, que corre nativo en
+    # el host EC2 y no en Docker, pueda leerlo directamente.
+    access_log /var/log/nginx-crowdsec/access.log main;
+
+    # Epic 11 — Seguridad Agéntica (ADR-005): ModSecurity + OWASP CRS. Arranca en
+    # DetectionOnly (default de modsecurity.conf del paquete) — no bloquea tráfico todavía.
+    modsecurity on;
+    modsecurity_rules_file /etc/nginx/modsec-main.conf;
+
+    # DNS interno de Docker: re-resuelve el hostname de laravel cada 10s.
+    # Evita 502 cuando el contenedor laravel se recrea y obtiene nueva IP.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $laravel_upstream laravel:9000;
+
+    root  /var/www/frontend;
+    index index.html;
+
+    location /api/ {
+        include fastcgi_params;
+        fastcgi_pass $laravel_upstream;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME     /index.php;
+        fastcgi_param REQUEST_URI     $request_uri;
+    }
+
+    location = /up {
+        include fastcgi_params;
+        fastcgi_pass $laravel_upstream;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME     /index.php;
+        fastcgi_param REQUEST_URI     $request_uri;
+    }
+
+    location /horizon {
+        include fastcgi_params;
+        fastcgi_pass $laravel_upstream;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME     /index.php;
+        fastcgi_param REQUEST_URI     $request_uri;
+    }
+
+    # Share links (SCRUM) — endpoint público sin autenticación, sin prefijo /api,
+    # tiene que llegar a Laravel y no caer en el catch-all de la SPA de más abajo.
+    location /public/ {
+        include fastcgi_params;
+        fastcgi_pass $laravel_upstream;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME     /index.php;
+        fastcgi_param REQUEST_URI     $request_uri;
+    }
+
+    location ~* \.(?:js|css)$ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        expires 0;
+    }
+
+    location = /version.json {
+        add_header Cache-Control "no-store";
+        add_header Pragma "no-cache";
+        expires 0;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

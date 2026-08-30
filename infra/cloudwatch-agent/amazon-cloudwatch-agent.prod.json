@@ -1,0 +1,41 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root"
+  },
+  "metrics": {
+    "namespace": "AtlanticERP",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "disk": {
+        "measurement": ["used_percent"],
+        "resources": ["/", "/data/postgres"],
+        "metrics_collection_interval": 300
+      },
+      "mem": {
+        "measurement": ["mem_used_percent"],
+        "metrics_collection_interval": 300
+      }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/www/backend/storage/logs/laravel.log",
+            "log_group_name": "/atlanticerp/prod",
+            "log_stream_name": "{instance_id}/laravel"
+          },
+          {
+            "file_path": "/var/log/nginx-crowdsec/access.log",
+            "log_group_name": "/atlanticerp/prod",
+            "log_stream_name": "{instance_id}/nginx-access"
+          }
+        ]
+      }
+    }
+  }
+}

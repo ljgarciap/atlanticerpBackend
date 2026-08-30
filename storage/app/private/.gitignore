@@ -1,0 +1,6 @@
+*
+!.gitignore
+# SCRUM-701 (REQ-621) — PDF de ejemplo real de Jira, servido tal cual por
+# CatalogController::exampleCatalogPdf(), asset estático versionado en el repo (no S3).
+!catalog-ejemplo
+!catalog-ejemplo/**

@@ -1,0 +1,461 @@
+# =============================================================================
+# AtlanticERP Backend — CI/CD
+#
+# CI:  PHPStan Level 8 + PHPUnit con Postgres real.
+#      Corre en todo push y en toda PR a cualquier rama.
+#
+# CD:  Deploy vía SSH al EC2 correspondiente.
+#      dev    → EC2_DEV_HOST  (dev.atlanticerp.ai)   — solo en push a `dev`
+#      test   → EC2_TEST_HOST (test.atlanticerp.ai)  — solo en push a `test`
+#      master → EC2_PROD_HOST (atlanticerp.ai)        — solo en push a `master`
+#
+# Secrets requeridos (GitHub → Settings → Secrets and variables → Actions):
+#   EC2_DEV_HOST    — IP del EC2 de dev   (dev.atlanticerp.ai)
+#   EC2_TEST_HOST   — IP del EC2 de test  (test.atlanticerp.ai)
+#   EC2_PROD_HOST   — IP del EC2 de prod  (atlanticerp.ai)
+#   EC2_SSH_KEY     — Clave privada SSH (PEM); el par público debe estar
+#                     en /home/ubuntu/.ssh/authorized_keys de cada EC2.
+#
+# GitHub Environments a configurar (Settings → Environments):
+#   dev   — sin protección (deploy automático en cada push a `dev`)
+#   test  — sin protección (deploy automático en cada push a `test`)
+#   prod  — añadir "Required reviewers: Luis" antes de activar
+# =============================================================================
+
+name: CI/CD Backend
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 1 — CI: PHPStan Level 8 + PHPUnit con Postgres real
+  # ─────────────────────────────────────────────────────────────────────────────
+  ci:
+    name: CI — PHPStan + PHPUnit
+    runs-on: ubuntu-22.04
+
+    # Postgres como servicio nativo de GHA: solo se levanta este contenedor,
+    # no los 5 del docker-compose, para acelerar el cold-start del runner.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: atlanticerp
+          POSTGRES_USER: atlanticerp
+          POSTGRES_PASSWORD: ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U atlanticerp -d atlanticerp"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      # shivammathur/setup-php instala extensiones nativas con una sola directiva
+      # sin necesitar apt-get manual; pcov es más liviano que Xdebug para medir coverage en CI.
+      - name: Configurar PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, pgsql, pcntl, zip, sodium, redis
+          coverage: pcov
+          ini-values: memory_limit=512M
+
+      - name: Cache dependencias Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Instalar dependencias Composer
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      # DB_HOST=127.0.0.1 porque el servicio Postgres está mapeado al loopback del
+      # runner, no al hostname interno de Docker.
+      # JWT_SECRET y TENANT_DEFAULT son obligatorios en el arranque de la app;
+      # FILESYSTEM_DISK=local evita intentos de conexión a S3 en CI.
+      - name: Preparar .env de testing
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=atlanticerp/' .env
+          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=atlanticerp/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=ci_password/' .env
+          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=pgsql/' .env
+          sed -i 's/^JWT_SECRET=.*/JWT_SECRET=ci-local-jwt-secret-not-for-production/' .env
+          sed -i 's/^FILESYSTEM_DISK=.*/FILESYSTEM_DISK=local/' .env
+
+      # Los schemas deben existir antes de migrate; sin ellos Laravel lanza
+      # "schema not found" al ejecutar la primera migration del módulo.
+      - name: Crear schemas PostgreSQL
+        run: |
+          PGPASSWORD=ci_password psql -h 127.0.0.1 -U atlanticerp -d atlanticerp \
+            -c "CREATE SCHEMA IF NOT EXISTS illuminations_auth;
+                CREATE SCHEMA IF NOT EXISTS illuminations_crm;
+                CREATE SCHEMA IF NOT EXISTS illuminations_installations;"
+
+      - name: Correr migrations
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: atlanticerp
+          DB_USERNAME: atlanticerp
+          DB_PASSWORD: ci_password
+          TENANT_DEFAULT: illuminations
+        run: php artisan migrate --force
+
+      # PHPStan corre ANTES de PHPUnit: retroalimentación estática rápida sin
+      # necesitar BD. Si falla aquí, no se ejecutan los tests.
+      #
+      # --memory-limit=1G explícito (agregado 2026-08-15, tras el push de las 4 entidades de
+      # Legacy — SCRUM-755/756/757/758): el `memory_limit=512M` de PHP configurado más arriba
+      # (paso "Configurar PHP 8.3") ya no alcanza para analizar el codebase actual (566 archivos),
+      # el runner de CI reventó con "Allowed memory size of 536870912 bytes exhausted" y bloqueó
+      # los 3 jobs de CD. Mismo criterio que ya usa cada comando local del proyecto
+      # (`infra/test.sh`/docblocks de Legacy, ver feedback_phpstan_memory_limit_parallel_worker.md
+      # en la memoria) — nunca correr PHPStan sin este flag explícito, el ini del proceso no
+      # alcanza en ninguno de los dos entornos.
+      - name: PHPStan Level 8 (análisis estático)
+        run: |
+          mkdir -p storage/phpstan
+          vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      # Las variables de entorno del step tienen precedencia sobre los valores del
+      # .env porque phpdotenv no sobreescribe vars ya presentes en el proceso.
+      - name: PHPUnit (tests con Postgres)
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: atlanticerp
+          DB_USERNAME: atlanticerp
+          DB_PASSWORD: ci_password
+          APP_ENV: testing
+          JWT_SECRET: ci-local-jwt-secret-not-for-production
+          TENANT_DEFAULT: illuminations
+          FILESYSTEM_DISK: local
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
+          BROADCAST_CONNECTION: 'null'
+        run: php artisan test --coverage-clover=coverage.xml
+
+      # Solo visibilidad por ahora (sin --min): fase 1 del tracking de coverage,
+      # ver SCRUM-50. El umbral se fija cuando haya un número base real.
+      - name: Subir reporte de coverage como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage.xml
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2 — CD dev: Deploy a dev.atlanticerp.ai (solo en push a `dev`)
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-dev:
+    name: CD — Deploy dev.atlanticerp.ai
+    needs: ci
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    concurrency:
+      group: backend-deploy-dev
+      cancel-in-progress: false
+    environment:
+      name: dev
+      url: https://dev.atlanticerp.ai
+
+    steps:
+      - name: Preparar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.EC2_DEV_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy en EC2 (dev)
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              ubuntu@"${{ secrets.EC2_DEV_HOST }}" bash -s << 'ENDSSH'
+            set -euo pipefail
+            cd /var/www/backend
+
+            echo "==> git checkout dev (forzar rama correcta, evitar drift)"
+            git fetch origin dev
+            git checkout dev
+            git reset --hard origin/dev
+
+            echo "==> composer install"
+            docker run --rm \
+              -v /var/www/backend:/app -w /app \
+              composer:latest install \
+                --no-dev --optimize-autoloader --no-interaction \
+                --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-gd
+
+            echo "==> fix ownership + permissions"
+            sudo chown -R ubuntu:ubuntu /var/www/backend
+            chmod -R 777 storage bootstrap/cache
+
+            echo "==> docker compose build + up"
+            docker compose -f infra/docker-compose.qa.yml up -d --build --remove-orphans
+
+            echo "==> wait for postgres"
+            until docker compose -f infra/docker-compose.qa.yml exec -T postgres \
+              pg_isready -U atlanticerp -d atlanticerp < /dev/null 2>/dev/null; do sleep 2; done
+
+            echo "==> wait for laravel"
+            until docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan --version < /dev/null > /dev/null 2>&1; do sleep 3; done
+
+            echo "==> config:clear (flush stale bootstrap cache)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan config:clear < /dev/null
+
+            echo "==> migrate (landlord)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan migrate --force < /dev/null
+
+            echo "==> sync tenant schemas (crea los que falten para modulos nuevos)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan tenant:sync-schemas < /dev/null
+
+            echo "==> migrate (tenant schemas)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan tenants:artisan "migrate --force --path=database/migrations/tenant" < /dev/null
+
+            echo "==> seed (tenant + usuarios)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan db:seed --force < /dev/null
+
+            echo "==> reload nginx"
+            docker compose -f infra/docker-compose.qa.yml exec -T nginx \
+              nginx -s reload < /dev/null || true
+
+            echo "==> horizon terminate"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan horizon:terminate < /dev/null || true
+
+            echo "==> Deploy dev completado."
+          ENDSSH
+
+      - name: Limpiar clave SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 3 — CD test: Deploy a test.atlanticerp.ai (solo en push a `test`)
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-test:
+    name: CD — Deploy test.atlanticerp.ai
+    needs: ci
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/test'
+    concurrency:
+      group: backend-deploy-test
+      cancel-in-progress: false
+    environment:
+      name: test
+      url: https://test.atlanticerp.ai
+
+    steps:
+      - name: Preparar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.EC2_TEST_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy en EC2 (test)
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              ubuntu@"${{ secrets.EC2_TEST_HOST }}" bash -s << 'ENDSSH'
+            set -euo pipefail
+            cd /var/www/backend
+
+            echo "==> git checkout test (forzar rama correcta, evitar drift)"
+            git fetch origin test
+            git checkout test
+            git reset --hard origin/test
+
+            echo "==> composer install"
+            docker run --rm \
+              -v /var/www/backend:/app -w /app \
+              composer:latest install \
+                --no-dev --optimize-autoloader --no-interaction \
+                --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-gd
+
+            echo "==> fix ownership + permissions"
+            sudo chown -R ubuntu:ubuntu /var/www/backend
+            chmod -R 777 storage bootstrap/cache
+
+            echo "==> docker compose build + up"
+            docker compose -f infra/docker-compose.qa.yml up -d --build --remove-orphans
+
+            echo "==> wait for postgres"
+            until docker compose -f infra/docker-compose.qa.yml exec -T postgres \
+              pg_isready -U atlanticerp -d atlanticerp < /dev/null 2>/dev/null; do sleep 2; done
+
+            echo "==> wait for laravel"
+            until docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan --version < /dev/null > /dev/null 2>&1; do sleep 3; done
+
+            echo "==> config:clear (flush stale bootstrap cache)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan config:clear < /dev/null
+
+            echo "==> migrate (landlord)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan migrate --force < /dev/null
+
+            echo "==> sync tenant schemas (crea los que falten para modulos nuevos)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan tenant:sync-schemas < /dev/null
+
+            echo "==> migrate (tenant schemas)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan tenants:artisan "migrate --force --path=database/migrations/tenant" < /dev/null
+
+            echo "==> seed (tenant + usuarios)"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan db:seed --force < /dev/null
+
+            echo "==> reload nginx"
+            docker compose -f infra/docker-compose.qa.yml exec -T nginx \
+              nginx -s reload < /dev/null || true
+
+            echo "==> horizon terminate"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan horizon:terminate < /dev/null || true
+
+            echo "==> Deploy test completado."
+          ENDSSH
+
+      - name: Limpiar clave SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 4 — CD prod: Deploy a atlanticerp.ai (solo en push a `master`)
+  # ─────────────────────────────────────────────────────────────────────────────
+  # IMPORTANTE: antes de activar deploys a prod, configurar el Environment `prod`
+  # en GitHub con "Required reviewers: Luis" para exigir aprobación manual.
+  deploy-prod:
+    name: CD — Deploy atlanticerp.ai (PRODUCCIÓN)
+    needs: ci
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    concurrency:
+      group: backend-deploy-prod
+      cancel-in-progress: false
+    environment:
+      name: prod
+      url: https://atlanticerp.ai
+
+    steps:
+      - name: Preparar clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.EC2_PROD_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy en EC2 (prod)
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              ubuntu@"${{ secrets.EC2_PROD_HOST }}" bash -s << 'ENDSSH'
+            set -euo pipefail
+            cd /var/www/backend
+
+            echo "==> git checkout master (forzar rama correcta, evitar drift)"
+            git fetch origin master
+            git checkout master
+            git reset --hard origin/master
+
+            echo "==> composer install"
+            docker run --rm \
+              -v /var/www/backend:/app -w /app \
+              composer:latest install \
+                --no-dev --optimize-autoloader --no-interaction \
+                --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-gd
+
+            echo "==> fix ownership + permissions"
+            sudo chown -R ubuntu:ubuntu /var/www/backend
+            chmod -R 777 storage bootstrap/cache
+
+            echo "==> docker compose build + up"
+            docker compose -f infra/docker-compose.prod.yml up -d --build --remove-orphans
+
+            echo "==> wait for postgres"
+            until docker compose -f infra/docker-compose.prod.yml exec -T postgres \
+              pg_isready -U atlanticerp -d atlanticerp < /dev/null 2>/dev/null; do sleep 2; done
+
+            echo "==> wait for laravel"
+            until docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+              php artisan --version < /dev/null > /dev/null 2>&1; do sleep 3; done
+
+            echo "==> config:clear (flush stale bootstrap cache)"
+            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+              php artisan config:clear < /dev/null
+
+            echo "==> migrate (landlord)"
+            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+              php artisan migrate --force < /dev/null
+
+            echo "==> sync tenant schemas (crea los que falten para modulos nuevos)"
+            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+              php artisan tenant:sync-schemas < /dev/null
+
+            echo "==> migrate (tenant schemas)"
+            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+              php artisan tenants:artisan "migrate --force --path=database/migrations/tenant" < /dev/null
+
+            echo "==> seed (tenant + usuarios)"
+            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+              php artisan db:seed --force < /dev/null
+
+            echo "==> reload nginx"
+            docker compose -f infra/docker-compose.prod.yml exec -T nginx \
+              nginx -s reload < /dev/null || true
+
+            echo "==> horizon terminate"
+            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+              php artisan horizon:terminate < /dev/null || true
+
+            echo "==> Deploy prod completado."
+          ENDSSH
+
+      - name: Limpiar clave SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
