@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Modules\Auth\Models\Department;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Auth\Models\RoleModuleVisibility;
+use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Models\SecurityLevelModulePermission;
 use App\Modules\Auth\Models\UserAdditionalRole;
 use App\Modules\Auth\Models\UserModuleMenuVisibility;
@@ -12,49 +14,54 @@ use App\Modules\Auth\Models\UserRole;
 use App\Modules\Auth\Services\UatVisibilityService;
 use App\Modules\Auth\Support\ModuleCatalog;
 use App\Shared\Multitenancy\Tenant;
+use Carbon\Carbon;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Modules\Auth\Models\Department;
-use App\Modules\Auth\Models\SecurityLevel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use RuntimeException;
 
 /**
- * @property int         $id
- * @property string      $first_name
- * @property string      $last_name
- * @property string      $email
- * @property string      $password_hash
+ * @property int $id
+ * @property string $first_name
+ * @property string $last_name
+ * @property string $email
+ * @property string $password_hash
  * @property string|null $phone
- * @property int|null             $department_id
- * @property int                  $security_level_id
- * @property int|null             $role_id
- * @property bool                 $approve_large_amounts
- * @property bool                 $manage_users
- * @property list<string>         $extra_permissions
- * @property string|null          $notes
+ * @property int|null $department_id
+ * @property int $security_level_id
+ * @property int|null $role_id
+ * @property bool $approve_large_amounts
+ * @property bool $manage_users
+ * @property list<string> $extra_permissions
+ * @property string|null $notes
  * @property array<string, mixed> $preferences
- * @property bool                 $is_active
- * @property bool                 $mfa_enabled
- * @property \Carbon\Carbon|null  $security_blocked_at
- * @property Department|null      $department
- * @property SecurityLevel|null   $securityLevel
- * @property Role|null            $role
+ * @property bool $is_active
+ * @property bool $mfa_enabled
+ * @property Carbon|null $security_blocked_at
+ * @property Department|null $department
+ * @property SecurityLevel|null $securityLevel
+ * @property Role|null $role
  */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    public const ROLE_SUPERADMIN  = 'superadmin';
-    public const ROLE_MANAGEMENT  = 'management';
-    public const ROLE_DESIGNER    = 'designer';
-    public const ROLE_SUPERVISOR  = 'supervisor';
+    public const ROLE_SUPERADMIN = 'superadmin';
+
+    public const ROLE_MANAGEMENT = 'management';
+
+    public const ROLE_DESIGNER = 'designer';
+
+    public const ROLE_SUPERVISOR = 'supervisor';
+
     public const ROLE_ELECTRICIAN = 'electrician';
-    public const ROLE_GUEST       = 'guest';
+
+    public const ROLE_GUEST = 'guest';
 
     /** @var list<string> */
     protected $fillable = [
@@ -85,14 +92,14 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'is_active'             => 'boolean',
-            'mfa_enabled'           => 'boolean',
-            'password_hash'         => 'hashed',
-            'preferences'           => 'array',
-            'extra_permissions'     => 'array',
-            'security_blocked_at'   => 'datetime',
+            'is_active' => 'boolean',
+            'mfa_enabled' => 'boolean',
+            'password_hash' => 'hashed',
+            'preferences' => 'array',
+            'extra_permissions' => 'array',
+            'security_blocked_at' => 'datetime',
             'approve_large_amounts' => 'boolean',
-            'manage_users'          => 'boolean',
+            'manage_users' => 'boolean',
         ];
     }
 
@@ -161,6 +168,18 @@ class User extends Authenticatable
      * mayoría de usuarios tiene exactamente 1 elemento acá — multi-rol es la excepción, no la
      * norma (por eso el gate de superadmin al escribir, ver `UserService`).
      *
+     * Fallback a rol legado (KAN-11, 2026-08-31): un usuario sin `role_id` — el camino real de
+     * `UserService::approve()` (registro público), que todavía solo asigna `user_roles`, nunca
+     * `role_id` (Fase E del ADR sigue pendiente) — antes de la Fase 3 de la auditoría de permisos
+     * seguía teniendo acceso vía el `role:` legado de las rutas (`hasRole()`); al migrar esas
+     * rutas a `permission:` (que se resuelve por acá), esos usuarios perdían el acceso en silencio.
+     * Si no hay `role_id`/roles adicionales, se resuelve el(los) rol(es) legado(s)
+     * (`user_roles.role`, strings) contra `roles.key` — solo 'superadmin'/'management' calzan hoy
+     * (el resto de `User::ROLE_*` son fixtures de demo de `AuthUserSeeder`, sin equivalente real
+     * en el catálogo de 14 roles nuevo, así que no matchean nada y siguen sin acceso, sin cambio
+     * de comportamiento para ellos). No toca `UserService::approve()` ni la tabla `user_roles` —
+     * decisión explícita de Luis de acotar el fix a este método, ver KAN-11.
+     *
      * @return list<int>
      */
     public function roleIds(): array
@@ -170,21 +189,33 @@ class User extends Authenticatable
         // `findOrFail()` cargan `additionalRoles`) en vez de disparar una query nueva cada vez que
         // se llama — effectivePermissionsV2()/canViewTeamV2()/modulesPayload() la invocan todas.
         $additional = $this->additionalRoles->pluck('role_id')->all();
+        $ids = array_values(array_unique(array_merge($ids, $additional)));
 
-        return array_values(array_unique(array_merge($ids, $additional)));
+        if ($ids !== []) {
+            return $ids;
+        }
+
+        $legacyRoles = $this->roles();
+        if ($legacyRoles === []) {
+            return [];
+        }
+
+        return array_values(Role::whereIn('key', $legacyRoles)->pluck('id')->map(fn (mixed $id) => (int) $id)->all());
     }
 
     /** @return list<string> */
     public function effectivePermissions(): array
     {
         $securityLevel = $this->securityLevel;
-        $levelPerms    = $securityLevel !== null ? $securityLevel->permissions : [];
+        $levelPerms = $securityLevel !== null ? $securityLevel->permissions : [];
+
         return array_values(array_unique(array_merge($levelPerms, $this->extra_permissions ?? [])));
     }
 
     public function hasPermission(string $permission): bool
     {
         $effective = $this->effectivePermissions();
+
         return in_array($permission, $effective, true)
             || in_array('superadmin.all', $effective, true);
     }
@@ -226,7 +257,7 @@ class User extends Authenticatable
             return $this->plainEscapeHatchPermissions();
         }
 
-        /** @var \Illuminate\Support\Collection<int, Role> $roles */
+        /** @var Collection<int, Role> $roles */
         $roles = Role::whereIn('id', $roleIds)->get();
 
         if ($roles->contains(fn (Role $r) => $r->is_superadmin)) {
@@ -235,7 +266,7 @@ class User extends Authenticatable
 
         $perms = [];
 
-        /** @var \Illuminate\Support\Collection<int, RoleModuleVisibility> $visibility */
+        /** @var Collection<int, RoleModuleVisibility> $visibility */
         $visibility = RoleModuleVisibility::whereIn('role_id', $roleIds)
             ->where('can_view', '>=', RoleModuleVisibility::VIEW_FULL)
             ->get();
@@ -267,7 +298,7 @@ class User extends Authenticatable
         // usuario individual no está soportado todavía (solo a nivel de rol) — un
         // override explícito siempre gana en FULL o NONE, nunca dejaría un módulo
         // en la lista de readonly.
-        /** @var \Illuminate\Support\Collection<int, UserModuleVisibility> $moduleOverrides */
+        /** @var Collection<int, UserModuleVisibility> $moduleOverrides */
         $moduleOverrides = UserModuleVisibility::where('user_id', $this->id)->get();
         foreach ($moduleOverrides as $override) {
             if ($override->can_view >= RoleModuleVisibility::VIEW_FULL) {
@@ -295,7 +326,7 @@ class User extends Authenticatable
         // de lo que diga security_level_module_permissions — el nombre "readonly" es la garantía.
         $viewableModules = array_keys($viewByModule);
 
-        /** @var \Illuminate\Support\Collection<int, SecurityLevelModulePermission> $capabilities */
+        /** @var Collection<int, SecurityLevelModulePermission> $capabilities */
         $capabilities = SecurityLevelModulePermission::where('security_level_id', $this->security_level_id)->get();
 
         foreach ($capabilities as $capability) {
@@ -393,12 +424,13 @@ class User extends Authenticatable
             foreach (ModuleCatalog::keys() as $module) {
                 $payload[$module] = ['view' => true, 'view_team' => true, 'edit' => true, 'approve' => true];
             }
+
             return $payload;
         }
 
         // Decisión 1 revisada (2026-07-09) — unión sobre todos los roles del usuario: "view" y
         // "view_team" quedan en true si CUALQUIER rol lo otorga (OR, no el último que se procese).
-        /** @var \Illuminate\Support\Collection<int, RoleModuleVisibility> $visibility */
+        /** @var Collection<int, RoleModuleVisibility> $visibility */
         $visibility = RoleModuleVisibility::whereIn('role_id', $roleIds)
             ->where('can_view', '>=', RoleModuleVisibility::VIEW_FULL)
             ->get();
@@ -407,7 +439,7 @@ class User extends Authenticatable
             if (! array_key_exists($row->module, $payload)) {
                 continue;
             }
-            $payload[$row->module]['view']      = true;
+            $payload[$row->module]['view'] = true;
             $payload[$row->module]['view_team'] = $payload[$row->module]['view_team'] || $row->can_view_team;
         }
 
@@ -442,12 +474,12 @@ class User extends Authenticatable
         // cualquier módulo con view=false.
         foreach (app(UatVisibilityService::class)->hiddenModules() as $hiddenModule) {
             if (array_key_exists($hiddenModule, $payload)) {
-                $payload[$hiddenModule]['view']      = false;
+                $payload[$hiddenModule]['view'] = false;
                 $payload[$hiddenModule]['view_team'] = false;
             }
         }
 
-        /** @var \Illuminate\Support\Collection<int, SecurityLevelModulePermission> $capabilities */
+        /** @var Collection<int, SecurityLevelModulePermission> $capabilities */
         $capabilities = SecurityLevelModulePermission::where('security_level_id', $this->security_level_id)->get();
 
         foreach ($capabilities as $capability) {
@@ -458,7 +490,7 @@ class User extends Authenticatable
             if (in_array($capability->module, $readonlyModules, true)) {
                 continue;
             }
-            $payload[$capability->module]['edit']    = $capability->can_edit;
+            $payload[$capability->module]['edit'] = $capability->can_edit;
             $payload[$capability->module]['approve'] = $capability->can_approve;
         }
 
@@ -471,18 +503,18 @@ class User extends Authenticatable
      * reusarlo tal cual desde effectivePermissionsV2() (mismo eje view/view_team,
      * forma de array distinta).
      *
-     * @param array<string, array{view: bool, view_team: bool, edit: bool, approve: bool}> $payload
+     * @param  array<string, array{view: bool, view_team: bool, edit: bool, approve: bool}>  $payload
      */
     private function applyModuleVisibilityOverrides(array &$payload): void
     {
-        /** @var \Illuminate\Support\Collection<int, UserModuleVisibility> $overrides */
+        /** @var Collection<int, UserModuleVisibility> $overrides */
         $overrides = UserModuleVisibility::where('user_id', $this->id)->get();
 
         foreach ($overrides as $override) {
             if (! array_key_exists($override->module, $payload)) {
                 continue;
             }
-            $payload[$override->module]['view']      = $override->can_view >= RoleModuleVisibility::VIEW_FULL;
+            $payload[$override->module]['view'] = $override->can_view >= RoleModuleVisibility::VIEW_FULL;
             $payload[$override->module]['view_team'] = $payload[$override->module]['view'] && $override->can_view_team;
         }
     }
@@ -498,7 +530,7 @@ class User extends Authenticatable
      */
     public function menuVisibilityPayload(): array
     {
-        /** @var \Illuminate\Support\Collection<int, UserModuleMenuVisibility> $overrides */
+        /** @var Collection<int, UserModuleMenuVisibility> $overrides */
         $overrides = UserModuleMenuVisibility::where('user_id', $this->id)->where('visible', false)->get();
 
         $payload = [];
@@ -548,6 +580,7 @@ class User extends Authenticatable
     private function isSuperadminForVisibility(): bool
     {
         $roleIds = $this->roleIds();
+
         return $roleIds !== [] && Role::whereIn('id', $roleIds)->where('is_superadmin', true)->exists();
     }
 

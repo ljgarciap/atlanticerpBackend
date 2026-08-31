@@ -10,6 +10,7 @@ use App\Modules\Auth\Models\RoleModuleVisibility;
 use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Models\SecurityLevelModulePermission;
 use App\Modules\Auth\Models\UserAdditionalRole;
+use App\Modules\Auth\Models\UserRole;
 use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
@@ -32,7 +33,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     private function makeUser(?int $roleId, int $securityLevelId, array $extraPermissions = []): User
     {
         return User::create([
-            'first_name' => 'Test', 'last_name' => 'User', 'email' => uniqid('v2-test-') . '@atlantic.test',
+            'first_name' => 'Test', 'last_name' => 'User', 'email' => uniqid('v2-test-').'@atlantic.test',
             'password_hash' => 'x', 'security_level_id' => $securityLevelId, 'role_id' => $roleId,
             'extra_permissions' => $extraPermissions,
         ]);
@@ -56,6 +57,46 @@ class EffectivePermissionsV2Test extends FeatureTestCase
 
         $this->assertContains('ventas_diseno.write', $perms);
         $this->assertTrue(array_intersect(['ventas_diseno.view', 'ventas_diseno.edit', 'ventas_diseno.approve'], $perms) === []);
+    }
+
+    /**
+     * KAN-11 — fallback de `roleIds()` a rol legado: un usuario sin `role_id` pero con
+     * `user_roles.role = 'management'` (el camino real de `UserService::approve()`, que todavía
+     * no asigna `role_id`) debe resolver al mismo `role_id` que el rol `management` real —
+     * 'management'/'superadmin' son los únicos 2 roles legados con `key` idéntica en el catálogo
+     * de roles nuevo.
+     */
+    public function test_usuario_sin_role_id_con_rol_legado_management_resuelve_al_role_id_real(): void
+    {
+        $level = SecurityLevel::where('level', 9)->firstOrFail();
+        $user = $this->makeUser(null, $level->id);
+        UserRole::create(['user_id' => $user->id, 'role' => 'management']);
+        $user = $user->fresh();
+
+        $management = Role::where('key', 'management')->firstOrFail();
+        $this->assertSame([$management->id], $user->roleIds());
+        $this->assertTrue($user->canViewTeamV2('ventas_diseno'));
+        $this->assertContains('ventas_diseno.view_team', $user->effectivePermissionsV2());
+    }
+
+    /**
+     * Contraparte: un rol legado sin equivalente en el catálogo nuevo (designer/supervisor/
+     * electrician/guest — fixtures de demo de AuthUserSeeder, nunca un rol real de negocio) no
+     * debe resolver a nada — mismo comportamiento (escape hatch plano únicamente) que antes del
+     * fallback, sin over-grant.
+     */
+    public function test_usuario_sin_role_id_con_rol_legado_sin_equivalente_no_resuelve_nada(): void
+    {
+        $level = SecurityLevel::where('level', 3)->firstOrFail();
+        $user = $this->makeUser(null, $level->id, ['ventas_diseno.write']);
+        UserRole::create(['user_id' => $user->id, 'role' => 'designer']);
+        $user = $user->fresh();
+
+        $this->assertSame([], $user->roleIds());
+        $this->assertFalse($user->canViewTeamV2('ventas_diseno'));
+        $perms = $user->effectivePermissionsV2();
+        $this->assertContains('ventas_diseno.write', $perms); // escape hatch plano, sin cambios
+        $this->assertTrue(array_intersect(['ventas_diseno.view', 'ventas_diseno.edit', 'ventas_diseno.approve', 'ventas_diseno.view_team'], $perms) === []);
     }
 
     public function test_rol_con_vista_de_equipo_mas_nivel_con_editar_y_aprobar(): void
@@ -147,7 +188,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
         // SCRUM-771 — si CUALQUIER rol del usuario ya da VIEW_FULL sobre un módulo, ese nivel
         // manda: nunca se degrada un módulo que algún rol ya volvió full a solo `.view`.
         $roleReadonly = Role::create(['key' => 'test_role_readonly_2', 'name' => 'Test Role Readonly 2', 'is_superadmin' => false, 'is_system' => false, 'is_active' => true]);
-        $roleFull     = Role::create(['key' => 'test_role_full_2', 'name' => 'Test Role Full 2', 'is_superadmin' => false, 'is_system' => false, 'is_active' => true]);
+        $roleFull = Role::create(['key' => 'test_role_full_2', 'name' => 'Test Role Full 2', 'is_superadmin' => false, 'is_system' => false, 'is_active' => true]);
         RoleModuleVisibility::create(['role_id' => $roleReadonly->id, 'module' => 'bodega', 'can_view' => RoleModuleVisibility::VIEW_READONLY, 'can_view_team' => false]);
         RoleModuleVisibility::create(['role_id' => $roleFull->id, 'module' => 'bodega', 'can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => false]);
 
@@ -165,7 +206,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     {
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = User::create([
-            'first_name' => 'Flags', 'last_name' => 'User', 'email' => uniqid('v2-flags-') . '@atlantic.test',
+            'first_name' => 'Flags', 'last_name' => 'User', 'email' => uniqid('v2-flags-').'@atlantic.test',
             'password_hash' => 'x', 'security_level_id' => $level->id, 'role_id' => null,
             'extra_permissions' => [], 'approve_large_amounts' => true, 'manage_users' => true,
         ]);
@@ -184,7 +225,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
         // ticket) no podia acceder a la administracion de usuarios pese a tener el flag.
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = User::create([
-            'first_name' => 'Manage', 'last_name' => 'Users', 'email' => uniqid('v2-manage-') . '@atlantic.test',
+            'first_name' => 'Manage', 'last_name' => 'Users', 'email' => uniqid('v2-manage-').'@atlantic.test',
             'password_hash' => 'x', 'security_level_id' => $level->id, 'role_id' => null,
             'extra_permissions' => [], 'manage_users' => true,
         ]);
@@ -196,7 +237,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     {
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = User::create([
-            'first_name' => 'No', 'last_name' => 'Manage', 'email' => uniqid('v2-nomanage-') . '@atlantic.test',
+            'first_name' => 'No', 'last_name' => 'Manage', 'email' => uniqid('v2-nomanage-').'@atlantic.test',
             'password_hash' => 'x', 'security_level_id' => $level->id, 'role_id' => null,
             'extra_permissions' => [], 'manage_users' => false,
         ]);
@@ -220,7 +261,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
 
         foreach ([5, 6, 7] as $levelNumber) {
             $level = SecurityLevel::where('level', $levelNumber)->firstOrFail();
-            $user  = $this->makeUser($role->id, $level->id);
+            $user = $this->makeUser($role->id, $level->id);
 
             $this->assertNotContains(
                 'security.users',
@@ -238,9 +279,9 @@ class EffectivePermissionsV2Test extends FeatureTestCase
      */
     public function test_nivel_9_admin_sigue_otorgando_security_levels_y_settings_global(): void
     {
-        $role  = Role::where('key', 'management')->firstOrFail();
+        $role = Role::where('key', 'management')->firstOrFail();
         $level = SecurityLevel::where('level', 9)->firstOrFail();
-        $user  = $this->makeUser($role->id, $level->id);
+        $user = $this->makeUser($role->id, $level->id);
 
         $perms = $user->effectivePermissionsV2();
         $this->assertContains('security.levels', $perms);
