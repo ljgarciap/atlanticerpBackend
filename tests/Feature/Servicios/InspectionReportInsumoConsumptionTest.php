@@ -20,7 +20,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class InspectionReportInsumoConsumptionTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
     protected function setUp(): void
     {
@@ -37,14 +37,14 @@ class InspectionReportInsumoConsumptionTest extends FeatureTestCase
     private function makeTicket(array $overrides = []): Ticket
     {
         return Ticket::create([
-            'numero'                   => 'INS-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'subtipo'                  => Ticket::SUBTIPO_INSPECTION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba — Grupo D parte 2',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_ON_SITE,
-            'quote_status'             => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
+            'numero' => 'INS-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'subtipo' => Ticket::SUBTIPO_INSPECTION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba — Grupo D parte 2',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_ON_SITE,
+            'quote_status' => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
             ...$overrides,
         ]);
@@ -59,8 +59,8 @@ class InspectionReportInsumoConsumptionTest extends FeatureTestCase
     {
         ProductWarehouseStock::create([
             'catalog_product_id' => $product->id,
-            'warehouse_id'       => $this->reservaWarehouseId(),
-            'quantity'           => $quantity,
+            'warehouse_id' => $this->reservaWarehouseId(),
+            'quantity' => $quantity,
         ]);
     }
 
@@ -70,7 +70,7 @@ class InspectionReportInsumoConsumptionTest extends FeatureTestCase
         $this->seedReservaStock($product, 10);
 
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", [
@@ -105,7 +105,7 @@ class InspectionReportInsumoConsumptionTest extends FeatureTestCase
     public function test_material_sin_catalog_product_id_nunca_afecta_inventario(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", [
@@ -126,7 +126,7 @@ class InspectionReportInsumoConsumptionTest extends FeatureTestCase
         $this->seedReservaStock($product, 20);
 
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", [
@@ -165,7 +165,7 @@ class InspectionReportInsumoConsumptionTest extends FeatureTestCase
         $this->seedReservaStock($product, 5);
 
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", [

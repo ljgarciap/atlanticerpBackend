@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SCRUM-122 (Daniela Amaya, 2026-08-02) — el directorio de Arquitectos era global
+ * SCRUM-122 (Gerencia Test, 2026-08-02) — el directorio de Arquitectos era global
  * (decisión confirmada el 2026-07-30); Daniela pidió que en cambio queden asociados
  * a Cliente Master/Subcliente igual que sales_projects (ver
  * 2026_07_13_100001_make_sub_client_id_nullable_on_ventas_diseno_sales_projects_table

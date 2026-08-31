@@ -13,7 +13,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * Fase 4 — Servicios, Batch 1 (REQ-216→221, REQ-249). Usuarios reales de Servicios (Aaron Leis/
- * lider_servicios, Carlos Vergara/tecnico_servicios, Miguel Castillo/garantias_servicios) y de
+ * lider_servicios, Tecnico Servicios Test/tecnico_servicios, Garantias Servicios Test/garantias_servicios) y de
  * Ventas & Diseño (vendedor_disenador) ya existen vía `BusinessRoleUserSeeder` en TODOS los
  * entornos incl. testing — password = el email (cast `hashed`, ver `User::casts()`). Los permisos
  * de módulo (`RoleModuleVisibility`/`SecurityLevelModulePermission`) ya vienen sembrados por las
@@ -21,15 +21,15 @@ use Tests\Feature\FeatureTestCase;
  */
 class TicketFlowTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
-    private const GARANTIAS_SERVICIOS = 'garantias@atlantic.com.pa';
+    private const GARANTIAS_SERVICIOS = 'garantiasservicios@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
-    private const VENDEDOR_DISENADOR = 'milena.e@grupolafayette.com';
+    private const VENDEDOR_DISENADOR = 'vendedordisenador@test.com';
 
     protected function setUp(): void
     {
@@ -47,7 +47,7 @@ class TicketFlowTest extends FeatureTestCase
     {
         $unique = uniqid();
         $master = MasterClient::create(['name' => "Cliente {$unique}"]);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
 
         return SalesProject::create(['sub_client_id' => $sub->id, 'name' => "Proyecto {$unique}"]);
     }
@@ -56,14 +56,14 @@ class TicketFlowTest extends FeatureTestCase
     private function makeTicket(array $overrides = []): Ticket
     {
         return Ticket::create([
-            'numero'                   => 'INS-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'subtipo'                  => Ticket::SUBTIPO_INSPECTION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_REPORTED,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'numero' => 'INS-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'subtipo' => Ticket::SUBTIPO_INSPECTION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_REPORTED,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
             ...$overrides,
         ]);
@@ -74,14 +74,14 @@ class TicketFlowTest extends FeatureTestCase
     public function test_crear_ticket_instalacion_subtipo_instalacion_deriva_ambos_no_aplica(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_INSTALLATION,
-                'subtipo'          => Ticket::SUBTIPO_INSTALLATION,
+                'tipo' => Ticket::TIPO_INSTALLATION,
+                'subtipo' => Ticket::SUBTIPO_INSTALLATION,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Instalación nueva por venta',
+                'descripcion' => 'Instalación nueva por venta',
                 'sales_project_id' => $project->id,
             ])
             ->assertStatus(201);
@@ -99,13 +99,13 @@ class TicketFlowTest extends FeatureTestCase
     public function test_crear_ticket_reclamo_deriva_informe_no_aplica_cotizacion_pendiente(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Reclamo de producto defectuoso',
+                'descripcion' => 'Reclamo de producto defectuoso',
                 'sales_project_id' => $project->id,
             ])
             ->assertStatus(201);
@@ -120,14 +120,14 @@ class TicketFlowTest extends FeatureTestCase
     public function test_crear_ticket_garantia_deriva_ambos_pendientes(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_WARRANTY,
-                'subtipo'          => Ticket::SUBTIPO_WARRANTY_GENERIC,
+                'tipo' => Ticket::TIPO_WARRANTY,
+                'subtipo' => Ticket::SUBTIPO_WARRANTY_GENERIC,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_SUBCONTRACTED,
-                'descripcion'      => 'Garantía genérica',
+                'descripcion' => 'Garantía genérica',
                 'sales_project_id' => $project->id,
             ])
             ->assertStatus(201);
@@ -139,13 +139,13 @@ class TicketFlowTest extends FeatureTestCase
     public function test_crear_ticket_sin_subtipo_requerido_retorna_422(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_WARRANTY,
+                'tipo' => Ticket::TIPO_WARRANTY,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Sin subtipo',
+                'descripcion' => 'Sin subtipo',
                 'sales_project_id' => $project->id,
             ])
             ->assertStatus(422);
@@ -158,9 +158,9 @@ class TicketFlowTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Sin proyecto asociado',
+                'descripcion' => 'Sin proyecto asociado',
             ])
             ->assertStatus(422);
     }
@@ -168,25 +168,25 @@ class TicketFlowTest extends FeatureTestCase
     public function test_numeracion_es_consecutiva_por_prefijo_y_anio(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $headers = $this->authHeaders($token);
 
         $payload = [
-            'tipo'             => Ticket::TIPO_INSTALLATION,
-            'subtipo'          => Ticket::SUBTIPO_INSPECTION,
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'subtipo' => Ticket::SUBTIPO_INSPECTION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'      => 'Inspección',
+            'descripcion' => 'Inspección',
             'sales_project_id' => $project->id,
         ];
 
-        $first  = $this->withHeaders($headers)->postJson('/api/servicios/tickets', $payload)->assertStatus(201);
+        $first = $this->withHeaders($headers)->postJson('/api/servicios/tickets', $payload)->assertStatus(201);
         $second = $this->withHeaders($headers)->postJson('/api/servicios/tickets', $payload)->assertStatus(201);
 
         $warranty = $this->withHeaders($headers)->postJson('/api/servicios/tickets', [
-            'tipo'             => Ticket::TIPO_WARRANTY,
-            'subtipo'          => Ticket::SUBTIPO_WARRANTY_GENERIC,
+            'tipo' => Ticket::TIPO_WARRANTY,
+            'subtipo' => Ticket::SUBTIPO_WARRANTY_GENERIC,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'      => 'Garantía',
+            'descripcion' => 'Garantía',
             'sales_project_id' => $project->id,
         ])->assertStatus(201);
 
@@ -234,7 +234,7 @@ class TicketFlowTest extends FeatureTestCase
 
         $numeros = collect($response->json('data'))->pluck('numero')->all();
         $posUnscheduled = array_search($unscheduled->numero, $numeros, true);
-        $posScheduled   = array_search($scheduled->numero, $numeros, true);
+        $posScheduled = array_search($scheduled->numero, $numeros, true);
 
         $this->assertNotFalse($posUnscheduled);
         $this->assertNotFalse($posScheduled);
@@ -278,14 +278,14 @@ class TicketFlowTest extends FeatureTestCase
     public function test_vendedor_disenador_puede_crear_ticket(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor_disenador');
+        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor_disenador');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_INSTALLATION,
-                'subtipo'          => Ticket::SUBTIPO_INSTALLATION,
+                'tipo' => Ticket::TIPO_INSTALLATION,
+                'subtipo' => Ticket::SUBTIPO_INSTALLATION,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Garantía detectada en visita de venta',
+                'descripcion' => 'Garantía detectada en visita de venta',
                 'sales_project_id' => $project->id,
             ])
             ->assertStatus(201);
@@ -295,13 +295,13 @@ class TicketFlowTest extends FeatureTestCase
     public function test_management_puede_crear_ticket(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
+        $token = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Creado por Gerencia',
+                'descripcion' => 'Creado por Gerencia',
                 'sales_project_id' => $project->id,
             ])
             ->assertStatus(201);
@@ -312,7 +312,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_resuelto_bloqueado_si_falta_informe(): void
     {
         $ticket = $this->makeTicket([
-            'quote_status'             => Ticket::QUOTE_STATUS_APPROVED,
+            'quote_status' => Ticket::QUOTE_STATUS_APPROVED,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
 
@@ -331,7 +331,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_cerrado_bloqueado_si_cotizacion_rechazada(): void
     {
         $ticket = $this->makeTicket([
-            'quote_status'             => Ticket::QUOTE_STATUS_REJECTED,
+            'quote_status' => Ticket::QUOTE_STATUS_REJECTED,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_COMPLETED,
         ]);
 
@@ -347,7 +347,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_resuelto_permitido_cuando_cotizacion_y_informe_cumplen(): void
     {
         $ticket = $this->makeTicket([
-            'quote_status'             => Ticket::QUOTE_STATUS_APPROVED,
+            'quote_status' => Ticket::QUOTE_STATUS_APPROVED,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_COMPLETED,
         ]);
 
@@ -362,7 +362,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_cerrado_permitido_cuando_no_aplica(): void
     {
         $ticket = $this->makeTicket([
-            'quote_status'             => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
+            'quote_status' => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
         ]);
 
@@ -377,7 +377,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cancelar_no_valida_el_gate(): void
     {
         $ticket = $this->makeTicket([
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
 
@@ -393,7 +393,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_agendado_no_valida_el_gate(): void
     {
         $ticket = $this->makeTicket([
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
 
@@ -409,7 +409,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_tecnico_servicios_no_puede_cambiar_estado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_SCHEDULED])
@@ -419,7 +419,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_garantias_servicios_no_puede_cambiar_estado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::GARANTIAS_SERVICIOS, self::GARANTIAS_SERVICIOS, 'garantias_servicios');
+        $token = $this->loginAs(self::GARANTIAS_SERVICIOS, self::GARANTIAS_SERVICIOS, 'garantias_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_SCHEDULED])
@@ -429,7 +429,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_management_no_puede_cambiar_estado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
+        $token = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_SCHEDULED])
@@ -439,7 +439,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_lider_servicios_si_puede_cambiar_estado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_SCHEDULED])
@@ -454,13 +454,13 @@ class TicketFlowTest extends FeatureTestCase
     public function test_tecnico_servicios_no_puede_crear_ticket(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'No debería poder crear',
+                'descripcion' => 'No debería poder crear',
                 'sales_project_id' => $project->id,
             ])
             ->assertStatus(403);
@@ -469,13 +469,13 @@ class TicketFlowTest extends FeatureTestCase
     public function test_garantias_servicios_no_puede_crear_ticket(): void
     {
         $project = $this->makeSalesProject();
-        $token   = $this->loginAs(self::GARANTIAS_SERVICIOS, self::GARANTIAS_SERVICIOS, 'garantias_servicios');
+        $token = $this->loginAs(self::GARANTIAS_SERVICIOS, self::GARANTIAS_SERVICIOS, 'garantias_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'No debería poder crear',
+                'descripcion' => 'No debería poder crear',
                 'sales_project_id' => $project->id,
             ])
             ->assertStatus(403);

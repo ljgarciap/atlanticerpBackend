@@ -10,6 +10,7 @@ use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
@@ -43,13 +44,14 @@ class CommissionsControllerTest extends FeatureTestCase
     private function userIdByEmail(string $email): int
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
-    private function makeApprovedCard(int $ownerId, float $amount, \Carbon\Carbon $stageChangedAt): PipelineCard
+    private function makeApprovedCard(int $ownerId, float $amount, Carbon $stageChangedAt): PipelineCard
     {
-        $master  = MasterClient::create(['name' => 'Cliente Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $master = MasterClient::create(['name' => 'Cliente Test']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
 
         return PipelineCard::create([
@@ -98,8 +100,8 @@ class CommissionsControllerTest extends FeatureTestCase
         // role_id nuevo, sin fila en user_roles) nunca tuvieron. Gerencia veía $0/"Sin comisiones"
         // en alcance Equipo pese a comisiones reales pendientes por vendedor.
         $this->grantVentasDisenoRead('management@atlantic.test');
-        $juanManuelId = $this->userIdByEmail('juanmanuel@atlantic.com.pa');
-        $this->assertGreaterThan(0, $juanManuelId, 'Juan Manuel Brustein debe existir (BusinessRoleUserSeeder).');
+        $juanManuelId = $this->userIdByEmail('vendedordisenador8@test.com');
+        $this->assertGreaterThan(0, $juanManuelId, 'Vendedor Disenador Test 8 debe existir (BusinessRoleUserSeeder).');
 
         $targetMonth = now()->subMonths(5);
         $this->makeApprovedCard($juanManuelId, 25000, $targetMonth);

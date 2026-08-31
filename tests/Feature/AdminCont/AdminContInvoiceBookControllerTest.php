@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContItbmsRate;
@@ -18,7 +19,8 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 23 Grupo 3 de Admin&Cont (SCRUM-661→664, REQ-584→587) — "Libro de Facturas" (4M3). */
 class AdminContInvoiceBookControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
@@ -46,13 +48,13 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
     private function makeInvoiceWithRuc(float $monto, ?AdminContItbmsRate $rate, string $createdAt, string $taxId): AdminContInvoice
     {
         $master = MasterClient::create(['name' => 'Cliente Libro '.self::uniqueTestNumber()]);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Libro '.self::uniqueTestNumber(), 'tax_id' => $taxId]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Libro '.self::uniqueTestNumber(), 'tax_id' => $taxId]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Libro '.self::uniqueTestNumber()]);
-        $card   = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $this->userId(self::FELIX_EMAIL), 'amount' => $monto, 'stage_changed_at' => now(),
         ]);
-        $order  = Order::create([
+        $order = Order::create([
             'order_number' => 'PED-LIB-'.random_int(1000, 999999), 'pipeline_card_id' => $card->id,
             'order_type' => Order::ORDER_TYPE_PEDIDO, 'stage' => Order::STAGE_POR_DESPACHAR,
             'customer_name' => $sub->business_name,
@@ -80,7 +82,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
 
     private function userId(string $email): int
     {
-        return (int) \App\Models\User::where('email', $email)->value('id');
+        return (int) User::where('email', $email)->value('id');
     }
 
     // ------------------------------------------------------------------- Gate ----
@@ -97,8 +99,8 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
 
     public function test_documentos_en_orden_cronologico_con_porcentaje_real_por_documento(): void
     {
-        $rate7  = $this->makeRate(7.0);
-        $rate0  = $this->makeRate(0.0);
+        $rate7 = $this->makeRate(7.0);
+        $rate0 = $this->makeRate(0.0);
 
         // 8400 @ 7% -> base 7850.47, itbms 549.53 (mismo cálculo que el mockup real).
         $this->makeInvoiceWithRuc(8400.0, $rate7, '2026-02-01 09:00:00', '8-745-1230');

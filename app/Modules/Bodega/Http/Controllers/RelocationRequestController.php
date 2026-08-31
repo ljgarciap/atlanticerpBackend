@@ -83,7 +83,7 @@ final class RelocationRequestController extends Controller
             ], 422);
         }
 
-        // Mejora SCRUM-752 (RN1, Daniela Amaya 2026-08-13) — mismo criterio que arriba, ahora
+        // Mejora SCRUM-752 (RN1, Gerencia Test 2026-08-13) — mismo criterio que arriba, ahora
         // también como DESTINO: Zona Libre es "pendiente" (sin ubicación física), no debe recibir
         // reubicaciones. El frontend ya la excluye del selector, pero eso no alcanza acá tampoco.
         $destinationWarehouse = Warehouse::find((int) $validated['destination_warehouse_id']);
@@ -240,7 +240,7 @@ final class RelocationRequestController extends Controller
 
     /**
      * Gate "exclusivo de Mark" — mismo mecanismo que
-     * `AdjustmentRequestController::resolveMarkAccess()` (`ComprasSettings::mark_approver_user_id`,
+     * `AdjustmentRequestController::resolveMarkAccess()` (`ComprasSettings::primary_approver_user_id`,
      * no un permiso de rol nuevo).
      *
      * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Mark acepta cualquier

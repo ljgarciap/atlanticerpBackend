@@ -6,6 +6,7 @@ namespace Tests\Feature\Bodega;
 
 use App\Modules\Bodega\Models\AdjustmentRequest;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
+use App\Modules\Bodega\Models\BodegaSetting;
 use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderDocument;
@@ -17,6 +18,7 @@ use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use Carbon\Carbon;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Http;
 use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
@@ -41,11 +43,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
      * registrado después dentro de un test individual, a menos que se resetee la factory antes de
      * volver a fakear. Solo lo necesita el test que verifica un conteo de eventos real distinto de 0.
      *
-     * @param list<array<string, mixed>> $events
+     * @param  list<array<string, mixed>>  $events
      */
     private function fakeOutlookCalendarWith(array $events): void
     {
-        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::swap(new Factory);
         $this->fakeOutlookCalendar($events);
     }
 
@@ -60,9 +62,9 @@ class BodegaHomeControllerTest extends FeatureTestCase
     private function stageHistory(Order $order, ?string $fromStage, string $toStage, Carbon $createdAt): OrderStageHistory
     {
         return OrderStageHistory::create([
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'from_stage' => $fromStage,
-            'to_stage'   => $toStage,
+            'to_stage' => $toStage,
             'changed_by' => null,
             'created_at' => $createdAt,
         ]);
@@ -72,7 +74,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_team_retorna_lista_vacia_para_picker_sin_alcance_de_equipo(): void
     {
-        $response = $this->withHeaders($this->authHeadersFor('apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('ayudantegeneralbodega@test.com', 'ayudante_general_bodega'))
             ->getJson('/api/bodega/home/team')
             ->assertStatus(200);
 
@@ -87,17 +89,17 @@ class BodegaHomeControllerTest extends FeatureTestCase
      */
     public function test_team_retorna_solo_los_asistentes_de_bodega_para_el_jefe(): void
     {
-        $response = $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson('/api/bodega/home/team')
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
         $this->assertCount(2, $names);
-        $this->assertTrue($names->contains('Osvaldo Santos'));
-        $this->assertTrue($names->contains('Mariano Sandoval'));
-        $this->assertFalse($names->contains('Esteban Cardenas'));
-        $this->assertFalse($names->contains('Apolonio Gonzalez'));
-        $this->assertFalse($names->contains('Gary Arrocha'));
+        $this->assertTrue($names->contains('Asistente Bodega Test'));
+        $this->assertTrue($names->contains('Asistente Bodega Test 2'));
+        $this->assertFalse($names->contains('Lider Bodega Test'));
+        $this->assertFalse($names->contains('Ayudante General Bodega Test'));
+        $this->assertFalse($names->contains('Transporte Test'));
     }
 
     // ── Fix de regresión cruzada (2026-07-28) — GET /bodega/team-members ────
@@ -110,43 +112,43 @@ class BodegaHomeControllerTest extends FeatureTestCase
      */
     public function test_team_members_role_courier_retorna_solo_transporte(): void
     {
-        $response = $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson('/api/bodega/team-members?role=courier')
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
-        $this->assertTrue($names->contains('Gary Arrocha'));
-        $this->assertFalse($names->contains('Osvaldo Santos'));
-        $this->assertFalse($names->contains('Apolonio Gonzalez'));
+        $this->assertTrue($names->contains('Transporte Test'));
+        $this->assertFalse($names->contains('Asistente Bodega Test'));
+        $this->assertFalse($names->contains('Ayudante General Bodega Test'));
     }
 
     public function test_team_members_role_picker_retorna_solo_ayudante_general(): void
     {
-        $response = $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson('/api/bodega/team-members?role=picker')
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
-        $this->assertTrue($names->contains('Apolonio Gonzalez'));
-        $this->assertFalse($names->contains('Gary Arrocha'));
-        $this->assertFalse($names->contains('Osvaldo Santos'));
+        $this->assertTrue($names->contains('Ayudante General Bodega Test'));
+        $this->assertFalse($names->contains('Transporte Test'));
+        $this->assertFalse($names->contains('Asistente Bodega Test'));
     }
 
     public function test_team_members_role_asistente_bodega_mismo_resultado_que_home_team(): void
     {
-        $response = $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson('/api/bodega/team-members?role=asistente_bodega')
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
         $this->assertCount(2, $names);
-        $this->assertTrue($names->contains('Osvaldo Santos'));
-        $this->assertTrue($names->contains('Mariano Sandoval'));
+        $this->assertTrue($names->contains('Asistente Bodega Test'));
+        $this->assertTrue($names->contains('Asistente Bodega Test 2'));
     }
 
     public function test_team_members_role_invalido_retorna_422(): void
     {
-        $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson('/api/bodega/team-members?role=jefe_de_bodega')
             ->assertStatus(422);
     }
@@ -156,13 +158,13 @@ class BodegaHomeControllerTest extends FeatureTestCase
         // Hallazgo CRÍTICO de Pre-QA (2026-07-21, mismo guard en OutlookCalendarController):
         // Gerencia (o cualquier rol con view_team) no puede pasar el owner_id de alguien fuera
         // del equipo de Bodega para ver su alcance "Mío".
-        $jefeId = $this->userIdByEmail('almacen@atlantic.com.pa');
+        $jefeId = $this->userIdByEmail('liderbodega@test.com');
         $outsiderId = $this->userIdByEmail('management@atlantic.test');
 
         $order = $this->makeOrder(['assistant_id' => $jefeId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($order, null, Order::STAGE_ASIGNADO, Carbon::now());
 
-        $response = $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson("/api/bodega/home/summary?scope=team&owner_id={$outsiderId}")
             ->assertStatus(200);
 
@@ -172,16 +174,16 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_summary_scope_team_es_ignorado_para_quien_no_puede_ver_equipo(): void
     {
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
+        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
         $order = $this->makeOrder(['picker_id' => $pickerId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($order, null, Order::STAGE_ASIGNADO, Carbon::now());
 
         // Un pedido de otra persona no debería contar para el picker en "team" (que ni debería
         // aplicarse, ya que ayudante_general_bodega no tiene view_team).
-        $otherId = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $otherId = $this->userIdByEmail('asistentebodega2@test.com');
         $this->makeOrder(['assistant_id' => $otherId, 'stage' => Order::STAGE_ASIGNADO]);
 
-        $response = $this->withHeaders($this->authHeadersFor('apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('ayudantegeneralbodega@test.com', 'ayudante_general_bodega'))
             ->getJson('/api/bodega/home/summary?scope=team')
             ->assertStatus(200);
 
@@ -190,15 +192,15 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_summary_scope_team_sin_owner_id_agrega_todo_el_equipo(): void
     {
-        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
-        $marianoId = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
+        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
 
         $o1 = $this->makeOrder(['assistant_id' => $osvaldoId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($o1, null, Order::STAGE_ASIGNADO, Carbon::now());
         $o2 = $this->makeOrder(['assistant_id' => $marianoId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($o2, null, Order::STAGE_ASIGNADO, Carbon::now());
 
-        $response = $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson('/api/bodega/home/summary?scope=team')
             ->assertStatus(200);
 
@@ -214,15 +216,15 @@ class BodegaHomeControllerTest extends FeatureTestCase
      */
     public function test_summary_scope_team_con_owner_id_puntual_saluda_en_singular(): void
     {
-        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
-        $marianoId = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
+        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
 
         $o1 = $this->makeOrder(['assistant_id' => $osvaldoId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($o1, null, Order::STAGE_ASIGNADO, Carbon::now());
         $o2 = $this->makeOrder(['assistant_id' => $marianoId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($o2, null, Order::STAGE_ASIGNADO, Carbon::now());
 
-        $response = $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson("/api/bodega/home/summary?scope=team&owner_id={$osvaldoId}")
             ->assertStatus(200);
 
@@ -244,11 +246,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
      */
     public function test_mi_dia_asignados_hoy_cuenta_pedidos_sin_historial_de_etapa(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         // Sin llamar a stageHistory() a propósito — reproduce el gap real del seeder SCRUM-501.
         $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ASIGNADO]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -262,11 +264,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
      */
     public function test_mi_dia_asignados_hoy_incluye_pedidos_asignados_en_dias_anteriores(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $order = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_EN_PICKING]);
         $this->stageHistory($order, Order::STAGE_ASIGNADO, Order::STAGE_EN_PICKING, Carbon::now()->subDays(3));
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -276,10 +278,10 @@ class BodegaHomeControllerTest extends FeatureTestCase
     /** Un pedido ya Entregado está cerrado — no debe seguir contando como backlog del día. */
     public function test_mi_dia_asignados_hoy_excluye_pedidos_entregados(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ENTREGADO]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -290,12 +292,12 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_pendientes_marca_picking_no_iniciado_pasado_el_umbral_configurado(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $order = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ASIGNADO]);
         // Default 3 horas (BodegaSettingsService) — 5 horas atrás está vencido.
         $this->stageHistory($order, null, Order::STAGE_ASIGNADO, Carbon::now()->subHours(5));
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -307,11 +309,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_pendientes_no_marca_picking_dentro_del_umbral(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $order = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($order, null, Order::STAGE_ASIGNADO, Carbon::now()->subHour());
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -323,14 +325,14 @@ class BodegaHomeControllerTest extends FeatureTestCase
     {
         // Regla del proyecto: nunca hardcodear el umbral — se lee de bodega_settings.
         app(BodegaSettingsService::class)->pendientesPickingHoras(); // fuerza el default-seed (3h)
-        \App\Modules\Bodega\Models\BodegaSetting::where('key', 'home_pendientes_picking_horas')->update(['value' => '1']);
+        BodegaSetting::where('key', 'home_pendientes_picking_horas')->update(['value' => '1']);
 
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $order = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ASIGNADO]);
         // 2 horas atrás — no superaría el default de 3h, pero SÍ el umbral configurado a 1h.
         $this->stageHistory($order, null, Order::STAGE_ASIGNADO, Carbon::now()->subHours(2));
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -340,12 +342,12 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_pendientes_marca_guia_de_entrega_sin_subir_pasado_el_umbral(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $order = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_DESPACHADO]);
         // Default 2 días — 3 días atrás está vencido.
         $this->stageHistory($order, Order::STAGE_POR_DESPACHAR, Order::STAGE_DESPACHADO, Carbon::now()->subDays(3));
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -356,7 +358,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_pendientes_no_marca_guia_si_ya_fue_subida(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $order = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_DESPACHADO]);
         $this->stageHistory($order, Order::STAGE_POR_DESPACHAR, Order::STAGE_DESPACHADO, Carbon::now()->subDays(5));
         OrderDocument::create([
@@ -364,7 +366,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             'storage_key' => 'guides/test.pdf', 'received_by_name' => 'Juan Pérez', 'created_at' => Carbon::now(),
         ]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -378,8 +380,8 @@ class BodegaHomeControllerTest extends FeatureTestCase
      */
     public function test_pendientes_incluye_solicitud_de_ajuste_pendiente_del_propio_solicitante(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
-        $otherId = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
+        $otherId = $this->userIdByEmail('asistentebodega2@test.com');
         $product = $this->makeCatalogProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->firstOrFail();
 
@@ -397,7 +399,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
         ]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -408,7 +410,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_pendientes_de_ajuste_ve_todas_las_solicitudes_en_equipo_completo(): void
     {
-        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
         $product = $this->makeCatalogProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->firstOrFail();
 
@@ -419,7 +421,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
         ]);
 
-        $response = $this->withHeaders($this->authHeadersFor('almacen@atlantic.com.pa', 'lider_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
             ->getJson('/api/bodega/home/summary?scope=team')
             ->assertStatus(200);
 
@@ -431,11 +433,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_despachos_urgentes_filtra_por_ventana_configurada(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $urgent = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_POR_DESPACHAR, 'committed_delivery_date' => Carbon::tomorrow()]);
         $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_POR_DESPACHAR, 'committed_delivery_date' => Carbon::today()->addDays(20)]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -445,10 +447,10 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_despachos_urgentes_excluye_entregados(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ENTREGADO, 'committed_delivery_date' => Carbon::today()]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -466,14 +468,14 @@ class BodegaHomeControllerTest extends FeatureTestCase
      */
     public function test_estado_de_pedidos_cuenta_el_backlog_actual_no_solo_lo_que_entro_hoy(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $today = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($today, null, Order::STAGE_ASIGNADO, Carbon::now());
 
         $old = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($old, null, Order::STAGE_ASIGNADO, Carbon::now()->subDays(2));
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -483,14 +485,14 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_estado_de_pedidos_entregado_usa_ventana_de_una_semana(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $recent = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ENTREGADO]);
         $this->stageHistory($recent, Order::STAGE_DESPACHADO, Order::STAGE_ENTREGADO, Carbon::now()->subDays(3));
 
         $old = $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_ENTREGADO]);
         $this->stageHistory($old, Order::STAGE_DESPACHADO, Order::STAGE_ENTREGADO, Carbon::now()->subDays(10));
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -500,11 +502,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_estado_de_pedidos_urgentes_count_usa_el_mismo_criterio_que_el_chip(): void
     {
-        $userId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $userId = $this->userIdByEmail('asistentebodega@test.com');
         $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_POR_DESPACHAR, 'committed_delivery_date' => Carbon::tomorrow()]);
         $this->makeOrder(['assistant_id' => $userId, 'stage' => Order::STAGE_POR_DESPACHAR, 'committed_delivery_date' => Carbon::today()->addDays(20)]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -531,7 +533,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             'quantity' => 8, 'unit_cost' => 25, 'subtotal' => 200,
         ]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -561,7 +563,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             'quantity' => 3, 'unit_cost' => 20, 'subtotal' => 60,
         ]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -588,7 +590,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             'saldo_inicial' => 50, 'saldo_resultante' => 0, 'created_at' => Carbon::now()->subDays(45),
         ]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -611,7 +613,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             'price_full' => 100, 'cost' => 60, 'stock_quantity' => 100, 'reorder_point' => 5, 'is_active' => true,
         ]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
@@ -628,7 +630,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             ['id' => 'evt-1', 'subject' => 'Reunión de bodega', 'start' => ['dateTime' => now()->toIso8601String()], 'end' => ['dateTime' => now()->addHour()->toIso8601String()]],
         ]);
 
-        $response = $this->withHeaders($this->authHeadersFor('logistica@atlantic.com.pa', 'asistente_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 

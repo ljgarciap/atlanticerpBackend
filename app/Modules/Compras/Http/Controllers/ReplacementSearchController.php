@@ -12,7 +12,9 @@ use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -25,8 +27,10 @@ use Illuminate\Support\Str;
  */
 final class ReplacementSearchController extends Controller
 {
-    private const ANALYSIS_TYPE  = 'replacement_search';
-    private const DISK           = 's3-private';
+    private const ANALYSIS_TYPE = 'replacement_search';
+
+    private const DISK = 's3-private';
+
     private const MAX_CANDIDATES = 25;
 
     /**
@@ -35,6 +39,7 @@ final class ReplacementSearchController extends Controller
      * PurchaseOrderDocumentController::VALIDATION_MAX_ATTEMPTS_PER_ORDER.
      */
     private const SEARCH_MAX_ATTEMPTS_PER_USER = 10;
+
     private const SEARCH_DECAY_SECONDS = 3600;
 
     public function store(SearchSubstituteCandidatesRequest $request): JsonResponse
@@ -84,19 +89,19 @@ final class ReplacementSearchController extends Controller
 
         RateLimiter::hit($limiterKey, self::SEARCH_DECAY_SECONDS);
 
-        /** @var \Illuminate\Http\UploadedFile $file */
+        /** @var UploadedFile $file */
         $file = $request->file('file');
-        $ext  = strtolower($file->getClientOriginalExtension());
-        $key  = 'compras/replacement-search/' . Str::uuid()->toString() . ($ext !== '' ? ".{$ext}" : '');
+        $ext = strtolower($file->getClientOriginalExtension());
+        $key = 'compras/replacement-search/'.Str::uuid()->toString().($ext !== '' ? ".{$ext}" : '');
         Storage::disk(self::DISK)->putFileAs('compras/replacement-search', $file, basename($key));
 
         /** @var AiAnalysis $analysis */
         $analysis = AiAnalysis::create([
-            'entity_type'   => self::ANALYSIS_TYPE,
+            'entity_type' => self::ANALYSIS_TYPE,
             'analysis_type' => self::ANALYSIS_TYPE,
-            'status'        => AiAnalysis::STATUS_PENDING,
-            'requested_by'  => $user->id,
-            'extra'         => ['family_id' => $family->id, 'original_catalog_product_id' => $originalProductId],
+            'status' => AiAnalysis::STATUS_PENDING,
+            'requested_by' => $user->id,
+            'extra' => ['family_id' => $family->id, 'original_catalog_product_id' => $originalProductId],
         ]);
 
         CompareSubstituteCandidatesJob::dispatch(
@@ -140,7 +145,7 @@ final class ReplacementSearchController extends Controller
         $ranking = $result['ranking'] ?? [];
 
         $productIds = array_column($ranking, 'catalog_product_id');
-        /** @var \Illuminate\Support\Collection<int, CatalogProduct> $products */
+        /** @var Collection<int, CatalogProduct> $products */
         $products = CatalogProduct::whereIn('id', $productIds)->get()->keyBy('id');
 
         $results = [];
@@ -151,7 +156,7 @@ final class ReplacementSearchController extends Controller
                 continue;
             }
 
-            // SCRUM-246 (rebote de Daniela Amaya 2026-08-09) — la tabla de candidatos pedía
+            // SCRUM-246 (rebote de Gerencia Test 2026-08-09) — la tabla de candidatos pedía
             // Categoría (ya existía en el modelo, solo faltaba exponerla acá) y "% de similitud";
             // este último YA lo calcula `CompareSubstituteCandidatesJob`/la IA
             // (`similarity_percent`, 0-100), no hacía falta un cálculo nuevo — solo faltaba
@@ -159,16 +164,16 @@ final class ReplacementSearchController extends Controller
             // como texto libre, sin un campo numérico propio para la barra visual del frontend).
             $results[] = [
                 'catalog_product_id' => $product->id,
-                'reference'          => $product->reference,
-                'name'               => $product->name,
-                'description'        => $product->description,
-                'category'           => $product->category,
-                'photo_url'          => $product->photo_url,
-                'price_full'         => $product->price_full,
-                'cost'               => $product->cost,
-                'stock_quantity'     => $product->stock_quantity,
+                'reference' => $product->reference,
+                'name' => $product->name,
+                'description' => $product->description,
+                'category' => $product->category,
+                'photo_url' => $product->photo_url,
+                'price_full' => $product->price_full,
+                'cost' => $product->cost,
+                'stock_quantity' => $product->stock_quantity,
                 'similarity_percent' => $entry['similarity_percent'],
-                'reasoning'          => $entry['reasoning'],
+                'reasoning' => $entry['reasoning'],
             ];
         }
 
@@ -179,7 +184,7 @@ final class ReplacementSearchController extends Controller
         ]);
     }
 
-    private function resolveTargetMediaType(\Illuminate\Http\UploadedFile $file): string
+    private function resolveTargetMediaType(UploadedFile $file): string
     {
         return $file->getMimeType() ?? 'application/octet-stream';
     }

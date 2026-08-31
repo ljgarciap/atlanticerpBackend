@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicios;
 
-use App\Modules\Servicios\Models\Ticket;
 use App\Modules\Servicios\Models\ServiciosSetting;
+use App\Modules\Servicios\Models\Ticket;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
@@ -27,9 +27,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class TicketBatch4Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
     protected function setUp(): void
     {
@@ -42,7 +42,7 @@ class TicketBatch4Test extends FeatureTestCase
     {
         $unique = uniqid();
         $master = MasterClient::create(['name' => "Cliente {$unique}"]);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
 
         return SalesProject::create(['sub_client_id' => $sub->id, 'name' => "Proyecto {$unique}"]);
     }
@@ -51,9 +51,9 @@ class TicketBatch4Test extends FeatureTestCase
     {
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', array_merge([
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Breve descripción',
+                'descripcion' => 'Breve descripción',
                 'sales_project_id' => $salesProjectId,
             ], $overrides))
             ->assertStatus(201);
@@ -65,14 +65,14 @@ class TicketBatch4Test extends FeatureTestCase
     public function test_crear_ticket_con_observaciones(): void
     {
         $salesProjectId = $this->makeSalesProject()->id;
-        $token          = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Breve descripción',
-                'observaciones'    => 'Confirmar acceso con el prospecto antes de la visita.',
+                'descripcion' => 'Breve descripción',
+                'observaciones' => 'Confirmar acceso con el prospecto antes de la visita.',
                 'sales_project_id' => $salesProjectId,
             ])
             ->assertStatus(201);
@@ -84,8 +84,8 @@ class TicketBatch4Test extends FeatureTestCase
     public function test_crear_ticket_sin_observaciones_queda_null(): void
     {
         $salesProjectId = $this->makeSalesProject()->id;
-        $token          = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
-        $ticketId       = $this->createTicket($token, $salesProjectId);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticketId = $this->createTicket($token, $salesProjectId);
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/tickets/{$ticketId}")
@@ -97,8 +97,8 @@ class TicketBatch4Test extends FeatureTestCase
     public function test_adjuntar_2_fotos_quedan_asociadas_al_ticket(): void
     {
         $salesProjectId = $this->makeSalesProject()->id;
-        $token          = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
-        $ticketId       = $this->createTicket($token, $salesProjectId);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticketId = $this->createTicket($token, $salesProjectId);
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticketId}/attachments", [
@@ -128,7 +128,7 @@ class TicketBatch4Test extends FeatureTestCase
     {
         $salesProjectId = $this->makeSalesProject()->id;
         ServiciosSetting::create(['key' => 'adjuntos_max_archivos', 'value' => '1']);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $ticketId = $this->createTicket($token, $salesProjectId);
 
         $this->withHeaders($this->authHeaders($token))
@@ -156,7 +156,7 @@ class TicketBatch4Test extends FeatureTestCase
     {
         $salesProjectId = $this->makeSalesProject()->id;
         ServiciosSetting::create(['key' => 'adjuntos_max_archivos', 'value' => '1']);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $ticketId = $this->createTicket($token, $salesProjectId);
 
         $statuses = [];
@@ -180,8 +180,8 @@ class TicketBatch4Test extends FeatureTestCase
     public function test_adjuntar_extension_no_permitida_retorna_422(): void
     {
         $salesProjectId = $this->makeSalesProject()->id;
-        $token          = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
-        $ticketId       = $this->createTicket($token, $salesProjectId);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticketId = $this->createTicket($token, $salesProjectId);
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticketId}/attachments", [
@@ -195,7 +195,7 @@ class TicketBatch4Test extends FeatureTestCase
     {
         $salesProjectId = $this->makeSalesProject()->id;
         ServiciosSetting::create(['key' => 'adjuntos_max_size_mb', 'value' => '1']);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $ticketId = $this->createTicket($token, $salesProjectId);
 
         $this->withHeaders($this->authHeaders($token))
@@ -229,8 +229,8 @@ class TicketBatch4Test extends FeatureTestCase
     public function test_tecnico_servicios_no_puede_adjuntar(): void
     {
         $salesProjectId = $this->makeSalesProject()->id;
-        $liderToken     = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
-        $ticketId       = $this->createTicket($liderToken, $salesProjectId);
+        $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticketId = $this->createTicket($liderToken, $salesProjectId);
 
         $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
@@ -244,8 +244,8 @@ class TicketBatch4Test extends FeatureTestCase
     public function test_obtener_url_firmada_de_un_adjunto(): void
     {
         $salesProjectId = $this->makeSalesProject()->id;
-        $token          = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
-        $ticketId       = $this->createTicket($token, $salesProjectId);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticketId = $this->createTicket($token, $salesProjectId);
 
         $uploadResponse = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticketId}/attachments", [

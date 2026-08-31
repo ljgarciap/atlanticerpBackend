@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\AdminCont\Http\Middleware\EnsureIsMarkApprover;
+use App\Modules\AdminCont\Http\Middleware\EnsureIsPrimaryApprover;
 use App\Modules\Auth\Http\Controllers\AuthController;
 use App\Modules\Auth\Http\Controllers\MfaController;
 use App\Modules\Auth\Http\Controllers\SecurityLevelController;
@@ -71,15 +71,15 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // Protected auth routes — JWT required via 'api' middleware group
             Route::middleware('api')->prefix('api/auth')->group(function (): void {
-                Route::get('/me',           [AuthController::class, 'me']);
+                Route::get('/me', [AuthController::class, 'me']);
                 Route::post('/switch-role', [AuthController::class, 'switchRole']);
-                Route::put('/password',     [AuthController::class, 'changePassword']);
-                Route::patch('/profile',    [AuthController::class, 'updateProfile']);
+                Route::put('/password', [AuthController::class, 'changePassword']);
+                Route::patch('/profile', [AuthController::class, 'updateProfile']);
 
-                Route::get('/mfa/status',          [MfaController::class, 'status']);
-                Route::post('/mfa/enable',         [MfaController::class, 'enable']);
+                Route::get('/mfa/status', [MfaController::class, 'status']);
+                Route::post('/mfa/enable', [MfaController::class, 'enable']);
                 Route::post('/mfa/enable/confirm', [MfaController::class, 'confirmEnable']);
-                Route::post('/mfa/disable',        [MfaController::class, 'disable']);
+                Route::post('/mfa/disable', [MfaController::class, 'disable']);
             });
         },
     )
@@ -100,10 +100,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Alias disponibles para uso puntual en rutas de módulos.
         $middleware->alias([
-            'jwt'        => AuthenticateJwt::class,
-            'role'       => EnforceRole::class,
+            'jwt' => AuthenticateJwt::class,
+            'role' => EnforceRole::class,
             'permission' => CheckPermission::class,
-            'mark_only'  => EnsureIsMarkApprover::class,
+            'primary_approver_only' => EnsureIsPrimaryApprover::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

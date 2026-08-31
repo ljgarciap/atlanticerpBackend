@@ -40,6 +40,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
     private function userIdByEmail(string $email): int
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -87,7 +88,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('user_name');
-        $this->assertTrue($names->contains('Juan Manuel Brustein'), 'Un vendedor real sembrado por BusinessRoleUserSeeder debe listarse.');
+        $this->assertTrue($names->contains('Vendedor Disenador Test 8'), 'Un vendedor real sembrado por BusinessRoleUserSeeder debe listarse.');
     }
 
     public function test_upsert_goal_crea_y_actualiza(): void

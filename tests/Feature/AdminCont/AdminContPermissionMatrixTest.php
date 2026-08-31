@@ -19,15 +19,15 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContPermissionMatrixTest extends FeatureTestCase
 {
-    private const SUPERADMIN = 'andres.loi@atlantic.com.pa';
+    private const SUPERADMIN = 'superadmin@test.com';
 
-    private const FELIX = 'conta@atlantic.com.pa';
+    private const FELIX = 'contabilidad@test.com';
 
-    private const YANETH = 'asistente@atlantic.com.pa';
+    private const YANETH = 'asistenteadministrativa@test.com';
 
-    private const DANIELA = 'daniela@atlantic.com.pa';
+    private const DANIELA = 'gerencia@test.com';
 
-    private const MARIAM = 'operaciones@atlantic.com.pa';
+    private const MARIAM = 'lideroperaciones@test.com';
 
     protected function setUp(): void
     {
@@ -129,9 +129,9 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
     public function test_otros_lideres_no_ganan_ningun_permiso_de_admin_contab(): void
     {
         foreach ([
-            ['lider_servicios', 'servicio@atlantic.com.pa'],
-            ['lider_compras', 'gerencia2@atlantic.com.pa'],
-            ['lider_bodega', 'almacen@atlantic.com.pa'],
+            ['lider_servicios', 'liderservicios@test.com'],
+            ['lider_compras', 'lidercompras@test.com'],
+            ['lider_bodega', 'liderbodega@test.com'],
         ] as [$role, $email]) {
             $token = $this->tokenFor($email, $role);
             $this->withHeaders($this->authHeaders($token))

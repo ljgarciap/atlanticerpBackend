@@ -33,6 +33,7 @@ class QuoteItemControllerTest extends FeatureTestCase
     private function userIdByEmail(string $email): int
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
@@ -40,7 +41,7 @@ class QuoteItemControllerTest extends FeatureTestCase
     private function makeQuoteWithPart(int $ownerId): array
     {
         $quote = Quote::create(['owner_id' => $ownerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
 
         return ['quote' => $quote, 'part' => $part];
     }
@@ -220,15 +221,15 @@ class QuoteItemControllerTest extends FeatureTestCase
     public function test_mark_puede_crear_item_por_debajo_del_margen_sin_bloqueo(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@atlantic.com.pa')
+        DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
             ->update(['extra_permissions' => json_encode([
                 'ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.override_min_margin',
             ])]);
-        $markId = $this->userIdByEmail('mbekhar@atlantic.com.pa');
+        $markId = $this->userIdByEmail('gerencia3@test.com');
         $fixture = $this->makeQuoteWithPart($markId);
         // CoreUserSeeder: password default = el propio email (nunca sobreescrito si
         // ya se cambió), a diferencia de los usuarios *@atlantic.test de fixtures.
-        $token = $this->loginAs('mbekhar@atlantic.com.pa', 'mbekhar@atlantic.com.pa', 'management');
+        $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
 
         // Mismo escenario que test_crear_item_con_precio_que_viola_margen_retorna_422
         // (16.7% < 30%) pero con el permiso de excepción — no bloquea.
@@ -716,7 +717,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         $fixture = $this->makeQuoteWithPart($designerId);
         // (60-50)/60=16.7% < 30% default.
         $lowMargin = $this->makeCatalogProduct(['reference' => 'BULK-020', 'price_full' => 60, 'cost' => 50]);
-        $healthy   = $this->makeCatalogProduct(['reference' => 'BULK-021', 'price_full' => 200, 'cost' => 100]);
+        $healthy = $this->makeCatalogProduct(['reference' => 'BULK-021', 'price_full' => 200, 'cost' => 100]);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -757,14 +758,14 @@ class QuoteItemControllerTest extends FeatureTestCase
     public function test_bulk_saltea_por_margen_no_aplica_con_permiso_de_excepcion(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@atlantic.com.pa')
+        DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
             ->update(['extra_permissions' => json_encode([
                 'ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.override_min_margin',
             ])]);
-        $markId = $this->userIdByEmail('mbekhar@atlantic.com.pa');
+        $markId = $this->userIdByEmail('gerencia3@test.com');
         $fixture = $this->makeQuoteWithPart($markId);
         $lowMargin = $this->makeCatalogProduct(['reference' => 'BULK-040', 'price_full' => 60, 'cost' => 50]);
-        $token = $this->loginAs('mbekhar@atlantic.com.pa', 'mbekhar@atlantic.com.pa', 'management');
+        $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/bulk", [
@@ -782,7 +783,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $existing = $this->makeCatalogProduct(['reference' => 'BULK-010']);
-        $newOne   = $this->makeCatalogProduct(['reference' => 'BULK-011']);
+        $newOne = $this->makeCatalogProduct(['reference' => 'BULK-011']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
@@ -939,14 +940,14 @@ class QuoteItemControllerTest extends FeatureTestCase
     public function test_preview_price_con_permiso_de_excepcion_marca_can_override(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@atlantic.com.pa')
+        DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.override_min_margin'])]);
-        $markId = $this->userIdByEmail('mbekhar@atlantic.com.pa');
+        $markId = $this->userIdByEmail('gerencia3@test.com');
         $fixture = $this->makeQuoteWithPart($markId);
         $itemId = $fixture['part']->items()->create([
             'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 50,
         ])->id;
-        $token = $this->loginAs('mbekhar@atlantic.com.pa', 'mbekhar@atlantic.com.pa', 'management');
+        $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$itemId}/preview-price", [

@@ -19,6 +19,7 @@ use App\Modules\VentasDiseno\Models\Quote;
 use App\Shared\Support\AprobacionGate;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
@@ -41,12 +42,11 @@ final class GerenciaHomeService
     public function __construct(
         private readonly AprobacionGate $gate,
         private readonly InventoryKpiService $inventoryKpis,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $filters
-     * @param int|null $userId ID del usuario autenticado (para filtrar aprobaciones)
+     * @param  array<string, mixed>  $filters
+     * @param  int|null  $userId  ID del usuario autenticado (para filtrar aprobaciones)
      * @return array<string, mixed>
      */
     public function home(array $filters, ?int $userId = null): array
@@ -60,15 +60,15 @@ final class GerenciaHomeService
             : CarbonImmutable::now()->endOfDay();
 
         $vendedorId = isset($filters['vendedor_id']) ? (int) $filters['vendedor_id'] : null;
-        $clienteId  = isset($filters['cliente_id'])  ? (int) $filters['cliente_id']  : null;
+        $clienteId = isset($filters['cliente_id']) ? (int) $filters['cliente_id'] : null;
 
         return [
-            'kpis'          => $this->kpis($desde, $hasta, $vendedorId, $clienteId),
-            'facturacion'   => $this->facturacion($desde, $hasta, $clienteId, $vendedorId),
-            'proyectos'     => $this->proyectos($desde, $hasta, $vendedorId, $clienteId),
+            'kpis' => $this->kpis($desde, $hasta, $vendedorId, $clienteId),
+            'facturacion' => $this->facturacion($desde, $hasta, $clienteId, $vendedorId),
+            'proyectos' => $this->proyectos($desde, $hasta, $vendedorId, $clienteId),
             ...$this->pendingApprovalsSection($userId),
             'salud_modulos' => $this->saludModulos(),
-            'agendas'       => $this->agendas(),
+            'agendas' => $this->agendas(),
         ];
     }
 
@@ -121,8 +121,8 @@ final class GerenciaHomeService
         $cxcQuery = AdminContInvoice::where('es_incobrable', false)
             ->when($clienteId, fn ($q) => $q->where('master_client_id', $clienteId));
 
-        $totalCxC       = $cxcQuery->sum('monto');
-        $vencidasCxC    = (clone $cxcQuery)->where('created_at', '<', Carbon::now()->subDays(30))->sum('monto');
+        $totalCxC = $cxcQuery->sum('monto');
+        $vencidasCxC = (clone $cxcQuery)->where('created_at', '<', Carbon::now()->subDays(30))->sum('monto');
         // Facturas que vencerán en los próximos 7 días = creadas hace 23-30 días
         $porVencer7dCxC = (clone $cxcQuery)
             ->whereBetween('created_at', [Carbon::now()->subDays(30), Carbon::now()->subDays(23)])
@@ -135,16 +135,16 @@ final class GerenciaHomeService
 
         return [
             'variacion_margen' => [
-                'facturado'        => (float) $facturado,
-                'cotizado'         => (float) $cotizado,
-                'variacion_pct'    => $variacionPct,
-                'margen_real_pct'  => $margenRealPct,
+                'facturado' => (float) $facturado,
+                'cotizado' => (float) $cotizado,
+                'variacion_pct' => $variacionPct,
+                'margen_real_pct' => $margenRealPct,
                 'margen_cotiz_pct' => $margenCotizPct,
             ],
             'cxc_al_dia' => [
-                'total'          => (float) $totalCxC,
-                'vencidas'       => (float) $vencidasCxC,
-                'por_vencer_7d'  => (float) $porVencer7dCxC,
+                'total' => (float) $totalCxC,
+                'vencidas' => (float) $vencidasCxC,
+                'por_vencer_7d' => (float) $porVencer7dCxC,
             ],
             'proyectos_activos' => $proyectosActivos,
         ];
@@ -172,9 +172,9 @@ final class GerenciaHomeService
             ->when($clienteId, fn ($q) => $q->where('master_client_id', $clienteId))
             ->when($vendedorId, fn ($q) => $this->filtrarPorVendedor($q, (int) $vendedorId));
 
-        $total  = (float) $query->sum('monto');
-        $count  = $query->count();
-        $meses  = max(1, (int) $desde->diffInMonths($hasta) + 1);
+        $total = (float) $query->sum('monto');
+        $count = $query->count();
+        $meses = max(1, (int) $desde->diffInMonths($hasta) + 1);
 
         // `toBase()` — esta consulta agrega por mes con `selectRaw`/`groupBy`, no representa filas
         // reales de `AdminContInvoice` (la columna `mes` no existe en la tabla). Sin `toBase()`,
@@ -215,21 +215,21 @@ final class GerenciaHomeService
 
         return [
             'kpis' => [
-                'facturado_anio'    => (float) AdminContInvoice::whereYear('created_at', $hasta->year)
+                'facturado_anio' => (float) AdminContInvoice::whereYear('created_at', $hasta->year)
                     ->when($clienteId, fn ($q) => $q->where('master_client_id', $clienteId))
                     ->when($vendedorId, fn ($q) => $this->filtrarPorVendedor($q, (int) $vendedorId))
                     ->sum('monto'),
-                'facturado_mes'     => $total,
-                'margen_anio_pct'   => $this->calcMargenDeQuoteIds($anioQuoteIds),
-                'margen_mes_pct'    => $this->calcMargenDeQuoteIds($mesQuoteIds),
-                'facturas_count'    => $count,
+                'facturado_mes' => $total,
+                'margen_anio_pct' => $this->calcMargenDeQuoteIds($anioQuoteIds),
+                'margen_mes_pct' => $this->calcMargenDeQuoteIds($mesQuoteIds),
+                'facturas_count' => $count,
             ],
             'chart_mensual' => $this->zeroFillMeses($desde, $hasta, $chartMensual),
         ];
     }
 
     /**
-     * SCRUM-160 — Daniela Amaya, comentario 2026-08-26: cuando el rango filtrado solo tiene datos
+     * SCRUM-160 — Gerencia Test, comentario 2026-08-26: cuando el rango filtrado solo tiene datos
      * reales en UN mes, `chart_mensual` traía un único ítem — `BarChart` (frontend) lo estira a
      * 100% del ancho (flex-1 con un solo hijo) y se ve como un bloque grueso, no como una barra
      * dentro de un gráfico de barras. Se rellenan con monto 0 los meses del rango [desde, hasta]
@@ -237,7 +237,7 @@ final class GerenciaHomeService
      * rango — mismo criterio que, por coincidencia, ya se veía bien en Facturación cuando el rango
      * filtrado tenía datos en varios meses seguidos.
      *
-     * @param array<int, array{mes: string, monto: float}> $rows
+     * @param  array<int, array{mes: string, monto: float}>  $rows
      * @return list<array{mes: string, monto: float}>
      */
     private function zeroFillMeses(CarbonImmutable $desde, CarbonImmutable $hasta, array $rows): array
@@ -247,23 +247,23 @@ final class GerenciaHomeService
             $porMes[$row['mes']] = $row['monto'];
         }
 
-        $meses  = [];
+        $meses = [];
         $cursor = $desde->startOfMonth();
-        $fin    = $hasta->startOfMonth();
+        $fin = $hasta->startOfMonth();
         while ($cursor->lessThanOrEqualTo($fin)) {
-            $mes    = $cursor->format('Y-m');
+            $mes = $cursor->format('Y-m');
             $meses[] = ['mes' => $mes, 'monto' => $porMes[$mes] ?? 0.0];
-            $cursor  = $cursor->addMonth();
+            $cursor = $cursor->addMonth();
         }
 
         return $meses;
     }
 
     /**
-     * @param \Illuminate\Database\Eloquent\Builder<AdminContInvoice> $query
-     * @return \Illuminate\Database\Eloquent\Builder<AdminContInvoice>
+     * @param  Builder<AdminContInvoice>  $query
+     * @return Builder<AdminContInvoice>
      */
-    private function filtrarPorVendedor(\Illuminate\Database\Eloquent\Builder $query, int $vendedorId): \Illuminate\Database\Eloquent\Builder
+    private function filtrarPorVendedor(Builder $query, int $vendedorId): Builder
     {
         return $query->whereIn(
             'sales_project_id',
@@ -281,11 +281,11 @@ final class GerenciaHomeService
         $baseQuery = PipelineCard::whereBetween('created_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId));
 
-        $aprobadas       = PipelineCard::where('stage', 'approved')
+        $aprobadas = PipelineCard::where('stage', 'approved')
             ->whereBetween('updated_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->count();
-        $montoAprobado   = (float) PipelineCard::where('stage', 'approved')
+        $montoAprobado = (float) PipelineCard::where('stage', 'approved')
             ->whereBetween('updated_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->sum('amount');
@@ -338,12 +338,12 @@ final class GerenciaHomeService
 
         return [
             'kpis' => [
-                'cerrados_anio'        => $cerradosAnio,
-                'cerrados_anio_count'  => $cerradosAnioCount,
-                'cerrados_mes'         => (float) $montoAprobado,
-                'cerrados_mes_count'   => $cerradosMesCount,
-                'margen_anio_pct'      => $this->calcMargenDeProjectIds($cerradosAnioProjectIds),
-                'margen_mes_pct'       => $this->calcMargenDeProjectIds($cerradosMesProjectIds),
+                'cerrados_anio' => $cerradosAnio,
+                'cerrados_anio_count' => $cerradosAnioCount,
+                'cerrados_mes' => (float) $montoAprobado,
+                'cerrados_mes_count' => $cerradosMesCount,
+                'margen_anio_pct' => $this->calcMargenDeProjectIds($cerradosAnioProjectIds),
+                'margen_mes_pct' => $this->calcMargenDeProjectIds($cerradosMesProjectIds),
             ],
             'chart_mensual' => $this->zeroFillMeses($desde, $hasta, $chartMensual),
         ];
@@ -356,7 +356,7 @@ final class GerenciaHomeService
      * Solo considera ítems con cost != null y price_type != 'partner'.
      * Retorna null si ningún ítem tiene costo registrado.
      *
-     * @param list<int> $quoteIds
+     * @param  list<int>  $quoteIds
      */
     private function calcMargenDeQuoteIds(array $quoteIds): ?float
     {
@@ -375,7 +375,7 @@ final class GerenciaHomeService
      * Igual que calcMargenDeQuoteIds pero busca por sales_project_id de las cotizaciones
      * confirmadas (tarjetas PipelineCard → cotización asociada al mismo proyecto).
      *
-     * @param list<int> $projectIds
+     * @param  list<int>  $projectIds
      */
     private function calcMargenDeProjectIds(array $projectIds): ?float
     {
@@ -394,12 +394,12 @@ final class GerenciaHomeService
     /**
      * Calcula el margen % ponderado de una colección de cotizaciones ya cargadas con parts.items.
      *
-     * @param \Illuminate\Support\Collection<int, Quote> $quotes
+     * @param  Collection<int, Quote>  $quotes
      */
-    private function calcMargenDeQuotes(\Illuminate\Support\Collection $quotes): ?float
+    private function calcMargenDeQuotes(Collection $quotes): ?float
     {
         $sumRevenue = 0.0;
-        $sumCost    = 0.0;
+        $sumCost = 0.0;
 
         foreach ($quotes as $quote) {
             $priceType = $quote->price_type;
@@ -423,11 +423,11 @@ final class GerenciaHomeService
                     // (que requiere carga de tabla config en cada iteración) — la aproximación es
                     // suficientemente fiel para un KPI de gestión de alto nivel.
                     $itemDiscount = $item->discount_percent ?? 0.0;
-                    $revenue      = $item->unit_price * (1.0 - $itemDiscount / 100.0) * $item->quantity;
-                    $cost         = (float) $item->cost * $item->quantity;
+                    $revenue = $item->unit_price * (1.0 - $itemDiscount / 100.0) * $item->quantity;
+                    $cost = (float) $item->cost * $item->quantity;
 
                     $sumRevenue += $revenue;
-                    $sumCost    += $cost;
+                    $sumCost += $cost;
                 }
             }
         }
@@ -447,12 +447,12 @@ final class GerenciaHomeService
     private function saludModulos(): array
     {
         $inicioMes = CarbonImmutable::now()->startOfMonth();
-        $finMes    = CarbonImmutable::now()->endOfMonth();
+        $finMes = CarbonImmutable::now()->endOfMonth();
 
         // ── Ventas & Diseño ───────────────────────────────────────────────────
         $vd = [
-            'en_final_stage'     => PipelineCard::where('stage', 'proposal')->count(),
-            'estancados'         => PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
+            'en_final_stage' => PipelineCard::where('stage', 'proposal')->count(),
+            'estancados' => PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
                 ->where('stage_changed_at', '<', Carbon::now()->subDays(PipelineCard::STAGNANT_THRESHOLD_DAYS))
                 ->count(),
             'monto_cotizado_mes' => (float) PipelineCard::whereBetween('created_at', [$inicioMes, $finMes])
@@ -460,7 +460,7 @@ final class GerenciaHomeService
             'monto_aprobado_mes' => (float) PipelineCard::where('stage', 'approved')
                 ->whereBetween('updated_at', [$inicioMes, $finMes])
                 ->sum('amount'),
-            'pipeline_total'     => (float) PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
+            'pipeline_total' => (float) PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
                 ->sum('amount'),
         ];
 
@@ -468,13 +468,13 @@ final class GerenciaHomeService
         // SCRUM-167 (REQ-105) RN1/RN3 — CxC Total y Cuentas al día (Daniela 2026-08-25).
         // CxP total eliminado. cxc_total = suma de facturas no incobrables (CxC pendiente de cobro).
         // cuentas_al_dia = CxC total menos lo vencido (> 30 días sin cobrar).
-        $cxcBase  = AdminContInvoice::where('es_incobrable', false);
+        $cxcBase = AdminContInvoice::where('es_incobrable', false);
         $cxcTotal = (float) $cxcBase->sum('monto');
-        $cxcVenc  = (float) (clone $cxcBase)
+        $cxcVenc = (float) (clone $cxcBase)
             ->where('created_at', '<', Carbon::now()->subDays(30))
             ->sum('monto');
         $ac = [
-            'cxc_total'      => $cxcTotal,
+            'cxc_total' => $cxcTotal,
             'cuentas_al_dia' => (float) max(0, $cxcTotal - $cxcVenc),
         ];
 
@@ -488,22 +488,22 @@ final class GerenciaHomeService
         // cambia el resultado, solo reduce lo que se carga).
         /** @var list<PurchaseOrder> $ordersNoRecibidas */
         $ordersNoRecibidas = PurchaseOrder::where('status', '!=', PurchaseOrder::STATUS_RECIBIDO)->get()->all();
-        $ordenesCriticas   = count(array_filter($ordersNoRecibidas, fn (PurchaseOrder $o): bool => $o->isCritical()));
+        $ordenesCriticas = count(array_filter($ordersNoRecibidas, fn (PurchaseOrder $o): bool => $o->isCritical()));
 
         $compras = [
-            'ordenes_criticas'         => $ordenesCriticas,
+            'ordenes_criticas' => $ordenesCriticas,
             // SCRUM-168 RN2 (Daniela 2026-08-25) — "Bajo stock sin ordenar": bajo_stock/sin_stock
             // sin ninguna orden de compra abierta cubriéndolo. Chip destino:
             // InventoryController@index ?chip=bajo_stock_sin_ordenar (InventoryKpiService::
             // isLowStockWithoutOpenOrder(), misma clasificación, nunca un cálculo paralelo).
-            'bajo_stock_sin_ordenar'   => $this->inventoryKpis->lowStockWithoutOpenOrderCount(),
-            'en_transito'              => PurchaseOrder::whereIn('status', [
+            'bajo_stock_sin_ordenar' => $this->inventoryKpis->lowStockWithoutOpenOrderCount(),
+            'en_transito' => PurchaseOrder::whereIn('status', [
                 PurchaseOrder::STATUS_EN_TRANSITO,
                 PurchaseOrder::STATUS_EN_ADUANA,
                 PurchaseOrder::STATUS_EN_TRANSITO_LOCAL,
             ])->count(),
-            'proximas_a_llegar'        => PurchaseOrder::where('status', PurchaseOrder::STATUS_EN_TRANSITO_LOCAL)->count(),
-            'cantidad_pedidos'         => PurchaseOrder::whereNotIn('status', [PurchaseOrder::STATUS_RECIBIDO])->count(),
+            'proximas_a_llegar' => PurchaseOrder::where('status', PurchaseOrder::STATUS_EN_TRANSITO_LOCAL)->count(),
+            'cantidad_pedidos' => PurchaseOrder::whereNotIn('status', [PurchaseOrder::STATUS_RECIBIDO])->count(),
         ];
 
         // ── Bodega ─────────────────────────────────────────────────────────────
@@ -524,7 +524,7 @@ final class GerenciaHomeService
         $hoyDate = Carbon::today();
 
         $bodega = [
-            'despachos_urgentes'  => BodegaOrder::whereIn('stage', $bodegaActiveStages)
+            'despachos_urgentes' => BodegaOrder::whereIn('stage', $bodegaActiveStages)
                 ->whereNotNull('committed_delivery_date')
                 ->whereDate('committed_delivery_date', '<=', $hoyDate)
                 ->count(),
@@ -537,7 +537,7 @@ final class GerenciaHomeService
                 ->whereNotNull('committed_delivery_date')
                 ->whereRaw('DATE(updated_at) <= committed_delivery_date')
                 ->count(),
-            'completados_hoy'     => BodegaOrder::where('stage', BodegaOrder::STAGE_ENTREGADO)
+            'completados_hoy' => BodegaOrder::where('stage', BodegaOrder::STAGE_ENTREGADO)
                 ->whereDate('updated_at', $hoyDate)
                 ->count(),
         ];
@@ -548,7 +548,7 @@ final class GerenciaHomeService
         // sin_responder   = tickets en estado REPORTED (sin atender aún).
         // completados_mes = tickets RESOLVED en el mes actual.
         $servicios = [
-            'sin_responder'   => Ticket::where('estado', Ticket::ESTADO_REPORTED)->count(),
+            'sin_responder' => Ticket::where('estado', Ticket::ESTADO_REPORTED)->count(),
             'completados_mes' => Ticket::where('estado', Ticket::ESTADO_RESOLVED)
                 ->whereBetween('updated_at', [$inicioMes, $finMes])
                 ->count(),
@@ -556,10 +556,10 @@ final class GerenciaHomeService
 
         return [
             'ventas_diseno' => $vd,
-            'admin_contab'  => $ac,
-            'compras'       => $compras,
-            'bodega'        => $bodega,
-            'servicios'     => $servicios,
+            'admin_contab' => $ac,
+            'compras' => $compras,
+            'bodega' => $bodega,
+            'servicios' => $servicios,
         ];
     }
 
@@ -583,12 +583,12 @@ final class GerenciaHomeService
             ->orderBy('committed_delivery_date')
             ->get()
             ->map(fn (BodegaOrder $o): array => [
-                'id'           => $o->id,
+                'id' => $o->id,
                 'order_number' => $o->order_number,
-                'stage'        => $o->stage,
-                'customer'     => $o->customer_name,
-                'project'      => $o->pipelineCard?->salesProject?->name,
-                'address'      => $o->delivery_address,
+                'stage' => $o->stage,
+                'customer' => $o->customer_name,
+                'project' => $o->pipelineCard?->salesProject?->name,
+                'address' => $o->delivery_address,
             ])
             ->values()
             ->all();
@@ -603,23 +603,23 @@ final class GerenciaHomeService
             ->orderBy('scheduled_at')
             ->get()
             ->map(fn (Ticket $t): array => [
-                'id'        => $t->id,
-                'numero'    => $t->numero,
-                'tipo'      => $t->tipo,
-                'estado'    => $t->estado,
-                'hora'      => $t->scheduled_at?->format('H:i'),
-                'hora_fin'  => $t->scheduled_ends_at?->format('H:i'),
-                'cliente'   => $t->cliente,
+                'id' => $t->id,
+                'numero' => $t->numero,
+                'tipo' => $t->tipo,
+                'estado' => $t->estado,
+                'hora' => $t->scheduled_at?->format('H:i'),
+                'hora_fin' => $t->scheduled_ends_at?->format('H:i'),
+                'cliente' => $t->cliente,
                 'direccion' => $t->direccion,
-                'tecnico'   => $t->internalTechnician
-                    ? $t->internalTechnician->first_name . ' ' . $t->internalTechnician->last_name
+                'tecnico' => $t->internalTechnician
+                    ? $t->internalTechnician->first_name.' '.$t->internalTechnician->last_name
                     : null,
             ])
             ->values()
             ->all();
 
         return [
-            'bodega'    => $bodegaItems,
+            'bodega' => $bodegaItems,
             'servicios' => $serviciosItems,
         ];
     }
@@ -644,8 +644,8 @@ final class GerenciaHomeService
         $user = $userId !== null ? User::find($userId) : null;
         if ($user === null) {
             return [
-                'aprobaciones'  => [],
-                'is_approver'   => false,
+                'aprobaciones' => [],
+                'is_approver' => false,
                 'pending_total' => 0,
             ];
         }
@@ -657,22 +657,22 @@ final class GerenciaHomeService
         // ── Compras: POs pendientes de aprobación ───────────────────────────
         if ($this->gate->canAct($user, 'purchase_order')) {
             $poQuery = PurchaseOrder::where('status', PurchaseOrder::STATUS_POR_APROBAR)
-                ->where('requires_mark_approval', true)
+                ->where('requires_primary_approval', true)
                 ->whereNull('approved_by');
             $totalCount += $poQuery->count();
             $pos = (clone $poQuery)->orderBy('created_at')->limit(20)->get();
 
             foreach ($pos as $po) {
                 $items->push([
-                    'id'          => $po->id,
-                    'type'        => 'purchase_order',
-                    'module'      => 'compras',
-                    'reference'   => "PO-{$po->id}",
-                    'description' => "Orden de compra por " . number_format((float) $po->total_amount, 2),
-                    'amount'      => (float) ($po->total_amount ?? 0),
-                    'created_at'  => $po->created_at->toIso8601String(),
+                    'id' => $po->id,
+                    'type' => 'purchase_order',
+                    'module' => 'compras',
+                    'reference' => "PO-{$po->id}",
+                    'description' => 'Orden de compra por '.number_format((float) $po->total_amount, 2),
+                    'amount' => (float) ($po->total_amount ?? 0),
+                    'created_at' => $po->created_at->toIso8601String(),
                     'can_approve' => true,
-                    'action_url'  => '/compras/ordenes',
+                    'action_url' => '/compras/ordenes',
                 ]);
             }
         }
@@ -685,15 +685,15 @@ final class GerenciaHomeService
 
             foreach ($relocations as $rel) {
                 $items->push([
-                    'id'          => $rel->id,
-                    'type'        => 'relocation',
-                    'module'      => 'bodega',
-                    'reference'   => "REU-{$rel->id}",
+                    'id' => $rel->id,
+                    'type' => 'relocation',
+                    'module' => 'bodega',
+                    'reference' => "REU-{$rel->id}",
                     'description' => 'Solicitud de reubicación de inventario',
-                    'amount'      => null,
-                    'created_at'  => $rel->created_at->toIso8601String(),
+                    'amount' => null,
+                    'created_at' => $rel->created_at->toIso8601String(),
                     'can_approve' => true,
-                    'action_url'  => '/bodega/inventario',
+                    'action_url' => '/bodega/inventario',
                 ]);
             }
         }
@@ -706,15 +706,15 @@ final class GerenciaHomeService
 
             foreach ($adjustments as $adj) {
                 $items->push([
-                    'id'          => $adj->id,
-                    'type'        => 'adjustment',
-                    'module'      => 'bodega',
-                    'reference'   => "AJS-{$adj->id}",
+                    'id' => $adj->id,
+                    'type' => 'adjustment',
+                    'module' => 'bodega',
+                    'reference' => "AJS-{$adj->id}",
                     'description' => 'Ajuste de inventario pendiente',
-                    'amount'      => null,
-                    'created_at'  => $adj->created_at->toIso8601String(),
+                    'amount' => null,
+                    'created_at' => $adj->created_at->toIso8601String(),
                     'can_approve' => true,
-                    'action_url'  => '/bodega/solicitud-ajuste',
+                    'action_url' => '/bodega/solicitud-ajuste',
                 ]);
             }
         }
@@ -727,15 +727,15 @@ final class GerenciaHomeService
 
             foreach ($counts as $cnt) {
                 $items->push([
-                    'id'          => $cnt->id,
-                    'type'        => 'general_count',
-                    'module'      => 'bodega',
-                    'reference'   => "CNT-{$cnt->id}",
+                    'id' => $cnt->id,
+                    'type' => 'general_count',
+                    'module' => 'bodega',
+                    'reference' => "CNT-{$cnt->id}",
                     'description' => 'Conteo general pendiente de aprobación',
-                    'amount'      => null,
-                    'created_at'  => $cnt->created_at->toIso8601String(),
+                    'amount' => null,
+                    'created_at' => $cnt->created_at->toIso8601String(),
                     'can_approve' => true,
-                    'action_url'  => '/bodega/inventario-general',
+                    'action_url' => '/bodega/inventario-general',
                 ]);
             }
         }
@@ -748,15 +748,15 @@ final class GerenciaHomeService
 
             foreach ($zonaLibre as $zl) {
                 $items->push([
-                    'id'          => $zl->id,
-                    'type'        => 'zona_libre',
-                    'module'      => 'compras',
-                    'reference'   => "ZL-{$zl->id}",
+                    'id' => $zl->id,
+                    'type' => 'zona_libre',
+                    'module' => 'compras',
+                    'reference' => "ZL-{$zl->id}",
                     'description' => 'Solicitud Zona Libre pendiente',
-                    'amount'      => null,
-                    'created_at'  => $zl->created_at->toIso8601String(),
+                    'amount' => null,
+                    'created_at' => $zl->created_at->toIso8601String(),
                     'can_approve' => true,
-                    'action_url'  => '/bodega/ordenes-zona-libre',
+                    'action_url' => '/bodega/ordenes-zona-libre',
                 ]);
             }
         }
@@ -768,8 +768,8 @@ final class GerenciaHomeService
                 ->contains(fn (string $tipo): bool => $this->gate->canAct($user, $tipo));
 
         return [
-            'aprobaciones'  => array_values($items->sortBy('created_at')->all()),
-            'is_approver'   => $isApprover,
+            'aprobaciones' => array_values($items->sortBy('created_at')->all()),
+            'is_approver' => $isApprover,
             'pending_total' => $totalCount,
         ];
     }

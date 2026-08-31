@@ -7,6 +7,7 @@ namespace Tests\Feature\Bodega;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderDocument;
 use App\Modules\VentasDiseno\Models\Quote;
+use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
@@ -32,8 +33,8 @@ class OrderStatusControllerTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -41,7 +42,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     /** @param list<string> $extra */
     private function grantVentasDisenoRead(string $email, array $extra = []): void
     {
-        $slug = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->value('slug');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $permissions = array_merge(['ventas_diseno.read'], $extra);
         DB::table("{$slug}_auth.users")->where('email', $email)->update(['extra_permissions' => json_encode($permissions)]);
     }
@@ -204,7 +205,7 @@ class OrderStatusControllerTest extends FeatureTestCase
         $sellerA = $this->userIdByEmail('designer@atlantic.test');
         $sellerB = $this->userIdByEmail('management@atlantic.test');
 
-        $ownOrder   = $this->makeOrderWithPipelineCard($sellerA, ['order_number' => 'PED-2026-MINE']);
+        $ownOrder = $this->makeOrderWithPipelineCard($sellerA, ['order_number' => 'PED-2026-MINE']);
         $otherOrder = $this->makeOrderWithPipelineCard($sellerB, ['order_number' => 'PED-2026-OTHERS']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');

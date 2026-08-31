@@ -18,11 +18,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class CrmPermissionMigrationTest extends FeatureTestCase
 {
-    private const DANIELA = 'daniela@atlantic.com.pa'; // management
+    private const DANIELA = 'gerencia@test.com'; // management
 
-    private const ALDO = 'servicio@atlantic.com.pa'; // lider_servicios — ajeno a ventas_diseno/crm
+    private const ALDO = 'liderservicios@test.com'; // lider_servicios — ajeno a ventas_diseno/crm
 
-    private const MILENA = 'milena.e@grupolafayette.com'; // vendedor_disenador — can_view_team=false
+    private const MILENA = 'vendedordisenador@test.com'; // vendedor_disenador — can_view_team=false
 
     protected function setUp(): void
     {
@@ -109,7 +109,7 @@ class CrmPermissionMigrationTest extends FeatureTestCase
 
     public function test_superadmin_pasa_team_y_delete(): void
     {
-        $token = $this->loginAs('andres.loi@atlantic.com.pa', 'andres.loi@atlantic.com.pa');
+        $token = $this->loginAs('superadmin@test.com', 'superadmin@test.com');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/crm/projects', ['nombre' => 'Superadmin Test', 'tipo' => 'diseno', 'assignee_ids' => []]);
         $response->assertStatus(201);

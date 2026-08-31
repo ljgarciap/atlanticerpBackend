@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SCRUM-194 (REQ-131, hallazgo de Daniela Amaya 2026-07-30) — el mockup `2H__Compras_NuevaOrden.html`
+ * SCRUM-194 (REQ-131, hallazgo de Gerencia Test 2026-07-30) — el mockup `2H__Compras_NuevaOrden.html`
  * pide un solo campo de "Costo adicional estimado" con toggle $ monto / % del costo; solo existía
  * `additional_cost_percent`. Se agrega `additional_cost_amount` + `additional_cost_type` en vez de
  * reemplazar la columna existente, para no perder los `additional_cost_percent` ya guardados en

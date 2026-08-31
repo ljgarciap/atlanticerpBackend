@@ -99,7 +99,7 @@ final class ProviderController extends Controller
             $field = $pagination['sort_by'];
             $cmp = match ($field) {
                 'created_at' => $a->created_at <=> $b->created_at,
-                default      => strcasecmp((string) $a->{$field}, (string) $b->{$field}),
+                default => strcasecmp((string) $a->{$field}, (string) $b->{$field}),
             };
 
             return $pagination['sort_dir'] === 'desc' ? -$cmp : $cmp;
@@ -108,9 +108,9 @@ final class ProviderController extends Controller
 
         return response()->json([
             'fuzzy' => $fuzzy,
-            'kpis'  => $this->kpis(),
-            'data'  => array_map(fn (Provider $p) => $this->format($p), $paginator->items()),
-            'meta'  => Pagination::meta($paginator),
+            'kpis' => $this->kpis(),
+            'data' => array_map(fn (Provider $p) => $this->format($p), $paginator->items()),
+            'meta' => Pagination::meta($paginator),
         ]);
     }
 
@@ -183,14 +183,14 @@ final class ProviderController extends Controller
         $threshold = ComprasSettings::current()->low_rating_threshold;
 
         return [
-            'total_providers'   => $active->count(),
+            'total_providers' => $active->count(),
             // REQ-121 RN: promedio excluye "sin calificar" (Escenario 1).
-            'average_rating'    => $averageRating === null ? null : round($averageRating, 1),
-            'low_rating_count'  => $rated->filter(fn (float $r): bool => $r < $threshold)->count(),
+            'average_rating' => $averageRating === null ? null : round($averageRating, 1),
+            'low_rating_count' => $rated->filter(fn (float $r): bool => $r < $threshold)->count(),
             'active_categories' => $active->pluck('category')->filter()->unique()->count(),
             // SCRUM-185 — lista real de categorías en uso, para que el filtro sea un <select>
             // con opciones reales en vez de un input de texto libre.
-            'categories'        => $active->pluck('category')->filter()->unique()->sort()->values()->all(),
+            'categories' => $active->pluck('category')->filter()->unique()->sort()->values()->all(),
         ];
     }
 
@@ -200,19 +200,19 @@ final class ProviderController extends Controller
         $lastOrder = $provider->purchaseOrders()->orderByDesc('created_at')->first();
 
         $base = [
-            'id'               => $provider->id,
-            'name'             => $provider->name,
-            'category'         => $provider->category,
-            'origin'           => $provider->origin,
-            'currency'         => $provider->currency,
-            'is_active'        => $provider->is_active,
-            // SCRUM-186 (2026-08-06, hallazgo Daniela Amaya): columna "Contacto" de la tabla
+            'id' => $provider->id,
+            'name' => $provider->name,
+            'category' => $provider->category,
+            'origin' => $provider->origin,
+            'currency' => $provider->currency,
+            'is_active' => $provider->is_active,
+            // SCRUM-186 (2026-08-06, hallazgo Gerencia Test): columna "Contacto" de la tabla
             // principal — se expone acá (no solo en el detalle) para no requerir un fetch extra
             // por fila.
-            'contact_name'     => $provider->contact_name,
+            'contact_name' => $provider->contact_name,
             // REQ-124 Escenario 2 / REQ-123: null = "Sin calificar" / "Sin compras registradas
             // aún" — el frontend decide el texto, el backend nunca inventa 0.
-            'rating'           => $provider->ratingScore(),
+            'rating' => $provider->ratingScore(),
             'last_purchase_at' => $lastOrder?->created_at?->toDateString(),
         ];
 
@@ -221,15 +221,15 @@ final class ProviderController extends Controller
         }
 
         return array_merge($base, [
-            'whatsapp'             => $provider->whatsapp,
-            'phone'                => $provider->phone,
-            'email'                => $provider->email,
-            'address'              => $provider->address,
-            'country'              => $provider->country,
-            'bank_name'            => $provider->bank_name,
-            'bank_account_number'  => $provider->bank_account_number,
-            'bank_swift'           => $provider->bank_swift,
-            'bank_beneficiary'     => $provider->bank_beneficiary,
+            'whatsapp' => $provider->whatsapp,
+            'phone' => $provider->phone,
+            'email' => $provider->email,
+            'address' => $provider->address,
+            'country' => $provider->country,
+            'bank_name' => $provider->bank_name,
+            'bank_account_number' => $provider->bank_account_number,
+            'bank_swift' => $provider->bank_swift,
+            'bank_beneficiary' => $provider->bank_beneficiary,
         ]);
     }
 

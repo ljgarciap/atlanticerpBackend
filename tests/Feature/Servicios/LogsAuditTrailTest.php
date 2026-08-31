@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicios;
 
+use App\Models\User;
 use App\Modules\Servicios\Models\Ticket;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\SalesProject;
@@ -32,7 +33,7 @@ class LogsAuditTrailTest extends FeatureTestCase
     /** Mismo patrón que TestDataCleanupServiceTest::actingForAudit() — sin esto, resolveUserId() no tiene JWT que leer fuera de un endpoint HTTP real. */
     private function actingForAudit(): void
     {
-        $user    = \App\Models\User::where('email', 'servicio@atlantic.com.pa')->firstOrFail();
+        $user = User::where('email', 'liderservicios@test.com')->firstOrFail();
         $request = Request::create('/');
         $request->attributes->set('jwt', ['sub' => $user->id]);
         $this->app->instance('request', $request);
@@ -42,7 +43,7 @@ class LogsAuditTrailTest extends FeatureTestCase
     {
         $unique = uniqid();
         $master = MasterClient::create(['name' => "Cliente {$unique}"]);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
 
         return SalesProject::create(['sub_client_id' => $sub->id, 'name' => "Proyecto {$unique}"]);
     }
@@ -54,14 +55,14 @@ class LogsAuditTrailTest extends FeatureTestCase
 
         $this->actingForAudit();
         $ticket = Ticket::create([
-            'numero'                   => 'INS-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba — audit trail',
-            'cliente'                  => 'Cliente de prueba',
-            'sales_project_id'         => $project->id,
-            'estado'                   => Ticket::ESTADO_REPORTED,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'numero' => 'INS-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba — audit trail',
+            'cliente' => 'Cliente de prueba',
+            'sales_project_id' => $project->id,
+            'estado' => Ticket::ESTADO_REPORTED,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
 
@@ -81,14 +82,14 @@ class LogsAuditTrailTest extends FeatureTestCase
 
         $this->actingForAudit();
         $ticket = Ticket::create([
-            'numero'                   => 'INS-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba — audit trail',
-            'cliente'                  => 'Cliente de prueba',
-            'sales_project_id'         => $project->id,
-            'estado'                   => Ticket::ESTADO_REPORTED,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'numero' => 'INS-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba — audit trail',
+            'cliente' => 'Cliente de prueba',
+            'sales_project_id' => $project->id,
+            'estado' => Ticket::ESTADO_REPORTED,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
 

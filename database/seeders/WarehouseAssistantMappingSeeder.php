@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * SCRUM-329 Oleada A / Batch A1 (REQ-307, ticket SCRUM-377) — mapeo real vendedor→Asistente de
- * Bodega, confirmado contra la RN1/RN2 del ticket de Jira (no inventado): Mariano Sandoval recibe
- * los pedidos de Juan Manuel, Fefi, Neil, Bernardo y Annie; Osvaldo Santos recibe los de Idmar,
+ * Bodega, confirmado contra la RN1/RN2 del ticket de Jira (no inventado): Asistente Bodega Test 2 recibe
+ * los pedidos de Juan Manuel, Fefi, Neil, Bernardo y Annie; Asistente Bodega Test recibe los de Idmar,
  * Vanessa, Paola, Milena y Maribel. Los 12 emails vienen de `BusinessRoleUserSeeder::USERS`
  * (roster real ya sembrado) — ninguno se inventa acá.
  *
@@ -28,17 +28,17 @@ class WarehouseAssistantMappingSeeder extends Seeder
 {
     /** @var array<string, string> seller email => assistant email */
     private const MAPPING = [
-        'juanmanuel@atlantic.com.pa' => 'almacen2@atlantic.com.pa', // Mariano Sandoval
-        'fefi@atlantic.com.pa'       => 'almacen2@atlantic.com.pa',
-        'neil.quiel@atlantic.com.pa' => 'almacen2@atlantic.com.pa',
-        'bernardo@atlantic.com.pa'   => 'almacen2@atlantic.com.pa',
-        'annie@atlantic.com.pa'      => 'almacen2@atlantic.com.pa',
+        'vendedordisenador8@test.com' => 'asistentebodega2@test.com', // Asistente Bodega Test 2
+        'vendedordisenador3@test.com' => 'asistentebodega2@test.com',
+        'vendedordisenador2@test.com' => 'asistentebodega2@test.com',
+        'vendedordisenador9@test.com' => 'asistentebodega2@test.com',
+        'vendedordisenador6@test.com' => 'asistentebodega2@test.com',
 
-        'idmar@atlantic.com.pa'      => 'logistica@atlantic.com.pa', // Osvaldo Santos
-        'vanessa@atlantic.com.pa'    => 'logistica@atlantic.com.pa',
-        'paola@atlantic.com.pa'      => 'logistica@atlantic.com.pa',
-        'milena.e@grupolafayette.com'     => 'logistica@atlantic.com.pa',
-        'maribel@atlantic.com.pa'    => 'logistica@atlantic.com.pa',
+        'vendedordisenador10@test.com' => 'asistentebodega@test.com', // Asistente Bodega Test
+        'vendedordisenador4@test.com' => 'asistentebodega@test.com',
+        'vendedordisenador5@test.com' => 'asistentebodega@test.com',
+        'vendedordisenador@test.com' => 'asistentebodega@test.com',
+        'vendedordisenador7@test.com' => 'asistentebodega@test.com',
     ];
 
     public function run(): void
@@ -47,6 +47,7 @@ class WarehouseAssistantMappingSeeder extends Seeder
 
         if ($tenant === null) {
             $this->command?->warn('Tenant "atlantic" not found — WarehouseAssistantMappingSeeder skipped.');
+
             return;
         }
 
@@ -61,10 +62,12 @@ class WarehouseAssistantMappingSeeder extends Seeder
             foreach (self::MAPPING as $sellerEmail => $assistantEmail) {
                 if (! isset($userIds[$sellerEmail])) {
                     $this->command?->warn("Vendedor \"{$sellerEmail}\" no encontrado — mapeo omitido.");
+
                     continue;
                 }
                 if (! isset($userIds[$assistantEmail])) {
                     $this->command?->warn("Asistente \"{$assistantEmail}\" no encontrado — mapeo omitido.");
+
                     continue;
                 }
 
@@ -80,9 +83,9 @@ class WarehouseAssistantMappingSeeder extends Seeder
                 }
 
                 WarehouseAssistantMapping::create([
-                    'seller_user_id'    => $sellerId,
+                    'seller_user_id' => $sellerId,
                     'assistant_user_id' => $assistantId,
-                    'is_active'         => true,
+                    'is_active' => true,
                 ]);
             }
         } finally {

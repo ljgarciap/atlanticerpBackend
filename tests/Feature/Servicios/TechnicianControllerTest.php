@@ -14,9 +14,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class TechnicianControllerTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const VENDEDOR_DISENADOR = 'milena.e@grupolafayette.com';
+    private const VENDEDOR_DISENADOR = 'vendedordisenador@test.com';
 
     protected function setUp(): void
     {
@@ -36,10 +36,10 @@ class TechnicianControllerTest extends FeatureTestCase
             ->map(fn (array $t) => "{$t['first_name']} {$t['last_name']}")
             ->all();
 
-        $this->assertContains('Carlos Vergara', $names);
-        $this->assertContains('Pedro Santos', $names);
-        $this->assertContains('Agustin Rodriguez', $names);
-        $this->assertContains('Miguel Castillo', $names);
+        $this->assertContains('Tecnico Servicios Test', $names);
+        $this->assertContains('Tecnico Servicios Test 2', $names);
+        $this->assertContains('Tecnico Servicios Test 3', $names);
+        $this->assertContains('Garantias Servicios Test', $names);
         $this->assertCount(4, $names);
     }
 

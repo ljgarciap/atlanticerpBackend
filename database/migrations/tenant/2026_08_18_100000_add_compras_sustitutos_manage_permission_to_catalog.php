@@ -6,7 +6,7 @@ use App\Shared\Multitenancy\TenantSchemaMigration;
 use Illuminate\Support\Facades\DB;
 
 /**
- * SCRUM-771 — Líder de Operaciones (operaciones@atlantic.com.pa) necesita acceso COMPLETO a
+ * SCRUM-771 — Líder de Operaciones (lideroperaciones@test.com) necesita acceso COMPLETO a
  * Catálogo y Stock → Comparación de Referencias ("Sustitutos" en código, `ReplacementRequestController`
  * /`ReplacementSearchController`), pero SOLO LECTURA en el resto de Compras (Ver Órdenes,
  * Logística & Envío, Inventario, Ver Registros de Ingreso). No se reusa `compras.write`/

@@ -7,7 +7,6 @@ namespace Tests\Feature\Servicios;
 use App\Modules\Servicios\Models\InternalTechnician;
 use App\Modules\Servicios\Models\Tool;
 use App\Modules\Servicios\Models\ToolMovement;
-use App\Modules\Servicios\Models\ToolPurchaseRequest;
 use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
@@ -17,13 +16,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class ToolsBatch13Part1Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
-    private const VENDEDOR_DISENADOR = 'milena.e@grupolafayette.com';
+    private const VENDEDOR_DISENADOR = 'vendedordisenador@test.com';
 
     protected function setUp(): void
     {
@@ -40,21 +39,21 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     private function carlosTechnicianId(): int
     {
-        return InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail()->id;
+        return InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail()->id;
     }
 
     private function pedroTechnicianId(): int
     {
-        return InternalTechnician::where('nombre', 'Pedro Santos')->firstOrFail()->id;
+        return InternalTechnician::where('nombre', 'Tecnico Servicios Test 2')->firstOrFail()->id;
     }
 
     /** @param array<string, mixed> $overrides */
     private function makeTool(array $overrides = []): Tool
     {
         return Tool::create([
-            'nombre'       => 'Casco de seguridad',
-            'codigo_unico' => 'COD-HER-' . str_pad((string) random_int(1, 999999), 3, '0', STR_PAD_LEFT) . random_int(1000, 9999),
-            'estado'       => Tool::ESTADO_GOOD,
+            'nombre' => 'Casco de seguridad',
+            'codigo_unico' => 'COD-HER-'.str_pad((string) random_int(1, 999999), 3, '0', STR_PAD_LEFT).random_int(1000, 9999),
+            'estado' => Tool::ESTADO_GOOD,
             ...$overrides,
         ]);
     }
@@ -95,7 +94,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         $this->makeTool(['codigo_unico' => 'COD-HER-100', 'estado' => Tool::ESTADO_GOOD]);
         $this->makeTool(['codigo_unico' => 'COD-HER-101', 'estado' => Tool::ESTADO_WORN]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/tools?estado=worn')
             ->assertStatus(200);
@@ -109,9 +108,9 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     {
         $carlosId = $this->carlosTechnicianId();
         $this->makeTool([
-            'codigo_unico'              => 'COD-HER-200',
+            'codigo_unico' => 'COD-HER-200',
             'assigned_to_technician_id' => $carlosId,
-            'assigned_since'            => now()->toDateString(),
+            'assigned_since' => now()->toDateString(),
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -131,13 +130,13 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     {
         $carlosId = $this->carlosTechnicianId();
         $this->makeTool([
-            'codigo_unico'              => 'COD-HER-300',
+            'codigo_unico' => 'COD-HER-300',
             'assigned_to_technician_id' => $carlosId,
-            'assigned_since'            => now()->toDateString(),
+            'assigned_since' => now()->toDateString(),
         ]);
         $this->makeTool(['codigo_unico' => 'COD-HER-301', 'assigned_to_technician_id' => null]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/tools?assigned_to=bodega')
             ->assertStatus(200);
@@ -161,10 +160,10 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     public function test_marcar_danada_atribuye_responsable_al_tecnico_asignado(): void
     {
         $carlosId = $this->carlosTechnicianId();
-        $tool     = $this->makeTool([
-            'codigo_unico'              => 'COD-HER-400',
+        $tool = $this->makeTool([
+            'codigo_unico' => 'COD-HER-400',
             'assigned_to_technician_id' => $carlosId,
-            'assigned_since'            => now()->toDateString(),
+            'assigned_since' => now()->toDateString(),
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -172,13 +171,13 @@ class ToolsBatch13Part1Test extends FeatureTestCase
             ->patchJson("/api/servicios/tools/{$tool->id}/estado", ['estado' => Tool::ESTADO_DAMAGED])
             ->assertStatus(200);
 
-        $this->assertSame('Carlos Vergara', $response->json('responsable_incidente'));
+        $this->assertSame('Tecnico Servicios Test', $response->json('responsable_incidente'));
         $this->assertSame('damaged', $response->json('estado'));
 
         $this->reactivateTenant();
-        $this->assertDatabaseHas((new ToolMovement())->getTable(), [
+        $this->assertDatabaseHas((new ToolMovement)->getTable(), [
             'tool_id' => $tool->id,
-            'tipo'    => ToolMovement::TIPO_DAMAGED,
+            'tipo' => ToolMovement::TIPO_DAMAGED,
         ]);
     }
 
@@ -186,7 +185,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     {
         $tool = $this->makeTool(['codigo_unico' => 'COD-HER-401', 'assigned_to_technician_id' => null]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tools/{$tool->id}/estado", ['estado' => Tool::ESTADO_LOST])
             ->assertStatus(200);
@@ -197,13 +196,13 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     public function test_marcar_desgaste_no_atribuye_responsable(): void
     {
         $carlosId = $this->carlosTechnicianId();
-        $tool     = $this->makeTool([
-            'codigo_unico'              => 'COD-HER-402',
+        $tool = $this->makeTool([
+            'codigo_unico' => 'COD-HER-402',
             'assigned_to_technician_id' => $carlosId,
-            'assigned_since'            => now()->toDateString(),
+            'assigned_since' => now()->toDateString(),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tools/{$tool->id}/estado", ['estado' => Tool::ESTADO_WORN])
             ->assertStatus(200);
@@ -211,24 +210,24 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         $this->assertNull($response->json('responsable_incidente'));
 
         $this->reactivateTenant();
-        $this->assertDatabaseHas((new ToolMovement())->getTable(), [
+        $this->assertDatabaseHas((new ToolMovement)->getTable(), [
             'tool_id' => $tool->id,
-            'tipo'    => ToolMovement::TIPO_WORN,
+            'tipo' => ToolMovement::TIPO_WORN,
         ]);
     }
 
     public function test_volver_a_buen_estado_limpia_responsable(): void
     {
         $carlosId = $this->carlosTechnicianId();
-        $tool     = $this->makeTool([
-            'codigo_unico'              => 'COD-HER-403',
+        $tool = $this->makeTool([
+            'codigo_unico' => 'COD-HER-403',
             'assigned_to_technician_id' => $carlosId,
-            'assigned_since'            => now()->toDateString(),
-            'estado'                    => Tool::ESTADO_DAMAGED,
-            'responsable_incidente'     => 'Carlos Vergara',
+            'assigned_since' => now()->toDateString(),
+            'estado' => Tool::ESTADO_DAMAGED,
+            'responsable_incidente' => 'Tecnico Servicios Test',
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tools/{$tool->id}/estado", ['estado' => Tool::ESTADO_GOOD])
             ->assertStatus(200);
@@ -239,17 +238,17 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         // a Buen estado SÍ genera un Ingreso ahora, para que el saldo del Kardex revierta la baja
         // corregida (antes quedaba restada para siempre). Ver `ToolService::updateEstado()`.
         $this->reactivateTenant();
-        $this->assertDatabaseHas((new ToolMovement())->getTable(), [
+        $this->assertDatabaseHas((new ToolMovement)->getTable(), [
             'tool_id' => $tool->id,
-            'tipo'    => ToolMovement::TIPO_INGRESO,
+            'tipo' => ToolMovement::TIPO_INGRESO,
             'detalle' => 'Restaurada a Buen estado',
         ]);
-        $this->assertDatabaseCount((new ToolMovement())->getTable(), 1);
+        $this->assertDatabaseCount((new ToolMovement)->getTable(), 1);
     }
 
     public function test_estado_invalido_retorna_422(): void
     {
-        $tool  = $this->makeTool(['codigo_unico' => 'COD-HER-404']);
+        $tool = $this->makeTool(['codigo_unico' => 'COD-HER-404']);
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
@@ -259,7 +258,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_tecnico_interno_no_puede_cambiar_estado(): void
     {
-        $tool  = $this->makeTool(['codigo_unico' => 'COD-HER-405']);
+        $tool = $this->makeTool(['codigo_unico' => 'COD-HER-405']);
         $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
@@ -269,7 +268,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_management_no_puede_cambiar_estado(): void
     {
-        $tool  = $this->makeTool(['codigo_unico' => 'COD-HER-406']);
+        $tool = $this->makeTool(['codigo_unico' => 'COD-HER-406']);
         $token = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
 
         $this->withHeaders($this->authHeaders($token))
@@ -281,29 +280,29 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_reasignar_actualiza_tecnico_y_fecha(): void
     {
-        $tool     = $this->makeTool(['codigo_unico' => 'COD-HER-500', 'assigned_to_technician_id' => null]);
-        $pedroId  = $this->pedroTechnicianId();
+        $tool = $this->makeTool(['codigo_unico' => 'COD-HER-500', 'assigned_to_technician_id' => null]);
+        $pedroId = $this->pedroTechnicianId();
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tools/{$tool->id}/asignacion", ['assigned_to_technician_id' => $pedroId])
             ->assertStatus(200);
 
         $this->assertSame($pedroId, $response->json('assigned_to_technician_id'));
-        $this->assertSame('Pedro Santos', $response->json('assigned_to'));
+        $this->assertSame('Tecnico Servicios Test 2', $response->json('assigned_to'));
         $this->assertSame(now()->toDateString(), $response->json('assigned_since'));
     }
 
     public function test_reasignar_a_bodega_limpia_tecnico(): void
     {
         $carlosId = $this->carlosTechnicianId();
-        $tool     = $this->makeTool([
-            'codigo_unico'              => 'COD-HER-501',
+        $tool = $this->makeTool([
+            'codigo_unico' => 'COD-HER-501',
             'assigned_to_technician_id' => $carlosId,
-            'assigned_since'            => now()->subDays(10)->toDateString(),
+            'assigned_since' => now()->subDays(10)->toDateString(),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tools/{$tool->id}/asignacion", ['assigned_to_technician_id' => null])
             ->assertStatus(200);
@@ -316,7 +315,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     /** RN3 — reasignar NUNCA genera movimiento de kardex, a diferencia de REQ-269. */
     public function test_reasignar_no_genera_movimiento_de_kardex(): void
     {
-        $tool    = $this->makeTool(['codigo_unico' => 'COD-HER-502']);
+        $tool = $this->makeTool(['codigo_unico' => 'COD-HER-502']);
         $pedroId = $this->pedroTechnicianId();
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -325,12 +324,12 @@ class ToolsBatch13Part1Test extends FeatureTestCase
             ->assertStatus(200);
 
         $this->reactivateTenant();
-        $this->assertDatabaseCount((new ToolMovement())->getTable(), 0);
+        $this->assertDatabaseCount((new ToolMovement)->getTable(), 0);
     }
 
     public function test_tecnico_interno_no_puede_reasignar(): void
     {
-        $tool  = $this->makeTool(['codigo_unico' => 'COD-HER-503']);
+        $tool = $this->makeTool(['codigo_unico' => 'COD-HER-503']);
         $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
@@ -342,7 +341,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_alta_nueva_crea_solicitud_pendiente_sin_unidades_reales(): void
     {
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tools/purchase-requests', ['nombre' => 'Taladro inalámbrico', 'cantidad' => 3])
             ->assertStatus(201);
@@ -352,7 +351,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         $this->assertSame(3, $response->json('cantidad'));
 
         $this->reactivateTenant();
-        $this->assertDatabaseCount((new Tool())->getTable(), 0);
+        $this->assertDatabaseCount((new Tool)->getTable(), 0);
     }
 
     public function test_alta_nueva_sin_nombre_ni_cantidad_retorna_422(): void
@@ -392,10 +391,10 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         $this->assertCount(2, array_unique($codigos));
 
         $this->reactivateTenant();
-        $this->assertDatabaseCount((new Tool())->getTable(), 2);
+        $this->assertDatabaseCount((new Tool)->getTable(), 2);
         // RN4 — 1 movimiento "Ingreso" por unidad generada, cada uno con el detalle de todos los
         // códigos de esta recepción.
-        $this->assertDatabaseCount((new ToolMovement())->getTable(), 2);
+        $this->assertDatabaseCount((new ToolMovement)->getTable(), 2);
         $movements = ToolMovement::all();
         $this->assertTrue($movements->every(fn (ToolMovement $m): bool => $m->tipo === ToolMovement::TIPO_INGRESO));
         $this->assertTrue($movements->every(fn (ToolMovement $m): bool => str_contains((string) $m->detalle, $codigos[0]) && str_contains((string) $m->detalle, $codigos[1])));
@@ -403,7 +402,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_recibir_solicitud_ya_recibida_retorna_409(): void
     {
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tools/purchase-requests', ['nombre' => 'Casco de seguridad', 'cantidad' => 1])
             ->assertStatus(201);
@@ -440,15 +439,15 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_solicitar_reposicion_deriva_nombre_del_tool_server_side(): void
     {
-        $tool  = $this->makeTool(['nombre' => 'Escalera doble altura', 'codigo_unico' => 'COD-HER-600']);
+        $tool = $this->makeTool(['nombre' => 'Escalera doble altura', 'codigo_unico' => 'COD-HER-600']);
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tools/purchase-requests', [
-                'tool_id'  => $tool->id,
+                'tool_id' => $tool->id,
                 'cantidad' => 2,
                 // Texto libre a propósito — RN de REQ-272: debe ignorarse, `nombre` se deriva del tool.
-                'nombre'   => 'Nombre inventado por el cliente',
+                'nombre' => 'Nombre inventado por el cliente',
             ])
             ->assertStatus(201);
 
@@ -458,7 +457,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_reposicion_disponible_en_cualquier_unidad_no_solo_danadas(): void
     {
-        $tool  = $this->makeTool(['codigo_unico' => 'COD-HER-601', 'estado' => Tool::ESTADO_GOOD]);
+        $tool = $this->makeTool(['codigo_unico' => 'COD-HER-601', 'estado' => Tool::ESTADO_GOOD]);
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
@@ -469,7 +468,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     public function test_recibir_reposicion_nunca_reutiliza_el_codigo_original(): void
     {
         $original = $this->makeTool(['nombre' => 'Guantes de seguridad', 'codigo_unico' => 'COD-HER-602']);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tools/purchase-requests', ['tool_id' => $original->id, 'cantidad' => 1])
@@ -491,7 +490,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_index_muestra_solicitud_de_reposicion_pendiente_en_la_unidad_original(): void
     {
-        $tool  = $this->makeTool(['codigo_unico' => 'COD-HER-603']);
+        $tool = $this->makeTool(['codigo_unico' => 'COD-HER-603']);
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))

@@ -8,7 +8,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SCRUM-388 (REQ-318, corrección de Daniela Amaya 2026-08-11) — `InventoryReviewService::
+ * SCRUM-388 (REQ-318, corrección de Gerencia Test 2026-08-11) — `InventoryReviewService::
  * resolve()` sobrescribía `location_snapshot` con la ubicación confirmada durante la Revisión de
  * Inventario, perdiendo la ubicación ORIGINAL registrada del producto. `location_snapshot` ahora
  * queda intocable desde ese flujo — la nueva ubicación confirmada vive en columnas propias:

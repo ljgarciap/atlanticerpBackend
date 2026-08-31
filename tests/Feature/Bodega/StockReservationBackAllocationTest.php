@@ -30,11 +30,11 @@ class StockReservationBackAllocationTest extends FeatureTestCase
 
     private function startPicking(Order $order): void
     {
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
+        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
         $order->update(['picker_id' => $pickerId, 'stage' => Order::STAGE_PICKING_PENDIENTE]);
 
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/start-picking")
@@ -131,11 +131,11 @@ class StockReservationBackAllocationTest extends FeatureTestCase
         $this->setStock($product, 5);
 
         $dispatched = $this->makeOrder(
-            ['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $this->userIdByEmail('arrochagary@gmail.com'), 'invoice_ready' => true],
+            ['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $this->userIdByEmail('transporte@test.com'), 'invoice_ready' => true],
             ['catalog_product_id' => $product->id, 'qty_requested' => 5],
         );
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/bodega/orders/{$dispatched->id}/dispatch")->assertStatus(200);
 
         $this->makeCurrentTenant();

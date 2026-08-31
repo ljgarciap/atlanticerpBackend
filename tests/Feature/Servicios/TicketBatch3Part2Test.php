@@ -20,11 +20,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class TicketBatch3Part2Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
-    private const VENDEDOR_DISENADOR = 'milena.e@grupolafayette.com';
+    private const VENDEDOR_DISENADOR = 'vendedordisenador@test.com';
 
     protected function setUp(): void
     {
@@ -37,7 +37,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
     {
         $unique = uniqid();
         $master = MasterClient::create(['name' => "Cliente {$unique}"]);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => "Proyecto {$unique}"]);
 
         return ['master' => $master, 'sub' => $sub, 'project' => $project];
@@ -56,18 +56,18 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_crear_ticket_con_requerimientos_y_productos(): void
     {
         $hierarchy = $this->makeClientHierarchy();
-        $product   = $this->makeCatalogProduct('LUM-COL-014', 'Colgante LED', 'Atlantic');
-        $token     = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $product = $this->makeCatalogProduct('LUM-COL-014', 'Colgante LED', 'Atlantic');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Reclamo con productos',
+                'descripcion' => 'Reclamo con productos',
                 'sales_project_id' => $hierarchy['project']->id,
                 'requerimientos_especiales' => [
                     'catalog' => ['casco', 'arnes'],
-                    'otros'   => ['Requiere grúa'],
+                    'otros' => ['Requiere grúa'],
                 ],
                 'productos' => [
                     ['catalog_product_id' => $product->id, 'cantidad_reclamo' => 3],
@@ -94,13 +94,13 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_crear_ticket_sin_productos_ni_requerimientos(): void
     {
         $hierarchy = $this->makeClientHierarchy();
-        $token     = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Sin extras',
+                'descripcion' => 'Sin extras',
                 'sales_project_id' => $hierarchy['project']->id,
             ])
             ->assertStatus(201);
@@ -114,14 +114,14 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_crear_ticket_con_producto_duplicado_retorna_422(): void
     {
         $hierarchy = $this->makeClientHierarchy();
-        $product   = $this->makeCatalogProduct('LUM-COL-020', 'Colgante LED 2');
-        $token     = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $product = $this->makeCatalogProduct('LUM-COL-020', 'Colgante LED 2');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Producto duplicado',
+                'descripcion' => 'Producto duplicado',
                 'sales_project_id' => $hierarchy['project']->id,
                 'productos' => [
                     ['catalog_product_id' => $product->id, 'cantidad_reclamo' => 1],
@@ -134,13 +134,13 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_crear_ticket_con_clave_de_requerimiento_invalida_retorna_422(): void
     {
         $hierarchy = $this->makeClientHierarchy();
-        $token     = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
-                'tipo'             => Ticket::TIPO_CLAIM,
+                'tipo' => Ticket::TIPO_CLAIM,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
-                'descripcion'      => 'Clave inventada',
+                'descripcion' => 'Clave inventada',
                 'sales_project_id' => $hierarchy['project']->id,
                 'requerimientos_especiales' => ['catalog' => ['clave-que-no-existe']],
             ])
@@ -188,7 +188,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_buscar_proyectos_acotado_al_subcliente(): void
     {
         $hierarchy = $this->makeClientHierarchy();
-        $otherSub  = SubClient::create(['master_client_id' => $hierarchy['master']->id, 'business_name' => 'Otro sub', 'tax_id' => uniqid()]);
+        $otherSub = SubClient::create(['master_client_id' => $hierarchy['master']->id, 'business_name' => 'Otro sub', 'tax_id' => uniqid()]);
         SalesProject::create(['sub_client_id' => $otherSub->id, 'name' => 'Proyecto de otro sub']);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');

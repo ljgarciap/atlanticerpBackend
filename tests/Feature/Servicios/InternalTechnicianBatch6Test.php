@@ -19,9 +19,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class InternalTechnicianBatch6Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
     // 2026-08-10 15:00:00 UTC == 2026-08-10 10:00:00 America/Panama (UTC-5).
     private const FROZEN_NOW = '2026-08-10 15:00:00';
@@ -48,13 +48,13 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
     private function makeTicket(array $overrides = []): Ticket
     {
         return Ticket::create([
-            'numero'                   => 'INS-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_SCHEDULED,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'numero' => 'INS-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_SCHEDULED,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
             ...$overrides,
         ]);
@@ -63,7 +63,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
     private function carlosUserId(): int
     {
         /** @var InternalTechnician $carlos */
-        $carlos = InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail();
+        $carlos = InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail();
 
         return (int) $carlos->user_id;
     }
@@ -79,8 +79,8 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             ->assertStatus(200);
 
         $nombres = collect($response->json('data'))->pluck('nombre')->all();
-        $this->assertContains('Carlos Vergara', $nombres);
-        $this->assertContains('Miguel Castillo', $nombres);
+        $this->assertContains('Tecnico Servicios Test', $nombres);
+        $this->assertContains('Garantias Servicios Test', $nombres);
     }
 
     /** pct_resuelto_primera_visita sigue siendo placeholder hasta REQ-211 (Batch 15). */
@@ -92,7 +92,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             ->getJson('/api/servicios/internal-technicians')
             ->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame(0, $carlos['herramientas_asignadas']);
         $this->assertNull($carlos['pct_resuelto_primera_visita']);
     }
@@ -106,7 +106,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
     public function test_herramientas_asignadas_refleja_el_conteo_real(): void
     {
         /** @var InternalTechnician $carlos */
-        $carlos = InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail();
+        $carlos = InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail();
         Tool::create([
             'nombre' => 'Taladro', 'codigo_unico' => 'TL-'.uniqid(), 'estado' => Tool::ESTADO_GOOD,
             'assigned_to_technician_id' => $carlos->id, 'assigned_since' => now()->toDateString(),
@@ -126,7 +126,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             ->getJson('/api/servicios/internal-technicians')
             ->assertStatus(200);
 
-        $row = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $row = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame(2, $row['herramientas_asignadas']);
     }
 
@@ -146,14 +146,14 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at'           => $this->panama('09:45'),
-            'scheduled_ends_at'      => $this->panama('10:30'),
+            'scheduled_at' => $this->panama('09:45'),
+            'scheduled_ends_at' => $this->panama('10:30'),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/servicios/internal-technicians')->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame('on_site', $carlos['estado']);
     }
 
@@ -162,14 +162,14 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at'           => $this->panama('10:45'),
-            'scheduled_ends_at'      => $this->panama('11:30'),
+            'scheduled_at' => $this->panama('10:45'),
+            'scheduled_ends_at' => $this->panama('11:30'),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/servicios/internal-technicians')->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame('en_route', $carlos['estado']);
     }
 
@@ -178,14 +178,14 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at'           => $this->panama('14:00'),
-            'scheduled_ends_at'      => $this->panama('15:00'),
+            'scheduled_at' => $this->panama('14:00'),
+            'scheduled_ends_at' => $this->panama('15:00'),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/servicios/internal-technicians')->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame('available', $carlos['estado']);
     }
 
@@ -194,14 +194,14 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at'           => $this->panama('07:00'),
-            'scheduled_ends_at'      => $this->panama('08:00'),
+            'scheduled_at' => $this->panama('07:00'),
+            'scheduled_ends_at' => $this->panama('08:00'),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/servicios/internal-technicians')->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame('off', $carlos['estado']);
     }
 
@@ -209,10 +209,10 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
     {
         Carbon::setTestNow($this->panama('20:00')); // fuera de 08:00-18:00
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/servicios/internal-technicians')->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame('off', $carlos['estado']);
     }
 
@@ -224,7 +224,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         // loginAs() ya disparó una request HTTP real, que limpia el search_path que setUp() dejó
         // activo (mismo gotcha documentado en TicketBatch4Test/ExternalTechnicianBatch5Test).
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $id = InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail()->id;
+        $id = InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail()->id;
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/internal-technicians/{$id}/estado", ['estado' => 'available'])
@@ -245,7 +245,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             'scheduled_at' => $this->panama('09:00'), 'scheduled_ends_at' => $this->panama('09:30'),
         ]);
 
-        $id    = InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail()->id;
+        $id = InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail()->id;
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -258,7 +258,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
 
     public function test_visitas_hoy_vacio_sin_ticket(): void
     {
-        $id    = InternalTechnician::where('nombre', 'Miguel Castillo')->firstOrFail()->id;
+        $id = InternalTechnician::where('nombre', 'Garantias Servicios Test')->firstOrFail()->id;
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -285,7 +285,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/internal-technicians', [
-                'nombre'       => 'Luis Fernández',
+                'nombre' => 'Luis Fernández',
                 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL,
             ])
             ->assertStatus(201);
@@ -359,10 +359,10 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
                 'nombre' => 'Técnico Garantías Dos', 'especialidad' => InternalTechnician::ESPECIALIDAD_WARRANTY,
             ])->assertStatus(201);
 
-        // Miguel Castillo (seed real) ya tiene ámbar — el nuevo NO debe recibir el mismo color.
+        // Garantias Servicios Test (seed real) ya tiene ámbar — el nuevo NO debe recibir el mismo color.
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertNotSame(
-            InternalTechnician::where('nombre', 'Miguel Castillo')->firstOrFail()->color,
+            InternalTechnician::where('nombre', 'Garantias Servicios Test')->firstOrFail()->color,
             $r1->json('color'),
         );
     }
@@ -388,44 +388,44 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             'scheduled_at' => $this->panama('14:00'), 'scheduled_ends_at' => $this->panama('15:00'),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda')
             ->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertCount(1, $carlos['visitas']);
     }
 
     /** Escenario 2 (REQ-260) — técnico sin visitas hoy trae array vacío (RN3, mensaje lo resuelve el frontend). */
     public function test_agenda_tecnico_sin_visitas_trae_array_vacio(): void
     {
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda')
             ->assertStatus(200);
 
-        $miguel = collect($response->json('data'))->firstWhere('nombre', 'Miguel Castillo');
+        $miguel = collect($response->json('data'))->firstWhere('nombre', 'Garantias Servicios Test');
         $this->assertSame([], $miguel['visitas']);
     }
 
     public function test_agenda_filtra_por_technician_id(): void
     {
-        $carlosId = InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail()->id;
+        $carlosId = InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail()->id;
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/internal-technicians/agenda?technician_id={$carlosId}")
             ->assertStatus(200);
 
         $this->assertCount(1, $response->json('data'));
-        $this->assertSame('Carlos Vergara', $response->json('data.0.nombre'));
+        $this->assertSame('Tecnico Servicios Test', $response->json('data.0.nombre'));
     }
 
     /** RN5 (REQ-260) — Vendedor/Diseñador tiene acceso de solo vista. */
     public function test_vendedor_disenador_puede_ver_agenda_equipo(): void
     {
-        $token = $this->loginAs('milena.e@grupolafayette.com', 'milena.e@grupolafayette.com', 'vendedor_disenador');
+        $token = $this->loginAs('vendedordisenador@test.com', 'vendedordisenador@test.com', 'vendedor_disenador');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda')
@@ -444,12 +444,12 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             'scheduled_ends_at' => Carbon::parse('2026-08-13 15:00', 'America/Panama')->utc(),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda?view=day')
             ->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame([], $carlos['visitas']);
     }
 
@@ -462,12 +462,12 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             'scheduled_ends_at' => Carbon::parse('2026-08-13 15:00', 'America/Panama')->utc(),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda?view=week')
             ->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertCount(1, $carlos['visitas']);
         $this->assertSame('2026-08-13', $carlos['visitas'][0]['fecha']);
     }
@@ -481,12 +481,12 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             'scheduled_ends_at' => Carbon::parse('2026-08-20 15:00', 'America/Panama')->utc(),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda?view=week')
             ->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame([], $carlos['visitas']);
     }
 
@@ -499,12 +499,12 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             'scheduled_ends_at' => Carbon::parse('2026-08-28 10:00', 'America/Panama')->utc(),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda?view=month')
             ->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertCount(1, $carlos['visitas']);
     }
 
@@ -517,12 +517,12 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             'scheduled_ends_at' => Carbon::parse('2026-09-01 10:00', 'America/Panama')->utc(),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda?view=month')
             ->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertSame([], $carlos['visitas']);
     }
 
@@ -535,12 +535,12 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
             'scheduled_ends_at' => Carbon::parse('2026-09-15 10:00', 'America/Panama')->utc(),
         ]);
 
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda?view=month&date=2026-09-01')
             ->assertStatus(200);
 
-        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Carlos Vergara');
+        $carlos = collect($response->json('data'))->firstWhere('nombre', 'Tecnico Servicios Test');
         $this->assertCount(1, $carlos['visitas']);
     }
 }

@@ -13,7 +13,7 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-638/639/642 (REQ-561/562/565) — Datos de la Empresa, exclusiva de Mark. */
 class AdminContCompanyProfileControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -25,13 +25,13 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_show_devuelve_los_defaults_y_espeja_razon_social_de_fiscal_settings(): void
     {
         AdminContFiscalSettings::current()->update([
-            'razon_social'     => 'Atlantic Panama S.A.',
+            'razon_social' => 'Atlantic Panama S.A.',
             'nombre_comercial' => 'Atlantic',
         ]);
 
@@ -68,8 +68,8 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/company-profile', [
                 'descripcion_corta' => 'Diseño y suministro de iluminación en Panamá.',
-                'sitio_web'         => 'https://atlantic.com.pa',
-                'redes_sociales'    => [['plataforma' => 'Instagram', 'url' => 'https://instagram.com/atlantic']],
+                'sitio_web' => 'https://atlantic.com.pa',
+                'redes_sociales' => [['plataforma' => 'Instagram', 'url' => 'https://instagram.com/atlantic']],
             ])
             ->assertStatus(200);
 
@@ -86,10 +86,10 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/company-profile', [
-                'razon_social'     => 'Otra Cosa S.A.',
+                'razon_social' => 'Otra Cosa S.A.',
                 'nombre_comercial' => 'Otra Cosa',
-                'moneda'           => 'PAB',
-                'anio_fiscal'      => 'Abril-Marzo',
+                'moneda' => 'PAB',
+                'anio_fiscal' => 'Abril-Marzo',
                 'descripcion_corta' => 'Cambio real',
             ])
             ->assertStatus(200);

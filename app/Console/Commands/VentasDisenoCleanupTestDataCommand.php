@@ -12,7 +12,7 @@ use RuntimeException;
 /**
  * SCRUM-735 — "Eliminación de información generada durante PM Review en Ventas & Diseño".
  *
- * Identifica (y, solo con --force, borra) la data de prueba que Daniela Amaya generó en
+ * Identifica (y, solo con --force, borra) la data de prueba que Gerencia Test generó en
  * test.atlanticerp.ai probando manualmente el módulo Ventas & Diseño — sin tocar la data DEMO
  * marcada con [DEMO-711]/[QA-VD]/[QA-VD-409] (protegida siempre, sin importar quién la
  * creó). Ver App\Modules\VentasDiseno\Services\TestDataCleanupService para el diseño
@@ -31,13 +31,13 @@ final class VentasDisenoCleanupTestDataCommand extends Command
     /** @var string */
     protected $signature = 'ventas-diseno:cleanup-test-data
         {--tenant=atlantic : Slug del tenant a limpiar}
-        {--user=daniela@atlantic.com.pa : Email del usuario cuya data de prueba se identifica}
+        {--user=gerencia@test.com : Email del usuario cuya data de prueba se identifica}
         {--force : Ejecuta el borrado real — sin esta opción el comando SIEMPRE corre en modo reporte}
         {--json : Emite el reporte en JSON en vez de tablas de consola}
         {--env-override : Permite correr fuera de app()->environment("qa") — SOLO para testing local/CI}';
 
     /** @var string */
-    protected $description = 'SCRUM-735 — identifica (y, con --force, borra) la data de prueba de Daniela Amaya en Ventas & Diseño, preservando [DEMO-711]/[QA-VD]/[QA-VD-409]';
+    protected $description = 'SCRUM-735 — identifica (y, con --force, borra) la data de prueba de Gerencia Test en Ventas & Diseño, preservando [DEMO-711]/[QA-VD]/[QA-VD-409]';
 
     public function __construct(private readonly TestDataCleanupService $service)
     {
@@ -49,16 +49,16 @@ final class VentasDisenoCleanupTestDataCommand extends Command
         if (! app()->environment('qa') && ! $this->option('env-override')) {
             $this->error(
                 'Este comando solo corre en el entorno "qa" (test.atlanticerp.ai). '
-                . 'Usá --env-override para correrlo en local/testing — nunca contra dev/production.'
+                .'Usá --env-override para correrlo en local/testing — nunca contra dev/production.'
             );
 
             return self::FAILURE;
         }
 
         $tenantSlug = (string) $this->option('tenant');
-        $userEmail  = (string) $this->option('user');
-        $isForce    = (bool) $this->option('force');
-        $asJson     = (bool) $this->option('json');
+        $userEmail = (string) $this->option('user');
+        $isForce = (bool) $this->option('force');
+        $asJson = (bool) $this->option('json');
 
         $tenant = Tenant::where('slug', $tenantSlug)->first();
         if ($tenant === null) {
@@ -89,7 +89,7 @@ final class VentasDisenoCleanupTestDataCommand extends Command
             $this->newLine();
             $this->comment(
                 'Modo dry-run (default) — no se borró nada. Pasá --force para ejecutar el '
-                . 'borrado real, después de revisión humana del reporte de arriba.'
+                .'borrado real, después de revisión humana del reporte de arriba.'
             );
 
             return self::SUCCESS;
@@ -130,7 +130,7 @@ final class VentasDisenoCleanupTestDataCommand extends Command
         $this->info("Usuario objetivo: {$report['user']['email']} (id={$report['user']['id']})");
         $this->line(
             "Ventana de audit_logs consideradas: {$report['audit_window']['rows_considered']} filas "
-            . "[{$report['audit_window']['from']} .. {$report['audit_window']['to']}]"
+            ."[{$report['audit_window']['from']} .. {$report['audit_window']['to']}]"
         );
 
         $this->newLine();

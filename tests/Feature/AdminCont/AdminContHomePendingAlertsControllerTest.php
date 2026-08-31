@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
+use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
@@ -27,9 +28,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
-    private const URL            = '/api/admin-contab/home/pendientes';
+
+    private const URL = '/api/admin-contab/home/pendientes';
 
     protected function setUp(): void
     {
@@ -68,10 +71,10 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
      *  controlar `mes_cierre` (siempre 1° del mes de esa fecha). */
     private function makeCommissionableOrder(int $ownerId, float $amount, CarbonImmutable $stageChangedAt): AdminContInvoice
     {
-        $master  = MasterClient::create(['name' => 'Cliente Comisión Pend '.self::uniqueTestNumber()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Pend '.self::uniqueTestNumber(), 'tax_id' => '155-0000-8-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Comisión Pend '.self::uniqueTestNumber()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Pend '.self::uniqueTestNumber(), 'tax_id' => '155-0000-8-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Comisión Pend '.self::uniqueTestNumber()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $ownerId, 'amount' => $amount,
             'stage_changed_at' => $stageChangedAt,
@@ -103,10 +106,10 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
             'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_EXENTO,
         ]);
 
-        $master  = MasterClient::create(['name' => 'Cliente Externa Pend '.self::uniqueTestNumber()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa Pend '.self::uniqueTestNumber(), 'tax_id' => '155-0000-7-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Externa Pend '.self::uniqueTestNumber()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa Pend '.self::uniqueTestNumber(), 'tax_id' => '155-0000-7-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa Pend '.self::uniqueTestNumber()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'amount' => $amount,
             'stage_changed_at' => now(),
@@ -186,7 +189,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
      */
     public function test_factura_que_vence_hoy_no_genera_alerta_todavia(): void
     {
-        $dias = \App\Modules\AdminCont\Models\AdminContFiscalSettings::current()->dias_credito_factura;
+        $dias = AdminContFiscalSettings::current()->dias_credito_factura;
         $this->makeInvoice(1000, 0, now()->subDays($dias)->toDateTimeString());
 
         $token = $this->loginAsFelix();
@@ -224,7 +227,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 
     public function test_comision_interna_pendiente_hace_mas_de_10_dias_genera_alerta(): void
     {
-        $roleId   = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
         $vendedor = User::where('role_id', $roleId)->first();
         $this->assertNotNull($vendedor, 'debe existir al menos un vendedor_disenador real sembrado en testing');
 
@@ -251,7 +254,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
      *  reales (no medianoche exacta) reproducía "27.607690584572 días" en el texto de la alerta. */
     public function test_comision_interna_pendiente_muestra_dias_como_entero_sin_decimales(): void
     {
-        $roleId   = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
         $vendedor = User::where('role_id', $roleId)->first();
         $this->assertNotNull($vendedor);
 
@@ -274,7 +277,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 
     public function test_comision_interna_dentro_del_umbral_no_genera_alerta(): void
     {
-        $roleId   = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
         $vendedor = User::where('role_id', $roleId)->first();
         $this->assertNotNull($vendedor);
 

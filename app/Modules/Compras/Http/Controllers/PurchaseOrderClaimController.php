@@ -10,10 +10,10 @@ use App\Modules\Compras\Events\ClaimCreated;
 use App\Modules\Compras\Events\ClaimStatusChanged;
 use App\Modules\Compras\Http\Requests\StorePurchaseOrderClaimRequest;
 use App\Modules\Compras\Models\ComprasSettings;
+use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrderClaim;
 use App\Modules\Compras\Models\PurchaseOrderClaimLine;
 use App\Modules\Compras\Models\PurchaseOrderClaimPhoto;
-use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Services\PurchaseOrderClaimPdfService;
 use App\Modules\Compras\Services\PurchaseOrderClaimPhotoService;
 use App\Shared\Http\Pagination;
@@ -23,6 +23,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -39,11 +40,10 @@ final class PurchaseOrderClaimController extends Controller
     public function __construct(
         private readonly PurchaseOrderClaimPhotoService $photos,
         private readonly PurchaseOrderClaimPdfService $pdfService,
-    ) {
-    }
+    ) {}
 
     /**
-     * REQ-194/REQ-195 (hallazgo de Daniela Amaya 2026-08-09/2026-08-10) — encabezado con los 4
+     * REQ-194/REQ-195 (hallazgo de Gerencia Test 2026-08-09/2026-08-10) — encabezado con los 4
      * KPIs nuevos (Total/Reportados-En revisión/Resueltos este mes/Monto en disputa, reemplazan
      * a los 4 anteriores que incluían "Atención" como tarjeta — esa señal sigue existiendo como
      * `needs_attention` por fila y como chip de filtro, ya no como KPI aparte), filtro por chip
@@ -71,7 +71,7 @@ final class PurchaseOrderClaimController extends Controller
 
         $attentionDays = ComprasSettings::current()->claim_attention_days;
 
-        /** @var \Illuminate\Support\Collection<int, PurchaseOrderClaim> $allClaims */
+        /** @var Collection<int, PurchaseOrderClaim> $allClaims */
         $allClaims = PurchaseOrderClaim::with(['purchaseOrder.provider', 'lines.orderLine.catalogProduct'])
             ->orderByDesc('created_at')
             ->get();
@@ -80,10 +80,10 @@ final class PurchaseOrderClaimController extends Controller
 
         $chip = (string) $request->query('chip', 'todos');
         $filtered = match ($chip) {
-            'atencion'              => $filtered->filter(fn (PurchaseOrderClaim $c): bool => $c->needsAttention($attentionDays)),
+            'atencion' => $filtered->filter(fn (PurchaseOrderClaim $c): bool => $c->needsAttention($attentionDays)),
             'reportado', 'en_revision' => $filtered->where('status', PurchaseOrderClaim::STATUS_EN_REVISION),
-            'resuelto'               => $filtered->where('status', PurchaseOrderClaim::STATUS_RESUELTO),
-            default                  => $filtered,
+            'resuelto' => $filtered->where('status', PurchaseOrderClaim::STATUS_RESUELTO),
+            default => $filtered,
         };
 
         $providerId = $request->query('provider_id');
@@ -112,17 +112,17 @@ final class PurchaseOrderClaimController extends Controller
 
         // SCRUM-754 — kpis siguen sobre $allClaims (sin filtros, sin cambios); solo data pagina.
         $pagination = Pagination::params($request, [], 'created_at');
-        $paginator  = Pagination::ofArray(array_values($filtered->values()->all()), $pagination['per_page'], $pagination['page']);
+        $paginator = Pagination::ofArray(array_values($filtered->values()->all()), $pagination['per_page'], $pagination['page']);
 
         return response()->json([
             'data' => array_values(array_map(fn (PurchaseOrderClaim $c) => $this->formatSummary($c, $attentionDays), $paginator->items())),
             'meta' => Pagination::meta($paginator),
             'kpis' => [
-                'total'                  => $allClaims->count(),
+                'total' => $allClaims->count(),
                 'reportados_en_revision' => $allClaims->where('status', PurchaseOrderClaim::STATUS_EN_REVISION)->count(),
-                'resueltos_este_mes'     => $allClaims->filter(fn (PurchaseOrderClaim $c): bool => $c->status === PurchaseOrderClaim::STATUS_RESUELTO
+                'resueltos_este_mes' => $allClaims->filter(fn (PurchaseOrderClaim $c): bool => $c->status === PurchaseOrderClaim::STATUS_RESUELTO
                     && $c->resolved_at !== null && $c->resolved_at->greaterThanOrEqualTo($currentMonthStart))->count(),
-                'disputed_amount'        => round((float) $allClaims->sum(fn (PurchaseOrderClaim $c): float => $c->totalAmount()), 2),
+                'disputed_amount' => round((float) $allClaims->sum(fn (PurchaseOrderClaim $c): float => $c->totalAmount()), 2),
             ],
             'filters' => [
                 'providers' => $providers->map(fn (Provider $p): array => ['id' => $p->id, 'name' => $p->name])->values(),
@@ -159,20 +159,20 @@ final class PurchaseOrderClaimController extends Controller
 
         $claim = DB::transaction(function () use ($validated, $user): PurchaseOrderClaim {
             $claim = PurchaseOrderClaim::create([
-                'purchase_order_id'   => $validated['purchase_order_id'],
-                'description'         => $validated['description'] ?? null,
+                'purchase_order_id' => $validated['purchase_order_id'],
+                'description' => $validated['description'] ?? null,
                 'expected_resolution' => $validated['expected_resolution'] ?? null,
-                'status'              => PurchaseOrderClaim::STATUS_EN_REVISION,
-                'status_changed_at'   => now(),
-                'created_by'          => $user->id,
+                'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
+                'status_changed_at' => now(),
+                'created_by' => $user->id,
             ]);
 
             foreach ($validated['lines'] as $line) {
                 PurchaseOrderClaimLine::create([
-                    'claim_id'                => $claim->id,
-                    'purchase_order_line_id'  => $line['purchase_order_line_id'],
-                    'affected_quantity'       => $line['affected_quantity'],
-                    'description'             => $line['description'] ?? null,
+                    'claim_id' => $claim->id,
+                    'purchase_order_line_id' => $line['purchase_order_line_id'],
+                    'affected_quantity' => $line['affected_quantity'],
+                    'description' => $line['description'] ?? null,
                 ]);
             }
 
@@ -205,17 +205,17 @@ final class PurchaseOrderClaimController extends Controller
 
         $previousStatus = $claim->status;
         $claim->update([
-            'status'             => $validated['status'],
-            'status_changed_at'  => now(),
-            'resolved_at'        => $validated['status'] === PurchaseOrderClaim::STATUS_RESUELTO ? now() : null,
+            'status' => $validated['status'],
+            'status_changed_at' => now(),
+            'resolved_at' => $validated['status'] === PurchaseOrderClaim::STATUS_RESUELTO ? now() : null,
         ]);
 
         event(new ClaimStatusChanged(
-            claimId:        $claim->id,
+            claimId: $claim->id,
             previousStatus: $previousStatus,
-            newStatus:      $claim->status,
-            changedBy:      $user->id,
-            tenant:         (string) Tenant::current()?->slug,
+            newStatus: $claim->status,
+            changedBy: $user->id,
+            tenant: (string) Tenant::current()?->slug,
         ));
 
         // SCRUM-259 (REQ-196) — hallazgo de QA: "historial de estados" es parte explícita de la
@@ -223,11 +223,11 @@ final class PurchaseOrderClaimController extends Controller
         // status_changed_at. Se reusa audit_logs (mismo patrón que SCRUM-211) en vez de una tabla
         // nueva — un reclamo no cambia de estado con frecuencia suficiente como para justificarla.
         app(AuditService::class)->log(
-            action:     AuditService::COMPRAS_CLAIM_STATUS_CHANGED,
+            action: AuditService::COMPRAS_CLAIM_STATUS_CHANGED,
             entityType: 'purchase_order_claim',
-            entityId:   $claim->id,
-            oldValues:  ['status' => $previousStatus],
-            newValues:  ['status' => $claim->status],
+            entityId: $claim->id,
+            oldValues: ['status' => $previousStatus],
+            newValues: ['status' => $claim->status],
         );
 
         $attentionDays = ComprasSettings::current()->claim_attention_days;
@@ -236,7 +236,7 @@ final class PurchaseOrderClaimController extends Controller
     }
 
     /**
-     * SCRUM-259 (REQ-196, hallazgo de Daniela Amaya 2026-08-10) — "Tipo de resolución" pasa a
+     * SCRUM-259 (REQ-196, hallazgo de Gerencia Test 2026-08-10) — "Tipo de resolución" pasa a
      * ser editable desde el detalle del reclamo, no solo al crearlo. Mismo catálogo fijo que
      * StorePurchaseOrderClaimRequest (PurchaseOrderClaim::RESOLUTION_TYPES).
      */
@@ -301,12 +301,12 @@ final class PurchaseOrderClaimController extends Controller
 
         // SCRUM-791 (Epic SCRUM-788 — Logs y Telemetría) — documento formal del reclamo.
         app(AuditService::class)->log(
-            action:     AuditService::COMPRAS_CLAIM_PDF_DOWNLOADED,
+            action: AuditService::COMPRAS_CLAIM_PDF_DOWNLOADED,
             entityType: 'purchase_order_claim',
-            entityId:   $claim->id,
+            entityId: $claim->id,
         );
 
-        // SCRUM-259 (hallazgo de Daniela Amaya) — "Descargar PDF del reclamo", no "Ver PDF":
+        // SCRUM-259 (hallazgo de Gerencia Test) — "Descargar PDF del reclamo", no "Ver PDF":
         // descarga real (mismo patrón que InspectionReportController), no vista inline.
         return $pdf->download("reclamo-{$claim->code()}.pdf");
     }
@@ -314,31 +314,31 @@ final class PurchaseOrderClaimController extends Controller
     /** @return array<string, mixed> */
     private function formatSummary(PurchaseOrderClaim $claim, int $attentionDays): array
     {
-        // SCRUM-258 (hallazgo de Daniela Amaya) — columna "Producto": nombre del primer producto
+        // SCRUM-258 (hallazgo de Gerencia Test) — columna "Producto": nombre del primer producto
         // de la línea + conteo de adicionales si hay más de uno (un reclamo puede tener varios
         // productos, la tabla es de una fila por reclamo, no por línea).
         $productNames = $claim->lines->map(fn (PurchaseOrderClaimLine $l): ?string => $l->orderLine?->catalogProduct?->name)->filter()->values();
         $product = $productNames->first();
         if ($productNames->count() > 1) {
-            $product .= ' (+' . ($productNames->count() - 1) . ')';
+            $product .= ' (+'.($productNames->count() - 1).')';
         }
 
         return [
-            'id'                   => $claim->id,
-            'code'                 => $claim->code(),
-            'purchase_order_id'    => $claim->purchase_order_id,
-            'provider_name'        => $claim->purchaseOrder?->provider?->name,
-            'provider_id'          => $claim->purchaseOrder?->provider_id,
-            'product'              => $product,
-            'expected_resolution'  => $claim->expected_resolution,
-            'status'               => $claim->status,
-            'status_changed_at'    => $claim->status_changed_at->toIso8601String(),
-            'needs_attention'      => $claim->needsAttention($attentionDays),
-            'total_amount'         => $claim->totalAmount(),
-            'created_at'           => $claim->created_at->toIso8601String(),
+            'id' => $claim->id,
+            'code' => $claim->code(),
+            'purchase_order_id' => $claim->purchase_order_id,
+            'provider_name' => $claim->purchaseOrder?->provider?->name,
+            'provider_id' => $claim->purchaseOrder?->provider_id,
+            'product' => $product,
+            'expected_resolution' => $claim->expected_resolution,
+            'status' => $claim->status,
+            'status_changed_at' => $claim->status_changed_at->toIso8601String(),
+            'needs_attention' => $claim->needsAttention($attentionDays),
+            'total_amount' => $claim->totalAmount(),
+            'created_at' => $claim->created_at->toIso8601String(),
             // REQ-198, alcance reducido (ver docblock de la clase) — siempre null hasta que
             // exista el vínculo real con Servicios.
-            'service_ticket'       => null,
+            'service_ticket' => null,
         ];
     }
 
@@ -349,21 +349,21 @@ final class PurchaseOrderClaimController extends Controller
 
         return [
             ...$this->formatSummary($claim, $attentionDays),
-            'description'          => $claim->description,
-            'expected_resolution'  => $claim->expected_resolution,
-            'resolved_at'          => $claim->resolved_at?->toIso8601String(),
+            'description' => $claim->description,
+            'expected_resolution' => $claim->expected_resolution,
+            'resolved_at' => $claim->resolved_at?->toIso8601String(),
             // REQ-198, alcance reducido — ver docblock de la clase.
-            'service_tickets'      => [],
-            'status_history'       => $this->statusHistory($claim),
-            'lines'                => $claim->lines->map(fn (PurchaseOrderClaimLine $l): array => [
-                'id'                       => $l->id,
-                'purchase_order_line_id'   => $l->purchase_order_line_id,
-                'description'              => $l->orderLine?->catalogProduct?->name,
-                'affected_quantity'        => $l->affected_quantity,
-                'unit_cost'                => $l->orderLine?->unit_cost,
-                'subtotal'                 => $l->subtotal(),
+            'service_tickets' => [],
+            'status_history' => $this->statusHistory($claim),
+            'lines' => $claim->lines->map(fn (PurchaseOrderClaimLine $l): array => [
+                'id' => $l->id,
+                'purchase_order_line_id' => $l->purchase_order_line_id,
+                'description' => $l->orderLine?->catalogProduct?->name,
+                'affected_quantity' => $l->affected_quantity,
+                'unit_cost' => $l->orderLine?->unit_cost,
+                'subtotal' => $l->subtotal(),
             ])->values(),
-            'photos'                => $claim->photos->map(fn (PurchaseOrderClaimPhoto $p) => $this->formatPhoto($p))->values(),
+            'photos' => $claim->photos->map(fn (PurchaseOrderClaimPhoto $p) => $this->formatPhoto($p))->values(),
         ];
     }
 
@@ -379,9 +379,9 @@ final class PurchaseOrderClaimController extends Controller
         $creator = $claim->creator;
         $history = [[
             'from_status' => null,
-            'to_status'   => PurchaseOrderClaim::STATUS_EN_REVISION,
-            'changed_by'  => $creator !== null ? trim("{$creator->first_name} {$creator->last_name}") : null,
-            'changed_at'  => $claim->created_at->toIso8601String(),
+            'to_status' => PurchaseOrderClaim::STATUS_EN_REVISION,
+            'changed_by' => $creator !== null ? trim("{$creator->first_name} {$creator->last_name}") : null,
+            'changed_at' => $claim->created_at->toIso8601String(),
         ]];
 
         $changes = AuditLog::where('entity_type', 'purchase_order_claim')
@@ -394,11 +394,11 @@ final class PurchaseOrderClaimController extends Controller
         foreach ($changes as $change) {
             $history[] = [
                 'from_status' => $change->old_values['status'] ?? null,
-                'to_status'   => $change->new_values['status'] ?? '',
-                'changed_by'  => $change->user !== null
+                'to_status' => $change->new_values['status'] ?? '',
+                'changed_by' => $change->user !== null
                     ? trim("{$change->user->first_name} {$change->user->last_name}")
                     : null,
-                'changed_at'  => $change->created_at->toIso8601String(),
+                'changed_at' => $change->created_at->toIso8601String(),
             ];
         }
 
@@ -409,8 +409,8 @@ final class PurchaseOrderClaimController extends Controller
     private function formatPhoto(PurchaseOrderClaimPhoto $photo): array
     {
         return [
-            'id'         => $photo->id,
-            'url'        => $this->photos->presignUrl($photo),
+            'id' => $photo->id,
+            'url' => $this->photos->presignUrl($photo),
             'created_at' => $photo->created_at->toIso8601String(),
         ];
     }

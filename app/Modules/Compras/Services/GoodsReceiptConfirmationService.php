@@ -8,6 +8,7 @@ use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Services\KardexService;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderReceiptLine;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -33,9 +34,9 @@ final class GoodsReceiptConfirmationService
      * para "¿esta orden ya recibió TODO lo que pidió?", usada tanto acá como en
      * `GoodsReceiptController::receivedByProduct()`.
      *
-     * @return \Illuminate\Support\Collection<int, int> cantidad recibida por catalog_product_id
+     * @return Collection<int, int> cantidad recibida por catalog_product_id
      */
-    public function receivedQuantitiesByProduct(PurchaseOrder $order, ?int $excludeReceiptId = null): \Illuminate\Support\Collection
+    public function receivedQuantitiesByProduct(PurchaseOrder $order, ?int $excludeReceiptId = null): Collection
     {
         return PurchaseOrderReceiptLine::query()
             ->whereHas('receipt', fn ($q) => $q->where('purchase_order_id', $order->id)
@@ -85,7 +86,7 @@ final class GoodsReceiptConfirmationService
      *
      * SCRUM-429 (2026-08-14) — `catalog_products.stock_quantity` (el agregado) YA NO se
      * incrementa acá a mano: `KardexService::registrar()` ahora sincroniza ese mismo agregado
-     * con el mismo delta (mismo fix que corrigió el bug real de Daniela Amaya en Conteos
+     * con el mismo delta (mismo fix que corrigió el bug real de Gerencia Test en Conteos
      * Generales, ver docblock de `KardexService`) — hacerlo ACÁ TAMBIÉN duplicaba el incremento.
      * El COALESCE que evitaba el bug de `stock_quantity` NULL (Pre-QA 2026-07-20, ver abajo)
      * sigue vigente, solo que ahora vive dentro de `registrar()`, no acá.

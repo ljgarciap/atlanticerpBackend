@@ -25,7 +25,7 @@ final class PipelineFileService
     public function upload(UploadedFile $file, PipelineCard $card, string $type, int $uploadedBy): PipelineCardFile
     {
         $ext = strtolower($file->getClientOriginalExtension());
-        $key = "ventas-diseno/{$card->id}/{$type}/" . Str::uuid()->toString() . ($ext !== '' ? ".{$ext}" : '');
+        $key = "ventas-diseno/{$card->id}/{$type}/".Str::uuid()->toString().($ext !== '' ? ".{$ext}" : '');
 
         (new CircuitBreaker(self::DISK))->call(function () use ($card, $type, $file, $key): void {
             $uploaded = Storage::disk(self::DISK)->putFileAs(
@@ -35,16 +35,16 @@ final class PipelineFileService
             );
 
             if ($uploaded === false) {
-                throw new \RuntimeException('S3 upload failed for disk [' . self::DISK . "] key [{$key}]");
+                throw new \RuntimeException('S3 upload failed for disk ['.self::DISK."] key [{$key}]");
             }
         });
 
         return $card->files()->create([
-            'type'        => $type,
-            'file_name'   => $file->getClientOriginalName(),
+            'type' => $type,
+            'file_name' => $file->getClientOriginalName(),
             'storage_key' => $key,
-            'size_bytes'  => $file->getSize(),
-            'mime_type'   => $file->getMimeType() ?? 'application/octet-stream',
+            'size_bytes' => $file->getSize(),
+            'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
             'uploaded_by' => $uploadedBy,
         ]);
     }
@@ -62,7 +62,7 @@ final class PipelineFileService
      * pedir `attachment` para el visor forzaría una descarga en vez de renderizar el PDF/imagen
      * dentro del iframe.
      *
-     * Segunda corrección real (rebote de Daniela Amaya 2026-08-16, SCRUM-767): S3 rechaza
+     * Segunda corrección real (rebote de Gerencia Test 2026-08-16, SCRUM-767): S3 rechaza
      * `ResponseContentDisposition` con `InvalidArgument — Header value cannot be represented using
      * ISO-8859-1` para nombres de archivo con cualquier carácter fuera de Latin-1 — el caso real
      * que lo disparó fue una captura de pantalla de macOS ("... 2.35.19 p.m..png"), cuyo nombre
@@ -74,7 +74,7 @@ final class PipelineFileService
      * final es siempre ASCII puro, así que nunca vuelve a chocar con la validación de S3, sea cual
      * sea el charset del nombre original.
      *
-     * @param 'inline'|'attachment' $disposition
+     * @param  'inline'|'attachment'  $disposition
      */
     public function getPresignedUrl(PipelineCardFile $file, string $disposition = 'inline'): string
     {
@@ -85,7 +85,7 @@ final class PipelineFileService
             $asciiFallback = 'archivo';
         }
 
-        $contentDisposition = "{$disposition}; filename=\"{$asciiFallback}\"; filename*=UTF-8''" . rawurlencode($filename);
+        $contentDisposition = "{$disposition}; filename=\"{$asciiFallback}\"; filename*=UTF-8''".rawurlencode($filename);
 
         return Storage::disk(self::DISK)->temporaryUrl(
             $file->storage_key,

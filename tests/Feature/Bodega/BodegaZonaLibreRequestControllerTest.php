@@ -213,7 +213,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $this->reMakeCurrent();
         $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ZONA_LIBRE_REMINDER)->first();
         $this->assertNotNull($send);
-        $yirenaId = (int) DB::table('atlantic_auth.users')->where('email', 'gerencia2@atlantic.com.pa')->value('id');
+        $yirenaId = (int) DB::table('atlantic_auth.users')->where('email', 'lidercompras@test.com')->value('id');
         $this->assertContains($yirenaId, $send->audience);
     }
 
@@ -280,13 +280,13 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
 
     public function test_lider_bodega_puede_editar_solicitud_pendiente(): void
     {
-        $product    = $this->makeZonaLibreProduct();
+        $product = $this->makeZonaLibreProduct();
         $newProduct = $this->makeZonaLibreProduct();
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        // almacen@atlantic.com.pa = Esteban Cardenas, role_key lider_bodega real (BusinessRoleUserSeeder).
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        // liderbodega@test.com = Lider Bodega Test, role_key lider_bodega real (BusinessRoleUserSeeder).
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -307,10 +307,10 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        // gerencia2@atlantic.com.pa = Yirena Teng, ya tiene compras.zona-libre.approve real
+        // lidercompras@test.com = Lider Compras Test, ya tiene compras.zona-libre.approve real
         // (SpecialPermissionSeeder) — sin bodega.write, así que el gate amplio de la ruta también
         // se ejercita acá (permission:bodega.write,compras.zona-libre.approve).
-        $token = $this->loginAs('gerencia2@atlantic.com.pa', 'gerencia2@atlantic.com.pa', 'lider_compras');
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -343,7 +343,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_APROBADA]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -360,7 +360,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         ]);
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
@@ -376,12 +376,12 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $zonaLibreRequest->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost_snapshot' => 30]);
 
         $otherProvider = Provider::create(['name' => 'Otro Proveedor Update', 'currency' => 'USD']);
-        $otherProduct  = CatalogProduct::create([
+        $otherProduct = CatalogProduct::create([
             'reference' => 'OTRO-'.uniqid(), 'name' => 'Producto de otro proveedor', 'description' => 'Producto de otro proveedor',
             'price_full' => 50, 'cost' => 30, 'provider_id' => $otherProvider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [

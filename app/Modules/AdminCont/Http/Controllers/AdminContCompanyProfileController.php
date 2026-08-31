@@ -10,12 +10,13 @@ use App\Modules\AdminCont\Models\AdminContCompanyProfile;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Shared\Support\CircuitBreaker;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * SCRUM-638/639/642 (REQ-561/562/565) — Datos de la Empresa, gateada por EnsureIsMarkApprover.
+ * SCRUM-638/639/642 (REQ-561/562/565) — Datos de la Empresa, gateada por EnsureIsPrimaryApprover.
  * `razon_social`/`nombre_comercial` se leen en vivo de AdminContFiscalSettings (RN1 de REQ-562) —
  * nunca se duplican acá, para que nunca se muestren razones sociales distintas entre pantallas.
  */
@@ -40,10 +41,10 @@ class AdminContCompanyProfileController
     {
         $profile = AdminContCompanyProfile::current();
 
-        /** @var \Illuminate\Http\UploadedFile $file */
+        /** @var UploadedFile $file */
         $file = $request->validated()['file'];
-        $ext  = strtolower($file->getClientOriginalExtension());
-        $key  = 'admin-contab/company/' . Str::uuid()->toString() . ($ext !== '' ? ".{$ext}" : '');
+        $ext = strtolower($file->getClientOriginalExtension());
+        $key = 'admin-contab/company/'.Str::uuid()->toString().($ext !== '' ? ".{$ext}" : '');
 
         (new CircuitBreaker(self::DISK))->call(function () use ($file, $key): void {
             $uploaded = Storage::disk(self::DISK)->putFileAs('admin-contab/company', $file, basename($key));
@@ -53,14 +54,14 @@ class AdminContCompanyProfileController
             }
         });
 
-        $base      = rtrim((string) (config('filesystems.disks.s3-public.cdn_url') ?: config('filesystems.disks.s3-public.url', '')), '/');
+        $base = rtrim((string) (config('filesystems.disks.s3-public.cdn_url') ?: config('filesystems.disks.s3-public.url', '')), '/');
         $publicUrl = $base !== '' ? "{$base}/public/{$key}" : null;
 
         $previousKey = $profile->logo_key;
 
         // `logo_key`/`logo_public_url` a propósito NO están en $fillable (nunca settable vía el
         // PUT general de /company-profile) — se asignan directo, no vía update() masivo.
-        $profile->logo_key        = $key;
+        $profile->logo_key = $key;
         $profile->logo_public_url = $publicUrl;
         $profile->save();
 
@@ -81,15 +82,15 @@ class AdminContCompanyProfileController
         $fiscal = AdminContFiscalSettings::current();
 
         return [
-            'razon_social'      => $fiscal->razon_social,
-            'nombre_comercial'  => $fiscal->nombre_comercial,
-            'logo_url'          => $profile->logo_public_url,
+            'razon_social' => $fiscal->razon_social,
+            'nombre_comercial' => $fiscal->nombre_comercial,
+            'logo_url' => $profile->logo_public_url,
             'descripcion_corta' => $profile->descripcion_corta,
-            'sitio_web'         => $profile->sitio_web,
-            'redes_sociales'    => $profile->redes_sociales ?? [],
-            'moneda'            => $profile->moneda,
-            'anio_fiscal'       => $profile->anio_fiscal,
-            'zona_horaria'      => $profile->zona_horaria,
+            'sitio_web' => $profile->sitio_web,
+            'redes_sociales' => $profile->redes_sociales ?? [],
+            'moneda' => $profile->moneda,
+            'anio_fiscal' => $profile->anio_fiscal,
+            'zona_horaria' => $profile->zona_horaria,
         ];
     }
 }

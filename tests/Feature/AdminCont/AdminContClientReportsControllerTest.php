@@ -17,7 +17,8 @@ use Tests\Feature\FeatureTestCase;
  *  (4M1, agrupación 'dia') y "Mensual por cliente — acumulado" (4M2, agrupación 'mes'). */
 class AdminContClientReportsControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
@@ -39,8 +40,8 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
     /** @return array{0: int, 1: int} */
     private function makeClientWithProject(string $projectName): array
     {
-        $master  = MasterClient::create(['name' => 'Cliente Reportes '.self::uniqueTestNumber()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Reportes '.self::uniqueTestNumber()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => $projectName]);
 
         return [$master->id, $project->id];

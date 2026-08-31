@@ -58,7 +58,7 @@ class AdminContCashPositionController
         $data = $this->cashPosition->projected($windowDays);
         if ($this->roleFromRequest($request) === 'asistente_administrativa') {
             $data['entradas'] = [];
-            $data['salidas']  = [];
+            $data['salidas'] = [];
         }
 
         return response()->json($data);
@@ -127,8 +127,8 @@ class AdminContCashPositionController
     /** GET /api/admin-contab/cash-position/daily-count/export — REQ-529, arqueo activo. */
     public function dailyCountExport(): StreamedResponse
     {
-        $data     = $this->dailyCashCount->active();
-        $bytes    = $this->summaryPdf->toPdf($data);
+        $data = $this->dailyCashCount->active();
+        $bytes = $this->summaryPdf->toPdf($data);
         $filename = "arqueo-{$data['fecha']}-".now()->format('Ymd-His').'.pdf';
 
         return response()->streamDownload(fn () => print $bytes, $filename, ['Content-Type' => 'application/pdf']);
@@ -145,7 +145,7 @@ class AdminContCashPositionController
      * RN2) es dependiente del actor, no del arqueo — mismo criterio que
      * `puede_decidir_incobrable`/`puede_aprobar_rechazar` en el resto del módulo
      * (AdminContInvoiceController::detail()/AdminContCreditNoteController), calculado acá porque
-     * esta ruta no está gateada por `mark_only` (accesible a Felix/Yaneth/Mark/Gerencia) — el
+     * esta ruta no está gateada por `primary_approver_only` (accesible a Felix/Yaneth/Mark/Gerencia) — el
      * frontend lo usa solo para mostrar/ocultar el botón "Aprobar", nunca decide por su cuenta
      * quién es Mark.
      */
@@ -165,11 +165,11 @@ class AdminContCashPositionController
             : [];
 
         // superadmin.all bypassa el gate de Mark (decisión de Luis, 2026-08-22) — mismo criterio
-        // que EnsureIsMarkApprover, que ya lo aplica sobre la acción real de aprobar.
-        $markApproverId = AdminContFiscalSettings::current()->mark_approver_user_id;
-        $isMark         = in_array('superadmin.all', $permissions, true)
-            || ($payload !== null && isset($payload['sub']) && $markApproverId !== null
-                && (int) $payload['sub'] === $markApproverId);
+        // que EnsureIsPrimaryApprover, que ya lo aplica sobre la acción real de aprobar.
+        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
+        $isMark = in_array('superadmin.all', $permissions, true)
+            || ($payload !== null && isset($payload['sub']) && $primaryApproverId !== null
+                && (int) $payload['sub'] === $primaryApproverId);
 
         $data['puede_aprobar'] = $data['estado'] === AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION && $isMark;
 
@@ -184,7 +184,7 @@ class AdminContCashPositionController
             return response()->json(['message' => 'Arqueo no encontrado.'], 404);
         }
 
-        $bytes    = $this->summaryPdf->toPdf($data);
+        $bytes = $this->summaryPdf->toPdf($data);
         $filename = "arqueo-{$data['fecha']}-".now()->format('Ymd-His').'.pdf';
 
         return response()->streamDownload(fn () => print $bytes, $filename, ['Content-Type' => 'application/pdf']);
@@ -214,7 +214,7 @@ class AdminContCashPositionController
      */
     public function export(Request $request): StreamedResponse|JsonResponse
     {
-        $view   = $request->string('view')->toString();
+        $view = $request->string('view')->toString();
         $format = $request->string('format')->toString();
         if (! in_array($view, ['proyectado', 'real'], true) || ! in_array($format, ['pdf', 'excel'], true)) {
             return response()->json(['message' => 'view debe ser "proyectado" o "real", format debe ser "pdf" o "excel".'], 422);
@@ -228,10 +228,10 @@ class AdminContCashPositionController
             return response()->json(['message' => 'El Arqueo del día (Real + Hoy) no se exporta desde acá.'], 422);
         }
 
-        $data     = $view === 'proyectado' ? $this->cashPosition->projected($windowDays) : $this->cashPosition->real($windowDays);
-        $bytes    = $format === 'pdf' ? $this->export->toPdf($view, $data) : $this->export->toExcel($view, $data);
+        $data = $view === 'proyectado' ? $this->cashPosition->projected($windowDays) : $this->cashPosition->real($windowDays);
+        $bytes = $format === 'pdf' ? $this->export->toPdf($view, $data) : $this->export->toExcel($view, $data);
         $filename = "flujo-caja-{$view}-".now()->format('Ymd-His').($format === 'pdf' ? '.pdf' : '.xlsx');
-        $mime     = $format === 'pdf'
+        $mime = $format === 'pdf'
             ? 'application/pdf'
             : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 

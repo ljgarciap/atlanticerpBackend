@@ -10,7 +10,7 @@ class PermissionCatalogTest extends FeatureTestCase
 {
     // ── GET /api/permission-catalog ───────────────────────────────────────────
 
-    public function test_permission_catalog_retorna_catalogo_agrupado_con_41_permisos(): void
+    public function test_permission_catalog_retorna_catalogo_agrupado_con_42_permisos(): void
     {
         // sprint2: compras.settings.configure (SCRUM-183→196) agrega el módulo `compras` nuevo.
         // SCRUM-500: bodega.settings.configure agrega el módulo `bodega` nuevo.
@@ -25,6 +25,7 @@ class PermissionCatalogTest extends FeatureTestCase
         // Fase 2 de la auditoría de permisos (2026-08-30, ver Atlantic/CLAUDE.md): 8 permisos
         // finos nuevos de `servicios` (2026_08_30_100001) + 3 de `admin_contab`
         // (2026_08_30_100002), reemplazando los `role:` hardcodeados de esos 2 archivos de rutas.
+        // Fase 3 (2026-08-30): crm.projects.delete (2026_08_30_100003), 5to permiso de `crm`.
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -37,42 +38,43 @@ class PermissionCatalogTest extends FeatureTestCase
 
         $this->assertCount(11, $catalog, 'El catálogo debe tener exactamente 11 módulos');
 
-        $this->assertArrayHasKey('crm',           $catalog);
-        $this->assertArrayHasKey('reports',       $catalog);
-        $this->assertArrayHasKey('ai',            $catalog);
-        $this->assertArrayHasKey('security',      $catalog);
-        $this->assertArrayHasKey('settings',      $catalog);
-        $this->assertArrayHasKey('superadmin',    $catalog);
+        $this->assertArrayHasKey('crm', $catalog);
+        $this->assertArrayHasKey('reports', $catalog);
+        $this->assertArrayHasKey('ai', $catalog);
+        $this->assertArrayHasKey('security', $catalog);
+        $this->assertArrayHasKey('settings', $catalog);
+        $this->assertArrayHasKey('superadmin', $catalog);
         $this->assertArrayHasKey('ventas_diseno', $catalog);
-        $this->assertArrayHasKey('compras',       $catalog);
-        $this->assertArrayHasKey('bodega',        $catalog);
-        $this->assertArrayHasKey('servicios',     $catalog);
-        $this->assertArrayHasKey('admin_contab',  $catalog);
+        $this->assertArrayHasKey('compras', $catalog);
+        $this->assertArrayHasKey('bodega', $catalog);
+        $this->assertArrayHasKey('servicios', $catalog);
+        $this->assertArrayHasKey('admin_contab', $catalog);
 
-        $this->assertCount(4, $catalog['crm'],           'crm debe tener 4 permisos');
-        $this->assertCount(2, $catalog['reports'],       'reports debe tener 2 permisos');
-        $this->assertCount(1, $catalog['ai'],            'ai debe tener 1 permiso');
-        $this->assertCount(2, $catalog['security'],      'security debe tener 2 permisos');
-        $this->assertCount(1, $catalog['settings'],      'settings debe tener 1 permiso');
-        $this->assertCount(1, $catalog['superadmin'],    'superadmin debe tener 1 permiso');
+        $this->assertCount(5, $catalog['crm'], 'crm debe tener 5 permisos');
+        $this->assertCount(2, $catalog['reports'], 'reports debe tener 2 permisos');
+        $this->assertCount(1, $catalog['ai'], 'ai debe tener 1 permiso');
+        $this->assertCount(2, $catalog['security'], 'security debe tener 2 permisos');
+        $this->assertCount(1, $catalog['settings'], 'settings debe tener 1 permiso');
+        $this->assertCount(1, $catalog['superadmin'], 'superadmin debe tener 1 permiso');
         $this->assertCount(12, $catalog['ventas_diseno'], 'ventas_diseno debe tener 12 permisos');
-        $this->assertCount(4, $catalog['compras'],        'compras debe tener 4 permisos');
-        $this->assertCount(1, $catalog['bodega'],         'bodega debe tener 1 permiso');
-        $this->assertCount(9, $catalog['servicios'],      'servicios debe tener 9 permisos');
-        $this->assertCount(4, $catalog['admin_contab'],   'admin_contab debe tener 4 permisos');
+        $this->assertCount(4, $catalog['compras'], 'compras debe tener 4 permisos');
+        $this->assertCount(1, $catalog['bodega'], 'bodega debe tener 1 permiso');
+        $this->assertCount(9, $catalog['servicios'], 'servicios debe tener 9 permisos');
+        $this->assertCount(4, $catalog['admin_contab'], 'admin_contab debe tener 4 permisos');
 
         $totalPermisos = array_sum(array_map('count', $catalog));
-        $this->assertSame(41, $totalPermisos, 'El total de permisos en el catálogo debe ser 41');
+        $this->assertSame(42, $totalPermisos, 'El total de permisos en el catálogo debe ser 42');
 
         $crmKeys = array_column((array) $catalog['crm'], 'key');
-        $this->assertContains('crm.read',   $crmKeys);
-        $this->assertContains('crm.write',  $crmKeys);
-        $this->assertContains('crm.edit',   $crmKeys);
+        $this->assertContains('crm.read', $crmKeys);
+        $this->assertContains('crm.write', $crmKeys);
+        $this->assertContains('crm.edit', $crmKeys);
         $this->assertContains('crm.delete', $crmKeys);
+        $this->assertContains('crm.projects.delete', $crmKeys);
 
         $firstCrm = $catalog['crm'][0];
-        $this->assertArrayHasKey('key',         $firstCrm);
-        $this->assertArrayHasKey('label',       $firstCrm);
+        $this->assertArrayHasKey('key', $firstCrm);
+        $this->assertArrayHasKey('label', $firstCrm);
         $this->assertArrayHasKey('description', $firstCrm);
     }
 

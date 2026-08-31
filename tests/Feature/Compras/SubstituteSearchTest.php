@@ -84,8 +84,8 @@ class SubstituteSearchTest extends FeatureTestCase
         $trigger = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
-                'family_id'                   => $family->id,
-                'file'                         => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
+                'family_id' => $family->id,
+                'file' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
             ])
             ->assertStatus(202);
 
@@ -101,7 +101,7 @@ class SubstituteSearchTest extends FeatureTestCase
         $poll->assertJsonPath('results.0.similarity_percent', 87.5);
         $poll->assertJsonPath('results.0.stock_quantity', 7);
         $poll->assertJsonPath('results.0.cost', 12);
-        // SCRUM-246 (rebote de Daniela Amaya) — Categoría, ausente hasta ahora en la tabla.
+        // SCRUM-246 (rebote de Gerencia Test) — Categoría, ausente hasta ahora en la tabla.
         $poll->assertJsonPath('results.0.category', 'bombillos');
         $poll->assertJsonPath('results.0.name', 'Bombillo genérico E27');
 
@@ -139,8 +139,8 @@ class SubstituteSearchTest extends FeatureTestCase
         $trigger = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
-                'family_id'                   => $family->id,
-                'file'                         => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
+                'family_id' => $family->id,
+                'file' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
             ])
             ->assertStatus(202);
 
@@ -168,8 +168,8 @@ class SubstituteSearchTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
-                'family_id'                   => $family->id,
-                'file'                         => UploadedFile::fake()->create('foto.zip', 50, 'application/zip'),
+                'family_id' => $family->id,
+                'file' => UploadedFile::fake()->create('foto.zip', 50, 'application/zip'),
             ])
             ->assertStatus(422);
 
@@ -186,8 +186,8 @@ class SubstituteSearchTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
-                'family_id'                   => $family->id,
-                'file'                         => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
+                'family_id' => $family->id,
+                'file' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
             ])
             ->assertStatus(422);
     }
@@ -207,8 +207,8 @@ class SubstituteSearchTest extends FeatureTestCase
             $this->withHeaders($this->authHeaders($token))
                 ->postJson('/api/compras/replacement-requests/search', [
                     'original_catalog_product_id' => $original->id,
-                    'family_id'                   => $family->id,
-                    'file'                         => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
+                    'family_id' => $family->id,
+                    'file' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
                 ])
                 ->assertStatus(202);
         }
@@ -216,8 +216,8 @@ class SubstituteSearchTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
-                'family_id'                   => $family->id,
-                'file'                         => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
+                'family_id' => $family->id,
+                'file' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
             ])
             ->assertStatus(429);
     }
@@ -233,8 +233,8 @@ class SubstituteSearchTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
-                'family_id'                   => $family->id,
-                'file'                         => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
+                'family_id' => $family->id,
+                'file' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
             ])
             ->assertStatus(403);
     }
@@ -258,8 +258,8 @@ class SubstituteSearchTest extends FeatureTestCase
         $trigger = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/replacement-requests/search', [
                 'original_catalog_product_id' => $original->id,
-                'family_id'                   => $family->id,
-                'file'                         => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
+                'family_id' => $family->id,
+                'file' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
             ])
             ->assertStatus(202);
 

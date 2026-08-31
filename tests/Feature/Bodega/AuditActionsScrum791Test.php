@@ -30,9 +30,9 @@ class AuditActionsScrum791Test extends FeatureTestCase
     public function test_descargar_documento_de_entrega_logea_accion(): void
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
-        $item  = $order->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $item = $order->items->first();
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-delivery", [

@@ -121,7 +121,7 @@ class AdminContPettyCashController
 
         // Campo plano (no anidado en "acciones") — mismo shape que `DailyCashCountHistoryDetail`
         // en `types/adminContab.ts` del frontend, por consistencia con el resto del módulo.
-        $detail['puede_aprobar'] = $detail['estado'] === AdminContPettyCashReport::ESTADO_PENDIENTE_APROBACION && $this->isMarkApprover($request);
+        $detail['puede_aprobar'] = $detail['estado'] === AdminContPettyCashReport::ESTADO_PENDIENTE_APROBACION && $this->isPrimaryApprover($request);
 
         return response()->json($detail);
     }
@@ -149,7 +149,7 @@ class AdminContPettyCashController
     }
 
     /** PUT /api/admin-contab/petty-cash/reports/{numero}/approve — REQ-540, gate real es el
-     *  middleware `mark_only` en la ruta (ver routes/admin-contab.php). */
+     *  middleware `primary_approver_only` en la ruta (ver routes/admin-contab.php). */
     public function approveReport(string $numero, Request $request): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -181,7 +181,7 @@ class AdminContPettyCashController
 
         $detail['puede_rechazar'] = $detail['ubicacion'] === 'reporte'
             && $detail['reporte_estado'] === AdminContPettyCashReport::ESTADO_PENDIENTE_APROBACION
-            && $this->isMarkApprover($request);
+            && $this->isPrimaryApprover($request);
         $detail['puede_reabrir'] = $detail['ubicacion'] === 'rechazados' && $this->isFelixOrYaneth($request);
 
         return response()->json($detail);
@@ -240,7 +240,7 @@ class AdminContPettyCashController
     }
 
     /** PUT /api/admin-contab/petty-cash/expenses/{id}/reject — REQ-541, exclusivo Mark
-     *  (`mark_only` en la ruta). */
+     *  (`primary_approver_only` en la ruta). */
     public function rejectExpense(int $id, RejectPettyCashExpenseRequest $request): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -266,7 +266,7 @@ class AdminContPettyCashController
     }
 
     /** PUT /api/admin-contab/petty-cash/reports/{numero}/reject — REQ-541, exclusivo Mark
-     *  (`mark_only` en la ruta). */
+     *  (`primary_approver_only` en la ruta). */
     public function rejectReport(string $numero, RejectPettyCashReportRequest $request): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -292,7 +292,7 @@ class AdminContPettyCashController
     }
 
     /** PUT /api/admin-contab/petty-cash/expenses/{id}/reopen — REQ-544, Felix/Yaneth (mismo
-     *  roster que `storeExpenses`, deliberadamente SIN `mark_only` — reabrir no es de Mark). */
+     *  roster que `storeExpenses`, deliberadamente SIN `primary_approver_only` — reabrir no es de Mark). */
     public function reopenExpense(int $id, ReopenPettyCashExpenseRequest $request): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -346,11 +346,11 @@ class AdminContPettyCashController
         return User::find((int) $payload['sub']);
     }
 
-    /** Redundante con el gate `mark_only` de la ruta de aprobar (ver docblock ahí) — se reusa acá
+    /** Redundante con el gate `primary_approver_only` de la ruta de aprobar (ver docblock ahí) — se reusa acá
      *  solo para calcular `puede_aprobar` en el detalle, que SÍ es visible para Felix/Yaneth/
-     *  Gerencia (no está detrás de `mark_only`). Mismo criterio que
+     *  Gerencia (no está detrás de `primary_approver_only`). Mismo criterio que
      *  `AdminContCashPositionController::historyDetail()`. */
-    private function isMarkApprover(Request $request): bool
+    private function isPrimaryApprover(Request $request): bool
     {
         /** @var array{sub?: int, permissions?: mixed}|null $payload */
         $payload = $request->attributes->get('jwt');
@@ -364,16 +364,16 @@ class AdminContPettyCashController
             return true;
         }
 
-        $markApproverId = AdminContFiscalSettings::current()->mark_approver_user_id;
+        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        return $payload !== null && isset($payload['sub']) && $markApproverId !== null
-            && (int) $payload['sub'] === $markApproverId;
+        return $payload !== null && isset($payload['sub']) && $primaryApproverId !== null
+            && (int) $payload['sub'] === $primaryApproverId;
     }
 
     /** Batch 21 — mismo roster de rol que el grupo `role:superadmin,lider_admin_contab,
      *  asistente_administrativa` que protege `PUT /expenses/{id}/reopen` (ver routes/admin-contab.php).
      *  Se duplica acá solo para calcular `puede_reabrir` en el detalle, que SÍ es visible para
-     *  Gerencia (no está detrás de ese `role:`) — mismo criterio que `isMarkApprover()`. */
+     *  Gerencia (no está detrás de ese `role:`) — mismo criterio que `isPrimaryApprover()`. */
     private function isFelixOrYaneth(Request $request): bool
     {
         /** @var array{role?: string}|null $payload */

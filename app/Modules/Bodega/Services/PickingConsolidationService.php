@@ -27,7 +27,7 @@ use Illuminate\Support\Collection;
  * de otro pedido, aunque comparta la misma referencia/descripción textual, porque no hay un id
  * estable para agruparlos (ver docblock de `OrderItem`) — cada uno queda en su propia línea.
  *
- * `location` (corrección 2026-08-11, Daniela Amaya, SCRUM-391) — columna obligatoria agregada al
+ * `location` (corrección 2026-08-11, Gerencia Test, SCRUM-391) — columna obligatoria agregada al
  * consolidado: usa `found_location` (ubicación real confirmada por una Revisión de Inventario,
  * REQ-318) cuando existe, si no cae a `location_snapshot` (la original) — mismo criterio de
  * prioridad que la Hoja de Picking individual. Se fija una sola vez, al crear la fila consolidada
@@ -68,27 +68,27 @@ final class PickingConsolidationService
 
                     $consolidated[$key] = [
                         'catalog_product_id' => $item->catalog_product_id,
-                        'reference'          => $product !== null ? $product->reference : $item->reference_snapshot,
-                        'description'        => $product !== null ? $product->name : $item->description_snapshot,
-                        'location'           => $item->found_location ?? $item->location_snapshot,
-                        'qty_requested'      => 0,
-                        'orders'             => [],
+                        'reference' => $product !== null ? $product->reference : $item->reference_snapshot,
+                        'description' => $product !== null ? $product->name : $item->description_snapshot,
+                        'location' => $item->found_location ?? $item->location_snapshot,
+                        'qty_requested' => 0,
+                        'orders' => [],
                     ];
                 }
 
                 $consolidated[$key]['qty_requested'] += $item->qty_requested;
                 $consolidated[$key]['orders'][] = [
-                    'order_id'      => $order->id,
-                    'order_number'  => $order->order_number,
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
                     'qty_requested' => $item->qty_requested,
                 ];
             }
         }
 
         return [
-            'picker_id'    => $pickerId,
+            'picker_id' => $pickerId,
             'orders_count' => $orders->count(),
-            'items'        => array_values($consolidated),
+            'items' => array_values($consolidated),
         ];
     }
 

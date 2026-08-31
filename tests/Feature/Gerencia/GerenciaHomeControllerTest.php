@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-160 — Daniela Amaya, comentario 2026-08-26: cuando el rango filtrado del panel
+ * SCRUM-160 — Gerencia Test, comentario 2026-08-26: cuando el rango filtrado del panel
  * "Proyectos" solo tenía datos reales en un mes, `chart_mensual` traía un único ítem — el
  * `BarChart` del frontend (flex-1 con un solo hijo) lo estiraba al 100% del ancho, y se veía
  * como un bloque grueso en vez de una barra dentro de un gráfico de barras. Ver
@@ -41,13 +41,13 @@ class GerenciaHomeControllerTest extends FeatureTestCase
             ->value('security_level_id');
 
         return DB::table("{$slug}_auth.users")->insertGetId([
-            'first_name'        => 'Owner',
-            'last_name'         => 'SCRUM-160',
-            'email'             => 'owner-scrum-160@atlantic.test',
-            'password_hash'     => bcrypt('irrelevant'),
+            'first_name' => 'Owner',
+            'last_name' => 'SCRUM-160',
+            'email' => 'owner-scrum-160@atlantic.test',
+            'password_hash' => bcrypt('irrelevant'),
             'security_level_id' => $securityLevelId,
-            'created_at'        => Carbon::now(),
-            'updated_at'        => Carbon::now(),
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ]);
     }
 
@@ -56,20 +56,20 @@ class GerenciaHomeControllerTest extends FeatureTestCase
         $ownerId = $this->createOwner();
 
         $master = MasterClient::create(['name' => 'Cliente SCRUM-160']);
-        $sub    = SubClient::create([
+        $sub = SubClient::create([
             'master_client_id' => $master->id,
-            'business_name'    => 'Subcliente SCRUM-160',
-            'tax_id'            => '155-0000-9-2026',
+            'business_name' => 'Subcliente SCRUM-160',
+            'tax_id' => '155-0000-9-2026',
         ]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto SCRUM-160']);
 
         $card = PipelineCard::create([
             'sales_project_id' => $project->id,
-            'stage'            => 'lead',
+            'stage' => 'lead',
             'master_client_id' => $master->id,
-            'sub_client_id'    => $sub->id,
-            'owner_id'         => $ownerId,
-            'amount'           => 51000,
+            'sub_client_id' => $sub->id,
+            'owner_id' => $ownerId,
+            'amount' => 51000,
             'stage_changed_at' => Carbon::parse('2026-08-15'),
         ]);
         $card->forceFill(['created_at' => Carbon::parse('2026-08-15')])->save();

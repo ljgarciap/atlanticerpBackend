@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Controllers;
 
 use App\Models\User;
-use App\Modules\Auth\Models\Role;
 use App\Modules\AdminCont\Http\Requests\StoreCommissionTierRequest;
 use App\Modules\AdminCont\Http\Requests\UpdateCommissionTierRequest;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\CommissionTier;
 use App\Modules\AdminCont\Services\CommissionExportService;
 use App\Modules\AdminCont\Services\CommissionOrderService;
+use App\Modules\Auth\Models\Role;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,7 +38,7 @@ class AdminContInternalCommissionController
         );
     }
 
-    /** POST /api/admin-contab/commissions/internal/tiers — CRUD gateado por `mark_only` en routes. */
+    /** POST /api/admin-contab/commissions/internal/tiers — CRUD gateado por `primary_approver_only` en routes. */
     public function storeTier(StoreCommissionTierRequest $request): JsonResponse
     {
         $tier = CommissionTier::create($request->validated());
@@ -110,7 +110,7 @@ class AdminContInternalCommissionController
             ->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
 
         return response()->json($vendedores->map(fn (User $v) => [
-            'id'     => $v->id,
+            'id' => $v->id,
             'nombre' => trim("{$v->first_name} {$v->last_name}"),
         ])->values());
     }
@@ -162,9 +162,9 @@ class AdminContInternalCommissionController
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        $mesParam    = $request->string('mes')->toString();
+        $mesParam = $request->string('mes')->toString();
         $parsedMonth = $mesParam !== '' ? CarbonImmutable::createFromFormat('Y-m', $mesParam) : null;
-        $viewMonth   = ($parsedMonth instanceof CarbonImmutable ? $parsedMonth : CarbonImmutable::now())->startOfMonth();
+        $viewMonth = ($parsedMonth instanceof CarbonImmutable ? $parsedMonth : CarbonImmutable::now())->startOfMonth();
 
         return response()->json($this->orders->accountStatementForVendor($vendor, $viewMonth));
     }
@@ -186,9 +186,9 @@ class AdminContInternalCommissionController
             abort(404);
         }
 
-        $mesParam    = $request->string('mes')->toString();
+        $mesParam = $request->string('mes')->toString();
         $parsedMonth = $mesParam !== '' ? CarbonImmutable::createFromFormat('Y-m', $mesParam) : null;
-        $viewMonth   = ($parsedMonth instanceof CarbonImmutable ? $parsedMonth : CarbonImmutable::now())->startOfMonth();
+        $viewMonth = ($parsedMonth instanceof CarbonImmutable ? $parsedMonth : CarbonImmutable::now())->startOfMonth();
 
         $data = $this->orders->accountStatementForVendor($vendor, $viewMonth);
 
@@ -283,28 +283,28 @@ class AdminContInternalCommissionController
         // implementaron en paralelo sobre el mismo ADR, esperable, ver
         // feedback_worktree_isolation_one_repo_per_dispatch en la memoria del proyecto).
         return [
-            'mes'                        => $viewMonth->format('Y-m'),
-            'meses_disponibles'          => $mesesDisponibles,
-            'mes_cerrado'                => $viewMonth->lt(CarbonImmutable::now()->startOfMonth()),
-            'puede_ver_equipo'           => $canViewTeam,
-            'puede_exportar'             => $canViewTeam,
+            'mes' => $viewMonth->format('Y-m'),
+            'meses_disponibles' => $mesesDisponibles,
+            'mes_cerrado' => $viewMonth->lt(CarbonImmutable::now()->startOfMonth()),
+            'puede_ver_equipo' => $canViewTeam,
+            'puede_exportar' => $canViewTeam,
             // Bug real de Pre-QA (Visual Review, 2026-08-25): el frontend gateaba el CRUD de
             // tramos (botones editar/eliminar/agregar en el modal "Tabla de comisión
             // escalonada") con `admin_contab.edit`, que Felix también tiene — pero `POST/PUT/
-            // DELETE .../tiers` está gateado por `mark_only` en routes/admin-contab.php, así que
+            // DELETE .../tiers` está gateado por `primary_approver_only` en routes/admin-contab.php, así que
             // Felix veía controles que siempre devolvían 403 al guardar. Mismo patrón ya
             // establecido en `AdminContInvoiceController::detail()` (`puede_decidir_incobrable`)
             // — el frontend nunca decide por su cuenta quién es Mark, el backend expone el
             // cómputo dependiente del actor en el endpoint de acceso general.
-            'puede_editar_tramos'       => $this->isMarkApprover($actor, $request),
-            'total_pedidos_mes'          => round((float) $cardRows->sum('total_pedidos_mes'), 2),
+            'puede_editar_tramos' => $this->isPrimaryApprover($actor, $request),
+            'total_pedidos_mes' => round((float) $cardRows->sum('total_pedidos_mes'), 2),
             'vendedores_con_pedidos_mes' => $cardRows->filter(fn (array $r) => $r['total_pedidos_mes'] > 0)->count(),
-            'ya_pagada'                  => round((float) $cardRows->sum('pagada'), 2),
-            'por_pagar'                  => round((float) $cardRows->sum('por_pagar'), 2),
-            'pendiente_cobro'            => round((float) $cardRows->sum('pendiente_cobro'), 2),
-            'banner_comisiones_count'    => $banner['count'],
-            'banner_comisiones_total'    => $banner['total'],
-            'vendedores'                 => $rows,
+            'ya_pagada' => round((float) $cardRows->sum('pagada'), 2),
+            'por_pagar' => round((float) $cardRows->sum('por_pagar'), 2),
+            'pendiente_cobro' => round((float) $cardRows->sum('pendiente_cobro'), 2),
+            'banner_comisiones_count' => $banner['count'],
+            'banner_comisiones_total' => $banner['total'],
+            'vendedores' => $rows,
         ];
     }
 
@@ -320,10 +320,10 @@ class AdminContInternalCommissionController
         return User::find((int) $payload['sub']);
     }
 
-    /** Mismo criterio que `EnsureIsMarkApprover` (el middleware `mark_only` real que gatea
+    /** Mismo criterio que `EnsureIsPrimaryApprover` (el middleware `primary_approver_only` real que gatea
      *  storeTier/updateTier/destroyTier) y `AdminContInvoiceController::detail()` —
-     *  `superadmin.all` bypassa, si no hay `mark_approver_user_id` configurado nadie es Mark. */
-    private function isMarkApprover(User $actor, Request $request): bool
+     *  `superadmin.all` bypassa, si no hay `primary_approver_user_id` configurado nadie es Mark. */
+    private function isPrimaryApprover(User $actor, Request $request): bool
     {
         /** @var array{permissions?: mixed}|null $payload */
         $payload = $request->attributes->get('jwt');
@@ -337,8 +337,8 @@ class AdminContInternalCommissionController
             return true;
         }
 
-        $markApproverId = AdminContFiscalSettings::current()->mark_approver_user_id;
+        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        return $markApproverId !== null && $actor->id === $markApproverId;
+        return $primaryApproverId !== null && $actor->id === $primaryApproverId;
     }
 }

@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace Tests\Feature\VentasDiseno;
 
+use App\Models\User;
 use App\Modules\VentasDiseno\Events\QuoteConfirmed;
 use App\Modules\VentasDiseno\Events\QuoteGenerated;
+use App\Modules\VentasDiseno\Http\Controllers\QuoteController;
 use App\Modules\VentasDiseno\Models\Architect;
+use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\Quote;
+use App\Modules\VentasDiseno\Models\QuoteItem;
+use App\Modules\VentasDiseno\Models\QuotePart;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
+use App\Modules\VentasDiseno\Services\QuotePdfService;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -47,14 +53,15 @@ class QuoteControllerTest extends FeatureTestCase
     private function userIdByEmail(string $email): int
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
     /** @return array{master: MasterClient, sub: SubClient, project: SalesProject} */
     private function makeClientHierarchy(): array
     {
-        $master  = MasterClient::create(['name' => 'Cliente Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $master = MasterClient::create(['name' => 'Cliente Test']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
 
         return ['master' => $master, 'sub' => $sub, 'project' => $project];
@@ -118,12 +125,12 @@ class QuoteControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/quotes', [
                 'master_client_id' => $hierarchy['master']->id,
-                'sub_client_id'    => $hierarchy['sub']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
                 'sales_project_id' => $hierarchy['project']->id,
-                'ruc'              => '155-0000-1-2026',
-                'description'      => 'Cotizacion de prueba',
-                'delivery_type'    => 'partial',
-                'delivery_dates'   => ['2026-09-01', '2026-09-15'],
+                'ruc' => '155-0000-1-2026',
+                'description' => 'Cotizacion de prueba',
+                'delivery_type' => 'partial',
+                'delivery_dates' => ['2026-09-01', '2026-09-15'],
             ])
             ->assertStatus(201);
 
@@ -137,14 +144,14 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_crear_cotizacion_con_subcliente_de_otro_master_client_retorna_422(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $hierarchy   = $this->makeClientHierarchy();
+        $hierarchy = $this->makeClientHierarchy();
         $otherMaster = MasterClient::create(['name' => 'Otro Cliente']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/quotes', [
                 'master_client_id' => $otherMaster->id,
-                'sub_client_id'    => $hierarchy['sub']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
             ])
             ->assertStatus(422);
     }
@@ -153,13 +160,13 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $hierarchy = $this->makeClientHierarchy();
-        $otherSub  = SubClient::create(['master_client_id' => $hierarchy['master']->id, 'business_name' => 'Otro Sub', 'tax_id' => '155-9999-1-2026']);
+        $otherSub = SubClient::create(['master_client_id' => $hierarchy['master']->id, 'business_name' => 'Otro Sub', 'tax_id' => '155-9999-1-2026']);
         $otherProject = SalesProject::create(['sub_client_id' => $otherSub->id, 'name' => 'Otro Proyecto']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/quotes', [
-                'sub_client_id'    => $hierarchy['sub']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
                 'sales_project_id' => $otherProject->id,
             ])
             ->assertStatus(422);
@@ -207,9 +214,9 @@ class QuoteControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quoteId}", [
                 'master_client_id' => $hierarchy['master']->id,
-                'sub_client_id'    => $hierarchy['sub']->id,
-                'ruc'              => '155-0000-1-2026',
-                'description'      => 'Actualizada',
+                'sub_client_id' => $hierarchy['sub']->id,
+                'ruc' => '155-0000-1-2026',
+                'description' => 'Actualizada',
             ])
             ->assertStatus(200);
 
@@ -285,7 +292,7 @@ class QuoteControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $quote = Quote::create(['owner_id' => $designerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         $part->items()->create([
             'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'discount_percent' => 20,
         ]);
@@ -387,7 +394,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -408,7 +415,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 1000]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -431,7 +438,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -462,7 +469,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         // Público: (100-65)/100=35% ok. Proyecto (-15%): precio 85, margen (85-65)/85=23.5% (<30%).
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 65]);
 
@@ -481,7 +488,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId, 'discount_mode' => 'global']);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         // Precio 100, costo 65 -> margen sano 35%. 40% de descuento global -> precio 60, margen negativo.
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 65]);
 
@@ -500,7 +507,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         // Subtotal 100, costo 65 (margen sano 35%). 30% de descuento de Totales -> neto 70, margen (70-65)/70=7.1% (<30%).
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 65]);
 
@@ -527,7 +534,7 @@ class QuoteControllerTest extends FeatureTestCase
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.select_partner_price'])]);
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 65]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -543,7 +550,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $part  = $quote->parts()->create(['name' => 'Partida 1']);
+        $part = $quote->parts()->create(['name' => 'Partida 1']);
         // Item 100% personalizado, sin costo -> el descuento de Totales no tiene contra qué medir margen.
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100]);
 
@@ -608,7 +615,7 @@ class QuoteControllerTest extends FeatureTestCase
         $quote = Quote::create([
             'owner_id' => $designerId,
             'master_client_id' => $hierarchy['master']->id,
-            'sub_client_id'    => $hierarchy['sub']->id,
+            'sub_client_id' => $hierarchy['sub']->id,
             'sales_project_id' => $hierarchy['project']->id,
             'ruc' => '155-0000-1-2026',
             'description' => 'Cotizacion completa',
@@ -636,16 +643,16 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $hierarchy = $this->makeClientHierarchy();
         $architect = Architect::create(['name' => 'Arq. Test', 'phone' => '6000-0000']);
-        $contact   = $hierarchy['sub']->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
+        $contact = $hierarchy['sub']->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
 
         $quote = Quote::create([
-            'owner_id'         => $ownerId,
+            'owner_id' => $ownerId,
             'master_client_id' => $hierarchy['master']->id,
-            'sub_client_id'    => $hierarchy['sub']->id,
+            'sub_client_id' => $hierarchy['sub']->id,
             'sales_project_id' => $hierarchy['project']->id,
-            'ruc'              => '155-0000-1-2026',
-            'description'      => 'Cotizacion completa',
-            'architect_id'     => $architect->id,
+            'ruc' => '155-0000-1-2026',
+            'description' => 'Cotizacion completa',
+            'architect_id' => $architect->id,
         ]);
         $quote->deliveryDates()->create(['date' => '2026-09-01']);
         $quote->contacts()->attach($contact->id);
@@ -662,19 +669,19 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
-        $hierarchy  = $this->makeClientHierarchy();
-        $architect  = Architect::create(['name' => 'Arq. TBD', 'phone' => '6000-0001']);
-        $contact    = $hierarchy['sub']->contacts()->create(['name' => 'Contacto TBD', 'role' => 'client', 'phone' => '6111-1112']);
+        $hierarchy = $this->makeClientHierarchy();
+        $architect = Architect::create(['name' => 'Arq. TBD', 'phone' => '6000-0001']);
+        $contact = $hierarchy['sub']->contacts()->create(['name' => 'Contacto TBD', 'role' => 'client', 'phone' => '6111-1112']);
 
         $quote = Quote::create([
-            'owner_id'         => $designerId,
+            'owner_id' => $designerId,
             'master_client_id' => $hierarchy['master']->id,
-            'sub_client_id'    => $hierarchy['sub']->id,
+            'sub_client_id' => $hierarchy['sub']->id,
             'sales_project_id' => $hierarchy['project']->id,
-            'ruc'              => '155-0000-1-2026',
-            'description'      => 'Cotizacion con entrega por definir',
-            'architect_id'     => $architect->id,
-            'delivery_type'    => 'tbd',
+            'ruc' => '155-0000-1-2026',
+            'description' => 'Cotizacion con entrega por definir',
+            'architect_id' => $architect->id,
+            'delivery_type' => 'tbd',
         ]);
         $quote->contacts()->attach($contact->id);
         // Sin deliveryDates() a propósito — 'tbd' no debe exigirlas.
@@ -697,19 +704,19 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
-        $hierarchy  = $this->makeClientHierarchy();
-        $architect  = Architect::create(['name' => 'Arq. Sin Fecha', 'phone' => '6000-0002']);
-        $contact    = $hierarchy['sub']->contacts()->create(['name' => 'Contacto Sin Fecha', 'role' => 'client', 'phone' => '6111-1113']);
+        $hierarchy = $this->makeClientHierarchy();
+        $architect = Architect::create(['name' => 'Arq. Sin Fecha', 'phone' => '6000-0002']);
+        $contact = $hierarchy['sub']->contacts()->create(['name' => 'Contacto Sin Fecha', 'role' => 'client', 'phone' => '6111-1113']);
 
         $quote = Quote::create([
-            'owner_id'         => $designerId,
+            'owner_id' => $designerId,
             'master_client_id' => $hierarchy['master']->id,
-            'sub_client_id'    => $hierarchy['sub']->id,
+            'sub_client_id' => $hierarchy['sub']->id,
             'sales_project_id' => $hierarchy['project']->id,
-            'ruc'              => '155-0000-1-2026',
-            'description'      => 'Cotizacion sin fecha',
-            'architect_id'     => $architect->id,
-            'delivery_type'    => 'single',
+            'ruc' => '155-0000-1-2026',
+            'description' => 'Cotizacion sin fecha',
+            'architect_id' => $architect->id,
+            'delivery_type' => 'single',
         ]);
         $quote->contacts()->attach($contact->id);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
@@ -762,9 +769,9 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_guardar_borrador_exitoso_sin_items(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $hierarchy  = $this->makeClientHierarchy();
-        $architect  = Architect::create(['name' => 'Arq. Test', 'phone' => '6000-0000']);
-        $contact    = $hierarchy['sub']->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
+        $hierarchy = $this->makeClientHierarchy();
+        $architect = Architect::create(['name' => 'Arq. Test', 'phone' => '6000-0000']);
+        $contact = $hierarchy['sub']->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $quoteId = $this->withHeaders($this->authHeaders($token))
@@ -776,12 +783,12 @@ class QuoteControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quoteId}/save-draft", [
                 'master_client_id' => $hierarchy['master']->id,
-                'sub_client_id'    => $hierarchy['sub']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
                 'sales_project_id' => $hierarchy['project']->id,
-                'ruc'              => '155-0000-1-2026',
-                'description'      => 'Sin items todavía',
-                'architect_id'     => $architect->id,
-                'delivery_dates'   => ['2026-09-01'],
+                'ruc' => '155-0000-1-2026',
+                'description' => 'Sin items todavía',
+                'architect_id' => $architect->id,
+                'delivery_dates' => ['2026-09-01'],
             ])
             ->assertStatus(200);
 
@@ -812,12 +819,12 @@ class QuoteControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quoteId}/save-draft", [
                 'master_client_id' => $hierarchy['master']->id,
-                'sub_client_id'    => $hierarchy['sub']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
                 'sales_project_id' => $hierarchy['project']->id,
-                'ruc'              => '155-0000-1-2026',
-                'description'      => 'Sin contacto todavía',
-                'architect_id'     => $architect->id,
-                'delivery_dates'   => ['2026-09-01'],
+                'ruc' => '155-0000-1-2026',
+                'description' => 'Sin contacto todavía',
+                'architect_id' => $architect->id,
+                'delivery_dates' => ['2026-09-01'],
             ])
             ->assertStatus(200);
 
@@ -838,13 +845,13 @@ class QuoteControllerTest extends FeatureTestCase
         $hierarchy = $this->makeClientHierarchy();
         $architect = Architect::create(['name' => 'Arq. Test', 'phone' => '6000-0000']);
         $quote = Quote::create([
-            'owner_id'         => $designerId,
+            'owner_id' => $designerId,
             'master_client_id' => $hierarchy['master']->id,
-            'sub_client_id'    => $hierarchy['sub']->id,
+            'sub_client_id' => $hierarchy['sub']->id,
             'sales_project_id' => $hierarchy['project']->id,
-            'ruc'              => '155-0000-1-2026',
-            'description'      => 'Sin contacto',
-            'architect_id'     => $architect->id,
+            'ruc' => '155-0000-1-2026',
+            'description' => 'Sin contacto',
+            'architect_id' => $architect->id,
         ]);
         $quote->deliveryDates()->create(['date' => '2026-09-01']);
         $quote->parts()->create(['name' => 'Partida'])->items()->create([
@@ -871,11 +878,11 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_guardar_borrador_reparenta_proyecto_ya_vinculado_a_nuevo_subcliente(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $master  = MasterClient::create(['name' => 'Cliente Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $master = MasterClient::create(['name' => 'Cliente Test']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
         $orphanProject = SalesProject::create(['sub_client_id' => null, 'name' => 'Proyecto sin cliente']);
         $architect = Architect::create(['name' => 'Arq. Test', 'phone' => '6000-0000']);
-        $contact   = $sub->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
+        $contact = $sub->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
         $designerId = $this->userIdByEmail('designer@atlantic.test');
 
         $quote = Quote::create(['owner_id' => $designerId, 'sales_project_id' => $orphanProject->id]);
@@ -885,12 +892,12 @@ class QuoteControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/save-draft", [
                 'master_client_id' => $master->id,
-                'sub_client_id'    => $sub->id,
+                'sub_client_id' => $sub->id,
                 'sales_project_id' => $orphanProject->id, // el mismo — no se elige uno nuevo
-                'ruc'              => '155-0000-1-2026',
-                'description'      => 'Completando cliente',
-                'architect_id'     => $architect->id,
-                'delivery_dates'   => ['2026-09-01'],
+                'ruc' => '155-0000-1-2026',
+                'description' => 'Completando cliente',
+                'architect_id' => $architect->id,
+                'delivery_dates' => ['2026-09-01'],
             ])
             ->assertStatus(200);
 
@@ -909,7 +916,7 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $hierarchy = $this->makeClientHierarchy();
-        $otherSub     = SubClient::create(['master_client_id' => $hierarchy['master']->id, 'business_name' => 'Otro Sub', 'tax_id' => '155-9999-1-2026']);
+        $otherSub = SubClient::create(['master_client_id' => $hierarchy['master']->id, 'business_name' => 'Otro Sub', 'tax_id' => '155-9999-1-2026']);
         $otherProject = SalesProject::create(['sub_client_id' => $otherSub->id, 'name' => 'Proyecto ajeno']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
@@ -918,7 +925,7 @@ class QuoteControllerTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quoteId}/save-draft", [
-                'sub_client_id'    => $hierarchy['sub']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
                 'sales_project_id' => $otherProject->id,
             ])
             ->assertStatus(422);
@@ -1016,8 +1023,8 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
-        $master  = MasterClient::create(['name' => 'Cliente Pipeline']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Pipeline', 'tax_id' => '155-1111-1-2026']);
+        $master = MasterClient::create(['name' => 'Cliente Pipeline']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Pipeline', 'tax_id' => '155-1111-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Pipeline']);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'design',
@@ -1151,7 +1158,6 @@ class QuoteControllerTest extends FeatureTestCase
      * se BLOQUEA por completo, no solo se abstiene de mover la etapa. Ver
      * test_confirmar_bloqueado_si_tarjeta_ya_en_propuesta() más abajo.
      */
-
     public function test_confirmar_cotizacion_sin_generar_retorna_422(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
@@ -1247,14 +1253,14 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_confirmar_cotizacion_con_margen_violado_avisa_a_mark_sin_confirmar_todavia(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@atlantic.com.pa')
+        DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.override_min_margin'])]);
-        $markId = $this->userIdByEmail('mbekhar@atlantic.com.pa');
+        $markId = $this->userIdByEmail('gerencia3@test.com');
         $data = $this->makeQuoteWithGeneralFieldsComplete($markId);
         $part = $data['quote']->parts()->create(['name' => 'Partida 1']);
         $itemId = $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 60, 'cost' => 50])->id;
 
-        $token = $this->loginAs('mbekhar@atlantic.com.pa', 'mbekhar@atlantic.com.pa', 'management');
+        $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$data['quote']->id}/generate")->assertStatus(200);
 
@@ -1271,14 +1277,14 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_confirmar_cotizacion_con_margen_violado_y_override_explicito_guarda_para_mark(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'mbekhar@atlantic.com.pa')
+        DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.override_min_margin'])]);
-        $markId = $this->userIdByEmail('mbekhar@atlantic.com.pa');
+        $markId = $this->userIdByEmail('gerencia3@test.com');
         $data = $this->makeQuoteWithGeneralFieldsComplete($markId);
         $part = $data['quote']->parts()->create(['name' => 'Partida 1']);
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 60, 'cost' => 50]);
 
-        $token = $this->loginAs('mbekhar@atlantic.com.pa', 'mbekhar@atlantic.com.pa', 'management');
+        $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$data['quote']->id}/generate")->assertStatus(200);
 
@@ -1305,7 +1311,7 @@ class QuoteControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/quotes', [
                 'master_client_id' => $hierarchy['master']->id,
-                'sub_client_id'    => $hierarchy['sub']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
                 'sales_project_id' => $hierarchy['project']->id,
             ])
             ->assertStatus(201);
@@ -1336,7 +1342,7 @@ class QuoteControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quoteId}", [
                 'master_client_id' => $hierarchy['master']->id,
-                'sub_client_id'    => $hierarchy['sub']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
                 'sales_project_id' => $hierarchy['project']->id,
             ])
             ->assertStatus(200);
@@ -1352,7 +1358,7 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
-        $hierarchy  = $this->makeClientHierarchy();
+        $hierarchy = $this->makeClientHierarchy();
 
         $card = PipelineCard::create([
             'sales_project_id' => $hierarchy['project']->id, 'stage' => 'lead',
@@ -1361,9 +1367,9 @@ class QuoteControllerTest extends FeatureTestCase
         ]);
 
         Quote::create([
-            'owner_id'         => $designerId,
+            'owner_id' => $designerId,
             'sales_project_id' => $hierarchy['project']->id,
-            'description'      => 'Borrador abandonado',
+            'description' => 'Borrador abandonado',
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -1550,7 +1556,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->assertSame('Cotizacion completa', Quote::find($data['quote']->id)?->description);
     }
 
-    public function test_can_edit_es_false_para_cotizacion_confirmada_en_formatDetail(): void
+    public function test_can_edit_es_false_para_cotizacion_confirmada_en_format_detail(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
@@ -1761,7 +1767,7 @@ class QuoteControllerTest extends FeatureTestCase
 
     // ── SCRUM-766: PDF real (plantilla única interna/externa/descarga) ──────────
 
-    /** @return array{quote: Quote, part: \App\Modules\VentasDiseno\Models\QuotePart} */
+    /** @return array{quote: Quote, part: QuotePart} */
     private function makeQuoteWithPdfableData(int $ownerId): array
     {
         $hierarchy = $this->makeClientHierarchy();
@@ -1773,8 +1779,8 @@ class QuoteControllerTest extends FeatureTestCase
             'observations' => 'Obs de test', 'conditions_text' => 'Condiciones de test',
             'folio' => 'TEST-PDF-001', 'generated_at' => now(),
         ]);
-        $part = \App\Modules\VentasDiseno\Models\QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
-        \App\Modules\VentasDiseno\Models\QuoteItem::create([
+        $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
+        QuoteItem::create([
             'quote_part_id' => $part->id, 'is_custom' => true,
             'reference' => 'REF-1', 'description' => 'Item de prueba',
             'quantity' => 2, 'unit_price' => 100, 'discount_percent' => 10,
@@ -1808,13 +1814,13 @@ class QuoteControllerTest extends FeatureTestCase
         $ownerId = $this->userIdByEmail('designer@atlantic.test');
         $data = $this->makeQuoteWithPdfableData($ownerId);
 
-        $controller = app(\App\Modules\VentasDiseno\Http\Controllers\QuoteController::class);
+        $controller = app(QuoteController::class);
         $reflection = new \ReflectionMethod($controller, 'formatDetail');
         $reflection->setAccessible(true);
-        $user = \App\Models\User::find($ownerId);
+        $user = User::find($ownerId);
         $detail = $reflection->invoke($controller, $data['quote']->fresh(['parts.items']), $user);
 
-        $pdfService = app(\App\Modules\VentasDiseno\Services\QuotePdfService::class);
+        $pdfService = app(QuotePdfService::class);
         $html = view('ventas-diseno.quote-pdf', $pdfService->viewData($detail, external: false))->render();
 
         $this->assertStringContainsString('secondary-header-badge">Cotizacion PDF test<', $html);
@@ -1832,13 +1838,13 @@ class QuoteControllerTest extends FeatureTestCase
         $ownerId = $this->userIdByEmail('designer@atlantic.test');
         $data = $this->makeQuoteWithPdfableData($ownerId);
 
-        $controller = app(\App\Modules\VentasDiseno\Http\Controllers\QuoteController::class);
+        $controller = app(QuoteController::class);
         $reflection = new \ReflectionMethod($controller, 'formatDetail');
         $reflection->setAccessible(true);
-        $user = \App\Models\User::find($ownerId);
+        $user = User::find($ownerId);
         $detail = $reflection->invoke($controller, $data['quote']->fresh(['parts.items']), $user);
 
-        $pdfService = app(\App\Modules\VentasDiseno\Services\QuotePdfService::class);
+        $pdfService = app(QuotePdfService::class);
         $html = view('ventas-diseno.quote-pdf', $pdfService->viewData($detail, external: false))->render();
 
         $this->assertStringContainsString('<img src="data:image/png;base64,', $html);
@@ -1856,13 +1862,13 @@ class QuoteControllerTest extends FeatureTestCase
         $ownerId = $this->userIdByEmail('designer@atlantic.test');
         $data = $this->makeQuoteWithPdfableData($ownerId);
 
-        $controller = app(\App\Modules\VentasDiseno\Http\Controllers\QuoteController::class);
+        $controller = app(QuoteController::class);
         $reflection = new \ReflectionMethod($controller, 'formatDetail');
         $reflection->setAccessible(true);
-        $user = \App\Models\User::find($ownerId);
+        $user = User::find($ownerId);
         $detail = $reflection->invoke($controller, $data['quote']->fresh(['parts.items']), $user);
 
-        $pdfService = app(\App\Modules\VentasDiseno\Services\QuotePdfService::class);
+        $pdfService = app(QuotePdfService::class);
         $viewData = $pdfService->viewData($detail, external: true);
 
         $this->assertTrue($viewData['external']);
@@ -1879,7 +1885,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $ownerId = $this->userIdByEmail('designer@atlantic.test');
         $hierarchy = $this->makeClientHierarchy();
-        $product = \App\Modules\VentasDiseno\Models\CatalogProduct::create([
+        $product = CatalogProduct::create([
             'reference' => 'FOTO-1', 'name' => 'Producto con foto', 'photo_url' => 'https://example.test/foto.png',
             'price_full' => 50, 'is_active' => true,
         ]);
@@ -1889,16 +1895,16 @@ class QuoteControllerTest extends FeatureTestCase
             'description' => 'Con foto', 'price_type' => 'project', 'discount_mode' => 'line', 'status' => 'draft',
             'folio' => 'TEST-PDF-002', 'generated_at' => now(),
         ]);
-        $part = \App\Modules\VentasDiseno\Models\QuotePart::create(['quote_id' => $quote->id, 'name' => 'P1', 'position' => 1]);
-        \App\Modules\VentasDiseno\Models\QuoteItem::create([
+        $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'P1', 'position' => 1]);
+        QuoteItem::create([
             'quote_part_id' => $part->id, 'catalog_product_id' => $product->id, 'is_custom' => false,
             'reference' => $product->reference, 'description' => $product->name, 'quantity' => 1, 'unit_price' => 50,
         ]);
 
-        $controller = app(\App\Modules\VentasDiseno\Http\Controllers\QuoteController::class);
+        $controller = app(QuoteController::class);
         $reflection = new \ReflectionMethod($controller, 'formatDetail');
         $reflection->setAccessible(true);
-        $user = \App\Models\User::find($ownerId);
+        $user = User::find($ownerId);
         $detail = $reflection->invoke($controller, $quote->fresh(['parts.items']), $user);
 
         $this->assertSame('https://example.test/foto.png', $detail['parts'][0]['items'][0]['photo_url']);

@@ -97,7 +97,7 @@ class WarehouseControllerTest extends FeatureTestCase
         $response->assertJsonPath('data.0.catalog_product_id', $product->id);
         $response->assertJsonPath('kpis.total_products', 1);
         $response->assertJsonPath('kpis.total_units', 8);
-        // Mejora SCRUM-752 RN3 (Daniela Amaya 2026-08-13) — unidades REALES de ESTA bodega (8 en
+        // Mejora SCRUM-752 RN3 (Gerencia Test 2026-08-13) — unidades REALES de ESTA bodega (8 en
         // Central), no la suma global entre bodegas (8+2=10).
         $response->assertJsonPath('data.0.unidades_en_bodega', 8);
 

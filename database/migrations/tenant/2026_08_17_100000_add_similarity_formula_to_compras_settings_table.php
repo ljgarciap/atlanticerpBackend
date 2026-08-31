@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SCRUM-246 (Lote 4, comentario de Daniela Amaya 2026-08-16) — fórmula de "% de similitud" del
+ * SCRUM-246 (Lote 4, comentario de Gerencia Test 2026-08-16) — fórmula de "% de similitud" del
  * método "Buscar en catálogo" de Comparación de Referencias, nunca definida antes en el
  * requerimiento original (columna vacía desde el batch 2026-08-15). Defaults = valores literales
  * de la fórmula que Daniela especificó con ejemplo numérico incluido, no números inventados —

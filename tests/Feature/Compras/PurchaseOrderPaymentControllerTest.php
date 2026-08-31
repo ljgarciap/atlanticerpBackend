@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
+use App\Modules\Compras\Models\PurchaseOrderPayment;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -68,7 +69,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/payments", [
                 'amount' => 600,
-                'proof'  => UploadedFile::fake()->create('comprobante1.pdf', 50, 'application/pdf'),
+                'proof' => UploadedFile::fake()->create('comprobante1.pdf', 50, 'application/pdf'),
             ])
             ->assertStatus(201);
 
@@ -81,7 +82,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/payments", [
                 'amount' => 400,
-                'proof'  => UploadedFile::fake()->create('comprobante2.pdf', 50, 'application/pdf'),
+                'proof' => UploadedFile::fake()->create('comprobante2.pdf', 50, 'application/pdf'),
             ])
             ->assertStatus(201);
 
@@ -102,7 +103,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/payments", [
                 'amount' => 1500,
-                'proof'  => UploadedFile::fake()->create('comprobante.pdf', 50, 'application/pdf'),
+                'proof' => UploadedFile::fake()->create('comprobante.pdf', 50, 'application/pdf'),
             ])
             ->assertStatus(422);
     }
@@ -140,7 +141,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $this->grantCompras('management@atlantic.test', ['compras.edit']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -183,7 +184,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-252 (hallazgo de Daniela Amaya 2026-08-09) — "caso crítico a corregir": antes, pedir
+     * SCRUM-252 (hallazgo de Gerencia Test 2026-08-09) — "caso crítico a corregir": antes, pedir
      * un cambio de monto no bloqueaba nada, así que se podía registrar el pago con el monto viejo
      * mientras el cambio seguía "pendiente de aprobación", dejando una inconsistencia visible.
      * Ahora, mientras exista `pending_amount_change`, registrar un pago está bloqueado (422) — el
@@ -231,7 +232,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $this->grantCompras('management@atlantic.test', ['compras.edit']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -276,7 +277,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $this->grantCompras('management@atlantic.test', ['compras.edit']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -286,7 +287,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        \App\Modules\Compras\Models\PurchaseOrderPayment::create([
+        PurchaseOrderPayment::create([
             'purchase_order_id' => $order->id, 'amount' => 100,
             'payment_proof_storage_key' => 'compras/test/fake.pdf',
         ]);
@@ -343,7 +344,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         // no solo los "5 indicadores" (esos sí quedaron fuera, sin RN documentadas). payment_status()
         // no es una columna — se calcula de paid_amount vs. total_amount.
         //
-        // SCRUM-250 (hallazgo de Daniela Amaya 2026-08-09) — el chip "pendiente" se dividió en
+        // SCRUM-250 (hallazgo de Gerencia Test 2026-08-09) — el chip "pendiente" se dividió en
         // "sin_enviar" (nunca se usó "Enviar a pago") y "por_pagar" (ya enviado, sigue sin pagos).
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
@@ -354,7 +355,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$paid->id}/payments", [
                 'amount' => 500,
-                'proof'  => UploadedFile::fake()->create('comprobante.pdf', 50, 'application/pdf'),
+                'proof' => UploadedFile::fake()->create('comprobante.pdf', 50, 'application/pdf'),
             ])
             ->assertStatus(201);
 
@@ -367,7 +368,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $this->assertFalse($ids->contains($paid->id));
     }
 
-    /** SCRUM-250 (hallazgo de Daniela Amaya) — "por_pagar" es un estado DISTINTO de "sin_enviar". */
+    /** SCRUM-250 (hallazgo de Gerencia Test) — "por_pagar" es un estado DISTINTO de "sin_enviar". */
     public function test_filtro_por_pagar_distinto_de_sin_enviar(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
@@ -396,7 +397,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-250 (hallazgo de Daniela Amaya) — los 5 KPIs se calculan sobre el universo COMPLETO
+     * SCRUM-250 (hallazgo de Gerencia Test) — los 5 KPIs se calculan sobre el universo COMPLETO
      * de "payment_pending" (con los demás filtros combinables aplicados, pero SIN el chip de
      * estado de pago activo), no sobre la página ya paginada ni sobre el chip actual.
      */

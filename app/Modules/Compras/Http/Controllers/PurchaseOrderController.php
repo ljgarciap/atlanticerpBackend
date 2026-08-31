@@ -47,9 +47,7 @@ final class PurchaseOrderController extends Controller
         private readonly PurchaseOrderPdfService $pdfService,
         private readonly InventoryKpiService $inventoryKpis,
         private readonly GoodsReceiptConfirmationService $goodsReceiptConfirmation,
-    )
-    {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -120,7 +118,7 @@ final class PurchaseOrderController extends Controller
             $query->where('modality', PurchaseOrder::MODALITY_ZONA_LIBRE);
         }
 
-        // REQ-187 (SCRUM-250, hallazgo de Daniela Amaya 2026-08-09) — 5 chips exactos: Todas,
+        // REQ-187 (SCRUM-250, hallazgo de Gerencia Test 2026-08-09) — 5 chips exactos: Todas,
         // Sin enviar, Por pagar, Pagado parcial, Pagado completo. "Sin enviar"/"Por pagar" son
         // los 2 estados en los que antes vivía un único "Pendiente": "Sin enviar" = todavía no se
         // usó "Enviar a pago" (payment_requested_at null); "Por pagar" = ya se envió pero sigue
@@ -144,9 +142,9 @@ final class PurchaseOrderController extends Controller
                     fn (PurchaseOrder $o): float => $o->total_amount - $o->paidAmount(), $allForKpis
                 )), 2),
                 'sin_enviar' => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->payment_requested_at === null && $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PENDIENTE)),
-                'por_pagar'  => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->payment_requested_at !== null && $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PENDIENTE)),
-                'parcial'    => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PARCIAL)),
-                'completo'   => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_COMPLETO)),
+                'por_pagar' => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->payment_requested_at !== null && $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PENDIENTE)),
+                'parcial' => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PARCIAL)),
+                'completo' => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_COMPLETO)),
             ];
         }
 
@@ -162,8 +160,8 @@ final class PurchaseOrderController extends Controller
             $all = $query->get()->all();
             $filtered = array_values(array_filter($all, fn (PurchaseOrder $o): bool => match ($paymentStatus) {
                 'sin_enviar' => $o->payment_requested_at === null && $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PENDIENTE,
-                'por_pagar'  => $o->payment_requested_at !== null && $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PENDIENTE,
-                default      => $o->paymentStatus() === $paymentStatus,
+                'por_pagar' => $o->payment_requested_at !== null && $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PENDIENTE,
+                default => $o->paymentStatus() === $paymentStatus,
             }));
             usort($filtered, fn (PurchaseOrder $a, PurchaseOrder $b) => $b->created_at <=> $a->created_at);
             $paginator = Pagination::ofArray($filtered, $pagination['per_page'], $pagination['page']);
@@ -181,21 +179,21 @@ final class PurchaseOrderController extends Controller
         $receivedByOrder = PurchaseOrder::receivedQuantitiesForOrders($pageOrderIds);
 
         return response()->json([
-            'data'    => $pageOrders->map(
+            'data' => $pageOrders->map(
                 // `?? collect()` (no `?? null`): una orden sin registros de ingreso YA está
                 // resuelta por el batch (0 recibido, ver Recepción "pendiente") — pasar null acá
                 // dispararía otra query individual dentro de formatSummary(), justo lo que el
                 // batch de arriba busca evitar.
                 fn (PurchaseOrder $o) => $this->formatSummary($o, $receivedByOrder[$o->id] ?? collect())
             )->values(),
-            'meta'    => Pagination::meta($paginator),
+            'meta' => Pagination::meta($paginator),
             // SCRUM-201/250 — lista de responsables/proveedores reales (para los <select> de
             // filtro), independiente de los filtros ya aplicados, igual que Provider::categories()
             // en ProviderController. "providers" nuevo para el filtro de Pagos a Proveedores
-            // (hallazgo de Daniela Amaya) — no tiene costo agregarlo para el resto de pantallas
+            // (hallazgo de Gerencia Test) — no tiene costo agregarlo para el resto de pantallas
             // que comparten este mismo endpoint, simplemente no lo consumen.
             'filters' => [
-                'creators'  => $this->distinctCreators(),
+                'creators' => $this->distinctCreators(),
                 'providers' => Provider::orderBy('name')->get(['id', 'name']),
             ],
             'payment_kpis' => $paymentKpis,
@@ -246,9 +244,9 @@ final class PurchaseOrderController extends Controller
 
         $rows = $query->orderBy('name')->limit(10)->get()->map(fn (SalesProject $p): array => [
             'sales_project_id' => $p->id,
-            'folio'            => null,
-            'project_name'     => $p->name,
-            'client_name'      => $p->subClient?->business_name,
+            'folio' => null,
+            'project_name' => $p->name,
+            'client_name' => $p->subClient?->business_name,
         ])->all();
 
         return response()->json(['data' => $rows]);
@@ -310,12 +308,12 @@ final class PurchaseOrderController extends Controller
         $validated = $request->validated();
 
         $order = DB::transaction(function () use ($validated, $user): PurchaseOrder {
-            $requiresApproval = PurchaseOrder::computeRequiresMarkApproval(
+            $requiresApproval = PurchaseOrder::computeRequiresPrimaryApproval(
                 $validated['shipping_type'] ?? null,
                 $validated['who_pays_shipping'] ?? null,
             );
 
-            // SCRUM-204 (REQ-141, 2026-08-06 — hallazgo Daniela Amaya): antes toda orden nacía en
+            // SCRUM-204 (REQ-141, 2026-08-06 — hallazgo Gerencia Test): antes toda orden nacía en
             // "Por aprobar" sin importar si de verdad requería la aprobación de Mark (RN3/REQ-118)
             // — $requiresApproval ya se calculaba arriba pero nunca se usaba para el estado
             // inicial. Ahora solo las que la requieren nacen en "Por aprobar"; el resto arranca
@@ -323,20 +321,20 @@ final class PurchaseOrderController extends Controller
             // `modality`, derivado del lado del cliente — ver
             // `atlanticerp-frontend/src/utils/orderStatusLabel.ts`).
             $order = PurchaseOrder::create([
-                'provider_id'             => $validated['provider_id'],
-                'status'                  => $requiresApproval
+                'provider_id' => $validated['provider_id'],
+                'status' => $requiresApproval
                     ? PurchaseOrder::STATUS_POR_APROBAR
                     : PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
-                'status_changed_at'       => now(),
-                'shipping_type'           => $validated['shipping_type'] ?? null,
-                'who_pays_shipping'       => $validated['who_pays_shipping'] ?? null,
-                'shipping_cost'           => $validated['shipping_cost'] ?? null,
-                'modality'                => $validated['modality'] ?? PurchaseOrder::MODALITY_DIRECTO,
-                'estimated_arrival_date'  => $validated['estimated_arrival_date'] ?? null,
-                'requires_mark_approval'  => $requiresApproval,
-                'currency'                => 'USD',
-                'notes'                   => $validated['notes'] ?? null,
-                'created_by'              => $user->id,
+                'status_changed_at' => now(),
+                'shipping_type' => $validated['shipping_type'] ?? null,
+                'who_pays_shipping' => $validated['who_pays_shipping'] ?? null,
+                'shipping_cost' => $validated['shipping_cost'] ?? null,
+                'modality' => $validated['modality'] ?? PurchaseOrder::MODALITY_DIRECTO,
+                'estimated_arrival_date' => $validated['estimated_arrival_date'] ?? null,
+                'requires_primary_approval' => $requiresApproval,
+                'currency' => 'USD',
+                'notes' => $validated['notes'] ?? null,
+                'created_by' => $user->id,
             ]);
 
             $this->replaceLines($order, $validated);
@@ -387,19 +385,19 @@ final class PurchaseOrderController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($validated, $order): void {
-            $requiresApproval = PurchaseOrder::computeRequiresMarkApproval(
+            $requiresApproval = PurchaseOrder::computeRequiresPrimaryApproval(
                 $validated['shipping_type'] ?? null,
                 $validated['who_pays_shipping'] ?? null,
             );
 
             $order->update([
-                'shipping_type'           => $validated['shipping_type'] ?? null,
-                'who_pays_shipping'       => $validated['who_pays_shipping'] ?? null,
-                'shipping_cost'           => $validated['shipping_cost'] ?? null,
-                'modality'                => $validated['modality'] ?? PurchaseOrder::MODALITY_DIRECTO,
-                'estimated_arrival_date'  => $validated['estimated_arrival_date'] ?? null,
-                'requires_mark_approval'  => $requiresApproval,
-                'notes'                   => $validated['notes'] ?? null,
+                'shipping_type' => $validated['shipping_type'] ?? null,
+                'who_pays_shipping' => $validated['who_pays_shipping'] ?? null,
+                'shipping_cost' => $validated['shipping_cost'] ?? null,
+                'modality' => $validated['modality'] ?? PurchaseOrder::MODALITY_DIRECTO,
+                'estimated_arrival_date' => $validated['estimated_arrival_date'] ?? null,
+                'requires_primary_approval' => $requiresApproval,
+                'notes' => $validated['notes'] ?? null,
             ]);
 
             $order->lines()->delete();
@@ -427,7 +425,7 @@ final class PurchaseOrderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $order->requires_mark_approval) {
+        if (! $order->requires_primary_approval) {
             return response()->json(['message' => 'Esta orden no requiere aprobación.'], 422);
         }
         if ($order->approved_by !== null) {
@@ -439,10 +437,10 @@ final class PurchaseOrderController extends Controller
         // Gerencia podía aprobar y quedaba registrada con trazabilidad correcta en `approved_by`
         // pero la UI mostraba el texto fijo "Aprobada por Mark" igual, sin importar quién aprobó.
         // superadmin.all bypassa este gate (decisión de Luis, 2026-08-22) — mismo criterio que
-        // el resto de la app, ver EnsureIsMarkApprover en Admin&Cont.
-        $markApproverId = ComprasSettings::current()->mark_approver_user_id;
-        if ($markApproverId !== null && $user->id !== $markApproverId && ! $user->hasPermission('superadmin.all')) {
-            return response()->json(['message' => 'Solo Mark puede aprobar esta orden.'], 403);
+        // el resto de la app, ver EnsureIsPrimaryApprover en Admin&Cont.
+        $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
+        if ($primaryApproverId !== null && $user->id !== $primaryApproverId && ! $user->hasPermission('superadmin.all')) {
+            return response()->json(['message' => 'Solo el aprobador configurado puede aprobar esta orden.'], 403);
         }
 
         $order->update(['approved_by' => $user->id, 'approved_at' => now()]);
@@ -490,11 +488,11 @@ final class PurchaseOrderController extends Controller
         $order->load(['provider', 'creator', 'approvedByUser', 'liquidationAgency', 'lines.catalogProduct', 'lines.salesProject', 'payments']);
 
         event(new OrderLiquidationAssigned(
-            orderId:    $order->id,
-            agencyId:   $agency->id,
+            orderId: $order->id,
+            agencyId: $agency->id,
             agencyName: $agency->name,
             assignedBy: $user->id,
-            tenant:     (string) Tenant::current()?->slug,
+            tenant: (string) Tenant::current()?->slug,
         ));
 
         return response()->json($this->formatDetail($order));
@@ -549,8 +547,8 @@ final class PurchaseOrderController extends Controller
                 return ['status' => 404, 'message' => null, 'order' => null];
             }
 
-            if ($order->isBlockedByMarkApproval()) {
-                return ['status' => 422, 'message' => 'Esta orden requiere la aprobación de Mark antes de avanzar.', 'order' => null];
+            if ($order->isBlockedByPrimaryApproval()) {
+                return ['status' => 422, 'message' => 'Esta orden requiere la aprobación del aprobador configurado antes de avanzar.', 'order' => null];
             }
 
             $next = $order->nextStatus();
@@ -558,7 +556,7 @@ final class PurchaseOrderController extends Controller
                 return ['status' => 422, 'message' => 'Esta orden no tiene un siguiente estado disponible.', 'order' => null];
             }
 
-            // SCRUM-208 (2026-08-06, hallazgo Daniela Amaya): `advance()` avanzaba el `status` de
+            // SCRUM-208 (2026-08-06, hallazgo Gerencia Test): `advance()` avanzaba el `status` de
             // la orden sin importar si una recepción parcial dejó un remanente pendiente
             // (`pending_remainder_status`, REQ-165) — una orden podía llegar a "Recibido" con
             // mercancía todavía en tránsito/aduana, sin ninguna señal visible de que faltaba algo.
@@ -637,7 +635,7 @@ final class PurchaseOrderController extends Controller
      * SCRUM-208 (rediseño 2026-08-15, docs/architecture/scrum208-recepcion-parcial-rediseno.md) —
      * avanza el REMANENTE (`pending_remainder_status`) por sus propias etapas, independiente del
      * `status` de la orden completa. Antes de este endpoint, `pending_remainder_status` era
-     * puramente informativo — nada lo avanzaba (root cause del reporte de Daniela Amaya, "el botón
+     * puramente informativo — nada lo avanzaba (root cause del reporte de Gerencia Test, "el botón
      * Completar etapa está clickeable pero no genera ninguna acción").
      *
      * Mismo patrón de lock/transacción que `advance()` — incluso si esto no compite por el mismo
@@ -749,10 +747,10 @@ final class PurchaseOrderController extends Controller
         // SCRUM-791 (Epic SCRUM-788 — Logs y Telemetría) — documento formal, incluye costo real
         // cuando include_cost=1.
         app(AuditService::class)->log(
-            action:     AuditService::COMPRAS_PURCHASE_ORDER_PDF_DOWNLOADED,
+            action: AuditService::COMPRAS_PURCHASE_ORDER_PDF_DOWNLOADED,
             entityType: 'purchase_order',
-            entityId:   $order->id,
-            metadata:   ['include_cost' => $includeCost],
+            entityId: $order->id,
+            metadata: ['include_cost' => $includeCost],
         );
 
         return $pdf->stream("orden-compra-{$order->id}.pdf");
@@ -807,8 +805,8 @@ final class PurchaseOrderController extends Controller
         }
 
         $validated = $request->validate([
-            'container_number'    => ['nullable', 'string', 'max:100'],
-            'carrier'              => ['nullable', 'string', 'max:255'],
+            'container_number' => ['nullable', 'string', 'max:100'],
+            'carrier' => ['nullable', 'string', 'max:255'],
         ]);
 
         $order->update($validated);
@@ -860,7 +858,7 @@ final class PurchaseOrderController extends Controller
                 $porServir = 0; // producto recién creado en este mismo request: no puede tener líneas previas
             }
 
-            // REQ-130 Escenario 2 (SCRUM-193, hallazgo de Daniela Amaya): el costo precargado del
+            // REQ-130 Escenario 2 (SCRUM-193, hallazgo de Gerencia Test): el costo precargado del
             // catálogo es editable por línea (ej. precio renegociado para esta orden puntual) — si
             // el cliente no manda `unit_cost` (compatibilidad), sigue tomando el costo real del
             // producto, mismo criterio que antes.
@@ -875,17 +873,17 @@ final class PurchaseOrderController extends Controller
             // vuelve a capturar el estado actual — se trata como "cuándo se comprometió esta
             // línea a la orden", no como un dato inmutable del primer guardado.
             PurchaseOrderLine::create([
-                'purchase_order_id'        => $order->id,
-                'catalog_product_id'       => $product->id,
-                'quantity'                 => $quantity,
-                'unit_cost'                => $unitCost,
-                'subtotal'                 => $subtotal,
-                'additional_cost_percent'  => $line['additional_cost_percent'] ?? null,
+                'purchase_order_id' => $order->id,
+                'catalog_product_id' => $product->id,
+                'quantity' => $quantity,
+                'unit_cost' => $unitCost,
+                'subtotal' => $subtotal,
+                'additional_cost_percent' => $line['additional_cost_percent'] ?? null,
                 // SCRUM-194 (REQ-131) — toggle $ monto / % del costo del mockup.
-                'additional_cost_amount'   => $line['additional_cost_amount'] ?? null,
-                'additional_cost_type'     => $line['additional_cost_type'] ?? null,
-                'sales_project_id'         => $line['sales_project_id'] ?? null,
-                'stock_state_at_order'     => $this->inventoryKpis->stockState($product, $porServir),
+                'additional_cost_amount' => $line['additional_cost_amount'] ?? null,
+                'additional_cost_type' => $line['additional_cost_type'] ?? null,
+                'sales_project_id' => $line['sales_project_id'] ?? null,
+                'stock_state_at_order' => $this->inventoryKpis->stockState($product, $porServir),
             ]);
         }
 
@@ -904,25 +902,25 @@ final class PurchaseOrderController extends Controller
     private function createProduct(int $providerId, array $newProduct): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference'         => $newProduct['reference'],
+            'reference' => $newProduct['reference'],
             'factory_reference' => $newProduct['factory_reference'] ?? null,
-            'name'              => $newProduct['name'],
-            'description'       => $newProduct['description'] ?? '',
-            'brand'             => $newProduct['brand'] ?? null,
-            // SCRUM-194 (REQ-131, hallazgo de Daniela Amaya 2026-07-30) — mockup 2H.
-            'category'          => $newProduct['category'] ?? null,
-            'rotation'          => $newProduct['rotation'] ?? null,
-            'price_full'        => $newProduct['price_full'],
-            'cost'              => $newProduct['cost'],
-            'reorder_point'     => $newProduct['reorder_point'] ?? null,
-            'provider_id'       => $providerId,
-            'is_active'         => true,
+            'name' => $newProduct['name'],
+            'description' => $newProduct['description'] ?? '',
+            'brand' => $newProduct['brand'] ?? null,
+            // SCRUM-194 (REQ-131, hallazgo de Gerencia Test 2026-07-30) — mockup 2H.
+            'category' => $newProduct['category'] ?? null,
+            'rotation' => $newProduct['rotation'] ?? null,
+            'price_full' => $newProduct['price_full'],
+            'cost' => $newProduct['cost'],
+            'reorder_point' => $newProduct['reorder_point'] ?? null,
+            'provider_id' => $providerId,
+            'is_active' => true,
         ]);
     }
 
     /**
      * @param  Collection<int, int>|null  $receivedByProduct  ver PurchaseOrder::receptionSummary()
-     *   — pasar el mapa precalculado en batch desde index() para no disparar 1 query extra por orden.
+     *                                                        — pasar el mapa precalculado en batch desde index() para no disparar 1 query extra por orden.
      * @return array<string, mixed>
      */
     private function formatSummary(PurchaseOrder $order, ?Collection $receivedByProduct = null): array
@@ -933,54 +931,54 @@ final class PurchaseOrderController extends Controller
         $reception = $order->receptionSummary($receivedByProduct);
 
         return [
-            'id'                      => $order->id,
-            'provider_id'             => $order->provider_id,
-            'provider_name'           => $order->provider?->name,
+            'id' => $order->id,
+            'provider_id' => $order->provider_id,
+            'provider_name' => $order->provider?->name,
             // REQ-154 (SCRUM-217) — el timeline visual necesita saber si este proveedor salta
             // aduana/tránsito internacional (Provider::ORIGIN_LOCAL) para dibujar la secuencia
             // reducida de 3 pasos en vez de la de 5 — mismo criterio que `statusSequence()`.
-            'provider_origin'         => $order->provider?->origin,
-            'created_by_name'         => $this->creatorName($order),
+            'provider_origin' => $order->provider?->origin,
+            'created_by_name' => $this->creatorName($order),
             // REQ-274 RN3 (Servicios, SCRUM-344/347 Grupo D parte 2) — Pre-QA 2026-08-13: la orden
             // ya nacía marcada `origin_module=servicios` en BD, pero nunca se exponía acá ni se
             // pintaba en el frontend — Yirena no tenía forma real de "diferenciarla de solicitudes
             // que vienen de Ventas & Diseño u otras áreas" (RN3 explícita del ticket) pese a que el
             // dato ya existía. `null` para el resto de órdenes (creadas a mano en Compras/Ventas &
             // Diseño) — ver `PurchaseOrder::ORIGIN_SERVICIOS`, único origen automático hoy.
-            'origin_module'           => $order->origin_module,
-            'status'                  => $order->status,
-            'next_status'             => $order->nextStatus(),
-            'is_critical'             => $order->isCritical(),
-            'modality'                => $order->modality,
+            'origin_module' => $order->origin_module,
+            'status' => $order->status,
+            'next_status' => $order->nextStatus(),
+            'is_critical' => $order->isCritical(),
+            'modality' => $order->modality,
             // REQ-140 (SCRUM-203) — "Tipo de envío"/"Costo de envío" de la tabla principal: mismo
             // dato ya expuesto en formatDetail() para la tarjeta de Logística, faltaba en el
             // listado (columnas confirmadas ausentes vs. mockup 2A/Excel de requerimientos).
-            'shipping_type'           => $order->shipping_type,
-            'shipping_cost'           => $order->shipping_cost,
-            'estimated_arrival_date'  => $order->estimated_arrival_date?->toDateString(),
-            'requires_mark_approval'  => $order->requires_mark_approval,
-            'blocked_by_mark_approval' => $order->isBlockedByMarkApproval(),
-            'approved_by'             => $order->approved_by,
+            'shipping_type' => $order->shipping_type,
+            'shipping_cost' => $order->shipping_cost,
+            'estimated_arrival_date' => $order->estimated_arrival_date?->toDateString(),
+            'requires_primary_approval' => $order->requires_primary_approval,
+            'blocked_by_primary_approval' => $order->isBlockedByPrimaryApproval(),
+            'approved_by' => $order->approved_by,
             // SCRUM-206 — nombre real de quien aprobó, para que la UI no siga mostrando el
             // texto fijo "Aprobada por Mark" sin importar quién aprobó de verdad.
-            'approved_by_name'        => $this->approvedByName($order),
-            'total_amount'            => $order->total_amount,
-            'currency'                => $order->currency,
+            'approved_by_name' => $this->approvedByName($order),
+            'total_amount' => $order->total_amount,
+            'currency' => $order->currency,
             // REQ-187→190 (SCRUM-250→253) — Pagos a Proveedores.
-            'payment_status'          => $order->paymentStatus(),
-            'paid_amount'             => $order->paidAmount(),
-            'payment_requested_at'    => $order->payment_requested_at?->toIso8601String(),
+            'payment_status' => $order->paymentStatus(),
+            'paid_amount' => $order->paidAmount(),
+            'payment_requested_at' => $order->payment_requested_at?->toIso8601String(),
             // REQ-140 (SCRUM-203) — "Fecha de pago" de la tabla principal: fecha del pago más
             // reciente ya registrado (payments viene ordenado por antigüedad ascendente, ver
             // PurchaseOrder::payments()) — null/"—" si la orden todavía no tiene ningún pago.
             // No existe un campo "fecha de pago" propio de la orden: se deriva del historial real
             // de purchase_order_payments, mismo dato que ya alimenta paidAmount()/paymentStatus().
-            'last_payment_date'       => $order->payments->last()?->created_at?->toDateString(),
-            'sales_project_summary'   => $projectSummary['summary'],
-            'has_multiple_projects'   => $projectSummary['has_multiple_projects'],
-            'sales_project_count'     => $projectSummary['project_count'],
+            'last_payment_date' => $order->payments->last()?->created_at?->toDateString(),
+            'sales_project_summary' => $projectSummary['summary'],
+            'has_multiple_projects' => $projectSummary['has_multiple_projects'],
+            'sales_project_count' => $projectSummary['project_count'],
             // REQ-140/145/158 — "Recepción" consolidada de la orden.
-            'reception_status'       => $reception['status'],
+            'reception_status' => $reception['status'],
             // REQ-157 — enlace "Ingreso de mercancía" (Logística).
             'shows_goods_receipt_link' => $order->showsGoodsReceiptLink(),
             'pending_remainder_status' => $order->pending_remainder_status,
@@ -988,24 +986,24 @@ final class PurchaseOrderController extends Controller
             // `next_status` de arriba pero para `advanceRemainder()`. El frontend (ya
             // implementado 2026-08-15, docs/architecture/scrum208-recepcion-parcial-rediseno.md)
             // asume este campo — no quitarlo sin coordinar ese lado.
-            'next_remainder_status'   => $order->nextRemainderStatus(),
-            'created_at'              => $order->created_at->toIso8601String(),
-            'status_changed_at'       => $order->status_changed_at->toIso8601String(),
+            'next_remainder_status' => $order->nextRemainderStatus(),
+            'created_at' => $order->created_at->toIso8601String(),
+            'status_changed_at' => $order->status_changed_at->toIso8601String(),
             // REQ-154 (SCRUM-217) — 1 fecha por etapa ya alcanzada, para el timeline visual de
             // Logística (`PurchaseOrder::STAGE_DATE_COLUMNS`). NULL en cualquiera de las 4 para
             // una orden creada antes de este fix (2026-08-05) o, en el caso de
             // en_transito_at/en_aduana_at, para CUALQUIER orden de proveedor local (esas 2 etapas
             // no existen en su secuencia, ver `statusSequence()`) — el timeline debe tratar ambos
             // casos como "sin dato", nunca asumir que null es un bug.
-            'ordenado_at'             => $order->ordenado_at?->toDateString(),
-            'en_transito_at'          => $order->en_transito_at?->toDateString(),
-            'en_aduana_at'            => $order->en_aduana_at?->toDateString(),
-            'en_transito_local_at'    => $order->en_transito_local_at?->toDateString(),
+            'ordenado_at' => $order->ordenado_at?->toDateString(),
+            'en_transito_at' => $order->en_transito_at?->toDateString(),
+            'en_aduana_at' => $order->en_aduana_at?->toDateString(),
+            'en_transito_local_at' => $order->en_transito_local_at?->toDateString(),
             // Etapa terminal — reusa esta columna ya existente en vez de una 5ta STAGE_DATE_COLUMN
             // (ver docblock de la migración). Ya estaba expuesta en formatDetail(); se sube acá
             // para que Logística (que renderiza el timeline desde el PurchaseOrderSummary de la
             // lista, no desde el detalle) no dependa de un 2do round-trip solo para esta fecha.
-            'actual_arrival_date'     => $order->actual_arrival_date?->toDateString(),
+            'actual_arrival_date' => $order->actual_arrival_date?->toDateString(),
         ];
     }
 
@@ -1029,9 +1027,9 @@ final class PurchaseOrderController extends Controller
         $count = $distinctProjects->count();
 
         return [
-            'summary'               => $count === 1 ? $distinctProjects->first()?->salesProject?->name : null,
+            'summary' => $count === 1 ? $distinctProjects->first()?->salesProject?->name : null,
             'has_multiple_projects' => $count > 1,
-            'project_count'         => $count,
+            'project_count' => $count,
         ];
     }
 
@@ -1047,38 +1045,38 @@ final class PurchaseOrderController extends Controller
             // shipping_type/shipping_cost ya vienen de formatSummary() (REQ-140/SCRUM-203) — no
             // repetirlos acá.
             ...$this->formatSummary($order, $received),
-            'who_pays_shipping'     => $order->who_pays_shipping,
+            'who_pays_shipping' => $order->who_pays_shipping,
             // SCRUM-210 (REQ-147, alcance reducido) — solo relevante para órdenes Zona Libre.
-            'liquidation_agency_id'   => $order->liquidation_agency_id,
+            'liquidation_agency_id' => $order->liquidation_agency_id,
             'liquidation_agency_name' => $order->liquidationAgency?->name,
             // actual_arrival_date ya viene de formatSummary() (REQ-154, arriba) — no repetirlo acá.
-            'container_number'      => $order->container_number,
-            'carrier'               => $order->carrier,
-            'approved_at'           => $order->approved_at?->toIso8601String(),
-            'pending_amount_change'      => $order->pending_amount_change,
+            'container_number' => $order->container_number,
+            'carrier' => $order->carrier,
+            'approved_at' => $order->approved_at?->toIso8601String(),
+            'pending_amount_change' => $order->pending_amount_change,
             'amount_change_requested_by' => $order->amount_change_requested_by,
-            'notes'                 => $order->notes,
-            'lines'                 => $order->lines->map(function (PurchaseOrderLine $line) use ($receptionByLine): array {
+            'notes' => $order->notes,
+            'lines' => $order->lines->map(function (PurchaseOrderLine $line) use ($receptionByLine): array {
                 /** @var array{received: int, status: string}|null $reception */
                 $reception = $receptionByLine[$line->catalog_product_id] ?? null;
 
                 return [
-                    'id'                       => $line->id,
-                    'catalog_product_id'       => $line->catalog_product_id,
-                    'reference'                => $line->catalogProduct?->reference,
-                    'factory_reference'        => $line->catalogProduct?->factory_reference,
-                    'description'              => $line->catalogProduct?->name,
-                    'quantity'                 => $line->quantity,
-                    'unit_cost'                => $line->unit_cost,
-                    'subtotal'                 => $line->subtotal,
-                    'additional_cost_percent'  => $line->additional_cost_percent,
+                    'id' => $line->id,
+                    'catalog_product_id' => $line->catalog_product_id,
+                    'reference' => $line->catalogProduct?->reference,
+                    'factory_reference' => $line->catalogProduct?->factory_reference,
+                    'description' => $line->catalogProduct?->name,
+                    'quantity' => $line->quantity,
+                    'unit_cost' => $line->unit_cost,
+                    'subtotal' => $line->subtotal,
+                    'additional_cost_percent' => $line->additional_cost_percent,
                     // SCRUM-194 (REQ-131) — toggle $ monto / % del costo del mockup.
-                    'additional_cost_amount'   => $line->additional_cost_amount,
-                    'additional_cost_type'     => $line->additional_cost_type,
-                    'sales_project_id'         => $line->sales_project_id,
-                    'sales_project_name'       => $line->salesProject?->name,
-                    'received_quantity'        => $reception['received'] ?? 0,
-                    'reception_status'         => $reception['status'] ?? PurchaseOrder::RECEPTION_PENDIENTE,
+                    'additional_cost_amount' => $line->additional_cost_amount,
+                    'additional_cost_type' => $line->additional_cost_type,
+                    'sales_project_id' => $line->sales_project_id,
+                    'sales_project_name' => $line->salesProject?->name,
+                    'received_quantity' => $reception['received'] ?? 0,
+                    'reception_status' => $reception['status'] ?? PurchaseOrder::RECEPTION_PENDIENTE,
                 ];
             })->values(),
         ];

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * SCRUM-433 (ADR-SCRUM433-445 sección 2) — el proveedor fijo "Zona Libre de Colón" nunca se
  * hardcodea (ni en frontend ni en backend): se guarda como parámetro configurable, mismo patrón
- * que `mark_approver_user_id` en la misma tabla (2026_07_20_100009). El registro real del
+ * que `primary_approver_user_id` en la misma tabla (2026_07_20_100009). El registro real del
  * `Provider` lo crea `database/seeders/ZonaLibreProviderSeeder`, que también setea este campo.
  */
 return new class extends TenantSchemaMigration

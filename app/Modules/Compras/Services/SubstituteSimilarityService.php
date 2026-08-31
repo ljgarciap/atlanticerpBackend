@@ -8,7 +8,7 @@ use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 
 /**
- * SCRUM-246 (Lote 4, comentario de Daniela Amaya 2026-08-16) — "% de similitud" del método
+ * SCRUM-246 (Lote 4, comentario de Gerencia Test 2026-08-16) — "% de similitud" del método
  * "Buscar en catálogo" de Comparación de Referencias (REQ-183), único de los 3 métodos que lo
  * calcula por ahora (foto/ficha técnica quedan con el hueco documentado a propósito — capacidad de
  * IA que no existe hoy / contradicción de alcance sin resolver, ver comentario del ticket).
@@ -27,7 +27,7 @@ use App\Modules\VentasDiseno\Models\CatalogProduct;
 final class SubstituteSimilarityService
 {
     /**
-     * @param list<CatalogProduct> $candidates
+     * @param  list<CatalogProduct>  $candidates
      * @return list<array{product: CatalogProduct, similarity_percent: float, penalized: bool}>
      */
     public function rank(CatalogProduct $original, array $candidates, ?ComprasSettings $settings = null): array
@@ -43,7 +43,7 @@ final class SubstituteSimilarityService
         // RN — si no hay ningún candidato en la misma categoría, se amplía a todas con penalización;
         // si SÍ hay, el pool queda acotado a esa categoría (nunca se mezclan candidatos penalizados
         // con no penalizados en la misma corrida).
-        $pool      = $sameCategory !== [] ? $sameCategory : $candidates;
+        $pool = $sameCategory !== [] ? $sameCategory : $candidates;
         $penalized = $sameCategory === [];
 
         $ranked = [];
@@ -62,11 +62,11 @@ final class SubstituteSimilarityService
 
     private function score(CatalogProduct $original, CatalogProduct $candidate, ComprasSettings $settings, bool $penalized): float
     {
-        $textScore   = $this->textSimilarity(
+        $textScore = $this->textSimilarity(
             trim("{$original->name} {$original->description}"),
             trim("{$candidate->name} {$candidate->description}"),
         );
-        $priceScore  = $this->closenessScore($original->price_full, $candidate->price_full);
+        $priceScore = $this->closenessScore($original->price_full, $candidate->price_full);
         $marginScore = $this->closenessScore($this->margin($original), $this->margin($candidate));
 
         $percent = ($settings->similarity_weight_text / 100 * $textScore)

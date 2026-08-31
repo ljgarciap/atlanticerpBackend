@@ -16,7 +16,7 @@ use Illuminate\Validation\Validator;
  * existente del catálogo O producto nuevo, nunca ambos ni ninguno) + proyecto opcional por línea.
  *
  * RN3 de REQ-118 (aplica acá, ver docs/specs/compras-proveedores-sprint2.md hallazgo 5): no se
- * valida acá, se calcula en el controller (PurchaseOrder::computeRequiresMarkApproval()) — es
+ * valida acá, se calcula en el controller (PurchaseOrder::computeRequiresPrimaryApproval()) — es
  * una regla de negocio derivada, no una validación de forma.
  */
 class StorePurchaseOrderRequest extends FormRequest
@@ -30,46 +30,46 @@ class StorePurchaseOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'provider_id'                       => ['required', 'integer', Rule::exists('providers', 'id')],
-            'shipping_type'                      => ['nullable', 'string', Rule::in(['aereo', 'maritimo', 'terrestre'])],
-            // SCRUM-197 (REQ-134, hallazgo de Daniela Amaya 2026-07-30): el mockup solo contempla
+            'provider_id' => ['required', 'integer', Rule::exists('providers', 'id')],
+            'shipping_type' => ['nullable', 'string', Rule::in(['aereo', 'maritimo', 'terrestre'])],
+            // SCRUM-197 (REQ-134, hallazgo de Gerencia Test 2026-07-30): el mockup solo contempla
             // Cliente/Atlantic — 'proveedor' no existe en el requerimiento, se corrige acá.
-            'who_pays_shipping'                  => ['nullable', 'string', Rule::in(['atlantic', 'cliente'])],
+            'who_pays_shipping' => ['nullable', 'string', Rule::in(['atlantic', 'cliente'])],
             // SCRUM-197 — RN de REQ-134: envío aéreo captura costo y quién lo paga.
-            'shipping_cost'                       => ['nullable', 'numeric', 'min:0'],
-            'modality'                           => ['nullable', 'string', Rule::in(['directo', 'zona_libre'])],
-            'estimated_arrival_date'              => ['nullable', 'date'],
-            'notes'                              => ['nullable', 'string'],
-            'lines'                              => ['required', 'array', 'min:1'],
-            'lines.*.catalog_product_id'         => ['nullable', 'integer', Rule::exists('catalog_products', 'id')->where(fn ($q) => $q->where('is_active', true))],
-            'lines.*.new_product'                => ['nullable', 'array'],
-            'lines.*.new_product.reference'      => ['required_with:lines.*.new_product', 'string', 'max:255', $this->uniquePublicReferenceRule()],
+            'shipping_cost' => ['nullable', 'numeric', 'min:0'],
+            'modality' => ['nullable', 'string', Rule::in(['directo', 'zona_libre'])],
+            'estimated_arrival_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.catalog_product_id' => ['nullable', 'integer', Rule::exists('catalog_products', 'id')->where(fn ($q) => $q->where('is_active', true))],
+            'lines.*.new_product' => ['nullable', 'array'],
+            'lines.*.new_product.reference' => ['required_with:lines.*.new_product', 'string', 'max:255', $this->uniquePublicReferenceRule()],
             'lines.*.new_product.factory_reference' => ['nullable', 'string', 'max:255', $this->uniqueFactoryReferenceRule()],
             // SCRUM-237/240 — "Nombre del producto" y "Descripción" son 2 campos independientes
             // (ver migración 2026_08_15_100000_...); el alta inline de un producto nuevo desde
             // Nueva Orden sigue el mismo criterio que Inventario (nombre obligatorio, descripción
             // libre y opcional).
-            'lines.*.new_product.name'           => ['required_with:lines.*.new_product', 'string', 'max:255'],
-            'lines.*.new_product.description'    => ['nullable', 'string', 'max:2000'],
-            'lines.*.new_product.brand'          => ['nullable', 'string', 'max:255'],
-            'lines.*.new_product.price_full'     => ['required_with:lines.*.new_product', 'numeric', 'min:0'],
-            'lines.*.new_product.cost'           => ['required_with:lines.*.new_product', 'numeric', 'min:0'],
-            'lines.*.new_product.reorder_point'  => ['nullable', 'integer', 'min:0'],
-            // SCRUM-194 (REQ-131, hallazgo de Daniela Amaya 2026-07-30) — Categoría/Rotación
+            'lines.*.new_product.name' => ['required_with:lines.*.new_product', 'string', 'max:255'],
+            'lines.*.new_product.description' => ['nullable', 'string', 'max:2000'],
+            'lines.*.new_product.brand' => ['nullable', 'string', 'max:255'],
+            'lines.*.new_product.price_full' => ['required_with:lines.*.new_product', 'numeric', 'min:0'],
+            'lines.*.new_product.cost' => ['required_with:lines.*.new_product', 'numeric', 'min:0'],
+            'lines.*.new_product.reorder_point' => ['nullable', 'integer', 'min:0'],
+            // SCRUM-194 (REQ-131, hallazgo de Gerencia Test 2026-07-30) — Categoría/Rotación
             // esperada del mockup, ausentes hasta ahora en el alta de producto nuevo.
-            'lines.*.new_product.category'       => ['nullable', 'string', Rule::in(CatalogProduct::CATEGORIES)],
-            'lines.*.new_product.rotation'       => ['nullable', 'string', Rule::in(CatalogProduct::ROTATIONS)],
-            'lines.*.quantity'                   => ['required', 'integer', 'min:1'],
-            // SCRUM-193 (REQ-130, hallazgo de Daniela Amaya) — costo precargado del catálogo pero
+            'lines.*.new_product.category' => ['nullable', 'string', Rule::in(CatalogProduct::CATEGORIES)],
+            'lines.*.new_product.rotation' => ['nullable', 'string', Rule::in(CatalogProduct::ROTATIONS)],
+            'lines.*.quantity' => ['required', 'integer', 'min:1'],
+            // SCRUM-193 (REQ-130, hallazgo de Gerencia Test) — costo precargado del catálogo pero
             // editable por línea (ej. precio renegociado para esta orden puntual); si no se manda,
             // el controller sigue tomando el costo real del producto (compatibilidad).
-            'lines.*.unit_cost'                  => ['nullable', 'numeric', 'min:0'],
-            'lines.*.additional_cost_percent'    => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'lines.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.additional_cost_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             // SCRUM-194 — toggle $ monto / % del costo del mockup; sustituye el % único que
             // existía. `additional_cost_percent` se mantiene por compatibilidad con órdenes viejas.
-            'lines.*.additional_cost_amount'     => ['nullable', 'numeric', 'min:0'],
-            'lines.*.additional_cost_type'       => ['nullable', 'string', Rule::in(['monto', 'porcentaje'])],
-            'lines.*.sales_project_id'           => ['nullable', 'integer', $this->approvedProjectRule()],
+            'lines.*.additional_cost_amount' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.additional_cost_type' => ['nullable', 'string', Rule::in(['monto', 'porcentaje'])],
+            'lines.*.sales_project_id' => ['nullable', 'integer', $this->approvedProjectRule()],
         ];
     }
 
@@ -151,14 +151,14 @@ class StorePurchaseOrderRequest extends FormRequest
     }
 
     /**
-     * SCRUM-194 (REQ-131, hallazgo real de Daniela Amaya 2026-07-30): `uniquePublicReferenceRule()`/
+     * SCRUM-194 (REQ-131, hallazgo real de Gerencia Test 2026-07-30): `uniquePublicReferenceRule()`/
      * `uniqueFactoryReferenceRule()` solo consultan la BD — dos líneas `new_product` NUEVAS en el
      * MISMO request con la misma referencia pasan ambas (ninguna existe todavía en `catalog_products`
      * al momento de validar), y `createProduct()` termina creando 2 productos duplicados. Pre-QA
      * (2026-07-17) solo había probado la colisión contra un producto YA existente en BD, nunca este
      * caso — no es la misma regresión, es un escenario que nunca se cubrió.
      *
-     * @param array<int, array<string, mixed>> $lines
+     * @param  array<int, array<string, mixed>>  $lines
      */
     private function validateNewProductReferencesAreUniqueWithinPayload(Validator $validator, array $lines): void
     {

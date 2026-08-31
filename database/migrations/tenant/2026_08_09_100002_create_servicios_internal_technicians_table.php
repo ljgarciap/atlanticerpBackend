@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\Schema;
  * `required|unique`, más `security_level_id`/guardia jerárquica que Aaron/lider_servicios no
  * tiene por qué ejercer). Un técnico interno registrado por REQ-259 es un perfil de roster, no
  * necesariamente una cuenta de login — por eso nombre/telefono/email viven acá como snapshot
- * propio, no solo derivados de `users`. Los 4 técnicos reales ya existentes (Carlos Vergara,
- * Pedro Santos, Agustín Rodríguez, Miguel Castillo) sí quedan linkeados vía `user_id`
+ * propio, no solo derivados de `users`. Los 4 técnicos reales ya existentes (Tecnico Servicios Test,
+ * Tecnico Servicios Test 2, Agustín Rodríguez, Garantias Servicios Test) sí quedan linkeados vía `user_id`
  * (`InternalTechnicianSeeder`), porque ya son usuarios reales con rol `tecnico_servicios`/
  * `garantias_servicios` y son quienes hoy reciben asignaciones reales de tickets
  * (`tickets.internal_technician_id` sigue apuntando a `users.id`, sin cambios — ver

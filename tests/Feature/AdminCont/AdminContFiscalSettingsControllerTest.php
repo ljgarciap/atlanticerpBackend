@@ -9,11 +9,11 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-632/633/634/637 (REQ-555/556/557/560) — Configuración Fiscal, exclusiva de Mark
- * (`mbekhar@atlantic.com.pa`, sembrado por CoreUserSeeder, password default = email).
+ * (`gerencia3@test.com`, sembrado por CoreUserSeeder, password default = email).
  */
 class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -23,7 +23,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_show_devuelve_los_defaults_para_mark(): void
@@ -68,8 +68,8 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
-                'razon_social'     => 'Atlantic Panama S.A.',
-                'ruc'              => '155646789-2-2019',
+                'razon_social' => 'Atlantic Panama S.A.',
+                'ruc' => '155646789-2-2019',
                 'regimen_tributario' => 'pequeno_contribuyente',
             ])
             ->assertStatus(200);
@@ -78,21 +78,21 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
         $response->assertJsonPath('regimen_tributario', 'pequeno_contribuyente');
     }
 
-    public function test_update_ignora_pac_last_sync_at_y_mark_approver_user_id_del_body(): void
+    public function test_update_ignora_pac_last_sync_at_y_primary_approver_user_id_del_body(): void
     {
         $token = $this->loginAsMark();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
-                'pac_last_sync_at'       => '2020-01-01 00:00:00',
-                'mark_approver_user_id'  => 999999,
-                'pac_ambiente'           => 'production',
+                'pac_last_sync_at' => '2020-01-01 00:00:00',
+                'primary_approver_user_id' => 999999,
+                'pac_ambiente' => 'production',
             ])
             ->assertStatus(200);
 
         $response->assertJsonPath('pac_last_sync_at', null);
         $response->assertJsonPath('pac_ambiente', 'production');
-        $response->assertJsonPath('mark_approver_user_id', fn ($id) => $id !== 999999);
+        $response->assertJsonPath('primary_approver_user_id', fn ($id) => $id !== 999999);
     }
 
     public function test_update_ignora_pac_connection_status_del_body(): void
@@ -102,7 +102,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
                 'pac_connection_status' => 'desconectado',
-                'pac_ambiente'          => 'production',
+                'pac_ambiente' => 'production',
             ])
             ->assertStatus(200);
 

@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Fase 4 — Servicios, Batch 7 (REQ-258 RN7 / REQ-292) — "hoy solo [Carlos Vergara] tiene este
+ * Fase 4 — Servicios, Batch 7 (REQ-258 RN7 / REQ-292) — "hoy solo [Tecnico Servicios Test] tiene este
  * plan de bonificación... si en el futuro se define un plan similar para otro técnico, este mismo
  * mecanismo debe poder aplicarse a cualquiera, no solo a Carlos". Modelado como bandera real en
  * vez de hardcodear el nombre en el frontend/backend — evita el anti-patrón que ya señaló

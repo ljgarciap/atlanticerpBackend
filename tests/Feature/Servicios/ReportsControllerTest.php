@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicios;
 
+use App\Models\User;
 use App\Modules\Servicios\Models\ClaimSheet;
 use App\Modules\Servicios\Models\InspectionReport;
 use App\Modules\Servicios\Models\InternalTechnician;
@@ -22,11 +23,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class ReportsControllerTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const CARLOS = 'carlos@atlantic.com.pa';
+    private const CARLOS = 'tecnicoservicios@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
     private const FROZEN_NOW = '2026-08-15 12:00:00';
 
@@ -50,7 +51,7 @@ class ReportsControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        return (int) \App\Models\User::where('email', $email)->value('id');
+        return (int) User::where('email', $email)->value('id');
     }
 
     /** @return array<string, string> */
@@ -66,22 +67,22 @@ class ReportsControllerTest extends FeatureTestCase
      * mass-assignable (no están en `Ticket::$fillable`), se extraen y se aplican por asignación
      * directa + save() después.
      *
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function makeTicket(array $overrides = []): Ticket
     {
         $createdAt = $overrides['created_at'] ?? null;
-        $closedAt  = $overrides['closed_at'] ?? null;
+        $closedAt = $overrides['closed_at'] ?? null;
         unset($overrides['created_at'], $overrides['closed_at']);
 
         $ticket = Ticket::create([
-            'numero'                   => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_REPORTED,
-            'quote_status'             => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
+            'numero' => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_REPORTED,
+            'quote_status' => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
             ...$overrides,
         ]);
@@ -102,12 +103,12 @@ class ReportsControllerTest extends FeatureTestCase
     private function makeQuote(Ticket $ticket, string $estado, float $total): ServiceQuote
     {
         return ServiceQuote::create([
-            'numero'    => 'COT-2026-'.static::uniqueTestNumber(),
+            'numero' => 'COT-2026-'.static::uniqueTestNumber(),
             'ticket_id' => $ticket->id,
-            'estado'    => $estado,
-            'subtotal'  => $total,
-            'itbms'     => 0,
-            'total'     => $total,
+            'estado' => $estado,
+            'subtotal' => $total,
+            'itbms' => 0,
+            'total' => $total,
         ]);
     }
 
@@ -115,7 +116,7 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_servicios_completados_pct_relaciona_cerrados_del_mes_con_reportados_del_mes(): void
     {
-        $user    = \App\Models\User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         // 4 tickets reportados este mes, 2 de ellos cerrados este mes.
@@ -154,7 +155,7 @@ class ReportsControllerTest extends FeatureTestCase
     /** RN2 (REQ-280) — paridad exacta con `HomeService::resueltoPrimeraVisitaPct()`. */
     public function test_resuelto_primera_visita_pct_coincide_exactamente_con_inicio(): void
     {
-        $user    = \App\Models\User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         for ($i = 0; $i < 3; $i++) {
@@ -185,7 +186,7 @@ class ReportsControllerTest extends FeatureTestCase
     /** RN3 (REQ-280) — a diferencia de Inicio (solo Garantías), acá promedia TODOS los tipos. */
     public function test_tiempo_promedio_resolucion_incluye_todos_los_tipos_a_diferencia_de_inicio(): void
     {
-        $user    = \App\Models\User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         $warranty = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(3)]);
@@ -234,7 +235,7 @@ class ReportsControllerTest extends FeatureTestCase
      */
     public function test_panorama_mes_acepta_year_month_explicito_y_excluye_el_mes_actual(): void
     {
-        $user    = \App\Models\User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         // Junio 2026: 2 reportados, 1 cerrado -> 50%.
@@ -288,7 +289,7 @@ class ReportsControllerTest extends FeatureTestCase
     /** Mismo patrón que `HomeService::ingresosInstalaciones()`. */
     public function test_realizadas_suma_total_de_cotizaciones_aprobadas_de_instalaciones_cerradas_este_mes(): void
     {
-        $user    = \App\Models\User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         $closed = $this->makeTicket(['subtipo' => Ticket::SUBTIPO_INSPECTION, 'estado' => Ticket::ESTADO_SCHEDULED]);
@@ -354,7 +355,7 @@ class ReportsControllerTest extends FeatureTestCase
 
         $this->makeTicket([
             'internal_technician_id' => $carlosId,
-            'scheduled_at'           => now()->addDays(2),
+            'scheduled_at' => now()->addDays(2),
         ]);
 
         $response = $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
@@ -363,7 +364,7 @@ class ReportsControllerTest extends FeatureTestCase
 
         $this->makeCurrentTenant();
         $carlos = InternalTechnician::where('email', self::CARLOS)->firstOrFail();
-        $byId   = collect($response->json('data'))->keyBy('id');
+        $byId = collect($response->json('data'))->keyBy('id');
 
         $this->assertSame(1, $byId[$carlos->id]['count']);
         $this->assertSame($carlos->color, $byId[$carlos->id]['color']);
@@ -430,7 +431,7 @@ class ReportsControllerTest extends FeatureTestCase
         $this->assertSame(0, $data[6]['total']); // meses sin datos igual aparecen, en 0.
     }
 
-    // ── REQ-285 — Comisión Carlos Vergara ─────────────────────────────────────────────────────
+    // ── REQ-285 — Comisión Tecnico Servicios Test ─────────────────────────────────────────────────────
 
     public function test_comision_carlos_vergara_gerencia_puede_verla_y_coincide_con_el_endpoint_de_tecnicos(): void
     {
@@ -480,9 +481,9 @@ class ReportsControllerTest extends FeatureTestCase
     private function makeInspectionReport(Ticket $ticket, string $estado = InspectionReport::ESTADO_PENDING): InspectionReport
     {
         return InspectionReport::create([
-            'numero'    => 'INF-2026-'.static::uniqueTestNumber(),
+            'numero' => 'INF-2026-'.static::uniqueTestNumber(),
             'ticket_id' => $ticket->id,
-            'estado'    => $estado,
+            'estado' => $estado,
         ]);
     }
 
@@ -531,8 +532,8 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_biblioteca_filtra_por_texto_libre_de_cliente(): void
     {
-        $match    = $this->makeTicket(['cliente' => 'Constructora Panama SA']);
-        $noMatch  = $this->makeTicket(['cliente' => 'Otro Cliente']);
+        $match = $this->makeTicket(['cliente' => 'Constructora Panama SA']);
+        $noMatch = $this->makeTicket(['cliente' => 'Otro Cliente']);
         $this->makeInspectionReport($match);
         $this->makeInspectionReport($noMatch);
 

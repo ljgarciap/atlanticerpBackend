@@ -66,8 +66,8 @@ final class GeneralCountController extends Controller
         return response()->json([
             'data' => collect($paginator->items())->map(fn (GeneralCountRequest $r) => $this->formatRequest($r))->values(),
             'meta' => Pagination::meta($paginator),
-            // SCRUM-463 (rebote de Daniela Amaya 2026-08-14) — mismo gap que SCRUM-466 (apply()):
-            // el frontend no tenía forma de saber quién es "Mark" (mark_approver_user_id es
+            // SCRUM-463 (rebote de Gerencia Test 2026-08-14) — mismo gap que SCRUM-466 (apply()):
+            // el frontend no tenía forma de saber quién es "Mark" (primary_approver_user_id es
             // puramente de backend, sin claim en el JWT), así que Aprobar/Rechazar quedaban
             // visibles+clicables para TODOS con un candado decorativo — el backend ya rechazaba
             // (403) a quien no fuera Mark, pero el botón seguía pareciendo funcional. Se expone
@@ -100,7 +100,7 @@ final class GeneralCountController extends Controller
      * `WarehouseController::show()` — solo `ProductWarehouseStock` con `quantity > 0` entra al
      * conteo (un sobrante físico de un producto en 0 en el sistema queda fuera de este flujo).
      *
-     * SCRUM-797 (rebote de Daniela Amaya 2026-08-27) — la bodega elegida sigue siendo la única
+     * SCRUM-797 (rebote de Gerencia Test 2026-08-27) — la bodega elegida sigue siendo la única
      * "selección" real de este flujo (el conteo es siempre de TODA la bodega, precarga todos los
      * productos con stock — eso no cambió). Lo que sí cambió: el chequeo de duplicados dejó de ser
      * "¿esta bodega ya tiene CUALQUIER conteo sin resolver?" (bloqueaba toda la bodega por un solo
@@ -477,7 +477,7 @@ final class GeneralCountController extends Controller
      * `diferencia != 0`, un movimiento de Kardex `TIPO_CONTEO` con la cantidad firmada =
      * `diferencia` (positiva si sobró, negativa si faltó).
      *
-     * Rebote de Daniela Amaya (2026-08-14) — RN1 del REQ define este paso como una confirmación
+     * Rebote de Gerencia Test (2026-08-14) — RN1 del REQ define este paso como una confirmación
      * manual EXCLUSIVA del Líder de Bodega (doble validación humana: Mark aprueba el conteo,
      * Líder de Bodega confirma que el ajuste ya se aplicó físicamente). El endpoint solo estaba
      * gateado por `permission:bodega.write` — un permiso amplio que cualquier perfil de Bodega
@@ -485,7 +485,7 @@ final class GeneralCountController extends Controller
      * dejando el botón funcional para gente que nunca debió poder accionarlo. `resolveUser()` no
      * alcanza por sí solo — mismo patrón que `resolveMarkAccess()` en este mismo controller y en
      * `RelocationRequestController`, pero gateando por `role_key` en vez de por
-     * `mark_approver_user_id` (esto es un rol, no una persona puntual).
+     * `primary_approver_user_id` (esto es un rol, no una persona puntual).
      */
     public function apply(Request $request, int $id): JsonResponse
     {
@@ -543,7 +543,7 @@ final class GeneralCountController extends Controller
     }
 
     /**
-     * SCRUM-462 (REQ-392, rebote de Daniela Amaya 2026-08-14) — "Continuar" un conteo que quedó
+     * SCRUM-462 (REQ-392, rebote de Gerencia Test 2026-08-14) — "Continuar" un conteo que quedó
      * en `pendiente_evaluacion` o `evaluado` sin enviarse a aprobación. No recalcula nada (eso
      * sigue siendo `evaluate()`, idempotente) — solo confirma que el conteo TODAVÍA es
      * continuable y devuelve el detalle completo (mismo shape que `show()`/`evaluate()`), con
@@ -570,7 +570,7 @@ final class GeneralCountController extends Controller
     }
 
     /**
-     * SCRUM-462 (REQ-392, rebote de Daniela Amaya 2026-08-14) — "Eliminar" el borrador completo.
+     * SCRUM-462 (REQ-392, rebote de Gerencia Test 2026-08-14) — "Eliminar" el borrador completo.
      * Mismo criterio de estado que `continueDraft()`: solo si NUNCA se envió a aprobación
      * (`pendiente_evaluacion`/`evaluado`) — a partir de `pendiente_aprobacion` ya no es "solo un
      * borrador" de Bodega, es una decisión de Mark, no se puede eliminar por acá. Las líneas se
@@ -612,7 +612,7 @@ final class GeneralCountController extends Controller
 
     /**
      * Gate "exclusivo de Mark" — mismo mecanismo que
-     * `AdjustmentRequestController::resolveMarkAccess()` (`ComprasSettings::mark_approver_user_id`).
+     * `AdjustmentRequestController::resolveMarkAccess()` (`ComprasSettings::primary_approver_user_id`).
      *
      * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Mark acepta cualquier
      * usuario con una `ReglaAprobacion` activa para tipo=general_count (SCRUM-163) — ver docblock
@@ -790,7 +790,7 @@ final class GeneralCountController extends Controller
     }
 
     /**
-     * SCRUM-797 (rebote de Daniela Amaya 2026-08-27) — reemplaza el viejo `findUnresolvedForWarehouse()`
+     * SCRUM-797 (rebote de Gerencia Test 2026-08-27) — reemplaza el viejo `findUnresolvedForWarehouse()`
      * (bloqueo de bodega completa). Un producto está "en conflicto" únicamente si ya tiene una
      * línea EVALUADA con diferencia real (`diferencia != 0`) en OTRO conteo de la misma bodega que
      * sigue sin aprobar/rechazar por Mark (`evaluado`/`pendiente_aprobacion`) — decisión explícita
@@ -799,14 +799,14 @@ final class GeneralCountController extends Controller
      * todavía. `replaced_by_id IS NULL` — una línea ya reemplazada por confirmación previa no
      * vuelve a bloquear nada.
      *
-     * @param  list<int> $catalogProductIds productos a evaluar (todos los que va a incluir el
-     *   conteo en `store()`, o los que salieron con diferencia en `submit()`)
+     * @param  list<int>  $catalogProductIds  productos a evaluar (todos los que va a incluir el
+     *                                        conteo en `store()`, o los que salieron con diferencia en `submit()`)
      * @return Collection<int, GeneralCountRequestLine> indexada por `catalog_product_id`
      */
     private function findConflictingLines(int $warehouseId, array $catalogProductIds, ?int $excludeRequestId = null): Collection
     {
         if ($catalogProductIds === []) {
-            return new Collection();
+            return new Collection;
         }
 
         return $this->conflictingLinesQuery($warehouseId, $catalogProductIds, $excludeRequestId)
@@ -817,7 +817,7 @@ final class GeneralCountController extends Controller
     }
 
     /**
-     * @param  list<int> $catalogProductIds
+     * @param  list<int>  $catalogProductIds
      * @return Builder<GeneralCountRequestLine>
      */
     private function conflictingLinesQuery(int $warehouseId, array $catalogProductIds, ?int $excludeRequestId = null): Builder
@@ -854,7 +854,7 @@ final class GeneralCountController extends Controller
     }
 
     /**
-     * @param  Collection<int, GeneralCountRequestLine> $conflictingLines indexada por catalog_product_id
+     * @param  Collection<int, GeneralCountRequestLine>  $conflictingLines  indexada por catalog_product_id
      * @return list<array<string, mixed>>
      */
     private function formatDuplicates(Collection $conflictingLines): array

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
@@ -27,9 +28,12 @@ use Tests\Feature\FeatureTestCase;
  *  home de Reportes. */
 class AdminContReportsControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
-    private const YANETH_EMAIL   = 'asistente@atlantic.com.pa';
-    private const MARK_EMAIL     = 'mbekhar@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
+    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
@@ -45,7 +49,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     private function loginAsDesigner(): string
@@ -86,16 +90,16 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        return (int) \App\Models\User::where('email', $email)->value('id');
+        return (int) User::where('email', $email)->value('id');
     }
 
     /** Mismo esqueleto que AdminContInternalCommissionControllerTest::makeCommissionableOrder(). */
     private function makeCommissionableOrder(int $ownerId, float $amount, ?Carbon $mesCierre = null): AdminContInvoice
     {
-        $master  = MasterClient::create(['name' => 'Cliente Comisión Reportes '.self::uniqueTestNumber()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-9-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Comisión Reportes '.self::uniqueTestNumber()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-9-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Comisión Reportes '.self::uniqueTestNumber()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $ownerId, 'amount' => $amount,
             'stage_changed_at' => $mesCierre ?? Carbon::now(),
@@ -119,10 +123,10 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $architect = Architect::create(['name' => 'Arq. Reportes '.self::uniqueTestNumber(), 'email' => self::uniqueTestNumber().'@arq.test']);
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio Reportes', 'ruc' => '1-1-'.self::uniqueTestNumber(), 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_EXENTO]);
 
-        $master  = MasterClient::create(['name' => 'Cliente Externa Reportes '.self::uniqueTestNumber()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-8-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Externa Reportes '.self::uniqueTestNumber()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-8-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa Reportes '.self::uniqueTestNumber()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'amount' => $amount,
             'stage_changed_at' => Carbon::now(),
@@ -146,7 +150,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     private function makeCreditNote(string $tipo, ?string $subtipo, float $monto, string $estado, string $fecha): AdminContCreditNote
     {
-        $invoice      = $this->makeInvoice($monto, 0, $fecha);
+        $invoice = $this->makeInvoice($monto, 0, $fecha);
         $masterClient = MasterClient::create(['name' => 'Cliente NC Reportes '.self::uniqueTestNumber()]);
 
         return AdminContCreditNote::create([
@@ -164,7 +168,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $token = $this->loginAsDesigner();
 
         foreach (['/api/admin-contab/reports/felix-commission', '/api/admin-contab/reports/cartera',
-                  '/api/admin-contab/reports/ventas', '/api/admin-contab/reports/flujo-caja'] as $url) {
+            '/api/admin-contab/reports/ventas', '/api/admin-contab/reports/flujo-caja'] as $url) {
             $this->withHeaders($this->authHeaders($token))->getJson($url)->assertStatus(403);
         }
     }
@@ -174,7 +178,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $token = $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
 
         foreach (['/api/admin-contab/reports/felix-commission', '/api/admin-contab/reports/cartera',
-                  '/api/admin-contab/reports/ventas', '/api/admin-contab/reports/flujo-caja'] as $url) {
+            '/api/admin-contab/reports/ventas', '/api/admin-contab/reports/flujo-caja'] as $url) {
             $this->withHeaders($this->authHeaders($token))->getJson($url)->assertStatus(200);
         }
     }

@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SCRUM-428 (REQ-358, rebote de Daniela Amaya 2026-08-13) — el modal "Solicitar ajuste" agrega 2
+ * SCRUM-428 (REQ-358, rebote de Gerencia Test 2026-08-13) — el modal "Solicitar ajuste" agrega 2
  * campos opcionales nuevos al lado del Motivo (que pasa de texto libre a un desplegable de 6
  * opciones fijas, ver `AdjustmentRequestLine::MOTIVOS` — sin cambio de columna, sigue siendo
  * `text`, la restricción de vocabulario se valida en el Request): `descripcion` (texto libre,

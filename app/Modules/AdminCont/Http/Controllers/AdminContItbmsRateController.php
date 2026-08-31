@@ -11,7 +11,7 @@ use App\Modules\AdminCont\Models\AdminContItbmsRate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** SCRUM-635/636 (REQ-558/559) — catálogo de tasas de ITBMS, gateado por EnsureIsMarkApprover. */
+/** SCRUM-635/636 (REQ-558/559) — catálogo de tasas de ITBMS, gateado por EnsureIsPrimaryApprover. */
 class AdminContItbmsRateController
 {
     public function index(): JsonResponse
@@ -33,8 +33,8 @@ class AdminContItbmsRateController
         // $request->validated() nunca la trae. `es_base` queda fuera de $fillable a propósito
         // (nunca se crea una tasa base por request), así que se asigna directo, no vía create().
         $rate = new AdminContItbmsRate($request->validated());
-        $rate->es_base    = false;
-        $rate->activa     = false;
+        $rate->es_base = false;
+        $rate->activa = false;
         $rate->created_by = $user?->id;
         $rate->save();
 

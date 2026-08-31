@@ -58,9 +58,11 @@ use Illuminate\Support\Str;
  */
 final class ArchitectCommissionService
 {
-    public const ESTADO_AUN_NO_GENERADA   = 'aun_no_generada';
+    public const ESTADO_AUN_NO_GENERADA = 'aun_no_generada';
+
     public const ESTADO_PENDIENTE_FACTURA = 'pendiente_factura_arquitecto';
-    public const ESTADO_PAGADA            = 'pagada';
+
+    public const ESTADO_PAGADA = 'pagada';
 
     /** REQ-513 RN1 — mismo disco privado que el resto de adjuntos del módulo. */
     private const DISK = 's3-private';
@@ -92,11 +94,11 @@ final class ArchitectCommissionService
         }
 
         $pipelineTable = "{$tenant->slug}_ventas_diseno.pipeline_cards";
-        $quoteTable    = "{$tenant->slug}_ventas_diseno.quotes";
-        $orderTable    = "{$tenant->slug}_bodega.orders";
-        $invoiceTable  = "{$tenant->slug}_admin_contab.invoices";
-        $paymentTable  = "{$tenant->slug}_admin_contab.payments";
-        $payInvTable   = "{$tenant->slug}_admin_contab.payment_invoices";
+        $quoteTable = "{$tenant->slug}_ventas_diseno.quotes";
+        $orderTable = "{$tenant->slug}_bodega.orders";
+        $invoiceTable = "{$tenant->slug}_admin_contab.invoices";
+        $paymentTable = "{$tenant->slug}_admin_contab.payments";
+        $payInvTable = "{$tenant->slug}_admin_contab.payment_invoices";
         $architectCommissionTable = "{$tenant->slug}_admin_contab.architect_commissions";
 
         $rows = DB::table("{$pipelineTable} as pc")
@@ -146,34 +148,34 @@ final class ArchitectCommissionService
         }
 
         return $withArchitect->map(function (object $row): array {
-            $monto          = (float) $row->monto_proyecto;
+            $monto = (float) $row->monto_proyecto;
             $totalFacturado = $row->total_facturado !== null ? (float) $row->total_facturado : null;
-            $totalCobrado   = $row->total_cobrado !== null ? (float) $row->total_cobrado : 0.0;
-            $fechaPago      = $row->fecha_pago !== null ? CarbonImmutable::parse($row->fecha_pago) : null;
+            $totalCobrado = $row->total_cobrado !== null ? (float) $row->total_cobrado : 0.0;
+            $fechaPago = $row->fecha_pago !== null ? CarbonImmutable::parse($row->fecha_pago) : null;
 
             return [
-                'pipeline_card_id'            => (int) $row->pipeline_card_id,
-                'architect_id'                => (int) $row->architect_id,
-                'numero_pedido'                => $row->numero_pedido,
-                'cliente'                      => $row->cliente,
-                'fecha_pedido'                 => $row->stage_changed_at !== null ? CarbonImmutable::parse($row->stage_changed_at) : null,
-                'monto_proyecto'               => $monto,
-                'total_facturado'              => $totalFacturado,
-                'total_cobrado'                => $totalCobrado,
-                'cuenta_cobro_nombre_archivo'  => $row->cuenta_cobro_nombre_archivo !== null ? (string) $row->cuenta_cobro_nombre_archivo : null,
-                'cuenta_cobro_uploaded_at'     => $row->cuenta_cobro_uploaded_at !== null ? CarbonImmutable::parse($row->cuenta_cobro_uploaded_at) : null,
-                'fecha_pago'                   => $fechaPago,
-                'estado'                       => $this->estadoFor($totalFacturado, $totalCobrado, $fechaPago),
+                'pipeline_card_id' => (int) $row->pipeline_card_id,
+                'architect_id' => (int) $row->architect_id,
+                'numero_pedido' => $row->numero_pedido,
+                'cliente' => $row->cliente,
+                'fecha_pedido' => $row->stage_changed_at !== null ? CarbonImmutable::parse($row->stage_changed_at) : null,
+                'monto_proyecto' => $monto,
+                'total_facturado' => $totalFacturado,
+                'total_cobrado' => $totalCobrado,
+                'cuenta_cobro_nombre_archivo' => $row->cuenta_cobro_nombre_archivo !== null ? (string) $row->cuenta_cobro_nombre_archivo : null,
+                'cuenta_cobro_uploaded_at' => $row->cuenta_cobro_uploaded_at !== null ? CarbonImmutable::parse($row->cuenta_cobro_uploaded_at) : null,
+                'fecha_pago' => $fechaPago,
+                'estado' => $this->estadoFor($totalFacturado, $totalCobrado, $fechaPago),
                 'comprobante_retencion_nombre_archivo' => $row->comprobante_retencion_nombre_archivo !== null ? (string) $row->comprobante_retencion_nombre_archivo : null,
-                'comprobante_retencion_uploaded_at'    => $row->comprobante_retencion_uploaded_at !== null ? CarbonImmutable::parse($row->comprobante_retencion_uploaded_at) : null,
-                'bank_account_id'              => $row->bank_account_id !== null ? (int) $row->bank_account_id : null,
-                'porcentaje_aprobado'          => $row->porcentaje_aprobado !== null ? (float) $row->porcentaje_aprobado : null,
-                'porcentaje_pendiente'         => $row->porcentaje_pendiente !== null ? (float) $row->porcentaje_pendiente : null,
-                'porcentaje_pendiente_motivo'  => $row->porcentaje_pendiente_motivo !== null ? (string) $row->porcentaje_pendiente_motivo : null,
+                'comprobante_retencion_uploaded_at' => $row->comprobante_retencion_uploaded_at !== null ? CarbonImmutable::parse($row->comprobante_retencion_uploaded_at) : null,
+                'bank_account_id' => $row->bank_account_id !== null ? (int) $row->bank_account_id : null,
+                'porcentaje_aprobado' => $row->porcentaje_aprobado !== null ? (float) $row->porcentaje_aprobado : null,
+                'porcentaje_pendiente' => $row->porcentaje_pendiente !== null ? (float) $row->porcentaje_pendiente : null,
+                'porcentaje_pendiente_motivo' => $row->porcentaje_pendiente_motivo !== null ? (string) $row->porcentaje_pendiente_motivo : null,
                 // Batch 18 (SCRUM-597→601) — "fecha estimada" de una comisión pendiente para el
                 // flujo de caja proyectado (ADR-SCRUM597-601, reconciliación punto 7). Ya se
                 // seleccionaba en la query de arriba pero nunca se exponía en el array mapeado.
-                'fecha_cobro_completo'         => $row->fecha_cobro_completo !== null ? CarbonImmutable::parse($row->fecha_cobro_completo) : null,
+                'fecha_cobro_completo' => $row->fecha_cobro_completo !== null ? CarbonImmutable::parse($row->fecha_cobro_completo) : null,
             ];
         })->values();
     }
@@ -195,7 +197,7 @@ final class ArchitectCommissionService
     /** REQ-508/511 RN1 — 10% fijo por defecto en este batch (override por proyecto es REQ-514,
      *  Batch 17). Vive en `AdminContFiscalSettings.comision_externa_default_percent` (singleton
      *  ya existente de Configuración Fiscal, ver migración `2026_08_25_100008`) — nunca una
-     *  constante propia, mismo criterio ya aplicado a `mark_approval_threshold` en ese mismo
+     *  constante propia, mismo criterio ya aplicado a `primary_approval_threshold` en ese mismo
      *  singleton. Sin pantalla de edición propia todavía (mismo patrón que
      *  `client_billing_profiles`), editable por tinker hasta que Batch 17 traiga la UI real. */
     private function porcentajeDefault(): float
@@ -226,16 +228,16 @@ final class ArchitectCommissionService
 
         $itbmsPercent = ItbmsRateResolver::defaultPercentage();
         $impuesto = match ($regimenFiscal) {
-            ArchitectFiscalProfile::REGIMEN_EXENTO       => 0.0,
-            ArchitectFiscalProfile::REGIMEN_CON_ITBMS    => round($comision * $itbmsPercent / 100, 2),
+            ArchitectFiscalProfile::REGIMEN_EXENTO => 0.0,
+            ArchitectFiscalProfile::REGIMEN_CON_ITBMS => round($comision * $itbmsPercent / 100, 2),
             ArchitectFiscalProfile::REGIMEN_RETENCION_50 => round($comision * $itbmsPercent / 100 / 2, 2),
-            default                                       => null,
+            default => null,
         };
 
         return [
             'comision' => $comision,
             'impuesto' => $impuesto,
-            'total'    => $impuesto !== null ? round($comision + $impuesto, 2) : null,
+            'total' => $impuesto !== null ? round($comision + $impuesto, 2) : null,
         ];
     }
 
@@ -245,7 +247,7 @@ final class ArchitectCommissionService
      * AND — RN2 REQ-509). Un arquitecto sin ningún proyecto que matchee los filtros activos se
      * oculta por completo de la tabla (RN3 REQ-509).
      *
-     * @param array{search?: string, mes?: string, architect_id?: int, estado?: string} $filters
+     * @param  array{search?: string, mes?: string, architect_id?: int, estado?: string}  $filters
      * @return array<string, mixed>
      */
     public function summary(array $filters = []): array
@@ -258,15 +260,15 @@ final class ArchitectCommissionService
         /** @var Collection<int, ArchitectFiscalProfile> $fiscalProfiles */
         $fiscalProfiles = ArchitectFiscalProfile::whereIn('architect_id', $architectIds)->get()->keyBy('architect_id');
         /** @var Collection<int, AdminContBankAccount> $bankAccounts */
-        $bankAccounts       = AdminContBankAccount::all()->keyBy('id');
+        $bankAccounts = AdminContBankAccount::all()->keyBy('id');
         $defaultBankAccount = $this->defaultBankAccount();
 
         $cards = $this->buildCards($projects, $fiscalProfiles);
 
-        $search   = isset($filters['search']) && trim((string) $filters['search']) !== '' ? mb_strtolower(trim((string) $filters['search'])) : null;
-        $mes      = $filters['mes'] ?? null;
-        $archId   = $filters['architect_id'] ?? null;
-        $estado   = $filters['estado'] ?? null;
+        $search = isset($filters['search']) && trim((string) $filters['search']) !== '' ? mb_strtolower(trim((string) $filters['search'])) : null;
+        $mes = $filters['mes'] ?? null;
+        $archId = $filters['architect_id'] ?? null;
+        $estado = $filters['estado'] ?? null;
 
         $mesesDisponibles = $projects->pluck('fecha_pedido')->filter()
             ->unique(fn (CarbonImmutable $m) => $m->format('Y-m'))
@@ -320,8 +322,8 @@ final class ArchitectCommissionService
             // las tarjetas globales (§buildCards) pero acotado a los proyectos YA filtrados de
             // este arquitecto — nunca a su universo completo, para que quede consistente con lo
             // que el usuario ve al expandir la fila.
-            $generada  = 0.0;
-            $pagada    = 0.0;
+            $generada = 0.0;
+            $pagada = 0.0;
             $pendiente = 0.0;
             foreach ($enrichedProjects as $ep) {
                 if ($ep['total'] === null) {
@@ -337,23 +339,23 @@ final class ArchitectCommissionService
             }
 
             return [
-                'architect_id'              => $id,
-                'nombre'                    => $architect->name,
-                'empresa'                   => $profile?->empresa,
-                'ruc'                       => $profile?->ruc,
-                'regimen_fiscal'            => $regimen,
-                'datos_fiscales_completos'  => $profile !== null,
-                'generada'                  => round($generada, 2),
-                'pagada'                    => round($pagada, 2),
-                'pendiente'                 => round($pendiente, 2),
-                'proyectos'                 => $enrichedProjects,
+                'architect_id' => $id,
+                'nombre' => $architect->name,
+                'empresa' => $profile?->empresa,
+                'ruc' => $profile?->ruc,
+                'regimen_fiscal' => $regimen,
+                'datos_fiscales_completos' => $profile !== null,
+                'generada' => round($generada, 2),
+                'pagada' => round($pagada, 2),
+                'pendiente' => round($pendiente, 2),
+                'proyectos' => $enrichedProjects,
             ];
         })->filter()->values()->all();
 
         return [
             ...$cards,
             'meses_disponibles' => $mesesDisponibles,
-            'arquitectos'       => $architectRows,
+            'arquitectos' => $architectRows,
         ];
     }
 
@@ -369,7 +371,7 @@ final class ArchitectCommissionService
      */
     public function commissionsPaidByDate(): Collection
     {
-        $projects     = $this->allProjects();
+        $projects = $this->allProjects();
         $architectIds = $projects->pluck('architect_id')->unique()->values();
         /** @var Collection<int, ArchitectFiscalProfile> $fiscalProfiles */
         $fiscalProfiles = ArchitectFiscalProfile::whereIn('architect_id', $architectIds)->get()->keyBy('architect_id');
@@ -391,26 +393,27 @@ final class ArchitectCommissionService
     }
 
     /**
-     * @param Collection<int, ArchitectProjectRow> $projects
-     * @param Collection<int, ArchitectFiscalProfile> $fiscalProfiles
+     * @param  Collection<int, ArchitectProjectRow>  $projects
+     * @param  Collection<int, ArchitectFiscalProfile>  $fiscalProfiles
      * @return array<string, float>
      */
     private function buildCards(Collection $projects, Collection $fiscalProfiles): array
     {
         $currentMonth = CarbonImmutable::now()->format('Y-m');
 
-        $pagada           = 0.0;
-        $pagadoEsteMes     = 0.0;
+        $pagada = 0.0;
+        $pagadoEsteMes = 0.0;
         $pendienteFactura = 0.0;
-        $aunNoGenerada    = 0.0;
+        $aunNoGenerada = 0.0;
 
         foreach ($projects as $p) {
-            $profile  = $fiscalProfiles->get($p['architect_id']);
+            $profile = $fiscalProfiles->get($p['architect_id']);
             $comision = round($p['monto_proyecto'] * ($p['porcentaje_aprobado'] ?? $this->porcentajeDefault()) / 100, 2);
 
             if ($p['estado'] === self::ESTADO_AUN_NO_GENERADA) {
                 // RN4 REQ-508 — no exige datos fiscales completos, es un estimado en potencia.
                 $aunNoGenerada += $comision;
+
                 continue;
             }
 
@@ -431,17 +434,17 @@ final class ArchitectCommissionService
         }
 
         return [
-            'comision_generada'  => round($pagada + $pendienteFactura, 2),
-            'pagada_total'       => round($pagada, 2),
-            'pagado_este_mes'    => round($pagadoEsteMes, 2),
-            'pendiente_factura'  => round($pendienteFactura, 2),
-            'aun_no_generada'    => round($aunNoGenerada, 2),
+            'comision_generada' => round($pagada + $pendienteFactura, 2),
+            'pagada_total' => round($pagada, 2),
+            'pagado_este_mes' => round($pagadoEsteMes, 2),
+            'pendiente_factura' => round($pendienteFactura, 2),
+            'aun_no_generada' => round($aunNoGenerada, 2),
         ];
     }
 
     /**
-     * @param ArchitectProjectRow $p
-     * @param Collection<int, AdminContBankAccount> $bankAccounts
+     * @param  ArchitectProjectRow  $p
+     * @param  Collection<int, AdminContBankAccount>  $bankAccounts
      * @return array<string, mixed>
      */
     private function enrichProject(array $p, ?string $regimenFiscal, Collection $bankAccounts, ?AdminContBankAccount $defaultBankAccount): array
@@ -454,31 +457,31 @@ final class ArchitectCommissionService
         $bankAccount = $p['bank_account_id'] !== null ? $bankAccounts->get($p['bank_account_id']) : $defaultBankAccount;
 
         return [
-            'pipeline_card_id'  => $p['pipeline_card_id'],
-            'numero_pedido'     => $p['numero_pedido'],
-            'cliente'           => $p['cliente'],
-            'fecha_pedido'      => $p['fecha_pedido']?->toDateString(),
-            'monto_proyecto'    => $p['monto_proyecto'],
-            'total_facturado'   => $p['total_facturado'],
-            'total_cobrado'     => $p['total_cobrado'],
-            'porcentaje'        => $p['porcentaje_aprobado'] ?? $this->porcentajeDefault(),
-            'comision'          => $montos['comision'],
-            'impuesto'          => $montos['impuesto'],
-            'total'             => $montos['total'],
-            'estado'            => $p['estado'],
-            'cuenta_cobro'      => $p['cuenta_cobro_nombre_archivo'] !== null ? [
+            'pipeline_card_id' => $p['pipeline_card_id'],
+            'numero_pedido' => $p['numero_pedido'],
+            'cliente' => $p['cliente'],
+            'fecha_pedido' => $p['fecha_pedido']?->toDateString(),
+            'monto_proyecto' => $p['monto_proyecto'],
+            'total_facturado' => $p['total_facturado'],
+            'total_cobrado' => $p['total_cobrado'],
+            'porcentaje' => $p['porcentaje_aprobado'] ?? $this->porcentajeDefault(),
+            'comision' => $montos['comision'],
+            'impuesto' => $montos['impuesto'],
+            'total' => $montos['total'],
+            'estado' => $p['estado'],
+            'cuenta_cobro' => $p['cuenta_cobro_nombre_archivo'] !== null ? [
                 'nombre_archivo' => $p['cuenta_cobro_nombre_archivo'],
-                'uploaded_at'    => $p['cuenta_cobro_uploaded_at']?->toIso8601String(),
+                'uploaded_at' => $p['cuenta_cobro_uploaded_at']?->toIso8601String(),
             ] : null,
             // REQ-514 RN1 — el frontend decide si mostrar la zona de carga según el régimen del
             // arquitecto (ya expuesto en la fila padre); acá solo va el estado del archivo.
             'comprobante_retencion' => $p['comprobante_retencion_nombre_archivo'] !== null ? [
                 'nombre_archivo' => $p['comprobante_retencion_nombre_archivo'],
-                'uploaded_at'    => $p['comprobante_retencion_uploaded_at']?->toIso8601String(),
+                'uploaded_at' => $p['comprobante_retencion_uploaded_at']?->toIso8601String(),
             ] : null,
-            'fecha_pago'        => $p['fecha_pago']?->toDateString(),
+            'fecha_pago' => $p['fecha_pago']?->toDateString(),
             // REQ-516 — propuesta de % pendiente de aprobación de Mark, null si no hay ninguna.
-            'porcentaje_pendiente'        => $p['porcentaje_pendiente'],
+            'porcentaje_pendiente' => $p['porcentaje_pendiente'],
             'porcentaje_pendiente_motivo' => $p['porcentaje_pendiente_motivo'],
             // REQ-517 — cuenta de pago; `null` hasta que se resuelva el default (REQ-517 RN1) o se
             // edite manualmente. El frontend muestra el default resuelto vía `bankAccountOptions()`.
@@ -507,7 +510,7 @@ final class ArchitectCommissionService
     public function uploadCuentaCobro(int $pipelineCardId, int $architectId, UploadedFile $file, int $uploadedBy): ArchitectCommission
     {
         $existing = ArchitectCommission::where('pipeline_card_id', $pipelineCardId)->first();
-        $oldKey   = $existing?->cuenta_cobro_storage_key;
+        $oldKey = $existing?->cuenta_cobro_storage_key;
 
         $ext = strtolower($file->getClientOriginalExtension());
         $key = "admin-contab/architect-commissions/{$pipelineCardId}/".Str::uuid()->toString().($ext !== '' ? ".{$ext}" : '');
@@ -524,13 +527,13 @@ final class ArchitectCommissionService
             $commission = ArchitectCommission::updateOrCreate(
                 ['pipeline_card_id' => $pipelineCardId],
                 [
-                    'architect_id'                 => $architectId,
-                    'cuenta_cobro_storage_key'     => $key,
-                    'cuenta_cobro_nombre_archivo'  => $file->getClientOriginalName(),
-                    'cuenta_cobro_size_bytes'      => $file->getSize(),
-                    'cuenta_cobro_mime_type'       => $file->getMimeType() ?? 'application/octet-stream',
-                    'cuenta_cobro_uploaded_at'     => now(),
-                    'cuenta_cobro_uploaded_by'     => $uploadedBy,
+                    'architect_id' => $architectId,
+                    'cuenta_cobro_storage_key' => $key,
+                    'cuenta_cobro_nombre_archivo' => $file->getClientOriginalName(),
+                    'cuenta_cobro_size_bytes' => $file->getSize(),
+                    'cuenta_cobro_mime_type' => $file->getMimeType() ?? 'application/octet-stream',
+                    'cuenta_cobro_uploaded_at' => now(),
+                    'cuenta_cobro_uploaded_by' => $uploadedBy,
                 ],
             );
         } catch (\Throwable $e) {
@@ -585,7 +588,7 @@ final class ArchitectCommissionService
         }
 
         $existing = ArchitectCommission::where('pipeline_card_id', $pipelineCardId)->first();
-        $oldKey   = $existing?->comprobante_retencion_storage_key;
+        $oldKey = $existing?->comprobante_retencion_storage_key;
 
         $ext = strtolower($file->getClientOriginalExtension());
         $key = "admin-contab/architect-commissions/{$pipelineCardId}/retencion-".Str::uuid()->toString().($ext !== '' ? ".{$ext}" : '');
@@ -602,13 +605,13 @@ final class ArchitectCommissionService
             $commission = ArchitectCommission::updateOrCreate(
                 ['pipeline_card_id' => $pipelineCardId],
                 [
-                    'architect_id'                        => $architectId,
-                    'comprobante_retencion_storage_key'    => $key,
+                    'architect_id' => $architectId,
+                    'comprobante_retencion_storage_key' => $key,
                     'comprobante_retencion_nombre_archivo' => $file->getClientOriginalName(),
-                    'comprobante_retencion_size_bytes'     => $file->getSize(),
-                    'comprobante_retencion_mime_type'      => $file->getMimeType() ?? 'application/octet-stream',
-                    'comprobante_retencion_uploaded_at'    => now(),
-                    'comprobante_retencion_uploaded_by'    => $uploadedBy,
+                    'comprobante_retencion_size_bytes' => $file->getSize(),
+                    'comprobante_retencion_mime_type' => $file->getMimeType() ?? 'application/octet-stream',
+                    'comprobante_retencion_uploaded_at' => now(),
+                    'comprobante_retencion_uploaded_by' => $uploadedBy,
                 ],
             );
         } catch (\Throwable $e) {
@@ -704,17 +707,17 @@ final class ArchitectCommissionService
             throw new ArchitectCommissionStateException('No se puede proponer un cambio de % — la comisión de este proyecto ya está pagada.');
         }
         if ($project['porcentaje_pendiente'] !== null) {
-            throw new ArchitectCommissionStateException('Ya hay un cambio de % pendiente de aprobación de Mark para este proyecto.');
+            throw new ArchitectCommissionStateException('Ya hay un cambio de % pendiente de aprobación del aprobador configurado para este proyecto.');
         }
 
         return ArchitectCommission::updateOrCreate(
             ['pipeline_card_id' => $pipelineCardId],
             [
-                'architect_id'                       => $architectId,
-                'porcentaje_pendiente'                => $nuevoPorcentaje,
-                'porcentaje_pendiente_motivo'          => $motivo,
-                'porcentaje_pendiente_propuesto_por'   => $actorId,
-                'porcentaje_pendiente_propuesto_at'    => now(),
+                'architect_id' => $architectId,
+                'porcentaje_pendiente' => $nuevoPorcentaje,
+                'porcentaje_pendiente_motivo' => $motivo,
+                'porcentaje_pendiente_propuesto_por' => $actorId,
+                'porcentaje_pendiente_propuesto_at' => now(),
             ],
         );
     }
@@ -734,10 +737,10 @@ final class ArchitectCommissionService
         if ($aprobar) {
             $commission->porcentaje_aprobado = $commission->porcentaje_pendiente;
         }
-        $commission->porcentaje_pendiente              = null;
-        $commission->porcentaje_pendiente_motivo        = null;
+        $commission->porcentaje_pendiente = null;
+        $commission->porcentaje_pendiente_motivo = null;
         $commission->porcentaje_pendiente_propuesto_por = null;
-        $commission->porcentaje_pendiente_propuesto_at  = null;
+        $commission->porcentaje_pendiente_propuesto_at = null;
         $commission->save();
 
         return $commission->refresh();
@@ -761,7 +764,7 @@ final class ArchitectCommissionService
             throw new ArchitectCommissionStateException('Este proyecto no está en estado "Pendiente de factura del arquitecto".');
         }
         if ($project['porcentaje_pendiente'] !== null) {
-            throw new ArchitectCommissionStateException('Hay un cambio de % pendiente de aprobación de Mark en este proyecto — resuélvelo primero.');
+            throw new ArchitectCommissionStateException('Hay un cambio de % pendiente de aprobación del aprobador configurado en este proyecto — resuélvelo primero.');
         }
 
         $profile = ArchitectFiscalProfile::where('architect_id', $project['architect_id'])->first();
@@ -790,17 +793,17 @@ final class ArchitectCommissionService
             // (histórico) del flujo de caja. `bank_account_id` puede seguir null si nunca se
             // configuró la cuenta de pago (REQ-517 no la exige para llegar a "Pagada").
             if ($commission->bank_account_id !== null) {
-                $montos    = $this->montoFor($project['monto_proyecto'], $profile->regimen_fiscal, $project['porcentaje_aprobado']);
+                $montos = $this->montoFor($project['monto_proyecto'], $profile->regimen_fiscal, $project['porcentaje_aprobado']);
                 $architect = Architect::find($project['architect_id']);
 
                 AdminContBankMovement::create([
                     'bank_account_id' => $commission->bank_account_id,
-                    'fecha'           => now()->toDateString(),
-                    'tipo'            => AdminContBankMovement::TIPO_COMISION,
-                    'concepto'        => "Comisión arquitecto {$architect?->name} — {$project['numero_pedido']}",
-                    'monto'           => $montos['total'] ?? $montos['comision'],
-                    'source_type'     => AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION,
-                    'source_id'       => $commission->id,
+                    'fecha' => now()->toDateString(),
+                    'tipo' => AdminContBankMovement::TIPO_COMISION,
+                    'concepto' => "Comisión arquitecto {$architect?->name} — {$project['numero_pedido']}",
+                    'monto' => $montos['total'] ?? $montos['comision'],
+                    'source_type' => AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION,
+                    'source_id' => $commission->id,
                 ]);
             }
 

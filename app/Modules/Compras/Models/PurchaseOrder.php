@@ -7,6 +7,7 @@ namespace App\Modules\Compras\Models;
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,66 +15,76 @@ use Illuminate\Support\Collection;
 
 /**
  * REQ-128→133 (Nueva Orden, 2H) + REQ-138→156 (Ver Órdenes 2A / Logística 2B, sprint2) — `status`
- * usa las 7 etapas de REQ-117. `requires_mark_approval` se calcula al crear (RN3 de REQ-118).
+ * usa las 7 etapas de REQ-117. `requires_primary_approval` se calcula al crear (RN3 de REQ-118).
  *
  * `modality` (directo|zona_libre) es un eje DISTINTO de `shipping_type` — REQ-153 los trata como
  * 2 datos separados de la tarjeta de envío, no el mismo campo.
  *
- * @property int         $id
- * @property int         $provider_id
- * @property string      $status
+ * @property int $id
+ * @property int $provider_id
+ * @property string $status
  * @property string|null $pending_remainder_status
  * @property string|null $shipping_type
  * @property string|null $who_pays_shipping
- * @property float|null  $shipping_cost
- * @property int|null    $liquidation_agency_id
- * @property string      $modality
- * @property \Carbon\Carbon|null $estimated_arrival_date
- * @property \Carbon\Carbon|null $actual_arrival_date
+ * @property float|null $shipping_cost
+ * @property int|null $liquidation_agency_id
+ * @property string $modality
+ * @property Carbon|null $estimated_arrival_date
+ * @property Carbon|null $actual_arrival_date
  * @property string|null $container_number
  * @property string|null $carrier
- * @property bool         $requires_mark_approval
- * @property int|null     $approved_by
- * @property string|null  $currency
- * @property float        $total_amount
- * @property string|null  $notes
- * @property \Carbon\Carbon      $created_at
- * @property \Carbon\Carbon|null $approved_at
- * @property \Carbon\Carbon      $status_changed_at
- * @property \Carbon\Carbon|null $payment_requested_at
- * @property float|null          $pending_amount_change
- * @property int|null            $amount_change_requested_by
- * @property \Carbon\Carbon|null $ordenado_at
- * @property \Carbon\Carbon|null $en_transito_at
- * @property \Carbon\Carbon|null $en_aduana_at
- * @property \Carbon\Carbon|null $en_transito_local_at
+ * @property bool $requires_primary_approval
+ * @property int|null $approved_by
+ * @property string|null $currency
+ * @property float $total_amount
+ * @property string|null $notes
+ * @property Carbon $created_at
+ * @property Carbon|null $approved_at
+ * @property Carbon $status_changed_at
+ * @property Carbon|null $payment_requested_at
+ * @property float|null $pending_amount_change
+ * @property int|null $amount_change_requested_by
+ * @property Carbon|null $ordenado_at
+ * @property Carbon|null $en_transito_at
+ * @property Carbon|null $en_aduana_at
+ * @property Carbon|null $en_transito_local_at
  * @property string|null $origin_module
- * @property \Carbon\Carbon|null $remainder_status_changed_at
- * @property \Carbon\Carbon|null $remainder_salio_de_origen_at
- * @property \Carbon\Carbon|null $remainder_en_transito_at
- * @property \Carbon\Carbon|null $remainder_en_aduana_at
- * @property \Carbon\Carbon|null $remainder_en_transito_local_at
+ * @property Carbon|null $remainder_status_changed_at
+ * @property Carbon|null $remainder_salio_de_origen_at
+ * @property Carbon|null $remainder_en_transito_at
+ * @property Carbon|null $remainder_en_aduana_at
+ * @property Carbon|null $remainder_en_transito_local_at
  */
 class PurchaseOrder extends Model
 {
     use LogsAuditTrail;
 
     public const STATUS_POR_APROBAR = 'por_aprobar';
+
     public const STATUS_PENDIENTE_LIQUIDAR = 'pendiente_liquidar';
+
     public const STATUS_ORDENADO = 'ordenado';
+
     public const STATUS_EN_TRANSITO = 'en_transito';
+
     public const STATUS_EN_ADUANA = 'en_aduana';
+
     public const STATUS_EN_TRANSITO_LOCAL = 'en_transito_local';
+
     public const STATUS_RECIBIDO = 'recibido';
 
     public const SHIPPING_AEREO = 'aereo';
+
     public const SHIPPING_MARITIMO = 'maritimo';
+
     public const SHIPPING_TERRESTRE = 'terrestre';
 
     public const PAYS_ATLANTIC = 'atlantic';
+
     public const PAYS_PROVIDER = 'proveedor';
 
     public const MODALITY_DIRECTO = 'directo';
+
     public const MODALITY_ZONA_LIBRE = 'zona_libre';
 
     /**
@@ -89,7 +100,9 @@ class PurchaseOrder extends Model
     private const CRITICAL_DAYS_POR_APROBAR = 3;
 
     public const PAYMENT_STATUS_PENDIENTE = 'pendiente';
+
     public const PAYMENT_STATUS_PARCIAL = 'parcial';
+
     public const PAYMENT_STATUS_COMPLETO = 'completo';
 
     /**
@@ -105,9 +118,13 @@ class PurchaseOrder extends Model
      * hasta que el remanente avance, igual que antes para `salio_de_origen`/`en_transito`.
      */
     public const REMAINDER_ORDENADO = 'ordenado';
+
     public const REMAINDER_SALIO_DE_ORIGEN = 'salio_de_origen';
+
     public const REMAINDER_EN_TRANSITO = 'en_transito';
+
     public const REMAINDER_EN_ADUANA = 'en_aduana';
+
     public const REMAINDER_EN_TRANSITO_LOCAL = 'en_transito_local';
 
     /** @var list<string> */
@@ -128,15 +145,17 @@ class PurchaseOrder extends Model
      * @var array<string, string>
      */
     public const REMAINDER_STAGE_DATE_COLUMNS = [
-        self::REMAINDER_SALIO_DE_ORIGEN   => 'remainder_salio_de_origen_at',
-        self::REMAINDER_EN_TRANSITO       => 'remainder_en_transito_at',
-        self::REMAINDER_EN_ADUANA         => 'remainder_en_aduana_at',
+        self::REMAINDER_SALIO_DE_ORIGEN => 'remainder_salio_de_origen_at',
+        self::REMAINDER_EN_TRANSITO => 'remainder_en_transito_at',
+        self::REMAINDER_EN_ADUANA => 'remainder_en_aduana_at',
         self::REMAINDER_EN_TRANSITO_LOCAL => 'remainder_en_transito_local_at',
     ];
 
     /** REQ-145 — "Recepción", por línea y consolidada de la orden. */
     public const RECEPTION_PENDIENTE = 'pendiente';
+
     public const RECEPTION_PARCIAL = 'parcial';
+
     public const RECEPTION_COMPLETO = 'completo';
 
     /**
@@ -147,9 +166,9 @@ class PurchaseOrder extends Model
      * @var array<string, string>
      */
     public const STAGE_DATE_COLUMNS = [
-        self::STATUS_ORDENADO          => 'ordenado_at',
-        self::STATUS_EN_TRANSITO       => 'en_transito_at',
-        self::STATUS_EN_ADUANA         => 'en_aduana_at',
+        self::STATUS_ORDENADO => 'ordenado_at',
+        self::STATUS_EN_TRANSITO => 'en_transito_at',
+        self::STATUS_EN_ADUANA => 'en_aduana_at',
         self::STATUS_EN_TRANSITO_LOCAL => 'en_transito_local_at',
     ];
 
@@ -157,7 +176,7 @@ class PurchaseOrder extends Model
     protected $fillable = [
         'provider_id', 'status', 'shipping_type', 'who_pays_shipping', 'shipping_cost', 'modality',
         'estimated_arrival_date', 'actual_arrival_date', 'container_number', 'carrier',
-        'requires_mark_approval', 'approved_by', 'approved_at', 'currency', 'total_amount',
+        'requires_primary_approval', 'approved_by', 'approved_at', 'currency', 'total_amount',
         'notes', 'created_by', 'status_changed_at', 'liquidation_agency_id',
         'payment_requested_at', 'pending_amount_change', 'amount_change_requested_by',
         'pending_remainder_status', 'ordenado_at', 'en_transito_at', 'en_aduana_at', 'en_transito_local_at',
@@ -169,23 +188,23 @@ class PurchaseOrder extends Model
     protected function casts(): array
     {
         return [
-            'requires_mark_approval' => 'boolean',
-            'total_amount'           => 'float',
-            'shipping_cost'          => 'float',
-            'approved_at'            => 'datetime',
+            'requires_primary_approval' => 'boolean',
+            'total_amount' => 'float',
+            'shipping_cost' => 'float',
+            'approved_at' => 'datetime',
             'estimated_arrival_date' => 'date',
-            'actual_arrival_date'    => 'date',
-            'status_changed_at'      => 'datetime',
-            'payment_requested_at'   => 'datetime',
-            'pending_amount_change'  => 'float',
-            'ordenado_at'            => 'datetime',
-            'en_transito_at'         => 'datetime',
-            'en_aduana_at'           => 'datetime',
-            'en_transito_local_at'   => 'datetime',
-            'remainder_status_changed_at'    => 'datetime',
-            'remainder_salio_de_origen_at'   => 'datetime',
-            'remainder_en_transito_at'       => 'datetime',
-            'remainder_en_aduana_at'         => 'datetime',
+            'actual_arrival_date' => 'date',
+            'status_changed_at' => 'datetime',
+            'payment_requested_at' => 'datetime',
+            'pending_amount_change' => 'float',
+            'ordenado_at' => 'datetime',
+            'en_transito_at' => 'datetime',
+            'en_aduana_at' => 'datetime',
+            'en_transito_local_at' => 'datetime',
+            'remainder_status_changed_at' => 'datetime',
+            'remainder_salio_de_origen_at' => 'datetime',
+            'remainder_en_transito_at' => 'datetime',
+            'remainder_en_aduana_at' => 'datetime',
             'remainder_en_transito_local_at' => 'datetime',
         ];
     }
@@ -311,7 +330,7 @@ class PurchaseOrder extends Model
     /**
      * RN3 (REQ-118, aplica a Nueva Orden): aéreo + paga Atlantic requiere aprobación de Mark.
      */
-    public static function computeRequiresMarkApproval(?string $shippingType, ?string $whoPaysShipping): bool
+    public static function computeRequiresPrimaryApproval(?string $shippingType, ?string $whoPaysShipping): bool
     {
         return $shippingType === self::SHIPPING_AEREO && $whoPaysShipping === self::PAYS_ATLANTIC;
     }
@@ -320,7 +339,7 @@ class PurchaseOrder extends Model
      * REQ-141: secuencia de estados según el origen del proveedor — un proveedor local se salta
      * tránsito/aduana (RN1/Escenario 1). `pendiente_liquidar` pasaba fuera de la secuencia
      * automática a propósito (se alcanzaba solo vía el botón "Liquidar" de Zona Libre, REQ-147) —
-     * realineado 2026-08-06 (hallazgo Daniela Amaya, SCRUM-204): TODA orden pasa por
+     * realineado 2026-08-06 (hallazgo Gerencia Test, SCRUM-204): TODA orden pasa por
      * "Pendiente/Por liquidar" entre "Por aprobar" y "Ordenado", sin importar la modalidad — ver
      * `orderStatusLabel()` (frontend, `atlanticerp-frontend/src/utils/orderStatusLabel.ts`) para el
      * texto mostrado según `modality` — la derivación es del lado del cliente, no hay un método
@@ -413,10 +432,10 @@ class PurchaseOrder extends Model
      * no se dio, no se puede avanzar — el aviso deja de ser meramente informativo (brecha que el
      * propio REQ-143 marcó como "deber ser", no construida en el mockup original).
      */
-    public function isBlockedByMarkApproval(): bool
+    public function isBlockedByPrimaryApproval(): bool
     {
         return $this->status === self::STATUS_POR_APROBAR
-            && $this->requires_mark_approval
+            && $this->requires_primary_approval
             && $this->approved_by === null;
     }
 
@@ -485,9 +504,9 @@ class PurchaseOrder extends Model
      * movimiento asociado, algo llegó físicamente aunque Inventario no lo haya formalizado.
      *
      * @param  Collection<int, int>|null  $receivedByProduct  catalog_product_id => unidades ya
-     *   registradas (confirmado o no). Si es null, se consulta acá mismo (1 query) — para
-     *   listados, pasar el mapa ya precalculado en batch (ver receivedQuantitiesForOrders()) y
-     *   evitar 1 query por orden.
+     *                                                        registradas (confirmado o no). Si es null, se consulta acá mismo (1 query) — para
+     *                                                        listados, pasar el mapa ya precalculado en batch (ver receivedQuantitiesForOrders()) y
+     *                                                        evitar 1 query por orden.
      * @return array{status: string, lines: array<int, array{catalog_product_id: int, expected: int, received: int, status: string}>}
      */
     public function receptionSummary(?Collection $receivedByProduct = null): array
@@ -502,9 +521,9 @@ class PurchaseOrder extends Model
 
             return [
                 'catalog_product_id' => (int) $productId,
-                'expected'           => $exp,
-                'received'           => $rec,
-                'status'             => self::lineReceptionStatus($rec, $exp),
+                'expected' => $exp,
+                'received' => $rec,
+                'status' => self::lineReceptionStatus($rec, $exp),
             ];
         })->values()->all();
 

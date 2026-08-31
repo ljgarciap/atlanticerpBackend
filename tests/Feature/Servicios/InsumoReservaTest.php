@@ -28,9 +28,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class InsumoReservaTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
     protected function setUp(): void
     {
@@ -89,14 +89,14 @@ class InsumoReservaTest extends FeatureTestCase
     public function test_agregar_insumo_crea_setting_y_dispara_solicitud_en_0_disponible(): void
     {
         $provider = $this->makeLocalProvider();
-        $product  = $this->makeProduct(['provider_id' => $provider->id]);
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/insumos', [
                 'catalog_product_id' => $product->id,
-                'minimo'             => 5,
-                'cantidad_inicial'   => 10,
+                'minimo' => 5,
+                'cantidad_inicial' => 10,
             ])
             ->assertStatus(201);
 
@@ -105,7 +105,7 @@ class InsumoReservaTest extends FeatureTestCase
         $this->assertSame('bajo_minimo', $response->json('estado'));
 
         $this->reMakeCurrent();
-        $this->assertDatabaseCount((new InsumoSetting())->getTable(), 1);
+        $this->assertDatabaseCount((new InsumoSetting)->getTable(), 1);
 
         $purchaseRequest = InsumoPurchaseRequest::where('catalog_product_id', $product->id)->firstOrFail();
         $this->assertSame(InsumoPurchaseRequest::ESTADO_PENDIENTE, $purchaseRequest->estado);
@@ -136,15 +136,15 @@ class InsumoReservaTest extends FeatureTestCase
     public function test_agregar_insumo_ya_trackeado_retorna_422(): void
     {
         $provider = $this->makeLocalProvider();
-        $product  = $this->makeProduct(['provider_id' => $provider->id]);
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
         InsumoSetting::create(['catalog_product_id' => $product->id, 'minimo' => 3]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/insumos', [
                 'catalog_product_id' => $product->id,
-                'minimo'             => 5,
-                'cantidad_inicial'   => 10,
+                'minimo' => 5,
+                'cantidad_inicial' => 10,
             ])
             ->assertStatus(422);
     }
@@ -157,8 +157,8 @@ class InsumoReservaTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/insumos', [
                 'catalog_product_id' => $product->id,
-                'minimo'             => 5,
-                'cantidad_inicial'   => 10,
+                'minimo' => 5,
+                'cantidad_inicial' => 10,
             ])
             ->assertStatus(422);
 
@@ -166,20 +166,20 @@ class InsumoReservaTest extends FeatureTestCase
 
         // RN — sin proveedor, no debe quedar ningún setting/solicitud huérfana.
         $this->reMakeCurrent();
-        $this->assertDatabaseCount((new InsumoSetting())->getTable(), 0);
+        $this->assertDatabaseCount((new InsumoSetting)->getTable(), 0);
     }
 
     public function test_tecnico_interno_no_puede_agregar_insumo(): void
     {
         $provider = $this->makeLocalProvider();
-        $product  = $this->makeProduct(['provider_id' => $provider->id]);
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
 
         $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/insumos', [
                 'catalog_product_id' => $product->id,
-                'minimo'             => 5,
-                'cantidad_inicial'   => 10,
+                'minimo' => 5,
+                'cantidad_inicial' => 10,
             ])
             ->assertStatus(403);
     }
@@ -189,8 +189,8 @@ class InsumoReservaTest extends FeatureTestCase
     public function test_listado_calcula_disponible_y_estado_desde_reserva_servicios(): void
     {
         $provider = $this->makeLocalProvider();
-        $ok       = $this->makeProduct(['provider_id' => $provider->id, 'reference' => 'INS-OK-'.uniqid()]);
-        $bajo     = $this->makeProduct(['provider_id' => $provider->id, 'reference' => 'INS-BAJO-'.uniqid()]);
+        $ok = $this->makeProduct(['provider_id' => $provider->id, 'reference' => 'INS-OK-'.uniqid()]);
+        $bajo = $this->makeProduct(['provider_id' => $provider->id, 'reference' => 'INS-BAJO-'.uniqid()]);
 
         InsumoSetting::create(['catalog_product_id' => $ok->id, 'minimo' => 5]);
         InsumoSetting::create(['catalog_product_id' => $bajo->id, 'minimo' => 5]);
@@ -199,13 +199,13 @@ class InsumoReservaTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $ok->id, 'warehouse_id' => $reservaId, 'quantity' => 10]);
         ProductWarehouseStock::create(['catalog_product_id' => $bajo->id, 'warehouse_id' => $reservaId, 'quantity' => 2]);
 
-        $token    = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/insumos')
             ->assertStatus(200);
 
         $rows = collect($response->json('data'));
-        $okRow   = $rows->firstWhere('catalog_product_id', $ok->id);
+        $okRow = $rows->firstWhere('catalog_product_id', $ok->id);
         $bajoRow = $rows->firstWhere('catalog_product_id', $bajo->id);
 
         $this->assertSame(10, $okRow['disponible']);
@@ -224,14 +224,14 @@ class InsumoReservaTest extends FeatureTestCase
     public function test_orden_recibida_reubica_de_bodega_central_a_reserva_servicios_y_marca_solicitud_recibida(): void
     {
         $provider = $this->makeLocalProvider();
-        $product  = $this->makeProduct(['provider_id' => $provider->id]);
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
 
         $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($liderToken))
             ->postJson('/api/servicios/insumos', [
                 'catalog_product_id' => $product->id,
-                'minimo'             => 3,
-                'cantidad_inicial'   => 10,
+                'minimo' => 3,
+                'cantidad_inicial' => 10,
             ])
             ->assertStatus(201);
 
@@ -311,14 +311,14 @@ class InsumoReservaTest extends FeatureTestCase
     public function test_orden_recibida_en_dos_entregas_parciales_reubica_la_suma_de_ambos_recibos(): void
     {
         $provider = $this->makeLocalProvider();
-        $product  = $this->makeProduct(['provider_id' => $provider->id]);
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
 
         $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($liderToken))
             ->postJson('/api/servicios/insumos', [
                 'catalog_product_id' => $product->id,
-                'minimo'             => 3,
-                'cantidad_inicial'   => 10,
+                'minimo' => 3,
+                'cantidad_inicial' => 10,
             ])
             ->assertStatus(201);
 
@@ -380,11 +380,11 @@ class InsumoReservaTest extends FeatureTestCase
     public function test_orden_de_compras_normal_sin_origen_servicios_no_dispara_reubicacion(): void
     {
         $provider = $this->makeLocalProvider();
-        $product  = $this->makeProduct(['provider_id' => $provider->id]);
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $token   = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         // loginAs() ya disparó una request HTTP real, que resetea el search_path/tenant "actual"
@@ -417,7 +417,7 @@ class InsumoReservaTest extends FeatureTestCase
             ->where('warehouse_id', $bodegaCentralId)->first();
         $this->assertSame(4, $centralStock->quantity);
 
-        $this->assertDatabaseCount((new InsumoPurchaseRequest())->getTable(), 0);
+        $this->assertDatabaseCount((new InsumoPurchaseRequest)->getTable(), 0);
         $reubicaciones = InventoryMovement::where('catalog_product_id', $product->id)
             ->where('tipo', InventoryMovement::TIPO_REUBICACION)->count();
         $this->assertSame(0, $reubicaciones);

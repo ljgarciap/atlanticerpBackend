@@ -15,9 +15,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class ToolMovementsEndpointTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
     protected function setUp(): void
     {
@@ -29,9 +29,9 @@ class ToolMovementsEndpointTest extends FeatureTestCase
     private function makeTool(array $overrides = []): Tool
     {
         return Tool::create([
-            'nombre'       => 'Escalera',
-            'codigo_unico' => 'COD-HER-' . random_int(100000, 999999),
-            'estado'       => Tool::ESTADO_GOOD,
+            'nombre' => 'Escalera',
+            'codigo_unico' => 'COD-HER-'.random_int(100000, 999999),
+            'estado' => Tool::ESTADO_GOOD,
             ...$overrides,
         ]);
     }
@@ -75,7 +75,7 @@ class ToolMovementsEndpointTest extends FeatureTestCase
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tools/{$tool->id}/estado", [
-                'estado'  => Tool::ESTADO_DAMAGED,
+                'estado' => Tool::ESTADO_DAMAGED,
                 'detalle' => 'Cable pelado detectado en inspección de rutina',
             ])
             ->assertStatus(200);
@@ -101,7 +101,7 @@ class ToolMovementsEndpointTest extends FeatureTestCase
     {
         $toolA = $this->makeTool(['nombre' => 'Escalera']);
         $toolB = $this->makeTool(['nombre' => 'Escalera']);
-        $otra  = $this->makeTool(['nombre' => 'Taladro']);
+        $otra = $this->makeTool(['nombre' => 'Taladro']);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $headers = $this->authHeaders($token);
@@ -197,7 +197,7 @@ class ToolMovementsEndpointTest extends FeatureTestCase
     // no a todo el módulo (a diferencia de `/tools` y `/tools/purchase-requests`). El test
     // original afirmaba lo contrario (200 para técnico) — reflejaba el gate real ANTES del fix,
     // no lo que pedía el ticket.
-    public function test_tecnico_interno_NO_puede_leer_el_kardex_de_herramientas(): void
+    public function test_tecnico_interno_n_o_puede_leer_el_kardex_de_herramientas(): void
     {
         $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
         $this->withHeaders($this->authHeaders($token))

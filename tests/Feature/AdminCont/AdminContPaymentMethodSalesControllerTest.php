@@ -15,7 +15,8 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 23 Grupo 3 de Admin&Cont (SCRUM-665→669, REQ-588→592) — "Ventas por medio de pago" (4M4). */
 class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
@@ -72,7 +73,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
 
     public function test_sin_cliente_muestra_todos_por_default_nunca_estado_vacio(): void
     {
-        $master  = MasterClient::create(['name' => 'Cliente VMP Default']);
+        $master = MasterClient::create(['name' => 'Cliente VMP Default']);
         $invoice = $this->makeInvoice($master->id, 1000.0, 0, '2026-01-01 09:00:00');
         $this->makePayment($invoice, 1000.0, AdminContPayment::METODO_TRANSFERENCIA, '2026-01-01 09:00:00');
 
@@ -89,7 +90,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
 
     public function test_monto_de_la_factura_cae_en_una_sola_de_las_9_columnas_reales(): void
     {
-        $master  = MasterClient::create(['name' => 'Cliente VMP Tarjeta']);
+        $master = MasterClient::create(['name' => 'Cliente VMP Tarjeta']);
         $invoice = $this->makeInvoice($master->id, 660.0, 0, '2026-02-01 09:00:00');
         $this->makePayment($invoice, 660.0, AdminContPayment::METODO_TARJETA, '2026-02-01 09:00:00');
 
@@ -110,7 +111,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
     public function test_suma_de_las_9_columnas_de_total_del_periodo_coincide_con_el_total_del_resumen(): void
     {
         $master = MasterClient::create(['name' => 'Cliente VMP Totales']);
-        $inv1   = $this->makeInvoice($master->id, 500.0, 0, '2026-03-01 09:00:00');
+        $inv1 = $this->makeInvoice($master->id, 500.0, 0, '2026-03-01 09:00:00');
         $this->makePayment($inv1, 500.0, AdminContPayment::METODO_EFECTIVO, '2026-03-01 09:00:00');
         $inv2 = $this->makeInvoice($master->id, 300.0, 0, '2026-03-02 09:00:00');
         $this->makePayment($inv2, 300.0, AdminContPayment::METODO_YAPPY, '2026-03-02 09:00:00');

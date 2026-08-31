@@ -12,6 +12,7 @@ use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\Servicios\Models\InsumoPurchaseRequest;
 use App\Modules\Servicios\Models\InsumoSetting;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -53,7 +54,7 @@ final class InsumoService
             return [];
         }
 
-        /** @var \Illuminate\Support\Collection<int, int> $stockByProduct catalog_product_id => quantity */
+        /** @var Collection<int, int> $stockByProduct catalog_product_id => quantity */
         $stockByProduct = ProductWarehouseStock::query()
             ->where('warehouse_id', $reservaId)
             ->whereIn('catalog_product_id', $settings->pluck('catalog_product_id'))
@@ -87,8 +88,9 @@ final class InsumoService
      * una vez, ver `unique` de la migración. Al confirmar, dispara automáticamente una solicitud
      * de compra (REQ-274) por `cantidadInicial` — arranca en 0 disponible hasta que se reciba.
      *
-     * @throws \InvalidArgumentException el producto ya está trackeado, o no tiene proveedor asignado
      * @return array<string, mixed>
+     *
+     * @throws \InvalidArgumentException el producto ya está trackeado, o no tiene proveedor asignado
      */
     public function addInsumo(int $catalogProductId, int $minimo, int $cantidadInicial, User $user): array
     {
@@ -100,7 +102,7 @@ final class InsumoService
 
             $setting = InsumoSetting::create([
                 'catalog_product_id' => $catalogProductId,
-                'minimo'             => $minimo,
+                'minimo' => $minimo,
             ]);
 
             $this->requestPurchase($setting, $cantidadInicial, $user);
@@ -123,7 +125,7 @@ final class InsumoService
      * nada más) — se deriva del proveedor por defecto del producto
      * (`catalog_products.provider_id`), mismo dato que ya usa Compras para reordenar este
      * producto. `shipping_type`/`who_pays_shipping` quedan NULL a propósito — sin esos datos
-     * `PurchaseOrder::computeRequiresMarkApproval()` siempre da `false` (RN3/REQ-118 solo aplica a
+     * `PurchaseOrder::computeRequiresPrimaryApproval()` siempre da `false` (RN3/REQ-118 solo aplica a
      * envíos aéreos pagados por Atlantic, que este flujo interno nunca captura), así que la
      * orden nace directo en "Pendiente/Por liquidar", sin bloquear en un gate de aprobación de
      * Mark que este formulario no tiene forma de satisfacer.
@@ -148,32 +150,32 @@ final class InsumoService
             $subtotal = round($unitCost * $cantidad, 2);
 
             $order = PurchaseOrder::create([
-                'provider_id'            => $product->provider_id,
-                'status'                 => PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
-                'status_changed_at'      => now(),
-                'modality'               => PurchaseOrder::MODALITY_DIRECTO,
-                'requires_mark_approval' => false,
-                'currency'               => 'USD',
-                'total_amount'           => $subtotal,
-                'notes'                  => "Solicitud de Reserva Servicios — {$product->description}",
-                'created_by'             => $user->id,
-                'origin_module'          => PurchaseOrder::ORIGIN_SERVICIOS,
+                'provider_id' => $product->provider_id,
+                'status' => PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
+                'status_changed_at' => now(),
+                'modality' => PurchaseOrder::MODALITY_DIRECTO,
+                'requires_primary_approval' => false,
+                'currency' => 'USD',
+                'total_amount' => $subtotal,
+                'notes' => "Solicitud de Reserva Servicios — {$product->description}",
+                'created_by' => $user->id,
+                'origin_module' => PurchaseOrder::ORIGIN_SERVICIOS,
             ]);
 
             PurchaseOrderLine::create([
-                'purchase_order_id'  => $order->id,
+                'purchase_order_id' => $order->id,
                 'catalog_product_id' => $product->id,
-                'quantity'           => $cantidad,
-                'unit_cost'          => $unitCost,
-                'subtotal'           => $subtotal,
+                'quantity' => $cantidad,
+                'unit_cost' => $unitCost,
+                'subtotal' => $subtotal,
             ]);
 
             return InsumoPurchaseRequest::create([
-                'catalog_product_id'  => $product->id,
+                'catalog_product_id' => $product->id,
                 'cantidad_solicitada' => $cantidad,
-                'estado'              => InsumoPurchaseRequest::ESTADO_PENDIENTE,
-                'purchase_order_id'   => $order->id,
-                'solicitado_por'      => $user->id,
+                'estado' => InsumoPurchaseRequest::ESTADO_PENDIENTE,
+                'purchase_order_id' => $order->id,
+                'solicitado_por' => $user->id,
             ]);
         });
     }
@@ -182,13 +184,13 @@ final class InsumoService
     public function presentPurchaseRequest(InsumoPurchaseRequest $r): array
     {
         return [
-            'id'                  => $r->id,
-            'catalog_product_id'  => $r->catalog_product_id,
+            'id' => $r->id,
+            'catalog_product_id' => $r->catalog_product_id,
             'cantidad_solicitada' => $r->cantidad_solicitada,
-            'estado'              => $r->estado,
-            'purchase_order_id'   => $r->purchase_order_id,
-            'received_at'         => $r->received_at?->toIso8601String(),
-            'created_at'          => $r->created_at->toIso8601String(),
+            'estado' => $r->estado,
+            'purchase_order_id' => $r->purchase_order_id,
+            'received_at' => $r->received_at?->toIso8601String(),
+            'created_at' => $r->created_at->toIso8601String(),
         ];
     }
 
@@ -211,20 +213,20 @@ final class InsumoService
         // "member access on null" aunque $product sea null) — mismo criterio ya usado en
         // ToolService::summary().
         return [
-            'id'                 => $s->id,
+            'id' => $s->id,
             'catalog_product_id' => $s->catalog_product_id,
-            'referencia'         => $product->factory_reference ?? $product->reference ?? null,
+            'referencia' => $product->factory_reference ?? $product->reference ?? null,
             // SCRUM-361/779 (rebote QA 2026-08-19) — la migración 2026_08_15_100000 movió el
             // nombre visible del producto a la columna `name` y reseteó `description` a '' —
             // este mapeo quedó leyendo el campo viejo, devolviendo nombre vacío tras la migración
             // ICG (SCRUM-750/751). ProductLookupController::format() ya usa `name` correctamente.
-            'nombre'             => $product->name ?? null,
-            'disponible'         => $disponible,
-            'minimo'             => $s->minimo,
-            'estado'             => $disponible >= $s->minimo ? 'ok' : 'bajo_minimo',
+            'nombre' => $product->name ?? null,
+            'disponible' => $disponible,
+            'minimo' => $s->minimo,
+            'estado' => $disponible >= $s->minimo ? 'ok' : 'bajo_minimo',
             // REQ-274 RN4 — null cuando no hay solicitud activa (el botón muestra "Solicitar");
             // 'pendiente' mientras la PurchaseOrder real no llegó a "Recibido".
-            'estado_solicitud'   => $estadoSolicitud,
+            'estado_solicitud' => $estadoSolicitud,
         ];
     }
 }

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * SCRUM-329 Oleada A / Batch A1 (REQ-307) — mapeo configurable vendedor→Asistente de Bodega, la
  * fuente de verdad de `Order.assistant_id` al aprobar una cotización (REQ-308). RN3 de REQ-307 es
  * explícito: "esta tabla de mapeo debe ser configurable (no codificada de forma fija)" — nunca un
- * `match()`/array hardcodeado con los nombres reales (Mariano Sandoval, Osvaldo Santos, etc., ver
+ * `match()`/array hardcodeado con los nombres reales (Asistente Bodega Test 2, Asistente Bodega Test, etc., ver
  * `database/seeders/WarehouseAssistantMappingSeeder.php` para el seed inicial real).
  *
  * `is_active` permite reasignar un vendedor a otro asistente sin perder el historial de quién

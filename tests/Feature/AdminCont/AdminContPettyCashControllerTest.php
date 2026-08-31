@@ -14,12 +14,12 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 20 de Admin&Cont (SCRUM-612→617, REQ-535→540) — Caja Chica. */
 class AdminContPettyCashControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
 
-    private const YANETH_EMAIL = 'asistente@atlantic.com.pa';
+    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
 
     /** Mismo email real que `AdminContCreditNoteControllerTest`/`AdminContInvoiceControllerTest`. */
-    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -40,7 +40,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     private function userIdByEmail(string $email): int
@@ -63,8 +63,8 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     /** REQ-540 RN1 — solo Mark aprueba, sin importar quién esté configurado como approver hoy. */
     private function ensureMarkIsApprover(): void
     {
-        $markId = $this->userIdByEmail(self::MARK_EMAIL);
-        DB::table($this->tableFqn('fiscal_settings'))->where('id', 1)->update(['mark_approver_user_id' => $markId]);
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        DB::table($this->tableFqn('fiscal_settings'))->where('id', 1)->update(['primary_approver_user_id' => $markId]);
     }
 
     /** @return array<string, mixed> */
@@ -85,7 +85,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $token = $this->loginAsFelix();
         $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
-        $markId = $this->userIdByEmail(self::MARK_EMAIL);
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/petty-cash/expenses', [
@@ -146,7 +146,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $token = $this->loginAsFelix();
         $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
-        $markId = $this->userIdByEmail(self::MARK_EMAIL);
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/petty-cash/expenses', [
             'lineas' => [$this->lineaPayload($felixId, 'A', 10, 0), $this->lineaPayload($markId, 'B', 20, 0)],

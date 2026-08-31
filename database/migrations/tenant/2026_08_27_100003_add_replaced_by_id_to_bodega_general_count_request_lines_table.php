@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SCRUM-797 (rebote de Daniela Amaya 2026-08-27, "Validación de Conteos Pendientes por Producto y
+ * SCRUM-797 (rebote de Gerencia Test 2026-08-27, "Validación de Conteos Pendientes por Producto y
  * Bodega") — el chequeo de duplicados de Inventario General pasa de bodega completa a
  * producto+bodega (ver docblock de `GeneralCountController::store()`/`findConflictingLines()`).
  * Como un "Conteo General" sigue precargando TODOS los productos de la bodega a la vez (eso no

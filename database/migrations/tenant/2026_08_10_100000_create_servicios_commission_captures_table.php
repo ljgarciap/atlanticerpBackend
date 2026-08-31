@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Fase 4 — Servicios, Batch 7 (REQ-292) — captura mensual de los 3 criterios de comisión que el
  * sistema no puede calcular solo (satisfacción, puntualidad, actitud), más la bandera de licencia
- * médica (RN4). Un registro por técnico/mes/año (RN1) — hoy solo Carlos Vergara tiene plan de
+ * médica (RN4). Un registro por técnico/mes/año (RN1) — hoy solo Tecnico Servicios Test tiene plan de
  * bonificación activo (REQ-258 RN7), pero el mecanismo es genérico por `internal_technician_id`
  * para no repetir trabajo si mañana se define un plan similar para otro técnico.
  *

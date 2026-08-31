@@ -39,7 +39,7 @@ class RegisterCreditNoteRequest extends FormRequest
         $tipo = (string) $this->input('tipo');
 
         $facturaOrigenId = $this->input('factura_origen_id');
-        $facturaOrigen   = is_numeric($facturaOrigenId) ? AdminContInvoice::find((int) $facturaOrigenId) : null;
+        $facturaOrigen = is_numeric($facturaOrigenId) ? AdminContInvoice::find((int) $facturaOrigenId) : null;
 
         $montoInput = is_numeric($this->input('monto')) ? (float) $this->input('monto') : 0.0;
         $montoEfectivo = $tipo === AdminContCreditNote::TIPO_ANULACION_COMPLETA && $facturaOrigen !== null
@@ -51,7 +51,7 @@ class RegisterCreditNoteRequest extends FormRequest
             : 0.0;
         $hayExcedente = $facturaOrigen !== null && round($montoEfectivo - $saldoPendiente, 2) > 0;
 
-        $threshold = (float) AdminContFiscalSettings::current()->mark_approval_threshold;
+        $threshold = (float) AdminContFiscalSettings::current()->primary_approval_threshold;
 
         // REQ-487 RN1/RN2 — la devolución nunca lo exige, sin importar tipo/monto. Predicado
         // compartido con `CreditNoteService::decide()` (Batch 13, RN2 de REQ-494) — ver docblock
@@ -59,9 +59,9 @@ class RegisterCreditNoteRequest extends FormRequest
         $requiereComprobante = AdminContCreditNote::requiresComprobante($tipo, $montoEfectivo, $threshold);
 
         return [
-            'master_client_id'   => ['required', 'integer'],
-            'cliente'            => ['required', 'string', 'max:255'],
-            'tipo'               => ['required', Rule::in([
+            'master_client_id' => ['required', 'integer'],
+            'cliente' => ['required', 'string', 'max:255'],
+            'tipo' => ['required', Rule::in([
                 AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL,
                 AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA,
                 AdminContCreditNote::TIPO_ANULACION_COMPLETA,
@@ -95,7 +95,7 @@ class RegisterCreditNoteRequest extends FormRequest
                 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240',
             ],
             'mercancia_regresa_bodega' => ['sometimes', 'boolean'],
-            'devolucion_bodega_id'     => ['sometimes', 'nullable', 'integer'],
+            'devolucion_bodega_id' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 

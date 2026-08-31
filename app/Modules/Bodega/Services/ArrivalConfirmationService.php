@@ -79,9 +79,9 @@ final class ArrivalConfirmationService
                 $remaining -= $grant;
 
                 $line->update([
-                    'bodega_confirmed_at'       => now(),
+                    'bodega_confirmed_at' => now(),
                     'bodega_confirmed_quantity' => $grant,
-                    'bodega_confirmed_by'       => $userId,
+                    'bodega_confirmed_by' => $userId,
                 ]);
                 $confirmedLineIds[] = $line->id;
             }
@@ -103,7 +103,7 @@ final class ArrivalConfirmationService
      *   - `pending_bodega_action`: hay líneas "Por ingresar" que Bodega todavía no reportó (botón).
      *   - `awaiting_compras`: hay líneas que Bodega YA reportó pero Compras todavía no finalizó
      *     (nota "ya confirmaste, esperando a que Compras finalice").
-     *   - `confirmed_quantity`/`confirmed_by_name` (rebote REQ-427, Daniela Amaya 2026-08-13) — la
+     *   - `confirmed_quantity`/`confirmed_by_name` (rebote REQ-427, Gerencia Test 2026-08-13) — la
      *     cantidad total ya reportada y el nombre de quién la reportó, para que tanto la nota de
      *     Bodega como el detalle de Compras muestren el dato real en vez de un genérico "esperando".
      *
@@ -119,7 +119,7 @@ final class ArrivalConfirmationService
      * Mismo cálculo que `pendingSummary()`, para todos los productos de una tabla paginada a la
      * vez (1 sola query) — evita 1 query por fila en `BodegaInventoryController::index()`.
      *
-     * @param list<int> $productIds
+     * @param  list<int>  $productIds
      * @return array<int, array{pending_bodega_action: bool, awaiting_compras: bool, confirmed_quantity: int, confirmed_by_name: string|null}>
      */
     public function bulkPendingSummary(array $productIds): array
@@ -148,9 +148,9 @@ final class ArrivalConfirmationService
 
             $result[$productId] = [
                 'pending_bodega_action' => $lines->contains(fn (PurchaseOrderReceiptLine $l): bool => $l->needsBodegaConfirmation()),
-                'awaiting_compras'      => $confirmedLines->isNotEmpty(),
-                'confirmed_quantity'    => (int) $confirmedLines->sum('bodega_confirmed_quantity'),
-                'confirmed_by_name'     => $confirmedByUser !== null ? trim("{$confirmedByUser->first_name} {$confirmedByUser->last_name}") : null,
+                'awaiting_compras' => $confirmedLines->isNotEmpty(),
+                'confirmed_quantity' => (int) $confirmedLines->sum('bodega_confirmed_quantity'),
+                'confirmed_by_name' => $confirmedByUser !== null ? trim("{$confirmedByUser->first_name} {$confirmedByUser->last_name}") : null,
             ];
         }
 

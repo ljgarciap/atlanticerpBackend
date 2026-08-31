@@ -191,7 +191,7 @@ Route::prefix('general-counts')->group(function (): void {
     Route::post('/{id}/approve', [GeneralCountController::class, 'approve'])->middleware('permission:bodega.approve');
     Route::post('/{id}/reject', [GeneralCountController::class, 'reject'])->middleware('permission:bodega.approve');
     Route::post('/{id}/apply', [GeneralCountController::class, 'apply'])->middleware('permission:bodega.write');
-    // SCRUM-462 (rebote de Daniela Amaya 2026-08-14) — un conteo en borrador (pendiente_evaluacion)
+    // SCRUM-462 (rebote de Gerencia Test 2026-08-14) — un conteo en borrador (pendiente_evaluacion)
     // o evaluado pero nunca enviado a aprobación quedaba inerte en la bandeja, sin ninguna acción
     // disponible. "Continuar" retoma la evaluación (mismo estado, el frontend navega al detalle ya
     // cargado con lo que haya). "Eliminar" borra el borrador completo — solo si NO fue enviado a
@@ -215,7 +215,7 @@ Route::prefix('returns')->group(function (): void {
     Route::post('/', [CustomerReturnController::class, 'store'])->middleware('permission:bodega.write');
     Route::get('/{id}', [CustomerReturnController::class, 'show'])->middleware('permission:bodega.read');
     Route::post('/{id}/signed-document', [CustomerReturnController::class, 'uploadSignedDocument'])->middleware('permission:bodega.write');
-    // SCRUM-478 (rebote de Daniela Amaya 2026-08-16) — subir el documento funcionaba, pero no
+    // SCRUM-478 (rebote de Gerencia Test 2026-08-16) — subir el documento funcionaba, pero no
     // había ninguna forma de verlo/descargarlo después: mismo patrón GET presignado que /form y
     // /delivery-guide, pero sobre el archivo YA subido (sin generar nada nuevo).
     Route::get('/{id}/signed-document', [CustomerReturnController::class, 'signedDocumentUrl'])->middleware('permission:bodega.read');

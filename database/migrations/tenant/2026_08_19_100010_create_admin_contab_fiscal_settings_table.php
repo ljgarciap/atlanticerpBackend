@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Schema;
 /**
  * SCRUM-632/633/634/637 (REQ-555/556/557/560) — fila única (id=1) de Configuración Fiscal.
  * Mismo patrón que `compras.settings`/`ComprasSettings`: parámetros de negocio en tabla
- * configurable, nunca hardcodeados. `mark_approver_user_id` se deja NULL acá — lo backfillea
- * `AdminContMarkApproverBackfillSeeder` (mismo criterio que `MarkApproverBackfillSeeder` de
+ * configurable, nunca hardcodeados. `primary_approver_user_id` se deja NULL acá — lo backfillea
+ * `AdminContPrimaryApproverBackfillSeeder` (mismo criterio que `PrimaryApproverBackfillSeeder` de
  * Compras: correr el lookup por email en el seeder, no en la migración, para no depender del
  * orden migrate/seed en un entorno reprovisionado desde cero).
  *
@@ -38,7 +38,7 @@ return new class extends TenantSchemaMigration
             $table->boolean('pac_doc_factura_habilitado')->default(true);
             $table->boolean('pac_doc_nota_credito_habilitado')->default(true);
             $table->boolean('retencion_proveedores_activa')->default(false);
-            $table->foreignId('mark_approver_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('primary_approver_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
 

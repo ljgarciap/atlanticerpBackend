@@ -32,7 +32,7 @@ final class OutlookCalendarController extends Controller
      * `scope=team` directo contra `GET /api/servicios/calendar` (sin pasar por el frontend, que
      * a propósito nunca manda ese param — ver `ServiciosMyCalendarPanel.tsx`) devolvía eventos
      * reales de Outlook de OTROS usuarios para cualquier actor con `servicios.view_team=true`
-     * (ej. Aaron/`lider_servicios` veía el calendario de Miguel Castillo y Daniela Amaya,
+     * (ej. Aaron/`lider_servicios` veía el calendario de Garantias Servicios Test y Gerencia Test,
      * confirmado en vivo contra el stack local). Viola PERMISOS de SCRUM-272 ("nadie puede ver
      * el calendario personal de otro usuario desde aquí") — regla deliberadamente MÁS estricta
      * que Ventas & Diseño/Compras/Bodega, que sí exponen team-view como funcionalidad aprobada.
@@ -52,11 +52,11 @@ final class OutlookCalendarController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $module     = (string) $request->route('module', 'ventas_diseno');
+        $module = (string) $request->route('module', 'ventas_diseno');
         $canSeeTeam = in_array($module, self::MODULES_WITH_TEAM_CALENDAR, true) && $user->canViewTeamV2($module);
 
         $ownerId = $request->query('owner_id');
-        $scope   = $request->query('scope');
+        $scope = $request->query('scope');
 
         // Mismo mecanismo de 3 vías que CalendarEventController (que este endpoint reemplaza como
         // fuente de datos): equipo completo (sin owner_id) / un vendedor puntual / propio. La
@@ -92,7 +92,7 @@ final class OutlookCalendarController extends Controller
         // eventos reales con to=mañana). El mismo bug truncaba el último día de los rangos
         // Semana/Mes. `endOfDay()` se aplica siempre, no solo en el fallback por defecto.
         $from = $this->parseDate($request->query('from')) ?? Carbon::now()->startOfDay();
-        $to   = ($this->parseDate($request->query('to')) ?? $from->copy())->endOfDay();
+        $to = ($this->parseDate($request->query('to')) ?? $from->copy())->endOfDay();
 
         if ($emails === []) {
             return response()->json(['data' => [], 'source_unavailable' => false]);

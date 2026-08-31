@@ -57,7 +57,7 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_con_minimo_obligatorio_usa_moneda_usd_por_defecto(): void
     {
-        // REQ-126 RN2. RN1 realineado 2026-08-06 (hallazgo Daniela Amaya): obligatorios
+        // REQ-126 RN2. RN1 realineado 2026-08-06 (hallazgo Gerencia Test): obligatorios
         // name/category/country + al menos un contacto — ver test_crear_proveedor_sin_* abajo
         // para cada validación negativa por separado.
         $this->grantCompras('designer@atlantic.test', ['compras.write']);
@@ -275,7 +275,7 @@ class ProviderControllerTest extends FeatureTestCase
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/providers?category=' . urlencode('Cableado'))
+            ->getJson('/api/compras/providers?category='.urlencode('Cableado'))
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
@@ -354,7 +354,7 @@ class ProviderControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-189 (REQ-126, hallazgo de Daniela Amaya 2026-07-30): el form divergía del mockup real
+     * SCRUM-189 (REQ-126, hallazgo de Gerencia Test 2026-07-30): el form divergía del mockup real
      * `2G__Compras_Proveedores.html`. Cubre los campos realineados y que `origin` (REQ-141) ya
      * no se acepta como input directo — se deriva de `category`.
      */
@@ -409,7 +409,7 @@ class ProviderControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    /** SCRUM-190 (REQ-127 RN3, hallazgo de Daniela Amaya): no debe haber 2 proveedores con el mismo nombre. */
+    /** SCRUM-190 (REQ-127 RN3, hallazgo de Gerencia Test): no debe haber 2 proveedores con el mismo nombre. */
     public function test_crear_proveedor_con_nombre_duplicado_retorna_422(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.write']);

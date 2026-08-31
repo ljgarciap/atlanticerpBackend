@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Compras;
 
 use App\Modules\Compras\Models\ComprasSettings;
+use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderClaim;
 use App\Modules\Compras\Models\PurchaseOrderClaimLine;
 use App\Modules\Compras\Models\PurchaseOrderLine;
-use App\Modules\Compras\Models\Provider;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\UploadedFile;
@@ -100,7 +100,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
             ->postJson('/api/compras/claims', [
                 'purchase_order_id' => $fixture['order']->id,
                 'description' => 'Llegaron rotos',
-                // SCRUM-260 (hallazgo de Daniela Amaya) — deja de ser texto libre, ahora valida
+                // SCRUM-260 (hallazgo de Gerencia Test) — deja de ser texto libre, ahora valida
                 // contra PurchaseOrderClaim::RESOLUTION_TYPES.
                 'expected_resolution' => PurchaseOrderClaim::RESOLUTION_REPOSICION,
                 'lines' => [
@@ -116,7 +116,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-260 (hallazgo de Daniela Amaya 2026-08-10) — "Tipo de resolución" deja de ser texto
+     * SCRUM-260 (hallazgo de Gerencia Test 2026-08-10) — "Tipo de resolución" deja de ser texto
      * libre; cualquier valor fuera de PurchaseOrderClaim::RESOLUTION_TYPES es 422.
      */
     public function test_expected_resolution_ya_no_acepta_texto_libre(): void
@@ -205,7 +205,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
         $row = collect($response->json('data'))->firstWhere('id', $claim->id);
         $this->assertTrue($row['needs_attention']);
 
-        // SCRUM-257 (hallazgo de Daniela Amaya) — "Atención" ya no es un KPI (los 4 nuevos son
+        // SCRUM-257 (hallazgo de Gerencia Test) — "Atención" ya no es un KPI (los 4 nuevos son
         // Total/Reportados-En revisión/Resueltos este mes/Monto en disputa), sigue existiendo
         // como bandera por fila y como chip de filtro.
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
@@ -253,7 +253,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-259 (REQ-196, hallazgo de Daniela Amaya 2026-08-10) — "Tipo de resolución" editable
+     * SCRUM-259 (REQ-196, hallazgo de Gerencia Test 2026-08-10) — "Tipo de resolución" editable
      * desde el detalle, no solo al crear el reclamo.
      */
     public function test_actualizar_tipo_de_resolucion_desde_el_detalle(): void
@@ -312,7 +312,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    /** SCRUM-259 (hallazgo de Daniela Amaya) — "Descargar PDF del reclamo", descarga real (Content-Disposition: attachment), no vista inline. */
+    /** SCRUM-259 (hallazgo de Gerencia Test) — "Descargar PDF del reclamo", descarga real (Content-Disposition: attachment), no vista inline. */
     public function test_pdf_del_reclamo_se_descarga_como_adjunto(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
@@ -406,7 +406,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-257 (hallazgo de Daniela Amaya 2026-08-09) — los 4 KPIs nuevos (Total/Reportados-En
+     * SCRUM-257 (hallazgo de Gerencia Test 2026-08-09) — los 4 KPIs nuevos (Total/Reportados-En
      * revisión/Resueltos este mes/Monto en disputa), calculados sobre el universo COMPLETO de
      * reclamos, no sobre el resultado ya filtrado.
      */
@@ -482,7 +482,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
         ])->assertStatus(201);
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/claims?provider_id=' . $fixtureA['order']->provider_id)
+            ->getJson('/api/compras/claims?provider_id='.$fixtureA['order']->provider_id)
             ->assertStatus(200);
 
         $ids = collect($response->json('data'))->pluck('id')->all();
@@ -503,15 +503,15 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
         ])->assertStatus(201)->json('id');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/claims?' . http_build_query([
+            ->getJson('/api/compras/claims?'.http_build_query([
                 'expected_resolution' => PurchaseOrderClaim::RESOLUTION_NEGADO,
-                'search'              => 'Ámbar',
+                'search' => 'Ámbar',
             ]))
             ->assertStatus(200);
         $this->assertSame([$claimId], collect($response->json('data'))->pluck('id')->all());
 
         $emptyResponse = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/claims?expected_resolution=' . PurchaseOrderClaim::RESOLUTION_REPOSICION)
+            ->getJson('/api/compras/claims?expected_resolution='.PurchaseOrderClaim::RESOLUTION_REPOSICION)
             ->assertStatus(200);
         $this->assertSame([], collect($emptyResponse->json('data'))->pluck('id')->all());
     }

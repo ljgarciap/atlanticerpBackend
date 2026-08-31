@@ -14,13 +14,13 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-440 (REQ-370, Bloque B3 Zona Libre de Colón) — decisión de Yirena (Compras) sobre una
- * solicitud generada por Bodega. `gerencia2@atlantic.com.pa` (Yirena, role_key
+ * solicitud generada por Bodega. `lidercompras@test.com` (Yirena, role_key
  * `lider_compras`) ya sale de `SpecialPermissionSeeder` con `compras.zona-libre.approve`
  * concedido — no hace falta otorgarlo a mano.
  */
 class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
 {
-    private const YIRENA_EMAIL = 'gerencia2@atlantic.com.pa';
+    private const YIRENA_EMAIL = 'lidercompras@test.com';
 
     protected function setUp(): void
     {

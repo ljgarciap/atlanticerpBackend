@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContClientBillingProfile;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
@@ -19,7 +20,7 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 8/9 de Admin&Cont — Estado de Cuenta (SCRUM-529→538, REQ-452→461). */
 class AdminContAccountStatementControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -35,8 +36,8 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     /** @return array{master: MasterClient, sub: SubClient, project: SalesProject} */
     private function makeClientWithProject(string $suffix = ''): array
     {
-        $master  = MasterClient::create(['name' => 'Cliente EC '.$suffix.uniqid(), 'default_price_type' => 'project']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '8-'.random_int(100, 999)]);
+        $master = MasterClient::create(['name' => 'Cliente EC '.$suffix.uniqid(), 'default_price_type' => 'project']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '8-'.random_int(100, 999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.$suffix.uniqid()]);
 
         return ['master' => $master, 'sub' => $sub, 'project' => $project];
@@ -270,12 +271,12 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
 
         $this->assertNotNull($response->json('pago_a'));
         $this->assertStringContainsString('4521', (string) $response->json('cuenta_pago'));
-        $this->assertStringContainsString('Felix', (string) $response->json('responsable'));
+        $this->assertStringContainsString('Contabilidad', (string) $response->json('responsable'));
     }
 
     private function userIdByEmailHelper(string $email): int
     {
-        return (int) \App\Models\User::where('email', $email)->value('id');
+        return (int) User::where('email', $email)->value('id');
     }
 
     // ── REQ-459 — nota automática de contexto ────────────────────────────────────────────────

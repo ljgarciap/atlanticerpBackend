@@ -105,13 +105,13 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $response->assertJsonPath('lines.0.unit_cost', 12.5);
         $response->assertJsonPath('lines.0.subtotal', 37.5);
         $response->assertJsonPath('total_amount', 37.5);
-        // SCRUM-204 (2026-08-06, hallazgo Daniela Amaya): sin shipping_type/who_pays_shipping no
+        // SCRUM-204 (2026-08-06, hallazgo Gerencia Test): sin shipping_type/who_pays_shipping no
         // requiere aprobación de Mark (RN3/REQ-118) — nace directo en "Pendiente/Por liquidar".
         $response->assertJsonPath('status', PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR);
     }
 
     /**
-     * SCRUM-193 (REQ-130 Escenario 2, hallazgo de Daniela Amaya 2026-07-30) — el costo precargado
+     * SCRUM-193 (REQ-130 Escenario 2, hallazgo de Gerencia Test 2026-07-30) — el costo precargado
      * del catálogo debe ser editable por línea (ej. precio renegociado para esta orden puntual);
      * antes el backend lo pisaba siempre con el costo real del producto, dejando el campo de la
      * UI editable pero sin efecto real.
@@ -256,7 +256,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-194 (REQ-131, hallazgo real de Daniela Amaya 2026-07-30) — 2 productos NUEVOS con la
+     * SCRUM-194 (REQ-131, hallazgo real de Gerencia Test 2026-07-30) — 2 productos NUEVOS con la
      * misma referencia pública en el MISMO request: ninguno existe todavía en BD al momento de
      * validar, así que `uniquePublicReferenceRule()` (que solo consulta la BD) dejaba pasar ambos
      * y `createProduct()` terminaba creando 2 productos duplicados. Pre-QA (2026-07-17) solo había
@@ -414,10 +414,10 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             ])
             ->assertStatus(201);
 
-        $response->assertJsonPath('requires_mark_approval', true);
+        $response->assertJsonPath('requires_primary_approval', true);
         $response->assertJsonPath('approved_by', null);
-        // SCRUM-204 (2026-08-06, hallazgo Daniela Amaya): antes toda orden nacía en "Por
-        // aprobar" sin importar requires_mark_approval — ahora solo las que sí lo requieren.
+        // SCRUM-204 (2026-08-06, hallazgo Gerencia Test): antes toda orden nacía en "Por
+        // aprobar" sin importar requires_primary_approval — ahora solo las que sí lo requieren.
         $response->assertJsonPath('status', PurchaseOrder::STATUS_POR_APROBAR);
     }
 
@@ -437,12 +437,12 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             ])
             ->assertStatus(201);
 
-        $response->assertJsonPath('requires_mark_approval', false);
+        $response->assertJsonPath('requires_primary_approval', false);
         // SCRUM-204 (2026-08-06): no requiere aprobación -> nace directo en "Pendiente/Por liquidar".
         $response->assertJsonPath('status', PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR);
     }
 
-    /** SCRUM-197 (REQ-134, hallazgo de Daniela Amaya 2026-07-30): el mockup solo contempla Cliente/Atlantic. */
+    /** SCRUM-197 (REQ-134, hallazgo de Gerencia Test 2026-07-30): el mockup solo contempla Cliente/Atlantic. */
     public function test_envio_aereo_pagado_por_cliente_no_requiere_aprobacion(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.write']);
@@ -459,7 +459,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             ])
             ->assertStatus(201);
 
-        $response->assertJsonPath('requires_mark_approval', false);
+        $response->assertJsonPath('requires_primary_approval', false);
         $response->assertJsonPath('status', PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR);
     }
 
@@ -485,7 +485,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
-            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
+            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_primary_approval' => true,
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -499,7 +499,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.approve']);
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
-            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => false,
+            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_primary_approval' => false,
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -509,7 +509,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     }
 
     /**
-     * `MarkApproverBackfillSeeder` (Pre-QA 2026-07-24) ya deja `mark_approver_user_id` seteado al
+     * `PrimaryApproverBackfillSeeder` (Pre-QA 2026-07-24) ya deja `primary_approver_user_id` seteado al
      * usuario real de Mark tras el seeding normal — este test seteaba a `designer` como aprobador
      * implícito confiando en que el valor global quedara NULL, lo cual enmascaraba el gate real
      * (SCRUM-206). Se autocontiene seteando `designer` como el Mark configurado, mismo patrón que
@@ -519,11 +519,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     {
         $this->grantCompras('designer@atlantic.test', ['compras.approve']);
         $markId = (int) User::where('email', 'designer@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
-            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
+            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_primary_approval' => true,
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -706,11 +706,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $this->grantCompras('multi@atlantic.test', ['compras.approve']);
 
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
-            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
+            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_primary_approval' => true,
         ]);
 
         $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
@@ -727,11 +727,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_aprobar_orden_superadmin_bypassa_el_gate_de_mark(): void
     {
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
-            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
+            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_primary_approval' => true,
         ]);
 
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
@@ -744,11 +744,11 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     {
         $this->grantCompras('management@atlantic.test', ['compras.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
-            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_mark_approval' => true,
+            'provider_id' => $provider->id, 'currency' => 'USD', 'requires_primary_approval' => true,
         ]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');

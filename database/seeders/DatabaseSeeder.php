@@ -19,8 +19,8 @@ class DatabaseSeeder extends Seeder
         $this->call(SecurityLevelSeeder::class);
         $this->call(DepartmentSeeder::class);
         $this->call(CoreUserSeeder::class);
-        $this->call(MarkApproverBackfillSeeder::class);
-        $this->call(AdminContMarkApproverBackfillSeeder::class);
+        $this->call(PrimaryApproverBackfillSeeder::class);
+        $this->call(AdminContPrimaryApproverBackfillSeeder::class);
         $this->call(RoleBackfillSeeder::class);
         $this->call(BusinessRoleUserSeeder::class);
         $this->call(VentasDisenoSalesGoalsSeeder::class);

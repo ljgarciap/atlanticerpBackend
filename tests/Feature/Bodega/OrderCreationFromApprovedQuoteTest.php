@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bodega;
 
-use App\Models\User;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderStageHistory;
 use App\Modules\Bodega\Models\WarehouseAssistantMapping;
@@ -55,13 +54,14 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
     private function userIdByEmail(string $email): int
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
     private function makeCardInProposal(int $ownerId): PipelineCard
     {
         $master = MasterClient::create(['name' => 'Cliente Test']);
-        $sub    = SubClient::create([
+        $sub = SubClient::create([
             'master_client_id' => $master->id, 'business_name' => 'Subcliente Test',
             'tax_id' => '155-0000-1-2026', 'delivery_address' => 'Calle 50, Ciudad de Panamá',
         ]);
@@ -213,14 +213,14 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
     /**
      * Ajuste 2026-07-22 (decisión de Luis sobre el gap del Batch A1): si falta el mapeo
      * vendedor->asistente, el pedido SE CREA IGUAL (sin `assistant_id`) en vez de perderse, y se
-     * notifica al Jefe de Bodega (rol `lider_bodega` — Esteban Cardenas, sembrado por
+     * notifica al Jefe de Bodega (rol `lider_bodega` — Lider Bodega Test, sembrado por
      * `BusinessRoleUserSeeder` en todos los entornos, incl. testing) para triage manual.
      */
     public function test_aprobar_cotizacion_sin_mapeo_de_asistente_crea_pedido_sin_asignar_y_notifica_al_jefe_de_bodega(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $sellerId = $this->userIdByEmail('designer@atlantic.test');
-        $bodegaLeadId = $this->userIdByEmail('almacen@atlantic.com.pa');
+        $bodegaLeadId = $this->userIdByEmail('liderbodega@test.com');
 
         // Sin WarehouseAssistantMapping activo para este vendedor.
         $card = $this->makeCardInProposal($sellerId);
@@ -267,7 +267,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
         ]);
 
         $master = MasterClient::create(['name' => 'Cliente Test 2']);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente 2', 'tax_id' => '155-0000-1-2027']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente 2', 'tax_id' => '155-0000-1-2027']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test 2']);
         // RN5 (SCRUM-677/680) — design->quote vía el endpoint genérico ahora siempre bloquea (la
         // única vía es "Crear cotización"), así que esta card arranca ya en "quote" para poder
@@ -364,11 +364,11 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
         // (family_id null) choca con orders_pipeline_card_root_uq y OrderService::
         // createFromApprovedQuote() revienta con una QueryException real.
         Order::create([
-            'order_number'     => 'PED-2026-9999',
+            'order_number' => 'PED-2026-9999',
             'pipeline_card_id' => $card->id,
-            'order_type'       => Order::ORDER_TYPE_PEDIDO,
-            'stage'            => Order::STAGE_ASIGNADO,
-            'assistant_id'     => $assistantId,
+            'order_type' => Order::ORDER_TYPE_PEDIDO,
+            'stage' => Order::STAGE_ASIGNADO,
+            'assistant_id' => $assistantId,
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');

@@ -25,8 +25,8 @@ class OrderInvoiceControllerTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         return $this->authHeaders($token);
     }

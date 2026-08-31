@@ -361,7 +361,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-268 (corrección de Daniela Amaya, 2026-08-11) — "Por liquidar" son las órdenes
+     * SCRUM-268 (corrección de Gerencia Test, 2026-08-11) — "Por liquidar" son las órdenes
      * ordenadas que todavía no llegaron a Liquidado, y el universo del panel EXCLUYE las órdenes
      * que ni siquiera llegaron a "Ordenado" (subtítulo del mockup: "basado en órdenes Ordenado /
      * En tránsito / Recibido") — antes esas órdenes sin arrancar diluían el % dentro de

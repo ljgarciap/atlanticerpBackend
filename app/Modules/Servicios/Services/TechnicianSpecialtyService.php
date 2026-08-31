@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Batch 2 (REQ-225 RN5, REQ-226 RN2) — regla de "especialidad" de técnico interno por tipo de
- * ticket: Garantías solo la atiende `garantias_servicios` (hoy, Miguel Castillo); cualquier otro
+ * ticket: Garantías solo la atiende `garantias_servicios` (hoy, Garantias Servicios Test); cualquier otro
  * tipo (Instalación/Reclamo/Retrofit) solo lo atienden los `tecnico_servicios` — nunca se mezclan.
  * El módulo formal de Técnicos Internos con un campo propio de "especialidad" es Batch 6 (todavía
  * no construido); esta regla ya es 100% resolvible hoy con el rol real de cada usuario (mismo
@@ -28,7 +28,7 @@ final class TechnicianSpecialtyService
     public function forTipo(string $tipo): Collection
     {
         $roleKey = $tipo === Ticket::TIPO_WARRANTY ? self::ROLE_TECNICO_GARANTIAS : self::ROLE_TECNICO_GENERAL;
-        $roleId  = Role::where('key', $roleKey)->value('id');
+        $roleId = Role::where('key', $roleKey)->value('id');
 
         return User::where('role_id', $roleId)
             ->where('is_active', true)

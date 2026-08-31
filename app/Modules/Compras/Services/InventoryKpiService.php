@@ -19,7 +19,9 @@ use Illuminate\Support\Collection;
 final class InventoryKpiService
 {
     public const STOCK_DISPONIBLE = 'disponible';
+
     public const STOCK_BAJO_STOCK = 'bajo_stock';
+
     public const STOCK_SIN_STOCK = 'sin_stock';
 
     /**
@@ -72,10 +74,10 @@ final class InventoryKpiService
 
         return [
             'total_products' => $active->count(),
-            'low_stock'      => $lowStock,
-            'out_of_stock'   => $outOfStock,
-            'in_attention'   => $inAttention,
-            'total_value'    => round($totalValue, 2),
+            'low_stock' => $lowStock,
+            'out_of_stock' => $outOfStock,
+            'in_attention' => $inAttention,
+            'total_value' => round($totalValue, 2),
         ];
     }
 
@@ -112,10 +114,10 @@ final class InventoryKpiService
     {
         /** @var Collection<int, CatalogProduct> $active */
         $active = CatalogProduct::where('is_active', true)->get();
-        $ids    = array_values(array_map('intval', $active->pluck('id')->all()));
+        $ids = array_values(array_map('intval', $active->pluck('id')->all()));
 
         $porServirMap = $this->porServirMap($ids);
-        $enCaminoMap  = $this->enCaminoMap($ids);
+        $enCaminoMap = $this->enCaminoMap($ids);
 
         $count = 0;
         foreach ($active as $product) {
@@ -131,7 +133,7 @@ final class InventoryKpiService
      * REQ-171 RN3: "Por servir" = unidades con proyecto asignado en su línea de origen, sin
      * importar el estado de la orden.
      *
-     * @param list<int> $productIds
+     * @param  list<int>  $productIds
      * @return array<int, int>
      */
     public function porServirMap(array $productIds): array
@@ -156,7 +158,7 @@ final class InventoryKpiService
      * `confirmed_at` NULL. No cuenta como "Disponible" hasta que se confirme
      * (`GoodsReceiptController::confirm()`).
      *
-     * @param list<int> $productIds
+     * @param  list<int>  $productIds
      * @return array<int, int>
      */
     public function porIngresarMap(array $productIds): array
@@ -183,7 +185,7 @@ final class InventoryKpiService
      * por `InventoryController::orderPrefill()` (REQ-179), que antes de este método sumaba
      * directamente lo esperado sin restar lo ya registrado.
      *
-     * @param list<int> $productIds
+     * @param  list<int>  $productIds
      * @return array<int, int>
      */
     public function enCaminoMap(array $productIds): array
@@ -220,7 +222,7 @@ final class InventoryKpiService
     }
 
     /**
-     * SCRUM-234/238 (hallazgo de Daniela Amaya 2026-08-09) — columna "Bodega(s)" de la tabla de
+     * SCRUM-234/238 (hallazgo de Gerencia Test 2026-08-09) — columna "Bodega(s)" de la tabla de
      * Inventario: para cada producto, la lista de bodegas donde tiene unidades físicas > 0 (nunca
      * las bodegas en 0 — mismo criterio que `InventoryController::warehouseBreakdown()`, que ya
      * resolvía esto para UN producto a la vez desde el modal de detalle). Este método agrega el
@@ -228,7 +230,7 @@ final class InventoryKpiService
      * pintar la tabla. Fuente única de verdad — el modal de detalle sigue usando el endpoint
      * `/warehouse-stock` existente, no se duplicó la query.
      *
-     * @param list<int> $productIds
+     * @param  list<int>  $productIds
      * @return array<int, list<array{warehouse_id: int, warehouse_name: string|null, quantity: int}>>
      */
     public function warehousesMap(array $productIds): array
@@ -245,9 +247,9 @@ final class InventoryKpiService
         $map = [];
         foreach ($rows as $row) {
             $map[$row->catalog_product_id][] = [
-                'warehouse_id'   => $row->warehouse_id,
+                'warehouse_id' => $row->warehouse_id,
                 'warehouse_name' => $row->warehouse?->name,
-                'quantity'       => $row->quantity,
+                'quantity' => $row->quantity,
             ];
         }
 
@@ -296,9 +298,9 @@ final class InventoryKpiService
             }
 
             $rows[] = [
-                'purchase_order_id'      => $purchaseOrder->id,
-                'provider_name'          => $purchaseOrder->provider?->name,
-                'quantity'               => $remaining,
+                'purchase_order_id' => $purchaseOrder->id,
+                'provider_name' => $purchaseOrder->provider?->name,
+                'quantity' => $remaining,
                 'estimated_arrival_date' => $purchaseOrder->estimated_arrival_date?->toDateString(),
             ];
         }

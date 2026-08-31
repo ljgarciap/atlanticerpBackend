@@ -10,7 +10,7 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-635/636 (REQ-558/559) — catálogo de tasas de ITBMS. */
 class AdminContItbmsRateControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -20,7 +20,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_index_devuelve_las_3_tasas_base_activas(): void
@@ -52,9 +52,9 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/itbms-rates', [
-                'nombre'      => '10% — Servicios de hospedaje',
+                'nombre' => '10% — Servicios de hospedaje',
                 'descripcion' => 'Tasa especial para servicios de hospedaje.',
-                'porcentaje'  => 10,
+                'porcentaje' => 10,
             ])
             ->assertStatus(201);
 
@@ -68,10 +68,10 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/itbms-rates', [
-                'nombre'      => 'Tasa X',
+                'nombre' => 'Tasa X',
                 'descripcion' => 'Descripción X',
-                'porcentaje'  => 5,
-                'activa'      => true,
+                'porcentaje' => 5,
+                'activa' => true,
             ])
             ->assertStatus(201);
 
@@ -85,7 +85,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/itbms-rates', [
                 'descripcion' => 'Servicios de hospedaje',
-                'porcentaje'  => 10,
+                'porcentaje' => 10,
             ])
             ->assertStatus(201);
 
@@ -106,7 +106,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_update_activa_una_tasa_personalizada(): void
     {
-        $token   = $this->loginAsMark();
+        $token = $this->loginAsMark();
         $headers = $this->authHeaders($token);
 
         $created = $this->withHeaders($headers)->postJson('/api/admin-contab/itbms-rates', [
@@ -123,7 +123,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_destroy_elimina_una_tasa_personalizada(): void
     {
-        $token   = $this->loginAsMark();
+        $token = $this->loginAsMark();
         $headers = $this->authHeaders($token);
 
         $created = $this->withHeaders($headers)->postJson('/api/admin-contab/itbms-rates', [
@@ -139,7 +139,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_destroy_rechaza_eliminar_una_tasa_base(): void
     {
-        $token   = $this->loginAsMark();
+        $token = $this->loginAsMark();
         $headers = $this->authHeaders($token);
 
         $baseId = $this->withHeaders($headers)

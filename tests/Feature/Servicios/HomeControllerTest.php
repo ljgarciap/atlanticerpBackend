@@ -21,13 +21,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class HomeControllerTest extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const CARLOS = 'carlos@atlantic.com.pa';
+    private const CARLOS = 'tecnicoservicios@test.com';
 
-    private const MIGUEL = 'garantias@atlantic.com.pa';
+    private const MIGUEL = 'garantiasservicios@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
     protected function setUp(): void
     {
@@ -65,15 +65,15 @@ class HomeControllerTest extends FeatureTestCase
         unset($overrides['created_at']);
 
         $ticket = Ticket::create([
-            'numero'                   => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_REPORTED,
+            'numero' => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_REPORTED,
             // Gate REQ-218 no es el foco de este batch — se satisface a propósito para poder
             // cerrar el ticket directo desde el servicio real (TicketService::changeStage()).
-            'quote_status'             => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
+            'quote_status' => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
             ...$overrides,
         ]);
@@ -93,13 +93,13 @@ class HomeControllerTest extends FeatureTestCase
         unset($overrides['created_at']);
 
         $ticketProduct = TicketProduct::create([
-            'ticket_id'           => $ticket->id,
-            'marca'               => 'Marca de prueba',
-            'referencia'          => 'REF-001',
-            'descripcion'         => 'Producto de prueba',
-            'cantidad_reclamo'    => 5,
-            'cantidad_recibida'   => 0,
-            'cantidad_pendiente'  => 5,
+            'ticket_id' => $ticket->id,
+            'marca' => 'Marca de prueba',
+            'referencia' => 'REF-001',
+            'descripcion' => 'Producto de prueba',
+            'cantidad_reclamo' => 5,
+            'cantidad_recibida' => 0,
+            'cantidad_pendiente' => 5,
             ...$overrides,
         ]);
 
@@ -116,13 +116,13 @@ class HomeControllerTest extends FeatureTestCase
     public function test_rutas_dia_limita_a_5_y_marca_has_more(): void
     {
         $carlosId = $this->userIdByEmail(self::CARLOS);
-        $today    = Carbon::now('America/Panama')->startOfDay()->addHours(9);
+        $today = Carbon::now('America/Panama')->startOfDay()->addHours(9);
 
         for ($i = 0; $i < 8; $i++) {
             $this->makeTicket([
-                'estado'                 => Ticket::ESTADO_SCHEDULED,
+                'estado' => Ticket::ESTADO_SCHEDULED,
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => $today->copy()->addHours($i)->utc(),
+                'scheduled_at' => $today->copy()->addHours($i)->utc(),
             ]);
         }
 
@@ -139,9 +139,9 @@ class HomeControllerTest extends FeatureTestCase
     {
         $carlosId = $this->userIdByEmail(self::CARLOS);
         $miguelId = $this->userIdByEmail(self::MIGUEL);
-        $today    = Carbon::now('America/Panama')->startOfDay();
+        $today = Carbon::now('America/Panama')->startOfDay();
 
-        $late  = $this->makeTicket([
+        $late = $this->makeTicket([
             'estado' => Ticket::ESTADO_SCHEDULED, 'internal_technician_id' => $carlosId,
             'scheduled_at' => $today->copy()->addHours(15)->utc(),
         ]);
@@ -158,11 +158,11 @@ class HomeControllerTest extends FeatureTestCase
         $this->assertSame([$early->id, $late->id], $ids);
     }
 
-    /** RN3 — el color debe ser EXACTAMENTE el mismo que internal_technicians.color (Miguel Castillo = ámbar). */
+    /** RN3 — el color debe ser EXACTAMENTE el mismo que internal_technicians.color (Garantias Servicios Test = ámbar). */
     public function test_rutas_dia_color_de_tecnico_coincide_con_tecnicos_internos(): void
     {
         $miguel = InternalTechnician::where('email', self::MIGUEL)->firstOrFail();
-        $today  = Carbon::now('America/Panama')->startOfDay()->addHours(9);
+        $today = Carbon::now('America/Panama')->startOfDay()->addHours(9);
 
         $this->makeTicket([
             'estado' => Ticket::ESTADO_SCHEDULED, 'tipo' => Ticket::TIPO_WARRANTY,
@@ -181,7 +181,7 @@ class HomeControllerTest extends FeatureTestCase
     public function test_rutas_dia_no_incluye_ticket_reagendado_a_otro_dia(): void
     {
         $carlosId = $this->userIdByEmail(self::CARLOS);
-        $ticket   = $this->makeTicket([
+        $ticket = $this->makeTicket([
             'estado' => Ticket::ESTADO_SCHEDULED, 'internal_technician_id' => $carlosId,
             'scheduled_at' => Carbon::now('America/Panama')->startOfDay()->addHours(9)->utc(),
         ]);
@@ -388,7 +388,7 @@ class HomeControllerTest extends FeatureTestCase
     public function test_estado_tickets_cerrado_solo_cuenta_el_mes_en_curso(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-08-15 12:00:00', 'UTC'));
-        $user    = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         $thisMonth = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
@@ -445,7 +445,7 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_meta_se_calcula_con_historial_suficiente(): void
     {
-        $user    = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         // Ticket "fundacional" 4 meses atrás para que hasSufficientHistory() vea >= 3 meses reales.
@@ -490,7 +490,7 @@ class HomeControllerTest extends FeatureTestCase
     public function test_resuelto_primera_visita_pct_excluye_tickets_con_mas_de_una_visita(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-08-15 12:00:00', 'UTC'));
-        $user    = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         // 3 garantías resueltas en 1ra visita.
@@ -520,7 +520,7 @@ class HomeControllerTest extends FeatureTestCase
     public function test_tiempo_promedio_resolucion_solo_considera_garantias(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-08-20 12:00:00', 'UTC'));
-        $user    = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         $warranty = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(5)]);
@@ -545,7 +545,7 @@ class HomeControllerTest extends FeatureTestCase
     public function test_ingresos_instalaciones_suma_solo_cotizaciones_aprobadas_del_mes(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-08-20 12:00:00', 'UTC'));
-        $user    = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
+        $user = User::where('email', self::LIDER_SERVICIOS)->firstOrFail();
         $service = app(TicketService::class);
 
         $approvedThisMonth = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(5)]);
@@ -573,12 +573,12 @@ class HomeControllerTest extends FeatureTestCase
     private function makeQuote(Ticket $ticket, string $estado, float $total): ServiceQuote
     {
         return ServiceQuote::create([
-            'numero'    => 'COT-2026-'.static::uniqueTestNumber(),
+            'numero' => 'COT-2026-'.static::uniqueTestNumber(),
             'ticket_id' => $ticket->id,
-            'estado'    => $estado,
-            'subtotal'  => $total,
-            'itbms'     => 0,
-            'total'     => $total,
+            'estado' => $estado,
+            'subtotal' => $total,
+            'itbms' => 0,
+            'total' => $total,
         ]);
     }
 }

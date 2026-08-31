@@ -13,7 +13,7 @@ namespace App\Modules\Bodega\Support;
  *
  * No hay un modelo de "picker"/"repartidor" nuevo — REQ-313/326 ya hablan de personas reales
  * sembradas por `BusinessRoleUserSeeder` con estos `role_key` (Apolonio González =
- * `ayudante_general_bodega`, Gary Arrocha = `transporte`), confirmado contra Jira y el seeder
+ * `ayudante_general_bodega`, Transporte Test = `transporte`), confirmado contra Jira y el seeder
  * antes de escribir código nuevo (regla del proyecto).
  */
 final class BodegaRoles
@@ -61,7 +61,7 @@ final class BodegaRoles
      * SCRUM-366 (REQ-296) — hallazgo de QA 2026-07-24 (marly.rangel): el selector de personas del
      * alcance "Equipo" en Home de Bodega debe listar ÚNICAMENTE Asistentes de Bodega, no los 4
      * roles de `ALL`. El ticket describe el selector como "una [opción] por cada Asistente/
-     * Operativo de Bodega (ej. Mariano Sandoval, Osvaldo Santos)" — ambos ejemplos son
+     * Operativo de Bodega (ej. Asistente Bodega Test 2, Asistente Bodega Test)" — ambos ejemplos son
      * `ASISTENTE_BODEGA`; QA confirmó en vivo que el Jefe (Esteban, `LIDER_BODEGA`), el Ayudante
      * General (Apolonio, `PICKER`) y Transporte (Gary, `COURIER`) NO deben aparecer como opciones
      * filtrables, pese a que los 3 sí participan del flujo operativo de Pedidos — "Asistente/
@@ -92,7 +92,7 @@ final class BodegaRoles
      */
     public const TEAM_MEMBERS_QUERY_MAP = [
         'asistente_bodega' => self::ASISTENTE_BODEGA,
-        'courier'          => self::COURIER,
-        'picker'           => self::PICKER,
+        'courier' => self::COURIER,
+        'picker' => self::PICKER,
     ];
 }

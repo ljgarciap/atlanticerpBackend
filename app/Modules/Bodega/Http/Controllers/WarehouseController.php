@@ -233,7 +233,7 @@ final class WarehouseController extends Controller
             'ubicacion' => $ubicacionDetalle,
             'description' => $product->name,
             'categoria' => $product->families->first()?->name,
-            // Mejora SCRUM-752 (RN3, Daniela Amaya 2026-08-13) — unidades REALES en ESTA bodega
+            // Mejora SCRUM-752 (RN3, Gerencia Test 2026-08-13) — unidades REALES en ESTA bodega
             // (no el stock global de la empresa que sí es `disponible`/`stock_total` abajo).
             // `$row` ya es el `ProductWarehouseStock` de esta bodega — el dato ya estaba en scope,
             // solo nunca se devolvía.

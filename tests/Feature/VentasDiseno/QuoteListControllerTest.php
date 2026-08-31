@@ -35,16 +35,17 @@ class QuoteListControllerTest extends FeatureTestCase
     private function userIdByEmail(string $email): int
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
     /**
-     * @param array{folio?: string|null, amount?: float, stage?: string|null, master?: string, sub?: string, project?: string} $opts
+     * @param  array{folio?: string|null, amount?: float, stage?: string|null, master?: string, sub?: string, project?: string}  $opts
      */
     private function makeQuote(int $ownerId, array $opts = []): Quote
     {
-        $master  = MasterClient::create(['name' => $opts['master'] ?? 'Cliente Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => $opts['sub'] ?? 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $master = MasterClient::create(['name' => $opts['master'] ?? 'Cliente Test']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $opts['sub'] ?? 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => $opts['project'] ?? 'Proyecto Test']);
 
         // SCRUM-723: confirmed_at (no folio) es lo que ahora decide document_status
@@ -81,9 +82,9 @@ class QuoteListControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
-        $otherId    = $this->userIdByEmail('management@atlantic.test');
+        $otherId = $this->userIdByEmail('management@atlantic.test');
 
-        $mine  = $this->makeQuote($designerId, ['folio' => 'COT-2026-0001']);
+        $mine = $this->makeQuote($designerId, ['folio' => 'COT-2026-0001']);
         $their = $this->makeQuote($otherId, ['folio' => 'COT-2026-0002']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -101,8 +102,8 @@ class QuoteListControllerTest extends FeatureTestCase
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
 
-        $draft    = $this->makeQuote($designerId, []); // sin folio
-        $sent     = $this->makeQuote($designerId, ['folio' => 'COT-2026-0010', 'stage' => 'quote', 'amount' => 100]);
+        $draft = $this->makeQuote($designerId, []); // sin folio
+        $sent = $this->makeQuote($designerId, ['folio' => 'COT-2026-0010', 'stage' => 'quote', 'amount' => 100]);
         $approved = $this->makeQuote($designerId, ['folio' => 'COT-2026-0011', 'stage' => 'approved', 'amount' => 100]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -183,8 +184,8 @@ class QuoteListControllerTest extends FeatureTestCase
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
 
-        $master  = MasterClient::create(['name' => 'Cliente Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $master = MasterClient::create(['name' => 'Cliente Test']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote', 'amount' => 1070,
@@ -238,8 +239,8 @@ class QuoteListControllerTest extends FeatureTestCase
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
 
-        $master  = MasterClient::create(['name' => 'Cliente Borrador Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $master = MasterClient::create(['name' => 'Cliente Borrador Test']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Borrador Test']);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote',
@@ -306,8 +307,8 @@ class QuoteListControllerTest extends FeatureTestCase
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
 
-        $master  = MasterClient::create(['name' => 'Cliente Folio Viejo Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $master = MasterClient::create(['name' => 'Cliente Folio Viejo Test']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Folio Viejo Test']);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote',
@@ -427,7 +428,7 @@ class QuoteListControllerTest extends FeatureTestCase
 
     public function test_busqueda_aproximada_de_folio_sin_guiones(): void
     {
-        // SCRUM-103 (comentario Daniela Amaya, 2026-07-22): buscar el folio sin ninguno
+        // SCRUM-103 (comentario Gerencia Test, 2026-07-22): buscar el folio sin ninguno
         // de sus 2 guiones ("COT20260006") debe seguir encontrando "COT-2026-0006" por
         // aproximación -- ya cubierto por el fix de tokenización de 2026-07-12 (distancia
         // Levenshtein de 2 inserciones, dentro de la tolerancia), pero sin test dedicado.

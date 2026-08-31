@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <style>
-    {{-- SCRUM-411 (REQ-341, rebote de Daniela Amaya 2026-08-12) — rediseño completo contra el
+    {{-- SCRUM-411 (REQ-341, rebote de Gerencia Test 2026-08-12) — rediseño completo contra el
          mockup: ícono + ATLANTIC + "Powered by AtlanticERP" como marca (antes solo texto, sin
          ícono, con "Estatus de Pedido" como subtítulo — RN1), título grande "ESTATUS DE PEDIDO"
          como encabezado principal en vez del "Pedido {numero}" secundario que usaba antes (RN2),

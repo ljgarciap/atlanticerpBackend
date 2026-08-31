@@ -10,7 +10,7 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-640 (REQ-563) — Ubicaciones: combina Warehouse (Bodega, solo lectura) + AdminContLocation. */
 class AdminContLocationControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -20,7 +20,7 @@ class AdminContLocationControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_index_incluye_las_7_bodegas_oficiales_como_solo_lectura(): void
@@ -60,8 +60,8 @@ class AdminContLocationControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/locations', [
-                'nombre'    => 'Oficina Administrativa',
-                'tipo'      => 'oficina',
+                'nombre' => 'Oficina Administrativa',
+                'tipo' => 'oficina',
                 'direccion' => 'Calle 50, Panamá',
             ])
             ->assertStatus(201);

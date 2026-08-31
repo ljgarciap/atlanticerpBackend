@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
  * esas pantallas no existen aún (bloques 1/2/3/6/7 del roadmap de Bodega) — cuando se construyan,
  * llaman a `registrar()` en vez de tocar `ProductWarehouseStock` directo.
  *
- * SCRUM-429 (REQ-359, rebote de Daniela Amaya 2026-08-13) — bug real encontrado: este método SOLO
+ * SCRUM-429 (REQ-359, rebote de Gerencia Test 2026-08-13) — bug real encontrado: este método SOLO
  * actualizaba `product_warehouse_stock.quantity` (desglose por bodega), nunca el agregado
  * `catalog_products.stock_quantity` del que derivan "Disponible"/"Stock Total" en TODO el resto
  * de Inventario/Compras/Bodega (`disponible = stock_quantity - por_servir`, ver
@@ -35,14 +35,10 @@ use Illuminate\Support\Facades\DB;
 final class KardexService
 {
     /**
-     * @param int         $catalogProductId
-     * @param int         $warehouseId
-     * @param string      $tipo             Uno de InventoryMovement::TIPO_*
-     * @param int         $cantidad         Con signo — positivo entradas, negativo salidas
-     * @param string      $referenciaTexto  Ej. "Orden #123 recibida"
-     * @param string|null $referenciaEntidadTipo
-     * @param int|null    $referenciaEntidadId
-     * @param int|null    $realizadoPor     Null = "Sistema" (ver Modelo de Datos, realizado_por)
+     * @param  string  $tipo  Uno de InventoryMovement::TIPO_*
+     * @param  int  $cantidad  Con signo — positivo entradas, negativo salidas
+     * @param  string  $referenciaTexto  Ej. "Orden #123 recibida"
+     * @param  int|null  $realizadoPor  Null = "Sistema" (ver Modelo de Datos, realizado_por)
      */
     public function registrar(
         int $catalogProductId,
@@ -76,17 +72,17 @@ final class KardexService
                 ->update(['stock_quantity' => DB::raw('COALESCE(stock_quantity, 0) + ('.$cantidad.')')]);
 
             return InventoryMovement::create([
-                'catalog_product_id'      => $catalogProductId,
-                'warehouse_id'            => $warehouseId,
-                'tipo'                    => $tipo,
-                'cantidad'                => $cantidad,
-                'referencia_texto'        => $referenciaTexto,
+                'catalog_product_id' => $catalogProductId,
+                'warehouse_id' => $warehouseId,
+                'tipo' => $tipo,
+                'cantidad' => $cantidad,
+                'referencia_texto' => $referenciaTexto,
                 'referencia_entidad_tipo' => $referenciaEntidadTipo,
-                'referencia_entidad_id'   => $referenciaEntidadId,
-                'realizado_por'           => $realizadoPor,
-                'saldo_inicial'           => $saldoInicial,
-                'saldo_resultante'        => $saldoResultante,
-                'created_at'              => now(),
+                'referencia_entidad_id' => $referenciaEntidadId,
+                'realizado_por' => $realizadoPor,
+                'saldo_inicial' => $saldoInicial,
+                'saldo_resultante' => $saldoResultante,
+                'created_at' => now(),
             ]);
         });
     }

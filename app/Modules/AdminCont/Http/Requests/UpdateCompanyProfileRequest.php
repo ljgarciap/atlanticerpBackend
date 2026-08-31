@@ -15,19 +15,19 @@ class UpdateCompanyProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // el gate real es el middleware EnsureIsMarkApprover sobre toda la ruta
+        return true; // el gate real es el middleware EnsureIsPrimaryApprover sobre toda la ruta
     }
 
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
-            'descripcion_corta'            => ['sometimes', 'string', 'max:500'],
-            'sitio_web'                    => ['sometimes', 'nullable', 'string', 'max:255', 'url'],
-            'redes_sociales'                => ['sometimes', 'array'],
-            'redes_sociales.*.plataforma'   => ['required_with:redes_sociales', 'string', 'max:100'],
-            'redes_sociales.*.url'          => ['required_with:redes_sociales', 'string', 'max:255', 'url'],
-            'zona_horaria'                  => ['sometimes', 'in:America/Panama'],
+            'descripcion_corta' => ['sometimes', 'string', 'max:500'],
+            'sitio_web' => ['sometimes', 'nullable', 'string', 'max:255', 'url'],
+            'redes_sociales' => ['sometimes', 'array'],
+            'redes_sociales.*.plataforma' => ['required_with:redes_sociales', 'string', 'max:100'],
+            'redes_sociales.*.url' => ['required_with:redes_sociales', 'string', 'max:255', 'url'],
+            'zona_horaria' => ['sometimes', 'in:America/Panama'],
         ];
     }
 }

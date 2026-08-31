@@ -67,7 +67,7 @@ final class AdminContSeedRebotesQaCommand extends Command
     public function handle(ArchitectCommissionService $commissions): int
     {
         if (app()->environment('production') && ! $this->option('force')) {
-            $this->error("Este comando siembra datos de prueba — nunca corre en production sin --force explícito.");
+            $this->error('Este comando siembra datos de prueba — nunca corre en production sin --force explícito.');
 
             return self::FAILURE;
         }
@@ -81,9 +81,9 @@ final class AdminContSeedRebotesQaCommand extends Command
         Tenant::forgetCurrent();
         $tenant->makeCurrent();
 
-        $felixId = (int) User::where('email', 'conta@atlantic.com.pa')->value('id');
-        $neilId  = (int) User::where('email', 'neil.quiel@atlantic.com.pa')->value('id');
-        $fefiId  = (int) User::where('email', 'fefi@atlantic.com.pa')->value('id');
+        $felixId = (int) User::where('email', 'contabilidad@test.com')->value('id');
+        $neilId = (int) User::where('email', 'vendedordisenador2@test.com')->value('id');
+        $fefiId = (int) User::where('email', 'vendedordisenador3@test.com')->value('id');
 
         if ($felixId === 0 || $neilId === 0 || $fefiId === 0) {
             $this->error('Faltan usuarios base del roster real (Felix/Neil/Fefi) — abortando.');
@@ -105,15 +105,15 @@ final class AdminContSeedRebotesQaCommand extends Command
     /** SCRUM-583 — pedido compartido entre 2 vendedores reales. */
     private function seedSharedProject(int $ownerId, int $sharedWithId): void
     {
-        if (MasterClient::where('name', 'like', self::MARKER_583 . '%')->exists()) {
+        if (MasterClient::where('name', 'like', self::MARKER_583.'%')->exists()) {
             $this->line('SCRUM-583 — ya sembrado, omitido.');
 
             return;
         }
 
-        $master  = MasterClient::create(['name' => self::MARKER_583 . ' Cliente Compartido']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '155-0000-9-' . random_int(1000, 9999)]);
-        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => self::MARKER_583 . ' Proyecto Compartido']);
+        $master = MasterClient::create(['name' => self::MARKER_583.' Cliente Compartido']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '155-0000-9-'.random_int(1000, 9999)]);
+        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => self::MARKER_583.' Proyecto Compartido']);
 
         $amount = 6000.0;
         $card = PipelineCard::create([
@@ -123,13 +123,13 @@ final class AdminContSeedRebotesQaCommand extends Command
         ]);
 
         $order = Order::create([
-            'order_number' => 'PED-COM-' . random_int(1000, 999999), 'pipeline_card_id' => $card->id,
+            'order_number' => 'PED-COM-'.random_int(1000, 999999), 'pipeline_card_id' => $card->id,
             'order_type' => Order::ORDER_TYPE_PEDIDO, 'stage' => Order::STAGE_POR_DESPACHAR,
             'customer_name' => $sub->business_name,
         ]);
 
         AdminContInvoice::create([
-            'numero' => 'F-COM-' . random_int(1000, 999999), 'order_id' => $order->id, 'cliente' => $sub->business_name,
+            'numero' => 'F-COM-'.random_int(1000, 999999), 'order_id' => $order->id, 'cliente' => $sub->business_name,
             'master_client_id' => $master->id, 'monto' => $amount, 'saldo_aplicado' => $amount,
         ]);
 
@@ -144,7 +144,7 @@ final class AdminContSeedRebotesQaCommand extends Command
      */
     private function seedArchitectPendingSinArchivo(string $marker, string $regimenFiscal, int $ownerId): void
     {
-        if (Architect::where('name', 'like', $marker . '%')->exists()) {
+        if (Architect::where('name', 'like', $marker.'%')->exists()) {
             $this->line("{$marker} — ya sembrado, omitido.");
 
             return;
@@ -162,7 +162,7 @@ final class AdminContSeedRebotesQaCommand extends Command
      */
     private function seedArchitectReadyToPay(int $ownerId, ArchitectCommissionService $commissions): void
     {
-        if (Architect::where('name', 'like', self::MARKER_592 . '%')->exists()) {
+        if (Architect::where('name', 'like', self::MARKER_592.'%')->exists()) {
             $this->line('SCRUM-592 — ya sembrado, omitido.');
 
             return;
@@ -171,7 +171,7 @@ final class AdminContSeedRebotesQaCommand extends Command
         $card = $this->makeArchitectProject(self::MARKER_592, ArchitectFiscalProfile::REGIMEN_CON_ITBMS, $ownerId, amount: 4200.0, totalCobrado: 4200.0);
         $architectId = (int) Quote::where('sales_project_id', $card->sales_project_id)->value('architect_id');
 
-        $tmpPath = sys_get_temp_dir() . '/preqa-cuenta-cobro-' . uniqid() . '.pdf';
+        $tmpPath = sys_get_temp_dir().'/preqa-cuenta-cobro-'.uniqid().'.pdf';
         file_put_contents($tmpPath, "%PDF-1.4\n% PREQA-REBOTE-SCRUM592 — cuenta de cobro de prueba\n%%EOF");
         $file = new UploadedFile($tmpPath, 'cuenta-cobro-preqa-scrum592.pdf', 'application/pdf', null, true);
 
@@ -186,16 +186,16 @@ final class AdminContSeedRebotesQaCommand extends Command
      *  AdminContArchitectCommissionControllerTest::makeArchitectProject()/makeArchitect(). */
     private function makeArchitectProject(string $marker, string $regimenFiscal, int $ownerId, float $amount, float $totalCobrado): PipelineCard
     {
-        $architect = Architect::create(['name' => $marker . ' Arq. ' . uniqid(), 'email' => 'preqa+' . uniqid() . '@atlantic.test']);
+        $architect = Architect::create(['name' => $marker.' Arq. '.uniqid(), 'email' => 'preqa+'.uniqid().'@atlantic.test']);
         ArchitectFiscalProfile::create([
-            'architect_id' => $architect->id, 'empresa' => $marker . ' Empresa Arq', 'ruc' => '155-' . random_int(1000, 9999) . '-1-' . random_int(1000, 9999),
+            'architect_id' => $architect->id, 'empresa' => $marker.' Empresa Arq', 'ruc' => '155-'.random_int(1000, 9999).'-1-'.random_int(1000, 9999),
             'regimen_fiscal' => $regimenFiscal,
         ]);
 
-        $master  = MasterClient::create(['name' => $marker . ' Cliente Arq']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '155-0000-8-' . random_int(1000, 9999)]);
-        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => $marker . ' Proyecto Arq']);
-        $card    = PipelineCard::create([
+        $master = MasterClient::create(['name' => $marker.' Cliente Arq']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '155-0000-8-'.random_int(1000, 9999)]);
+        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => $marker.' Proyecto Arq']);
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $ownerId, 'amount' => $amount,
             'stage_changed_at' => Carbon::now(),
@@ -207,13 +207,13 @@ final class AdminContSeedRebotesQaCommand extends Command
         ]);
 
         $order = Order::create([
-            'order_number' => 'PED-ARQ-' . random_int(1000, 999999), 'pipeline_card_id' => $card->id,
+            'order_number' => 'PED-ARQ-'.random_int(1000, 999999), 'pipeline_card_id' => $card->id,
             'order_type' => Order::ORDER_TYPE_PEDIDO, 'stage' => Order::STAGE_POR_DESPACHAR,
             'customer_name' => $sub->business_name,
         ]);
 
         AdminContInvoice::create([
-            'numero' => 'F-ARQ-' . random_int(1000, 999999), 'order_id' => $order->id, 'cliente' => $sub->business_name,
+            'numero' => 'F-ARQ-'.random_int(1000, 999999), 'order_id' => $order->id, 'cliente' => $sub->business_name,
             'master_client_id' => $master->id, 'monto' => $amount, 'saldo_aplicado' => $totalCobrado,
         ]);
 
@@ -223,22 +223,22 @@ final class AdminContSeedRebotesQaCommand extends Command
     /** SCRUM-601 — al menos 1 cobro confirmado hoy, para que el Arqueo del día tenga contenido. */
     private function seedDailyCashCountPayment(int $createdBy): void
     {
-        if (MasterClient::where('name', 'like', self::MARKER_601 . '%')->exists()) {
+        if (MasterClient::where('name', 'like', self::MARKER_601.'%')->exists()) {
             $this->line('SCRUM-601 — ya sembrado, omitido.');
 
             return;
         }
 
-        $master = MasterClient::create(['name' => self::MARKER_601 . ' Cliente Arqueo']);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '155-0000-7-' . random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => self::MARKER_601.' Cliente Arqueo']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '155-0000-7-'.random_int(1000, 9999)]);
 
         $invoice = AdminContInvoice::create([
-            'numero' => 'F-ARQ-DIA-' . random_int(100000, 999999), 'order_id' => random_int(1000000, 9999999),
+            'numero' => 'F-ARQ-DIA-'.random_int(100000, 999999), 'order_id' => random_int(1000000, 9999999),
             'master_client_id' => $master->id, 'cliente' => $sub->business_name, 'monto' => 350.0, 'saldo_aplicado' => 0,
         ]);
 
         $payment = AdminContPayment::create([
-            'numero_recibo' => 'REC-PREQA-' . random_int(100000, 999999), 'master_client_id' => $master->id,
+            'numero_recibo' => 'REC-PREQA-'.random_int(100000, 999999), 'master_client_id' => $master->id,
             'monto_recibido' => 350.0, 'saldo_favor_aplicado' => 0, 'metodo_pago' => AdminContPayment::METODO_EFECTIVO,
             'estado' => AdminContPayment::ESTADO_CONFIRMADO, 'created_by' => $createdBy,
         ]);

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Fase 4 — Servicios (docs/architecture/servicios-fase4-diseno.md, sección 6). `tecnico_servicios`
- * (Carlos Vergara, Pedro Santos, Agustín Rodríguez) y `garantias_servicios` (Miguel Castillo)
+ * (Tecnico Servicios Test, Tecnico Servicios Test 2, Agustín Rodríguez) y `garantias_servicios` (Garantias Servicios Test)
  * necesitan poder generar/editar el Informe de Inspección y la Cotización de SU ticket asignado
  * (REQ-238 RN5, REQ-292 RN7, batches futuros 8-9/11-12) — hoy están en Nivel 1 ("Read Only",
  * `can_edit=false` en los 7 módulos), asignado cuando Servicios todavía no existía
@@ -45,10 +45,10 @@ return new class extends TenantSchemaMigration
 
     public function up(): void
     {
-        $rolesTable  = $this->table('roles');
+        $rolesTable = $this->table('roles');
         $levelsTable = $this->table('security_levels');
         $matrixTable = $this->table('security_level_module_permissions');
-        $usersTable  = $this->table('users');
+        $usersTable = $this->table('users');
 
         $oldLevelId = (int) DB::table($levelsTable)->where('level', self::OLD_LEVEL)->value('id');
         $newLevelId = (int) DB::table($levelsTable)->where('level', self::NEW_LEVEL)->value('id');
@@ -81,10 +81,10 @@ return new class extends TenantSchemaMigration
 
     public function down(): void
     {
-        $rolesTable  = $this->table('roles');
+        $rolesTable = $this->table('roles');
         $levelsTable = $this->table('security_levels');
         $matrixTable = $this->table('security_level_module_permissions');
-        $usersTable  = $this->table('users');
+        $usersTable = $this->table('users');
 
         $oldLevelId = (int) DB::table($levelsTable)->where('level', self::OLD_LEVEL)->value('id');
         $newLevelId = (int) DB::table($levelsTable)->where('level', self::NEW_LEVEL)->value('id');

@@ -19,6 +19,7 @@ use App\Modules\VentasDiseno\Services\QuoteFolioService;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,20 +43,20 @@ class Scrum711SalesForceDemoSeeder extends Seeder
 
     /** @var list<string> */
     private const VENDOR_EMAILS = [
-        'milena.e@grupolafayette.com',
-        'neil.quiel@atlantic.com.pa',
-        'fefi@atlantic.com.pa',
-        'vanessa@atlantic.com.pa',
-        'paola@atlantic.com.pa',
-        'annie@atlantic.com.pa',
-        'maribel@atlantic.com.pa',
-        'juanmanuel@atlantic.com.pa',
-        'bernardo@atlantic.com.pa',
-        'idmar@atlantic.com.pa',
+        'vendedordisenador@test.com',
+        'vendedordisenador2@test.com',
+        'vendedordisenador3@test.com',
+        'vendedordisenador4@test.com',
+        'vendedordisenador5@test.com',
+        'vendedordisenador6@test.com',
+        'vendedordisenador7@test.com',
+        'vendedordisenador8@test.com',
+        'vendedordisenador9@test.com',
+        'vendedordisenador10@test.com',
     ];
 
     /** Primer vendedor de la lista — cumple "3 meses sin superar $20,000" (REQ-075). */
-    private const LOW_PERFORMER_EMAIL = 'milena.e@grupolafayette.com';
+    private const LOW_PERFORMER_EMAIL = 'vendedordisenador@test.com';
 
     /**
      * Plan de tarjetas por vendedor (índice de VENDOR_EMAILS) — [stage, monthsAgo, stagnant].
@@ -142,6 +143,7 @@ class Scrum711SalesForceDemoSeeder extends Seeder
         $tenant = Tenant::where('slug', 'atlantic')->first();
         if ($tenant === null) {
             $this->command?->warn('Tenant "atlantic" not found — Scrum711SalesForceDemoSeeder skipped.');
+
             return;
         }
 
@@ -155,8 +157,9 @@ class Scrum711SalesForceDemoSeeder extends Seeder
 
     private function seed(string $slug): void
     {
-        if (MasterClient::where('name', 'like', self::MARKER . '%')->exists()) {
+        if (MasterClient::where('name', 'like', self::MARKER.'%')->exists()) {
             $this->command?->info('Scrum711SalesForceDemoSeeder ya corrió en este entorno — skip.');
+
             return;
         }
 
@@ -169,7 +172,8 @@ class Scrum711SalesForceDemoSeeder extends Seeder
 
         $missing = array_diff(self::VENDOR_EMAILS, $vendors->pluck('email')->all());
         if ($missing !== []) {
-            $this->command?->warn('Faltan vendedores (correr BusinessRoleUserSeeder primero): ' . implode(', ', $missing));
+            $this->command?->warn('Faltan vendedores (correr BusinessRoleUserSeeder primero): '.implode(', ', $missing));
+
             return;
         }
 
@@ -179,25 +183,25 @@ class Scrum711SalesForceDemoSeeder extends Seeder
 
         foreach ($vendors as $row) {
             $vendorIndex = array_search($row->email, self::VENDOR_EMAILS, true);
-            $ownerId     = (int) $row->id;
+            $ownerId = (int) $row->id;
             $isLowPerformer = $row->email === self::LOW_PERFORMER_EMAIL;
-            $slugName    = explode('@', $row->email)[0];
+            $slugName = explode('@', $row->email)[0];
 
             SalesGoal::create([
-                'user_id'          => $ownerId,
-                'goal_amount'      => $isLowPerformer ? 15000 : (25000 + $vendorIndex * 2000),
+                'user_id' => $ownerId,
+                'goal_amount' => $isLowPerformer ? 15000 : (25000 + $vendorIndex * 2000),
                 'goal_plus_amount' => $isLowPerformer ? 20000 : (32000 + $vendorIndex * 2500),
             ]);
 
             $master = MasterClient::create([
-                'name'                => self::MARKER . ' Cliente de ' . ucfirst($slugName),
-                'default_price_type'  => 'project',
+                'name' => self::MARKER.' Cliente de '.ucfirst($slugName),
+                'default_price_type' => 'project',
             ]);
             $sub = SubClient::create([
                 'master_client_id' => $master->id,
-                'business_name'    => self::MARKER . ' ' . ucfirst($slugName) . ' S.A.',
-                'tax_id'           => sprintf('155-%04d-1-2026', 1000 + $vendorIndex),
-                'category'         => 'b_architect_designer',
+                'business_name' => self::MARKER.' '.ucfirst($slugName).' S.A.',
+                'tax_id' => sprintf('155-%04d-1-2026', 1000 + $vendorIndex),
+                'category' => 'b_architect_designer',
             ]);
 
             // Sin esto, PipelineCard::validationErrorForTransitionTo() bloquea el botón
@@ -206,14 +210,14 @@ class Scrum711SalesForceDemoSeeder extends Seeder
             // porque el seed nunca cargaba contactos de Subcliente).
             $contact = SubClientContact::create([
                 'sub_client_id' => $sub->id,
-                'name'          => 'Contacto ' . ucfirst($slugName),
-                'role'          => 'client',
-                'phone'         => sprintf('+507 6%03d-%04d', 100 + $vendorIndex, 1000 + $vendorIndex),
-                'email'         => $slugName . '.contacto@' . $slugName . '-demo.test',
+                'name' => 'Contacto '.ucfirst($slugName),
+                'role' => 'client',
+                'phone' => sprintf('+507 6%03d-%04d', 100 + $vendorIndex, 1000 + $vendorIndex),
+                'email' => $slugName.'.contacto@'.$slugName.'-demo.test',
             ]);
 
             $approvedAmounts = self::APPROVED_AMOUNTS[$vendorIndex];
-            $approvedCursor  = 0;
+            $approvedCursor = 0;
 
             foreach (self::PIPELINE_PLAN[$vendorIndex] as $i => $plan) {
                 $stage = $plan['stage'];
@@ -243,17 +247,17 @@ class Scrum711SalesForceDemoSeeder extends Seeder
                 // sus 7 tarjetas compartían un solo SalesProject y la última era 'lost').
                 $project = SalesProject::create([
                     'sub_client_id' => $sub->id,
-                    'name'          => self::MARKER . ' Proyecto ' . ucfirst($slugName) . ' ' . ($i + 1),
-                    'tag'           => 'both',
+                    'name' => self::MARKER.' Proyecto '.ucfirst($slugName).' '.($i + 1),
+                    'tag' => 'both',
                 ]);
 
                 $card = PipelineCard::create([
                     'sales_project_id' => $project->id,
-                    'stage'            => $stage,
+                    'stage' => $stage,
                     'master_client_id' => $master->id,
-                    'sub_client_id'    => $sub->id,
-                    'owner_id'         => $ownerId,
-                    'amount'           => $amount,
+                    'sub_client_id' => $sub->id,
+                    'owner_id' => $ownerId,
+                    'amount' => $amount,
                     'stage_changed_at' => $stageChangedAt,
                 ]);
 
@@ -267,7 +271,7 @@ class Scrum711SalesForceDemoSeeder extends Seeder
             }
         }
 
-        $this->command?->info('Scrum711SalesForceDemoSeeder: sembrados ' . count(self::VENDOR_EMAILS) . ' vendedores.');
+        $this->command?->info('Scrum711SalesForceDemoSeeder: sembrados '.count(self::VENDOR_EMAILS).' vendedores.');
     }
 
     /**
@@ -309,8 +313,8 @@ class Scrum711SalesForceDemoSeeder extends Seeder
         switch ($card->stage) {
             case 'lead':
                 $card->contacts()->create([
-                    'name'  => $contact->name,
-                    'role'  => $contact->role,
+                    'name' => $contact->name,
+                    'role' => $contact->role,
                     'phone' => $contact->phone,
                     'email' => $contact->email,
                 ]);
@@ -337,41 +341,41 @@ class Scrum711SalesForceDemoSeeder extends Seeder
     {
         PipelineCardFile::create([
             'pipeline_card_id' => $card->id,
-            'type'             => $type,
-            'file_name'        => self::MARKER . " {$type}.pdf",
-            'storage_key'      => "ventas-diseno/demo-711/{$card->id}/{$type}.pdf",
-            'size_bytes'       => 102400,
-            'mime_type'        => 'application/pdf',
-            'uploaded_by'      => $ownerId,
+            'type' => $type,
+            'file_name' => self::MARKER." {$type}.pdf",
+            'storage_key' => "ventas-diseno/demo-711/{$card->id}/{$type}.pdf",
+            'size_bytes' => 102400,
+            'mime_type' => 'application/pdf',
+            'uploaded_by' => $ownerId,
         ]);
     }
 
-    /** @param \Illuminate\Support\Collection<int, int> $catalogIds */
+    /** @param Collection<int, int> $catalogIds */
     private function makeQuote(
         PipelineCard $card,
         int $ownerId,
         QuoteFolioService $folioService,
-        \Illuminate\Support\Collection $catalogIds,
+        Collection $catalogIds,
         int $seedOffset,
     ): void {
         $status = in_array($card->stage, ['proposal', 'approved'], true) ? 'approved' : 'sent';
 
         $quote = Quote::create([
             'master_client_id' => $card->master_client_id,
-            'sub_client_id'    => $card->sub_client_id,
+            'sub_client_id' => $card->sub_client_id,
             'sales_project_id' => $card->sales_project_id,
-            'description'      => self::MARKER . ' Cotización ' . ucfirst($card->stage),
-            'owner_id'         => $ownerId,
-            'delivery_type'    => 'single',
-            'status'           => $status,
-            'folio'            => $folioService->next(),
-            'generated_at'     => $card->stage_changed_at,
-            'price_type'       => 'project',
+            'description' => self::MARKER.' Cotización '.ucfirst($card->stage),
+            'owner_id' => $ownerId,
+            'delivery_type' => 'single',
+            'status' => $status,
+            'folio' => $folioService->next(),
+            'generated_at' => $card->stage_changed_at,
+            'price_type' => 'project',
         ]);
 
         $part = QuotePart::create([
             'quote_id' => $quote->id,
-            'name'     => 'General',
+            'name' => 'General',
             'position' => 1,
         ]);
 
@@ -386,14 +390,14 @@ class Scrum711SalesForceDemoSeeder extends Seeder
             }
 
             QuoteItem::create([
-                'quote_part_id'      => $part->id,
+                'quote_part_id' => $part->id,
                 'catalog_product_id' => $product->id,
-                'is_custom'          => false,
-                'reference'          => $product->reference,
-                'description'        => $product->description,
-                'quantity'           => random_int(1, 8),
-                'unit_price'         => $product->price_full,
-                'cost'               => $product->cost,
+                'is_custom' => false,
+                'reference' => $product->reference,
+                'description' => $product->description,
+                'quantity' => random_int(1, 8),
+                'unit_price' => $product->price_full,
+                'cost' => $product->cost,
             ]);
         }
     }

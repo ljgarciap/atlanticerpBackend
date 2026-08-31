@@ -22,14 +22,15 @@ use Illuminate\Http\Request;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-735. Daniela (daniela@atlantic.com.pa, seedeada por CoreUserSeeder en TODOS
- * los entornos, incl. `testing`) y Neil (neil.quiel@atlantic.com.pa, seedeado por
+ * SCRUM-735. Daniela (gerencia@test.com, seedeada por CoreUserSeeder en TODOS
+ * los entornos, incl. `testing`) y Neil (vendedordisenador2@test.com, seedeado por
  * BusinessRoleUserSeeder, rol vendedor_disenador real) son usuarios reales — no hace falta
  * ningún fixture de usuario propio.
  */
 class TestDataCleanupServiceTest extends FeatureTestCase
 {
     private User $daniela;
+
     private User $neil;
 
     protected function setUp(): void
@@ -37,8 +38,8 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         parent::setUp();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        $this->daniela = User::where('email', 'daniela@atlantic.com.pa')->firstOrFail();
-        $this->neil    = User::where('email', 'neil.quiel@atlantic.com.pa')->firstOrFail();
+        $this->daniela = User::where('email', 'gerencia@test.com')->firstOrFail();
+        $this->neil = User::where('email', 'vendedordisenador2@test.com')->firstOrFail();
     }
 
     /**
@@ -71,9 +72,9 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($owner);
         $sub = SubClient::create([
             'master_client_id' => $master->id,
-            'business_name'    => "{$prefix} Subcliente S.A.",
-            'tax_id'            => sprintf('155-%04d-1-2026', random_int(1000, 9999)),
-            'category'          => 'b_architect_designer',
+            'business_name' => "{$prefix} Subcliente S.A.",
+            'tax_id' => sprintf('155-%04d-1-2026', random_int(1000, 9999)),
+            'category' => 'b_architect_designer',
         ]);
 
         // SalesProject NO usa LogsAuditTrail (ver docblock de TestDataCleanupService) —
@@ -83,20 +84,20 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($owner);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id,
-            'stage'            => 'lead',
+            'stage' => 'lead',
             'master_client_id' => $master->id,
-            'sub_client_id'    => $sub->id,
-            'owner_id'         => $owner->id,
+            'sub_client_id' => $sub->id,
+            'owner_id' => $owner->id,
             'stage_changed_at' => now(),
         ]);
 
         $this->actingForAudit($owner);
         $quote = Quote::create([
             'master_client_id' => $master->id,
-            'sub_client_id'    => $sub->id,
+            'sub_client_id' => $sub->id,
             'sales_project_id' => $project->id,
-            'description'      => "{$prefix} Cotización",
-            'owner_id'         => $owner->id,
+            'description' => "{$prefix} Cotización",
+            'owner_id' => $owner->id,
         ]);
 
         $this->actingForAudit($owner);
@@ -105,11 +106,11 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($owner);
         $item = QuoteItem::create([
             'quote_part_id' => $part->id,
-            'is_custom'     => true,
-            'reference'     => 'REF-1',
-            'description'   => "{$prefix} Item",
-            'quantity'      => 1,
-            'unit_price'    => 10.0,
+            'is_custom' => true,
+            'reference' => 'REF-1',
+            'description' => "{$prefix} Item",
+            'quantity' => 1,
+            'unit_price' => 10.0,
         ]);
 
         return compact('master', 'sub', 'project', 'card', 'quote', 'part', 'item');
@@ -118,9 +119,9 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     public function test_dry_run_identifica_toda_la_data_de_daniela_y_excluye_lo_de_otro_usuario(): void
     {
         $daniela = $this->seedFullPipeline($this->daniela, '[Daniela QA]');
-        $neil    = $this->seedFullPipeline($this->neil, '[Neil Real]');
+        $neil = $this->seedFullPipeline($this->neil, '[Neil Real]');
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         $this->assertContains($daniela['master']->id, $report['candidates']['master_client']);
         $this->assertContains($daniela['sub']->id, $report['candidates']['sub_client']);
@@ -144,7 +145,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($this->daniela);
         $master = MasterClient::create(['name' => '[DEMO-711] Cliente de Daniela', 'default_price_type' => 'project']);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         $this->assertNotContains($master->id, $report['candidates']['master_client']);
         $excludedIds = collect($report['excluded'])->where('entity_type', 'master_client')->pluck('id')->all();
@@ -157,12 +158,12 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         // quedar protegido igual, vía labelsFor() caminando quote_part -> quote.
         $this->actingForAudit($this->daniela);
         $master = MasterClient::create(['name' => 'Cliente sin marcador']);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub sin marcador', 'tax_id' => '155-0001-1-2026']);
-        $quote  = Quote::create(['master_client_id' => $master->id, 'sub_client_id' => $sub->id, 'name' => '[QA-VD] Cotización protegida', 'description' => '[QA-VD] Cotización protegida', 'owner_id' => $this->daniela->id]);
-        $part   = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida', 'position' => 1]);
-        $item   = QuoteItem::create(['quote_part_id' => $part->id, 'is_custom' => true, 'reference' => 'REF-X', 'name' => 'Item sin marcador propio', 'description' => 'Item sin marcador propio', 'quantity' => 1, 'unit_price' => 5.0]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub sin marcador', 'tax_id' => '155-0001-1-2026']);
+        $quote = Quote::create(['master_client_id' => $master->id, 'sub_client_id' => $sub->id, 'name' => '[QA-VD] Cotización protegida', 'description' => '[QA-VD] Cotización protegida', 'owner_id' => $this->daniela->id]);
+        $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida', 'position' => 1]);
+        $item = QuoteItem::create(['quote_part_id' => $part->id, 'is_custom' => true, 'reference' => 'REF-X', 'name' => 'Item sin marcador propio', 'description' => 'Item sin marcador propio', 'quantity' => 1, 'unit_price' => 5.0]);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         $this->assertNotContains($quote->id, $report['candidates']['quote']);
         $this->assertNotContains($part->id, $report['candidates']['quote_part']);
@@ -178,7 +179,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($this->daniela);
         $master->update(['default_price_type' => 'special']);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         $this->assertNotContains($master->id, $report['candidates']['master_client']);
     }
@@ -187,7 +188,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         $daniela = $this->seedFullPipeline($this->daniela, '[Daniela Inferido]');
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         // SalesProject nunca tiene su propia fila en audit_logs (no usa LogsAuditTrail) —
         // si aparece como candidato, es porque la inferencia por sub_client_id + ventana
@@ -198,13 +199,13 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     public function test_active_reference_protege_master_client_con_subcliente_vivo_de_otro_usuario(): void
     {
         $this->actingForAudit($this->daniela);
-        $master     = MasterClient::create(['name' => '[Daniela] Cliente compartido']);
+        $master = MasterClient::create(['name' => '[Daniela] Cliente compartido']);
         $subDaniela = SubClient::create(['master_client_id' => $master->id, 'business_name' => '[Daniela] Sub propio', 'tax_id' => '155-1111-1-2026']);
 
         $this->actingForAudit($this->neil);
         $subNeil = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Neil', 'tax_id' => '155-2222-1-2026']);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         // El subcliente de Daniela sigue siendo candidato en sí mismo...
         $this->assertContains($subDaniela->id, $report['candidates']['sub_client']);
@@ -229,10 +230,10 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         $this->actingForAudit($this->daniela);
         $product = CatalogProduct::create([
-            'reference'   => '[Daniela] REF-TEST',
+            'reference' => '[Daniela] REF-TEST',
             'name' => '[Daniela] Producto de prueba', 'description' => '[Daniela] Producto de prueba',
-            'price_full'  => 100.0,
-            'is_active'   => true,
+            'price_full' => 100.0,
+            'is_active' => true,
         ]);
 
         // Línea de compra REAL — no participa del algoritmo de candidatos (Compras no es
@@ -245,7 +246,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'status' => PurchaseOrder::STATUS_POR_APROBAR,
             'shipping_type' => PurchaseOrder::SHIPPING_TERRESTRE, 'who_pays_shipping' => PurchaseOrder::PAYS_PROVIDER,
-            'modality' => PurchaseOrder::MODALITY_DIRECTO, 'requires_mark_approval' => false,
+            'modality' => PurchaseOrder::MODALITY_DIRECTO, 'requires_primary_approval' => false,
             'currency' => 'USD', 'created_by' => $this->neil->id,
         ]);
         $line = PurchaseOrderLine::create([
@@ -253,7 +254,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
             'quantity' => 5, 'unit_cost' => 60.0, 'subtotal' => 300.0,
         ]);
 
-        $report = app(TestDataCleanupService::class)->buildReport('daniela@atlantic.com.pa');
+        $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         $this->assertNotContains($product->id, $report['candidates']['catalog_product']);
         $excludedIds = collect($report['excluded'])->where('entity_type', 'catalog_product')->pluck('id')->all();
@@ -277,14 +278,14 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         $this->actingForAudit($this->daniela);
         $product = CatalogProduct::create([
-            'reference'   => '[Daniela] REF-LIBRE',
+            'reference' => '[Daniela] REF-LIBRE',
             'name' => '[Daniela] Producto sin referencias', 'description' => '[Daniela] Producto sin referencias',
-            'price_full'  => 50.0,
-            'is_active'   => true,
+            'price_full' => 50.0,
+            'is_active' => true,
         ]);
 
         $service = app(TestDataCleanupService::class);
-        $report  = $service->buildReport('daniela@atlantic.com.pa');
+        $report = $service->buildReport('gerencia@test.com');
 
         $this->assertContains($product->id, $report['candidates']['catalog_product']);
 
@@ -303,7 +304,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $neil = $this->seedFullPipeline($this->neil, '[Neil Force]');
 
         $service = app(TestDataCleanupService::class);
-        $report  = $service->buildReport('daniela@atlantic.com.pa');
+        $report = $service->buildReport('gerencia@test.com');
         $service->execute($report);
 
         $this->assertNull(MasterClient::find($daniela['master']->id));
@@ -341,7 +342,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $daniela = $this->seedFullPipeline($this->daniela, '[Daniela Cascade Count]');
 
         $service = app(TestDataCleanupService::class);
-        $report  = $service->buildReport('daniela@atlantic.com.pa');
+        $report = $service->buildReport('gerencia@test.com');
         $this->assertContains($daniela['sub']->id, $report['candidates']['sub_client']);
         $this->assertContains($daniela['project']->id, $report['candidates']['sales_project']);
 
@@ -395,7 +396,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         $this->artisan('ventas-diseno:cleanup-test-data', [
             '--env-override' => true,
-            '--user'         => 'no-existe@atlantic.com.pa',
+            '--user' => 'no-existe@atlantic.com.pa',
         ])->assertExitCode(1);
     }
 }

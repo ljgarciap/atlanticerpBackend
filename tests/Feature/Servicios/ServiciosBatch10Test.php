@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicios;
 
+use App\Modules\Servicios\Models\InspectionReport;
 use App\Modules\Servicios\Models\InternalTechnician;
 use App\Modules\Servicios\Models\Ticket;
 use App\Modules\Servicios\Services\ServiciosSettingsService;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * Fase 4 — Servicios, Batch 10 (REQ-251→254 Informe móvil + REQ-258 Comisión Carlos Vergara,
+ * Fase 4 — Servicios, Batch 10 (REQ-251→254 Informe móvil + REQ-258 Comisión Tecnico Servicios Test,
  * decisión de Luis 2026-08-11). Cubre lo más propenso a bugs reales de este batch: la fórmula
  * ponderada de comisión (RN1/RN5/RN6) y el gap de validación real encontrado en Senior Review —
  * `saveMobile()` decodifica el payload a mano (JSON string dentro de multipart) y por eso NO pasa
@@ -21,11 +22,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class ServiciosBatch10Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_CARLOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_CARLOS = 'tecnicoservicios@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
     protected function setUp(): void
     {
@@ -41,21 +42,21 @@ class ServiciosBatch10Test extends FeatureTestCase
     {
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        return InternalTechnician::where('nombre', 'Carlos Vergara')->firstOrFail();
+        return InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail();
     }
 
     /** @param array<string, mixed> $overrides */
     private function makeTicket(array $overrides = []): Ticket
     {
         return Ticket::create([
-            'numero'                   => 'INS-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'subtipo'                  => Ticket::SUBTIPO_INSPECTION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba — Batch 10',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_ON_SITE,
-            'quote_status'             => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
+            'numero' => 'INS-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'subtipo' => Ticket::SUBTIPO_INSPECTION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba — Batch 10',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_ON_SITE,
+            'quote_status' => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
             ...$overrides,
         ]);
@@ -67,7 +68,7 @@ class ServiciosBatch10Test extends FeatureTestCase
     public function test_comision_sin_captura_retorna_null(): void
     {
         $token = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
-        $id    = $this->carlos()->id;
+        $id = $this->carlos()->id;
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/internal-technicians/{$id}/commission?year=2020&month=1")
@@ -85,7 +86,7 @@ class ServiciosBatch10Test extends FeatureTestCase
     public function test_total_ponderado_con_defaults_del_plan_real(): void
     {
         $carlos = $this->carlos();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/servicios/internal-technicians/{$carlos->id}/commission-capture", [
@@ -96,7 +97,7 @@ class ServiciosBatch10Test extends FeatureTestCase
             ->assertStatus(200);
 
         $mgmtToken = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
-        $response  = $this->withHeaders($this->authHeaders($mgmtToken))
+        $response = $this->withHeaders($this->authHeaders($mgmtToken))
             ->getJson("/api/servicios/internal-technicians/{$carlos->id}/commission?year=2026&month=8")
             ->assertStatus(200);
 
@@ -122,7 +123,7 @@ class ServiciosBatch10Test extends FeatureTestCase
     public function test_licencia_medica_redistribuye_el_monto_de_puntualidad(): void
     {
         $carlos = $this->carlos();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/servicios/internal-technicians/{$carlos->id}/commission-capture", [
@@ -133,7 +134,7 @@ class ServiciosBatch10Test extends FeatureTestCase
             ->assertStatus(200);
 
         $mgmtToken = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
-        $response  = $this->withHeaders($this->authHeaders($mgmtToken))
+        $response = $this->withHeaders($this->authHeaders($mgmtToken))
             ->getJson("/api/servicios/internal-technicians/{$carlos->id}/commission?year=2026&month=9")
             ->assertStatus(200);
 
@@ -149,7 +150,7 @@ class ServiciosBatch10Test extends FeatureTestCase
     /** RN8 — exclusivo del propio técnico o Gerencia; Aaron (lider_servicios) puede CAPTURAR pero no ver el resultado. */
     public function test_aaron_no_puede_ver_el_resultado_calculado(): void
     {
-        $id    = $this->carlos()->id;
+        $id = $this->carlos()->id;
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
@@ -159,7 +160,7 @@ class ServiciosBatch10Test extends FeatureTestCase
 
     public function test_carlos_puede_ver_su_propio_resultado(): void
     {
-        $id    = $this->carlos()->id;
+        $id = $this->carlos()->id;
         $token = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
@@ -192,42 +193,42 @@ class ServiciosBatch10Test extends FeatureTestCase
 
     // ── REQ-251→254 — Informe móvil ───────────────────────────────────────────────────────────
 
-    public function test_saveMobile_sin_conclusion_retorna_422(): void
+    public function test_save_mobile_sin_conclusion_retorna_422(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/mobile", [
-                'payload'              => json_encode(['firma_cliente_nombre' => 'Cliente de prueba']),
+                'payload' => json_encode(['firma_cliente_nombre' => 'Cliente de prueba']),
                 'firma_cliente_imagen' => UploadedFile::fake()->image('firma.png', 100, 60),
             ])
             ->assertStatus(422);
     }
 
-    public function test_saveMobile_sin_nombre_de_firma_retorna_422(): void
+    public function test_save_mobile_sin_nombre_de_firma_retorna_422(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/mobile", [
-                'payload'              => json_encode(['conclusion' => 'Todo en orden']),
+                'payload' => json_encode(['conclusion' => 'Todo en orden']),
                 'firma_cliente_imagen' => UploadedFile::fake()->image('firma.png', 100, 60),
             ])
             ->assertStatus(422);
     }
 
     /** RN1 REQ-254 — completa el informe en el MISMO registro, con la firma gráfica real. */
-    public function test_saveMobile_completa_el_informe_con_firma_grafica(): void
+    public function test_save_mobile_completa_el_informe_con_firma_grafica(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/mobile", [
                 'payload' => json_encode([
-                    'conclusion'           => 'Instalación completada en sitio.',
+                    'conclusion' => 'Instalación completada en sitio.',
                     'firma_cliente_nombre' => 'Cliente de prueba',
                 ]),
                 'firma_cliente_imagen' => UploadedFile::fake()->image('firma.png', 100, 60),
@@ -249,15 +250,15 @@ class ServiciosBatch10Test extends FeatureTestCase
      * nueva reemplazaba la firma del cliente en silencio. Reproducido con 2 llamadas reales a
      * `saveMobile()` sobre el mismo ticket, la segunda con una imagen y un nombre distintos.
      */
-    public function test_saveMobile_rechaza_reemplazar_una_firma_ya_confirmada(): void
+    public function test_save_mobile_rechaza_reemplazar_una_firma_ya_confirmada(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/mobile", [
                 'payload' => json_encode([
-                    'conclusion'           => 'Instalación completada en sitio.',
+                    'conclusion' => 'Instalación completada en sitio.',
                     'firma_cliente_nombre' => 'Cliente Original',
                 ]),
                 'firma_cliente_imagen' => UploadedFile::fake()->image('firma.png', 100, 60),
@@ -266,7 +267,7 @@ class ServiciosBatch10Test extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/mobile", [
                 'payload' => json_encode([
-                    'conclusion'           => 'Instalación completada en sitio.',
+                    'conclusion' => 'Instalación completada en sitio.',
                     'firma_cliente_nombre' => 'Otra Persona',
                 ]),
                 'firma_cliente_imagen' => UploadedFile::fake()->image('firma2.png', 100, 60),
@@ -274,14 +275,14 @@ class ServiciosBatch10Test extends FeatureTestCase
         $response->assertStatus(409);
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $report = \App\Modules\Servicios\Models\InspectionReport::where('ticket_id', $ticket->id)->firstOrFail();
+        $report = InspectionReport::where('ticket_id', $ticket->id)->firstOrFail();
         $this->assertSame('Cliente Original', $report->firma_cliente_nombre);
     }
 
     public function test_tecnico_no_asignado_no_puede_completar_informe_movil(): void
     {
         $ticket = $this->makeTicket(); // sin internal_technician_id asignado a Carlos
-        $token  = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/mobile", [

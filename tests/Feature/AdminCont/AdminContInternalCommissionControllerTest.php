@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Services\CommissionOrderService;
@@ -23,8 +24,10 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContInternalCommissionControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL     = 'mbekhar@atlantic.com.pa';
-    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
+
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
@@ -35,7 +38,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     private function loginAsFelix(): string
@@ -52,7 +55,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
      */
     private function loginAsDesigner(): string
     {
-        \App\Models\User::where('email', self::DESIGNER_EMAIL)
+        User::where('email', self::DESIGNER_EMAIL)
             ->update(['extra_permissions' => json_encode(['admin_contab.commissions_internal.view'])]);
 
         return $this->loginAs(self::DESIGNER_EMAIL, 'Password123!', 'designer');
@@ -61,7 +64,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     /** Mismo patrón que AdminContAccountStatementControllerTest::userIdByEmailHelper(). */
     private function userIdByEmail(string $email): int
     {
-        return (int) \App\Models\User::where('email', $email)->value('id');
+        return (int) User::where('email', $email)->value('id');
     }
 
     /**
@@ -76,10 +79,10 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         ?Carbon $mesCierre = null,
         ?array $compartidoCon = null,
     ): AdminContInvoice {
-        $master  = MasterClient::create(['name' => 'Cliente Comisión '.uniqid()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Comisión '.uniqid()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Comisión '.uniqid()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $ownerId, 'amount' => $amount,
             'stage_changed_at' => $mesCierre ?? Carbon::now(), 'compartido_con' => $compartidoCon,
@@ -124,7 +127,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_estado_for_abono_parcial_permanece_pendiente_de_cobro(): void
     {
         $service = app(CommissionOrderService::class);
-        $mes     = CarbonImmutable::now()->startOfMonth();
+        $mes = CarbonImmutable::now()->startOfMonth();
 
         // RN2 REQ-501: $3,000 de $6,600 — abono parcial, nunca dispara comisión.
         $this->assertSame(
@@ -136,7 +139,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_estado_for_cobro_completo_en_mes_en_curso_es_por_pagar(): void
     {
         $service = app(CommissionOrderService::class);
-        $mes     = CarbonImmutable::now()->startOfMonth();
+        $mes = CarbonImmutable::now()->startOfMonth();
 
         // RN3 REQ-501: 100% cobrado, mes de cierre = mes en curso → ganada pero no liquidada.
         $this->assertSame(
@@ -263,9 +266,9 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
      * Regresión de Pre-QA/Visual Review (2026-08-25): el frontend gateaba el CRUD de tramos
      * (botones editar/eliminar/agregar del modal "Tabla de comisión escalonada") con
      * `admin_contab.edit` — Felix también tiene ese flag sin ser Mark, así que veía los
-     * controles y se encontraba con un 403 real al intentar guardar (`mark_only` gatea
+     * controles y se encontraba con un 403 real al intentar guardar (`primary_approver_only` gatea
      * POST/PUT/DELETE .../tiers). `puede_editar_tramos` es el cómputo server-side dependiente
-     * del actor (`current_user_id === mark_approver_user_id`), mismo criterio ya establecido en
+     * del actor (`current_user_id === primary_approver_user_id`), mismo criterio ya establecido en
      * `puede_decidir_incobrable` (AdminContInvoiceController::detail()).
      */
     public function test_summary_puede_editar_tramos_solo_para_mark(): void
@@ -460,7 +463,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_summary_tarjetas_de_resumen_ignoran_el_filtro_de_vendedor(): void
     {
         $vendorA = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $vendorB = $this->userIdByEmail('neil.quiel@atlantic.com.pa');
+        $vendorB = $this->userIdByEmail('vendedordisenador2@test.com');
 
         $this->makeCommissionableOrder($vendorA, 10000.0, 10000.0);
         $this->makeCommissionableOrder($vendorB, 8000.0, 4000.0);
@@ -472,7 +475,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             ->assertStatus(200)->json();
 
         $filtered = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/commissions/internal?vendedor_id=' . $vendorA)
+            ->getJson('/api/admin-contab/commissions/internal?vendedor_id='.$vendorA)
             ->assertStatus(200)->json();
 
         foreach (['total_pedidos_mes', 'ya_pagada', 'por_pagar', 'pendiente_cobro'] as $key) {
@@ -593,7 +596,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_divide_el_monto_en_partes_iguales_entre_2(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId  = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
 
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, null, [$felixId]);
 
@@ -616,8 +619,8 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_divide_el_monto_en_partes_iguales_entre_3(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId  = $this->userIdByEmail(self::FELIX_EMAIL);
-        $markId   = $this->userIdByEmail(self::MARK_EMAIL);
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
         $this->makeCommissionableOrder($vendorId, 30000.0, 30000.0, null, [$felixId, $markId]);
 

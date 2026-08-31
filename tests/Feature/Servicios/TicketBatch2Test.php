@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicios;
 
+use App\Models\User;
 use App\Modules\Servicios\Models\Ticket;
 use App\Modules\Servicios\Models\TicketProduct;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
+use Carbon\Carbon;
 use Tests\Feature\FeatureTestCase;
 
 /**
@@ -16,13 +18,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class TicketBatch2Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
-    private const GARANTIAS_SERVICIOS = 'garantias@atlantic.com.pa';
+    private const GARANTIAS_SERVICIOS = 'garantiasservicios@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
     protected function setUp(): void
     {
@@ -36,7 +38,7 @@ class TicketBatch2Test extends FeatureTestCase
      * timestamps automáticos). Se extrae acá y se aplica por asignación directa + save() después,
      * que sí lo respeta.
      *
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function makeTicket(array $overrides = []): Ticket
     {
@@ -44,14 +46,14 @@ class TicketBatch2Test extends FeatureTestCase
         unset($overrides['created_at']);
 
         $ticket = Ticket::create([
-            'numero'                   => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'subtipo'                  => Ticket::SUBTIPO_INSPECTION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_REPORTED,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'numero' => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'subtipo' => Ticket::SUBTIPO_INSPECTION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_REPORTED,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
             ...$overrides,
         ]);
@@ -75,7 +77,7 @@ class TicketBatch2Test extends FeatureTestCase
 
     private function technicianId(string $email): int
     {
-        return (int) \App\Models\User::where('email', $email)->value('id');
+        return (int) User::where('email', $email)->value('id');
     }
 
     // El round-trip HTTP resetea el tenant actual — re-activarlo antes de cualquier `->fresh()`
@@ -105,21 +107,21 @@ class TicketBatch2Test extends FeatureTestCase
     {
         $this->makeTicket([
             'inspection_report_status' => Ticket::INSPECTION_STATUS_COMPLETED,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
         ]);
         $this->makeTicket([
             'inspection_report_status' => Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
         ]);
         // No cuenta: informe todavía pendiente.
         $this->makeTicket([
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
         ]);
         // No cuenta: cotización ya no está pending (ya se generó, en algún estado del ciclo).
         $this->makeTicket([
             'inspection_report_status' => Ticket::INSPECTION_STATUS_COMPLETED,
-            'quote_status'             => Ticket::QUOTE_STATUS_DRAFT,
+            'quote_status' => Ticket::QUOTE_STATUS_DRAFT,
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -183,7 +185,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_detalle_visible_para_tecnico_interno(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/tickets/{$ticket->id}")
@@ -195,13 +197,13 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_editar_ticket_exitoso_cambia_subtipo(): void
     {
         $ticket = $this->makeTicket(['tipo' => Ticket::TIPO_INSTALLATION, 'subtipo' => Ticket::SUBTIPO_INSTALLATION]);
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}", [
-                'tipo'                      => Ticket::TIPO_INSTALLATION,
-                'subtipo'                   => Ticket::SUBTIPO_INSPECTION,
-                'tipo_instalacion'          => Ticket::TIPO_INSTALACION_INTERNAL,
+                'tipo' => Ticket::TIPO_INSTALLATION,
+                'subtipo' => Ticket::SUBTIPO_INSPECTION,
+                'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
                 // Batch 3 parte 2 — formato estructurado (antes era texto libre).
                 'requerimientos_especiales' => ['catalog' => ['andamio'], 'otros' => ['Requiere grúa']],
             ])
@@ -216,12 +218,12 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_editar_subtipo_invalido_para_el_tipo_retorna_422(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}", [
-                'tipo'             => Ticket::TIPO_CLAIM,
-                'subtipo'          => Ticket::SUBTIPO_INSTALLATION, // claim no maneja subtipo
+                'tipo' => Ticket::TIPO_CLAIM,
+                'subtipo' => Ticket::SUBTIPO_INSTALLATION, // claim no maneja subtipo
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
             ])
             ->assertStatus(422);
@@ -230,7 +232,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_editar_cambio_de_tipo_desasigna_tecnico_sin_especialidad_valida(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS); // tecnico_servicios, NO atiende Garantías
-        $ticket   = $this->makeTicket([
+        $ticket = $this->makeTicket([
             'tipo' => Ticket::TIPO_INSTALLATION, 'subtipo' => Ticket::SUBTIPO_INSTALLATION,
             'internal_technician_id' => $carlosId,
         ]);
@@ -238,8 +240,8 @@ class TicketBatch2Test extends FeatureTestCase
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}", [
-                'tipo'             => Ticket::TIPO_WARRANTY,
-                'subtipo'          => Ticket::SUBTIPO_WARRANTY_GENERIC,
+                'tipo' => Ticket::TIPO_WARRANTY,
+                'subtipo' => Ticket::SUBTIPO_WARRANTY_GENERIC,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
             ])
             ->assertStatus(200);
@@ -253,7 +255,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_editar_mantiene_tecnico_si_sigue_siendo_valido_para_el_nuevo_tipo(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket([
+        $ticket = $this->makeTicket([
             'tipo' => Ticket::TIPO_INSTALLATION, 'subtipo' => Ticket::SUBTIPO_INSTALLATION,
             'internal_technician_id' => $carlosId,
         ]);
@@ -261,8 +263,8 @@ class TicketBatch2Test extends FeatureTestCase
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}", [
-                'tipo'             => Ticket::TIPO_RETROFIT,
-                'subtipo'          => null,
+                'tipo' => Ticket::TIPO_RETROFIT,
+                'subtipo' => null,
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
             ])
             ->assertStatus(200);
@@ -275,7 +277,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_tecnico_interno_no_puede_editar_ticket(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}", [
@@ -288,7 +290,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_management_no_puede_editar_ticket(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
+        $token = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}", [
@@ -302,9 +304,9 @@ class TicketBatch2Test extends FeatureTestCase
 
     public function test_agregar_producto_a_ticket_existente(): void
     {
-        $ticket  = $this->makeTicket();
+        $ticket = $this->makeTicket();
         $product = $this->makeCatalogProduct(['reference' => 'LUM-COL-014', 'name' => 'Colgante LED', 'brand' => 'Atlantic']);
-        $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/products", [
@@ -320,9 +322,9 @@ class TicketBatch2Test extends FeatureTestCase
 
     public function test_editar_cantidad_de_producto_sin_recepcion(): void
     {
-        $ticket  = $this->makeTicket();
+        $ticket = $this->makeTicket();
         $product = $this->makeCatalogProduct();
-        $row     = TicketProduct::create([
+        $row = TicketProduct::create([
             'ticket_id' => $ticket->id, 'catalog_product_id' => $product->id,
             'cantidad_reclamo' => 2, 'cantidad_recibida' => 0, 'cantidad_pendiente' => 2,
         ]);
@@ -338,9 +340,9 @@ class TicketBatch2Test extends FeatureTestCase
 
     public function test_quitar_producto_sin_recepcion(): void
     {
-        $ticket  = $this->makeTicket();
+        $ticket = $this->makeTicket();
         $product = $this->makeCatalogProduct();
-        $row     = TicketProduct::create([
+        $row = TicketProduct::create([
             'ticket_id' => $ticket->id, 'catalog_product_id' => $product->id,
             'cantidad_reclamo' => 2, 'cantidad_recibida' => 0, 'cantidad_pendiente' => 2,
         ]);
@@ -360,9 +362,9 @@ class TicketBatch2Test extends FeatureTestCase
      */
     public function test_no_se_puede_editar_producto_con_recepcion_registrada(): void
     {
-        $ticket  = $this->makeTicket();
+        $ticket = $this->makeTicket();
         $product = $this->makeCatalogProduct();
-        $row     = TicketProduct::create([
+        $row = TicketProduct::create([
             'ticket_id' => $ticket->id, 'catalog_product_id' => $product->id,
             'cantidad_reclamo' => 5, 'cantidad_recibida' => 2, 'cantidad_pendiente' => 3,
         ]);
@@ -378,9 +380,9 @@ class TicketBatch2Test extends FeatureTestCase
 
     public function test_no_se_puede_quitar_producto_con_recepcion_registrada(): void
     {
-        $ticket  = $this->makeTicket();
+        $ticket = $this->makeTicket();
         $product = $this->makeCatalogProduct();
-        $row     = TicketProduct::create([
+        $row = TicketProduct::create([
             'ticket_id' => $ticket->id, 'catalog_product_id' => $product->id,
             'cantidad_reclamo' => 5, 'cantidad_recibida' => 2, 'cantidad_pendiente' => 3,
         ]);
@@ -396,9 +398,9 @@ class TicketBatch2Test extends FeatureTestCase
 
     public function test_tecnico_interno_no_puede_agregar_producto(): void
     {
-        $ticket  = $this->makeTicket();
+        $ticket = $this->makeTicket();
         $product = $this->makeCatalogProduct();
-        $token   = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/products", [
@@ -412,13 +414,13 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_primer_agendamiento_pasa_reportado_a_agendado(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket(['estado' => Ticket::ESTADO_REPORTED, 'scheduled_at' => null]);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_REPORTED, 'scheduled_at' => null]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDays(2)->toIso8601String(),
+                'scheduled_at' => now()->addDays(2)->toIso8601String(),
             ])
             ->assertStatus(200);
 
@@ -430,7 +432,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_reagendar_no_cambia_el_estado(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket([
+        $ticket = $this->makeTicket([
             'estado' => Ticket::ESTADO_ON_SITE, 'scheduled_at' => now()->addDay(),
             'internal_technician_id' => $carlosId,
         ]);
@@ -440,8 +442,8 @@ class TicketBatch2Test extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => $nuevaFecha,
-                'motivo_reagendamiento'  => 'Cliente pidió mover la visita.',
+                'scheduled_at' => $nuevaFecha,
+                'motivo_reagendamiento' => 'Cliente pidió mover la visita.',
             ])
             ->assertStatus(200);
 
@@ -453,7 +455,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_reagendar_sin_motivo_retorna_422(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket([
+        $ticket = $this->makeTicket([
             'estado' => Ticket::ESTADO_SCHEDULED, 'scheduled_at' => now()->addDay(),
             'internal_technician_id' => $carlosId,
         ]);
@@ -462,7 +464,7 @@ class TicketBatch2Test extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDays(5)->toIso8601String(),
+                'scheduled_at' => now()->addDays(5)->toIso8601String(),
             ])
             ->assertStatus(422);
     }
@@ -470,13 +472,13 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_primer_agendamiento_no_exige_motivo(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket(['estado' => Ticket::ESTADO_REPORTED, 'scheduled_at' => null]);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_REPORTED, 'scheduled_at' => null]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDays(2)->toIso8601String(),
+                'scheduled_at' => now()->addDays(2)->toIso8601String(),
             ])
             ->assertStatus(200);
     }
@@ -485,7 +487,7 @@ class TicketBatch2Test extends FeatureTestCase
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
         $fechaOriginal = now()->addDay();
-        $ticket   = $this->makeTicket([
+        $ticket = $this->makeTicket([
             'estado' => Ticket::ESTADO_SCHEDULED, 'scheduled_at' => $fechaOriginal,
             'internal_technician_id' => $carlosId,
         ]);
@@ -495,8 +497,8 @@ class TicketBatch2Test extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => $nuevaFecha,
-                'motivo_reagendamiento'  => 'Cliente pidió mover la visita.',
+                'scheduled_at' => $nuevaFecha,
+                'motivo_reagendamiento' => 'Cliente pidió mover la visita.',
             ])
             ->assertStatus(200);
 
@@ -507,19 +509,19 @@ class TicketBatch2Test extends FeatureTestCase
         // Precisión de segundo — la columna es timestamp sin microsegundos (mismo criterio que
         // el resto de columnas de fecha del módulo), equalTo() con el Carbon original fallaría.
         $this->assertSame($fechaOriginal->format('Y-m-d H:i:s'), $history->first()->previous_scheduled_at->format('Y-m-d H:i:s'));
-        $this->assertSame(\Carbon\Carbon::parse($nuevaFecha)->format('Y-m-d H:i:s'), $history->first()->new_scheduled_at->format('Y-m-d H:i:s'));
+        $this->assertSame(Carbon::parse($nuevaFecha)->format('Y-m-d H:i:s'), $history->first()->new_scheduled_at->format('Y-m-d H:i:s'));
     }
 
     public function test_primer_agendamiento_no_genera_historial(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket(['estado' => Ticket::ESTADO_REPORTED, 'scheduled_at' => null]);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_REPORTED, 'scheduled_at' => null]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDays(2)->toIso8601String(),
+                'scheduled_at' => now()->addDays(2)->toIso8601String(),
             ])
             ->assertStatus(200);
 
@@ -530,7 +532,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_reagendar_dos_veces_deja_dos_filas_de_historial(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket([
+        $ticket = $this->makeTicket([
             'estado' => Ticket::ESTADO_SCHEDULED, 'scheduled_at' => now()->addDay(),
             'internal_technician_id' => $carlosId,
         ]);
@@ -539,16 +541,16 @@ class TicketBatch2Test extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDays(5)->toIso8601String(),
-                'motivo_reagendamiento'  => 'Primer reagendamiento.',
+                'scheduled_at' => now()->addDays(5)->toIso8601String(),
+                'motivo_reagendamiento' => 'Primer reagendamiento.',
             ])
             ->assertStatus(200);
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDays(8)->toIso8601String(),
-                'motivo_reagendamiento'  => 'Segundo reagendamiento.',
+                'scheduled_at' => now()->addDays(8)->toIso8601String(),
+                'motivo_reagendamiento' => 'Segundo reagendamiento.',
             ])
             ->assertStatus(200);
 
@@ -559,7 +561,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_show_expone_reschedule_history_ordenado_del_mas_reciente(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket([
+        $ticket = $this->makeTicket([
             'estado' => Ticket::ESTADO_SCHEDULED, 'scheduled_at' => now()->addDay(),
             'internal_technician_id' => $carlosId,
         ]);
@@ -568,8 +570,8 @@ class TicketBatch2Test extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDays(5)->toIso8601String(),
-                'motivo_reagendamiento'  => 'Motivo A.',
+                'scheduled_at' => now()->addDays(5)->toIso8601String(),
+                'motivo_reagendamiento' => 'Motivo A.',
             ])
             ->assertStatus(200);
 
@@ -585,13 +587,13 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_agendar_garantia_solo_acepta_tecnico_de_garantias(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS); // NO atiende Garantías
-        $ticket   = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'subtipo' => Ticket::SUBTIPO_WARRANTY_GENERIC]);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'subtipo' => Ticket::SUBTIPO_WARRANTY_GENERIC]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDay()->toIso8601String(),
+                'scheduled_at' => now()->addDay()->toIso8601String(),
             ])
             ->assertStatus(422);
     }
@@ -599,13 +601,13 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_agendar_garantia_acepta_tecnico_de_garantias(): void
     {
         $miguelId = $this->technicianId(self::GARANTIAS_SERVICIOS);
-        $ticket   = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'subtipo' => Ticket::SUBTIPO_WARRANTY_GENERIC]);
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'subtipo' => Ticket::SUBTIPO_WARRANTY_GENERIC]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $miguelId,
-                'scheduled_at'           => now()->addDay()->toIso8601String(),
+                'scheduled_at' => now()->addDay()->toIso8601String(),
             ])
             ->assertStatus(200);
     }
@@ -613,8 +615,8 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_agendar_sin_fecha_retorna_422(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket();
-        $token    = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
@@ -626,13 +628,13 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_tecnico_interno_no_puede_agendar(): void
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
-        $ticket   = $this->makeTicket();
-        $token    = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [
                 'internal_technician_id' => $carlosId,
-                'scheduled_at'           => now()->addDay()->toIso8601String(),
+                'scheduled_at' => now()->addDay()->toIso8601String(),
             ])
             ->assertStatus(403);
     }

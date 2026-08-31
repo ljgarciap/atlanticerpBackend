@@ -17,14 +17,14 @@ class CoreUserSeeder extends Seeder
      */
     private const USERS = [
         // Owners / Super Admins — level 10
-        ['first_name' => 'Andres',   'last_name' => 'Loi',      'email' => 'andres.loi@atlantic.com.pa', 'roles' => ['superadmin'], 'level' => 10],
-        ['first_name' => 'Luis',     'last_name' => 'Garcia',   'email' => 'luis.garcia@atlantic.com.pa','roles' => ['superadmin'], 'level' => 10],
-        ['first_name' => 'Luis J',   'last_name' => 'Garcia P', 'email' => 'lujogarpin78@gmail.com',          'roles' => ['superadmin'], 'level' => 10],
+        ['first_name' => 'Superadmin',   'last_name' => 'Test',      'email' => 'superadmin@test.com', 'roles' => ['superadmin'], 'level' => 10],
+        ['first_name' => 'Superadmin',     'last_name' => 'Test 2',   'email' => 'superadmin2@test.com', 'roles' => ['superadmin'], 'level' => 10],
+        ['first_name' => 'Superadmin',   'last_name' => 'Test 3', 'email' => 'superadmin3@test.com',          'roles' => ['superadmin'], 'level' => 10],
         // Managers — level 9
-        ['first_name' => 'Daniela',  'last_name' => 'Amaya',    'email' => 'daniela@atlantic.com.pa',    'roles' => ['management'], 'level' => 9],
-        ['first_name' => 'David',    'last_name' => 'Bresler',  'email' => 'david@grupolafayette.com',        'roles' => ['management'], 'level' => 9],
-        ['first_name' => 'Mark',     'last_name' => 'Bekhar',   'email' => 'mbekhar@atlantic.com.pa',    'roles' => ['management'], 'level' => 9],
-        ['first_name' => 'Marly',    'last_name' => 'Rangel',   'email' => 'marly.rangel@atlantic.com.pa','roles' => ['management'], 'level' => 9],
+        ['first_name' => 'Gerencia',  'last_name' => 'Test',    'email' => 'gerencia@test.com',    'roles' => ['management'], 'level' => 9],
+        ['first_name' => 'Gerencia',    'last_name' => 'Test 2',  'email' => 'gerencia2@test.com',        'roles' => ['management'], 'level' => 9],
+        ['first_name' => 'Gerencia',     'last_name' => 'Test 3',   'email' => 'gerencia3@test.com',    'roles' => ['management'], 'level' => 9],
+        ['first_name' => 'Gerencia',    'last_name' => 'Test 4',   'email' => 'gerencia4@test.com', 'roles' => ['management'], 'level' => 9],
     ];
 
     public function run(): void
@@ -33,14 +33,15 @@ class CoreUserSeeder extends Seeder
 
         if ($tenant === null) {
             $this->command->warn('Tenant "atlantic" not found — CoreUserSeeder skipped.');
+
             return;
         }
 
         $tenant->makeCurrent();
 
         try {
-            $userRolesTable  = "{$tenant->slug}_auth.user_roles";
-            $securityLevels  = "{$tenant->slug}_auth.security_levels";
+            $userRolesTable = "{$tenant->slug}_auth.user_roles";
+            $securityLevels = "{$tenant->slug}_auth.security_levels";
             $fallbackLevelId = (int) (DB::table($securityLevels)->where('level', 5)->value('id') ?? 1);
 
             foreach (self::USERS as $data) {
@@ -52,11 +53,11 @@ class CoreUserSeeder extends Seeder
                 if ($existing === null) {
                     /** @var User $user */
                     $user = User::query()->create([
-                        'first_name'        => $data['first_name'],
-                        'last_name'         => $data['last_name'],
-                        'email'             => $data['email'],
-                        'password_hash'     => $data['email'],
-                        'is_active'         => true,
+                        'first_name' => $data['first_name'],
+                        'last_name' => $data['last_name'],
+                        'email' => $data['email'],
+                        'password_hash' => $data['email'],
+                        'is_active' => true,
                         'security_level_id' => $levelId,
                         'extra_permissions' => [],
                     ]);

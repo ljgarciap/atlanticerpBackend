@@ -28,7 +28,7 @@ use RuntimeException;
  * SCRUM-735 — "Eliminación de información generada durante PM Review en Ventas & Diseño".
  *
  * Identifica (buildReport()) y, solo cuando se le pide explícitamente (execute()), borra
- * la data de prueba que Daniela Amaya generó en test.atlanticerp.ai probando manualmente el módulo
+ * la data de prueba que Gerencia Test generó en test.atlanticerp.ai probando manualmente el módulo
  * Ventas & Diseño — sin tocar la data DEMO marcada con [DEMO-711]/[QA-VD]/[QA-VD-409]
  * (Scrum711SalesForceDemoSeeder / QaTicketsBatch20260725Seeder), sin importar quién la creó.
  *
@@ -74,16 +74,16 @@ final class TestDataCleanupService
      * @var array<string, class-string<Model>>
      */
     private const AUDITED_ENTITIES = [
-        'master_client'         => MasterClient::class,
-        'sub_client'             => SubClient::class,
-        'architect'               => Architect::class,
-        'pipeline_card'           => PipelineCard::class,
-        'pipeline_card_contact'   => PipelineCardContact::class,
-        'pipeline_card_file'      => PipelineCardFile::class,
-        'quote'                   => Quote::class,
-        'quote_part'              => QuotePart::class,
-        'quote_item'              => QuoteItem::class,
-        'catalog_product'         => CatalogProduct::class,
+        'master_client' => MasterClient::class,
+        'sub_client' => SubClient::class,
+        'architect' => Architect::class,
+        'pipeline_card' => PipelineCard::class,
+        'pipeline_card_contact' => PipelineCardContact::class,
+        'pipeline_card_file' => PipelineCardFile::class,
+        'quote' => Quote::class,
+        'quote_part' => QuotePart::class,
+        'quote_item' => QuoteItem::class,
+        'catalog_product' => CatalogProduct::class,
     ];
 
     /**
@@ -103,21 +103,21 @@ final class TestDataCleanupService
      * @var array<string, string|null>
      */
     private const LABEL_COLUMNS = [
-        'master_client'         => 'name',
-        'sub_client'             => 'business_name',
-        'architect'               => 'name',
-        'pipeline_card'           => null,
-        'pipeline_card_contact'   => 'name',
-        'pipeline_card_file'      => 'file_name',
-        'quote'                   => 'description',
-        'quote_part'              => 'name',
-        'quote_item'              => 'description',
+        'master_client' => 'name',
+        'sub_client' => 'business_name',
+        'architect' => 'name',
+        'pipeline_card' => null,
+        'pipeline_card_contact' => 'name',
+        'pipeline_card_file' => 'file_name',
+        'quote' => 'description',
+        'quote_part' => 'name',
+        'quote_item' => 'description',
         // SCRUM-237/240 — `name` es el campo identificatorio real desde el split name/description
         // (ver migración 2026_08_15_100000_...); un marcador `[QA-VD]`/`[DEMO-711]` puesto a mano
         // en un producto de prueba vive en el nombre visible, no en `description` (que ahora es
         // texto libre real, casi siempre vacío).
-        'catalog_product'         => 'name',
-        'sales_project'           => 'name',
+        'catalog_product' => 'name',
+        'sales_project' => 'name',
     ];
 
     /**
@@ -129,25 +129,25 @@ final class TestDataCleanupService
      * @var array<string, list<array{0: string, 1: string}>>
      */
     private const PARENT_CHAINS = [
-        'master_client'         => [],
-        'sub_client'             => [['master_client', 'master_client_id']],
-        'architect'               => [['sub_client', 'sub_client_id']],
-        'pipeline_card'           => [
+        'master_client' => [],
+        'sub_client' => [['master_client', 'master_client_id']],
+        'architect' => [['sub_client', 'sub_client_id']],
+        'pipeline_card' => [
             ['master_client', 'master_client_id'],
             ['sub_client', 'sub_client_id'],
             ['sales_project', 'sales_project_id'],
         ],
-        'pipeline_card_contact'   => [['pipeline_card', 'pipeline_card_id']],
-        'pipeline_card_file'      => [['pipeline_card', 'pipeline_card_id']],
-        'quote'                   => [
+        'pipeline_card_contact' => [['pipeline_card', 'pipeline_card_id']],
+        'pipeline_card_file' => [['pipeline_card', 'pipeline_card_id']],
+        'quote' => [
             ['master_client', 'master_client_id'],
             ['sub_client', 'sub_client_id'],
             ['sales_project', 'sales_project_id'],
         ],
-        'quote_part'              => [['quote', 'quote_id']],
-        'quote_item'              => [['quote_part', 'quote_part_id']],
-        'catalog_product'         => [],
-        'sales_project'           => [['sub_client', 'sub_client_id']],
+        'quote_part' => [['quote', 'quote_id']],
+        'quote_item' => [['quote_part', 'quote_part_id']],
+        'catalog_product' => [],
+        'sales_project' => [['sub_client', 'sub_client_id']],
     ];
 
     /**
@@ -243,7 +243,7 @@ final class TestDataCleanupService
 
         $userId = (int) $userId;
 
-        /** @var \Illuminate\Support\Collection<int, AuditLog> $auditRows */
+        /** @var Collection<int, AuditLog> $auditRows */
         $auditRows = AuditLog::query()
             ->where('user_id', $userId)
             ->where('action', 'like', 'ventas_diseno.%.created')
@@ -252,7 +252,7 @@ final class TestDataCleanupService
             ->get(['id', 'entity_type', 'entity_id', 'created_at']);
 
         $windowFrom = $auditRows->min('created_at');
-        $windowTo   = $auditRows->max('created_at');
+        $windowTo = $auditRows->max('created_at');
 
         /** @var array<string, list<int>> $candidateIds */
         $candidateIds = [];
@@ -276,12 +276,14 @@ final class TestDataCleanupService
 
             if ($row === null) {
                 $excluded[] = ['entity_type' => $entityType, 'id' => $entityId, 'reason' => 'already_deleted', 'label' => null];
+
                 continue;
             }
 
             $labels = $this->labelsFor($entityType, $row);
             if ($this->containsMarker($labels)) {
                 $excluded[] = ['entity_type' => $entityType, 'id' => $entityId, 'reason' => 'marker_protected', 'label' => implode(' | ', $labels)];
+
                 continue;
             }
 
@@ -300,6 +302,7 @@ final class TestDataCleanupService
                 $labels = $this->labelsFor('sales_project', $row);
                 if ($this->containsMarker($labels)) {
                     $excluded[] = ['entity_type' => 'sales_project', 'id' => $row->id, 'reason' => 'marker_protected', 'label' => implode(' | ', $labels)];
+
                     continue;
                 }
                 $candidateIds['sales_project'][] = $row->id;
@@ -326,9 +329,9 @@ final class TestDataCleanupService
 
         foreach ($candidateIds as $entityType => $ids) {
             Log::info('ventas_diseno.cleanup_test_data.candidate_set', [
-                'user_email'  => $userEmail,
+                'user_email' => $userEmail,
                 'entity_type' => $entityType,
-                'ids'         => $ids,
+                'ids' => $ids,
             ]);
         }
         foreach ($excluded as $row) {
@@ -336,14 +339,14 @@ final class TestDataCleanupService
         }
 
         return [
-            'user'         => ['id' => $userId, 'email' => $userEmail],
+            'user' => ['id' => $userId, 'email' => $userEmail],
             'audit_window' => [
-                'from'            => $windowFrom?->toIso8601String(),
-                'to'              => $windowTo?->toIso8601String(),
+                'from' => $windowFrom?->toIso8601String(),
+                'to' => $windowTo?->toIso8601String(),
                 'rows_considered' => $auditRows->count(),
             ],
             'candidates' => $candidateIds,
-            'excluded'   => $excluded,
+            'excluded' => $excluded,
         ];
     }
 
@@ -355,7 +358,7 @@ final class TestDataCleanupService
      * sentido loguear en audit_logs un borrado hecho por esta herramienta operativa, sin
      * usuario real detrás) — el rastro queda en storage/logs vía Log::info() más abajo.
      *
-     * @param array{candidates: array<string, list<int>>, ...} $report
+     * @param  array{candidates: array<string, list<int>>, ...}  $report
      * @return array<string, int> entity_type => filas borradas
      */
     public function execute(array $report): array
@@ -369,6 +372,7 @@ final class TestDataCleanupService
 
                 if ($ids === []) {
                     $deletedCounts[$entityType] = 0;
+
                     continue;
                 }
 
@@ -456,7 +460,7 @@ final class TestDataCleanupService
      * también. Un SalesProject candidato solo es seguro de borrar si NINGÚN
      * PipelineCard/Quote vivo (no candidato) todavía lo referencia.
      *
-     * @param array<string, list<int>> $candidateIds
+     * @param  array<string, list<int>>  $candidateIds
      * @return array{0: list<int>, 1: list<array{entity_type: string, id: int, reason: string, label: ?string}>}
      */
     private function guardSalesProjects(array $candidateIds): array
@@ -483,7 +487,7 @@ final class TestDataCleanupService
      * borrar si ningún SalesProject (ya filtrado por guardSalesProjects)/PipelineCard/
      * Quote/Architect vivo (no candidato) todavía lo referencia.
      *
-     * @param array<string, list<int>> $candidateIds
+     * @param  array<string, list<int>>  $candidateIds
      * @return array{0: list<int>, 1: list<array{entity_type: string, id: int, reason: string, label: ?string}>}
      */
     private function guardSubClients(array $candidateIds): array
@@ -520,7 +524,7 @@ final class TestDataCleanupService
      * filtrado por guardSubClients)/PipelineCard/Quote vivo (no candidato) todavía lo
      * referencia.
      *
-     * @param array<string, list<int>> $candidateIds
+     * @param  array<string, list<int>>  $candidateIds
      * @return array{0: list<int>, 1: list<array{entity_type: string, id: int, reason: string, label: ?string}>}
      */
     private function guardMasterClients(array $candidateIds): array
@@ -558,7 +562,7 @@ final class TestDataCleanupService
      * ahí sí se excluyen los propios candidatos de quote_item (esos se borran junto con
      * el producto, no lo bloquean).
      *
-     * @param array<string, list<int>> $candidateIds
+     * @param  array<string, list<int>>  $candidateIds
      * @return array{0: list<int>, 1: list<array{entity_type: string, id: int, reason: string, label: ?string}>}
      */
     private function guardCatalogProducts(array $candidateIds): array
@@ -585,18 +589,19 @@ final class TestDataCleanupService
     }
 
     /**
-     * @param list<int> $ids
-     * @param list<int> $blockedIds
+     * @param  list<int>  $ids
+     * @param  list<int>  $blockedIds
      * @return array{0: list<int>, 1: list<array{entity_type: string, id: int, reason: string, label: ?string}>}
      */
     private function splitByBlocked(string $entityType, array $ids, array $blockedIds): array
     {
         $survivors = [];
-        $excluded  = [];
+        $excluded = [];
 
         foreach ($ids as $id) {
             if (in_array($id, $blockedIds, true)) {
                 $excluded[] = ['entity_type' => $entityType, 'id' => $id, 'reason' => 'active_reference', 'label' => null];
+
                 continue;
             }
             $survivors[] = $id;
@@ -610,7 +615,7 @@ final class TestDataCleanupService
      * `mixed` por PHPStan) a una `list<int>` deduplicada — descarta null (columna FK
      * nullable sin valor) antes de castear.
      *
-     * @param Collection<int, mixed> $values
+     * @param  Collection<int, mixed>  $values
      * @return list<int>
      */
     private function normalizeIdList(Collection $values): array

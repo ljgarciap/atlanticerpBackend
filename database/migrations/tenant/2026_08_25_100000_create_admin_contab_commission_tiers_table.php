@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * tabla escalonada hardcodeada en `App\Modules\VentasDiseno\Services\SalesTotalsService` (REQ-073,
  * otro módulo, otra decisión de negocio, coexisten por decisión explícita de Luis).
  *
- * `monto_maximo` nulo = último tramo (sin techo). CRUD gateado por `mark_only`
+ * `monto_maximo` nulo = último tramo (sin techo). CRUD gateado por `primary_approver_only`
  * (`AdminContInternalCommissionController`), igual que el resto de configuración fiscal del
  * módulo (ver `AdminContItbmsRateController`) — nunca hardcodear estos valores en código.
  */

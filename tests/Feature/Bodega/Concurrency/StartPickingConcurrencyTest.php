@@ -48,13 +48,13 @@ class StartPickingConcurrencyTest extends FeatureTestCase
 
     public function test_dos_inicios_de_picking_concurrentes_solo_uno_avanza_a_en_picking(): void
     {
-        $pickerId = (int) DB::table('atlantic_auth.users')->where('email', 'apolonio.gonzalez@atlantic.com.pa')->value('id');
+        $pickerId = (int) DB::table('atlantic_auth.users')->where('email', 'ayudantegeneralbodega@test.com')->value('id');
 
         $order = Order::create([
             'order_number' => 'PED-CONC-'.random_int(10000, 999999),
-            'order_type'   => Order::ORDER_TYPE_PEDIDO,
-            'stage'        => Order::STAGE_PICKING_PENDIENTE,
-            'picker_id'    => $pickerId,
+            'order_type' => Order::ORDER_TYPE_PEDIDO,
+            'stage' => Order::STAGE_PICKING_PENDIENTE,
+            'picker_id' => $pickerId,
             'customer_name' => 'Cliente concurrencia',
         ]);
         $this->orderId = $order->id;
@@ -62,7 +62,7 @@ class StartPickingConcurrencyTest extends FeatureTestCase
 
         $snippet = <<<'PHP'
 $order = \App\Modules\Bodega\Models\Order::find(__ORDER_ID__);
-$actor = \App\Models\User::where('email', 'almacen@atlantic.com.pa')->first();
+$actor = \App\Models\User::where('email', 'liderbodega@test.com')->first();
 try {
     app(\App\Modules\Bodega\Services\PickingService::class)->startPicking($order, $actor);
     file_put_contents($outFile, 'OK');
@@ -74,11 +74,11 @@ PHP;
 
         $results = $this->runConcurrently([$snippet, $snippet]);
 
-        $okCount       = count(array_filter($results, fn (string $r) => $r === 'OK'));
+        $okCount = count(array_filter($results, fn (string $r) => $r === 'OK'));
         $rejectedCount = count(array_filter($results, fn (string $r) => str_starts_with($r, 'REJECTED:')));
 
-        $this->assertSame(1, $okCount, "Exactamente 1 de los 2 inicios de picking concurrentes debe tener éxito. Resultados: ".implode(' | ', $results));
-        $this->assertSame(1, $rejectedCount, "El otro debe ver el pedido ya En picking y rechazar. Resultados: ".implode(' | ', $results));
+        $this->assertSame(1, $okCount, 'Exactamente 1 de los 2 inicios de picking concurrentes debe tener éxito. Resultados: '.implode(' | ', $results));
+        $this->assertSame(1, $rejectedCount, 'El otro debe ver el pedido ya En picking y rechazar. Resultados: '.implode(' | ', $results));
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 

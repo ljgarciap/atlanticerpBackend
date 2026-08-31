@@ -40,8 +40,8 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
 
     private function authHeadersForLiderBodega(): array
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -52,8 +52,8 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->firstOrFail();
         $this->setStock($product, 15, 'Bodega Central');
 
-        $pickerId = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
         $order = $this->makeOrder([], ['catalog_product_id' => $product->id, 'qty_requested' => 5]);
         $item = $order->items->first();
 
@@ -108,7 +108,7 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
     {
         Log::spy();
 
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
         $product = $this->makeCatalogProduct();
         // Item con catalog_product_id pero SIN warehouse_id — simula un pedido cuyo picking nunca
         // pasó por completePicking() (ej. datos heredados de antes de este batch).
@@ -134,7 +134,7 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
     /** Un ítem personalizado (sin catalog_product_id) no genera Kardex — no hay producto que trazar. */
     public function test_despachar_item_personalizado_no_genera_kardex(): void
     {
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
         $order = $this->makeOrder(
             ['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $courierId, 'invoice_ready' => true],
             ['catalog_product_id' => null, 'qty_requested' => 2, 'qty_delivered' => 2, 'reference_snapshot' => 'CUSTOM-1'],
@@ -151,7 +151,7 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
     /** No repite un item de OrderItem sin nada entregado (qty_delivered = 0) — nada que mover. */
     public function test_despachar_item_sin_entrega_no_genera_kardex(): void
     {
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
         $product = $this->makeCatalogProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->firstOrFail();
         $order = $this->makeOrder(
@@ -191,14 +191,14 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
         $this->setStock($product, 10, 'Bodega Central');
         $this->setStock($product, 5, 'Merma');
 
-        $pickerId  = $this->userIdByEmail('apolonio.gonzalez@atlantic.com.pa');
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
-        $headers   = $this->authHeadersForLiderBodega();
+        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
+        $headers = $this->authHeadersForLiderBodega();
         $this->makeCurrentTenant(); // authHeadersForLiderBodega() hace un login HTTP real, que deja el tenant sin "current" al volver.
 
         // Pedido 1 — pide 10, completa picking primero.
         $order1 = $this->makeOrder([], ['catalog_product_id' => $product->id, 'qty_requested' => 10]);
-        $item1  = $order1->items->first();
+        $item1 = $order1->items->first();
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order1->id}/assign-picker", ['picker_id' => $pickerId])->assertStatus(200);
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order1->id}/start-picking")->assertStatus(200);
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order1->id}/complete-picking", [
@@ -211,7 +211,7 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
         // Pedido 2 — pide 5, completa picking DESPUÉS, ANTES de que Pedido 1 despache (Bodega A
         // en product_warehouse_stock todavía muestra 10, sin decrementar).
         $order2 = $this->makeOrder([], ['catalog_product_id' => $product->id, 'qty_requested' => 5]);
-        $item2  = $order2->items->first();
+        $item2 = $order2->items->first();
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order2->id}/assign-picker", ['picker_id' => $pickerId])->assertStatus(200);
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order2->id}/start-picking")->assertStatus(200);
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order2->id}/complete-picking", [

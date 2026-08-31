@@ -71,23 +71,23 @@ class InventoryControllerTest extends FeatureTestCase
     private function makeTechnicalSpec(): array
     {
         return [
-            'voltage'            => '110V - 220V',
-            'power'              => '12 W',
-            'socket_type'        => 'E27',
-            'color_temperature'  => '3000K (cálida)',
-            'luminous_flux'      => '1050 lúmenes',
-            'dimensions'         => '40 x 40 x 55 cm',
-            'weight'             => '2.3 kg',
-            'material_finish'    => 'Metal pintado, difusor en vidrio',
-            'ip_rating'          => 'IP20 (interior)',
+            'voltage' => '110V - 220V',
+            'power' => '12 W',
+            'socket_type' => 'E27',
+            'color_temperature' => '3000K (cálida)',
+            'luminous_flux' => '1050 lúmenes',
+            'dimensions' => '40 x 40 x 55 cm',
+            'weight' => '2.3 kg',
+            'material_finish' => 'Metal pintado, difusor en vidrio',
+            'ip_rating' => 'IP20 (interior)',
             'estimated_lifespan' => '25,000 horas',
-            'warranty'           => '12 meses',
-            'certifications'     => 'CE, RoHS',
+            'warranty' => '12 meses',
+            'certifications' => 'CE, RoHS',
         ];
     }
 
     /**
-     * SCRUM-240 (corrección de Daniela Amaya 2026-08-09) — payload mínimo válido para
+     * SCRUM-240 (corrección de Gerencia Test 2026-08-09) — payload mínimo válido para
      * POST /api/compras/inventory tras la reescritura de StoreInventoryProductRequest: todos los
      * campos que antes eran opcionales (provider_id/factory_reference/brand/barcode/category/
      * rotation/reorder_point/other_cost) ahora son obligatorios. `technical_spec` YA NO se manda
@@ -98,21 +98,21 @@ class InventoryControllerTest extends FeatureTestCase
     private function makeValidCreatePayload(int $providerId, array $overrides = []): array
     {
         return [
-            'reference'         => 'REF-'.uniqid(),
+            'reference' => 'REF-'.uniqid(),
             'factory_reference' => 'FAB-'.uniqid(),
-            'name'              => 'Producto nuevo',
-            'description'       => 'Producto nuevo',
-            'brand'             => 'Marca X',
-            'barcode'           => '7501234567890',
-            'price_full'        => 30,
-            'cost'              => 15,
-            'other_cost'        => 2.5,
-            'reorder_point'     => 5,
-            'provider_id'       => $providerId,
-            'category'          => 'bombillos',
-            'rotation'          => 'media',
+            'name' => 'Producto nuevo',
+            'description' => 'Producto nuevo',
+            'brand' => 'Marca X',
+            'barcode' => '7501234567890',
+            'price_full' => 30,
+            'cost' => 15,
+            'other_cost' => 2.5,
+            'reorder_point' => 5,
+            'provider_id' => $providerId,
+            'category' => 'bombillos',
+            'rotation' => 'media',
             // SCRUM-426 — ficha técnica (Caso A/B: archivo O link) vuelve a ser obligatoria.
-            'link'              => 'https://proveedor.example.com/ficha.pdf',
+            'link' => 'https://proveedor.example.com/ficha.pdf',
             ...$overrides,
         ];
     }
@@ -140,7 +140,7 @@ class InventoryControllerTest extends FeatureTestCase
      *
      * Ajustado 2026-08-15 (SCRUM-238, decisión explícita de Luis en el comentario del ticket):
      * el detalle de UN producto (`show()`) en modo restringido SÍ expone Por ingresar/En camino
-     * desde ahora — el mockup de Daniela Amaya las pide como parte de las 9 métricas del modal, y
+     * desde ahora — el mockup de Gerencia Test las pide como parte de las 9 métricas del modal, y
      * ninguna de las 9 es costo/margen (no choca con RN1). La regla original de arriba sigue
      * vigente SOLO para el LISTADO (`index()`, sin cambios) — ver
      * `InventoryController::format()`, parámetro `$includeRestrictedDetail`.
@@ -186,7 +186,7 @@ class InventoryControllerTest extends FeatureTestCase
     }
 
     /**
-     * Rebote REQ-427 (Daniela Amaya 2026-08-13) — el detalle de Compras ("Por ingresar > Detalle")
+     * Rebote REQ-427 (Gerencia Test 2026-08-13) — el detalle de Compras ("Por ingresar > Detalle")
      * debe reflejar el estado real de la confirmación física de Bodega: pendiente antes, y
      * cantidad + usuario después de que Bodega confirme.
      */
@@ -216,13 +216,13 @@ class InventoryControllerTest extends FeatureTestCase
         $before->assertJsonPath('bodega_confirmation.confirmed_quantity', 0);
         $before->assertJsonPath('bodega_confirmation.confirmed_by_name', null);
 
-        // `almacen@atlantic.com.pa` (Esteban Cardenas) ya viene seeded por
+        // `liderbodega@test.com` (Lider Bodega Test) ya viene seeded por
         // BusinessRoleUserSeeder en entorno testing (mismo usuario que BodegaInventoryControllerTest),
         // pero el rol no trae bodega.write por defecto en el fixture — mismo patrón que
         // BodegaOrderTestHelpers::grantBodegaPermissions().
-        DB::table('atlantic_auth.users')->where('email', 'almacen@atlantic.com.pa')
+        DB::table('atlantic_auth.users')->where('email', 'liderbodega@test.com')
             ->update(['extra_permissions' => json_encode(['bodega.read', 'bodega.write'])]);
-        $bodegaToken = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $bodegaToken = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
         $this->withHeaders($this->authHeaders($bodegaToken))
             ->postJson("/api/bodega/inventory/{$product->id}/confirm-arrival", ['cantidad_entregada' => 5])
             ->assertStatus(200);
@@ -230,7 +230,7 @@ class InventoryControllerTest extends FeatureTestCase
         $after = $this->withHeaders($comprasHeaders)->getJson("/api/compras/inventory/{$product->id}")->assertStatus(200);
         $after->assertJsonPath('bodega_confirmation.awaiting_compras', true);
         $after->assertJsonPath('bodega_confirmation.confirmed_quantity', 5);
-        $after->assertJsonPath('bodega_confirmation.confirmed_by_name', 'Esteban Cardenas');
+        $after->assertJsonPath('bodega_confirmation.confirmed_by_name', 'Lider Bodega Test');
     }
 
     /**
@@ -613,7 +613,7 @@ class InventoryControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-240 (corrección de Daniela Amaya) — provider_id/factory_reference/brand/barcode/
+     * SCRUM-240 (corrección de Gerencia Test) — provider_id/factory_reference/brand/barcode/
      * category/rotation/reorder_point/other_cost pasan de opcionales a obligatorios.
      */
     public function test_crear_producto_sin_los_campos_ahora_obligatorios_retorna_422(): void
@@ -1149,7 +1149,7 @@ class InventoryControllerTest extends FeatureTestCase
     // ── SCRUM-425/426 (REQ-355/356) — ficha técnica del producto ──────────────
 
     /**
-     * SCRUM-240 (corrección de Daniela Amaya 2026-08-09) — el modal nuevo saca los 12 campos
+     * SCRUM-240 (corrección de Gerencia Test 2026-08-09) — el modal nuevo saca los 12 campos
      * estructurados del formulario de creación (technical_spec ya NO se valida acá, la ficha
      * técnica pasa a ser el documento/link de SCRUM-237) — `technical_spec = null` en un producto
      * creado por este flujo es el comportamiento esperado, no una regresión.
@@ -1171,7 +1171,7 @@ class InventoryControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-426 (rebote de Daniela Amaya 2026-08-13) — regresión real corregida: la ficha técnica
+     * SCRUM-426 (rebote de Gerencia Test 2026-08-13) — regresión real corregida: la ficha técnica
      * (documento/link, Caso A/B de SCRUM-237) vuelve a ser obligatoria para crear el producto, y
      * ahora se procesa en el MISMO request de creación (dentro de la misma transacción) — nunca un
      * producto sin ficha técnica en la base, ni siquiera transitoriamente entre 2 llamadas como
@@ -1254,8 +1254,8 @@ class InventoryControllerTest extends FeatureTestCase
     {
         ProductWarehouseStock::create([
             'catalog_product_id' => $product->id,
-            'warehouse_id'       => $this->warehouseId($warehouseName),
-            'quantity'           => $quantity,
+            'warehouse_id' => $this->warehouseId($warehouseName),
+            'quantity' => $quantity,
             ...$overrides,
         ]);
     }

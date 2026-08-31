@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Modules\AdminCont\Models\AdminContBankAccount;
-use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContCustomerCreditBalance;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
@@ -18,9 +17,11 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 5 de Admin&Cont (SCRUM-539→544, REQ-462→467) — Cobros. */
 class AdminContPaymentControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL  = 'conta@atlantic.com.pa';
-    private const MARK_EMAIL   = 'mbekhar@atlantic.com.pa';
-    private const YANETH_EMAIL = 'asistente@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
+
+    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
 
     protected function setUp(): void
     {
@@ -35,7 +36,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     private function loginAsYaneth(): string
@@ -52,7 +53,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
      */
     private function makeClientWithInvoice(float $monto, float $saldoAplicado = 0.0): array
     {
-        $master  = MasterClient::create(['name' => 'Cliente Cobros '.uniqid()]);
+        $master = MasterClient::create(['name' => 'Cliente Cobros '.uniqid()]);
         $invoice = AdminContInvoice::create([
             'numero' => 'F-'.static::uniqueTestNumber(), 'order_id' => random_int(100000, 999999),
             'master_client_id' => $master->id, 'cliente' => $master->name,
@@ -291,7 +292,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'cliente' => $master->name, 'monto' => 100,
         ]);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
 
         $r1 = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoiceA->id],
@@ -483,7 +484,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $montos = array_column($facturas, 'monto_aplicado');
         $this->assertContains(4000.0, array_map('floatval', $montos));
         $this->assertContains(2200.0, array_map('floatval', $montos));
-        $this->assertSame('Felix Campos', $response->json('registrado_por'));
+        $this->assertSame('Contabilidad Test', $response->json('registrado_por'));
     }
 
     public function test_detalle_de_cobro_inexistente_devuelve_404(): void
@@ -551,7 +552,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
@@ -584,7 +585,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->assertSame('comprobante.pdf', $response->json('data.nombre_archivo'));
-        $this->assertSame('Felix Campos', $response->json('data.uploaded_by'));
+        $this->assertSame('Contabilidad Test', $response->json('data.uploaded_by'));
         $this->assertNotEmpty($response->json('data.url'));
     }
 
@@ -594,7 +595,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
@@ -622,7 +623,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
         AdminContCustomerCreditBalance::create(['master_client_id' => $master->id, 'saldo' => 500]);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
@@ -638,7 +639,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
         $this->assertSame('confirmado', $response->json('estado'));
         $this->assertMatchesRegularExpression('/^CONF-\d{3}$/', (string) $response->json('confirmacion.numero_confirmacion'));
-        $this->assertSame('Felix Campos', $response->json('confirmacion.confirmado_por'));
+        $this->assertSame('Contabilidad Test', $response->json('confirmacion.confirmado_por'));
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(6200.0, (float) $invoice->refresh()->saldo_aplicado);
@@ -653,7 +654,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
 
         // Efectivo confirma de inmediato (RN3) — nunca pasa por "esperando_confirmacion".
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -670,7 +671,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
@@ -695,7 +696,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],

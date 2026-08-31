@@ -14,6 +14,7 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -44,18 +45,18 @@ final class DailyCashCountService
     {
         $entriesByKey = $this->entriesForDate($date);
 
-        $cobros       = [];
-        $retenciones  = [];
+        $cobros = [];
+        $retenciones = [];
         $totalCobrado = 0.0;
         foreach ($this->paymentsConfirmedOn($date) as $payment) {
             $totalCobrado += $payment->monto_recibido;
             $cobros[] = [
                 'movement_type' => AdminContDailyCashCountEntry::TYPE_PAYMENT,
-                'movement_id'   => $payment->id,
-                'concepto'      => "Cobro {$payment->numero_recibo}",
-                'metodo_pago'   => $payment->metodo_pago,
-                'monto'         => $payment->monto_recibido,
-                'observacion'   => $entriesByKey[AdminContDailyCashCountEntry::TYPE_PAYMENT.':'.$payment->id] ?? null,
+                'movement_id' => $payment->id,
+                'concepto' => "Cobro {$payment->numero_recibo}",
+                'metodo_pago' => $payment->metodo_pago,
+                'monto' => $payment->monto_recibido,
+                'observacion' => $entriesByKey[AdminContDailyCashCountEntry::TYPE_PAYMENT.':'.$payment->id] ?? null,
             ];
 
             // REQ-525 RN1 — sección Ajustes/Retención, solo cobros con este método.
@@ -64,30 +65,30 @@ final class DailyCashCountService
             }
         }
 
-        $notasCredito       = [];
-        $totalNotasCredito  = 0.0;
+        $notasCredito = [];
+        $totalNotasCredito = 0.0;
         foreach ($this->creditNotesReturnedOn($date) as [$note, $monto]) {
             $totalNotasCredito += $monto;
             $notasCredito[] = [
                 'movement_type' => AdminContDailyCashCountEntry::TYPE_CREDIT_NOTE,
-                'movement_id'   => $note->id,
-                'concepto'      => 'Devolución de dinero — '.$note->cliente,
-                'monto'         => $monto,
-                'observacion'   => $entriesByKey[AdminContDailyCashCountEntry::TYPE_CREDIT_NOTE.':'.$note->id] ?? null,
+                'movement_id' => $note->id,
+                'concepto' => 'Devolución de dinero — '.$note->cliente,
+                'monto' => $monto,
+                'observacion' => $entriesByKey[AdminContDailyCashCountEntry::TYPE_CREDIT_NOTE.':'.$note->id] ?? null,
             ];
         }
 
         $dailyCount = AdminContDailyCashCount::where('fecha', $date)->first();
 
         return [
-            'fecha'                => $date,
-            'cobros'               => $cobros,
-            'notas_credito'        => $notasCredito,
-            'retenciones'          => $retenciones,
-            'total_cobrado'        => round($totalCobrado, 2),
-            'total_notas_credito'  => round($totalNotasCredito, 2),
-            'total_neto'           => round($totalCobrado - $totalNotasCredito, 2),
-            'observacion_general'  => $dailyCount?->observacion_general,
+            'fecha' => $date,
+            'cobros' => $cobros,
+            'notas_credito' => $notasCredito,
+            'retenciones' => $retenciones,
+            'total_cobrado' => round($totalCobrado, 2),
+            'total_notas_credito' => round($totalNotasCredito, 2),
+            'total_neto' => round($totalCobrado - $totalNotasCredito, 2),
+            'observacion_general' => $dailyCount?->observacion_general,
         ];
     }
 
@@ -105,7 +106,7 @@ final class DailyCashCountService
             ?? now()->toDateString();
 
         $cursor = CarbonImmutable::parse($floor);
-        $today  = CarbonImmutable::parse(now()->toDateString());
+        $today = CarbonImmutable::parse(now()->toDateString());
 
         while ($cursor->lt($today)) {
             $record = AdminContDailyCashCount::where('fecha', $cursor->toDateString())->first();
@@ -120,17 +121,18 @@ final class DailyCashCountService
 
     /**
      * GET /cash-position/daily-count — el arqueo ACTIVO, con `es_atrasado` si no es hoy.
+     *
      * @return array<string, mixed>
      */
     public function active(): array
     {
-        $date   = $this->activeDate();
+        $date = $this->activeDate();
         $record = AdminContDailyCashCount::where('fecha', $date)->first();
-        $today  = now()->toDateString();
+        $today = now()->toDateString();
 
         return [
             ...$this->present($record, $date),
-            'es_atrasado'    => $date !== $today,
+            'es_atrasado' => $date !== $today,
             'fecha_real_hoy' => $today,
             // QA SCRUM-603 (2026-08-29 RN1) — el modal de confirmación de cierre necesita mostrar
             // un número; el real (`numero`) recién se asigna en close() (ver ADR §8), así que acá
@@ -141,6 +143,7 @@ final class DailyCashCountService
 
     /**
      * GET /cash-position/history/{id} y detalle usado por `/export` — cualquier arqueo, activo o cerrado.
+     *
      * @return array<string, mixed>|null
      */
     public function detail(int $id): ?array
@@ -155,8 +158,9 @@ final class DailyCashCountService
      * del frontend, que ya tiene `retenciones[]` de `active()` antes de confirmar — este método no
      * bloquea por eso.
      *
-     * @throws DailyCashCountStateException si el arqueo activo ya no está `abierto` (doble click / carrera).
      * @return array<string, mixed>
+     *
+     * @throws DailyCashCountStateException si el arqueo activo ya no está `abierto` (doble click / carrera).
      */
     public function close(int $actorId): array
     {
@@ -180,10 +184,10 @@ final class DailyCashCountService
             $numero = (int) (AdminContDailyCashCount::whereNotNull('numero')->max('numero') ?? 0) + 1;
 
             $record->update([
-                'numero'      => $numero,
-                'estado'      => AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION,
+                'numero' => $numero,
+                'estado' => AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION,
                 'cerrado_por' => $actorId,
-                'cerrado_at'  => now(),
+                'cerrado_at' => now(),
             ]);
 
             return $this->present($record->fresh(), $date);
@@ -203,11 +207,11 @@ final class DailyCashCountService
         $query = AdminContDailyCashCount::where('estado', '!=', AdminContDailyCashCount::ESTADO_ABIERTO)
             ->orderByDesc('fecha');
 
-        $total   = (clone $query)->count();
+        $total = (clone $query)->count();
         $records = $query->forPage(max(1, $page), $perPage)->get();
 
         $userIds = $records->pluck('cerrado_por')->merge($records->pluck('aprobado_por'))->filter()->unique();
-        /** @var \Illuminate\Support\Collection<int, string> $userNames */
+        /** @var Collection<int, string> $userNames */
         $userNames = User::query()->whereIn('id', $userIds)->get(['id', 'first_name', 'last_name'])
             ->mapWithKeys(fn (User $u) => [$u->id => trim("{$u->first_name} {$u->last_name}")]);
 
@@ -215,16 +219,16 @@ final class DailyCashCountService
             $totals = $this->forDate($r->fecha->toDateString());
 
             return [
-                'id'            => $r->id,
-                'numero'        => $r->numero,
-                'fecha'         => $r->fecha->toDateString(),
-                'total_neto'    => $totals['total_neto'],
-                'estado'        => $r->estado,
-                'aprobado_por'  => $r->aprobado_por !== null ? ($userNames->get($r->aprobado_por) ?? null) : null,
-                'aprobado_at'   => $r->aprobado_at?->toIso8601String(),
+                'id' => $r->id,
+                'numero' => $r->numero,
+                'fecha' => $r->fecha->toDateString(),
+                'total_neto' => $totals['total_neto'],
+                'estado' => $r->estado,
+                'aprobado_por' => $r->aprobado_por !== null ? ($userNames->get($r->aprobado_por) ?? null) : null,
+                'aprobado_at' => $r->aprobado_at?->toIso8601String(),
                 'realizado_por' => $r->cerrado_por !== null ? ($userNames->get($r->cerrado_por) ?? null) : null,
                 // QA SCRUM-603 (2026-08-29 RN4) — el historial mostraba quién cerró pero no la hora.
-                'cerrado_at'    => $r->cerrado_at?->toIso8601String(),
+                'cerrado_at' => $r->cerrado_at?->toIso8601String(),
             ];
         })->values();
 
@@ -241,10 +245,11 @@ final class DailyCashCountService
     }
 
     /**
-     * REQ-528 RN2/RN4 — exclusivo de Mark (gate real: middleware `mark_only`, ver routes/admin-contab.php).
+     * REQ-528 RN2/RN4 — exclusivo de Mark (gate real: middleware `primary_approver_only`, ver routes/admin-contab.php).
+     *
+     * @return array<string, mixed>
      *
      * @throws DailyCashCountStateException si el arqueo ya no está `pendiente_aprobacion`.
-     * @return array<string, mixed>
      */
     public function approve(int $id, int $markUserId): array
     {
@@ -257,9 +262,9 @@ final class DailyCashCountService
             }
 
             $record->update([
-                'estado'       => AdminContDailyCashCount::ESTADO_APROBADO,
+                'estado' => AdminContDailyCashCount::ESTADO_APROBADO,
                 'aprobado_por' => $markUserId,
-                'aprobado_at'  => now(),
+                'aprobado_at' => now(),
             ]);
 
             return $this->present($record->fresh(), $record->fecha->toDateString());
@@ -308,14 +313,14 @@ final class DailyCashCountService
         $estado = $record !== null ? $record->estado : AdminContDailyCashCount::ESTADO_ABIERTO;
 
         return [
-            'id'           => $record?->id,
-            'numero'       => $record?->numero,
-            'estado'       => $estado,
+            'id' => $record?->id,
+            'numero' => $record?->numero,
+            'estado' => $estado,
             ...$this->forDate($date),
-            'cerrado_por'  => $record?->cerrado_por !== null ? $this->userName($record->cerrado_por) : null,
-            'cerrado_at'   => $record?->cerrado_at?->toIso8601String(),
+            'cerrado_por' => $record?->cerrado_por !== null ? $this->userName($record->cerrado_por) : null,
+            'cerrado_at' => $record?->cerrado_at?->toIso8601String(),
             'aprobado_por' => $record?->aprobado_por !== null ? $this->userName($record->aprobado_por) : null,
-            'aprobado_at'  => $record?->aprobado_at?->toIso8601String(),
+            'aprobado_at' => $record?->aprobado_at?->toIso8601String(),
         ];
     }
 
@@ -333,14 +338,14 @@ final class DailyCashCountService
 
         return [
             'payment_id' => $payment->id,
-            'cliente'    => MasterClient::find($payment->master_client_id)?->name,
+            'cliente' => MasterClient::find($payment->master_client_id)?->name,
             'referencia' => $payment->invoiceLines->map(fn ($l) => $l->invoice?->numero)->filter()->implode(', '),
-            'motivo'     => $payment->numero_documento_retencion,
-            'monto'      => $payment->monto_recibido,
+            'motivo' => $payment->numero_documento_retencion,
+            'monto' => $payment->monto_recibido,
             'constancia' => $constancia === null ? null : [
                 'nombre_archivo' => $constancia->nombre_archivo,
-                'url'            => $this->retentionAttachments->presignedUrl($constancia),
-                'uploaded_at'    => $constancia->updated_at->toIso8601String(),
+                'url' => $this->retentionAttachments->presignedUrl($constancia),
+                'uploaded_at' => $constancia->updated_at->toIso8601String(),
             ],
         ];
     }
@@ -368,7 +373,7 @@ final class DailyCashCountService
      * de `invoiceLines.invoice`/`retentionAttachment` — antes innecesario, ahora usado por
      * `presentRetencion()`.
      *
-     * @return \Illuminate\Support\Collection<int, AdminContPayment>
+     * @return Collection<int, AdminContPayment>
      */
     private function paymentsConfirmedOn(string $date)
     {

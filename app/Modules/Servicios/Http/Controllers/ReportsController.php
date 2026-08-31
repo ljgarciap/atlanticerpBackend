@@ -85,7 +85,7 @@ final class ReportsController extends Controller
      * `InternalTechnicianController::commission()` en vez de reusarlo directamente, porque acá no
      * hay `{id}` en la URL (el ticket es específico a Carlos, no genérico a "un técnico").
      *
-     * El técnico se resuelve por `has_bonus_plan = true` — hoy Carlos Vergara es, por diseño
+     * El técnico se resuelve por `has_bonus_plan = true` — hoy Tecnico Servicios Test es, por diseño
      * (`InternalTechnicianSeeder`), el único `InternalTechnician` con plan de bonificación activo;
      * no se hardcodea su nombre/email para no acoplar el endpoint a un dato de seed.
      */
@@ -101,15 +101,15 @@ final class ReportsController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $roleKey    = $user->role?->key;
+        $roleKey = $user->role?->key;
         $esGerencia = $roleKey === 'superadmin' || $roleKey === 'management';
-        $esElMismo  = $technician->user_id !== null && $technician->user_id === $user->id;
+        $esElMismo = $technician->user_id !== null && $technician->user_id === $user->id;
 
         if (! $esGerencia && ! $esElMismo) {
             return response()->json(['message' => 'No autorizado.'], 403);
         }
 
-        $year  = $request->query('year');
+        $year = $request->query('year');
         $month = $request->query('month');
 
         $data = $this->commission->commissionForTechnician(
@@ -128,11 +128,11 @@ final class ReportsController extends Controller
 
         /** @var array{search?: string, tipo_documento?: string, estado?: string, per_page?: int, page?: int} $filters */
         $filters = array_filter([
-            'search'         => $request->query('search'),
+            'search' => $request->query('search'),
             'tipo_documento' => $request->query('tipo_documento'),
-            'estado'         => $request->query('estado'),
-            'per_page'       => $pagination['per_page'],
-            'page'           => $pagination['page'],
+            'estado' => $request->query('estado'),
+            'per_page' => $pagination['per_page'],
+            'page' => $pagination['page'],
         ], static fn (mixed $value): bool => $value !== null);
 
         $paginator = $this->reports->biblioteca($filters);
@@ -170,12 +170,12 @@ final class ReportsController extends Controller
         // "integer" solo valida el formato) — con `declare(strict_types=1)` en este archivo, pasar
         // ese string a un parámetro `?int` revienta con TypeError. Cast explícito acá, una sola vez.
         $validated = $request->validate([
-            'year'  => ['sometimes', 'integer', 'min:'.self::MIN_YEAR, 'max:'.($now->year + 1)],
+            'year' => ['sometimes', 'integer', 'min:'.self::MIN_YEAR, 'max:'.($now->year + 1)],
             'month' => ['sometimes', 'integer', 'min:1', 'max:12'],
         ]);
 
         return [
-            'year'  => isset($validated['year']) ? (int) $validated['year'] : (int) $now->year,
+            'year' => isset($validated['year']) ? (int) $validated['year'] : (int) $now->year,
             'month' => isset($validated['month']) ? (int) $validated['month'] : (int) $now->month,
         ];
     }

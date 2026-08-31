@@ -33,29 +33,29 @@ return new class extends TenantSchemaMigration
 
     /** @var array<string, int> rol key => nivel existente (1-10) */
     private array $defaults = [
-        'management'               => 9,
-        'lider_admin_contab'       => 4,
+        'management' => 9,
+        'lider_admin_contab' => 4,
         'asistente_administrativa' => 1,
-        'lider_compras'            => 1,
-        'lider_bodega'             => 4,
-        'asistente_bodega'         => 1,
-        'ayudante_general_bodega'  => 1,
-        'transporte'               => 1,
-        'lider_servicios'          => 4,
-        'tecnico_servicios'        => 1,
-        'garantias_servicios'      => 1,
-        'vendedor_disenador'       => 4,
-        'lider_operaciones'        => 1,
+        'lider_compras' => 1,
+        'lider_bodega' => 4,
+        'asistente_bodega' => 1,
+        'ayudante_general_bodega' => 1,
+        'transporte' => 1,
+        'lider_servicios' => 4,
+        'tecnico_servicios' => 1,
+        'garantias_servicios' => 1,
+        'vendedor_disenador' => 4,
+        'lider_operaciones' => 1,
     ];
 
-    private const WHIL_EMAIL = 'whil@atlantic.com.pa';
+    private const WHIL_EMAIL = 'gerencia5@test.com';
 
     public function up(): void
     {
-        $rolesTable   = $this->table('roles');
-        $levelsTable  = $this->table('security_levels');
-        $matrixTable  = $this->table('security_level_module_permissions');
-        $usersTable   = $this->table('users');
+        $rolesTable = $this->table('roles');
+        $levelsTable = $this->table('security_levels');
+        $matrixTable = $this->table('security_level_module_permissions');
+        $usersTable = $this->table('users');
 
         $oldLevelIds = DB::table($levelsTable)->whereIn('level', [11, 12, 13, 14])->pluck('id', 'level');
         $newLevelIds = DB::table($levelsTable)->whereIn('level', [1, 4, 8, 9])->pluck('id', 'level');
@@ -111,11 +111,11 @@ return new class extends TenantSchemaMigration
 
     public function down(): void
     {
-        $rolesTable  = $this->table('roles');
+        $rolesTable = $this->table('roles');
         $levelsTable = $this->table('security_levels');
         $matrixTable = $this->table('security_level_module_permissions');
-        $usersTable  = $this->table('users');
-        $now         = now();
+        $usersTable = $this->table('users');
+        $now = now();
 
         DB::table($levelsTable)->insert([
             ['level' => 11, 'name' => 'Gerencia Total', 'description' => 'Crear-Editar y Aprobar en los 7 módulos. Mark, David, Daniela.', 'permissions' => json_encode([]), 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],

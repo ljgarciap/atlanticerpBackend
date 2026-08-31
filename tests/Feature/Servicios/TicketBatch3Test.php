@@ -14,11 +14,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class TicketBatch3Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
     protected function setUp(): void
     {
@@ -30,14 +30,14 @@ class TicketBatch3Test extends FeatureTestCase
     private function makeTicket(array $overrides = []): Ticket
     {
         return Ticket::create([
-            'numero'                   => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_INSTALLATION,
-            'subtipo'                  => Ticket::SUBTIPO_INSPECTION,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_REPORTED,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'numero' => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_INSTALLATION,
+            'subtipo' => Ticket::SUBTIPO_INSPECTION,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_REPORTED,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
             ...$overrides,
         ]);
@@ -53,7 +53,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_cancelar_exitoso_cambia_estado_y_guarda_motivo(): void
     {
         $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/cancelar", ['motivo' => 'Cliente ya no requiere el servicio'])
@@ -68,7 +68,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_cancelar_sin_motivo_retorna_422(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/cancelar", [])
@@ -78,7 +78,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_cancelar_con_motivo_solo_espacios_retorna_422(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/cancelar", ['motivo' => '   '])
@@ -89,7 +89,7 @@ class TicketBatch3Test extends FeatureTestCase
     {
         // A diferencia de resolved/closed, cancelar no exige cotización/informe resueltos.
         $ticket = $this->makeTicket([
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -102,7 +102,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_cancelar_un_ticket_ya_cancelado_retorna_422(): void
     {
         $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_CANCELLED]);
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/cancelar", ['motivo' => 'Otra vez'])
@@ -112,7 +112,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_reactivar_ticket_cancelado_cambiando_estado_manualmente(): void
     {
         $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_CANCELLED, 'cancellation_reason' => 'Motivo previo']);
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_REPORTED])
@@ -123,7 +123,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_tecnico_interno_no_puede_cancelar(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/cancelar", ['motivo' => 'Intento no autorizado'])
@@ -133,7 +133,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_management_no_puede_cancelar(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
+        $token = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/cancelar", ['motivo' => 'Intento no autorizado'])
@@ -154,7 +154,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_pdf_se_genera_para_cualquier_rol_que_pueda_ver_el_detalle(): void
     {
         $ticket = $this->makeTicket(['descripcion' => 'Fuga en lámpara de techo']);
-        $token  = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/servicios/tickets/{$ticket->id}/pdf")

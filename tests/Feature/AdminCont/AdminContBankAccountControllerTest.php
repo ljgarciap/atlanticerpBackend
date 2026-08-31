@@ -11,8 +11,9 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-607→609 (REQ-530→532) — Cuentas Bancarias. */
 class AdminContBankAccountControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL   = 'conta@atlantic.com.pa';
-    private const YANETH_EMAIL  = 'asistente@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
+    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
 
     protected function setUp(): void
     {
@@ -126,7 +127,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
     public function test_deactivate_y_reactivate(): void
     {
         $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-accounts/{$account->id}/deactivate")

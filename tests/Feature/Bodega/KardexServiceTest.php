@@ -36,7 +36,7 @@ class KardexServiceTest extends FeatureTestCase
         $product = $this->makeProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->first();
 
-        $movement = (new KardexService())->registrar(
+        $movement = (new KardexService)->registrar(
             $product->id, $warehouse->id, InventoryMovement::TIPO_ENTRADA, 10, 'Orden #1 recibida',
         );
 
@@ -50,7 +50,7 @@ class KardexServiceTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-429 (rebote de Daniela Amaya 2026-08-13) — caso real reproducido: producto con 11
+     * SCRUM-429 (rebote de Gerencia Test 2026-08-13) — caso real reproducido: producto con 11
      * unidades (10 en Showroom Obarrio + 1 en Bodega Central), ajuste de -1 en Showroom Obarrio.
      * Antes de este fix, `catalog_products.stock_quantity` (el agregado del que derivan
      * "Disponible"/"Stock Total" en todo el resto de Inventario) se quedaba en 11 aunque el
@@ -64,7 +64,7 @@ class KardexServiceTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $showroom->id, 'quantity' => 10]);
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 1]);
 
-        (new KardexService())->registrar(
+        (new KardexService)->registrar(
             $product->id, $showroom->id, InventoryMovement::TIPO_CONTEO, -1, 'Conteo general aplicado',
         );
 
@@ -79,7 +79,7 @@ class KardexServiceTest extends FeatureTestCase
     {
         $product = $this->makeProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->first();
-        $service = new KardexService();
+        $service = new KardexService;
 
         $service->registrar($product->id, $warehouse->id, InventoryMovement::TIPO_ENTRADA, 25, 'Ingreso inicial');
         $second = $service->registrar($product->id, $warehouse->id, InventoryMovement::TIPO_SALIDA, -8, 'Pedido #55 despachado');
@@ -94,7 +94,7 @@ class KardexServiceTest extends FeatureTestCase
     {
         $product = $this->makeProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->first();
-        $service = new KardexService();
+        $service = new KardexService;
 
         $m1 = $service->registrar($product->id, $warehouse->id, InventoryMovement::TIPO_ENTRADA, 20, 'A');
         $m2 = $service->registrar($product->id, $warehouse->id, InventoryMovement::TIPO_AJUSTE, 5, 'B');
@@ -109,7 +109,7 @@ class KardexServiceTest extends FeatureTestCase
         $product = $this->makeProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->first();
 
-        $movement = (new KardexService())->registrar(
+        $movement = (new KardexService)->registrar(
             $product->id, $warehouse->id, InventoryMovement::TIPO_ENTRADA, 5, 'Orden #7 recibida',
             referenciaEntidadTipo: 'ORDEN_COMPRA', referenciaEntidadId: 7,
         );
@@ -123,7 +123,7 @@ class KardexServiceTest extends FeatureTestCase
         $product = $this->makeProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->first();
 
-        $movement = (new KardexService())->registrar(
+        $movement = (new KardexService)->registrar(
             $product->id, $warehouse->id, InventoryMovement::TIPO_ENTRADA, 5, 'Automatico',
         );
 

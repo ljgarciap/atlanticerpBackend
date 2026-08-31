@@ -50,15 +50,15 @@ final class ComprasSettingsController extends Controller
     private function format(ComprasSettings $settings): array
     {
         return [
-            'low_rating_threshold'          => $settings->low_rating_threshold,
-            'mark_approver_user_id'         => $settings->mark_approver_user_id,
-            'claim_attention_days'          => $settings->claim_attention_days,
-            'replacement_margin_threshold'  => $settings->replacement_margin_threshold,
-            'similarity_weight_text'            => $settings->similarity_weight_text,
-            'similarity_weight_price'           => $settings->similarity_weight_price,
-            'similarity_weight_margin'          => $settings->similarity_weight_margin,
+            'low_rating_threshold' => $settings->low_rating_threshold,
+            'primary_approver_user_id' => $settings->primary_approver_user_id,
+            'claim_attention_days' => $settings->claim_attention_days,
+            'replacement_margin_threshold' => $settings->replacement_margin_threshold,
+            'similarity_weight_text' => $settings->similarity_weight_text,
+            'similarity_weight_price' => $settings->similarity_weight_price,
+            'similarity_weight_margin' => $settings->similarity_weight_margin,
             'similarity_other_category_penalty' => $settings->similarity_other_category_penalty,
-            'similarity_min_threshold'           => $settings->similarity_min_threshold,
+            'similarity_min_threshold' => $settings->similarity_min_threshold,
         ];
     }
 

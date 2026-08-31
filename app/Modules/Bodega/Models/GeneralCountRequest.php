@@ -7,6 +7,7 @@ namespace App\Modules\Bodega\Models;
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,19 +18,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Ajustes/Reubicaciones, "Mark aprueba" (resuelto_por/resuelto_at) y "se aplica al Kardex"
  * (aplicado_at, SCRUM-466) son dos pasos desacoplados — ver ADR-SCRUM460-466-conteos-generales.md.
  *
- * @property int         $id
- * @property int         $warehouse_id
- * @property int         $realizado_por
- * @property string      $estado
+ * @property int $id
+ * @property int $warehouse_id
+ * @property int $realizado_por
+ * @property string $estado
  * @property string|null $motivo_rechazo
- * @property int|null    $resuelto_por
- * @property \Carbon\Carbon|null $resuelto_at
- * @property \Carbon\Carbon|null $aplicado_at
- * @property \Carbon\Carbon|null $fecha_solicitud_aprobacion SCRUM-797 (RN8) — momento en que
- *   `submit()` movió el conteo a `pendiente_aprobacion`, null mientras sigue en borrador.
- * @property int|null    $replaced_by_id SCRUM-797 (RN5→RN7) — seteado cuando el usuario confirma
- *   reemplazar este conteo (todavía sin resolver) por uno nuevo sobre la misma bodega.
- * @property \Carbon\Carbon $created_at
+ * @property int|null $resuelto_por
+ * @property Carbon|null $resuelto_at
+ * @property Carbon|null $aplicado_at
+ * @property Carbon|null $fecha_solicitud_aprobacion SCRUM-797 (RN8) — momento en que
+ *                                                   `submit()` movió el conteo a `pendiente_aprobacion`, null mientras sigue en borrador.
+ * @property int|null $replaced_by_id SCRUM-797 (RN5→RN7) — seteado cuando el usuario confirma
+ *                                    reemplazar este conteo (todavía sin resolver) por uno nuevo sobre la misma bodega.
+ * @property Carbon $created_at
  * @property-read int|null $lines_count `withCount('lines')` en `GeneralCountController::index()`.
  * @property-read int|null $diferencias_count `withCount(['lines as diferencias_count' => ...])`
  *                en `index()` (RN3 REQ-395, "Diferencias encontradas") — alias custom, no sigue
@@ -44,13 +45,18 @@ class GeneralCountRequest extends Model
     use LogsAuditTrail;
 
     public const ESTADO_PENDIENTE_EVALUACION = 'pendiente_evaluacion';
+
     public const ESTADO_EVALUADO = 'evaluado';
+
     public const ESTADO_PENDIENTE_APROBACION = 'pendiente_aprobacion';
+
     public const ESTADO_APROBADA = 'aprobada';
+
     public const ESTADO_RECHAZADA = 'rechazada';
+
     /**
      * SCRUM-797 RN7 (2026-08-26) — reemplazado por confirmación explícita del usuario, nunca
-     * automático. SUPERADO desde el rebote de Daniela Amaya del día siguiente (2026-08-27,
+     * automático. SUPERADO desde el rebote de Gerencia Test del día siguiente (2026-08-27,
      * "Validación de Conteos Pendientes por Producto y Bodega"): el reemplazo por confirmación
      * ahora vive por LÍNEA (`GeneralCountRequestLine::replaced_by_id`), no a nivel de todo el
      * conteo — `GeneralCountController` ya no vuelve a setear este estado ni `replaced_by_id` de
@@ -61,9 +67,9 @@ class GeneralCountRequest extends Model
 
     /**
      * @var list<string> SUPERADO junto con `ESTADO_REEMPLAZADA` (ver su docblock) — ya no se usa
-     *   para el chequeo de duplicados (ahora por línea/producto, ver
-     *   `GeneralCountController::findConflictingLines()`). Se mantiene por si algún reporte
-     *   histórico todavía filtra por "estados en curso" a nivel de todo el conteo.
+     *                   para el chequeo de duplicados (ahora por línea/producto, ver
+     *                   `GeneralCountController::findConflictingLines()`). Se mantiene por si algún reporte
+     *                   histórico todavía filtra por "estados en curso" a nivel de todo el conteo.
      */
     public const ESTADOS_SIN_RESOLVER = [
         self::ESTADO_PENDIENTE_EVALUACION, self::ESTADO_EVALUADO, self::ESTADO_PENDIENTE_APROBACION,

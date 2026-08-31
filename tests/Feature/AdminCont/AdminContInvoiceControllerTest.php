@@ -23,9 +23,9 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 2 de Facturación (SCRUM-513→518, REQ-436→441). */
 class AdminContInvoiceControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
 
-    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -40,7 +40,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     /** @return array{order: Order, quote: Quote} */
@@ -52,10 +52,10 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
             $folio = 'COT-2026-'.static::uniqueTestNumber();
         }
 
-        $master  = MasterClient::create(['name' => 'Cliente Facturación '.uniqid()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Facturación '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Facturación '.uniqid()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Facturación '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Facturación '.uniqid()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $ownerId, 'amount' => 500.0, 'stage_changed_at' => Carbon::now(),
             ...$cardOverrides,
@@ -211,7 +211,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
         ['order' => $orderB] = $this->makeFacturableOrder($ownerId, cardOverrides: [
             'master_client_id' => $masterClientId,
-            'sub_client_id'    => $orderA->pipelineCard->sub_client_id,
+            'sub_client_id' => $orderA->pipelineCard->sub_client_id,
         ]);
 
         AdminContCustomerCreditBalance::create(['master_client_id' => $masterClientId, 'saldo' => 200]);
@@ -522,7 +522,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->assertFalse($response->json('incobrable_pendiente'));
     }
 
-    /** `mark_only` — un rol distinto de Mark no puede decidir, aunque sea Gerencia genérica. */
+    /** `primary_approver_only` — un rol distinto de Mark no puede decidir, aunque sea Gerencia genérica. */
     public function test_uncollectible_decision_rechaza_a_un_no_mark(): void
     {
         $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
@@ -538,7 +538,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     }
 
     /** superadmin.all bypassa el gate exclusivo de Mark (decisión de Luis, 2026-08-22) — tanto la
-     *  acción real (mark_only) como el flag `puede_decidir_incobrable` que ve el frontend. */
+     *  acción real (primary_approver_only) como el flag `puede_decidir_incobrable` que ve el frontend. */
     public function test_uncollectible_decision_permite_a_superadmin_aunque_no_sea_mark(): void
     {
         $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
@@ -565,7 +565,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      *  SIGUE siendo cobrable cayendo en el rango correcto — este test cierra ese gap). */
     public function test_aging_ubica_una_factura_vencida_y_cobrable_en_el_rango_correcto(): void
     {
-        $ownerId     = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
         $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
 
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
@@ -592,7 +592,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** REQ-450 Escenario 1/2 — 4 rangos, y una factura aprobada como incobrable sale del cálculo. */
     public function test_aging_agrupa_por_rango_y_excluye_incobrables_aprobadas(): void
     {
-        $ownerId     = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
         $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
 
         // vigente (0-30): factura recién creada, todavía no vence.
@@ -677,6 +677,6 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
-        return (int) \Illuminate\Support\Facades\DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
+        return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 }

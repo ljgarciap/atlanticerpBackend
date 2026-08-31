@@ -14,6 +14,7 @@ use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\SalesProject;
+use App\Modules\VentasDiseno\Models\SubClient;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -74,18 +75,18 @@ final class OrderBoardService
         $itemsSummary = $this->itemsSummaryByOrder($orderIdsForSummary);
 
         return [
-            'cards'           => $orders->map(fn (Order $o) => $this->cardPayload($o, $etaByProduct, $itemsSummary))->values()->all(),
+            'cards' => $orders->map(fn (Order $o) => $this->cardPayload($o, $etaByProduct, $itemsSummary))->values()->all(),
             'counts_by_stage' => $counts,
-            'total'           => $orders->count(),
+            'total' => $orders->count(),
         ];
     }
 
     /**
      * REQ-306 — panel de carga por asistente.
      *
-     * Corrección 2026-08-11 (Daniela Amaya, SCRUM-376) — antes se derivaba la lista de "tarjetas"
+     * Corrección 2026-08-11 (Gerencia Test, SCRUM-376) — antes se derivaba la lista de "tarjetas"
      * agrupando los pedidos YA asignados (`groupBy('assistant_id')`), así que un asistente real de
-     * Bodega sin ningún pedido asignado en este momento (ej. Osvaldo Santos con 0) simplemente no
+     * Bodega sin ningún pedido asignado en este momento (ej. Asistente Bodega Test con 0) simplemente no
      * aparecía. Ahora se parte SIEMPRE del roster real de asistentes (`BodegaRoles::
      * ASISTENTE_BODEGA`, mismo criterio que `BodegaHomeService::team()`) y se les suma el conteo
      * de pedidos — un asistente con 0 pedidos sigue devolviendo su fila, con `orders_count: 0` y
@@ -97,7 +98,7 @@ final class OrderBoardService
     {
         /** @var Collection<int, Order> $orders */
         $orders = $this->baseQuery()->get();
-        $total  = $orders->count();
+        $total = $orders->count();
 
         /** @var Collection<int|string, Collection<int, Order>> $byAssistant */
         $byAssistant = $orders->whereNotNull('assistant_id')->groupBy('assistant_id');
@@ -110,10 +111,10 @@ final class OrderBoardService
             $count = $byAssistant->get($assistant->id)?->count() ?? 0;
 
             return [
-                'assistant_id'      => $assistant->id,
-                'assistant_name'    => $this->fullName($assistant),
-                'orders_count'      => $count,
-                'percent_of_total'  => $total > 0 ? round(($count / $total) * 100, 1) : 0.0,
+                'assistant_id' => $assistant->id,
+                'assistant_name' => $this->fullName($assistant),
+                'orders_count' => $count,
+                'percent_of_total' => $total > 0 ? round(($count / $total) * 100, 1) : 0.0,
             ];
         })->values()->all();
     }
@@ -132,7 +133,7 @@ final class OrderBoardService
 
         $itemsSummary = $this->itemsSummaryByOrder([$order->id]);
 
-        /** @var \App\Modules\VentasDiseno\Models\SubClient|null $subClient */
+        /** @var SubClient|null $subClient */
         $subClient = $order->pipelineCard?->salesProject?->subClient;
 
         // Lote 4 (SCRUM-395/402, 2026-08-17) — `customer_contact` es el string ya formateado
@@ -146,9 +147,9 @@ final class OrderBoardService
             // Frontend Dev (Batch A3, 2026-07-23) — `customer_contact`/`delivery_address` ya
             // existen en el modelo (poblados desde REQ-308) pero nunca se serializaban acá, dejando
             // el modal "Ver detalle" (REQ-332, que sí los pide) mostrando "—" siempre.
-            'contacto_cliente'  => $order->customer_contact,
+            'contacto_cliente' => $order->customer_contact,
             'contacto_telefono' => $primaryContact?->phone,
-            'contacto_correo'   => $primaryContact?->email,
+            'contacto_correo' => $primaryContact?->email,
             'direccion_entrega' => $order->delivery_address,
             // SCRUM-385 (REQ-315, corrección 2026-08-11) — Hoja de Picking pide "Cliente Master" y
             // "Subcliente" como campos INDEPENDIENTES, no el combinado `cliente` (que ya es
@@ -157,28 +158,28 @@ final class OrderBoardService
             // `pipelineCard -> salesProject -> subClient -> masterClient` — `null` si el pedido no
             // tiene `pipeline_card_id` (no debería pasar en el flujo normal, pero no es un caso
             // imposible en datos sembrados/legacy).
-            'cliente_master'    => $subClient?->masterClient?->name,
-            'subcliente'        => $subClient?->business_name,
+            'cliente_master' => $subClient?->masterClient?->name,
+            'subcliente' => $subClient?->business_name,
             'items' => $order->items->map(function (OrderItem $i): array {
                 /** @var CatalogProduct|null $product */
                 $product = $i->catalogProduct;
 
                 return [
-                    'id'                 => $i->id,
+                    'id' => $i->id,
                     'catalog_product_id' => $i->catalog_product_id,
-                    'reference'          => $product !== null ? $product->reference : $i->reference_snapshot,
+                    'reference' => $product !== null ? $product->reference : $i->reference_snapshot,
                     // Frontend Dev (Batch A3) — la tabla de detalle (REQ-332) pide "Ref. fábrica"
                     // además de la pública; solo existe cuando el ítem tiene producto de catálogo
                     // real (`CatalogProduct.factory_reference`, sprint2/REQ-131), nunca para ítems
                     // personalizados (sin `catalog_product_id`).
-                    'factory_reference'  => $product?->factory_reference,
-                    'description'        => $product !== null ? $product->name : $i->description_snapshot,
-                    'location'           => $i->location_snapshot,
-                    'qty_requested'      => $i->qty_requested,
-                    'qty_reserved'       => $i->qty_reserved,
-                    'qty_picked'         => $i->qty_picked,
-                    'qty_delivered'      => $i->qty_delivered,
-                    'shortage_reason'    => $i->shortage_reason,
+                    'factory_reference' => $product?->factory_reference,
+                    'description' => $product !== null ? $product->name : $i->description_snapshot,
+                    'location' => $i->location_snapshot,
+                    'qty_requested' => $i->qty_requested,
+                    'qty_reserved' => $i->qty_reserved,
+                    'qty_picked' => $i->qty_picked,
+                    'qty_delivered' => $i->qty_delivered,
+                    'shortage_reason' => $i->shortage_reason,
                 ];
             })->values()->all(),
             // `eta_proveedor` ya viaja desde `cardPayload()` (SCRUM-406) — no se recalcula acá.
@@ -238,12 +239,12 @@ final class OrderBoardService
         $today = Carbon::today();
 
         match ($chip) {
-            'urgentes'  => $this->applyUrgentScope($query),
+            'urgentes' => $this->applyUrgentScope($query),
             'atrasados' => $query->whereNotNull('committed_delivery_date')
                 ->where('committed_delivery_date', '<', $today->toDateString())
                 ->whereNotIn('stage', [Order::STAGE_ENTREGADO]),
             'sin_stock' => $query->where('order_type', Order::ORDER_TYPE_FALTANTE)->where('stage', Order::STAGE_ASIGNADO),
-            default     => null,
+            default => null,
         };
     }
 
@@ -254,11 +255,11 @@ final class OrderBoardService
      * y el chip del panel "Estado de pedidos" (REQ-302) — una sola fuente de verdad, nunca 2
      * definiciones de "urgente" que puedan desalinearse.
      *
-     * @param Builder<Order> $query
+     * @param  Builder<Order>  $query
      */
     public function applyUrgentScope(Builder $query): void
     {
-        $today   = Carbon::today();
+        $today = Carbon::today();
         $urgente = $today->copy()->addDays($this->settings->urgenteWindowDays());
 
         $query->whereNotNull('committed_delivery_date')
@@ -267,11 +268,11 @@ final class OrderBoardService
     }
 
     /**
-     * @param array<int, string>|null $etaByProduct catalog_product_id => fecha ETA (batch de
-     *        `board()`), o null si se llama para un solo pedido (`detail()`).
-     * @param array<int, array{product_count: int, unit_count: int}>|null $itemsSummary order_id =>
-     *        resumen de productos/unidades (SCRUM-382), siempre pasado por el caller (`board()`/
-     *        `detail()`) — nunca null en la práctica, el default solo evita romper firmas viejas.
+     * @param  array<int, string>|null  $etaByProduct  catalog_product_id => fecha ETA (batch de
+     *                                                 `board()`), o null si se llama para un solo pedido (`detail()`).
+     * @param  array<int, array{product_count: int, unit_count: int}>|null  $itemsSummary  order_id =>
+     *                                                                                     resumen de productos/unidades (SCRUM-382), siempre pasado por el caller (`board()`/
+     *                                                                                     `detail()`) — nunca null en la práctica, el default solo evita romper firmas viejas.
      * @return array<string, mixed>
      */
     private function cardPayload(Order $order, ?array $etaByProduct = null, ?array $itemsSummary = null): array
@@ -294,34 +295,34 @@ final class OrderBoardService
         $committedDate = $order->committed_delivery_date;
 
         return [
-            'id'                          => $order->id,
-            'order_number'                => $order->order_number,
-            'order_type'                  => $order->order_type,
-            'stage'                       => $order->stage,
-            'proyecto'                    => $salesProject?->name,
-            'cliente'                     => $order->customer_name,
-            'vendedor'                    => $this->fullName($seller),
-            'asistente'                   => $this->fullName($assistant),
-            'picker'                      => $this->fullName($picker),
-            'repartidor'                  => $this->fullName($courier),
-            'fecha_entrega_comprometida'  => $committedDate?->toDateString(),
-            'is_atrasado'                 => $committedDate !== null
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'order_type' => $order->order_type,
+            'stage' => $order->stage,
+            'proyecto' => $salesProject?->name,
+            'cliente' => $order->customer_name,
+            'vendedor' => $this->fullName($seller),
+            'asistente' => $this->fullName($assistant),
+            'picker' => $this->fullName($picker),
+            'repartidor' => $this->fullName($courier),
+            'fecha_entrega_comprometida' => $committedDate?->toDateString(),
+            'is_atrasado' => $committedDate !== null
                 && $committedDate->lt($today)
                 && $order->stage !== Order::STAGE_ENTREGADO,
-            'is_sin_stock'                => $order->isAwaitingStock(),
+            'is_sin_stock' => $order->isAwaitingStock(),
             // SCRUM-406 (REQ-336) — solo se calcula (y paga el query extra) cuando el pedido está
             // realmente "sin stock": antes esto SOLO viajaba en `detail()`, obligando a abrir el
             // modal para ver la ETA de un pedido atascado en Asignado por falta de stock.
-            'eta_proveedor'               => $order->isAwaitingStock() ? $this->supplierEta($order, $etaByProduct) : null,
-            'invoice_ready'               => $order->invoice_ready,
-            'family'                      => [
+            'eta_proveedor' => $order->isAwaitingStock() ? $this->supplierEta($order, $etaByProduct) : null,
+            'invoice_ready' => $order->invoice_ready,
+            'family' => [
                 'sequence_in_family' => $order->sequence_in_family,
-                'total_in_family'    => $order->total_in_family,
-                'badge'              => $this->family->completionBadge($order),
+                'total_in_family' => $order->total_in_family,
+                'badge' => $this->family->completionBadge($order),
             ],
             // SCRUM-382 (REQ-312, corrección 2026-08-11) — "resumen de productos y cantidades"
             // ("X productos y Y unidades") pedido en la tarjeta.
-            'items_summary'               => $itemsSummary[$order->id] ?? ['product_count' => 0, 'unit_count' => 0],
+            'items_summary' => $itemsSummary[$order->id] ?? ['product_count' => 0, 'unit_count' => 0],
         ];
     }
 
@@ -330,7 +331,7 @@ final class OrderBoardService
      * nunca un `count()`/`sum()` de `items` por tarjeta (mismo criterio de batching que
      * `bulkSupplierEtaByProduct()`).
      *
-     * @param list<int> $orderIds
+     * @param  list<int>  $orderIds
      * @return array<int, array{product_count: int, unit_count: int}>
      */
     private function itemsSummaryByOrder(array $orderIds): array
@@ -350,7 +351,7 @@ final class OrderBoardService
         foreach ($rows as $row) {
             $map[(int) $row->order_id] = [
                 'product_count' => (int) $row->product_count,
-                'unit_count'    => (int) $row->unit_count,
+                'unit_count' => (int) $row->unit_count,
             ];
         }
 
@@ -371,11 +372,11 @@ final class OrderBoardService
     /**
      * REQ-336 RN1 — ETA jala de la orden de compra real asociada, no se captura manualmente.
      *
-     * @param array<int, string>|null $etaByProduct si viene (llamado desde `board()`, ya batcheado
-     *        con `bulkSupplierEtaByProduct()`), se usa ese mapa y no se dispara ninguna query
-     *        nueva. Si es `null` (llamado desde `detail()`, un solo pedido), cae al query directo
-     *        de siempre — una sola consulta para un solo pedido es aceptable, el problema real
-     *        (Senior Review 2026-07-23) era repetirla una vez por tarjeta en el board completo.
+     * @param  array<int, string>|null  $etaByProduct  si viene (llamado desde `board()`, ya batcheado
+     *                                                 con `bulkSupplierEtaByProduct()`), se usa ese mapa y no se dispara ninguna query
+     *                                                 nueva. Si es `null` (llamado desde `detail()`, un solo pedido), cae al query directo
+     *                                                 de siempre — una sola consulta para un solo pedido es aceptable, el problema real
+     *                                                 (Senior Review 2026-07-23) era repetirla una vez por tarjeta en el board completo.
      */
     private function supplierEta(Order $order, ?array $etaByProduct = null): ?string
     {
@@ -408,7 +409,7 @@ final class OrderBoardService
      * para las `PurchaseOrder` candidatas + una para sus `lines` (eager load), nunca una consulta
      * nueva por pedido — mismo criterio de batching que `WarehouseStockService::breakdownForProducts()`.
      *
-     * @param list<int> $productIds
+     * @param  list<int>  $productIds
      * @return array<int, string> catalog_product_id => fecha ETA más próxima entre sus órdenes de compra activas
      */
     private function bulkSupplierEtaByProduct(array $productIds): array

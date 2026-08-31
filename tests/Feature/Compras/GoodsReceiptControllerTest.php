@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Compras;
 
+use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
@@ -210,7 +211,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts', [
                 'purchase_order_id' => $order->id,
-                'freight_total'     => 300,
+                'freight_total' => 300,
                 'lines' => [
                     ['catalog_product_id' => $productA->id, 'quantity' => 20, 'unit_cost' => 10, 'warehouse_id' => $this->warehouseId()],
                     ['catalog_product_id' => $productB->id, 'quantity' => 10, 'unit_cost' => 10, 'warehouse_id' => $this->warehouseId()],
@@ -293,7 +294,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
     }
 
     /**
-     * Pre-QA 2026-08-07 (SCRUM-208, hallazgo real del rebote de Daniela Amaya 2026-08-06): las
+     * Pre-QA 2026-08-07 (SCRUM-208, hallazgo real del rebote de Gerencia Test 2026-08-06): las
      * etapas de remanente deben cubrir "desde ordenado en adelante" — antes del fix,
      * `REMAINDER_STATUSES` no incluía `ordenado` y este payload fallaba con 422 de validación.
      */
@@ -452,9 +453,9 @@ class GoodsReceiptControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->reMakeCurrent();
-        $movement = \App\Modules\Bodega\Models\InventoryMovement::where('catalog_product_id', $product->id)->first();
+        $movement = InventoryMovement::where('catalog_product_id', $product->id)->first();
         $this->assertNotNull($movement, 'Confirmar el ingreso debe generar una línea en el Kardex');
-        $this->assertSame(\App\Modules\Bodega\Models\InventoryMovement::TIPO_ENTRADA, $movement->tipo);
+        $this->assertSame(InventoryMovement::TIPO_ENTRADA, $movement->tipo);
         $this->assertSame(10, $movement->cantidad);
         $this->assertSame(0, $movement->saldo_inicial);
         $this->assertSame(10, $movement->saldo_resultante);

@@ -6,17 +6,18 @@ namespace Tests\Feature\Bodega;
 
 use App\Modules\Bodega\Models\AdjustmentRequest;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
-use App\Modules\Bodega\Models\Order;
+use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Bodega\Services\BodegaInventoryKpiService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-490→495 (REQ-420→425, "Reportes de Bodega"). Mariano Sandoval (almacen2@atlantic.com.pa)
- * y Osvaldo Santos (logistica@atlantic.com.pa) son los 2 Asistentes de Bodega reales
+ * SCRUM-490→495 (REQ-420→425, "Reportes de Bodega"). Asistente Bodega Test 2 (asistentebodega2@test.com)
+ * y Asistente Bodega Test (asistentebodega@test.com) son los 2 Asistentes de Bodega reales
  * sembrados por `BusinessRoleUserSeeder` en todos los entornos (ver `BodegaOrderTestHelpers`).
  */
 class BodegaReportsControllerTest extends FeatureTestCase
@@ -31,8 +32,8 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -41,8 +42,8 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_productividad_rankea_por_pedidos_gestionados_en_el_periodo(): void
     {
-        $marianoId = $this->userIdByEmail('almacen2@atlantic.com.pa');
-        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
+        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
 
         $this->makeOrder(['assistant_id' => $marianoId]);
         $this->makeOrder(['assistant_id' => $marianoId]);
@@ -72,8 +73,8 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_productividad_incluye_asistentes_activos_sin_pedidos(): void
     {
-        $marianoId = $this->userIdByEmail('almacen2@atlantic.com.pa');
-        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
+        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
 
         $this->makeOrder(['assistant_id' => $marianoId]);
 
@@ -102,9 +103,9 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_productividad_excluye_asistente_inactivo(): void
     {
-        $marianoId = $this->userIdByEmail('almacen2@atlantic.com.pa');
-        $osvaldoId = $this->userIdByEmail('logistica@atlantic.com.pa');
-        $slug = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->value('slug');
+        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
+        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('id', $osvaldoId)->update(['is_active' => false]);
 
         $this->makeOrder(['assistant_id' => $marianoId]);
@@ -123,19 +124,19 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     private function makeAdjustmentLine(string $estado, string $motivo, ?Carbon $createdAt = null): AdjustmentRequestLine
     {
-        $warehouse = \App\Modules\Bodega\Models\Warehouse::query()->firstOrFail();
+        $warehouse = Warehouse::query()->firstOrFail();
         $product = $this->makeCatalogProduct();
 
         $line = AdjustmentRequestLine::create([
             'adjustment_request_id' => AdjustmentRequest::create([
                 'catalog_product_id' => $product->id,
-                'solicitado_por'     => $this->userIdByEmail('almacen@atlantic.com.pa'),
+                'solicitado_por' => $this->userIdByEmail('liderbodega@test.com'),
             ])->id,
             'warehouse_id' => $warehouse->id,
-            'tipo'         => AdjustmentRequestLine::TIPO_SUMAR,
-            'cantidad'     => 5,
-            'motivo'       => $motivo,
-            'estado'       => $estado,
+            'tipo' => AdjustmentRequestLine::TIPO_SUMAR,
+            'cantidad' => 5,
+            'motivo' => $motivo,
+            'estado' => $estado,
         ]);
 
         if ($createdAt !== null) {
@@ -223,8 +224,8 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_capacidad_por_bodega_umbral_configurable(): void
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read', 'bodega.settings.configure']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read', 'bodega.settings.configure']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/bodega/settings', ['capacidad_concentracion_pct' => 50])
@@ -255,15 +256,15 @@ class BodegaReportsControllerTest extends FeatureTestCase
     {
         $this->makeCatalogProduct([
             'stock_quantity' => 0,
-            'reorder_point'  => 5,
-            'rotation'       => CatalogProduct::ROTATION_ALTA,
-            'is_active'      => true,
+            'reorder_point' => 5,
+            'rotation' => CatalogProduct::ROTATION_ALTA,
+            'is_active' => true,
         ]);
         $this->makeCatalogProduct([
             'stock_quantity' => 100,
-            'reorder_point'  => 5,
-            'rotation'       => CatalogProduct::ROTATION_BAJA,
-            'is_active'      => true,
+            'reorder_point' => 5,
+            'rotation' => CatalogProduct::ROTATION_BAJA,
+            'is_active' => true,
         ]);
 
         $expected = app(BodegaInventoryKpiService::class)->kpis();
@@ -283,9 +284,9 @@ class BodegaReportsControllerTest extends FeatureTestCase
     {
         $this->makeCatalogProduct([
             'stock_quantity' => 100,
-            'reorder_point'  => 5,
-            'rotation'       => CatalogProduct::ROTATION_BAJA,
-            'is_active'      => true,
+            'reorder_point' => 5,
+            'rotation' => CatalogProduct::ROTATION_BAJA,
+            'is_active' => true,
         ]);
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())

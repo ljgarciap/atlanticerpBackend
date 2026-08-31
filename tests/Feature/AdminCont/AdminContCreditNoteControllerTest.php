@@ -7,8 +7,6 @@ namespace Tests\Feature\AdminCont;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
-use App\Modules\AdminCont\Models\AdminContCustomerCreditBalance;
-use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContItbmsRate;
 use App\Modules\Bodega\Models\CustomerReturn;
@@ -29,10 +27,10 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 10 de Admin&Cont (SCRUM-553→558, REQ-476→481) — apertura de Notas Crédito y Devoluciones. */
 class AdminContCreditNoteControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
 
     /** Batch 13 — mismo email real que `AdminContInvoiceControllerTest`/`AdminContFiscalSettingsControllerTest`. */
-    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -47,7 +45,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     private function userIdByEmail(string $email): int
@@ -60,8 +58,8 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     /** @return array{order: Order, invoice: AdminContInvoice} */
     private function makeInvoicedOrder(int $ownerId, float $monto = 500, float $saldoAplicado = 0.0): array
     {
-        $master  = MasterClient::create(['name' => 'Cliente Notas Crédito '.uniqid()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Notas Crédito '.uniqid()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.uniqid()]);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
@@ -78,12 +76,12 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $generalRate = AdminContItbmsRate::where('nombre', '7% — General')->firstOrFail();
 
         $invoice = AdminContInvoice::create([
-            'numero'       => 'F-'.static::uniqueTestNumber(),
-            'order_id'     => $order->id,
+            'numero' => 'F-'.static::uniqueTestNumber(),
+            'order_id' => $order->id,
             'itbms_rate_id' => $generalRate->id,
             'master_client_id' => $master->id,
-            'cliente'      => $sub->business_name,
-            'monto'        => $monto,
+            'cliente' => $sub->business_name,
+            'monto' => $monto,
             'saldo_aplicado' => $saldoAplicado,
         ]);
 
@@ -94,12 +92,12 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     private function baseRegisterPayload(AdminContInvoice $invoice, float $monto): array
     {
         return [
-            'master_client_id'  => $invoice->master_client_id,
-            'cliente'            => $invoice->cliente,
-            'tipo'               => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL,
+            'master_client_id' => $invoice->master_client_id,
+            'cliente' => $invoice->cliente,
+            'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL,
             'factura_origen_id' => $invoice->id,
-            'monto'              => $monto,
-            'motivo'             => 'Descuento comercial acordado con el cliente',
+            'monto' => $monto,
+            'motivo' => 'Descuento comercial acordado con el cliente',
         ];
     }
 
@@ -120,20 +118,20 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         $customerReturn = CustomerReturn::create([
             'return_number' => 'DEV-2026-'.random_int(1000, 999999),
-            'order_id'      => $order->id,
-            'status'        => CustomerReturn::STATUS_ESPERANDO_NOTA_CREDITO,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'status' => CustomerReturn::STATUS_ESPERANDO_NOTA_CREDITO,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'created_by'    => $ownerId,
+            'created_by' => $ownerId,
         ]);
         $customerReturn->lines()->create([
-            'order_item_id'        => $item->id,
-            'reference_snapshot'   => $item->reference_snapshot,
+            'order_item_id' => $item->id,
+            'reference_snapshot' => $item->reference_snapshot,
             'description_snapshot' => $item->description_snapshot,
-            'unit_price'           => $item->unit_price,
-            'qty_requested'        => 2,
-            'qty_received'         => 2,
-            'reason'               => 'danado_defectuoso',
+            'unit_price' => $item->unit_price,
+            'qty_requested' => 2,
+            'qty_received' => 2,
+            'reason' => 'danado_defectuoso',
         ]);
 
         $token = $this->loginAsFelix();
@@ -156,12 +154,12 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $response->assertJson([
-            'total_acreditado'             => 0,
-            'numero_notas'                  => 0,
-            'pendientes_aprobacion_monto'    => 0,
+            'total_acreditado' => 0,
+            'numero_notas' => 0,
+            'pendientes_aprobacion_monto' => 0,
             'pendientes_aprobacion_cantidad' => 0,
-            'devoluciones_por_generar'       => 0,
-            'nota_promedio'                  => 0,
+            'devoluciones_por_generar' => 0,
+            'nota_promedio' => 0,
         ]);
     }
 
@@ -195,11 +193,11 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $response->assertJson([
-            'total_acreditado'               => 300,
-            'numero_notas'                     => 2,
-            'pendientes_aprobacion_monto'      => 6000,
-            'pendientes_aprobacion_cantidad'   => 1,
-            'nota_promedio'                    => 150,
+            'total_acreditado' => 300,
+            'numero_notas' => 2,
+            'pendientes_aprobacion_monto' => 6000,
+            'pendientes_aprobacion_cantidad' => 1,
+            'nota_promedio' => 150,
         ]);
     }
 
@@ -416,14 +414,14 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $token = $this->loginAsFelix();
 
         $payload = [
-            'master_client_id'  => $invoice->master_client_id,
-            'cliente'            => $invoice->cliente,
-            'tipo'               => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
+            'master_client_id' => $invoice->master_client_id,
+            'cliente' => $invoice->cliente,
+            'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
             'factura_origen_id' => $invoice->id,
-            'monto'              => 1, // debe ignorarse — la nota debe quedar en 500 (total de la factura).
-            'motivo'             => 'Pedido cancelado por el cliente',
-            'comprobante'        => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
+            'monto' => 1, // debe ignorarse — la nota debe quedar en 500 (total de la factura).
+            'motivo' => 'Pedido cancelado por el cliente',
+            'comprobante' => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
         ];
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -445,13 +443,13 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $token = $this->loginAsFelix();
 
         $payload = [
-            'master_client_id'  => $invoice->master_client_id,
-            'cliente'            => $invoice->cliente,
-            'tipo'               => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
+            'master_client_id' => $invoice->master_client_id,
+            'cliente' => $invoice->cliente,
+            'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
             'factura_origen_id' => $invoice->id,
-            'motivo'             => 'Pedido cancelado, nunca cobrado',
-            'comprobante'        => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
+            'motivo' => 'Pedido cancelado, nunca cobrado',
+            'comprobante' => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
         ];
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -470,12 +468,12 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $token = $this->loginAsFelix();
 
         $payload = [
-            'master_client_id'  => $invoice->master_client_id,
-            'cliente'            => $invoice->cliente,
-            'tipo'               => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
+            'master_client_id' => $invoice->master_client_id,
+            'cliente' => $invoice->cliente,
+            'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
             'factura_origen_id' => $invoice->id,
-            'motivo'             => 'Pedido cancelado por el cliente',
+            'motivo' => 'Pedido cancelado por el cliente',
         ];
 
         $this->withHeaders($this->authHeaders($token))
@@ -515,12 +513,12 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $token = $this->loginAsFelix();
 
         $payload = [
-            'master_client_id'  => $invoice->master_client_id,
-            'cliente'            => $invoice->cliente,
-            'tipo'               => AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA,
+            'master_client_id' => $invoice->master_client_id,
+            'cliente' => $invoice->cliente,
+            'tipo' => AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA,
             'factura_origen_id' => $invoice->id,
-            'monto'              => 6000,
-            'motivo'             => 'Devolución de mercancía confirmada por Bodega',
+            'monto' => 6000,
+            'motivo' => 'Devolución de mercancía confirmada por Bodega',
         ];
 
         $this->withHeaders($this->authHeaders($token))
@@ -535,12 +533,12 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $token = $this->loginAsFelix();
 
         $payload = [
-            'master_client_id'  => $invoice->master_client_id,
-            'cliente'            => $invoice->cliente,
-            'tipo'               => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
+            'master_client_id' => $invoice->master_client_id,
+            'cliente' => $invoice->cliente,
+            'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CORRECCION,
             'factura_origen_id' => $invoice->id,
-            'motivo'             => 'Corrección de ITBMS',
+            'motivo' => 'Corrección de ITBMS',
         ];
 
         $this->withHeaders($this->authHeaders($token))
@@ -554,10 +552,10 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      */
     private function makeCorreccionFixture(int $ownerId): array
     {
-        $master  = MasterClient::create(['name' => 'Cliente Corrección '.uniqid()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Corrección '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Corrección '.uniqid()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Corrección '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Corrección '.uniqid()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $ownerId, 'amount' => 500.0, 'stage_changed_at' => Carbon::now(),
         ]);
@@ -576,13 +574,13 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         $generalRate = AdminContItbmsRate::where('nombre', '7% — General')->firstOrFail();
         $invoice = AdminContInvoice::create([
-            'numero'           => 'F-'.static::uniqueTestNumber(),
-            'order_id'         => $order->id,
-            'quote_id'         => $quote->id,
-            'itbms_rate_id'    => $generalRate->id,
+            'numero' => 'F-'.static::uniqueTestNumber(),
+            'order_id' => $order->id,
+            'quote_id' => $quote->id,
+            'itbms_rate_id' => $generalRate->id,
             'master_client_id' => $master->id,
-            'cliente'          => $sub->business_name,
-            'monto'            => 500,
+            'cliente' => $sub->business_name,
+            'monto' => 500,
         ]);
 
         return ['order' => $order, 'quote' => $quote, 'invoice' => $invoice];
@@ -608,11 +606,11 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $token = $this->loginAsFelix();
 
         $payload = [
-            'master_client_id'                => $invoice->master_client_id,
-            'factura_origen_id'                => $invoice->id,
-            'motivo_correccion'                => AdminContCreditNote::MOTIVO_CORRECCION_ITBMS,
-            'nuevo_tratamiento_itbms_rate_id'  => $nuevoRateId,
-            'motivo'                            => 'Prueba Pre-QA — tratamiento ITBMS incorrecto',
+            'master_client_id' => $invoice->master_client_id,
+            'factura_origen_id' => $invoice->id,
+            'motivo_correccion' => AdminContCreditNote::MOTIVO_CORRECCION_ITBMS,
+            'nuevo_tratamiento_itbms_rate_id' => $nuevoRateId,
+            'motivo' => 'Prueba Pre-QA — tratamiento ITBMS incorrecto',
         ];
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -652,9 +650,9 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         $store = $this->withHeaders($this->authHeaders($felix))->post('/api/admin-contab/notas-credito', [
             ...$this->baseRegisterPayload($invoice, 500),
-            'tipo'               => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
+            'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
-            'comprobante'        => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
+            'comprobante' => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
         ])->assertStatus(201);
         $noteId = $store->json('id');
         $this->assertSame(AdminContCreditNote::ESTADO_PENDIENTE_APROBACION, $store->json('estado'));
@@ -680,9 +678,9 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         $store = $this->withHeaders($this->authHeaders($felix))->post('/api/admin-contab/notas-credito', [
             ...$this->baseRegisterPayload($invoice, 500),
-            'tipo'               => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
+            'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
-            'comprobante'        => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
+            'comprobante' => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
         ])->assertStatus(201);
         $noteId = $store->json('id');
 
@@ -730,7 +728,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         );
     }
 
-    /** `mark_only` — un rol distinto de Mark, aunque sea Gerencia genérica, no puede decidir. */
+    /** `primary_approver_only` — un rol distinto de Mark, aunque sea Gerencia genérica, no puede decidir. */
     public function test_decision_rechaza_a_un_no_mark(): void
     {
         $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);

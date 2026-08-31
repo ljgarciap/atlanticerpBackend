@@ -15,7 +15,7 @@ use App\Modules\Gerencia\Models\ReglaAprobacion;
  * de un chequeo binario ("¿es aprobador de ALGO?"), sin filtrar por tipo (hallazgo Pre-QA v6/v7).
  *
  * Reglas reales por tipo, en `Shared` (no en `Gerencia`) porque cruza Compras/Bodega/Gerencia:
- *   - purchase_order: EXCLUSIVO de Mark (ComprasSettings.mark_approver_user_id) — a propósito SIN
+ *   - purchase_order: EXCLUSIVO de Mark (ComprasSettings.primary_approver_user_id) — a propósito SIN
  *     override de ReglaAprobacion. Es el flujo de dinero real ya endurecido una vez (SCRUM-206);
  *     extenderlo requiere una decisión aparte, no forma parte de este batch (ver
  *     docs/architecture/gerencia-epic-analisis-20260826.md).
@@ -54,7 +54,7 @@ final class AprobacionGate
     }
 
     /**
-     * @param list<string> $tipos
+     * @param  list<string>  $tipos
      * @return list<string> subconjunto de $tipos sobre los que $user puede actuar
      */
     public function tiposPermitidos(User $user, array $tipos): array
@@ -64,12 +64,12 @@ final class AprobacionGate
 
     private function esMark(User $user): bool
     {
-        $markApproverId = ComprasSettings::current()->mark_approver_user_id;
+        $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
 
         // Mismo criterio permisivo que los gates nativos que reemplaza (RelocationRequestController::
-        // resolveMarkAccess() etc.): sin mark_approver_user_id configurado todavía, el gate no
+        // resolveMarkAccess() etc.): sin primary_approver_user_id configurado todavía, el gate no
         // bloquea a nadie — estado inicial antes del ajuste (SCRUM-206), no un bug.
-        return $markApproverId === null || $user->id === $markApproverId;
+        return $primaryApproverId === null || $user->id === $primaryApproverId;
     }
 
     private function tieneReglaPara(User $user, string $tipo): bool

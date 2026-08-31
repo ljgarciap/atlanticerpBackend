@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Models\User;
 use App\Modules\AdminCont\Jobs\SendArchitectReminderEmailJob;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
+use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\ArchitectCommission;
 use App\Modules\AdminCont\Models\ArchitectFiscalProfile;
-use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Services\ArchitectCommissionService;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\VentasDiseno\Models\Architect;
@@ -19,7 +20,9 @@ use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
@@ -32,8 +35,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContArchitectCommissionControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL  = 'mbekhar@atlantic.com.pa';
-    private const FELIX_EMAIL = 'conta@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
+
+    private const FELIX_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -44,7 +48,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     private function loginAsFelix(): string
@@ -54,7 +58,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
 
     private function userIdByEmail(string $email): int
     {
-        return (int) \App\Models\User::where('email', $email)->value('id');
+        return (int) User::where('email', $email)->value('id');
     }
 
     /** loginAs()/una request HTTP real limpia el search_path que setUp() dejó activo — mismo
@@ -77,10 +81,10 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
      */
     private function makeArchitectProject(Architect $architect, float $amount, float $totalCobrado, ?Carbon $fechaPedido = null): PipelineCard
     {
-        $master  = MasterClient::create(['name' => 'Cliente Externa '.uniqid()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa '.uniqid(), 'tax_id' => '155-0000-2-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Externa '.uniqid()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa '.uniqid(), 'tax_id' => '155-0000-2-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa '.uniqid()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'amount' => $amount,
             'stage_changed_at' => $fechaPedido ?? Carbon::now(),
@@ -129,7 +133,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
 
         $this->assertSame(ArchitectCommissionService::ESTADO_AUN_NO_GENERADA, $service->estadoFor(1000.0, 600.0, null));
         $this->assertSame(ArchitectCommissionService::ESTADO_PENDIENTE_FACTURA, $service->estadoFor(1000.0, 1000.0, null));
-        $this->assertSame(ArchitectCommissionService::ESTADO_PAGADA, $service->estadoFor(1000.0, 1000.0, \Carbon\CarbonImmutable::now()));
+        $this->assertSame(ArchitectCommissionService::ESTADO_PAGADA, $service->estadoFor(1000.0, 1000.0, CarbonImmutable::now()));
     }
 
     /** Escenarios 1/2/3 de REQ-511. */
@@ -258,7 +262,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertJsonPath('empresa', 'Estudio Nuevo');
 
         $this->reactivateTenant();
-        $this->assertDatabaseHas((new ArchitectFiscalProfile())->getTable(), [
+        $this->assertDatabaseHas((new ArchitectFiscalProfile)->getTable(), [
             'architect_id' => $architect->id, 'empresa' => 'Estudio Nuevo', 'regimen_fiscal' => 'con_itbms',
         ]);
     }
@@ -384,7 +388,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
         $token = $this->loginAsFelix();
-        $file  = UploadedFile::fake()->create('retencion.pdf', 100, 'application/pdf');
+        $file = UploadedFile::fake()->create('retencion.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion", ['file' => $file])
@@ -633,11 +637,11 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
     {
         $architect = $this->makeArchitect();
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_EXENTO]);
-        $card    = $this->makeArchitectProject($architect, 10000.0, 10000.0);
+        $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
         $account = $this->makeBankAccount();
 
         $token = $this->loginAsFelix();
-        $file  = UploadedFile::fake()->create('cuenta.pdf', 100, 'application/pdf');
+        $file = UploadedFile::fake()->create('cuenta.pdf', 100, 'application/pdf');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro", ['file' => $file])
             ->assertStatus(201);
@@ -649,8 +653,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/mark-paid")
             ->assertStatus(200);
 
-        $slug     = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        $movement = \Illuminate\Support\Facades\DB::table("{$slug}_admin_contab.bank_movements")
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $movement = DB::table("{$slug}_admin_contab.bank_movements")
             ->where('source_type', 'architect_commission')->first();
 
         $this->assertNotNull($movement, 'debe registrar un bank_movement al marcar pagada una comisión con cuenta de pago');

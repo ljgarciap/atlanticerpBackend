@@ -19,6 +19,7 @@ use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -37,7 +38,7 @@ use Illuminate\Support\Facades\DB;
 final class BodegaZonaLibreRequestController extends Controller
 {
     /**
-     * `role_key` de Compras que resuelve estas solicitudes (Yirena Teng, ver
+     * `role_key` de Compras que resuelve estas solicitudes (Lider Compras Test, ver
      * `BusinessRoleUserSeeder`) — mismo criterio que `InventoryReviewService::COMPRAS_LEAD_ROLE_KEY`:
      * es un ROL, no una persona puntual configurable.
      */
@@ -98,7 +99,7 @@ final class BodegaZonaLibreRequestController extends Controller
 
         // SCRUM-754 — sin sort expuesto en esta pantalla hoy, solo per_page/page.
         $pagination = Pagination::params($request, [], 'created_at');
-        $paginator  = Pagination::ofArray(array_values($requests->values()->all()), $pagination['per_page'], $pagination['page']);
+        $paginator = Pagination::ofArray(array_values($requests->values()->all()), $pagination['per_page'], $pagination['page']);
 
         return response()->json([
             'data' => array_values(array_map(fn (BodegaZonaLibreRequest $r) => $this->formatRow($r, $providerName), $paginator->items())),
@@ -122,12 +123,12 @@ final class BodegaZonaLibreRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'shipping_type'           => ['nullable', 'string', 'in:aereo,maritimo,terrestre'],
-            'estimated_arrival_date'  => ['nullable', 'date'],
-            'notes'                   => ['nullable', 'string'],
-            'lines'                   => ['required', 'array', 'min:1'],
+            'shipping_type' => ['nullable', 'string', 'in:aereo,maritimo,terrestre'],
+            'estimated_arrival_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string'],
+            'lines' => ['required', 'array', 'min:1'],
             'lines.*.catalog_product_id' => ['required', 'integer', 'exists:catalog_products,id'],
-            'lines.*.quantity'            => ['required', 'integer', 'min:1'],
+            'lines.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
         $providerId = ComprasSettings::current()->zona_libre_provider_id;
@@ -139,7 +140,7 @@ final class BodegaZonaLibreRequestController extends Controller
         $lines = $validated['lines'];
         $productIds = array_values(array_unique(array_map(fn (array $l): int => (int) $l['catalog_product_id'], $lines)));
 
-        /** @var \Illuminate\Support\Collection<int, CatalogProduct> $products */
+        /** @var Collection<int, CatalogProduct> $products */
         $products = CatalogProduct::whereIn('id', $productIds)->get()->keyBy('id');
 
         foreach ($lines as $line) {
@@ -154,12 +155,12 @@ final class BodegaZonaLibreRequestController extends Controller
 
         $zonaLibreRequest = DB::transaction(function () use ($validated, $lines, $products, $user): BodegaZonaLibreRequest {
             $zonaLibreRequest = BodegaZonaLibreRequest::create([
-                'order_number'           => $this->folioService->next(),
-                'status'                 => BodegaZonaLibreRequest::STATUS_PENDIENTE,
-                'requested_by'           => $user->id,
-                'shipping_type'          => $validated['shipping_type'] ?? BodegaZonaLibreRequest::SHIPPING_TERRESTRE,
+                'order_number' => $this->folioService->next(),
+                'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE,
+                'requested_by' => $user->id,
+                'shipping_type' => $validated['shipping_type'] ?? BodegaZonaLibreRequest::SHIPPING_TERRESTRE,
                 'estimated_arrival_date' => $validated['estimated_arrival_date'] ?? null,
-                'notes'                  => $validated['notes'] ?? null,
+                'notes' => $validated['notes'] ?? null,
             ]);
 
             foreach ($lines as $line) {
@@ -168,9 +169,9 @@ final class BodegaZonaLibreRequestController extends Controller
 
                 BodegaZonaLibreRequestLine::create([
                     'bodega_zona_libre_request_id' => $zonaLibreRequest->id,
-                    'catalog_product_id'           => $product->id,
-                    'quantity'                      => $line['quantity'],
-                    'unit_cost_snapshot'            => $product->cost ?? 0,
+                    'catalog_product_id' => $product->id,
+                    'quantity' => $line['quantity'],
+                    'unit_cost_snapshot' => $product->cost ?? 0,
                 ]);
             }
 
@@ -202,12 +203,12 @@ final class BodegaZonaLibreRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'shipping_type'           => ['nullable', 'string', 'in:aereo,maritimo,terrestre'],
-            'estimated_arrival_date'  => ['nullable', 'date'],
-            'notes'                   => ['nullable', 'string'],
-            'lines'                   => ['required', 'array', 'min:1'],
+            'shipping_type' => ['nullable', 'string', 'in:aereo,maritimo,terrestre'],
+            'estimated_arrival_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string'],
+            'lines' => ['required', 'array', 'min:1'],
             'lines.*.catalog_product_id' => ['required', 'integer', 'exists:catalog_products,id'],
-            'lines.*.quantity'            => ['required', 'integer', 'min:1'],
+            'lines.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
         $providerId = ComprasSettings::current()->zona_libre_provider_id;
@@ -219,7 +220,7 @@ final class BodegaZonaLibreRequestController extends Controller
         $lines = $validated['lines'];
         $productIds = array_values(array_unique(array_map(fn (array $l): int => (int) $l['catalog_product_id'], $lines)));
 
-        /** @var \Illuminate\Support\Collection<int, CatalogProduct> $products */
+        /** @var Collection<int, CatalogProduct> $products */
         $products = CatalogProduct::whereIn('id', $productIds)->get()->keyBy('id');
 
         foreach ($lines as $line) {
@@ -243,9 +244,9 @@ final class BodegaZonaLibreRequestController extends Controller
             }
 
             $zonaLibreRequest->update([
-                'shipping_type'          => $validated['shipping_type'] ?? $zonaLibreRequest->shipping_type,
+                'shipping_type' => $validated['shipping_type'] ?? $zonaLibreRequest->shipping_type,
                 'estimated_arrival_date' => $validated['estimated_arrival_date'] ?? null,
-                'notes'                  => $validated['notes'] ?? null,
+                'notes' => $validated['notes'] ?? null,
             ]);
 
             $zonaLibreRequest->lines()->delete();
@@ -255,9 +256,9 @@ final class BodegaZonaLibreRequestController extends Controller
 
                 BodegaZonaLibreRequestLine::create([
                     'bodega_zona_libre_request_id' => $zonaLibreRequest->id,
-                    'catalog_product_id'           => $product->id,
-                    'quantity'                      => $line['quantity'],
-                    'unit_cost_snapshot'            => $product->cost ?? 0,
+                    'catalog_product_id' => $product->id,
+                    'quantity' => $line['quantity'],
+                    'unit_cost_snapshot' => $product->cost ?? 0,
                 ]);
             }
 
@@ -328,7 +329,7 @@ final class BodegaZonaLibreRequestController extends Controller
             audience: $audience,
             content: [
                 'subject' => "Recordatorio: solicitud Zona Libre #{$zonaLibreRequest->order_number} pendiente de aprobar",
-                'body'    => "La solicitud de Zona Libre de Colón #{$zonaLibreRequest->order_number} "
+                'body' => "La solicitud de Zona Libre de Colón #{$zonaLibreRequest->order_number} "
                     .'sigue pendiente de aprobación o rechazo en Compras.',
             ],
             channels: [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL],
@@ -359,17 +360,17 @@ final class BodegaZonaLibreRequestController extends Controller
             : "{$lines->count()} productos";
 
         return [
-            'id'                     => $r->id,
-            'order_number'           => $r->order_number,
-            'provider_name'          => $providerName,
-            'created_at'             => $r->created_at->toIso8601String(),
-            'products_summary'       => $productsSummary,
-            'total_amount'           => round((float) $lines->sum(fn (BodegaZonaLibreRequestLine $l) => $l->subtotal()), 2),
+            'id' => $r->id,
+            'order_number' => $r->order_number,
+            'provider_name' => $providerName,
+            'created_at' => $r->created_at->toIso8601String(),
+            'products_summary' => $productsSummary,
+            'total_amount' => round((float) $lines->sum(fn (BodegaZonaLibreRequestLine $l) => $l->subtotal()), 2),
             'estimated_arrival_date' => $r->estimated_arrival_date?->toDateString(),
-            'shipping_type'          => $r->shipping_type,
-            'status'                 => $r->status,
-            'requested_by_name'      => $this->userName($r->requester),
-            'generated_order_id'     => $r->generated_order_id,
+            'shipping_type' => $r->shipping_type,
+            'status' => $r->status,
+            'requested_by_name' => $this->userName($r->requester),
+            'generated_order_id' => $r->generated_order_id,
         ];
     }
 
@@ -380,21 +381,21 @@ final class BodegaZonaLibreRequestController extends Controller
 
         return [
             ...$base,
-            'notes'             => $r->notes,
-            'rejection_reason'  => $r->rejection_reason,
-            'approved_by_name'  => $this->userName($r->approver),
-            'rejected_by_name'  => $this->userName($r->rejecter),
-            'lines'             => $r->lines->map(fn (BodegaZonaLibreRequestLine $l) => [
-                'id'                  => $l->id,
-                'catalog_product_id'  => $l->catalog_product_id,
-                'reference'           => $l->catalogProduct?->reference,
+            'notes' => $r->notes,
+            'rejection_reason' => $r->rejection_reason,
+            'approved_by_name' => $this->userName($r->approver),
+            'rejected_by_name' => $this->userName($r->rejecter),
+            'lines' => $r->lines->map(fn (BodegaZonaLibreRequestLine $l) => [
+                'id' => $l->id,
+                'catalog_product_id' => $l->catalog_product_id,
+                'reference' => $l->catalogProduct?->reference,
                 // SCRUM-797 — el formulario de "Editar" precarga el carrito desde estas líneas y
                 // muestra la misma columna Ref. fábrica que "Nueva Orden" (buscador de productos).
-                'factory_reference'   => $l->catalogProduct?->factory_reference,
-                'description'         => $l->catalogProduct?->name,
-                'quantity'            => $l->quantity,
-                'unit_cost_snapshot'  => $l->unit_cost_snapshot,
-                'subtotal'            => $l->subtotal(),
+                'factory_reference' => $l->catalogProduct?->factory_reference,
+                'description' => $l->catalogProduct?->name,
+                'quantity' => $l->quantity,
+                'unit_cost_snapshot' => $l->unit_cost_snapshot,
+                'subtotal' => $l->subtotal(),
             ])->values(),
         ];
     }

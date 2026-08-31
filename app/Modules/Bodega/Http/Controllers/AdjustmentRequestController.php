@@ -105,8 +105,8 @@ final class AdjustmentRequestController extends Controller
         return response()->json([
             'data' => collect($paginator->items())->map(fn (AdjustmentRequestLine $l) => $this->formatLine($l))->values(),
             'meta' => Pagination::meta($paginator),
-            // SCRUM-429 (rebote de Daniela Amaya 2026-08-13) — mismo gap que SCRUM-463/466: el
-            // frontend no tenía forma de saber quién es "Mark" (mark_approver_user_id es
+            // SCRUM-429 (rebote de Gerencia Test 2026-08-13) — mismo gap que SCRUM-463/466: el
+            // frontend no tenía forma de saber quién es "Mark" (primary_approver_user_id es
             // puramente de backend), así que Aprobar/Rechazar quedaban visibles+clicables para
             // TODOS con un candado decorativo — el backend ya rechazaba (403) a quien no fuera
             // Mark, pero el botón seguía pareciendo funcional para Bodega. Se expone acá para que
@@ -149,24 +149,24 @@ final class AdjustmentRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'catalog_product_id'         => ['required', 'integer', 'exists:catalog_products,id'],
+            'catalog_product_id' => ['required', 'integer', 'exists:catalog_products,id'],
             // RN3 (REQ-358) — una bodega ya agregada no puede repetirse en la misma solicitud.
             // Hallazgo de Pre-QA 2026-07-21: el backend lo aceptaba vía API directa (la UI ya
             // lo impedía sacando la bodega del selector, pero el server-side no lo exigía).
-            'lines'                      => ['required', 'array', 'min:1'],
-            'lines.*.warehouse_id'       => ['required', 'integer', 'exists:warehouses,id', 'distinct'],
-            'lines.*.tipo'               => ['required', 'string', 'in:Sumar,Restar'],
-            'lines.*.cantidad'           => ['required', 'integer', 'min:1'],
-            // SCRUM-428 (rebote de Daniela Amaya 2026-08-13) — Motivo pasa de texto libre a un
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.warehouse_id' => ['required', 'integer', 'exists:warehouses,id', 'distinct'],
+            'lines.*.tipo' => ['required', 'string', 'in:Sumar,Restar'],
+            'lines.*.cantidad' => ['required', 'integer', 'min:1'],
+            // SCRUM-428 (rebote de Gerencia Test 2026-08-13) — Motivo pasa de texto libre a un
             // desplegable de 6 opciones fijas (ver AdjustmentRequestLine::MOTIVOS); descripcion/
             // responsable son nuevos, ambos opcionales — descripcion también sirve para detallar
             // cuando motivo = OTRO_ESPECIFICAR (el frontend decide si lo exige en ese caso, el
             // backend no fuerza esa dependencia entre campos).
-            'lines.*.motivo'             => ['required', 'string', Rule::in(AdjustmentRequestLine::MOTIVOS)],
-            'lines.*.descripcion'        => ['nullable', 'string', 'max:2000'],
-            'lines.*.responsable'        => ['nullable', 'string', 'max:255'],
-            'lines.*.evidencia'          => ['required', 'file', 'max:20480', 'extensions:jpg,jpeg,png,gif,webp,pdf'],
-            'confirm_replace'            => ['nullable', 'boolean'],
+            'lines.*.motivo' => ['required', 'string', Rule::in(AdjustmentRequestLine::MOTIVOS)],
+            'lines.*.descripcion' => ['nullable', 'string', 'max:2000'],
+            'lines.*.responsable' => ['nullable', 'string', 'max:255'],
+            'lines.*.evidencia' => ['required', 'file', 'max:20480', 'extensions:jpg,jpeg,png,gif,webp,pdf'],
+            'confirm_replace' => ['nullable', 'boolean'],
         ]);
         $confirmReplace = (bool) ($validated['confirm_replace'] ?? false);
 
@@ -185,7 +185,7 @@ final class AdjustmentRequestController extends Controller
             $adjustmentRequest = DB::transaction(function () use ($validated, $user, $confirmReplace): AdjustmentRequest {
                 $adjustmentRequest = AdjustmentRequest::create([
                     'catalog_product_id' => $validated['catalog_product_id'],
-                    'solicitado_por'     => $user->id,
+                    'solicitado_por' => $user->id,
                 ]);
 
                 foreach ($validated['lines'] as $line) {
@@ -220,25 +220,25 @@ final class AdjustmentRequestController extends Controller
                     // reemplazar en silencio.
                     if ($existingLine !== null && ! $confirmReplace) {
                         throw new AdjustmentDuplicateConflictException([[
-                            'warehouse_id'   => $line['warehouse_id'],
+                            'warehouse_id' => $line['warehouse_id'],
                             'warehouse_name' => $existingLine->warehouse?->name,
-                            'adjustment'     => ['id' => $existingLine->id, 'fecha' => $existingLine->created_at->toIso8601String()],
-                            'general_count'  => null,
+                            'adjustment' => ['id' => $existingLine->id, 'fecha' => $existingLine->created_at->toIso8601String()],
+                            'general_count' => null,
                         ]]);
                     }
 
                     $storageKey = $this->evidence->upload($line['evidencia'], $adjustmentRequest->id);
 
                     $newLine = AdjustmentRequestLine::create([
-                        'adjustment_request_id'  => $adjustmentRequest->id,
-                        'warehouse_id'           => $line['warehouse_id'],
-                        'tipo'                   => $line['tipo'],
-                        'cantidad'               => $line['cantidad'],
-                        'motivo'                 => $line['motivo'],
-                        'descripcion'            => $line['descripcion'] ?? null,
-                        'responsable'            => $line['responsable'] ?? null,
-                        'evidencia_storage_key'  => $storageKey,
-                        'estado'                 => AdjustmentRequestLine::ESTADO_PENDIENTE,
+                        'adjustment_request_id' => $adjustmentRequest->id,
+                        'warehouse_id' => $line['warehouse_id'],
+                        'tipo' => $line['tipo'],
+                        'cantidad' => $line['cantidad'],
+                        'motivo' => $line['motivo'],
+                        'descripcion' => $line['descripcion'] ?? null,
+                        'responsable' => $line['responsable'] ?? null,
+                        'evidencia_storage_key' => $storageKey,
+                        'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
                     ]);
 
                     if ($existingLine !== null) {
@@ -261,7 +261,7 @@ final class AdjustmentRequestController extends Controller
     }
 
     /**
-     * @param list<array{warehouse_id: int, tipo?: mixed, cantidad?: mixed}> $lines
+     * @param  list<array{warehouse_id: int, tipo?: mixed, cantidad?: mixed}>  $lines
      * @return list<array<string, mixed>>
      */
     private function findDuplicates(int $catalogProductId, array $lines): array
@@ -278,7 +278,7 @@ final class AdjustmentRequestController extends Controller
                 ->with('warehouse')
                 ->first();
 
-            // SCRUM-797 (rebote de Daniela Amaya 2026-08-27) — el cruce contra Inventario General
+            // SCRUM-797 (rebote de Gerencia Test 2026-08-27) — el cruce contra Inventario General
             // dejó de ser "¿esta bodega tiene CUALQUIER conteo general sin resolver?" (bloqueaba
             // un ajuste de cualquier producto por un conflicto ajeno en la misma bodega) y pasa a
             // ser por producto: solo bloquea si ESTE producto puntual ya tiene una línea evaluada
@@ -301,12 +301,12 @@ final class AdjustmentRequestController extends Controller
             $warehouseName = $sameType !== null ? $sameType->warehouse?->name : $crossType->request->warehouse?->name;
 
             $duplicates[] = [
-                'warehouse_id'   => $warehouseId,
+                'warehouse_id' => $warehouseId,
                 'warehouse_name' => $warehouseName,
-                'adjustment'     => $sameType !== null ? [
+                'adjustment' => $sameType !== null ? [
                     'id' => $sameType->id, 'fecha' => $sameType->created_at->toIso8601String(),
                 ] : null,
-                'general_count'  => $crossType !== null ? [
+                'general_count' => $crossType !== null ? [
                     'id' => $crossType->general_count_request_id, 'fecha' => $crossType->created_at->toIso8601String(), 'estado' => $crossType->request->estado,
                 ] : null,
             ];
@@ -357,9 +357,9 @@ final class AdjustmentRequestController extends Controller
             );
 
             $line->update([
-                'estado'       => AdjustmentRequestLine::ESTADO_APROBADA,
+                'estado' => AdjustmentRequestLine::ESTADO_APROBADA,
                 'resuelto_por' => $user->id,
-                'resuelto_at'  => now(),
+                'resuelto_at' => now(),
             ]);
 
             return ['status' => 200, 'line' => $line];
@@ -406,10 +406,10 @@ final class AdjustmentRequestController extends Controller
             }
 
             $line->update([
-                'estado'         => AdjustmentRequestLine::ESTADO_RECHAZADA,
+                'estado' => AdjustmentRequestLine::ESTADO_RECHAZADA,
                 'motivo_rechazo' => $validated['motivo_rechazo'],
-                'resuelto_por'   => $user->id,
-                'resuelto_at'    => now(),
+                'resuelto_por' => $user->id,
+                'resuelto_at' => now(),
             ]);
 
             return ['status' => 200, 'line' => $line];
@@ -431,7 +431,7 @@ final class AdjustmentRequestController extends Controller
     }
 
     /**
-     * SCRUM-430 (REQ-360) — el aprobador es "Mark", mismo `mark_approver_user_id` configurable
+     * SCRUM-430 (REQ-360) — el aprobador es "Mark", mismo `primary_approver_user_id` configurable
      * ya usado por el gate de aprobación de órdenes de Compras (SCRUM-206) — una sola fuente de
      * verdad de quién es Mark, no una config paralela por módulo.
      *
@@ -461,25 +461,25 @@ final class AdjustmentRequestController extends Controller
     private function formatLine(AdjustmentRequestLine $line): array
     {
         return [
-            'id'               => $line->id,
-            'producto'         => [
-                'id'          => $line->request->catalogProduct?->id,
-                'reference'   => $line->request->catalogProduct?->reference,
+            'id' => $line->id,
+            'producto' => [
+                'id' => $line->request->catalogProduct?->id,
+                'reference' => $line->request->catalogProduct?->reference,
                 'description' => $line->request->catalogProduct?->name,
             ],
-            'bodega'           => $line->warehouse?->name,
-            'tipo'             => $line->tipo,
-            'cantidad'         => $line->cantidad,
-            'motivo'           => $line->motivo,
-            'descripcion'      => $line->descripcion,
-            'responsable'      => $line->responsable,
-            'evidencia_url'    => $line->evidencia_storage_key !== null ? $this->evidence->presignUrl($line->evidencia_storage_key) : null,
-            'solicitado_por'   => $line->request->solicitante !== null
+            'bodega' => $line->warehouse?->name,
+            'tipo' => $line->tipo,
+            'cantidad' => $line->cantidad,
+            'motivo' => $line->motivo,
+            'descripcion' => $line->descripcion,
+            'responsable' => $line->responsable,
+            'evidencia_url' => $line->evidencia_storage_key !== null ? $this->evidence->presignUrl($line->evidencia_storage_key) : null,
+            'solicitado_por' => $line->request->solicitante !== null
                 ? trim("{$line->request->solicitante->first_name} {$line->request->solicitante->last_name}") : null,
-            'fecha'            => $line->created_at->toIso8601String(),
-            'estado'           => $line->estado,
-            'motivo_rechazo'   => $line->motivo_rechazo,
-            'resuelto_por'     => $line->resolvedBy !== null
+            'fecha' => $line->created_at->toIso8601String(),
+            'estado' => $line->estado,
+            'motivo_rechazo' => $line->motivo_rechazo,
+            'resuelto_por' => $line->resolvedBy !== null
                 ? trim("{$line->resolvedBy->first_name} {$line->resolvedBy->last_name}") : null,
         ];
     }

@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bodega;
 
+use App\Models\User;
+use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Bodega\Events\CourierAssigned;
 use App\Modules\Bodega\Events\DeliveryRegistered;
 use App\Modules\Bodega\Events\OrderDelivered;
 use App\Modules\Bodega\Events\OrderDispatched;
 use App\Modules\Bodega\Events\OrderSplit;
-use App\Modules\Auth\Models\Role;
-use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderDocument;
 use App\Modules\Notifications\Models\NotificationSend;
-use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
@@ -43,8 +43,8 @@ class DeliveryFlowTest extends FeatureTestCase
         // fix del cap en DeliveryService::registerDelivery()).
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-delivery", [
@@ -70,8 +70,8 @@ class DeliveryFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-delivery", [
@@ -87,8 +87,8 @@ class DeliveryFlowTest extends FeatureTestCase
 
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-delivery", [
@@ -119,8 +119,8 @@ class DeliveryFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 0]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         // Intentar entregar más de 0 (el tope real) debe rechazarse — antes del fix esto devolvía 200.
         $this->withHeaders($this->authHeaders($token))
@@ -143,8 +143,8 @@ class DeliveryFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('arrochagary@gmail.com');
-        $token = $this->loginAs('arrochagary@gmail.com', 'arrochagary@gmail.com', 'transporte');
+        $this->grantBodegaPermissions('transporte@test.com');
+        $token = $this->loginAs('transporte@test.com', 'transporte@test.com', 'transporte');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-delivery", [
@@ -156,9 +156,9 @@ class DeliveryFlowTest extends FeatureTestCase
     public function test_asignar_repartidor_solo_jefe_de_bodega(): void
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR]);
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
-        $this->grantBodegaPermissions('logistica@atlantic.com.pa'); // Osvaldo, asistente_bodega
-        $token = $this->loginAs('logistica@atlantic.com.pa', 'logistica@atlantic.com.pa', 'asistente_bodega');
+        $courierId = $this->userIdByEmail('transporte@test.com');
+        $this->grantBodegaPermissions('asistentebodega@test.com'); // Osvaldo, asistente_bodega
+        $token = $this->loginAs('asistentebodega@test.com', 'asistentebodega@test.com', 'asistente_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/assign-courier", ['courier_id' => $courierId])
@@ -171,9 +171,9 @@ class DeliveryFlowTest extends FeatureTestCase
 
         $root = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR]);
         $sibling = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'family_id' => $root->id]);
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $courierId = $this->userIdByEmail('transporte@test.com');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$root->id}/assign-courier", ['courier_id' => $courierId])
@@ -193,13 +193,13 @@ class DeliveryFlowTest extends FeatureTestCase
     {
         Event::fake([CourierAssigned::class]);
 
-        $originalCourierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $originalCourierId = $this->userIdByEmail('transporte@test.com');
         $newCourier = $this->makeCourier('Segundo Repartidor');
 
-        $root    = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $originalCourierId]);
+        $root = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $originalCourierId]);
         $sibling = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'family_id' => $root->id, 'courier_id' => $originalCourierId]);
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$root->id}/assign-courier", ['courier_id' => $newCourier->id])
@@ -217,7 +217,7 @@ class DeliveryFlowTest extends FeatureTestCase
 
     private function makeCourier(string $firstName): User
     {
-        $role  = Role::where('key', 'transporte')->firstOrFail();
+        $role = Role::where('key', 'transporte')->firstOrFail();
         $level = SecurityLevel::where('level', 1)->firstOrFail();
 
         return User::create([
@@ -231,8 +231,8 @@ class DeliveryFlowTest extends FeatureTestCase
     public function test_despachar_sin_repartidor_retorna_422(): void
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'invoice_ready' => true]);
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/dispatch")
@@ -242,10 +242,10 @@ class DeliveryFlowTest extends FeatureTestCase
 
     public function test_despachar_sin_factura_retorna_422(): void
     {
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
         $order = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $courierId, 'invoice_ready' => false]);
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/dispatch")
@@ -258,13 +258,13 @@ class DeliveryFlowTest extends FeatureTestCase
     {
         Event::fake([OrderDispatched::class]);
 
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
         $root = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $courierId, 'invoice_ready' => true]);
         $readySibling = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'family_id' => $root->id, 'courier_id' => $courierId, 'invoice_ready' => true]);
         $notReadySibling = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'family_id' => $root->id, 'courier_id' => $courierId, 'invoice_ready' => false]);
 
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$root->id}/dispatch")
@@ -286,10 +286,10 @@ class DeliveryFlowTest extends FeatureTestCase
     {
         Event::fake([DeliveryRegistered::class, OrderDelivered::class]);
 
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
         $order = $this->makeOrder(['stage' => Order::STAGE_DESPACHADO, 'courier_id' => $courierId]);
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-signed-guide", [
@@ -314,10 +314,10 @@ class DeliveryFlowTest extends FeatureTestCase
     /** Pre-QA 2026-07-23 (CRÍTICO) — sin `received_by_name` no hay forma de saber quién recibió realmente. */
     public function test_subir_guia_firmada_sin_nombre_de_receptor_retorna_422(): void
     {
-        $courierId = $this->userIdByEmail('arrochagary@gmail.com');
+        $courierId = $this->userIdByEmail('transporte@test.com');
         $order = $this->makeOrder(['stage' => Order::STAGE_DESPACHADO, 'courier_id' => $courierId]);
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-signed-guide", [
@@ -330,12 +330,12 @@ class DeliveryFlowTest extends FeatureTestCase
     public function test_subir_guia_firmada_en_etapa_incorrecta_retorna_422(): void
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR]);
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/register-signed-guide", [
-                'delivered_by_courier_id' => $this->userIdByEmail('arrochagary@gmail.com'),
+                'delivered_by_courier_id' => $this->userIdByEmail('transporte@test.com'),
                 'received_by_name' => 'Ana Torres',
                 'file' => UploadedFile::fake()->create('guia.pdf', 100, 'application/pdf'),
             ])

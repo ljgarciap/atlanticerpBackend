@@ -34,7 +34,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Siembra ad-hoc para SCRUM-498/499/501/670 (QA de UI en dev.atlanticerp.ai y test.atlanticerp.ai), pedida
- * por Daniela Amaya (498/499) y marly.rangel (501/670) el 2026-07-25. NO se registra en
+ * por Gerencia Test (498/499) y marly.rangel (501/670) el 2026-07-25. NO se registra en
  * DatabaseSeeder::run() — se invoca a mano vía tinker en cada entorno:
  *
  *   (new \Database\Seeders\QaTicketsBatch20260725Seeder)->run();
@@ -67,6 +67,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
 
         if ($tenant === null) {
             $this->command?->warn('Tenant "atlantic" no encontrado — batch abortado.');
+
             return;
         }
 
@@ -90,6 +91,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
     {
         if (SalesProject::where('name', 'like', self::VD_MARKER.'%')->exists()) {
             $this->command?->info('SCRUM-498/499: ya sembrado, se omite.');
+
             return;
         }
 
@@ -97,6 +99,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
 
         if ($ownerId === null) {
             $this->command?->warn('SCRUM-498/499: no se encontró un usuario designer/management — skip.');
+
             return;
         }
 
@@ -105,15 +108,15 @@ final class QaTicketsBatch20260725Seeder extends Seeder
 
         $subA = SubClient::create([
             'master_client_id' => $masterA->id,
-            'business_name'    => self::VD_MARKER.' Andina Residencial S.A.',
-            'tax_id'            => '155-9001-1-2026',
-            'category'          => 'b_architect_designer',
+            'business_name' => self::VD_MARKER.' Andina Residencial S.A.',
+            'tax_id' => '155-9001-1-2026',
+            'category' => 'b_architect_designer',
         ]);
         $subB = SubClient::create([
             'master_client_id' => $masterB->id,
-            'business_name'    => self::VD_MARKER.' Punta Pacífica Torres S.A.',
-            'tax_id'            => '155-9002-1-2026',
-            'category'          => 'c_bidding',
+            'business_name' => self::VD_MARKER.' Punta Pacífica Torres S.A.',
+            'tax_id' => '155-9002-1-2026',
+            'category' => 'c_bidding',
         ]);
 
         $proposalNames = [
@@ -125,24 +128,24 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         ];
 
         foreach ($proposalNames as $i => $name) {
-            $sub    = $i % 2 === 0 ? $subA : $subB;
+            $sub = $i % 2 === 0 ? $subA : $subB;
             $master = $i % 2 === 0 ? $masterA : $masterB;
 
             $project = SalesProject::create([
                 'sub_client_id' => $sub->id,
-                'name'          => self::VD_MARKER.' '.$name,
-                'tag'           => 'both',
+                'name' => self::VD_MARKER.' '.$name,
+                'tag' => 'both',
             ]);
 
             PipelineCard::create([
                 'sales_project_id' => $project->id,
-                'stage'            => 'proposal',
+                'stage' => 'proposal',
                 'master_client_id' => $master->id,
-                'sub_client_id'    => $sub->id,
-                'owner_id'         => $ownerId,
-                'amount'           => random_int(8000, 90000) + random_int(0, 99) / 100,
-                'worked_area_m2'   => random_int(50, 800),
-                'observations'     => 'Próximo paso: enviar propuesta final revisada y dar seguimiento telefónico. Cliente evaluando presupuesto.',
+                'sub_client_id' => $sub->id,
+                'owner_id' => $ownerId,
+                'amount' => random_int(8000, 90000) + random_int(0, 99) / 100,
+                'worked_area_m2' => random_int(50, 800),
+                'observations' => 'Próximo paso: enviar propuesta final revisada y dar seguimiento telefónico. Cliente evaluando presupuesto.',
                 'stage_changed_at' => Carbon::now()->subDays(random_int(0, 14)),
             ]);
         }
@@ -161,25 +164,25 @@ final class QaTicketsBatch20260725Seeder extends Seeder
             $cardsThisMonth = $monthsAgo === 0 ? 3 : 2;
 
             for ($n = 0; $n < $cardsThisMonth && $nameIdx < count($approvedNames); $n++, $nameIdx++) {
-                $sub    = $nameIdx % 2 === 0 ? $subA : $subB;
+                $sub = $nameIdx % 2 === 0 ? $subA : $subB;
                 $master = $nameIdx % 2 === 0 ? $masterA : $masterB;
-                $date   = Carbon::now()->subMonths($monthsAgo)->startOfMonth()->addDays(random_int(1, 25));
+                $date = Carbon::now()->subMonths($monthsAgo)->startOfMonth()->addDays(random_int(1, 25));
 
                 $project = SalesProject::create([
                     'sub_client_id' => $sub->id,
-                    'name'          => self::VD_MARKER.' '.$approvedNames[$nameIdx],
-                    'tag'           => 'both',
+                    'name' => self::VD_MARKER.' '.$approvedNames[$nameIdx],
+                    'tag' => 'both',
                 ]);
 
                 PipelineCard::create([
                     'sales_project_id' => $project->id,
-                    'stage'            => 'approved',
+                    'stage' => 'approved',
                     'master_client_id' => $master->id,
-                    'sub_client_id'    => $sub->id,
-                    'owner_id'         => $ownerId,
-                    'amount'           => random_int(5000, 60000) + random_int(0, 99) / 100,
-                    'worked_area_m2'   => random_int(50, 800),
-                    'observations'     => 'Negocio cerrado — pendiente coordinar fecha de entrega con Bodega.',
+                    'sub_client_id' => $sub->id,
+                    'owner_id' => $ownerId,
+                    'amount' => random_int(5000, 60000) + random_int(0, 99) / 100,
+                    'worked_area_m2' => random_int(50, 800),
+                    'observations' => 'Negocio cerrado — pendiente coordinar fecha de entrega con Bodega.',
                     'stage_changed_at' => $date,
                 ]);
             }
@@ -200,23 +203,26 @@ final class QaTicketsBatch20260725Seeder extends Seeder
     {
         if (Order::where('customer_name', 'like', self::BOD_MARKER.'%')->exists()) {
             $this->command?->info('SCRUM-501: ya sembrado, se omite.');
+
             return;
         }
 
-        $esteban  = $this->resolveUser('almacen@atlantic.com.pa', 'lider_bodega');
-        $osvaldo  = $this->resolveUser('logistica@atlantic.com.pa', 'asistente_bodega');
-        $mariano  = $this->resolveUser('almacen2@atlantic.com.pa', 'asistente_bodega');
-        $apolonio = $this->resolveUser('apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
-        $gary     = $this->resolveUser('arrochagary@gmail.com', 'transporte');
+        $esteban = $this->resolveUser('liderbodega@test.com', 'lider_bodega');
+        $osvaldo = $this->resolveUser('asistentebodega@test.com', 'asistente_bodega');
+        $mariano = $this->resolveUser('asistentebodega2@test.com', 'asistente_bodega');
+        $apolonio = $this->resolveUser('ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $gary = $this->resolveUser('transporte@test.com', 'transporte');
 
         if ($osvaldo === null || $mariano === null || $apolonio === null || $gary === null) {
             $this->command?->warn('SCRUM-501: falta algún usuario de Bodega (Osvaldo/Mariano/Apolonio/Gary) — skip.');
+
             return;
         }
 
         $products = CatalogProduct::where('is_active', true)->inRandomOrder()->limit(10)->get();
         if ($products->count() < 2) {
             $this->command?->warn('SCRUM-501: no hay suficientes CatalogProduct activos para armar los pedidos — skip.');
+
             return;
         }
         $products = $products->values();
@@ -335,34 +341,34 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         ?Carbon $committedDeliveryDate = null,
     ): Order {
         $order = Order::create([
-            'order_number'             => $orderNumberOverride ?? $orderNumber,
-            'order_type'               => Order::ORDER_TYPE_PEDIDO,
-            'stage'                    => $stage,
-            'family_id'                => $familyId,
-            'sequence_in_family'       => $sequenceInFamily,
-            'total_in_family'          => $totalInFamily,
-            'assistant_id'             => $assistant?->id,
-            'picker_id'                => $picker?->id,
-            'courier_id'               => $courier?->id,
-            'committed_delivery_date'  => $committedDeliveryDate ?? Carbon::now()->addDays(random_int(1, 10)),
-            'customer_name'            => $customerName,
-            'customer_contact'         => '+507 6'.random_int(100, 999).'-'.random_int(1000, 9999),
-            'delivery_address'         => 'Ciudad de Panamá',
-            'invoice_ready'            => $invoiceReady,
+            'order_number' => $orderNumberOverride ?? $orderNumber,
+            'order_type' => Order::ORDER_TYPE_PEDIDO,
+            'stage' => $stage,
+            'family_id' => $familyId,
+            'sequence_in_family' => $sequenceInFamily,
+            'total_in_family' => $totalInFamily,
+            'assistant_id' => $assistant?->id,
+            'picker_id' => $picker?->id,
+            'courier_id' => $courier?->id,
+            'committed_delivery_date' => $committedDeliveryDate ?? Carbon::now()->addDays(random_int(1, 10)),
+            'customer_name' => $customerName,
+            'customer_contact' => '+507 6'.random_int(100, 999).'-'.random_int(1000, 9999),
+            'delivery_address' => 'Ciudad de Panamá',
+            'invoice_ready' => $invoiceReady,
         ]);
 
         foreach ($products as $product) {
             $qty = random_int(2, 8);
             OrderItem::create([
-                'order_id'              => $order->id,
-                'catalog_product_id'    => $product->id,
-                'reference_snapshot'    => $product->reference,
-                'description_snapshot'  => $product->description,
-                'qty_requested'         => $qty,
-                'qty_reserved'          => $qty,
-                'qty_picked'            => $fullyPicked ? $qty : 0,
-                'qty_delivered'         => 0,
-                'found_at_location'     => $fullyPicked ? true : null,
+                'order_id' => $order->id,
+                'catalog_product_id' => $product->id,
+                'reference_snapshot' => $product->reference,
+                'description_snapshot' => $product->description,
+                'qty_requested' => $qty,
+                'qty_reserved' => $qty,
+                'qty_picked' => $fullyPicked ? $qty : 0,
+                'qty_delivered' => 0,
+                'found_at_location' => $fullyPicked ? true : null,
             ]);
         }
 
@@ -376,21 +382,24 @@ final class QaTicketsBatch20260725Seeder extends Seeder
     {
         if (CatalogProduct::where('reference', 'like', self::ZL_REF_PREFIX.'%')->exists()) {
             $this->command?->info('SCRUM-670: ya sembrado, se omite.');
+
             return;
         }
 
         $provider = Provider::where('name', 'Zona Libre de Colón')->first();
         if ($provider === null) {
             $this->command?->warn('SCRUM-670: proveedor "Zona Libre de Colón" no existe en este entorno (¿ZonaLibreProviderSeeder no corrió?) — skip.');
+
             return;
         }
 
-        $osvaldo = $this->resolveUser('logistica@atlantic.com.pa', 'asistente_bodega');
-        $mariano = $this->resolveUser('almacen2@atlantic.com.pa', 'asistente_bodega');
-        $yirena  = $this->resolveUser('gerencia2@atlantic.com.pa', 'lider_compras');
+        $osvaldo = $this->resolveUser('asistentebodega@test.com', 'asistente_bodega');
+        $mariano = $this->resolveUser('asistentebodega2@test.com', 'asistente_bodega');
+        $yirena = $this->resolveUser('lidercompras@test.com', 'lider_compras');
 
         if ($osvaldo === null || $mariano === null || $yirena === null) {
             $this->command?->warn('SCRUM-670: falta Osvaldo/Mariano/Yirena — skip.');
+
             return;
         }
 
@@ -406,15 +415,15 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         $createdProducts = [];
         foreach ($catalog as $row) {
             $product = CatalogProduct::create([
-                'reference'      => $row['ref'],
+                'reference' => $row['ref'],
                 // SCRUM-237/240 — `name` NOT NULL (ver migración 2026_08_15_100000_...).
-                'name'           => $row['desc'],
-                'price_full'     => $row['price'],
-                'cost'           => $row['cost'],
+                'name' => $row['desc'],
+                'price_full' => $row['price'],
+                'cost' => $row['cost'],
                 'stock_quantity' => $row['stock'],
-                'provider_id'    => $provider->id,
-                'is_active'      => true,
-                'rotation'       => CatalogProduct::ROTATION_MEDIA,
+                'provider_id' => $provider->id,
+                'is_active' => true,
+                'rotation' => CatalogProduct::ROTATION_MEDIA,
             ]);
             $createdProducts[] = $product;
 
@@ -480,15 +489,17 @@ final class QaTicketsBatch20260725Seeder extends Seeder
     {
         if (Order::where('customer_name', 'like', self::SCRUM406_MARKER.'%')->exists()) {
             $this->command?->info('SCRUM-406: ya sembrado, se omite.');
+
             return;
         }
 
-        $osvaldo  = $this->resolveUser('logistica@atlantic.com.pa', 'asistente_bodega');
-        $apolonio = $this->resolveUser('apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
-        $yirena   = $this->resolveUser('gerencia2@atlantic.com.pa', 'lider_compras');
+        $osvaldo = $this->resolveUser('asistentebodega@test.com', 'asistente_bodega');
+        $apolonio = $this->resolveUser('ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $yirena = $this->resolveUser('lidercompras@test.com', 'lider_compras');
 
         if ($osvaldo === null || $apolonio === null || $yirena === null) {
             $this->command?->warn('SCRUM-406: falta algún usuario (Osvaldo/Apolonio/Yirena) — skip.');
+
             return;
         }
 
@@ -500,9 +511,9 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         $product = CatalogProduct::firstOrCreate(
             ['reference' => 'QA-BOD-406-001'],
             [
-                'name'           => self::SCRUM406_MARKER.' Perfil LED Empotrable 2m (demo sin stock)',
-                'price_full'     => 95.0, 'cost' => 52.0, 'stock_quantity' => 0,
-                'provider_id'    => $provider->id, 'is_active' => true, 'rotation' => CatalogProduct::ROTATION_MEDIA,
+                'name' => self::SCRUM406_MARKER.' Perfil LED Empotrable 2m (demo sin stock)',
+                'price_full' => 95.0, 'cost' => 52.0, 'stock_quantity' => 0,
+                'provider_id' => $provider->id, 'is_active' => true, 'rotation' => CatalogProduct::ROTATION_MEDIA,
             ]
         );
 
@@ -519,54 +530,54 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         // el mismo catalog_product_id que el ítem "sin stock" del pedido (ver
         // OrderBoardService::supplierEta(), que hace exactamente ese join).
         $purchaseOrder = PurchaseOrder::create([
-            'provider_id'            => $provider->id,
-            'status'                 => PurchaseOrder::STATUS_EN_TRANSITO,
-            'status_changed_at'      => Carbon::now()->subDays(2),
-            'shipping_type'          => PurchaseOrder::SHIPPING_MARITIMO,
-            'who_pays_shipping'      => PurchaseOrder::PAYS_PROVIDER,
-            'modality'               => PurchaseOrder::MODALITY_DIRECTO,
+            'provider_id' => $provider->id,
+            'status' => PurchaseOrder::STATUS_EN_TRANSITO,
+            'status_changed_at' => Carbon::now()->subDays(2),
+            'shipping_type' => PurchaseOrder::SHIPPING_MARITIMO,
+            'who_pays_shipping' => PurchaseOrder::PAYS_PROVIDER,
+            'modality' => PurchaseOrder::MODALITY_DIRECTO,
             'estimated_arrival_date' => Carbon::now()->addDays(9),
-            'requires_mark_approval' => false,
-            'currency'               => 'USD',
-            'total_amount'           => 20 * $product->cost,
-            'notes'                  => self::SCRUM406_MARKER.' Orden de reposición en tránsito — fixture QA para SCRUM-406.',
-            'created_by'             => $yirena->id,
+            'requires_primary_approval' => false,
+            'currency' => 'USD',
+            'total_amount' => 20 * $product->cost,
+            'notes' => self::SCRUM406_MARKER.' Orden de reposición en tránsito — fixture QA para SCRUM-406.',
+            'created_by' => $yirena->id,
         ]);
 
         PurchaseOrderLine::create([
-            'purchase_order_id'  => $purchaseOrder->id,
+            'purchase_order_id' => $purchaseOrder->id,
             'catalog_product_id' => $product->id,
-            'quantity'           => 20,
-            'unit_cost'          => $product->cost,
-            'subtotal'           => 20 * $product->cost,
+            'quantity' => 20,
+            'unit_cost' => $product->cost,
+            'subtotal' => 20 * $product->cost,
         ]);
 
         $folio = app(OrderFolioService::class);
 
         $order = Order::create([
-            'order_number'            => $folio->next(),
-            'order_type'              => Order::ORDER_TYPE_FALTANTE,
-            'stage'                   => Order::STAGE_ASIGNADO,
-            'assistant_id'            => $osvaldo->id,
-            'picker_id'               => $apolonio->id,
+            'order_number' => $folio->next(),
+            'order_type' => Order::ORDER_TYPE_FALTANTE,
+            'stage' => Order::STAGE_ASIGNADO,
+            'assistant_id' => $osvaldo->id,
+            'picker_id' => $apolonio->id,
             'committed_delivery_date' => Carbon::now()->addDays(9),
-            'customer_name'           => self::SCRUM406_MARKER.' Residencial Punta Chame — Fam. Vega',
-            'customer_contact'        => '+507 6'.random_int(100, 999).'-'.random_int(1000, 9999),
-            'delivery_address'        => 'Ciudad de Panamá',
-            'invoice_ready'           => false,
+            'customer_name' => self::SCRUM406_MARKER.' Residencial Punta Chame — Fam. Vega',
+            'customer_contact' => '+507 6'.random_int(100, 999).'-'.random_int(1000, 9999),
+            'delivery_address' => 'Ciudad de Panamá',
+            'invoice_ready' => false,
         ]);
 
         OrderItem::create([
-            'order_id'              => $order->id,
-            'catalog_product_id'    => $product->id,
-            'reference_snapshot'    => $product->reference,
-            'description_snapshot'  => $product->description,
-            'qty_requested'         => 5,
-            'qty_reserved'          => 0,
-            'qty_picked'            => 0,
-            'qty_delivered'         => 0,
-            'found_at_location'     => false,
-            'shortage_reason'       => OrderItem::SHORTAGE_SIN_STOCK,
+            'order_id' => $order->id,
+            'catalog_product_id' => $product->id,
+            'reference_snapshot' => $product->reference,
+            'description_snapshot' => $product->description,
+            'qty_requested' => 5,
+            'qty_reserved' => 0,
+            'qty_picked' => 0,
+            'qty_delivered' => 0,
+            'found_at_location' => false,
+            'shortage_reason' => OrderItem::SHORTAGE_SIN_STOCK,
         ]);
 
         $this->command?->info('SCRUM-406: pedido "sin stock" (faltante/asignado) + PO real en tránsito con ETA futura sembrados.');
@@ -587,85 +598,87 @@ final class QaTicketsBatch20260725Seeder extends Seeder
     {
         if (SalesProject::where('name', 'like', self::SCRUM409_MARKER.'%')->exists()) {
             $this->command?->info('SCRUM-409: ya sembrado, se omite.');
+
             return;
         }
 
-        // Idmar Hernandez (vendedor_disenador) — vendedora real con WarehouseAssistantMapping
-        // real ya sembrado (-> Osvaldo Santos, ver WarehouseAssistantMappingSeeder), para que el
+        // Vendedor Disenador Test 10 (vendedor_disenador) — vendedora real con WarehouseAssistantMapping
+        // real ya sembrado (-> Asistente Bodega Test, ver WarehouseAssistantMappingSeeder), para que el
         // Order nazca con assistant_id asignado sin disparar la notificación de "sin asistente".
-        $owner = User::where('email', 'idmar@atlantic.com.pa')->first();
+        $owner = User::where('email', 'vendedordisenador10@test.com')->first();
 
         if ($owner === null) {
             $ownerId = $this->userIdByRole(['designer']) ?? $this->userIdByRole(['management', 'superadmin']);
-            $owner   = $ownerId !== null ? User::find($ownerId) : null;
+            $owner = $ownerId !== null ? User::find($ownerId) : null;
         }
 
         if ($owner === null) {
             $this->command?->warn('SCRUM-409: no se encontró un usuario vendedor/diseñador — skip.');
+
             return;
         }
 
         $master = MasterClient::create([
-            'name'               => self::SCRUM409_MARKER.' Grupo Torre Bahía',
+            'name' => self::SCRUM409_MARKER.' Grupo Torre Bahía',
             'default_price_type' => 'project',
         ]);
         $sub = SubClient::create([
             'master_client_id' => $master->id,
-            'business_name'    => self::SCRUM409_MARKER.' Torre Bahía Residencial S.A.',
-            'tax_id'            => '155-4090-1-2026',
-            'category'          => 'b_architect_designer',
-            'delivery_address'  => 'Costa del Este, Ciudad de Panamá',
+            'business_name' => self::SCRUM409_MARKER.' Torre Bahía Residencial S.A.',
+            'tax_id' => '155-4090-1-2026',
+            'category' => 'b_architect_designer',
+            'delivery_address' => 'Costa del Este, Ciudad de Panamá',
         ]);
         $project = SalesProject::create([
             'sub_client_id' => $sub->id,
-            'name'          => self::SCRUM409_MARKER.' Torre Bahía — Lobby Principal',
-            'tag'           => 'both',
+            'name' => self::SCRUM409_MARKER.' Torre Bahía — Lobby Principal',
+            'tag' => 'both',
         ]);
 
         $card = PipelineCard::create([
             'sales_project_id' => $project->id,
-            'stage'            => 'proposal',
+            'stage' => 'proposal',
             'master_client_id' => $master->id,
-            'sub_client_id'    => $sub->id,
-            'owner_id'         => $owner->id,
-            'amount'           => 28500.0,
-            'worked_area_m2'   => 320,
-            'observations'     => 'Propuesta final aceptada por el cliente — pendiente coordinar entrega con Bodega.',
+            'sub_client_id' => $sub->id,
+            'owner_id' => $owner->id,
+            'amount' => 28500.0,
+            'worked_area_m2' => 320,
+            'observations' => 'Propuesta final aceptada por el cliente — pendiente coordinar entrega con Bodega.',
             'stage_changed_at' => Carbon::now()->subDays(2),
         ]);
 
         PipelineCardContact::create([
             'pipeline_card_id' => $card->id,
-            'name'             => 'Arq. Fernanda Ríos',
-            'role'             => 'architect',
-            'phone'            => '+507 6234-5678',
-            'email'            => 'fernanda.rios@example.com',
+            'name' => 'Arq. Fernanda Ríos',
+            'role' => 'architect',
+            'phone' => '+507 6234-5678',
+            'email' => 'fernanda.rios@example.com',
         ]);
 
         $product = CatalogProduct::where('is_active', true)->inRandomOrder()->first();
 
         $quote = Quote::create([
             'master_client_id' => $master->id,
-            'sub_client_id'    => $sub->id,
+            'sub_client_id' => $sub->id,
             'sales_project_id' => $project->id,
-            'owner_id'         => $owner->id,
-            'status'           => 'approved',
-            'folio'            => 'COT-QA409-0001',
-            'generated_at'     => Carbon::now()->subDays(3),
-            'price_type'       => 'project',
+            'owner_id' => $owner->id,
+            'status' => 'approved',
+            'folio' => 'COT-QA409-0001',
+            'generated_at' => Carbon::now()->subDays(3),
+            'price_type' => 'project',
         ]);
 
         $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Iluminación General', 'position' => 1]);
 
         QuoteItem::create([
-            'quote_part_id'      => $part->id,
+            'quote_part_id' => $part->id,
             'catalog_product_id' => $product?->id,
-            'is_custom'          => $product === null,
-            'reference'          => $product?->reference ?? 'QA-409-CUSTOM',
-            'description'        => $product?->name ?? self::SCRUM409_MARKER.' Luminaria personalizada — lobby',
-            'quantity'           => 12,
-            'unit_price'         => 145.0,
-            'cost'               => 82.0,
+            'is_custom' => $product === null,
+            'reference' => $product?->reference ?? 'QA-409-CUSTOM',
+            'description' => $product?->name ?? self::SCRUM409_MARKER.' Luminaria personalizada — lobby',
+            'quantity' => 12,
+            'unit_price' => 145.0,
+            'cost' => 82.0,
         ]);
 
         // Dispara el flujo real: PipelineService::changeStage() -> evento QuoteApproved ->
@@ -679,7 +692,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
     /** @param list<string> $roles */
     private function userIdByRole(array $roles): ?int
     {
-        $slug  = Tenant::current()?->slug;
+        $slug = Tenant::current()?->slug;
         $table = "{$slug}_auth.user_roles";
 
         foreach ($roles as $role) {

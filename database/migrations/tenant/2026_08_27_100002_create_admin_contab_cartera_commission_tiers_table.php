@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Schema;
  * límites en notación redonda ("Menos de $15K", "$15K–$19K", "Más de $20K") sin definir el borde
  * exacto entre tramos — decisión de diseño tomada acá: <15000 → 1%, 15000–19999.99 → 1.5%,
  * ≥20000 → 2% (sin huecos ni solapes). Confirmado con Luis 2026-08-27: tabla paramétrica + CRUD
- * `mark_only` (mismo patrón que `commission_tiers`), sin pantalla de administración dedicada en
+ * `primary_approver_only` (mismo patrón que `commission_tiers`), sin pantalla de administración dedicada en
  * este batch — ningún ticket del plan de 29 batches la pide.
  */
 return new class extends TenantSchemaMigration

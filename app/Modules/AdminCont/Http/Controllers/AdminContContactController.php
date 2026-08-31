@@ -9,7 +9,7 @@ use App\Modules\AdminCont\Http\Requests\UpdateContactRequest;
 use App\Modules\AdminCont\Models\AdminContContact;
 use Illuminate\Http\JsonResponse;
 
-/** SCRUM-641 (REQ-564) — contactos generales por área, gateado por EnsureIsMarkApprover. */
+/** SCRUM-641 (REQ-564) — contactos generales por área, gateado por EnsureIsPrimaryApprover. */
 class AdminContContactController
 {
     public function index(): JsonResponse

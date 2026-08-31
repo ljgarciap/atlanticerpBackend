@@ -18,6 +18,7 @@ use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 
 /**
  * SCRUM-329 Bloque B2 (REQ-344→362, SCRUM-414→432) — "Ver Inventario" de Bodega: pantalla de
@@ -209,8 +210,8 @@ final class BodegaInventoryController extends Controller
         $paginator = Pagination::ofArray($products, $pagination['per_page'], $pagination['page']);
 
         return response()->json([
-            'fuzzy'     => $fuzzy,
-            'kpis'      => $this->bodegaKpis->kpis(),
+            'fuzzy' => $fuzzy,
+            'kpis' => $this->bodegaKpis->kpis(),
             // REQ-349 (SCRUM-419) — hallazgo de QA 2026-07-24: los filtros "Proveedor"/"Marca"
             // aparecían vacíos porque no había ningún endpoint de catálogo accesible con solo
             // `bodega.read` (`ProviderController` exige `compras.read`, que ningún rol de Bodega
@@ -218,8 +219,8 @@ final class BodegaInventoryController extends Controller
             // activos (no solo la página/filtro actual — mismo criterio que `kpis` arriba), para
             // que el dropdown no se vacíe/encoja a medida que se aplican otros filtros.
             'providers' => $this->distinctActiveProviders(),
-            'brands'    => $this->distinctActiveBrands(),
-            'data'      => array_map(
+            'brands' => $this->distinctActiveBrands(),
+            'data' => array_map(
                 fn (CatalogProduct $p) => $this->format(
                     $p,
                     $committedMap[$p->id] ?? 0,
@@ -303,9 +304,9 @@ final class BodegaInventoryController extends Controller
 
         return response()->json([
             'data' => $families->map(fn (CatalogProductFamily $f) => [
-                'id'            => $f->id,
-                'name'          => $f->name,
-                'description'   => $f->description,
+                'id' => $f->id,
+                'name' => $f->name,
+                'description' => $f->description,
                 'product_count' => $f->products_count,
             ])->values(),
         ]);
@@ -316,7 +317,7 @@ final class BodegaInventoryController extends Controller
      * "Generar compra" (ese endpoint — `generateFamilyPurchase()` — simplemente no se expone bajo
      * el prefijo `bodega/`, ver `routes/bodega.php`).
      *
-     * Reescrito 2026-08-15 (rebote de Daniela Amaya 2026-08-12, RN3): antes devolvía una lista
+     * Reescrito 2026-08-15 (rebote de Gerencia Test 2026-08-12, RN3): antes devolvía una lista
      * reducida (id/reference/description/stock_quantity/provider_id) sin ninguna de las columnas
      * operativas de la vista "Productos" — el criterio de agrupación por Familia REAL
      * (`CatalogProductFamily`, ya usado acá desde el principio, no por `category` como asumía el
@@ -331,7 +332,7 @@ final class BodegaInventoryController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        /** @var \Illuminate\Support\Collection<int, CatalogProduct> $products */
+        /** @var Collection<int, CatalogProduct> $products */
         $products = $family->products()->where('is_active', true)->with(['families', 'provider'])->orderBy('name')->get();
 
         /** @var list<int> $productIds */
@@ -343,11 +344,11 @@ final class BodegaInventoryController extends Controller
         $warehouseCounts = $this->warehouseCounts($productIds);
 
         return response()->json([
-            'id'             => $family->id,
-            'name'           => $family->name,
-            'description'    => $family->description,
-            'product_count'  => $products->count(),
-            'products'       => $products->map(fn (CatalogProduct $p) => $this->format(
+            'id' => $family->id,
+            'name' => $family->name,
+            'description' => $family->description,
+            'product_count' => $products->count(),
+            'products' => $products->map(fn (CatalogProduct $p) => $this->format(
                 $p,
                 $committedMap[$p->id] ?? 0,
                 $porIngresarMap[$p->id] ?? 0,
@@ -385,7 +386,7 @@ final class BodegaInventoryController extends Controller
         }
 
         return response()->json([
-            'confirmed_lines'    => $result['confirmed_lines'] ?? [],
+            'confirmed_lines' => $result['confirmed_lines'] ?? [],
             'confirmed_quantity' => $result['confirmed_quantity'] ?? 0,
         ]);
     }
@@ -450,13 +451,13 @@ final class BodegaInventoryController extends Controller
 
         return array_values($rows->map(fn (ProductWarehouseStock $r) => [
             'warehouse_id' => $r->warehouse_id,
-            'name'         => $r->warehouse?->name,
-            'quantity'     => $r->quantity,
+            'name' => $r->warehouse?->name,
+            'quantity' => $r->quantity,
         ])->values()->all());
     }
 
     /**
-     * @param list<int> $productIds
+     * @param  list<int>  $productIds
      * @return array<int, int> catalog_product_id => cantidad de bodegas distintas con stock > 0
      */
     private function warehouseCounts(array $productIds): array
@@ -474,7 +475,7 @@ final class BodegaInventoryController extends Controller
     }
 
     /**
-     * @param array{pending_bodega_action: bool, awaiting_compras: bool, confirmed_quantity: int, confirmed_by_name: string|null} $arrival
+     * @param  array{pending_bodega_action: bool, awaiting_compras: bool, confirmed_quantity: int, confirmed_by_name: string|null}  $arrival
      * @return array<string, mixed>
      */
     private function format(
@@ -501,50 +502,50 @@ final class BodegaInventoryController extends Controller
         $family = $product->relationLoaded('families') ? $product->families->first() : null;
 
         return [
-            'id'                  => $product->id,
-            'reference'           => $product->reference,
+            'id' => $product->id,
+            'reference' => $product->reference,
             // REQ-361 — expuesto también en el listado (no solo en `show()`), para que
             // `ProductDetailModal` (frontend) lo arme con los datos que YA trae la fila de la
             // tabla, sin necesitar un fetch aparte por producto.
-            'factory_reference'   => $product->factory_reference,
-            'barcode'             => $product->barcode,
-            'name'                => $product->name,
-            'description'         => $product->description,
-            'category'            => $product->category,
-            'brand'               => $product->brand,
-            'photo_url'           => $product->photo_url,
-            'stock_quantity'      => $product->stock_quantity,
-            'stock_total'         => $disponible + $committed,
-            'por_servir'          => $committed,
-            'disponible'          => $disponible,
-            'por_ingresar'        => $porIngresar,
-            'en_camino'           => $enCamino,
-            'reorder_point'       => $product->reorder_point,
-            'estado'              => $estado,
-            'rotation'            => $product->rotation,
-            'provider_id'         => $product->provider_id,
-            'provider_name'       => $product->provider?->name,
-            'family_id'           => $family?->id,
-            'family_name'         => $family?->name,
-            'is_active'           => $product->is_active,
+            'factory_reference' => $product->factory_reference,
+            'barcode' => $product->barcode,
+            'name' => $product->name,
+            'description' => $product->description,
+            'category' => $product->category,
+            'brand' => $product->brand,
+            'photo_url' => $product->photo_url,
+            'stock_quantity' => $product->stock_quantity,
+            'stock_total' => $disponible + $committed,
+            'por_servir' => $committed,
+            'disponible' => $disponible,
+            'por_ingresar' => $porIngresar,
+            'en_camino' => $enCamino,
+            'reorder_point' => $product->reorder_point,
+            'estado' => $estado,
+            'rotation' => $product->rotation,
+            'provider_id' => $product->provider_id,
+            'provider_name' => $product->provider?->name,
+            'family_id' => $family?->id,
+            'family_name' => $family?->name,
+            'is_active' => $product->is_active,
             // SCRUM-425 (REQ-355, RN1) — ficha técnica de solo lectura, mismo campo/shape que
             // `Compras\Http\Controllers\InventoryController::format()` (misma columna JSONB de
             // `CatalogProduct`), para que `TechnicalSpecModal.tsx` (compartido entre Compras y
             // Bodega) lo reciba sin cambios. `null` para productos creados antes de SCRUM-426 —
             // el frontend muestra el estado "no disponible" en ese caso.
-            'technical_spec'      => $product->technical_spec,
-            'warehouse_count'     => $warehouseCount,
+            'technical_spec' => $product->technical_spec,
+            'warehouse_count' => $warehouseCount,
             'arrival_confirmation' => [
                 // REQ-427 RN2 — el frontend muestra el botón "Confirmar llegada física" solo
                 // cuando `pending_bodega_action` es true, y la nota de espera cuando
                 // `awaiting_compras` es true (ambos pueden ser true a la vez si un reparto parcial
                 // dejó una línea sin tocar — ver `ArrivalConfirmationService::confirmArrival()`).
                 'pending_bodega_action' => $arrival['pending_bodega_action'],
-                'awaiting_compras'      => $arrival['awaiting_compras'],
-                // Rebote REQ-427 (Daniela Amaya 2026-08-13) — la nota de espera debe mostrar
+                'awaiting_compras' => $arrival['awaiting_compras'],
+                // Rebote REQ-427 (Gerencia Test 2026-08-13) — la nota de espera debe mostrar
                 // cantidad + quién confirmó, no un genérico "esperando a Compras".
-                'confirmed_quantity'    => $arrival['confirmed_quantity'],
-                'confirmed_by_name'     => $arrival['confirmed_by_name'],
+                'confirmed_quantity' => $arrival['confirmed_quantity'],
+                'confirmed_by_name' => $arrival['confirmed_by_name'],
             ],
         ];
     }

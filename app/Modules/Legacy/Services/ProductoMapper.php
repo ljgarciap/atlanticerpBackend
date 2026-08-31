@@ -39,7 +39,7 @@ final class ProductoMapper
     private const DEFAULT_CODPROVEEDOR = 1001;
 
     /**
-     * @param  list<int> $icgCodarticulos
+     * @param  list<int>  $icgCodarticulos
      * @return list<MappedProducto>
      */
     public function buildPayloads(array $icgCodarticulos): array
@@ -69,7 +69,7 @@ final class ProductoMapper
                 $codigo,
                 $productos->get($codigo),
                 $preciosPublico->get($codigo),
-                $costosPorArticulo->get($codigo) ?? new Collection(),
+                $costosPorArticulo->get($codigo) ?? new Collection,
             ),
             $icgCodarticulos,
         );
@@ -82,7 +82,7 @@ final class ProductoMapper
         ?ProductoPrecio $precioPublico,
         Collection $costosDelArticulo,
     ): MappedProducto {
-        // Corrección 2026-08-27 (SCRUM-799, reporte de Daniela Amaya) — reabre la decisión del
+        // Corrección 2026-08-27 (SCRUM-799, reporte de Gerencia Test) — reabre la decisión del
         // 2026-08-17 (commit 45fca4c): esa corrección dejó el código real de fabricante en
         // `factory_reference` y un ID sintético en `reference`, pero para el negocio ES esta
         // referencia (ARTICULOS.REFPROVEEDOR, ej. "42016B-WH") la que identifica públicamente el
@@ -96,8 +96,8 @@ final class ProductoMapper
         // `ProductoReferenceSwapService`/`legacy:fix-productos-referencia` (comando aparte,
         // corrección de DATA, no de este mapper) — este cambio solo evita que una corrida nueva
         // vuelva a generar el cruce.
-        $reference         = $producto !== null ? ($producto->ref_proveedor ?? "ICG-{$codigo}") : "ICG-{$codigo}";
-        $factoryReference  = null;
+        $reference = $producto !== null ? ($producto->ref_proveedor ?? "ICG-{$codigo}") : "ICG-{$codigo}";
+        $factoryReference = null;
 
         if ($producto === null) {
             return new MappedProducto(
@@ -157,7 +157,7 @@ final class ProductoMapper
      * quedaba `null` casi siempre sin que nada lo marcara como error). Ahora resuelve directo
      * contra `legacy.producto_costos` por el proveedor por defecto (`DEFAULT_CODPROVEEDOR`).
      *
-     * @param Collection<int, ProductoCosto> $costosDelArticulo
+     * @param  Collection<int, ProductoCosto>  $costosDelArticulo
      */
     private function resolveCost(Collection $costosDelArticulo): ?float
     {

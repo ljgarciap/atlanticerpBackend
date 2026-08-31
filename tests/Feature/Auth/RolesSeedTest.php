@@ -121,7 +121,7 @@ class RolesSeedTest extends FeatureTestCase
         }
     }
 
-    public function test_security_level_module_permissions_tiene_60_filas(): void
+    public function test_security_level_module_permissions_tiene_67_filas(): void
     {
         // 35 filas (5 niveles × 7 módulos) desde 2026_07_22_100010 (Pre-QA CRÍTICO, SCRUM-329
         // Batch A2): se sumó el Nivel 3 "solo-Bodega" a los 4 arquetipos previos (1, 4, 8, 9).
@@ -140,9 +140,15 @@ class RolesSeedTest extends FeatureTestCase
         //   Nivel 13 "Read Only — Admin & Contab"   (7 filas, clon completo del Nivel 1)
         //   Nivel 14 "Power User — Servicios"       (7 filas, clon completo del Nivel 4)
         //   Nivel 15 "Power User — Admin & Contab"  (7 filas, clon completo del Nivel 4)
+        //
+        // +7 filas — genericización de identidades (2026-08-30, ver Atlantic/CLAUDE.md): al vaciar
+        // SpecialPermissionSeeder se encontraron 3 grants que en realidad eran capacidad de rol
+        // completo, no de una persona puntual (2026_08_30_100004). `lider_compras` comparte el
+        // Nivel 4 con `lider_bodega`, así que se le dio nivel propio:
+        //   Nivel 16 "Power User — Compras"         (7 filas, clon completo del Nivel 4)
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $count = DB::table("{$slug}_auth.security_level_module_permissions")->count();
-        $this->assertSame(60, $count);
+        $this->assertSame(67, $count);
     }
 
     public function test_nivel_3_edita_solo_bodega_resto_solo_lectura(): void
@@ -172,7 +178,7 @@ class RolesSeedTest extends FeatureTestCase
     public function test_asistente_bodega_ayudante_y_transporte_usan_nivel_3(): void
     {
         $asistente = Role::with('defaultSecurityLevel')->where('key', 'asistente_bodega')->firstOrFail();
-        $ayudante  = Role::with('defaultSecurityLevel')->where('key', 'ayudante_general_bodega')->firstOrFail();
+        $ayudante = Role::with('defaultSecurityLevel')->where('key', 'ayudante_general_bodega')->firstOrFail();
         $transporte = Role::with('defaultSecurityLevel')->where('key', 'transporte')->firstOrFail();
         $liderBodega = Role::with('defaultSecurityLevel')->where('key', 'lider_bodega')->firstOrFail();
 

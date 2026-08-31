@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Compras;
 
+use App\Models\User;
 use App\Modules\Compras\Events\OrderLiquidationAssigned;
 use App\Modules\Compras\Models\LiquidationAgency;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
+use App\Modules\Compras\Models\PurchaseOrderLine;
+use App\Modules\Compras\Services\GoodsReceiptConfirmationService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
@@ -87,7 +90,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-204 (REQ-141, 2026-08-06 — hallazgo Daniela Amaya): "Pendiente/Por liquidar" pasa a
+     * SCRUM-204 (REQ-141, 2026-08-06 — hallazgo Gerencia Test): "Pendiente/Por liquidar" pasa a
      * ser parte de la secuencia automática, entre "Por aprobar" y "Ordenado", para TODA orden
      * (antes solo se alcanzaba vía el botón "Liquidar" de Zona Libre, diferido a backlog).
      */
@@ -133,7 +136,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-208 (REQ-145, 2026-08-06 — hallazgo Daniela Amaya): `advance()` no consideraba
+     * SCRUM-208 (REQ-145, 2026-08-06 — hallazgo Gerencia Test): `advance()` no consideraba
      * `pending_remainder_status` (REQ-165) — una orden con mercancía todavía en tránsito/aduana
      * podía marcarse "Recibido" igual, sin ningún aviso.
      */
@@ -192,7 +195,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL,
             'pending_remainder_status' => null,
         ]);
-        \App\Modules\Compras\Models\PurchaseOrderLine::create([
+        PurchaseOrderLine::create([
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100,
         ]);
@@ -290,7 +293,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, [
-            'status' => PurchaseOrder::STATUS_POR_APROBAR, 'requires_mark_approval' => true,
+            'status' => PurchaseOrder::STATUS_POR_APROBAR, 'requires_primary_approval' => true,
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -307,14 +310,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
-        $approver = \App\Models\User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $approver = User::where('email', 'designer@atlantic.test')->firstOrFail();
         $order = $this->makeOrder($provider->id, [
-            'status' => PurchaseOrder::STATUS_POR_APROBAR, 'requires_mark_approval' => true,
+            'status' => PurchaseOrder::STATUS_POR_APROBAR, 'requires_primary_approval' => true,
             'approved_by' => $approver->id, 'approved_at' => now(),
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        // SCRUM-204 (2026-08-06, hallazgo Daniela Amaya): "Pendiente/Por liquidar" ahora es parte
+        // SCRUM-204 (2026-08-06, hallazgo Gerencia Test): "Pendiente/Por liquidar" ahora es parte
         // de la secuencia automática entre "Por aprobar" y "Ordenado" — el primer avance tras la
         // aprobación de Mark ya no salta directo a "Ordenado".
         $this->withHeaders($this->authHeaders($token))
@@ -338,7 +341,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'stock_quantity' => 0, 'is_active' => true,
         ]);
         $order = $this->makeOrder($provider->id);
-        \App\Modules\Compras\Models\PurchaseOrderLine::create([
+        PurchaseOrderLine::create([
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 7, 'unit_cost' => 10, 'subtotal' => 70,
         ]);
@@ -398,7 +401,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'stock_quantity' => 0, 'is_active' => true,
         ]);
         $order = $this->makeOrder($provider->id);
-        \App\Modules\Compras\Models\PurchaseOrderLine::create([
+        PurchaseOrderLine::create([
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 7, 'unit_cost' => 10, 'subtotal' => 70,
         ]);
@@ -416,7 +419,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
         $this->reMakeCurrent();
         $order->refresh();
-        $service = app(\App\Modules\Compras\Services\GoodsReceiptConfirmationService::class);
+        $service = app(GoodsReceiptConfirmationService::class);
 
         $confirmedFirstCall = $service->confirmPendingForOrder($order);
         $confirmedSecondCall = $service->confirmPendingForOrder($order);
@@ -584,7 +587,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
-        $product = \App\Modules\VentasDiseno\Models\CatalogProduct::create([
+        $product = CatalogProduct::create([
             'reference' => 'RESP-1', 'name' => 'Producto', 'description' => 'Producto', 'cost' => 10, 'price_full' => 20,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
@@ -672,8 +675,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         // No cambia el status — alcance reducido, la secuencia de estados no se toca.
         $response->assertJsonPath('status', PurchaseOrder::STATUS_ORDENADO);
 
-        Event::assertDispatched(OrderLiquidationAssigned::class, fn (OrderLiquidationAssigned $e): bool =>
-            $e->orderId === $order->id && $e->agencyId === $agency->id && $e->agencyName === 'Agencia Aduanal Istmo');
+        Event::assertDispatched(OrderLiquidationAssigned::class, fn (OrderLiquidationAssigned $e): bool => $e->orderId === $order->id && $e->agencyId === $agency->id && $e->agencyName === 'Agencia Aduanal Istmo');
     }
 
     public function test_liquidar_orden_no_zona_libre_retorna_422(): void
@@ -906,7 +908,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     // ── SCRUM-208 (rediseño 2026-08-15) — confirm-pending-receipts ───────────
 
     /**
-     * Root cause real del reporte de Daniela Amaya (2026-08-12): una recepción parcial deja la
+     * Root cause real del reporte de Gerencia Test (2026-08-12): una recepción parcial deja la
      * línea "Por ingresar" y nada la confirma hasta que la orden ENTERA llega a "Recibido" — la
      * capacidad de confirmar manualmente ya existía (`confirmPendingForProduct`, acotada por
      * producto en TODAS las órdenes, solo alcanzable desde /inventario) pero no había forma de
@@ -923,7 +925,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             'stock_quantity' => 0, 'is_active' => true,
         ]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL]);
-        \App\Modules\Compras\Models\PurchaseOrderLine::create([
+        PurchaseOrderLine::create([
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100,
         ]);
@@ -934,9 +936,9 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
         // Recepción parcial: 1 de 10. La orden sigue en_transito_local (lejos de Recibido).
         $receipt = $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
-            'purchase_order_id'         => $order->id,
-            'lines'                     => [['catalog_product_id' => $product->id, 'quantity' => 1, 'unit_cost' => 10, 'warehouse_id' => $warehouseId]],
-            'pending_remainder_status'  => PurchaseOrder::REMAINDER_ORDENADO,
+            'purchase_order_id' => $order->id,
+            'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1, 'unit_cost' => 10, 'warehouse_id' => $warehouseId]],
+            'pending_remainder_status' => PurchaseOrder::REMAINDER_ORDENADO,
         ])->assertStatus(201);
         $receipt->assertJsonPath('lines.0.is_pending', true);
 
@@ -985,7 +987,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         $orderA = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL]);
         $orderB = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL]);
         foreach ([$orderA, $orderB] as $o) {
-            \App\Modules\Compras\Models\PurchaseOrderLine::create([
+            PurchaseOrderLine::create([
                 'purchase_order_id' => $o->id, 'catalog_product_id' => $product->id,
                 'quantity' => 5, 'unit_cost' => 10, 'subtotal' => 50,
             ]);
@@ -997,12 +999,12 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
         $receiptA = $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
             'purchase_order_id' => $orderA->id,
-            'lines'             => [['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost' => 10, 'warehouse_id' => $warehouseId]],
+            'lines' => [['catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost' => 10, 'warehouse_id' => $warehouseId]],
             'pending_remainder_status' => PurchaseOrder::REMAINDER_ORDENADO,
         ])->assertStatus(201);
         $receiptB = $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
             'purchase_order_id' => $orderB->id,
-            'lines'             => [['catalog_product_id' => $product->id, 'quantity' => 3, 'unit_cost' => 10, 'warehouse_id' => $warehouseId]],
+            'lines' => [['catalog_product_id' => $product->id, 'quantity' => 3, 'unit_cost' => 10, 'warehouse_id' => $warehouseId]],
             'pending_remainder_status' => PurchaseOrder::REMAINDER_ORDENADO,
         ])->assertStatus(201);
 

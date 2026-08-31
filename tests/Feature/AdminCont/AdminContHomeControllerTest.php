@@ -24,8 +24,10 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContHomeControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
-    private const YANETH_EMAIL   = 'asistente@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
+    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     private const URL = '/api/admin-contab/home/resumen-mes';
@@ -85,10 +87,10 @@ class AdminContHomeControllerTest extends FeatureTestCase
      *  comisionable (interno) completamente cobrado, sin pagar todavía al vendedor (por_pagar). */
     private function makeCommissionableOrder(int $ownerId, float $amount): AdminContInvoice
     {
-        $master  = MasterClient::create(['name' => 'Cliente Comisión Inicio '.self::uniqueTestNumber()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Inicio '.self::uniqueTestNumber(), 'tax_id' => '155-0000-9-'.random_int(1000, 9999)]);
+        $master = MasterClient::create(['name' => 'Cliente Comisión Inicio '.self::uniqueTestNumber()]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Inicio '.self::uniqueTestNumber(), 'tax_id' => '155-0000-9-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Comisión Inicio '.self::uniqueTestNumber()]);
-        $card    = PipelineCard::create([
+        $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
             'sub_client_id' => $sub->id, 'owner_id' => $ownerId, 'amount' => $amount,
             'stage_changed_at' => now(),
@@ -128,9 +130,9 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
         $response->assertJsonStructure([
             'total_cobrado_mes', 'mes_label',
-            'cuentas_al_dia'     => ['porcentaje', 'monto_al_dia', 'monto_con_mora'],
+            'cuentas_al_dia' => ['porcentaje', 'monto_al_dia', 'monto_con_mora'],
             'cartera_por_cobrar' => ['monto', 'monto_incobrable_excluido'],
-            'ventas_de_ayer'     => ['monto', 'cantidad', 'fecha'],
+            'ventas_de_ayer' => ['monto', 'cantidad', 'fecha'],
             'comisiones_por_pagar' => ['internas', 'externas'],
         ]);
     }
@@ -207,7 +209,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_comisiones_internas_suma_todos_los_vendedores_sin_scope_de_actor(): void
     {
-        $roleId   = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
         $vendedor = User::where('role_id', $roleId)->first();
         $this->assertNotNull($vendedor, 'debe existir al menos un vendedor_disenador real sembrado en testing');
 

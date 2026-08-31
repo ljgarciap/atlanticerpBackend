@@ -27,8 +27,8 @@ use App\Modules\Integrations\Outlook\Http\Controllers\OutlookCalendarController;
 use Illuminate\Support\Facades\Route;
 
 // SCRUM-632→637 (REQ-555→560) — Configuración Fiscal, exclusiva de Mark (ver
-// App\Modules\AdminCont\Http\Middleware\EnsureIsMarkApprover, aliased 'mark_only').
-Route::middleware('mark_only')->group(function (): void {
+// App\Modules\AdminCont\Http\Middleware\EnsureIsPrimaryApprover, aliased 'primary_approver_only').
+Route::middleware('primary_approver_only')->group(function (): void {
     Route::get('/fiscal-settings', [AdminContFiscalSettingsController::class, 'show']);
     Route::put('/fiscal-settings', [AdminContFiscalSettingsController::class, 'update']);
 
@@ -52,7 +52,7 @@ Route::middleware('mark_only')->group(function (): void {
 });
 
 // SCRUM-607→611 (REQ-530→534) — Cuentas Bancarias, Batch 1 del cuerpo principal de la épica (ver
-// docs/architecture/admin-contab-batches.md). A diferencia del grupo `mark_only` de arriba, esta
+// docs/architecture/admin-contab-batches.md). A diferencia del grupo `primary_approver_only` de arriba, esta
 // pantalla usa el sistema de roles/permisos estándar: visibilidad ya sembrada vía
 // `role_module_visibility` (ADR-006, migración 2026_07_11_100001) para gerencia/lider_admin_contab/
 // asistente_administrativa, sin seeding adicional. Las rutas de escritura usan el permiso angosto
@@ -97,7 +97,7 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('invoices')-
 
 // REQ-448 RN4 — aprobar/rechazar la propuesta de incobrable es EXCLUSIVO de Mark, mismo criterio
 // que Configuración Fiscal/Datos de la Empresa (no el gate de rol estándar de arriba).
-Route::middleware('mark_only')->prefix('invoices')->group(function (): void {
+Route::middleware('primary_approver_only')->prefix('invoices')->group(function (): void {
     Route::put('/{order}/uncollectible-decision', [AdminContInvoiceController::class, 'uncollectibleDecision'])->whereNumber('order');
 });
 
@@ -170,7 +170,7 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('notas-credi
 
 // Batch 13 (SCRUM-571, REQ-494 RN1) — aprobar/rechazar una nota pendiente es EXCLUSIVO de Mark,
 // mismo criterio que `invoices/{order}/uncollectible-decision`.
-Route::middleware('mark_only')->prefix('notas-credito')->group(function (): void {
+Route::middleware('primary_approver_only')->prefix('notas-credito')->group(function (): void {
     Route::put('/{creditNote}/decision', [AdminContCreditNoteController::class, 'decision'])->whereNumber('creditNote');
 });
 
@@ -208,7 +208,7 @@ Route::middleware('permission:admin_contab.read')->prefix('commissions/internal'
 });
 
 // CRUD de tramos — exclusivo de Mark, mismo gate que Configuración Fiscal/Datos de la Empresa.
-Route::middleware('mark_only')->prefix('commissions/internal')->group(function (): void {
+Route::middleware('primary_approver_only')->prefix('commissions/internal')->group(function (): void {
     Route::post('/tiers', [AdminContInternalCommissionController::class, 'storeTier']);
     Route::put('/tiers/{id}', [AdminContInternalCommissionController::class, 'updateTier'])->whereNumber('id');
     Route::delete('/tiers/{id}', [AdminContInternalCommissionController::class, 'destroyTier'])->whereNumber('id');
@@ -254,8 +254,8 @@ Route::middleware('permission:admin_contab.records.manage')
     });
 
 // Decidir % propuesto (REQ-516 RN4) — exclusivo de Mark (aprobación real de un ajuste de
-// comisión), mismo middleware que el grupo `mark_only` de Configuración Fiscal arriba.
-Route::middleware('mark_only')->prefix('commissions/external')->group(function (): void {
+// comisión), mismo middleware que el grupo `primary_approver_only` de Configuración Fiscal arriba.
+Route::middleware('primary_approver_only')->prefix('commissions/external')->group(function (): void {
     Route::post('/projects/{pipelineCardId}/percent/decide', [AdminContArchitectCommissionController::class, 'decidePercent'])->whereNumber('pipelineCardId');
 });
 
@@ -319,13 +319,13 @@ Route::middleware('permission:admin_contab.records.manage')
 
 // Batch 19 (SCRUM-605, REQ-528 RN2/RN4) — aprobar como Gerencia es EXCLUSIVO de Mark, mismo
 // criterio que `notas-credito/{id}/decision`/`invoices/{order}/uncollectible-decision`.
-Route::middleware('mark_only')->prefix('cash-position/history')->group(function (): void {
+Route::middleware('primary_approver_only')->prefix('cash-position/history')->group(function (): void {
     Route::post('/{id}/approve', [AdminContCashPositionController::class, 'approveDailyCashCount'])->whereNumber('id');
 });
 
 // Batch 20 (SCRUM-612→617, REQ-535→540) — Caja Chica. Lectura + aprobar visibles para Felix,
 // Yaneth, Mark y Gerencia (mismo roster amplio que bank-accounts/facturación/cobros/notas-credito
-// arriba); "aprobar" en sí es exclusivo de Mark vía `mark_only`, no por este permiso (que solo
+// arriba); "aprobar" en sí es exclusivo de Mark vía `primary_approver_only`, no por este permiso (que solo
 // controla quién puede ver el botón/pedir el detalle — mismo criterio que
 // `cash-position/history/{id}` vs `cash-position/history/{id}/approve`).
 Route::middleware('permission:admin_contab.records.manage')
@@ -356,7 +356,7 @@ Route::middleware('permission:admin_contab.operations.manage')
     });
 
 // REQ-540 — aprobar reporte completo, exclusivo de Mark.
-Route::middleware('mark_only')->prefix('petty-cash')->group(function (): void {
+Route::middleware('primary_approver_only')->prefix('petty-cash')->group(function (): void {
     Route::put('/reports/{numero}/approve', [AdminContPettyCashController::class, 'approveReport']);
     // Batch 21 (REQ-541) — rechazar línea puntual o reporte completo, exclusivo de Mark.
     Route::put('/expenses/{id}/reject', [AdminContPettyCashController::class, 'rejectExpense'])->whereNumber('id');
@@ -430,7 +430,7 @@ Route::middleware('permission:admin_contab.records.manage')
         Route::get('/tiers', [AdminContCarteraCommissionController::class, 'tiers']);
     });
 
-Route::middleware('mark_only')->prefix('commissions/cartera')->group(function (): void {
+Route::middleware('primary_approver_only')->prefix('commissions/cartera')->group(function (): void {
     Route::post('/tiers', [AdminContCarteraCommissionController::class, 'storeTier']);
     Route::put('/tiers/{id}', [AdminContCarteraCommissionController::class, 'updateTier'])->whereNumber('id');
     Route::delete('/tiers/{id}', [AdminContCarteraCommissionController::class, 'destroyTier'])->whereNumber('id');

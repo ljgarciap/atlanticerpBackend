@@ -35,13 +35,14 @@ class PipelineFileUploadTest extends FeatureTestCase
     private function userIdByEmail(string $email): int
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+
         return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
     }
 
     private function makeCard(int $ownerId, string $stage = 'design'): PipelineCard
     {
         $master = MasterClient::create(['name' => 'Cliente Test']);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
 
         return PipelineCard::create([
@@ -57,7 +58,7 @@ class PipelineFileUploadTest extends FeatureTestCase
         $card = $this->makeCard($designerId, 'design');
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $file  = UploadedFile::fake()->create('plano.pdf', 200, 'application/pdf');
+        $file = UploadedFile::fake()->create('plano.pdf', 200, 'application/pdf');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/files", ['type' => 'design', 'file' => $file])
@@ -81,7 +82,7 @@ class PipelineFileUploadTest extends FeatureTestCase
         $card = $this->makeCard($designerId, 'design');
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $file  = UploadedFile::fake()->create('modelo.dwg', 100);
+        $file = UploadedFile::fake()->create('modelo.dwg', 100);
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/files", ['type' => 'design', 'file' => $file])
@@ -95,7 +96,7 @@ class PipelineFileUploadTest extends FeatureTestCase
         $card = $this->makeCard($designerId, 'lost');
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $file  = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
+        $file = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/files", ['type' => 'design', 'file' => $file])
@@ -109,7 +110,7 @@ class PipelineFileUploadTest extends FeatureTestCase
         $card = $this->makeCard($designerId, 'design');
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $file  = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
+        $file = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/files", ['type' => 'design', 'file' => $file])
@@ -133,7 +134,7 @@ class PipelineFileUploadTest extends FeatureTestCase
         $card = $this->makeCard($designerId, 'design');
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $file  = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
+        $file = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/files", ['type' => 'design', 'file' => $file])
@@ -169,7 +170,7 @@ class PipelineFileUploadTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $file  = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
+        $file = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/files", ['type' => 'design', 'file' => $file])
             ->assertStatus(201);
@@ -214,7 +215,7 @@ class PipelineFileUploadTest extends FeatureTestCase
     }
 
     /**
-     * Rebote de Daniela Amaya (2026-08-16, SCRUM-767): S3 rechazaba `ResponseContentDisposition`
+     * Rebote de Gerencia Test (2026-08-16, SCRUM-767): S3 rechazaba `ResponseContentDisposition`
      * con "Header value cannot be represented using ISO-8859-1" para un nombre de archivo real de
      * captura de pantalla de macOS — el nombre autogenerado trae un espacio angosto Unicode
      * (U+202F, "\xE2\x80\xAF" en UTF-8) entre la hora y "p.m.", invisible pero fuera de Latin-1.

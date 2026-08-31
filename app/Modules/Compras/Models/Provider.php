@@ -7,8 +7,10 @@ namespace App\Modules\Compras\Models;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 /**
  * REQ-120→127 — único campo obligatorio es `name` (REQ-126 RN1); el resto se completa después.
@@ -16,14 +18,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * aparte, ningún criterio de aceptación pide múltiples contactos ni múltiples cuentas bancarias.
  *
  * `category` (REQ-126): mockup `2G__Compras_Proveedores.html` — uno de 5 valores fijos (ver
- * CATEGORIES abajo), no texto libre. Realineado 2026-07-30 (SCRUM-189, hallazgo de Daniela Amaya,
+ * CATEGORIES abajo), no texto libre. Realineado 2026-07-30 (SCRUM-189, hallazgo de Gerencia Test,
  * autorizado por Luis) — hasta entonces era texto libre sin relación con el mockup real.
  *
- * @property int         $id
- * @property string      $name
+ * @property int $id
+ * @property string $name
  * @property string|null $category
- * @property string      $origin
- * @property string      $currency
+ * @property string $origin
+ * @property string $currency
  * @property string|null $contact_name
  * @property string|null $whatsapp
  * @property string|null $phone
@@ -34,8 +36,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $bank_account_number
  * @property string|null $bank_swift
  * @property string|null $bank_beneficiary
- * @property bool        $is_active
- * @property \Carbon\Carbon $created_at
+ * @property bool $is_active
+ * @property Carbon $created_at
  */
 class Provider extends Model
 {
@@ -43,13 +45,18 @@ class Provider extends Model
 
     /** REQ-141 — determina si el ciclo de estados de sus órdenes salta tránsito/aduana. */
     public const ORIGIN_LOCAL = 'local';
+
     public const ORIGIN_INTERNACIONAL = 'internacional';
 
-    public const CATEGORY_LOCALES    = 'locales';
+    public const CATEGORY_LOCALES = 'locales';
+
     public const CATEGORY_ZONA_LIBRE = 'zona_libre';
-    public const CATEGORY_CHINA      = 'china';
-    public const CATEGORY_EUROPA     = 'europa';
-    public const CATEGORY_ONLINE     = 'online';
+
+    public const CATEGORY_CHINA = 'china';
+
+    public const CATEGORY_EUROPA = 'europa';
+
+    public const CATEGORY_ONLINE = 'online';
 
     /** @var list<string> */
     public const CATEGORIES = [
@@ -126,7 +133,7 @@ class Provider extends Model
      */
     public function ratingScore(): ?float
     {
-        /** @var \Illuminate\Support\Collection<int, PurchaseOrder> $received */
+        /** @var Collection<int, PurchaseOrder> $received */
         $received = $this->receivedOrders();
 
         if ($received->isEmpty()) {
@@ -168,16 +175,16 @@ class Provider extends Model
         return null;
     }
 
-    /** @return \Illuminate\Support\Collection<int, PurchaseOrder> */
-    private function receivedOrders(): \Illuminate\Support\Collection
+    /** @return Collection<int, PurchaseOrder> */
+    private function receivedOrders(): Collection
     {
         return $this->purchaseOrders()->where('status', PurchaseOrder::STATUS_RECIBIDO)->get();
     }
 
     /**
-     * @param \Illuminate\Support\Collection<int, PurchaseOrder> $received
+     * @param  Collection<int, PurchaseOrder>  $received
      */
-    private function computeOnTimePercent(\Illuminate\Support\Collection $received): ?float
+    private function computeOnTimePercent(Collection $received): ?float
     {
         // "A tiempo" solo se puede evaluar contra órdenes con fecha estimada — sin fecha
         // estimada no hay contra qué medir, se excluyen del denominador en vez de asumir.
@@ -193,8 +200,8 @@ class Provider extends Model
         return round($onTime->count() / $withEstimate->count() * 100, 1);
     }
 
-    /** @param \Illuminate\Support\Collection<int, PurchaseOrder> $received */
-    private function noClaimsPercent(\Illuminate\Support\Collection $received): float
+    /** @param Collection<int, PurchaseOrder> $received */
+    private function noClaimsPercent(Collection $received): float
     {
         $orderIds = $received->pluck('id');
         $ordersWithClaims = PurchaseOrderClaim::whereIn('purchase_order_id', $orderIds)

@@ -26,15 +26,15 @@ class StorePurchaseOrderClaimRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'purchase_order_id'                 => ['required', 'integer', 'exists:purchase_orders,id'],
-            'description'                       => ['nullable', 'string'],
-            // SCRUM-260 (hallazgo de Daniela Amaya) — deja de ser texto libre, solo las 5
+            'purchase_order_id' => ['required', 'integer', 'exists:purchase_orders,id'],
+            'description' => ['nullable', 'string'],
+            // SCRUM-260 (hallazgo de Gerencia Test) — deja de ser texto libre, solo las 5
             // opciones fijas del requerimiento.
-            'expected_resolution'                => ['nullable', 'string', Rule::in(PurchaseOrderClaim::RESOLUTION_TYPES)],
-            'lines'                              => ['required', 'array', 'min:1'],
-            'lines.*.purchase_order_line_id'     => ['required', 'integer', 'exists:purchase_order_lines,id'],
-            'lines.*.affected_quantity'          => ['required', 'integer', 'min:1'],
-            'lines.*.description'                => ['nullable', 'string'],
+            'expected_resolution' => ['nullable', 'string', Rule::in(PurchaseOrderClaim::RESOLUTION_TYPES)],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.purchase_order_line_id' => ['required', 'integer', 'exists:purchase_order_lines,id'],
+            'lines.*.affected_quantity' => ['required', 'integer', 'min:1'],
+            'lines.*.description' => ['nullable', 'string'],
         ];
     }
 

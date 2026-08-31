@@ -6,7 +6,6 @@ namespace Tests\Feature\Servicios;
 
 use App\Models\User;
 use App\Modules\Bodega\Models\Order;
-use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
@@ -21,7 +20,7 @@ class TicketProductProjectFilterTest extends FeatureTestCase
 {
     use BodegaOrderTestHelpers;
 
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
     protected function setUp(): void
     {
@@ -51,8 +50,8 @@ class TicketProductProjectFilterTest extends FeatureTestCase
 
     public function test_con_sales_project_id_solo_muestra_productos_entregados_a_ese_proyecto(): void
     {
-        $delivered   = $this->makeCatalogProduct(['reference' => 'PROJ-DELIVERED']);
-        $notOrdered  = $this->makeCatalogProduct(['reference' => 'PROJ-NOT-ORDERED']);
+        $delivered = $this->makeCatalogProduct(['reference' => 'PROJ-DELIVERED']);
+        $notOrdered = $this->makeCatalogProduct(['reference' => 'PROJ-NOT-ORDERED']);
 
         $order = $this->makeOrderWithPipelineCard(
             $this->ownerId(),
@@ -95,7 +94,7 @@ class TicketProductProjectFilterTest extends FeatureTestCase
 
     public function test_producto_entregado_a_otro_proyecto_no_aparece(): void
     {
-        $ownProduct   = $this->makeCatalogProduct(['reference' => 'PROJ-OWN']);
+        $ownProduct = $this->makeCatalogProduct(['reference' => 'PROJ-OWN']);
         $otherProduct = $this->makeCatalogProduct(['reference' => 'PROJ-OTHER']);
 
         $order = $this->makeOrderWithPipelineCard(

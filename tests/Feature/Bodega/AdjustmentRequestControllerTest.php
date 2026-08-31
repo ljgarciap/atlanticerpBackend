@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Bodega;
 
 use App\Models\User;
+use App\Modules\Bodega\Models\AdjustmentRequest;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\GeneralCountRequestLine;
@@ -12,7 +13,11 @@ use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Compras\Models\ComprasSettings;
+use App\Modules\Compras\Models\Provider;
+use App\Modules\Compras\Models\PurchaseOrder;
+use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -74,7 +79,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $this->assertSame(2, AdjustmentRequestLine::where('estado', AdjustmentRequestLine::ESTADO_PENDIENTE)->count());
     }
 
-    /** SCRUM-428 (rebote de Daniela Amaya 2026-08-13) — descripcion/responsable persisten y se exponen. */
+    /** SCRUM-428 (rebote de Gerencia Test 2026-08-13) — descripcion/responsable persisten y se exponen. */
     public function test_store_persiste_descripcion_y_responsable(): void
     {
         $product = $this->makeProduct();
@@ -89,7 +94,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
                 'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5,
                 'motivo' => AdjustmentRequestLine::MOTIVO_OTRO_ESPECIFICAR,
                 'descripcion' => 'Se encontró una caja adicional sin registrar',
-                'responsable' => 'Pedro Santos',
+                'responsable' => 'Tecnico Servicios Test 2',
                 'evidencia' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
             ]],
         ])->assertStatus(201);
@@ -97,7 +102,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $this->reMakeCurrent();
         $line = AdjustmentRequestLine::first();
         $this->assertSame('Se encontró una caja adicional sin registrar', $line->descripcion);
-        $this->assertSame('Pedro Santos', $line->responsable);
+        $this->assertSame('Tecnico Servicios Test 2', $line->responsable);
     }
 
     /** SCRUM-428 — Motivo deja de aceptar texto libre, solo las 6 opciones fijas. */
@@ -330,7 +335,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
         $line = AdjustmentRequestLine::create([
-            'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
+            'adjustment_request_id' => AdjustmentRequest::create([
                 'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
@@ -339,7 +344,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -362,7 +367,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
         $line = AdjustmentRequestLine::create([
-            'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
+            'adjustment_request_id' => AdjustmentRequest::create([
                 'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
@@ -371,7 +376,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -391,7 +396,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
         $line = AdjustmentRequestLine::create([
-            'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
+            'adjustment_request_id' => AdjustmentRequest::create([
                 'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
@@ -400,7 +405,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -414,7 +419,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
         $line = AdjustmentRequestLine::create([
-            'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
+            'adjustment_request_id' => AdjustmentRequest::create([
                 'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
@@ -427,7 +432,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         // simular un management genuino, no-Mark y no-superadmin.
         $this->grantBodega('multi@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -444,7 +449,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
         $line = AdjustmentRequestLine::create([
-            'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
+            'adjustment_request_id' => AdjustmentRequest::create([
                 'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo fisico',
@@ -453,7 +458,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -466,7 +471,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
-        $adjustmentRequest = \App\Modules\Bodega\Models\AdjustmentRequest::create([
+        $adjustmentRequest = AdjustmentRequest::create([
             'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
         ]);
         AdjustmentRequestLine::create([
@@ -493,14 +498,14 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-429 (rebote de Daniela Amaya 2026-08-13) — `can_approve` es lo que el frontend usa
+     * SCRUM-429 (rebote de Gerencia Test 2026-08-13) — `can_approve` es lo que el frontend usa
      * para OCULTAR Aprobar/Rechazar por completo (no solo el candado decorativo de antes).
      */
     public function test_index_expone_can_approve_true_para_mark(): void
     {
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/adjustment-requests');
@@ -513,7 +518,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     {
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
         $this->grantBodega('designer@atlantic.test');
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -596,14 +601,14 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     public function test_product_warehouse_stock_expone_por_servir(): void
     {
         $product = $this->makeProduct();
-        $provider = \App\Modules\Compras\Models\Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
-        $salesProject = \App\Modules\VentasDiseno\Models\SalesProject::create(['name' => 'Proyecto Demo']);
-        $order = \App\Modules\Compras\Models\PurchaseOrder::create([
+        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $salesProject = SalesProject::create(['name' => 'Proyecto Demo']);
+        $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD',
-            'status' => \App\Modules\Compras\Models\PurchaseOrder::STATUS_ORDENADO, 'status_changed_at' => now(),
+            'status' => PurchaseOrder::STATUS_ORDENADO, 'status_changed_at' => now(),
             'total_amount' => 40,
         ]);
-        \App\Modules\Compras\Models\PurchaseOrderLine::create([
+        PurchaseOrderLine::create([
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 4, 'unit_cost' => 10, 'subtotal' => 40, 'sales_project_id' => $salesProject->id,
         ]);
@@ -634,7 +639,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
         $line = AdjustmentRequestLine::create([
-            'adjustment_request_id' => \App\Modules\Bodega\Models\AdjustmentRequest::create([
+            'adjustment_request_id' => AdjustmentRequest::create([
                 'catalog_product_id' => $product->id, 'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
             ])->id,
             'warehouse_id' => $central->id, 'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Conteo',
@@ -643,7 +648,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $headers = $this->authHeaders($token);

@@ -19,9 +19,11 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 18 (SCRUM-597→601, REQ-520→524) — ver ADR-SCRUM597-601-batch18-arqueo-caja.md. */
 class AdminContCashPositionControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL  = 'conta@atlantic.com.pa';
-    private const YANETH_EMAIL = 'asistente@atlantic.com.pa';
-    private const MARK_EMAIL   = 'mbekhar@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
+    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -41,7 +43,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     private function userIdByEmail(string $email): int
@@ -55,7 +57,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_header_suma_bancos_activos_mas_caja_menuda_e_ignora_cuenta_inactiva(): void
     {
-        $activa   = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $activa = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
         $inactiva = AdminContBankAccount::create(['banco' => 'Global Bank', 'ultimos_4_digitos' => '1111', 'activa' => false]);
 
         AdminContBankMovement::create(['bank_account_id' => $activa->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 500]);
@@ -70,8 +72,8 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $response->assertJson([
-            'saldo_bancos'         => 400.0,
-            'saldo_caja_menuda'    => 340.0,
+            'saldo_bancos' => 400.0,
+            'saldo_caja_menuda' => 340.0,
             'saldo_disponible_hoy' => 740.0,
         ]);
     }
@@ -110,7 +112,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     {
         $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
 
-        $proxima  = AdminContInvoice::create(['numero' => 'F-9101', 'order_id' => 910100, 'cliente' => 'Cliente Próximo', 'monto' => 1000]);
+        $proxima = AdminContInvoice::create(['numero' => 'F-9101', 'order_id' => 910100, 'cliente' => 'Cliente Próximo', 'monto' => 1000]);
         $atrasada = AdminContInvoice::create(['numero' => 'F-9102', 'order_id' => 910101, 'cliente' => 'Cliente Atrasado', 'monto' => 2000]);
 
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
@@ -148,7 +150,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_projected_salidas_incluye_nota_credito_pendiente_con_excedente_calculado(): void
     {
-        $userId  = $this->userIdByEmail(self::FELIX_EMAIL);
+        $userId = $this->userIdByEmail(self::FELIX_EMAIL);
         $invoice = AdminContInvoice::create(['numero' => 'F-9105', 'order_id' => 910104, 'cliente' => 'Fam. Herrera', 'monto' => 1000, 'saldo_aplicado' => 800]);
 
         AdminContCreditNote::create([
@@ -299,7 +301,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_daily_count_incluye_nota_credito_devuelta_hoy_con_el_monto_del_bank_movement(): void
     {
-        $userId  = $this->userIdByEmail(self::FELIX_EMAIL);
+        $userId = $this->userIdByEmail(self::FELIX_EMAIL);
         $invoice = AdminContInvoice::create(['numero' => 'F-9106', 'order_id' => 910105, 'cliente' => 'Fam. Herrera', 'monto' => 1000, 'saldo_aplicado' => 700]);
 
         $note = AdminContCreditNote::create([
@@ -331,7 +333,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'metodo_pago' => AdminContPayment::METODO_EFECTIVO, 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
         ]);
 
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)
@@ -374,7 +376,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_close_pasa_a_pendiente_de_aprobacion_y_asigna_numero(): void
     {
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
         $headers = $this->authHeaders($token);
 
         $response = $this->withHeaders($headers)
@@ -388,7 +390,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_close_rechaza_doble_cierre(): void
     {
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
@@ -397,7 +399,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_editar_observacion_de_arqueo_ya_cerrado_es_rechazado(): void
     {
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
@@ -425,7 +427,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     {
         AdminContDailyCashCount::create(['fecha' => now()->subDay()->toDateString()]);
 
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
@@ -438,7 +440,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_lista_solo_cerrados_con_contador_de_pendientes(): void
     {
-        $token   = $this->loginAsFelix();
+        $token = $this->loginAsFelix();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);

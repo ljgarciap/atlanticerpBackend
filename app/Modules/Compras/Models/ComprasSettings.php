@@ -9,35 +9,35 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Fila única (id=1) de parámetros configurables del módulo Compras — `low_rating_threshold`
- * (REQ-121/122) y `mark_approver_user_id` (SCRUM-206: quién es "Mark" para el gate de
+ * (REQ-121/122) y `primary_approver_user_id` (SCRUM-206: quién es "Mark" para el gate de
  * aprobación de REQ-143, configurable en vez de hardcodeado por email). Mismo patrón que
  * App\Modules\VentasDiseno\Models\ReportSettings::current().
  *
  * `zona_libre_provider_id` (SCRUM-433, Bloque B3) — el `Provider` fijo "Zona Libre de Colón" al
  * que Bodega genera órdenes directamente, sembrado por `ZonaLibreProviderSeeder`. Mismo criterio
- * que `mark_approver_user_id`: nunca hardcodeado, siempre configurable.
+ * que `primary_approver_user_id`: nunca hardcodeado, siempre configurable.
  *
  * `similarity_weight_*`/`similarity_other_category_penalty`/`similarity_min_threshold` (Lote 4,
  * SCRUM-246, 2026-08-17) — pesos y umbral de la fórmula de "% de similitud" del método "Buscar en
  * catálogo" de Comparación de Referencias, ver `SubstituteSimilarityService`.
  *
- * @property int      $id
- * @property float    $low_rating_threshold
- * @property int|null $mark_approver_user_id
- * @property int      $claim_attention_days
- * @property float    $replacement_margin_threshold
+ * @property int $id
+ * @property float $low_rating_threshold
+ * @property int|null $primary_approver_user_id
+ * @property int $claim_attention_days
+ * @property float $replacement_margin_threshold
  * @property int|null $zona_libre_provider_id
- * @property float    $similarity_weight_text
- * @property float    $similarity_weight_price
- * @property float    $similarity_weight_margin
- * @property float    $similarity_other_category_penalty
- * @property float    $similarity_min_threshold
+ * @property float $similarity_weight_text
+ * @property float $similarity_weight_price
+ * @property float $similarity_weight_margin
+ * @property float $similarity_other_category_penalty
+ * @property float $similarity_min_threshold
  */
 class ComprasSettings extends Model
 {
     /** @var list<string> */
     protected $fillable = [
-        'low_rating_threshold', 'mark_approver_user_id', 'claim_attention_days',
+        'low_rating_threshold', 'primary_approver_user_id', 'claim_attention_days',
         'replacement_margin_threshold', 'zona_libre_provider_id',
         'similarity_weight_text', 'similarity_weight_price', 'similarity_weight_margin',
         'similarity_other_category_penalty', 'similarity_min_threshold',
@@ -47,16 +47,16 @@ class ComprasSettings extends Model
     protected function casts(): array
     {
         return [
-            'low_rating_threshold'          => 'float',
-            'mark_approver_user_id'         => 'integer',
-            'claim_attention_days'          => 'integer',
-            'replacement_margin_threshold'  => 'float',
-            'zona_libre_provider_id'        => 'integer',
-            'similarity_weight_text'                 => 'float',
-            'similarity_weight_price'                => 'float',
-            'similarity_weight_margin'                => 'float',
-            'similarity_other_category_penalty'       => 'float',
-            'similarity_min_threshold'                => 'float',
+            'low_rating_threshold' => 'float',
+            'primary_approver_user_id' => 'integer',
+            'claim_attention_days' => 'integer',
+            'replacement_margin_threshold' => 'float',
+            'zona_libre_provider_id' => 'integer',
+            'similarity_weight_text' => 'float',
+            'similarity_weight_price' => 'float',
+            'similarity_weight_margin' => 'float',
+            'similarity_other_category_penalty' => 'float',
+            'similarity_min_threshold' => 'float',
         ];
     }
 

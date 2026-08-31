@@ -8,7 +8,7 @@ use App\Modules\AdminCont\Http\Requests\UpdateFiscalSettingsRequest;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use Illuminate\Http\JsonResponse;
 
-/** SCRUM-632/633/634/637 (REQ-555/556/557/560) — Configuración Fiscal, gateada por EnsureIsMarkApprover sobre toda la ruta. */
+/** SCRUM-632/633/634/637 (REQ-555/556/557/560) — Configuración Fiscal, gateada por EnsureIsPrimaryApprover sobre toda la ruta. */
 class AdminContFiscalSettingsController
 {
     public function show(): JsonResponse

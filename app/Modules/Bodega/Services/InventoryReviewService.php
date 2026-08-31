@@ -40,7 +40,7 @@ final class InventoryReviewService
     use ChangesOrderStage;
 
     /**
-     * `role_key` de Compras que debe reordenar el producto (Yirena Teng, ver `BusinessRoleUserSeeder`)
+     * `role_key` de Compras que debe reordenar el producto (Lider Compras Test, ver `BusinessRoleUserSeeder`)
      * — mismo criterio que `OrderService::BODEGA_LEAD_ROLE_KEY`: es un ROL, no una persona
      * puntual configurable.
      */
@@ -73,7 +73,7 @@ final class InventoryReviewService
      * al mismo `CAN_OPERATE` que `assignPicker` — el Picker (`ayudante_general_bodega`) y el
      * Repartidor (`transporte`) NO deberían poder resolverla aunque tengan `bodega.write`.
      *
-     * @param list<array{order_item_id: int, found: bool, location?: string|null}> $decisions
+     * @param  list<array{order_item_id: int, found: bool, location?: string|null}>  $decisions
      * @return array{review: Order, newOrder: Order|null}
      */
     public function resolve(Order $review, array $decisions, User $actor): array
@@ -114,22 +114,22 @@ final class InventoryReviewService
                 );
             }
 
-            $foundIds    = [];
+            $foundIds = [];
             $notFoundIds = [];
 
             foreach ($decisions as $d) {
                 /** @var OrderItem $item */
                 $item = $locked->items()->lockForUpdate()->findOrFail($d['order_item_id']);
                 if ($d['found']) {
-                    // Corrección 2026-08-11 (Daniela Amaya, SCRUM-388) — `location_snapshot` es la
+                    // Corrección 2026-08-11 (Gerencia Test, SCRUM-388) — `location_snapshot` es la
                     // ubicación ORIGINAL del producto y nunca se sobrescribe desde este flujo; la
                     // ubicación nueva/confirmada durante la revisión vive en `found_location`
                     // (+ quién/cuándo la confirmó), ver docblock de `OrderItem::foundNote()`.
                     $item->update([
-                        'found_at_location'     => true,
-                        'found_location'        => $d['location'] ?? null,
+                        'found_at_location' => true,
+                        'found_location' => $d['location'] ?? null,
                         'found_confirmed_by_id' => $actor->id,
-                        'found_confirmed_at'    => now(),
+                        'found_confirmed_at' => now(),
                     ]);
                     $foundIds[] = $item->id;
                 } else {
@@ -183,43 +183,43 @@ final class InventoryReviewService
     private function splitFoundItemsIntoNewOrder(Order $review, array $foundIds, User $actor): Order
     {
         $newOrder = Order::create([
-            'order_number'            => $review->order_number,
-            'pipeline_card_id'        => $review->pipeline_card_id,
-            'order_type'              => Order::ORDER_TYPE_PEDIDO,
-            'stage'                   => Order::STAGE_EN_PICKING,
+            'order_number' => $review->order_number,
+            'pipeline_card_id' => $review->pipeline_card_id,
+            'order_type' => Order::ORDER_TYPE_PEDIDO,
+            'stage' => Order::STAGE_EN_PICKING,
             // family_id fijado ACÁ, no en un update() posterior — ver docblock de FamilyService::attach().
-            'family_id'               => $review->familyRootId(),
-            'assistant_id'            => $review->assistant_id,
-            'picker_id'               => $review->picker_id,
+            'family_id' => $review->familyRootId(),
+            'assistant_id' => $review->assistant_id,
+            'picker_id' => $review->picker_id,
             'committed_delivery_date' => $review->committed_delivery_date,
-            'customer_name'           => $review->customer_name,
-            'customer_contact'        => $review->customer_contact,
-            'delivery_address'        => $review->delivery_address,
+            'customer_name' => $review->customer_name,
+            'customer_contact' => $review->customer_contact,
+            'delivery_address' => $review->delivery_address,
         ]);
 
         foreach ($review->items()->whereIn('id', $foundIds)->get() as $foundItem) {
             $newOrder->items()->create([
-                'catalog_product_id'     => $foundItem->catalog_product_id,
-                'reference_snapshot'     => $foundItem->reference_snapshot,
-                'description_snapshot'   => $foundItem->description_snapshot,
-                'qty_requested'          => $foundItem->qty_requested,
-                'location_snapshot'      => $foundItem->location_snapshot,
-                'found_at_location'      => true,
+                'catalog_product_id' => $foundItem->catalog_product_id,
+                'reference_snapshot' => $foundItem->reference_snapshot,
+                'description_snapshot' => $foundItem->description_snapshot,
+                'qty_requested' => $foundItem->qty_requested,
+                'location_snapshot' => $foundItem->location_snapshot,
+                'found_at_location' => true,
                 // Corrección 2026-08-11 (SCRUM-388) — la nueva tarjeta "En picking" hereda la
                 // ubicación confirmada durante la revisión, para que el picker la use como
                 // referencia real (ver criterio de aceptación "al volver a hacer el picking, el
                 // picker puede utilizar Encontrado en").
-                'found_location'         => $foundItem->found_location,
-                'found_confirmed_by_id'  => $foundItem->found_confirmed_by_id,
-                'found_confirmed_at'     => $foundItem->found_confirmed_at,
+                'found_location' => $foundItem->found_location,
+                'found_confirmed_by_id' => $foundItem->found_confirmed_by_id,
+                'found_confirmed_at' => $foundItem->found_confirmed_at,
             ]);
             $foundItem->delete();
         }
 
         OrderStageHistory::create([
-            'order_id'   => $newOrder->id,
+            'order_id' => $newOrder->id,
             'from_stage' => null,
-            'to_stage'   => Order::STAGE_EN_PICKING,
+            'to_stage' => Order::STAGE_EN_PICKING,
             'changed_by' => $actor->id,
             'created_at' => now(),
         ]);
@@ -263,7 +263,7 @@ final class InventoryReviewService
             audience: array_values($audience),
             content: [
                 'subject' => "Pedido {$order->order_number} sin stock disponible",
-                'body'    => "El pedido {$order->order_number} quedó sin stock tras la revisión de inventario "
+                'body' => "El pedido {$order->order_number} quedó sin stock tras la revisión de inventario "
                     .'en Bodega — requiere reordenar el producto (Compras) e informar al cliente del retraso '
                     .'(Ventas & Diseño).',
             ],

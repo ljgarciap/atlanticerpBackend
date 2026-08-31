@@ -20,17 +20,17 @@ use Tests\Feature\FeatureTestCase;
  */
 class ServiciosPermissionMatrixTest extends FeatureTestCase
 {
-    private const SUPERADMIN = 'andres.loi@atlantic.com.pa';
+    private const SUPERADMIN = 'superadmin@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO = 'carlos@atlantic.com.pa';
+    private const TECNICO = 'tecnicoservicios@test.com';
 
-    private const GARANTIAS = 'garantias@atlantic.com.pa';
+    private const GARANTIAS = 'garantiasservicios@test.com';
 
-    private const VENDEDOR = 'milena.e@grupolafayette.com';
+    private const VENDEDOR = 'vendedordisenador@test.com';
 
     protected function setUp(): void
     {
@@ -228,7 +228,7 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
 
     public function test_lider_compras_y_lider_bodega_no_ganan_ningun_permiso_de_servicios(): void
     {
-        foreach ([['lider_compras', 'gerencia2@atlantic.com.pa'], ['lider_bodega', 'almacen@atlantic.com.pa']] as [$role, $email]) {
+        foreach ([['lider_compras', 'lidercompras@test.com'], ['lider_bodega', 'liderbodega@test.com']] as [$role, $email]) {
             $token = $this->tokenFor($email, $role);
             $this->withHeaders($this->authHeaders($token))
                 ->getJson('/api/servicios/settings')->assertStatus(403);

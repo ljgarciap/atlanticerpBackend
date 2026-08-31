@@ -16,11 +16,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class ExternalTechnicianBatch5Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa';
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
 
-    private const MANAGEMENT = 'daniela@atlantic.com.pa';
+    private const MANAGEMENT = 'gerencia@test.com';
 
     protected function setUp(): void
     {
@@ -35,8 +35,8 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/external-technicians', [
-                'nombre'     => 'Pedro Gómez',
-                'empresa'    => 'Gómez Instalaciones',
+                'nombre' => 'Pedro Gómez',
+                'empresa' => 'Gómez Instalaciones',
                 'tarifa_dia' => 28,
             ])
             ->assertStatus(201);
@@ -101,7 +101,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
      */
     public function test_vendedor_disenador_no_puede_ver_tecnicos_externos(): void
     {
-        $vendedorToken = $this->loginAs('milena.e@grupolafayette.com', 'milena.e@grupolafayette.com', 'vendedor_disenador');
+        $vendedorToken = $this->loginAs('vendedordisenador@test.com', 'vendedordisenador@test.com', 'vendedor_disenador');
 
         $this->withHeaders($this->authHeaders($vendedorToken))
             ->getJson('/api/servicios/external-technicians')
@@ -111,7 +111,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
     /** RN5 (REQ-263) — garantias_servicios (también técnico interno) conserva el acceso de solo consulta. */
     public function test_garantias_servicios_puede_listar(): void
     {
-        $garantiasToken = $this->loginAs('garantias@atlantic.com.pa', 'garantias@atlantic.com.pa', 'garantias_servicios');
+        $garantiasToken = $this->loginAs('garantiasservicios@test.com', 'garantiasservicios@test.com', 'garantias_servicios');
 
         $this->withHeaders($this->authHeaders($garantiasToken))
             ->getJson('/api/servicios/external-technicians')
@@ -386,8 +386,8 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
     public function test_active_projects_count_es_cero_sin_asignaciones_reales(): void
     {
         $service = app(ExternalTechnicianService::class);
-        $token   = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
-        $id      = $this->withHeaders($this->authHeaders($token))
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $id = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/external-technicians', [
                 'nombre' => 'X', 'empresa' => 'Y', 'tarifa_dia' => 10,
             ])->assertStatus(201)->json('id');

@@ -81,13 +81,13 @@ class DispatchConcurrencyTest extends FeatureTestCase
         $this->warehouseId = $warehouse->id;
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'quantity' => 20]);
 
-        $courierId = (int) DB::table('atlantic_auth.users')->where('email', 'arrochagary@gmail.com')->value('id');
+        $courierId = (int) DB::table('atlantic_auth.users')->where('email', 'transporte@test.com')->value('id');
 
         $order = Order::create([
             'order_number' => 'PED-CONC-'.random_int(10000, 999999),
-            'order_type'   => Order::ORDER_TYPE_PEDIDO,
-            'stage'        => Order::STAGE_POR_DESPACHAR,
-            'courier_id'   => $courierId,
+            'order_type' => Order::ORDER_TYPE_PEDIDO,
+            'stage' => Order::STAGE_POR_DESPACHAR,
+            'courier_id' => $courierId,
             'invoice_ready' => true,
             'customer_name' => 'Cliente concurrencia',
         ]);
@@ -100,7 +100,7 @@ class DispatchConcurrencyTest extends FeatureTestCase
 
         $snippet = <<<'PHP'
 $order = \App\Modules\Bodega\Models\Order::find(__ORDER_ID__);
-$actor = \App\Models\User::where('email', 'almacen@atlantic.com.pa')->first();
+$actor = \App\Models\User::where('email', 'liderbodega@test.com')->first();
 try {
     app(\App\Modules\Bodega\Services\DeliveryService::class)->dispatch($order, $actor);
     file_put_contents($outFile, 'OK');
@@ -112,12 +112,12 @@ PHP;
 
         $results = $this->runConcurrently([$snippet, $snippet]);
 
-        $okCount       = count(array_filter($results, fn (string $r) => $r === 'OK'));
+        $okCount = count(array_filter($results, fn (string $r) => $r === 'OK'));
         $rejectedCount = count(array_filter($results, fn (string $r) => str_starts_with($r, 'REJECTED:')));
 
         $this->assertSame(2, count($results), 'Se esperaban 2 resultados (uno por proceso).');
-        $this->assertSame(1, $okCount, "Exactamente 1 de los 2 despachos concurrentes debe tener éxito. Resultados: ".implode(' | ', $results));
-        $this->assertSame(1, $rejectedCount, "El otro debe ver el pedido ya despachado y rechazar. Resultados: ".implode(' | ', $results));
+        $this->assertSame(1, $okCount, 'Exactamente 1 de los 2 despachos concurrentes debe tener éxito. Resultados: '.implode(' | ', $results));
+        $this->assertSame(1, $rejectedCount, 'El otro debe ver el pedido ya despachado y rechazar. Resultados: '.implode(' | ', $results));
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 

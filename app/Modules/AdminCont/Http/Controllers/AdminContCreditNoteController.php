@@ -17,12 +17,13 @@ use App\Modules\AdminCont\Services\CreditNoteService;
 use App\Modules\Bodega\Exceptions\CustomerReturnException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * Batch 10 de Admin&Cont (SCRUM-553→558, REQ-476→481) — apertura de Notas Crédito y Devoluciones
  * (solo lectura). Batch 11 (SCRUM-559→564, REQ-482→487) agrega `facturas()` y `store()` — el
  * submit real. Batch 13 (SCRUM-571→574, REQ-494→497) agrega `decision()` (exclusivo Mark, ver
- * middleware `mark_only` en routes/admin-contab.php), `comprobante()` y `pdf()`. Ver docblock de
+ * middleware `primary_approver_only` en routes/admin-contab.php), `comprobante()` y `pdf()`. Ver docblock de
  * `CreditNoteService::register()`/`decide()` para el alcance exacto de cada uno.
  */
 class AdminContCreditNoteController
@@ -76,17 +77,17 @@ class AdminContCreditNoteController
         try {
             $note = $this->creditNotes->register(
                 data: [
-                    'master_client_id'         => (int) $request->validated('master_client_id'),
-                    'cliente'                  => (string) $request->validated('cliente'),
-                    'tipo'                     => (string) $request->validated('tipo'),
-                    'subtipo_anulacion'        => $request->validated('subtipo_anulacion'),
-                    'factura_origen_id'        => (int) $request->validated('factura_origen_id'),
-                    'monto'                    => $request->validated('monto') !== null ? (float) $request->validated('monto') : null,
-                    'motivo'                   => (string) $request->validated('motivo'),
-                    'resultado'                => $request->validated('resultado'),
+                    'master_client_id' => (int) $request->validated('master_client_id'),
+                    'cliente' => (string) $request->validated('cliente'),
+                    'tipo' => (string) $request->validated('tipo'),
+                    'subtipo_anulacion' => $request->validated('subtipo_anulacion'),
+                    'factura_origen_id' => (int) $request->validated('factura_origen_id'),
+                    'monto' => $request->validated('monto') !== null ? (float) $request->validated('monto') : null,
+                    'motivo' => (string) $request->validated('motivo'),
+                    'resultado' => $request->validated('resultado'),
                     'cuenta_bancaria_salida_id' => $request->validated('cuenta_bancaria_salida_id') !== null ? (int) $request->validated('cuenta_bancaria_salida_id') : null,
                     'mercancia_regresa_bodega' => $request->has('mercancia_regresa_bodega') ? $request->boolean('mercancia_regresa_bodega') : null,
-                    'devolucion_bodega_id'     => $request->validated('devolucion_bodega_id') !== null ? (int) $request->validated('devolucion_bodega_id') : null,
+                    'devolucion_bodega_id' => $request->validated('devolucion_bodega_id') !== null ? (int) $request->validated('devolucion_bodega_id') : null,
                 ],
                 comprobante: $request->file('comprobante'),
                 actor: $actor,
@@ -105,12 +106,12 @@ class AdminContCreditNoteController
     public function previewCorreccion(PreviewCreditNoteCorreccionRequest $request): JsonResponse
     {
         $result = $this->creditNotes->previewCorreccion([
-            'master_client_id'                => (int) $request->validated('master_client_id'),
-            'factura_origen_id'                => (int) $request->validated('factura_origen_id'),
-            'motivo_correccion'                => (string) $request->validated('motivo_correccion'),
-            'nuevo_tratamiento_itbms_rate_id'  => $request->validated('nuevo_tratamiento_itbms_rate_id') !== null ? (int) $request->validated('nuevo_tratamiento_itbms_rate_id') : null,
-            'nueva_fecha'                       => $request->validated('nueva_fecha'),
-            'motivo'                            => (string) $request->validated('motivo'),
+            'master_client_id' => (int) $request->validated('master_client_id'),
+            'factura_origen_id' => (int) $request->validated('factura_origen_id'),
+            'motivo_correccion' => (string) $request->validated('motivo_correccion'),
+            'nuevo_tratamiento_itbms_rate_id' => $request->validated('nuevo_tratamiento_itbms_rate_id') !== null ? (int) $request->validated('nuevo_tratamiento_itbms_rate_id') : null,
+            'nueva_fecha' => $request->validated('nueva_fecha'),
+            'motivo' => (string) $request->validated('motivo'),
         ]);
 
         return response()->json($result);
@@ -126,12 +127,12 @@ class AdminContCreditNoteController
 
         $note = $this->creditNotes->registerCorreccion(
             data: [
-                'master_client_id'                => (int) $request->validated('master_client_id'),
-                'factura_origen_id'                => (int) $request->validated('factura_origen_id'),
-                'motivo_correccion'                => (string) $request->validated('motivo_correccion'),
-                'nuevo_tratamiento_itbms_rate_id'  => $request->validated('nuevo_tratamiento_itbms_rate_id') !== null ? (int) $request->validated('nuevo_tratamiento_itbms_rate_id') : null,
-                'nueva_fecha'                       => $request->validated('nueva_fecha'),
-                'motivo'                            => (string) $request->validated('motivo'),
+                'master_client_id' => (int) $request->validated('master_client_id'),
+                'factura_origen_id' => (int) $request->validated('factura_origen_id'),
+                'motivo_correccion' => (string) $request->validated('motivo_correccion'),
+                'nuevo_tratamiento_itbms_rate_id' => $request->validated('nuevo_tratamiento_itbms_rate_id') !== null ? (int) $request->validated('nuevo_tratamiento_itbms_rate_id') : null,
+                'nueva_fecha' => $request->validated('nueva_fecha'),
+                'motivo' => (string) $request->validated('motivo'),
             ],
             comprobante: $request->file('comprobante'),
             actor: $actor,
@@ -144,10 +145,10 @@ class AdminContCreditNoteController
     public function index(Request $request): JsonResponse
     {
         $rows = $this->creditNotes->index([
-            'search'  => $request->query('search'),
+            'search' => $request->query('search'),
             'cliente' => $request->query('cliente') !== null ? (int) $request->query('cliente') : null,
-            'tipo'    => $request->query('tipo'),
-            'estado'  => $request->query('estado'),
+            'tipo' => $request->query('tipo'),
+            'estado' => $request->query('estado'),
         ]);
 
         return response()->json(['data' => $rows]);
@@ -167,7 +168,7 @@ class AdminContCreditNoteController
         // un 403 claro al intentar decidir, nunca un gap de seguridad, pero sí un patrón
         // inconsistente respecto del gemelo REQ-448 en Facturación —
         // `puede_decidir_incobrable`/`AdminContInvoiceController::detail()` — que sí resuelve el
-        // actor acá mismo). Mismo criterio: `superadmin.all` bypassa, igual que `mark_only`.
+        // actor acá mismo). Mismo criterio: `superadmin.all` bypassa, igual que `primary_approver_only`.
         /** @var array{sub?: int, permissions?: mixed}|null $payload */
         $payload = $request->attributes->get('jwt');
 
@@ -176,10 +177,10 @@ class AdminContCreditNoteController
             ? array_values(array_filter($payload['permissions'], 'is_string'))
             : [];
 
-        $markApproverId = AdminContFiscalSettings::current()->mark_approver_user_id;
-        $isMark         = in_array('superadmin.all', $permissions, true)
-            || ($payload !== null && isset($payload['sub']) && $markApproverId !== null
-                && (int) $payload['sub'] === $markApproverId);
+        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
+        $isMark = in_array('superadmin.all', $permissions, true)
+            || ($payload !== null && isset($payload['sub']) && $primaryApproverId !== null
+                && (int) $payload['sub'] === $primaryApproverId);
 
         $result['puede_aprobar_rechazar'] = $result['puede_aprobar_rechazar'] && $isMark;
 
@@ -188,7 +189,7 @@ class AdminContCreditNoteController
 
     /**
      * PUT /api/admin-contab/notas-credito/{creditNote}/decision — REQ-494, exclusivo Mark (gate
-     * real: middleware `mark_only` sobre esta ruta, ver routes/admin-contab.php).
+     * real: middleware `primary_approver_only` sobre esta ruta, ver routes/admin-contab.php).
      */
     public function decision(int $creditNote, CreditNoteDecisionRequest $request): JsonResponse
     {
@@ -226,7 +227,7 @@ class AdminContCreditNoteController
     }
 
     /** GET /api/admin-contab/notas-credito/{creditNote}/pdf — REQ-496, documento formal. */
-    public function pdf(int $creditNote): \Illuminate\Http\Response
+    public function pdf(int $creditNote): Response
     {
         $detail = $this->creditNotes->show($creditNote);
         abort_if($detail === null, 404, 'Nota de crédito no encontrada.');
@@ -252,23 +253,23 @@ class AdminContCreditNoteController
     private function present(AdminContCreditNote $note): array
     {
         return [
-            'id'                        => $note->id,
-            'numero'                    => $note->numero,
-            'master_client_id'          => $note->master_client_id,
-            'cliente'                   => $note->cliente,
-            'tipo'                      => $note->tipo,
-            'subtipo_anulacion'         => $note->subtipo_anulacion,
-            'factura_origen_id'         => $note->factura_origen_id,
-            'monto'                     => $note->monto,
-            'subtotal'                  => $note->subtotal,
-            'itbms'                     => $note->itbms,
-            'motivo'                    => $note->motivo,
-            'resultado'                 => $note->resultado,
+            'id' => $note->id,
+            'numero' => $note->numero,
+            'master_client_id' => $note->master_client_id,
+            'cliente' => $note->cliente,
+            'tipo' => $note->tipo,
+            'subtipo_anulacion' => $note->subtipo_anulacion,
+            'factura_origen_id' => $note->factura_origen_id,
+            'monto' => $note->monto,
+            'subtotal' => $note->subtotal,
+            'itbms' => $note->itbms,
+            'motivo' => $note->motivo,
+            'resultado' => $note->resultado,
             'cuenta_bancaria_salida_id' => $note->cuenta_bancaria_salida_id,
-            'estado'                    => $note->estado,
-            'tiene_comprobante'         => $note->comprobante_url !== null,
-            'fecha'                     => $note->fecha->toDateString(),
-            'created_at'                => $note->created_at->toIso8601String(),
+            'estado' => $note->estado,
+            'tiene_comprobante' => $note->comprobante_url !== null,
+            'fecha' => $note->fecha->toDateString(),
+            'created_at' => $note->created_at->toIso8601String(),
         ];
     }
 

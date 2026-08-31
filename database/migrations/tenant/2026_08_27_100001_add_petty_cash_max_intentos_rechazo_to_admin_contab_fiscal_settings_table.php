@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
  * Batch 21 (SCRUM-618→623, REQ-542) — Senior Review, hallazgo #5: la regla de "2 intentos" no
  * puede ser un literal `2` en el código (regla dura del workspace, ver CLAUDE.md raíz — "Nunca
  * hardcodear umbrales/márgenes/porcentajes de negocio"). Mismo patrón exacto que
- * `petty_cash_balance`/`mark_approver_user_id` ya tienen en este singleton: editable por Mark vía
+ * `petty_cash_balance`/`primary_approver_user_id` ya tienen en este singleton: editable por Mark vía
  * `PUT /fiscal-settings`, sin deploy para cambiarlo.
  */
 return new class extends TenantSchemaMigration

@@ -85,7 +85,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     }
 
     /**
-     * Lote 4 (SCRUM-246, comentario de Daniela Amaya 2026-08-16) — método "Buscar en catálogo" de
+     * Lote 4 (SCRUM-246, comentario de Gerencia Test 2026-08-16) — método "Buscar en catálogo" de
      * Comparación de Referencias: `original_catalog_product_id` decora los resultados con
      * `similarity_percent` real, con la fórmula 50% texto + 30% precio + 20% margen.
      */
@@ -133,7 +133,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $withoutOriginal = $this->withHeaders($this->authHeaders($token))
-            ->getJson("/api/compras/products?search=Bombillo")
+            ->getJson('/api/compras/products?search=Bombillo')
             ->assertStatus(200);
         $withOriginal = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?search=Bombillo&original_catalog_product_id={$original->id}")

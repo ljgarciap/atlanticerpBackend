@@ -10,7 +10,7 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-641 (REQ-564) — Contactos generales por área. */
 class AdminContContactControllerTest extends FeatureTestCase
 {
-    private const MARK_EMAIL = 'mbekhar@atlantic.com.pa';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -20,7 +20,7 @@ class AdminContContactControllerTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_store_crea_un_contacto_activo(): void
@@ -29,8 +29,8 @@ class AdminContContactControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/contacts', [
-                'area'     => 'Soporte',
-                'email'    => 'soporte@atlantic.com.pa',
+                'area' => 'Soporte',
+                'email' => 'soporte@atlantic.com.pa',
                 'telefono' => '+507 6000-0000',
             ])
             ->assertStatus(201);

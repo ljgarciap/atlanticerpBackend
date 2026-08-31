@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
  * Batch 22 de Admin&Cont (SCRUM-643→647, REQ-567) — CRUD de los tramos de la comisión de Felix
  * por gestión de cartera +90 días. Mismo patrón que `AdminContInternalCommissionController::
  * tiers/storeTier/updateTier/destroyTier` (Batch 14) — lectura para el roster amplio de Reportes,
- * escritura exclusiva de Mark (`mark_only` en routes/admin-contab.php).
+ * escritura exclusiva de Mark (`primary_approver_only` en routes/admin-contab.php).
  */
 class AdminContCarteraCommissionController
 {

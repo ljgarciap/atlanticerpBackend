@@ -83,10 +83,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 3, 'reason' => 'danado_defectuoso'],
             ],
         ]);
@@ -119,10 +119,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 3, 'reason' => 'danado_defectuoso'],
             ],
         ]);
@@ -148,10 +148,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 3, 'reason' => 'danado_defectuoso'],
             ],
         ]);
@@ -172,10 +172,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 2, 'reason' => 'otra', 'reason_detail' => 'Motivo particular'],
             ],
         ]);
@@ -202,10 +202,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'items'         => [],
+            'items' => [],
         ])->assertStatus(422);
     }
 
@@ -219,10 +219,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 5, 'reason' => 'danado_defectuoso'],
             ],
         ]);
@@ -250,10 +250,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
 
         // primera devolución: pide 2 de las 3 entregadas — debe pasar.
         $first = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 2, 'reason' => 'danado_defectuoso'],
             ],
         ]);
@@ -262,10 +262,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         // segunda devolución: pide 2 más (solo queda 1 disponible) — debe rechazarse, acumulado
         // excede lo entregado (2 + 2 = 4 > 3).
         $second = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Otro Contacto',
+            'order_id' => $order->id,
+            'contact_name' => 'Otro Contacto',
             'contact_phone' => '6000-5678',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 2, 'reason' => 'excedente'],
             ],
         ]);
@@ -277,10 +277,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         // una tercera pidiendo exactamente la 1 unidad restante SÍ debe pasar (no es un bloqueo
         // total del ítem, solo del excedente).
         $third = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Tercer Contacto',
+            'order_id' => $order->id,
+            'contact_name' => 'Tercer Contacto',
             'contact_phone' => '6000-9999',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 1, 'reason' => 'excedente'],
             ],
         ]);
@@ -300,10 +300,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $first = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 3, 'reason' => 'danado_defectuoso'],
             ],
         ]);
@@ -313,10 +313,10 @@ class CustomerReturnControllerTest extends FeatureTestCase
         CustomerReturn::find($first->json('id'))->update(['status' => CustomerReturn::STATUS_RECHAZADA]);
 
         $second = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
-            'order_id'      => $order->id,
-            'contact_name'  => 'Otro Contacto',
+            'order_id' => $order->id,
+            'contact_name' => 'Otro Contacto',
             'contact_phone' => '6000-5678',
-            'items'         => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 3, 'reason' => 'excedente'],
             ],
         ]);
@@ -334,11 +334,11 @@ class CustomerReturnControllerTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/returns', [
             'order_id' => $order->id,
-            'items'    => [
+            'items' => [
                 ['order_item_id' => $item->id, 'qty_requested' => 3, 'reason' => 'danado_defectuoso'],
             ],
         ])->assertStatus(422)
-          ->assertJsonValidationErrors(['contact_name', 'contact_phone']);
+            ->assertJsonValidationErrors(['contact_name', 'contact_phone']);
     }
 
     /** REQ-408 — habilita el paso siguiente del ciclo. */
@@ -363,7 +363,7 @@ class CustomerReturnControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-478 (rebote de Daniela Amaya 2026-08-16) — subir el documento funcionaba pero no
+     * SCRUM-478 (rebote de Gerencia Test 2026-08-16) — subir el documento funcionaba pero no
      * había ninguna forma de verlo/descargarlo después. GET presigna la key ya subida.
      */
     public function test_signed_document_url_devuelve_presigned_url_del_archivo_ya_subido(): void
@@ -479,7 +479,7 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $warehouse = Warehouse::where('name', 'Bodega Central')->first();
         $this->setStock($product, 2, 'Bodega Central');
 
-        // Solo bodega.write, SIN bodega.approve ni ComprasSettings::mark_approver_user_id —
+        // Solo bodega.write, SIN bodega.approve ni ComprasSettings::primary_approver_user_id —
         // a diferencia de Reubicación/Ajuste, rechazar una devolución no exige a Mark.
         $this->grantBodegaPermissions('designer@atlantic.test', ['bodega.read', 'bodega.write']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -560,11 +560,11 @@ class CustomerReturnControllerTest extends FeatureTestCase
 
         $customerReturn = CustomerReturn::create([
             'return_number' => 'DEV-2026-'.random_int(1000, 999999),
-            'order_id'      => $order->id,
-            'status'        => CustomerReturn::STATUS_PENDIENTE,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'status' => CustomerReturn::STATUS_PENDIENTE,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'created_by'    => $this->userIdByEmail('designer@atlantic.test'),
+            'created_by' => $this->userIdByEmail('designer@atlantic.test'),
         ]);
         $customerReturn->lines()->create([
             'order_item_id' => $item->id, 'reference_snapshot' => $item->reference_snapshot,
@@ -597,7 +597,7 @@ class CustomerReturnControllerTest extends FeatureTestCase
     }
 
     /**
-     * @param array<string, mixed> $itemOverrides
+     * @param  array<string, mixed>  $itemOverrides
      */
     private function makeCustomerReturn(array $itemOverrides = []): CustomerReturn
     {
@@ -610,19 +610,19 @@ class CustomerReturnControllerTest extends FeatureTestCase
 
         $customerReturn = CustomerReturn::create([
             'return_number' => 'DEV-2026-'.random_int(1000, 999999),
-            'order_id'      => $order->id,
-            'status'        => CustomerReturn::STATUS_PENDIENTE,
-            'contact_name'  => 'Ana Pérez',
+            'order_id' => $order->id,
+            'status' => CustomerReturn::STATUS_PENDIENTE,
+            'contact_name' => 'Ana Pérez',
             'contact_phone' => '6000-1234',
-            'created_by'    => $creatorId,
+            'created_by' => $creatorId,
         ]);
 
         $customerReturn->lines()->create([
-            'order_item_id'         => $item->id,
-            'reference_snapshot'    => $item->reference_snapshot,
-            'description_snapshot'  => $item->description_snapshot,
-            'qty_requested'         => min(3, $item->qty_delivered),
-            'reason'                => 'danado_defectuoso',
+            'order_item_id' => $item->id,
+            'reference_snapshot' => $item->reference_snapshot,
+            'description_snapshot' => $item->description_snapshot,
+            'qty_requested' => min(3, $item->qty_delivered),
+            'reason' => 'danado_defectuoso',
         ]);
 
         return $customerReturn->fresh('lines') ?? $customerReturn;

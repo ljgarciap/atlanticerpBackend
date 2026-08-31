@@ -53,7 +53,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     {
         $this->grantBodega($email, ['bodega.approve']);
         $markId = (int) User::where('email', $email)->value('id');
-        ComprasSettings::current()->update(['mark_approver_user_id' => $markId]);
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
         return $markId;
     }
@@ -97,7 +97,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // SCRUM-797 (rebote de Daniela Amaya 2026-08-27) — store() detecta conflicto por
+    // SCRUM-797 (rebote de Gerencia Test 2026-08-27) — store() detecta conflicto por
     // PRODUCTO+bodega, no por bodega completa (revierte la versión del 2026-08-26).
     // ─────────────────────────────────────────────────────────────────
 
@@ -853,7 +853,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-463 (rebote de Daniela Amaya 2026-08-14) — `can_approve` es lo que el frontend usa
+     * SCRUM-463 (rebote de Gerencia Test 2026-08-14) — `can_approve` es lo que el frontend usa
      * para OCULTAR Aprobar/Rechazar por completo (no solo el candado decorativo de antes).
      */
     public function test_index_expone_can_approve_true_para_mark(): void
@@ -1025,8 +1025,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 10, 'diferencia' => 0,
         ]);
 
-        $this->grantBodega('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodega('liderbodega@test.com', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/apply");
@@ -1061,8 +1061,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION,
         ]);
 
-        $this->grantBodega('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodega('liderbodega@test.com', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/apply")
@@ -1086,8 +1086,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'cantidad_sistema' => 10, 'cantidad_contada' => 13, 'diferencia' => 3,
         ]);
 
-        $this->grantBodega('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodega('liderbodega@test.com', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson("/api/bodega/general-counts/{$generalCount->id}/apply")->assertStatus(200);
@@ -1099,7 +1099,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-466 (rebote de Daniela Amaya 2026-08-14) — RN1: "Realizar ajuste" es exclusivo del
+     * SCRUM-466 (rebote de Gerencia Test 2026-08-14) — RN1: "Realizar ajuste" es exclusivo del
      * Líder de Bodega. Mark (con `bodega.approve`, el mismo permiso que ya usa para aprobar el
      * conteo) NO debe poder aplicar el ajuste — su rol termina en aprobar/rechazar.
      */
@@ -1123,11 +1123,11 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $this->reMakeCurrent();
         $this->assertNull(GeneralCountRequest::find($generalCount->id)->aplicado_at);
-        $this->assertSame($markId, ComprasSettings::current()->mark_approver_user_id);
+        $this->assertSame($markId, ComprasSettings::current()->primary_approver_user_id);
     }
 
     /**
-     * SCRUM-466 (rebote de Daniela Amaya 2026-08-14) — otros perfiles de Bodega (Asistentes,
+     * SCRUM-466 (rebote de Gerencia Test 2026-08-14) — otros perfiles de Bodega (Asistentes,
      * Operativos) tampoco deben poder aplicar el ajuste, únicamente el Líder de Bodega.
      */
     public function test_apply_siendo_asistente_bodega_retorna_403(): void
@@ -1140,8 +1140,8 @@ class GeneralCountControllerTest extends FeatureTestCase
             'estado' => GeneralCountRequest::ESTADO_APROBADA,
         ]);
 
-        $this->grantBodega('logistica@atlantic.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('logistica@atlantic.com.pa', 'logistica@atlantic.com.pa', 'asistente_bodega');
+        $this->grantBodega('asistentebodega@test.com', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('asistentebodega@test.com', 'asistentebodega@test.com', 'asistente_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/apply")

@@ -9,6 +9,7 @@ use App\Modules\Compras\Models\Provider;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Modules\VentasDiseno\Services\CatalogService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +23,7 @@ use Illuminate\Validation\Rule;
  * parcial ya existente, sprint2) — ambas validadas acá para devolver 422 claro en vez de dejar
  * que la constraint de DB tire un 500.
  *
- * Reescritura completa 2026-08-12 (corrección de Daniela Amaya 2026-08-09, mockup/requerimiento
+ * Reescritura completa 2026-08-12 (corrección de Gerencia Test 2026-08-09, mockup/requerimiento
  * completo) — campos/orden/obligatoriedad alineados al modal nuevo:
  * - `provider_id`/`factory_reference`/`brand`/`barcode`/`category`/`rotation`/`reorder_point`
  *   ("Stock mínimo") pasan de opcionales a OBLIGATORIOS.
@@ -36,7 +37,7 @@ use Illuminate\Validation\Rule;
  *   toggle $/% (mismo patrón que Nueva Orden, REQ-131) a un monto en dólares antes de enviarlo;
  *   el backend solo persiste el resultado, no conoce el toggle.
  *
- * SCRUM-426 (REQ-356, rebote de Daniela Amaya 2026-08-13) — la reescritura de SCRUM-240
+ * SCRUM-426 (REQ-356, rebote de Gerencia Test 2026-08-13) — la reescritura de SCRUM-240
  * (2026-08-12) sacó los 12 campos estructurados de `technical_spec` del formulario y los
  * reemplazó por el botón "Cargar ficha técnica" (documento/link, mecanismo de SCRUM-237), pero
  * dejó ese paso completamente opcional — el endpoint no exigía ni `technical_spec` NI el
@@ -58,28 +59,28 @@ class StoreInventoryProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'reference'         => ['required', 'string', 'max:255', $this->uniquePublicReferenceRule()],
+            'reference' => ['required', 'string', 'max:255', $this->uniquePublicReferenceRule()],
             'factory_reference' => ['required', 'string', 'max:255', $this->uniqueFactoryReferenceRule()],
-            // SCRUM-240 (rebote de Daniela Amaya 2026-08-12) — "Nombre del producto" y
+            // SCRUM-240 (rebote de Gerencia Test 2026-08-12) — "Nombre del producto" y
             // "Descripción" pasan a ser 2 campos independientes (ver migración
             // 2026_08_15_100000_...); `description` deja de ser obligatorio, el nombre es lo único
             // que siempre identifica al producto.
-            'name'              => ['required', 'string', 'max:255'],
-            'description'       => ['nullable', 'string', 'max:2000'],
-            'brand'             => ['required', 'string', 'max:255'],
-            'barcode'           => ['required', 'string', 'max:255'],
-            'photo_url'         => ['nullable', 'string', 'max:2048'],
-            'price_full'        => ['required', 'numeric', 'min:0'],
-            'cost'              => ['required', 'numeric', 'min:0'],
-            'other_cost'        => ['required', 'numeric', 'min:0'],
-            'reorder_point'     => ['required', 'integer', 'min:0'],
-            'provider_id'       => ['required', 'integer', 'min:1', $this->existsRule(Provider::class)],
-            'family_id'         => ['nullable', 'integer', 'min:1', $this->existsRule(CatalogProductFamily::class)],
-            'category'          => ['required', 'string', Rule::in(CatalogProduct::CATEGORIES)],
-            'rotation'          => ['required', 'string', Rule::in(CatalogProduct::ROTATIONS)],
-            'initial_stock'                   => ['nullable', 'array'],
-            'initial_stock.*.warehouse_id'    => ['required', 'integer', 'min:1', $this->existsRule(Warehouse::class)],
-            'initial_stock.*.quantity'        => ['required', 'integer', 'min:0'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'brand' => ['required', 'string', 'max:255'],
+            'barcode' => ['required', 'string', 'max:255'],
+            'photo_url' => ['nullable', 'string', 'max:2048'],
+            'price_full' => ['required', 'numeric', 'min:0'],
+            'cost' => ['required', 'numeric', 'min:0'],
+            'other_cost' => ['required', 'numeric', 'min:0'],
+            'reorder_point' => ['required', 'integer', 'min:0'],
+            'provider_id' => ['required', 'integer', 'min:1', $this->existsRule(Provider::class)],
+            'family_id' => ['nullable', 'integer', 'min:1', $this->existsRule(CatalogProductFamily::class)],
+            'category' => ['required', 'string', Rule::in(CatalogProduct::CATEGORIES)],
+            'rotation' => ['required', 'string', Rule::in(CatalogProduct::ROTATIONS)],
+            'initial_stock' => ['nullable', 'array'],
+            'initial_stock.*.warehouse_id' => ['required', 'integer', 'min:1', $this->existsRule(Warehouse::class)],
+            'initial_stock.*.quantity' => ['required', 'integer', 'min:0'],
             // SCRUM-426 — mismas reglas que StoreInventoryProductTechnicalSheetRequest (Caso A/B:
             // archivo O link, nunca ambos ni ninguno).
             'file' => [
@@ -102,7 +103,7 @@ class StoreInventoryProductRequest extends FormRequest
      * correcto). Reemplazo: closure que consulta el modelo real (mismo patrón que
      * `uniquePublicReferenceRule()`/`uniqueFactoryReferenceRule()` de esta misma clase).
      *
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     * @param  class-string<Model>  $modelClass
      */
     private function existsRule(string $modelClass): \Closure
     {

@@ -23,16 +23,16 @@ return new class extends TenantSchemaMigration
     public function up(): void
     {
         Schema::table($this->table('fiscal_settings'), function (Blueprint $table): void {
-            $table->decimal('mark_approval_threshold', 12, 2)->default(5000.00);
+            $table->decimal('primary_approval_threshold', 12, 2)->default(5000.00);
         });
 
-        DB::table($this->table('fiscal_settings'))->where('id', 1)->update(['mark_approval_threshold' => 5000.00]);
+        DB::table($this->table('fiscal_settings'))->where('id', 1)->update(['primary_approval_threshold' => 5000.00]);
     }
 
     public function down(): void
     {
         Schema::table($this->table('fiscal_settings'), function (Blueprint $table): void {
-            $table->dropColumn('mark_approval_threshold');
+            $table->dropColumn('primary_approval_threshold');
         });
     }
 };

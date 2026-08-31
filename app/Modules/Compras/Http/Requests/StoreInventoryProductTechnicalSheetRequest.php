@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * SCRUM-237 (REQ-174, hallazgo de Daniela Amaya 2026-08-09) — Caso A del modal Detalle del
+ * SCRUM-237 (REQ-174, hallazgo de Gerencia Test 2026-08-09) — Caso A del modal Detalle del
  * producto (modo Compras): "Cargar ficha técnica" acepta un archivo (PDF/imagen, mismo whitelist
  * que Catálogo/SCRUM-698) O, alternativamente, un link externo — exactamente uno de los dos por
  * request, nunca ambos ni ninguno.

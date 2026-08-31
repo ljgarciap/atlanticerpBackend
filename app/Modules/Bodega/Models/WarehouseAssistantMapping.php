@@ -7,6 +7,7 @@ namespace App\Modules\Bodega\Models;
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,17 +16,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Fuente de verdad para la asignación automática de `Order.assistant_id` al aprobar una
  * cotización (REQ-308). "Configurable" (RN3) = tabla editable, nunca un `match()`/array
  * hardcodeado con nombres — ver `database/seeders/WarehouseAssistantMappingSeeder.php` para el
- * seed inicial real (Mariano Sandoval / Osvaldo Santos, confirmado contra Jira SCRUM-377).
+ * seed inicial real (Asistente Bodega Test 2 / Asistente Bodega Test, confirmado contra Jira SCRUM-377).
  *
  * `is_active` permite reasignar un vendedor a otro asistente sin perder el historial: la
  * migración garantiza (índice único parcial) una sola fila activa por `seller_user_id` a la vez.
  *
- * @property int             $id
- * @property int             $seller_user_id
- * @property int             $assistant_user_id
- * @property bool             $is_active
- * @property \Carbon\Carbon  $created_at
- * @property \Carbon\Carbon  $updated_at
+ * @property int $id
+ * @property int $seller_user_id
+ * @property int $assistant_user_id
+ * @property bool $is_active
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property-read User        $seller
  * @property-read User        $assistant
  */

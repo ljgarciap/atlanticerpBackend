@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Log;
  * UPN de su cuenta de Outlook.
  *
  * Solo lectura — nunca crea/edita/borra eventos en Outlook (alcance confirmado por Luis 2026-07-21,
- * a partir del comentario de Daniela Amaya en SCRUM-66: "no es bidireccional").
+ * a partir del comentario de Gerencia Test en SCRUM-66: "no es bidireccional").
  */
 final class OutlookCalendarService
 {
@@ -43,7 +43,7 @@ final class OutlookCalendarService
      * tiempo total era la suma de las ~17 llamadas. Ahora se disparan todas en paralelo con
      * `Http::pool()` (una sola llamada de red conceptual, no 17 secuenciales).
      *
-     * @param list<string> $emails
+     * @param  list<string>  $emails
      * @return array{events: list<array<string, mixed>>, degraded: bool}
      */
     public function eventsForUsers(array $emails, CarbonInterface $from, CarbonInterface $to): array
@@ -67,15 +67,15 @@ final class OutlookCalendarService
             fn (string $email) => $pool->as($email)
                 ->withToken($token)
                 ->timeout(10)
-                ->get(self::GRAPH_BASE . '/users/' . urlencode($email) . '/calendarView', [
+                ->get(self::GRAPH_BASE.'/users/'.urlencode($email).'/calendarView', [
                     'startDateTime' => $from->toIso8601String(),
-                    'endDateTime'   => $to->toIso8601String(),
-                    '$orderby'      => 'start/dateTime',
-                    '$top'          => 50,
+                    'endDateTime' => $to->toIso8601String(),
+                    '$orderby' => 'start/dateTime',
+                    '$top' => 50,
                 ]),
         )->all(), self::POOL_CONCURRENCY);
 
-        $events   = [];
+        $events = [];
         $degraded = false;
 
         foreach ($emails as $email) {
@@ -87,6 +87,7 @@ final class OutlookCalendarService
                     'email' => $email,
                     'error' => $response instanceof \Throwable ? $response->getMessage() : 'sin respuesta',
                 ]);
+
                 continue;
             }
 
@@ -103,6 +104,7 @@ final class OutlookCalendarService
                 Log::warning('OutlookCalendarService: Graph respondió con error', [
                     'email' => $email, 'status' => $response->status(),
                 ]);
+
                 continue;
             }
 
@@ -117,19 +119,19 @@ final class OutlookCalendarService
     }
 
     /**
-     * @param array<string, mixed> $event
+     * @param  array<string, mixed>  $event
      * @return array{id: string, title: string, start_at: string|null, end_at: string|null, all_day: bool, location: string|null, organizer: string|null, owner_email: string}
      */
     private function mapEvent(array $event, string $ownerEmail): array
     {
         return [
-            'id'          => (string) ($event['id'] ?? ''),
-            'title'       => (string) ($event['subject'] ?? ''),
-            'start_at'    => isset($event['start']['dateTime']) ? (string) $event['start']['dateTime'] : null,
-            'end_at'      => isset($event['end']['dateTime']) ? (string) $event['end']['dateTime'] : null,
-            'all_day'     => (bool) ($event['isAllDay'] ?? false),
-            'location'    => $event['location']['displayName'] ?? null,
-            'organizer'   => $event['organizer']['emailAddress']['name'] ?? null,
+            'id' => (string) ($event['id'] ?? ''),
+            'title' => (string) ($event['subject'] ?? ''),
+            'start_at' => isset($event['start']['dateTime']) ? (string) $event['start']['dateTime'] : null,
+            'end_at' => isset($event['end']['dateTime']) ? (string) $event['end']['dateTime'] : null,
+            'all_day' => (bool) ($event['isAllDay'] ?? false),
+            'location' => $event['location']['displayName'] ?? null,
+            'organizer' => $event['organizer']['emailAddress']['name'] ?? null,
             'owner_email' => $ownerEmail,
         ];
     }
@@ -143,14 +145,14 @@ final class OutlookCalendarService
             $response = Http::asForm()
                 ->timeout(10)
                 ->post("https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/token", [
-                    'client_id'     => config('services.azure.client_id'),
+                    'client_id' => config('services.azure.client_id'),
                     'client_secret' => config('services.azure.client_secret'),
-                    'scope'         => 'https://graph.microsoft.com/.default',
-                    'grant_type'    => 'client_credentials',
+                    'scope' => 'https://graph.microsoft.com/.default',
+                    'grant_type' => 'client_credentials',
                 ]);
 
             if ($response->failed()) {
-                throw new \RuntimeException('Azure AD token request failed: HTTP ' . $response->status());
+                throw new \RuntimeException('Azure AD token request failed: HTTP '.$response->status());
             }
 
             $accessToken = $response->json('access_token');

@@ -25,7 +25,7 @@ return new class extends TenantSchemaMigration
     public function up(): void
     {
         Schema::table($this->table('settings'), function (Blueprint $table): void {
-            $table->foreignId('mark_approver_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('primary_approver_user_id')->nullable()->constrained('users')->nullOnDelete();
         });
 
         // Nombre de tabla calificado explícito (no bare 'users') — TenantSchemaMigration existe
@@ -36,16 +36,16 @@ return new class extends TenantSchemaMigration
         $tenant = Tenant::current();
         $authUsersTable = "{$tenant?->slug}_auth.users";
 
-        $mark = DB::table($authUsersTable)->where('email', 'mbekhar@atlantic.com.pa')->first();
+        $mark = DB::table($authUsersTable)->where('email', 'gerencia3@test.com')->first();
         if ($mark !== null) {
-            DB::table($this->table('settings'))->where('id', 1)->update(['mark_approver_user_id' => $mark->id]);
+            DB::table($this->table('settings'))->where('id', 1)->update(['primary_approver_user_id' => $mark->id]);
         }
     }
 
     public function down(): void
     {
         Schema::table($this->table('settings'), function (Blueprint $table): void {
-            $table->dropConstrainedForeignId('mark_approver_user_id');
+            $table->dropConstrainedForeignId('primary_approver_user_id');
         });
     }
 };

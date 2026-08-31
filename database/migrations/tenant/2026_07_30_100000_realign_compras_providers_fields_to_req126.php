@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * SCRUM-189/190/192 (REQ-126/127/129) — el form de Proveedor implementado en sprint2 divergió del
- * mockup real `2G__Compras_Proveedores.html` (hallazgo de Daniela Amaya, 2026-07-30, autorizado
+ * mockup real `2G__Compras_Proveedores.html` (hallazgo de Gerencia Test, 2026-07-30, autorizado
  * por Luis el mismo día): faltan whatsapp/dirección/país en Contacto y IBAN/SWIFT/Beneficiario en
  * Datos bancarios; `bank_account_type` y `notes` no existen en el mockup.
  *

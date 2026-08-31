@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SCRUM-237/240 (rebotes de Daniela Amaya 2026-08-12, ver estrategia de Batch 4 en memoria) —
+ * SCRUM-237/240 (rebotes de Gerencia Test 2026-08-12, ver estrategia de Batch 4 en memoria) —
  * causa raíz real: `catalog_products` solo tenía UNA columna de texto (`description`), que hacía
  * doble función de "nombre visible" del producto y "descripción" — por eso editar la Descripción
  * en el modal de SCRUM-237 cambiaba el nombre que se ve en toda la app (tablas, búsqueda, PDF,

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Fase 2 de la auditoría del esquema de permisos (Atlantic/CLAUDE.md, sesión 2026-08-30),
  * segunda parte — mismo método que la migración de Servicios (2026_08_30_100001), aplicado a
- * routes/admin-contab.php: reemplaza los 24 usos de `role:clave1,clave2,...` (los `mark_only` NO
+ * routes/admin-contab.php: reemplaza los 24 usos de `role:clave1,clave2,...` (los `primary_approver_only` NO
  * se tocan, es un middleware propio ya correctamente acotado a una persona) por 3 permisos finos
  * asignados por SECURITY_LEVEL, no por lista de roles.
  *
@@ -59,21 +59,21 @@ return new class extends TenantSchemaMigration
         //     su capacidad de la de lider_operaciones sin tocar el nivel 1 original.
         $level1 = DB::table($this->table('security_levels'))->where('level', 1)->first();
         $yanethLevelId = DB::table($this->table('security_levels'))->insertGetId([
-            'level'       => 13,
-            'name'        => 'Read Only — Admin & Contab',
+            'level' => 13,
+            'name' => 'Read Only — Admin & Contab',
             'description' => 'Igual que Read Only, con capacidad angosta de escritura en Administración y Contabilidad.',
             'permissions' => $level1->permissions,
-            'is_active'   => true,
-            'created_at'  => now(),
-            'updated_at'  => now(),
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         foreach (['ventas_diseno', 'compras', 'bodega', 'servicios', 'admin_contab', 'gerencia', 'operaciones'] as $module) {
             DB::table($this->table('security_level_module_permissions'))->insert([
                 'security_level_id' => $yanethLevelId,
-                'module'            => $module,
-                'can_edit'          => false,
-                'can_approve'       => false,
+                'module' => $module,
+                'can_edit' => false,
+                'can_approve' => false,
             ]);
         }
 
@@ -91,21 +91,21 @@ return new class extends TenantSchemaMigration
         //     ahí sin filtrarse a esos otros roles (ver Hallazgo 2 arriba).
         $level4 = DB::table($this->table('security_levels'))->where('level', 4)->first();
         $felixLevelId = DB::table($this->table('security_levels'))->insertGetId([
-            'level'       => 15,
-            'name'        => 'Power User — Admin & Contab',
+            'level' => 15,
+            'name' => 'Power User — Admin & Contab',
             'description' => 'Igual que Power User, con la capacidad de Admin&Cont propia del Líder de Admin&Cont (no compartida con otros líderes de módulo).',
             'permissions' => $level4->permissions,
-            'is_active'   => true,
-            'created_at'  => now(),
-            'updated_at'  => now(),
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         foreach (DB::table($this->table('security_level_module_permissions'))->where('security_level_id', $level4->id)->get() as $row) {
             DB::table($this->table('security_level_module_permissions'))->insert([
                 'security_level_id' => $felixLevelId,
-                'module'            => $row->module,
-                'can_edit'          => $row->can_edit,
-                'can_approve'       => $row->can_approve,
+                'module' => $row->module,
+                'can_edit' => $row->can_edit,
+                'can_approve' => $row->can_approve,
             ]);
         }
 

@@ -8,6 +8,7 @@ use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Compras\Models\Provider;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -45,47 +46,50 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * DISTINTO de `technical_spec` de arriba (esa es data estructurada, esta es un documento). Sin
  * versionado múltiple — ver `CatalogService::uploadTechnicalSheet()`.
  *
- * `name` (SCRUM-237/240, rebotes de Daniela Amaya 2026-08-12): nombre visible del producto,
+ * `name` (SCRUM-237/240, rebotes de Gerencia Test 2026-08-12): nombre visible del producto,
  * independiente de `description`. Antes de esto `description` hacía doble función de "nombre" y
  * "descripción" — editar una cambiaba la otra en toda la app (tablas, búsqueda, PDF, Excel,
  * candidatos de sustitutos). Todo lugar que muestra/ordena/busca por el nombre del producto usa
  * `name`, nunca `description` — ver migración
  * `2026_08_15_100000_add_name_backfill_from_description_to_ventas_diseno_catalog_products_table`.
  *
- * @property int         $id
- * @property string       $reference
- * @property string|null  $factory_reference
- * @property string       $name
- * @property string       $description
+ * @property int $id
+ * @property string $reference
+ * @property string|null $factory_reference
+ * @property string $name
+ * @property string $description
  * @property string|null $brand
  * @property string|null $photo_url
- * @property float         $price_full
- * @property float|null    $cost
- * @property float          $import_cost
- * @property float          $freight_cost
- * @property float          $handling_cost
- * @property float          $other_cost
+ * @property float $price_full
+ * @property float|null $cost
+ * @property float $import_cost
+ * @property float $freight_cost
+ * @property float $handling_cost
+ * @property float $other_cost
  * @property array<string, string>|null $technical_spec
- * @property int|null      $stock_quantity
- * @property int|null      $reorder_point
- * @property int|null      $provider_id
- * @property bool           $is_active
- * @property string|null    $rotation
- * @property string|null    $category
- * @property string|null    $technical_sheet_key
- * @property string|null    $technical_sheet_filename
- * @property \Carbon\Carbon|null $technical_sheet_uploaded_at
- * @property string|null    $barcode
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property int|null $stock_quantity
+ * @property int|null $reorder_point
+ * @property int|null $provider_id
+ * @property bool $is_active
+ * @property string|null $rotation
+ * @property string|null $category
+ * @property string|null $technical_sheet_key
+ * @property string|null $technical_sheet_filename
+ * @property Carbon|null $technical_sheet_uploaded_at
+ * @property string|null $barcode
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class CatalogProduct extends Model
 {
     use LogsAuditTrail;
 
-    public const ROTATION_ALTA  = 'alta';
+    public const ROTATION_ALTA = 'alta';
+
     public const ROTATION_MEDIA = 'media';
-    public const ROTATION_BAJA  = 'baja';
+
+    public const ROTATION_BAJA = 'baja';
+
     // SCRUM-194 (REQ-131, mockup 2H__Compras_NuevaOrden.html) — "Compra única": producto que no
     // se reordena por patrón de rotación, se compra puntual para un proyecto específico.
     public const ROTATION_UNICA = 'unica';
@@ -130,17 +134,17 @@ class CatalogProduct extends Model
     protected function casts(): array
     {
         return [
-            'price_full'                   => 'float',
-            'cost'                         => 'float',
-            'import_cost'                  => 'float',
-            'freight_cost'                 => 'float',
-            'handling_cost'                => 'float',
-            'other_cost'                   => 'float',
-            'technical_spec'               => 'array',
-            'stock_quantity'                => 'integer',
-            'reorder_point'                 => 'integer',
-            'is_active'                     => 'boolean',
-            'technical_sheet_uploaded_at'   => 'datetime',
+            'price_full' => 'float',
+            'cost' => 'float',
+            'import_cost' => 'float',
+            'freight_cost' => 'float',
+            'handling_cost' => 'float',
+            'other_cost' => 'float',
+            'technical_spec' => 'array',
+            'stock_quantity' => 'integer',
+            'reorder_point' => 'integer',
+            'is_active' => 'boolean',
+            'technical_sheet_uploaded_at' => 'datetime',
         ];
     }
 
@@ -166,7 +170,7 @@ class CatalogProduct extends Model
     public function families(): BelongsToMany
     {
         $tenant = Tenant::current();
-        $pivot  = $tenant !== null
+        $pivot = $tenant !== null
             ? "{$tenant->slug}_ventas_diseno.catalog_product_family_items"
             : 'catalog_product_family_items';
 

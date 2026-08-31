@@ -18,9 +18,11 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL    = 'conta@atlantic.com.pa';
+    private const FELIX_EMAIL = 'contabilidad@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
-    private const URL            = '/api/admin-contab/home/vencidos-por-vencer';
+
+    private const URL = '/api/admin-contab/home/vencidos-por-vencer';
 
     protected function setUp(): void
     {
@@ -49,7 +51,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
     private function makeInvoiceVenciendoEn(int $diasHastaVencer, float $monto = 1000.0, float $saldoAplicado = 0.0, bool $incobrable = false): AdminContInvoice
     {
         $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
-        $createdAt   = CarbonImmutable::now()->subDays($diasCredito - $diasHastaVencer);
+        $createdAt = CarbonImmutable::now()->subDays($diasCredito - $diasHastaVencer);
 
         $invoice = AdminContInvoice::create([
             'numero' => 'F-VPV-'.self::uniqueTestNumber(), 'order_id' => self::uniqueTestNumber(),

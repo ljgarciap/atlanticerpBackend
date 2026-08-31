@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bodega;
 
+use App\Modules\Bodega\Events\ArrivalConfirmedByWarehouse;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
+use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\Compras\Models\PurchaseOrderReceipt;
 use App\Modules\Compras\Models\PurchaseOrderReceiptLine;
-use App\Modules\Compras\Models\Provider;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
+use Illuminate\Support\Facades\Event;
 use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
@@ -30,16 +32,16 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
     private function readerHeaders(): array
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
 
     private function writerHeaders(): array
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read', 'bodega.write']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -108,18 +110,18 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     public function test_show_expone_technical_spec_con_los_12_campos_cuando_el_producto_lo_tiene(): void
     {
         $spec = [
-            'voltage'            => '110V - 220V',
-            'power'              => '12 W',
-            'socket_type'        => 'E27',
-            'color_temperature'  => '3000K (cálida)',
-            'luminous_flux'      => '1050 lúmenes',
-            'dimensions'         => '40 x 40 x 55 cm',
-            'weight'             => '2.3 kg',
-            'material_finish'    => 'Metal pintado, difusor en vidrio',
-            'ip_rating'          => 'IP20 (interior)',
+            'voltage' => '110V - 220V',
+            'power' => '12 W',
+            'socket_type' => 'E27',
+            'color_temperature' => '3000K (cálida)',
+            'luminous_flux' => '1050 lúmenes',
+            'dimensions' => '40 x 40 x 55 cm',
+            'weight' => '2.3 kg',
+            'material_finish' => 'Metal pintado, difusor en vidrio',
+            'ip_rating' => 'IP20 (interior)',
             'estimated_lifespan' => '25000 horas',
-            'warranty'           => '2 años',
-            'certifications'     => 'CE, RoHS',
+            'warranty' => '2 años',
+            'certifications' => 'CE, RoHS',
         ];
         $product = $this->makeCatalogProduct(['technical_spec' => $spec]);
 
@@ -289,7 +291,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     public function test_commitment_detail_lista_cliente_proyecto_pedido_y_estado(): void
     {
         $product = $this->makeCatalogProduct();
-        $ownerId = $this->userIdByEmail('almacen@atlantic.com.pa');
+        $ownerId = $this->userIdByEmail('liderbodega@test.com');
         $order = $this->makeOrderWithPipelineCard(
             $ownerId,
             ['stage' => Order::STAGE_EN_PICKING],
@@ -517,7 +519,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
     public function test_confirm_arrival_marca_la_linea_y_dispara_evento(): void
     {
-        \Illuminate\Support\Facades\Event::fake([\App\Modules\Bodega\Events\ArrivalConfirmedByWarehouse::class]);
+        Event::fake([ArrivalConfirmedByWarehouse::class]);
         $product = $this->makeCatalogProduct();
         $line = $this->makePendingReceiptLine($product, 10);
 
@@ -534,7 +536,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         $this->assertSame(10, $line->bodega_confirmed_quantity);
         $this->assertNull($line->confirmed_at); // Paso 2 de Compras sigue pendiente — no se factura.
 
-        \Illuminate\Support\Facades\Event::assertDispatched(\App\Modules\Bodega\Events\ArrivalConfirmedByWarehouse::class);
+        Event::assertDispatched(ArrivalConfirmedByWarehouse::class);
     }
 
     public function test_confirm_arrival_cantidad_mayor_a_pedida_retorna_422(): void
@@ -595,7 +597,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         $this->assertTrue($rowAfter['arrival_confirmation']['awaiting_compras']);
     }
 
-    /** Rebote REQ-427 (Daniela Amaya 2026-08-13) — la nota de espera debe traer cantidad + quién confirmó. */
+    /** Rebote REQ-427 (Gerencia Test 2026-08-13) — la nota de espera debe traer cantidad + quién confirmó. */
     public function test_confirm_arrival_expone_cantidad_y_usuario_que_confirmo(): void
     {
         $product = $this->makeCatalogProduct();
@@ -608,7 +610,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         $show = $this->withHeaders($this->readerHeaders())->getJson("/api/bodega/inventory/{$product->id}");
         $show->assertStatus(200);
         $show->assertJsonPath('arrival_confirmation.confirmed_quantity', 7);
-        $show->assertJsonPath('arrival_confirmation.confirmed_by_name', 'Esteban Cardenas');
+        $show->assertJsonPath('arrival_confirmation.confirmed_by_name', 'Lider Bodega Test');
     }
 
     public function test_show_expone_barcode(): void

@@ -112,51 +112,51 @@ final class QaSeedInvoicedComprasCommand extends Command
 
             DB::transaction(function () use ($scenario, $provider, $warehouse, $user, $item): void {
                 $order = PurchaseOrder::create([
-                    'provider_id'            => $provider->id,
-                    'status'                 => PurchaseOrder::STATUS_RECIBIDO,
-                    'status_changed_at'      => now(),
-                    'shipping_type'          => PurchaseOrder::SHIPPING_MARITIMO,
-                    'who_pays_shipping'      => PurchaseOrder::PAYS_PROVIDER,
-                    'modality'               => PurchaseOrder::MODALITY_DIRECTO,
-                    'requires_mark_approval' => false,
-                    'currency'               => 'USD',
-                    'notes'                  => "SCRUM-719 QA seed — {$scenario['label']}",
-                    'created_by'             => $user->id,
+                    'provider_id' => $provider->id,
+                    'status' => PurchaseOrder::STATUS_RECIBIDO,
+                    'status_changed_at' => now(),
+                    'shipping_type' => PurchaseOrder::SHIPPING_MARITIMO,
+                    'who_pays_shipping' => PurchaseOrder::PAYS_PROVIDER,
+                    'modality' => PurchaseOrder::MODALITY_DIRECTO,
+                    'requires_primary_approval' => false,
+                    'currency' => 'USD',
+                    'notes' => "SCRUM-719 QA seed — {$scenario['label']}",
+                    'created_by' => $user->id,
                 ]);
 
                 $subtotal = $scenario['invoiced_cost'] * $item->quantity;
 
                 PurchaseOrderLine::create([
-                    'purchase_order_id'  => $order->id,
+                    'purchase_order_id' => $order->id,
                     'catalog_product_id' => $scenario['product_id'],
-                    'quantity'           => $item->quantity,
-                    'unit_cost'          => $scenario['invoiced_cost'],
-                    'subtotal'           => $subtotal,
-                    'sales_project_id'   => $scenario['project_id'],
+                    'quantity' => $item->quantity,
+                    'unit_cost' => $scenario['invoiced_cost'],
+                    'subtotal' => $subtotal,
+                    'sales_project_id' => $scenario['project_id'],
                 ]);
 
                 $order->update(['total_amount' => $subtotal]);
 
                 $receipt = PurchaseOrderReceipt::create([
                     'purchase_order_id' => $order->id,
-                    'created_by'        => $user->id,
+                    'created_by' => $user->id,
                 ]);
 
                 $receiptLine = PurchaseOrderReceiptLine::create([
                     'purchase_order_receipt_id' => $receipt->id,
-                    'catalog_product_id'        => $scenario['product_id'],
-                    'quantity'                  => $item->quantity,
-                    'unit_cost'                 => $scenario['invoiced_cost'],
-                    'warehouse_id'               => $warehouse->id,
-                    'confirmed_at'               => now(),
+                    'catalog_product_id' => $scenario['product_id'],
+                    'quantity' => $item->quantity,
+                    'unit_cost' => $scenario['invoiced_cost'],
+                    'warehouse_id' => $warehouse->id,
+                    'confirmed_at' => now(),
                 ]);
 
                 app(GoodsReceiptConfirmationService::class)->confirmLine($receiptLine, $user->id);
 
                 $this->info(
                     "Pedido/Quote {$scenario['quote_id']} (proyecto {$scenario['project_id']}) — "
-                    . "{$scenario['label']}: PO #{$order->id}, producto {$scenario['product_id']}, "
-                    . "costo cotizado={$item->cost}, costo facturado={$scenario['invoiced_cost']}"
+                    ."{$scenario['label']}: PO #{$order->id}, producto {$scenario['product_id']}, "
+                    ."costo cotizado={$item->cost}, costo facturado={$scenario['invoiced_cost']}"
                 );
             });
         }

@@ -22,7 +22,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AuditActionsScrum791Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa';
+    private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
     protected function setUp(): void
     {
@@ -33,13 +33,13 @@ class AuditActionsScrum791Test extends FeatureTestCase
     private function makeTicket(array $overrides = []): Ticket
     {
         return Ticket::create([
-            'numero'                   => 'REC-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_CLAIM,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba — SCRUM-791',
-            'cliente'                  => 'Cliente de prueba',
-            'estado'                   => Ticket::ESTADO_ON_SITE,
-            'quote_status'             => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
+            'numero' => 'REC-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_CLAIM,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba — SCRUM-791',
+            'cliente' => 'Cliente de prueba',
+            'estado' => Ticket::ESTADO_ON_SITE,
+            'quote_status' => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
             ...$overrides,
         ]);
@@ -48,13 +48,13 @@ class AuditActionsScrum791Test extends FeatureTestCase
     public function test_descargar_pdf_de_hoja_de_reclamo_logea_accion(): void
     {
         $ticket = $this->makeTicket();
-        $sheet  = ClaimSheet::create([
-            'ticket_id'             => $ticket->id,
-            'descripcion_problema'  => 'Producto llegó dañado',
-            'fecha_reclamo'         => now()->toDateString(),
-            'diagnostico'           => 'Golpe en tránsito',
-            'firma_responsable'     => 'Aaron Leis',
-            'estado'                => ClaimSheet::ESTADO_COMPLETED,
+        $sheet = ClaimSheet::create([
+            'ticket_id' => $ticket->id,
+            'descripcion_problema' => 'Producto llegó dañado',
+            'fecha_reclamo' => now()->toDateString(),
+            'diagnostico' => 'Golpe en tránsito',
+            'firma_responsable' => 'Aaron Leis',
+            'estado' => ClaimSheet::ESTADO_COMPLETED,
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -75,16 +75,16 @@ class AuditActionsScrum791Test extends FeatureTestCase
     {
         $ticket = $this->makeTicket(['tipo' => Ticket::TIPO_INSTALLATION, 'subtipo' => Ticket::SUBTIPO_INSPECTION]);
         $report = InspectionReport::create([
-            'numero'                => 'INSP-2026-'.static::uniqueTestNumber(),
-            'ticket_id'             => $ticket->id,
-            'modo'                  => 'digital',
-            'fecha_inspeccion'      => now()->toDateString(),
-            'hora_inicio'           => '09:00',
-            'hora_fin'              => '10:00',
-            'findings'              => [],
-            'firma_tecnico_nombre'  => 'Carlos Vergara',
-            'firma_cliente_nombre'  => 'Cliente de prueba',
-            'estado'                => InspectionReport::ESTADO_COMPLETED,
+            'numero' => 'INSP-2026-'.static::uniqueTestNumber(),
+            'ticket_id' => $ticket->id,
+            'modo' => 'digital',
+            'fecha_inspeccion' => now()->toDateString(),
+            'hora_inicio' => '09:00',
+            'hora_fin' => '10:00',
+            'findings' => [],
+            'firma_tecnico_nombre' => 'Tecnico Servicios Test',
+            'firma_cliente_nombre' => 'Cliente de prueba',
+            'estado' => InspectionReport::ESTADO_COMPLETED,
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');

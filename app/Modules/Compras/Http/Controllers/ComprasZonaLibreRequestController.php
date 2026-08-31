@@ -57,32 +57,32 @@ final class ComprasZonaLibreRequestController extends Controller
             }
 
             $order = PurchaseOrder::create([
-                'provider_id'             => $providerId,
-                'status'                  => PurchaseOrder::STATUS_POR_APROBAR,
-                'status_changed_at'       => now(),
-                'modality'                => PurchaseOrder::MODALITY_ZONA_LIBRE,
-                'shipping_type'           => $zonaLibreRequest->shipping_type,
-                'estimated_arrival_date'  => $zonaLibreRequest->estimated_arrival_date,
-                'requires_mark_approval'  => false,
-                'currency'                => 'USD',
-                'total_amount'            => $zonaLibreRequest->lines->sum(fn (BodegaZonaLibreRequestLine $l) => $l->subtotal()),
-                'notes'                   => $zonaLibreRequest->notes,
-                'created_by'              => $user->id,
+                'provider_id' => $providerId,
+                'status' => PurchaseOrder::STATUS_POR_APROBAR,
+                'status_changed_at' => now(),
+                'modality' => PurchaseOrder::MODALITY_ZONA_LIBRE,
+                'shipping_type' => $zonaLibreRequest->shipping_type,
+                'estimated_arrival_date' => $zonaLibreRequest->estimated_arrival_date,
+                'requires_primary_approval' => false,
+                'currency' => 'USD',
+                'total_amount' => $zonaLibreRequest->lines->sum(fn (BodegaZonaLibreRequestLine $l) => $l->subtotal()),
+                'notes' => $zonaLibreRequest->notes,
+                'created_by' => $user->id,
             ]);
 
             foreach ($zonaLibreRequest->lines as $line) {
                 PurchaseOrderLine::create([
-                    'purchase_order_id'  => $order->id,
+                    'purchase_order_id' => $order->id,
                     'catalog_product_id' => $line->catalog_product_id,
-                    'quantity'           => $line->quantity,
-                    'unit_cost'          => $line->unit_cost_snapshot,
-                    'subtotal'           => $line->subtotal(),
+                    'quantity' => $line->quantity,
+                    'unit_cost' => $line->unit_cost_snapshot,
+                    'subtotal' => $line->subtotal(),
                 ]);
             }
 
             $zonaLibreRequest->update([
-                'status'             => BodegaZonaLibreRequest::STATUS_APROBADA,
-                'approved_by'        => $user->id,
+                'status' => BodegaZonaLibreRequest::STATUS_APROBADA,
+                'approved_by' => $user->id,
                 'generated_order_id' => $order->id,
             ]);
 
@@ -120,9 +120,9 @@ final class ComprasZonaLibreRequestController extends Controller
             }
 
             $zonaLibreRequest->update([
-                'status'            => BodegaZonaLibreRequest::STATUS_RECHAZADA,
-                'rejected_by'       => $user->id,
-                'rejection_reason'  => $validated['rejection_reason'],
+                'status' => BodegaZonaLibreRequest::STATUS_RECHAZADA,
+                'rejected_by' => $user->id,
+                'rejection_reason' => $validated['rejection_reason'],
             ]);
 
             return ['status' => 200];

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * sustituye `admin_contab.read` en el resto de rutas de Admin&Cont (Facturación, Cobros, Notas
  * Crédito, Estado de Cuenta, Cuentas Bancarias siguen exigiendo el permiso completo). Otorgado por
  * persona a los 10 vendedores reales vía `SpecialPermissionSeeder` (mismo criterio que
- * `compras.limited.view` → `operaciones@atlantic.com.pa`).
+ * `compras.limited.view` → `lideroperaciones@test.com`).
  */
 return new class extends TenantSchemaMigration
 {

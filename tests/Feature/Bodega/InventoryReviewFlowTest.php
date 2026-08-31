@@ -36,8 +36,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -54,8 +54,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -65,7 +65,7 @@ class InventoryReviewFlowTest extends FeatureTestCase
     }
 
     /**
-     * RN1 (corrección 2026-08-11, Daniela Amaya, SCRUM-388) — "Sí hay" con una ubicación distinta
+     * RN1 (corrección 2026-08-11, Gerencia Test, SCRUM-388) — "Sí hay" con una ubicación distinta
      * de la original NUNCA debe sobrescribir `location_snapshot` (la ubicación de origen del
      * producto) — la nueva ubicación confirmada vive aparte en `found_location` +
      * `found_confirmed_by_id`/`found_confirmed_at`, y la Hoja de Picking la expone ya armada como
@@ -76,8 +76,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
         $item->update(['location_snapshot' => 'A-01-03']);
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -117,8 +117,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
         $review->refresh();
         [$itemA, $itemB] = $review->items->all();
 
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -142,8 +142,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -173,8 +173,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
         $review->refresh();
         [$itemA, $itemB] = $review->items->all();
 
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -204,8 +204,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('apolonio.gonzalez@atlantic.com.pa');
-        $token = $this->loginAs('apolonio.gonzalez@atlantic.com.pa', 'apolonio.gonzalez@atlantic.com.pa', 'ayudante_general_bodega');
+        $this->grantBodegaPermissions('ayudantegeneralbodega@test.com');
+        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
@@ -218,8 +218,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['order_type' => Order::ORDER_TYPE_PEDIDO, 'stage' => Order::STAGE_ASIGNADO]);
         $item = $order->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/resolve-inventory-review", [
@@ -239,8 +239,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa');
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
         $headers = $this->authHeaders($token);
         $payload = ['decisions' => [['order_item_id' => $item->id, 'found' => true, 'location' => 'A-01']]];
 

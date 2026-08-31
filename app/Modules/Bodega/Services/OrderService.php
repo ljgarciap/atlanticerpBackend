@@ -32,7 +32,7 @@ final class OrderService
     /**
      * `role_key` real del catálogo de roles (`roles.key`, ver `BusinessRoleUserSeeder`) — Esteban
      * Cardenas hoy. No hay un settings configurable dedicado (a diferencia de "Mark" en Compras,
-     * `ComprasSettings.mark_approver_user_id`) porque acá la audiencia es un ROL, no una persona
+     * `ComprasSettings.primary_approver_user_id`) porque acá la audiencia es un ROL, no una persona
      * puntual configurable — cualquiera con este rol recibe la alerta, sin necesidad de un campo
      * de configuración aparte (decisión 2026-07-22, revisión de Luis sobre el batch).
      */
@@ -90,15 +90,15 @@ final class OrderService
             $primaryContact = $card->contacts->first();
 
             $order = Order::create([
-                'order_number'            => $this->folioService->next(),
-                'pipeline_card_id'        => $card->id,
-                'order_type'              => Order::ORDER_TYPE_PEDIDO,
-                'stage'                   => Order::STAGE_ASIGNADO,
-                'assistant_id'            => $mapping?->assistant_user_id,
+                'order_number' => $this->folioService->next(),
+                'pipeline_card_id' => $card->id,
+                'order_type' => Order::ORDER_TYPE_PEDIDO,
+                'stage' => Order::STAGE_ASIGNADO,
+                'assistant_id' => $mapping?->assistant_user_id,
                 'committed_delivery_date' => $card->deliveryDates->min('date'),
-                'customer_name'           => $card->subClient->business_name ?? $card->masterClient?->name,
-                'customer_contact'        => $this->formatContact($primaryContact),
-                'delivery_address'        => $card->subClient?->delivery_address,
+                'customer_name' => $card->subClient->business_name ?? $card->masterClient?->name,
+                'customer_contact' => $this->formatContact($primaryContact),
+                'delivery_address' => $card->subClient?->delivery_address,
             ]);
 
             if ($quote !== null) {
@@ -106,9 +106,9 @@ final class OrderService
             }
 
             OrderStageHistory::create([
-                'order_id'   => $order->id,
+                'order_id' => $order->id,
                 'from_stage' => null,
-                'to_stage'   => Order::STAGE_ASIGNADO,
+                'to_stage' => Order::STAGE_ASIGNADO,
                 'changed_by' => null, // creación automática del sistema, sin usuario detrás del clic
                 'created_at' => now(),
             ]);
@@ -122,8 +122,8 @@ final class OrderService
 
             if ($mapping === null) {
                 Log::warning('bodega.order.created-without-assistant-mapping', [
-                    'order_id'       => $order->id,
-                    'order_number'   => $order->order_number,
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
                     'seller_user_id' => $sellerId,
                 ]);
 
@@ -153,10 +153,10 @@ final class OrderService
         $withRelations = ['parts.items.catalogProduct'];
 
         return Quote::with($withRelations)
-                ->where('sales_project_id', $card->sales_project_id)
-                ->whereNotNull('folio')
-                ->orderByDesc('generated_at')
-                ->first()
+            ->where('sales_project_id', $card->sales_project_id)
+            ->whereNotNull('folio')
+            ->orderByDesc('generated_at')
+            ->first()
             ?? Quote::with($withRelations)
                 ->where('sales_project_id', $card->sales_project_id)
                 ->orderByDesc('created_at')
@@ -180,16 +180,16 @@ final class OrderService
         /** @var QuoteItem $item */
         foreach ($items as $item) {
             $order->items()->create([
-                'catalog_product_id'   => $item->catalog_product_id,
-                'reference_snapshot'   => $item->catalogProduct->reference ?? $item->reference,
+                'catalog_product_id' => $item->catalog_product_id,
+                'reference_snapshot' => $item->catalogProduct->reference ?? $item->reference,
                 'description_snapshot' => $item->catalogProduct->name ?? $item->description,
-                'unit_price'           => $item->unitPriceAfterDiscount(
+                'unit_price' => $item->unitPriceAfterDiscount(
                     $quote->discount_mode,
                     $quote->global_discount_percent,
                     $quote->price_type,
                     $settings,
                 ),
-                'qty_requested'        => (int) round($item->quantity),
+                'qty_requested' => (int) round($item->quantity),
             ]);
         }
     }
@@ -231,14 +231,14 @@ final class OrderService
             return;
         }
 
-        $seller     = User::find($sellerId);
+        $seller = User::find($sellerId);
         $sellerName = $seller !== null ? "{$seller->first_name} {$seller->last_name}" : "vendedor #{$sellerId}";
 
         $this->notifications->send(
             audience: $audience,
             content: [
                 'subject' => "Pedido {$order->order_number} sin asistente asignado",
-                'body'    => "El pedido {$order->order_number} (vendedor: {$sellerName}) se creó en Bodega "
+                'body' => "El pedido {$order->order_number} (vendedor: {$sellerName}) se creó en Bodega "
                     .'sin un Asistente de Bodega asignado — falta el mapeo vendedor->asistente para este '
                     .'vendedor (WarehouseAssistantMapping). Requiere asignación manual.',
             ],

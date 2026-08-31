@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Schema;
  * hay una razón concreta para que sea una columna real desde ya: no existe ningún otro lugar
  * (pipeline/kanban) donde vivir ese estado, y Nueva Orden necesita persistirlo al crear la orden.
  *
- * `requires_mark_approval`/`approved_by`/`approved_at` — RN3 de REQ-118 ("aéreo + paga
+ * `requires_primary_approval`/`approved_by`/`approved_at` — RN3 de REQ-118 ("aéreo + paga
  * Atlantic requiere aprobación de Mark"), regla que aplica a Nueva Orden (2H) aunque el
  * texto completo solo esté escrito en el ticket diferido REQ-118 (ver docs/specs/
  * compras-proveedores-sprint2.md, hallazgo 5).
@@ -40,7 +40,7 @@ return new class extends TenantSchemaMigration
             $table->string('status')->default('por_aprobar');
             $table->string('shipping_type')->nullable();
             $table->string('who_pays_shipping')->nullable();
-            $table->boolean('requires_mark_approval')->default(false);
+            $table->boolean('requires_primary_approval')->default(false);
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
             $table->string('currency', 3)->default('USD');

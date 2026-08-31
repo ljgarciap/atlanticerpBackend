@@ -30,8 +30,8 @@ class OrderBoardControllerTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         return $this->authHeaders($token);
     }
@@ -114,10 +114,10 @@ class OrderBoardControllerTest extends FeatureTestCase
     /** REQ-306 — panel de carga por asistente, % del total del equipo. */
     public function test_panel_de_carga_por_asistente(): void
     {
-        $assistantId = $this->userIdByEmail('almacen2@atlantic.com.pa');
+        $assistantId = $this->userIdByEmail('asistentebodega2@test.com');
         $this->makeOrder(['assistant_id' => $assistantId]);
         $this->makeOrder(['assistant_id' => $assistantId]);
-        $this->makeOrder(['assistant_id' => $this->userIdByEmail('logistica@atlantic.com.pa')]);
+        $this->makeOrder(['assistant_id' => $this->userIdByEmail('asistentebodega@test.com')]);
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson('/api/bodega/orders/assistant-load')
@@ -129,15 +129,15 @@ class OrderBoardControllerTest extends FeatureTestCase
     }
 
     /**
-     * REQ-306 (corrección 2026-08-11, Daniela Amaya, SCRUM-376) — el panel debe mostrar SIEMPRE
-     * las 2 tarjetas de los 2 Asistentes de Bodega reales (Osvaldo Santos/Mariano Sandoval),
+     * REQ-306 (corrección 2026-08-11, Gerencia Test, SCRUM-376) — el panel debe mostrar SIEMPRE
+     * las 2 tarjetas de los 2 Asistentes de Bodega reales (Asistente Bodega Test/Asistente Bodega Test 2),
      * incluso cuando uno tiene 0 pedidos asignados — antes, `groupBy('assistant_id')` hacía
      * desaparecer al asistente sin pedidos.
      */
     public function test_panel_de_carga_siempre_muestra_los_2_asistentes_incluso_con_cero_pedidos(): void
     {
-        $mariano = $this->userIdByEmail('almacen2@atlantic.com.pa');
-        $osvaldo = $this->userIdByEmail('logistica@atlantic.com.pa');
+        $mariano = $this->userIdByEmail('asistentebodega2@test.com');
+        $osvaldo = $this->userIdByEmail('asistentebodega@test.com');
         // Solo Mariano tiene pedidos asignados — Osvaldo se queda en 0.
         $this->makeOrder(['assistant_id' => $mariano]);
         $this->makeOrder(['assistant_id' => $mariano]);
@@ -175,7 +175,7 @@ class OrderBoardControllerTest extends FeatureTestCase
     }
 
     /**
-     * REQ-312 (corrección 2026-08-11, Daniela Amaya, SCRUM-382) — "resumen de productos y
+     * REQ-312 (corrección 2026-08-11, Gerencia Test, SCRUM-382) — "resumen de productos y
      * cantidades" en cada tarjeta del tablero.
      */
     public function test_tarjeta_expone_resumen_de_productos_y_cantidades(): void
@@ -193,12 +193,12 @@ class OrderBoardControllerTest extends FeatureTestCase
     }
 
     /**
-     * REQ-315 (corrección 2026-08-11, Daniela Amaya, SCRUM-385) — "Cliente Master" y "Subcliente"
+     * REQ-315 (corrección 2026-08-11, Gerencia Test, SCRUM-385) — "Cliente Master" y "Subcliente"
      * expuestos como campos independientes en el detalle, distintos del combinado `cliente`.
      */
     public function test_ver_detalle_expone_cliente_master_y_subcliente_independientes(): void
     {
-        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('neil.quiel@atlantic.com.pa'));
+        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson("/api/bodega/orders/{$order->id}")
@@ -215,7 +215,7 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_ver_detalle_expone_telefono_y_correo_del_contacto_por_separado(): void
     {
-        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('neil.quiel@atlantic.com.pa'));
+        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson("/api/bodega/orders/{$order->id}")
@@ -315,7 +315,7 @@ class OrderBoardControllerTest extends FeatureTestCase
 
         $cards = collect($response->json('cards'));
         $sinStockCard = $cards->firstWhere('id', $sinStock->id);
-        $normalCard   = $cards->firstWhere('id', $normal->id);
+        $normalCard = $cards->firstWhere('id', $normal->id);
 
         $this->assertSame('2026-08-15', $sinStockCard['eta_proveedor']);
         $this->assertNull($normalCard['eta_proveedor']);

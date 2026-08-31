@@ -37,9 +37,7 @@ use Illuminate\Routing\Controller;
  */
 final class ComprasReportsController extends Controller
 {
-    public function __construct(private readonly InventoryKpiService $inventoryKpis)
-    {
-    }
+    public function __construct(private readonly InventoryKpiService $inventoryKpis) {}
 
     /** REQ-200 — gráfico de barras, monto comprado por período, incluyendo el período en curso. */
     public function purchasedByPeriod(Request $request): JsonResponse
@@ -61,11 +59,11 @@ final class ComprasReportsController extends Controller
             $total = PurchaseOrder::whereBetween('created_at', [$p->start, $p->end])->sum('total_amount');
 
             return [
-                'label'        => $p->label(),
-                'start'        => $p->start->toDateString(),
-                'end'          => $p->end->toDateString(),
+                'label' => $p->label(),
+                'start' => $p->start->toDateString(),
+                'end' => $p->end->toDateString(),
                 'total_amount' => (float) $total,
-                'is_current'   => $p->isCurrent,
+                'is_current' => $p->isCurrent,
             ];
         }, $periods);
 
@@ -91,8 +89,8 @@ final class ComprasReportsController extends Controller
 
         $counts = [
             InventoryKpiService::STOCK_DISPONIBLE => 0,
-            InventoryKpiService::STOCK_BAJO_STOCK  => 0,
-            InventoryKpiService::STOCK_SIN_STOCK   => 0,
+            InventoryKpiService::STOCK_BAJO_STOCK => 0,
+            InventoryKpiService::STOCK_SIN_STOCK => 0,
         ];
         $classified = 0;
 
@@ -119,13 +117,13 @@ final class ComprasReportsController extends Controller
             : null;
 
         return response()->json([
-            'period'            => $this->formatPeriod($period),
+            'period' => $this->formatPeriod($period),
             'classified_orders' => $classified,
-            'a_tiempo_percent'  => $percent($counts[InventoryKpiService::STOCK_DISPONIBLE]),
+            'a_tiempo_percent' => $percent($counts[InventoryKpiService::STOCK_DISPONIBLE]),
             'a_demanda_percent' => $percent($counts[InventoryKpiService::STOCK_BAJO_STOCK]),
-            'tarde_percent'     => $percent($counts[InventoryKpiService::STOCK_SIN_STOCK]),
+            'tarde_percent' => $percent($counts[InventoryKpiService::STOCK_SIN_STOCK]),
             // REQ-202: aviso automático si "A demanda" + "Tarde" combinados superan el 50%.
-            'show_warning'      => $reactivePercent !== null && $reactivePercent > 50,
+            'show_warning' => $reactivePercent !== null && $reactivePercent > 50,
         ]);
     }
 
@@ -156,23 +154,23 @@ final class ComprasReportsController extends Controller
                 ->count();
 
             return [
-                'provider_id'       => $provider->id,
-                'provider_name'     => $provider->name,
-                'purchased_amount'  => (float) $purchased,
-                'claims_count'      => $claimsCount,
-                'rating'            => $provider->ratingScore(),
+                'provider_id' => $provider->id,
+                'provider_name' => $provider->name,
+                'purchased_amount' => (float) $purchased,
+                'claims_count' => $claimsCount,
+                'rating' => $provider->ratingScore(),
                 // SCRUM-264 — hallazgo de QA: el ticket pide estas 2 columnas explícitamente.
                 // Mismos métodos que componen `rating`, no un cálculo paralelo (ver docblock de
                 // Provider::ratingScore()). on_time_percent es all-time, no scopeado al período
                 // del selector — mismo criterio que rating, que tampoco lo está.
-                'on_time_percent'   => $provider->onTimePercent(),
-                'complete_percent'  => $provider->completePercent(),
+                'on_time_percent' => $provider->onTimePercent(),
+                'complete_percent' => $provider->completePercent(),
             ];
         })->sortByDesc('purchased_amount')->values();
 
         return response()->json([
             'period' => $this->formatPeriod($period),
-            'data'   => $data,
+            'data' => $data,
         ]);
     }
 
@@ -202,9 +200,9 @@ final class ComprasReportsController extends Controller
                 continue;
             }
             $countsByProvider[$order->provider_id] ??= [
-                'provider_id'   => $order->provider_id,
+                'provider_id' => $order->provider_id,
                 'provider_name' => $order->provider?->name,
-                'claims_count'  => 0,
+                'claims_count' => 0,
             ];
             $countsByProvider[$order->provider_id]['claims_count']++;
         }
@@ -212,10 +210,10 @@ final class ComprasReportsController extends Controller
         $ranking = $countsByProvider;
 
         return response()->json([
-            'period'           => $this->formatPeriod($period),
-            'open_count'       => $claims->where('status', PurchaseOrderClaim::STATUS_EN_REVISION)->count(),
-            'resolved_count'   => $claims->where('status', PurchaseOrderClaim::STATUS_RESUELTO)->count(),
-            'claim_rate'       => $totalOrders > 0 ? round($claims->count() / $totalOrders * 100, 1) : null,
+            'period' => $this->formatPeriod($period),
+            'open_count' => $claims->where('status', PurchaseOrderClaim::STATUS_EN_REVISION)->count(),
+            'resolved_count' => $claims->where('status', PurchaseOrderClaim::STATUS_RESUELTO)->count(),
+            'claim_rate' => $totalOrders > 0 ? round($claims->count() / $totalOrders * 100, 1) : null,
             'provider_ranking' => $ranking,
         ]);
     }
@@ -234,7 +232,7 @@ final class ComprasReportsController extends Controller
     /**
      * REQ-205 — "Liquidada" = misma definición que Agencias (PurchaseOrder::isLiquidated()).
      *
-     * SCRUM-268 (hallazgo de Daniela Amaya, 2026-08-11) — el panel se redefine para excluir del
+     * SCRUM-268 (hallazgo de Gerencia Test, 2026-08-11) — el panel se redefine para excluir del
      * universo las órdenes que TODAVÍA no llegaron a "Ordenado" (por_aprobar/pendiente_liquidar):
      * el subtítulo del mockup lo pide explícito ("basado en órdenes Ordenado / En tránsito /
      * Recibido"). Antes `total_imports` contaba TODA orden zona_libre del período sin importar la
@@ -274,7 +272,7 @@ final class ComprasReportsController extends Controller
             ->whereBetween('created_at', [$period->start, $period->end])
             ->whereNotIn('status', $notStartedStatuses)
             ->get();
-        $liquidated  = $orders->filter(fn (PurchaseOrder $o): bool => $o->isLiquidated());
+        $liquidated = $orders->filter(fn (PurchaseOrder $o): bool => $o->isLiquidated());
         $porLiquidar = $orders->reject(fn (PurchaseOrder $o): bool => $o->isLiquidated());
 
         /** @var array<int, array{agency_id: int, agency_name: string|null, liquidated_count: int}> $countsByAgency */
@@ -284,8 +282,8 @@ final class ComprasReportsController extends Controller
                 continue;
             }
             $countsByAgency[$order->liquidation_agency_id] ??= [
-                'agency_id'        => $order->liquidation_agency_id,
-                'agency_name'      => $order->liquidationAgency?->name,
+                'agency_id' => $order->liquidation_agency_id,
+                'agency_name' => $order->liquidationAgency?->name,
                 'liquidated_count' => 0,
             ];
             if ($order->isLiquidated()) {
@@ -296,11 +294,11 @@ final class ComprasReportsController extends Controller
         $ranking = $countsByAgency;
 
         return response()->json([
-            'period'             => $this->formatPeriod($period),
-            'liquidated_count'   => $liquidated->count(),
+            'period' => $this->formatPeriod($period),
+            'liquidated_count' => $liquidated->count(),
             'por_liquidar_count' => $porLiquidar->count(),
             'liquidated_percent' => $orders->count() > 0 ? round($liquidated->count() / $orders->count() * 100, 1) : null,
-            'agency_ranking'     => $ranking,
+            'agency_ranking' => $ranking,
         ]);
     }
 
@@ -329,10 +327,10 @@ final class ComprasReportsController extends Controller
     {
         return [
             'granularity' => $period->granularity,
-            'label'       => $period->label(),
-            'start'       => $period->start->toDateString(),
-            'end'         => $period->end->toDateString(),
-            'is_current'  => $period->isCurrent,
+            'label' => $period->label(),
+            'start' => $period->start->toDateString(),
+            'end' => $period->end->toDateString(),
+            'is_current' => $period->isCurrent,
         ];
     }
 

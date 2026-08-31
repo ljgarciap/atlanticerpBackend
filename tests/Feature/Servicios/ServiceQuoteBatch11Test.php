@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicios;
 
+use App\Models\User;
 use App\Modules\Servicios\Models\ExternalTechnician;
 use App\Modules\Servicios\Models\ServiceQuote;
 use App\Modules\Servicios\Models\Ticket;
@@ -21,13 +22,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class ServiceQuoteBatch11Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'servicio@atlantic.com.pa'; // Aaron Leis
+    private const LIDER_SERVICIOS = 'liderservicios@test.com'; // Aaron Leis
 
-    private const TECNICO_SERVICIOS = 'carlos@atlantic.com.pa'; // Carlos Vergara
+    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com'; // Tecnico Servicios Test
 
-    private const OTRO_TECNICO = 'santopedro181994@gmail.com'; // Pedro Santos
+    private const OTRO_TECNICO = 'tecnicoservicios2@test.com'; // Tecnico Servicios Test 2
 
-    private const MANAGEMENT = 'mbekhar@atlantic.com.pa'; // Mark — desglose de costos
+    private const MANAGEMENT = 'gerencia3@test.com'; // Mark — desglose de costos
 
     protected function setUp(): void
     {
@@ -44,7 +45,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     {
         $unique = uniqid();
         $master = MasterClient::create(['name' => "Cliente {$unique}"]);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
 
         return SalesProject::create(['sub_client_id' => $sub->id, 'name' => "Proyecto {$unique}"]);
     }
@@ -54,23 +55,23 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     {
         $project = $this->makeSalesProject();
 
-        $carlos = \App\Models\User::where('email', self::TECNICO_SERVICIOS)->first();
+        $carlos = User::where('email', self::TECNICO_SERVICIOS)->first();
 
         return Ticket::create([
-            'numero'                   => 'INS-2026-'.static::uniqueTestNumber(),
-            'tipo'                     => Ticket::TIPO_WARRANTY,
-            'subtipo'                  => Ticket::SUBTIPO_WARRANTY_GENERIC,
-            'tipo_instalacion'         => Ticket::TIPO_INSTALACION_INTERNAL,
-            'descripcion'              => 'Ticket de prueba Batch 11',
-            'sales_project_id'         => $project->id,
-            'cliente'                  => 'Cliente de prueba',
-            'contacto'                 => 'Contacto de prueba',
-            'telefono'                 => '6000-0000',
-            'direccion'                => 'Ciudad de Panamá',
-            'estado'                   => Ticket::ESTADO_REPORTED,
-            'quote_status'             => Ticket::QUOTE_STATUS_PENDING,
+            'numero' => 'INS-2026-'.static::uniqueTestNumber(),
+            'tipo' => Ticket::TIPO_WARRANTY,
+            'subtipo' => Ticket::SUBTIPO_WARRANTY_GENERIC,
+            'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+            'descripcion' => 'Ticket de prueba Batch 11',
+            'sales_project_id' => $project->id,
+            'cliente' => 'Cliente de prueba',
+            'contacto' => 'Contacto de prueba',
+            'telefono' => '6000-0000',
+            'direccion' => 'Ciudad de Panamá',
+            'estado' => Ticket::ESTADO_REPORTED,
+            'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
-            'internal_technician_id'   => $carlos?->id,
+            'internal_technician_id' => $carlos?->id,
             ...$overrides,
         ]);
     }
@@ -85,11 +86,11 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
         $unique = uniqid();
 
         return CatalogProduct::create([
-            'reference'   => "REF-{$unique}",
-            'name'        => "Producto {$unique}",
-            'price_full'  => $priceFull,
-            'cost'        => $cost,
-            'is_active'   => true,
+            'reference' => "REF-{$unique}",
+            'name' => "Producto {$unique}",
+            'price_full' => $priceFull,
+            'cost' => $cost,
+            'is_active' => true,
         ]);
     }
 
@@ -98,11 +99,11 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
         $this->makeCurrentTenant();
 
         return ExternalTechnician::create([
-            'nombre'         => 'Técnico Externo '.uniqid(),
-            'empresa'        => 'Empresa X',
-            'tarifa_dia'     => $tarifaDia,
+            'nombre' => 'Técnico Externo '.uniqid(),
+            'empresa' => 'Empresa X',
+            'tarifa_dia' => $tarifaDia,
             'tarifa_visible' => true,
-            'estado'         => $estado,
+            'estado' => $estado,
         ]);
     }
 
@@ -111,7 +112,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_gate_bloquea_generar_si_informe_pendiente(): void
     {
         $ticket = $this->makeTicket(['inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING]);
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -127,7 +128,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_generar_cotizacion_precarga_datos_cliente_sin_consumir_folio(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -150,7 +151,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_tecnico_no_asignado_no_puede_generar(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::OTRO_TECNICO, self::OTRO_TECNICO, 'tecnico_servicios');
+        $token = $this->loginAs(self::OTRO_TECNICO, self::OTRO_TECNICO, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -160,7 +161,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_tecnico_asignado_si_puede_generar(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -172,7 +173,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_item_producto_bloqueo_duro_por_margen(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         // margen = (100-90)/100 = 10%, por debajo del mínimo (30% default)
@@ -180,10 +181,10 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote/items", [
-                'tipo'               => 'product',
+                'tipo' => 'product',
                 'catalog_product_id' => $product->id,
-                'quantity'           => 1,
-                'unit_price'         => 100,
+                'quantity' => 1,
+                'unit_price' => 100,
             ])
             ->assertStatus(422)
             ->assertJsonPath('message', fn (string $m) => str_contains($m, $product->name) && str_contains($m, '30'));
@@ -192,7 +193,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_item_producto_margen_suficiente_se_guarda(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         // margen = (100-50)/100 = 50%, por encima del mínimo
@@ -200,10 +201,10 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote/items", [
-                'tipo'               => 'product',
+                'tipo' => 'product',
                 'catalog_product_id' => $product->id,
-                'quantity'           => 2,
-                'unit_price'         => 100,
+                'quantity' => 2,
+                'unit_price' => 100,
             ])
             ->assertStatus(201);
 
@@ -217,7 +218,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_item_producto_duplicado_es_rechazado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $product = $this->makeCatalogProduct(priceFull: 100, cost: 50);
@@ -236,16 +237,16 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_item_producto_otro_referencia_libre_sin_validar_margen(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote/items", [
-                'tipo'        => 'product',
-                'is_custom'   => true,
+                'tipo' => 'product',
+                'is_custom' => true,
                 'description' => 'Producto sin catálogo',
-                'quantity'    => 1,
-                'unit_price'  => 5, // "costo" implícito sería mayor, pero sin catalog no hay margen que validar
+                'quantity' => 1,
+                'unit_price' => 5, // "costo" implícito sería mayor, pero sin catalog no hay margen que validar
             ])
             ->assertStatus(201);
     }
@@ -255,7 +256,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_item_mano_de_obra_sin_validacion_de_margen(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $this->withHeaders($this->authHeaders($token))
@@ -275,8 +276,8 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
     public function test_item_subcontratado_solo_tecnicos_activos(): void
     {
-        $ticket     = $this->makeTicket();
-        $token      = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $inactivo = $this->makeExternalTechnician(estado: ExternalTechnician::ESTADO_INACTIVE);
@@ -290,8 +291,8 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
     public function test_item_subcontratado_calculo_con_margen_default(): void
     {
-        $ticket     = $this->makeTicket();
-        $token      = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 100);
@@ -314,8 +315,8 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
     public function test_item_subcontratado_margen_editable_por_linea(): void
     {
-        $ticket     = $this->makeTicket();
-        $token      = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 100);
@@ -340,8 +341,8 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
      */
     public function test_item_subcontratado_costo_editable_por_linea_no_afecta_maestro(): void
     {
-        $ticket     = $this->makeTicket();
-        $token      = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 100);
@@ -367,8 +368,8 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     /** Sin cost_reference explícito, sigue usando la tarifa real del técnico (comportamiento ya existente). */
     public function test_item_subcontratado_sin_costo_explicito_usa_tarifa_del_tecnico(): void
     {
-        $ticket     = $this->makeTicket();
-        $token      = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 100);
@@ -388,7 +389,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_editar_item_subcontratado_sin_cost_reference_preserva_el_override_guardado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 100);
@@ -412,7 +413,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
     public function test_desglose_de_costo_visible_solo_para_permiso_especial(): void
     {
-        $ticket     = $this->makeTicket();
+        $ticket = $this->makeTicket();
         $aaronToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($aaronToken))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
@@ -453,7 +454,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_editar_item_subcontratado_sin_margin_percent_preserva_el_valor_guardado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 100);
@@ -480,8 +481,8 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
     public function test_sincroniza_proyectos_activos_del_tecnico_externo(): void
     {
-        $ticket     = $this->makeTicket();
-        $token      = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 100);
@@ -511,7 +512,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_proyectos_asignados_expone_costo_margen_solo_a_quien_puede_verlos(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 25);
@@ -598,7 +599,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_totales_escenario_1000_descuento_10_por_ciento(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $this->withHeaders($this->authHeaders($token))
@@ -622,7 +623,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_totales_escenario_500_sin_descuento(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $this->withHeaders($this->authHeaders($token))
@@ -643,7 +644,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_guardar_no_promueve_el_estado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $this->withHeaders($this->authHeaders($token))
@@ -655,7 +656,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_enviar_exige_al_menos_un_item(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $this->withHeaders($this->authHeaders($token))
@@ -666,7 +667,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_enviar_cambia_estado_y_actualiza_ticket(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote/items", [
@@ -687,7 +688,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_tecnico_no_puede_decidir(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote/items", [
@@ -703,7 +704,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_aaron_aprueba_y_actualiza_ticket(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote/items", [
@@ -725,7 +726,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_generar_nueva_solo_si_la_mas_reciente_fue_rechazada(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         // Sin decidir -> generar de nuevo está bloqueado.
@@ -774,7 +775,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_editar_cotizacion_ya_enviada_queda_bloqueado(): void
     {
         $ticket = $this->makeTicket();
-        $token  = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote/items", [

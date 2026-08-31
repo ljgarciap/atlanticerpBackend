@@ -29,7 +29,7 @@ class AuditTrailModulePrefixTest extends FeatureTestCase
 
     private function actingForAudit(): void
     {
-        $user    = User::where('email', 'daniela@atlantic.com.pa')->firstOrFail();
+        $user = User::where('email', 'gerencia@test.com')->firstOrFail();
         $request = Request::create('/');
         $request->attributes->set('jwt', ['sub' => $user->id]);
         $this->app->instance('request', $request);

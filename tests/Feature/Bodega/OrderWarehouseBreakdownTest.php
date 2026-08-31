@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bodega;
 
-use App\Modules\Bodega\Models\Warehouse;
-use App\Modules\VentasDiseno\Models\CatalogProduct;
 use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
@@ -22,8 +20,8 @@ class OrderWarehouseBreakdownTest extends FeatureTestCase
 
     private function authHeadersForBodegaReader(): array
     {
-        $this->grantBodegaPermissions('almacen@atlantic.com.pa', ['bodega.read']);
-        $token = $this->loginAs('almacen@atlantic.com.pa', 'almacen@atlantic.com.pa', 'lider_bodega');
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         return $this->authHeaders($token);
     }

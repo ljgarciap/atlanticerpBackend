@@ -16,6 +16,7 @@ use App\Modules\Compras\Services\PurchaseOrderPaymentService;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 
 /**
@@ -26,9 +27,7 @@ use Illuminate\Routing\Controller;
  */
 final class PurchaseOrderPaymentController extends Controller
 {
-    public function __construct(private readonly PurchaseOrderPaymentService $payments)
-    {
-    }
+    public function __construct(private readonly PurchaseOrderPaymentService $payments) {}
 
     /** REQ-190 — historial completo, más antiguo primero. */
     public function index(Request $request, int $orderId): JsonResponse
@@ -64,16 +63,16 @@ final class PurchaseOrderPaymentController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        // SCRUM-252 (hallazgo de Daniela Amaya 2026-08-09) — mientras haya un cambio de monto
+        // SCRUM-252 (hallazgo de Gerencia Test 2026-08-09) — mientras haya un cambio de monto
         // pendiente de aprobación de Mark, "Registrar pago" queda BLOQUEADO de verdad (antes solo
         // se mostraba el aviso, pero el registro seguía funcionando con el monto viejo).
         if ($order->pending_amount_change !== null) {
             return response()->json([
-                'message' => 'Hay un cambio de monto pendiente de aprobación de Mark. No se puede registrar un pago hasta que se resuelva.',
+                'message' => 'Hay un cambio de monto pendiente de aprobación del aprobador configurado. No se puede registrar un pago hasta que se resuelva.',
             ], 422);
         }
 
-        /** @var array{amount: float, proof: \Illuminate\Http\UploadedFile} $validated */
+        /** @var array{amount: float, proof: UploadedFile} $validated */
         $validated = $request->validated();
         $amount = (float) $validated['amount'];
 
@@ -88,12 +87,12 @@ final class PurchaseOrderPaymentController extends Controller
         $order->refresh()->load('payments');
 
         event(new PaymentRegistered(
-            orderId:       $order->id,
-            paymentId:     $payment->id,
-            amount:        $payment->amount,
+            orderId: $order->id,
+            paymentId: $payment->id,
+            amount: $payment->amount,
             paymentStatus: $order->paymentStatus(),
-            registeredBy:  $user->id,
-            tenant:        (string) Tenant::current()?->slug,
+            registeredBy: $user->id,
+            tenant: (string) Tenant::current()?->slug,
         ));
 
         return response()->json($this->format($payment), 201);
@@ -112,11 +111,11 @@ final class PurchaseOrderPaymentController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        // SCRUM-252 (hallazgo de Daniela Amaya) — mismo bloqueo real que store(): "Enviar a
+        // SCRUM-252 (hallazgo de Gerencia Test) — mismo bloqueo real que store(): "Enviar a
         // pago" también queda deshabilitado mientras haya un cambio de monto pendiente.
         if ($order->pending_amount_change !== null) {
             return response()->json([
-                'message' => 'Hay un cambio de monto pendiente de aprobación de Mark. No se puede enviar a pago hasta que se resuelva.',
+                'message' => 'Hay un cambio de monto pendiente de aprobación del aprobador configurado. No se puede enviar a pago hasta que se resuelva.',
             ], 422);
         }
 
@@ -150,12 +149,12 @@ final class PurchaseOrderPaymentController extends Controller
         $validated = $request->validate(['new_amount' => ['required', 'numeric', 'min:0.01']]);
 
         $order->update([
-            'pending_amount_change'      => $validated['new_amount'],
+            'pending_amount_change' => $validated['new_amount'],
             'amount_change_requested_by' => $user->id,
         ]);
 
         return response()->json([
-            'pending_amount_change'      => $order->pending_amount_change,
+            'pending_amount_change' => $order->pending_amount_change,
             'amount_change_requested_by' => $order->amount_change_requested_by,
         ]);
     }
@@ -193,33 +192,33 @@ final class PurchaseOrderPaymentController extends Controller
         }
 
         // superadmin.all bypassa este gate (decisión de Luis, 2026-08-22).
-        $markApproverId = ComprasSettings::current()->mark_approver_user_id;
-        if ($markApproverId !== null && $user->id !== $markApproverId && ! $user->hasPermission('superadmin.all')) {
-            return response()->json(['message' => 'Solo Mark puede aprobar un cambio de monto.'], 403);
+        $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
+        if ($primaryApproverId !== null && $user->id !== $primaryApproverId && ! $user->hasPermission('superadmin.all')) {
+            return response()->json(['message' => 'Solo el aprobador configurado puede aprobar un cambio de monto.'], 403);
         }
 
         $previousAmount = $order->total_amount;
         $newAmount = $order->pending_amount_change;
 
         $order->update([
-            'total_amount'                => $newAmount,
-            'pending_amount_change'       => null,
-            'amount_change_requested_by'  => null,
+            'total_amount' => $newAmount,
+            'pending_amount_change' => null,
+            'amount_change_requested_by' => null,
         ]);
 
         event(new PaymentAmountChangeApproved(
-            orderId:        $order->id,
+            orderId: $order->id,
             previousAmount: $previousAmount,
-            newAmount:      $newAmount,
-            approvedBy:     $user->id,
-            tenant:         (string) Tenant::current()?->slug,
+            newAmount: $newAmount,
+            approvedBy: $user->id,
+            tenant: (string) Tenant::current()?->slug,
         ));
 
         return response()->json(['total_amount' => $order->total_amount]);
     }
 
     /**
-     * SCRUM-252 (hallazgo de Daniela Amaya) — "Si Mark rechaza/cancela el cambio, el nuevo monto
+     * SCRUM-252 (hallazgo de Gerencia Test) — "Si Mark rechaza/cancela el cambio, el nuevo monto
      * no debe aplicarse. La orden debe conservar el monto anterior." Mismo gate de Mark que
      * approveAmountChange() — Yirena no puede rechazar su propio pedido tampoco (solo Mark
      * resuelve la solicitud, en cualquier sentido).
@@ -241,9 +240,9 @@ final class PurchaseOrderPaymentController extends Controller
         }
 
         // superadmin.all bypassa este gate (decisión de Luis, 2026-08-22).
-        $markApproverId = ComprasSettings::current()->mark_approver_user_id;
-        if ($markApproverId !== null && $user->id !== $markApproverId && ! $user->hasPermission('superadmin.all')) {
-            return response()->json(['message' => 'Solo Mark puede rechazar un cambio de monto.'], 403);
+        $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
+        if ($primaryApproverId !== null && $user->id !== $primaryApproverId && ! $user->hasPermission('superadmin.all')) {
+            return response()->json(['message' => 'Solo el aprobador configurado puede rechazar un cambio de monto.'], 403);
         }
 
         $order->update(['pending_amount_change' => null, 'amount_change_requested_by' => null]);
@@ -255,12 +254,12 @@ final class PurchaseOrderPaymentController extends Controller
     private function format(PurchaseOrderPayment $payment): array
     {
         return [
-            'id'                    => $payment->id,
-            'amount'                => $payment->amount,
-            'proof_url'             => $this->payments->presignProofUrl($payment),
-            'registered_by'         => $payment->registered_by,
-            'registered_by_name'    => $this->registeredByName($payment),
-            'created_at'            => $payment->created_at->toIso8601String(),
+            'id' => $payment->id,
+            'amount' => $payment->amount,
+            'proof_url' => $this->payments->presignProofUrl($payment),
+            'registered_by' => $payment->registered_by,
+            'registered_by_name' => $this->registeredByName($payment),
+            'created_at' => $payment->created_at->toIso8601String(),
         ];
     }
 

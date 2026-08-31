@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Modules\Compras\Http\Controllers;
 
 use App\Models\User;
-use App\Modules\Auth\Support\ModuleCatalog;
 use App\Modules\Auth\Services\UatVisibilityService;
+use App\Modules\Auth\Support\ModuleCatalog;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Bodega\Services\ArrivalConfirmationService;
 use App\Modules\Compras\Http\Requests\StoreInventoryProductRequest;
+use App\Modules\Compras\Http\Requests\StoreInventoryProductTechnicalSheetRequest;
 use App\Modules\Compras\Http\Requests\UpdateInventoryProductRequest;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
-use App\Modules\Compras\Http\Requests\StoreInventoryProductTechnicalSheetRequest;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
@@ -23,7 +23,9 @@ use App\Modules\VentasDiseno\Services\FuzzySearchService;
 use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -61,7 +63,7 @@ final class InventoryController extends Controller
     ) {}
 
     /**
-     * SCRUM-237 (REQ-174, hallazgo de Daniela Amaya 2026-08-09) — validación de unicidad de
+     * SCRUM-237 (REQ-174, hallazgo de Gerencia Test 2026-08-09) — validación de unicidad de
      * Referencia pública EN VIVO mientras se escribe (mismo criterio que crear un producto,
      * REQ-178), reutilizando la misma tabla/columna que `StoreInventoryProductRequest`/
      * `UpdateInventoryProductRequest` ya validan al guardar — este endpoint es solo un chequeo de
@@ -87,12 +89,12 @@ final class InventoryController extends Controller
 
         return response()->json([
             'available' => false,
-            'message'   => "La referencia pública '{$reference}' ya pertenece al producto '{$existing->name}'.",
+            'message' => "La referencia pública '{$reference}' ya pertenece al producto '{$existing->name}'.",
         ]);
     }
 
     /**
-     * SCRUM-237 (REQ-174, hallazgo de Daniela Amaya 2026-08-09) — "Ficha técnica" como DOCUMENTO
+     * SCRUM-237 (REQ-174, hallazgo de Gerencia Test 2026-08-09) — "Ficha técnica" como DOCUMENTO
      * (archivo o link externo), distinto del bloque de 12 campos estructurados `technical_spec`
      * (SCRUM-425/426) que ya existe en este mismo modal. Proxy delgado a `CatalogService`
      * (SCRUM-698/REQ-618, ya construido para la pantalla Catálogo de Ventas & Diseño) — no se
@@ -134,7 +136,7 @@ final class InventoryController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        /** @var \Illuminate\Http\UploadedFile|null $file */
+        /** @var UploadedFile|null $file */
         $file = $request->file('file');
         if ($file !== null) {
             $this->catalogService->uploadTechnicalSheet($product, $file);
@@ -144,16 +146,16 @@ final class InventoryController extends Controller
             // completa en vez de una key de S3; `technicalSheetUrl()`/`hasTechnicalSheet()` no
             // necesitan saber la diferencia, ambos casos son "hay un documento o no").
             $product->update([
-                'technical_sheet_key'         => (string) $request->input('link'),
-                'technical_sheet_filename'    => (string) $request->input('link'),
+                'technical_sheet_key' => (string) $request->input('link'),
+                'technical_sheet_filename' => (string) $request->input('link'),
                 'technical_sheet_uploaded_at' => now(),
             ]);
         }
 
         return response()->json([
-            'id'                          => $product->id,
-            'has_technical_sheet'         => $product->hasTechnicalSheet(),
-            'technical_sheet_filename'    => $product->technical_sheet_filename,
+            'id' => $product->id,
+            'has_technical_sheet' => $product->hasTechnicalSheet(),
+            'technical_sheet_filename' => $product->technical_sheet_filename,
             'technical_sheet_uploaded_at' => $product->technical_sheet_uploaded_at?->toIso8601String(),
         ]);
     }
@@ -262,11 +264,11 @@ final class InventoryController extends Controller
         $warehousesMap = $this->inventoryKpis->warehousesMap($pageIds);
 
         return response()->json([
-            'fuzzy'      => $fuzzy,
+            'fuzzy' => $fuzzy,
             'restricted' => $restricted,
             'can_manage' => $canManage,
-            'kpis'       => $this->kpis(),
-            'data'       => array_map(
+            'kpis' => $this->kpis(),
+            'data' => array_map(
                 fn (CatalogProduct $p) => $this->format(
                     $p,
                     $porServirMap[$p->id] ?? 0,
@@ -277,7 +279,7 @@ final class InventoryController extends Controller
                 ),
                 $paginator->items(),
             ),
-            'meta'       => Pagination::meta($paginator),
+            'meta' => Pagination::meta($paginator),
         ]);
     }
 
@@ -298,7 +300,7 @@ final class InventoryController extends Controller
         $porIngresar = $this->inventoryKpis->porIngresarMap([$id])[$id] ?? 0;
         $enCamino = $this->inventoryKpis->enCaminoMap([$id])[$id] ?? 0;
         $warehouses = $this->inventoryKpis->warehousesMap([$id])[$id] ?? [];
-        // Rebote REQ-427 (Daniela Amaya 2026-08-13) — el detalle de Compras debe reflejar si
+        // Rebote REQ-427 (Gerencia Test 2026-08-13) — el detalle de Compras debe reflejar si
         // Bodega ya confirmó la llegada física (cantidad + quién), solo en el detalle completo
         // (no en index(), para no pagar 1 query extra por fila de la tabla).
         $arrival = $this->arrivalConfirmation->pendingSummary($id);
@@ -315,7 +317,7 @@ final class InventoryController extends Controller
 
         $validated = $request->validated();
 
-        // SCRUM-240 (corrección de Daniela Amaya 2026-08-09) — "Stock inicial (opcional)" es
+        // SCRUM-240 (corrección de Gerencia Test 2026-08-09) — "Stock inicial (opcional)" es
         // ahora una entrada por bodega (`initial_stock`), no una sola bodega — `stock_quantity`
         // de la columna se deriva como la suma (sigue siendo la fuente que el resto de Inventario
         // ya lee para "Stock"/KPIs, no se duplica ese cálculo en otro lado).
@@ -323,7 +325,7 @@ final class InventoryController extends Controller
         $initialStock = $validated['initial_stock'] ?? [];
         $totalStockQuantity = array_sum(array_column($initialStock, 'quantity'));
 
-        /** @var \Illuminate\Http\UploadedFile|null $technicalSheetFile */
+        /** @var UploadedFile|null $technicalSheetFile */
         $technicalSheetFile = $request->file('file');
         $technicalSheetLink = $request->input('link');
 
@@ -333,27 +335,27 @@ final class InventoryController extends Controller
             // RN1/Escenario 1 (REQ-177): el stock inicial cuenta como disponible de inmediato,
             // nunca pasa por "Por ingresar" — a diferencia de un producto creado desde una orden.
             $product = CatalogProduct::create([
-                'reference'         => $validated['reference'],
+                'reference' => $validated['reference'],
                 'factory_reference' => $validated['factory_reference'],
-                'name'              => $validated['name'],
-                'description'       => $validated['description'] ?? '',
-                'brand'             => $validated['brand'],
-                'barcode'           => $validated['barcode'],
-                'photo_url'         => $validated['photo_url'] ?? null,
-                'price_full'        => $validated['price_full'],
-                'cost'              => $validated['cost'],
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? '',
+                'brand' => $validated['brand'],
+                'barcode' => $validated['barcode'],
+                'photo_url' => $validated['photo_url'] ?? null,
+                'price_full' => $validated['price_full'],
+                'cost' => $validated['cost'],
                 // SCRUM-240 — "Costo adicional estimado" ($ o % ya resueltos por el frontend a un
                 // monto, ver docblock de StoreInventoryProductRequest) se persiste en `other_cost`
                 // (parte de CatalogProduct::costTotal()), mismo campo que la edición ya usa para
                 // ajustes de costo post-creación — "es un estimado, se reemplaza cuando llegue el
                 // Ingreso de Mercancía real" encaja con cómo `other_cost` ya se trata ahí.
-                'other_cost'        => $validated['other_cost'],
-                'reorder_point'     => $validated['reorder_point'],
-                'provider_id'       => $validated['provider_id'],
-                'category'          => $validated['category'],
-                'rotation'          => $validated['rotation'],
-                'stock_quantity'    => $totalStockQuantity,
-                'is_active'         => true,
+                'other_cost' => $validated['other_cost'],
+                'reorder_point' => $validated['reorder_point'],
+                'provider_id' => $validated['provider_id'],
+                'category' => $validated['category'],
+                'rotation' => $validated['rotation'],
+                'stock_quantity' => $totalStockQuantity,
+                'is_active' => true,
             ]);
 
             if (isset($validated['family_id'])) {
@@ -366,8 +368,8 @@ final class InventoryController extends Controller
                 }
                 ProductWarehouseStock::create([
                     'catalog_product_id' => $product->id,
-                    'warehouse_id'       => $entry['warehouse_id'],
-                    'quantity'           => $entry['quantity'],
+                    'warehouse_id' => $entry['warehouse_id'],
+                    'quantity' => $entry['quantity'],
                 ]);
             }
 
@@ -378,8 +380,8 @@ final class InventoryController extends Controller
                 $this->catalogService->uploadTechnicalSheet($product, $technicalSheetFile);
             } else {
                 $product->update([
-                    'technical_sheet_key'         => (string) $technicalSheetLink,
-                    'technical_sheet_filename'    => (string) $technicalSheetLink,
+                    'technical_sheet_key' => (string) $technicalSheetLink,
+                    'technical_sheet_filename' => (string) $technicalSheetLink,
                     'technical_sheet_uploaded_at' => now(),
                 ]);
             }
@@ -482,9 +484,9 @@ final class InventoryController extends Controller
 
         return response()->json([
             'data' => $rows->map(fn (ProductWarehouseStock $r) => [
-                'warehouse_id'   => $r->warehouse_id,
+                'warehouse_id' => $r->warehouse_id,
                 'warehouse_name' => $r->warehouse?->name,
-                'quantity'       => $r->quantity,
+                'quantity' => $r->quantity,
             ])->values(),
         ]);
     }
@@ -512,11 +514,11 @@ final class InventoryController extends Controller
         $suggestedQuantity = max(1, ($product->reorder_point ?? 0) - ($product->stock_quantity ?? 0));
 
         return response()->json([
-            'provider_id'          => $product->provider_id,
-            'catalog_product_id'   => $product->id,
-            'suggested_quantity'   => $suggestedQuantity,
+            'provider_id' => $product->provider_id,
+            'catalog_product_id' => $product->id,
+            'suggested_quantity' => $suggestedQuantity,
             'has_pending_shipment' => $enCamino > 0,
-            'pending_quantity'     => $enCamino,
+            'pending_quantity' => $enCamino,
         ]);
     }
 
@@ -550,18 +552,18 @@ final class InventoryController extends Controller
             ->get();
 
         $rows = $families->map(fn (CatalogProductFamily $f) => [
-            'id'            => $f->id,
-            'name'          => $f->name,
-            'description'   => $f->description,
+            'id' => $f->id,
+            'name' => $f->name,
+            'description' => $f->description,
             'product_count' => $f->products->count(),
-            'total_value'   => $restricted ? null : $f->products->sum(
+            'total_value' => $restricted ? null : $f->products->sum(
                 fn (CatalogProduct $p) => $p->costTotal() * (int) ($p->stock_quantity ?? 0)
             ),
         ])->values();
 
         // SCRUM-754 — sin filtros/sort en esta pestaña hoy, solo per_page/page.
         $pagination = Pagination::params($request, [], 'name');
-        $paginator  = Pagination::ofArray(array_values($rows->all()), $pagination['per_page'], $pagination['page']);
+        $paginator = Pagination::ofArray(array_values($rows->all()), $pagination['per_page'], $pagination['page']);
 
         return response()->json([
             // Lote 4 — expuesto a nivel de respuesta (no solo `total_value: null` por familia) para
@@ -619,14 +621,14 @@ final class InventoryController extends Controller
         $warehousesMap = $this->inventoryKpis->warehousesMap($productIds);
 
         return response()->json([
-            'id'            => $family->id,
-            'name'          => $family->name,
-            'description'   => $family->description,
-            'restricted'    => $restricted,
-            'can_manage'    => $canManage,
-            'total_value'   => $totalValue,
+            'id' => $family->id,
+            'name' => $family->name,
+            'description' => $family->description,
+            'restricted' => $restricted,
+            'can_manage' => $canManage,
+            'total_value' => $totalValue,
             'product_count' => $products->count(),
-            'products'      => $products->map(fn (CatalogProduct $p) => $this->format(
+            'products' => $products->map(fn (CatalogProduct $p) => $this->format(
                 $p,
                 $porServirMap[$p->id] ?? 0,
                 $restricted,
@@ -654,7 +656,7 @@ final class InventoryController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        /** @var \Illuminate\Support\Collection<int, CatalogProduct> $products */
+        /** @var Collection<int, CatalogProduct> $products */
         $products = $family->products()->where('is_active', true)->whereNotNull('provider_id')->get();
 
         if ($products->isEmpty()) {
@@ -667,13 +669,13 @@ final class InventoryController extends Controller
 
             foreach ($byProvider as $providerId => $providerProducts) {
                 $order = PurchaseOrder::create([
-                    'provider_id'            => (int) $providerId,
-                    'status'                 => PurchaseOrder::STATUS_POR_APROBAR,
-                    'status_changed_at'      => now(),
-                    'modality'               => PurchaseOrder::MODALITY_DIRECTO,
-                    'requires_mark_approval' => false,
-                    'currency'               => 'USD',
-                    'created_by'             => $user->id,
+                    'provider_id' => (int) $providerId,
+                    'status' => PurchaseOrder::STATUS_POR_APROBAR,
+                    'status_changed_at' => now(),
+                    'modality' => PurchaseOrder::MODALITY_DIRECTO,
+                    'requires_primary_approval' => false,
+                    'currency' => 'USD',
+                    'created_by' => $user->id,
                 ]);
 
                 $totalAmount = 0.0;
@@ -684,11 +686,11 @@ final class InventoryController extends Controller
                     $totalAmount += $subtotal;
 
                     PurchaseOrderLine::create([
-                        'purchase_order_id'  => $order->id,
+                        'purchase_order_id' => $order->id,
                         'catalog_product_id' => $product->id,
-                        'quantity'           => $quantity,
-                        'unit_cost'          => $unitCost,
-                        'subtotal'           => $subtotal,
+                        'quantity' => $quantity,
+                        'unit_cost' => $unitCost,
+                        'subtotal' => $subtotal,
                     ]);
                 }
 
@@ -703,7 +705,7 @@ final class InventoryController extends Controller
     }
 
     /**
-     * SCRUM-237/240 (REQ-174/177, rebote de Daniela Amaya 2026-08-12) — hasta ahora el selector de
+     * SCRUM-237/240 (REQ-174/177, rebote de Gerencia Test 2026-08-12) — hasta ahora el selector de
      * Familia solo permitía elegir de las ya sembradas por seeder (ver docblock de
      * `CatalogProductFamily`), ningún endpoint de creación existía. find-or-create por nombre
      * (case-insensitive, para no crear "Kit Baño"/"kit baño" como 2 familias distintas) — la
@@ -735,8 +737,8 @@ final class InventoryController extends Controller
         }
 
         return response()->json([
-            'id'          => $family->id,
-            'name'        => $family->name,
+            'id' => $family->id,
+            'name' => $family->name,
             'description' => $family->description,
         ], $created ? 201 : 200);
     }
@@ -791,8 +793,8 @@ final class InventoryController extends Controller
     }
 
     /**
-     * @param list<array{warehouse_id: int, warehouse_name: string|null, quantity: int}> $warehouses
-     * @param array{pending_bodega_action: bool, awaiting_compras: bool, confirmed_quantity: int, confirmed_by_name: string|null}|null $arrival
+     * @param  list<array{warehouse_id: int, warehouse_name: string|null, quantity: int}>  $warehouses
+     * @param  array{pending_bodega_action: bool, awaiting_compras: bool, confirmed_quantity: int, confirmed_by_name: string|null}|null  $arrival
      * @return array<string, mixed>
      */
     private function format(CatalogProduct $product, int $porServir, bool $restricted, int $porIngresar = 0, int $enCamino = 0, array $warehouses = [], bool $includeRestrictedDetail = false, ?array $arrival = null): array
@@ -807,45 +809,45 @@ final class InventoryController extends Controller
             default => 'disponible',
         };
 
-        // SCRUM-234/238 (hallazgo de Daniela Amaya 2026-08-09, reconfirmado 2026-08-12 con el
+        // SCRUM-234/238 (hallazgo de Gerencia Test 2026-08-09, reconfirmado 2026-08-12 con el
         // mockup adjunto a SCRUM-238 específicamente): Categoría, Rotación, Bodega(s), Stock
         // mínimo, Proveedor, Por ingresar y En camino pasan a verse en AMBOS modos (Compras y
         // Ventas & Diseño restringido) — decisión de Luis 2026-08-14, revierte la lectura de
         // REQ-172 PERMISOS aplicada el 2026-08-11 (esos 3 campos NO son información financiera —
         // costo/margen/precio de compra sí lo son y siguen exclusivos de modo Compras más abajo).
         $base = [
-            'id'             => $product->id,
-            'reference'      => $product->reference,
-            'name'           => $product->name,
-            'description'    => $product->description,
-            'brand'          => $product->brand,
-            'photo_url'      => $product->photo_url,
-            'category'       => $product->category,
-            'rotation'       => $product->rotation,
-            'reorder_point'  => $product->reorder_point,
-            'warehouses'     => $warehouses,
-            'price_full'     => $product->price_full,
+            'id' => $product->id,
+            'reference' => $product->reference,
+            'name' => $product->name,
+            'description' => $product->description,
+            'brand' => $product->brand,
+            'photo_url' => $product->photo_url,
+            'category' => $product->category,
+            'rotation' => $product->rotation,
+            'reorder_point' => $product->reorder_point,
+            'warehouses' => $warehouses,
+            'price_full' => $product->price_full,
             'stock_quantity' => $product->stock_quantity,
-            'por_servir'     => $porServir,
-            'por_ingresar'   => $porIngresar,
-            'en_camino'      => $enCamino,
-            'provider_name'  => $product->relationLoaded('provider') ? $product->provider?->name : null,
-            'disponible'     => $disponible,
-            'estado'         => $estado,
-            'is_active'      => $product->is_active,
+            'por_servir' => $porServir,
+            'por_ingresar' => $porIngresar,
+            'en_camino' => $enCamino,
+            'provider_name' => $product->relationLoaded('provider') ? $product->provider?->name : null,
+            'disponible' => $disponible,
+            'estado' => $estado,
+            'is_active' => $product->is_active,
             // SCRUM-425 (REQ-355, RN1) — ficha técnica de solo lectura, visible para Bodega igual
             // que el resto del detalle de producto (RN1 no menciona restricción por permiso, a
             // diferencia del bloque de costo/margen de abajo). `null` para productos creados antes
             // de SCRUM-426 (nunca se backfillea con datos falsos) — el frontend debe mostrar un
             // estado "no disponible" en ese caso, no asumir que siempre viene completo.
             'technical_spec' => $product->technical_spec,
-            'has_technical_sheet'         => $product->hasTechnicalSheet(),
-            'technical_sheet_filename'    => $product->technical_sheet_filename,
+            'has_technical_sheet' => $product->hasTechnicalSheet(),
+            'technical_sheet_filename' => $product->technical_sheet_filename,
             'technical_sheet_uploaded_at' => $product->technical_sheet_uploaded_at?->toIso8601String(),
         ];
 
         if ($restricted) {
-            // SCRUM-238 (rebote de Daniela Amaya 2026-08-15, ver comentario en el ticket) —
+            // SCRUM-238 (rebote de Gerencia Test 2026-08-15, ver comentario en el ticket) —
             // el modal de DETALLE de un producto en modo Ventas & Diseño necesita 9 métricas que
             // ya existen en la tabla de Inventario: Rotación, Estado, Proveedor, Stock mínimo,
             // Disponible, Por servir, Stock Total, Por ingresar, En camino. Ninguna es costo/
@@ -858,8 +860,8 @@ final class InventoryController extends Controller
             if ($includeRestrictedDetail) {
                 return array_merge($base, [
                     'provider_name' => $product->relationLoaded('provider') ? $product->provider?->name : null,
-                    'por_ingresar'  => $porIngresar,
-                    'en_camino'     => $enCamino,
+                    'por_ingresar' => $porIngresar,
+                    'en_camino' => $enCamino,
                 ]);
             }
 
@@ -874,24 +876,24 @@ final class InventoryController extends Controller
         $family = $product->relationLoaded('families') ? $product->families->first() : null;
         $base = array_merge($base, [
             'factory_reference' => $product->factory_reference,
-            'barcode'           => $product->barcode,
-            // Rebote REQ-427 (Daniela Amaya 2026-08-13) — solo presente en show() (detalle
+            'barcode' => $product->barcode,
+            // Rebote REQ-427 (Gerencia Test 2026-08-13) — solo presente en show() (detalle
             // completo), null en index(). "Ver Inventario > Por ingresar > Detalle".
             'bodega_confirmation' => $arrival === null ? null : [
-                'awaiting_compras'   => $arrival['awaiting_compras'],
+                'awaiting_compras' => $arrival['awaiting_compras'],
                 'confirmed_quantity' => $arrival['confirmed_quantity'],
-                'confirmed_by_name'  => $arrival['confirmed_by_name'],
+                'confirmed_by_name' => $arrival['confirmed_by_name'],
             ],
-            'cost'              => $product->cost,
-            'import_cost'       => $product->import_cost,
-            'freight_cost'      => $product->freight_cost,
-            'handling_cost'     => $product->handling_cost,
-            'other_cost'        => $product->other_cost,
-            'cost_total'        => $product->costTotal(),
-            'margin_percent'    => $product->marginPercent(),
-            'provider_id'       => $product->provider_id,
-            'family_id'         => $family?->id,
-            'family_name'       => $family?->name,
+            'cost' => $product->cost,
+            'import_cost' => $product->import_cost,
+            'freight_cost' => $product->freight_cost,
+            'handling_cost' => $product->handling_cost,
+            'other_cost' => $product->other_cost,
+            'cost_total' => $product->costTotal(),
+            'margin_percent' => $product->marginPercent(),
+            'provider_id' => $product->provider_id,
+            'family_id' => $family?->id,
+            'family_name' => $family?->name,
         ]);
 
         return $base;

@@ -55,11 +55,11 @@ class AdminContArchitectCommissionController
 
         $summary = $this->commissions->summary($filters);
 
-        // REQ-516 RN4 — mismo criterio que `AdminContInternalCommissionController::isMarkApprover()`
+        // REQ-516 RN4 — mismo criterio que `AdminContInternalCommissionController::isPrimaryApprover()`
         // y `AdminContInvoiceController::detail()`: dependiente del actor, no del proyecto, se
-        // calcula acá (este endpoint es de acceso general, no gateado por `mark_only`) para que el
+        // calcula acá (este endpoint es de acceso general, no gateado por `primary_approver_only`) para que el
         // frontend sepa cuándo mostrar Aprobar/Rechazar en el modal de detalle (REQ-519).
-        $summary['puede_decidir_porcentaje'] = $this->isMarkApprover($request);
+        $summary['puede_decidir_porcentaje'] = $this->isPrimaryApprover($request);
 
         return response()->json($summary);
     }
@@ -72,7 +72,7 @@ class AdminContArchitectCommissionController
         $architects = Architect::whereIn('id', $architectIds)->orderBy('name')->get(['id', 'name']);
 
         return response()->json($architects->map(fn (Architect $a) => [
-            'id'     => $a->id,
+            'id' => $a->id,
             'nombre' => $a->name,
         ])->values());
     }
@@ -113,7 +113,7 @@ class AdminContArchitectCommissionController
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        $file       = $request->file('file');
+        $file = $request->file('file');
         $commission = $this->commissions->uploadCuentaCobro(
             $pipelineCardId,
             (int) $project['architect_id'],
@@ -123,7 +123,7 @@ class AdminContArchitectCommissionController
 
         return response()->json([
             'nombre_archivo' => $commission->cuenta_cobro_nombre_archivo,
-            'uploaded_at'    => $commission->cuenta_cobro_uploaded_at?->toIso8601String(),
+            'uploaded_at' => $commission->cuenta_cobro_uploaded_at?->toIso8601String(),
         ], 201);
     }
 
@@ -167,7 +167,7 @@ class AdminContArchitectCommissionController
 
         return response()->json([
             'nombre_archivo' => $commission->comprobante_retencion_nombre_archivo,
-            'uploaded_at'    => $commission->comprobante_retencion_uploaded_at?->toIso8601String(),
+            'uploaded_at' => $commission->comprobante_retencion_uploaded_at?->toIso8601String(),
         ], 201);
     }
 
@@ -282,9 +282,9 @@ class AdminContArchitectCommissionController
         return response()->json(['message' => 'ok']);
     }
 
-    /** Mismo criterio que `AdminContInternalCommissionController::isMarkApprover()` —
-     *  `superadmin.all` bypassa, si no hay `mark_approver_user_id` configurado nadie es Mark. */
-    private function isMarkApprover(Request $request): bool
+    /** Mismo criterio que `AdminContInternalCommissionController::isPrimaryApprover()` —
+     *  `superadmin.all` bypassa, si no hay `primary_approver_user_id` configurado nadie es Mark. */
+    private function isPrimaryApprover(Request $request): bool
     {
         /** @var array{sub?: int, permissions?: mixed}|null $payload */
         $payload = $request->attributes->get('jwt');
@@ -301,9 +301,9 @@ class AdminContArchitectCommissionController
             return true;
         }
 
-        $markApproverId = AdminContFiscalSettings::current()->mark_approver_user_id;
+        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        return $markApproverId !== null && (int) $payload['sub'] === $markApproverId;
+        return $primaryApproverId !== null && (int) $payload['sub'] === $primaryApproverId;
     }
 
     private function resolveUser(Request $request): ?User

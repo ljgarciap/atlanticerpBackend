@@ -13,6 +13,7 @@ use App\Modules\AdminCont\Services\InvoicePdfService;
 use App\Modules\AdminCont\Services\InvoiceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -39,8 +40,8 @@ class AdminContInvoiceController
     public function index(Request $request): JsonResponse
     {
         $filters = $this->filtersFromRequest($request);
-        $view    = $filters['view'];
-        $result  = $this->invoices->list($filters);
+        $view = $filters['view'];
+        $result = $this->invoices->list($filters);
         $totalEnTab = $this->invoices->countInTab($filters['tab']);
 
         return response()->json($view === 'plana'
@@ -57,11 +58,11 @@ class AdminContInvoiceController
         }
 
         $filters = $this->filtersFromRequest($request);
-        $rows    = $this->invoices->list(['tab' => $filters['tab'], 'view' => 'plana'] + $filters);
+        $rows = $this->invoices->list(['tab' => $filters['tab'], 'view' => 'plana'] + $filters);
 
-        $bytes    = $format === 'pdf' ? $this->export->toPdf($rows) : $this->export->toExcel($rows);
+        $bytes = $format === 'pdf' ? $this->export->toPdf($rows) : $this->export->toExcel($rows);
         $filename = 'facturacion-'.now()->format('Ymd-His').($format === 'pdf' ? '.pdf' : '.xlsx');
-        $mime     = $format === 'pdf'
+        $mime = $format === 'pdf'
             ? 'application/pdf'
             : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -72,14 +73,14 @@ class AdminContInvoiceController
     private function filtersFromRequest(Request $request): array
     {
         return [
-            'tab'      => $request->string('tab', 'cobrable')->toString(),
-            'view'     => $request->string('view', 'agrupado')->toString(),
-            'cliente'  => $request->filled('cliente') ? $request->string('cliente')->toString() : null,
+            'tab' => $request->string('tab', 'cobrable')->toString(),
+            'view' => $request->string('view', 'agrupado')->toString(),
+            'cliente' => $request->filled('cliente') ? $request->string('cliente')->toString() : null,
             'proyecto' => $request->filled('proyecto') ? $request->string('proyecto')->toString() : null,
-            'estado'   => $request->filled('estado') ? $request->string('estado')->toString() : null,
-            'desde'    => $request->filled('desde') ? $request->string('desde')->toString() : null,
-            'hasta'    => $request->filled('hasta') ? $request->string('hasta')->toString() : null,
-            'search'   => $request->filled('search') ? $request->string('search')->toString() : null,
+            'estado' => $request->filled('estado') ? $request->string('estado')->toString() : null,
+            'desde' => $request->filled('desde') ? $request->string('desde')->toString() : null,
+            'hasta' => $request->filled('hasta') ? $request->string('hasta')->toString() : null,
+            'search' => $request->filled('search') ? $request->string('search')->toString() : null,
         ];
     }
 
@@ -132,7 +133,7 @@ class AdminContInvoiceController
     /** GET /api/admin-contab/invoices/{order}/detail — REQ-447, modal de detalle/trazabilidad.
      *  `puede_decidir_incobrable` (REQ-448) es dependiente del actor, no de la factura — se calcula
      *  acá en vez de en el service, ya que este endpoint es de acceso general (Felix/Mark/Gerencia),
-     *  no gateado por `mark_only`; el frontend lo usa para mostrar Aprobar/Rechazar solo a Mark. */
+     *  no gateado por `primary_approver_only`; el frontend lo usa para mostrar Aprobar/Rechazar solo a Mark. */
     public function detail(int $order, Request $request): JsonResponse
     {
         $detail = $this->invoices->detail($order);
@@ -146,11 +147,11 @@ class AdminContInvoiceController
             : [];
 
         // superadmin.all bypassa el gate de Mark (decisión de Luis, 2026-08-22) — mismo criterio
-        // que EnsureIsMarkApprover, que ya lo aplica sobre la acción real de decidir.
-        $markApproverId = AdminContFiscalSettings::current()->mark_approver_user_id;
-        $isMark         = in_array('superadmin.all', $permissions, true)
-            || ($payload !== null && isset($payload['sub']) && $markApproverId !== null
-                && (int) $payload['sub'] === $markApproverId);
+        // que EnsureIsPrimaryApprover, que ya lo aplica sobre la acción real de decidir.
+        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
+        $isMark = in_array('superadmin.all', $permissions, true)
+            || ($payload !== null && isset($payload['sub']) && $primaryApproverId !== null
+                && (int) $payload['sub'] === $primaryApproverId);
 
         $detail['puede_decidir_incobrable'] = $detail['cobrabilidad'] === 'pendiente_aprobacion' && $isMark;
 
@@ -158,7 +159,7 @@ class AdminContInvoiceController
     }
 
     /** GET /api/admin-contab/invoices/{order}/pdf — REQ-449, documento fiscal real. */
-    public function pdf(int $order): \Illuminate\Http\Response
+    public function pdf(int $order): Response
     {
         $detail = $this->invoices->detail($order);
         $numero = $detail['numero_factura'] ?? "orden-{$order}";
@@ -180,7 +181,7 @@ class AdminContInvoiceController
         return response()->json($invoice);
     }
 
-    /** PUT /api/admin-contab/invoices/{order}/uncollectible-decision — REQ-448, exclusivo de Mark (mark_only). */
+    /** PUT /api/admin-contab/invoices/{order}/uncollectible-decision — REQ-448, exclusivo de Mark (primary_approver_only). */
     public function uncollectibleDecision(int $order, Request $request): JsonResponse
     {
         $request->validate(['approve' => ['required', 'boolean']]);

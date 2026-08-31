@@ -49,8 +49,8 @@ class ResolveInventoryReviewConcurrencyTest extends FeatureTestCase
     {
         $review = Order::create([
             'order_number' => 'PED-CONC-'.random_int(10000, 999999),
-            'order_type'   => Order::ORDER_TYPE_REVISION_INVENTARIO,
-            'stage'        => Order::STAGE_PICKING_PENDIENTE,
+            'order_type' => Order::ORDER_TYPE_REVISION_INVENTARIO,
+            'stage' => Order::STAGE_PICKING_PENDIENTE,
             'customer_name' => 'Cliente concurrencia',
         ]);
         $this->orderId = $review->id;
@@ -58,7 +58,7 @@ class ResolveInventoryReviewConcurrencyTest extends FeatureTestCase
 
         $snippet = <<<'PHP'
 $review = \App\Modules\Bodega\Models\Order::find(__ORDER_ID__);
-$actor = \App\Models\User::where('email', 'almacen@atlantic.com.pa')->first();
+$actor = \App\Models\User::where('email', 'liderbodega@test.com')->first();
 $decisions = [['order_item_id' => __ITEM_ID__, 'found' => true, 'location' => 'A-01']];
 try {
     app(\App\Modules\Bodega\Services\InventoryReviewService::class)->resolve($review, $decisions, $actor);
@@ -71,11 +71,11 @@ PHP;
 
         $results = $this->runConcurrently([$snippet, $snippet]);
 
-        $okCount       = count(array_filter($results, fn (string $r) => $r === 'OK'));
+        $okCount = count(array_filter($results, fn (string $r) => $r === 'OK'));
         $rejectedCount = count(array_filter($results, fn (string $r) => str_starts_with($r, 'REJECTED:')));
 
-        $this->assertSame(1, $okCount, "Exactamente 1 de las 2 resoluciones concurrentes debe tener éxito. Resultados: ".implode(' | ', $results));
-        $this->assertSame(1, $rejectedCount, "La otra debe ver la revisión ya resuelta y rechazar. Resultados: ".implode(' | ', $results));
+        $this->assertSame(1, $okCount, 'Exactamente 1 de las 2 resoluciones concurrentes debe tener éxito. Resultados: '.implode(' | ', $results));
+        $this->assertSame(1, $rejectedCount, 'La otra debe ver la revisión ya resuelta y rechazar. Resultados: '.implode(' | ', $results));
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 

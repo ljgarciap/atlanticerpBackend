@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Batch 16 de Admin&Cont (SCRUM-585→590, REQ-508/511 RN1) — % de comisión por defecto para
  * proyectos referidos por arquitectos externos. Mismo criterio ya usado para
- * `mark_approval_threshold` (migración `2026_08_24_100002`, ver su propio docblock): se agrega al
+ * `primary_approval_threshold` (migración `2026_08_24_100002`, ver su propio docblock): se agrega al
  * singleton ya existente de Configuración Fiscal (`AdminContFiscalSettings::current()`, id=1) en
  * vez de una constante de `10.0` hardcodeada en `ArchitectCommissionService` — regla dura del
  * workspace, ningún porcentaje de negocio como constante en código.
