@@ -4,6 +4,7 @@ use App\Modules\AI\Http\Controllers\AiModelPricingController;
 use App\Modules\AI\Http\Controllers\AiUsageController;
 use App\Modules\Auth\Http\Controllers\AuditLogController;
 use App\Modules\Auth\Http\Controllers\DemoCleanupController;
+use App\Modules\Auth\Http\Controllers\ModuleController;
 use App\Modules\Auth\Http\Controllers\RoleController;
 use App\Modules\Auth\Http\Controllers\SecurityAnomalyController;
 use App\Modules\Auth\Http\Controllers\UserController;
@@ -51,6 +52,13 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     Route::delete('/roles/{id}',               [RoleController::class, 'destroy']);
     Route::get('/roles/{id}/visibility',       [RoleController::class, 'visibility']);
     Route::put('/roles/{id}/visibility',       [RoleController::class, 'updateVisibility']);
+
+    // Catálogo de módulos de negocio, como datos (hallazgo de la auditoría del esquema de
+    // permisos, Atlantic/CLAUDE.md sesión 2026-08-30) — mismo permiso que el catálogo de roles,
+    // mismo criterio: cambia el alcance de todos los roles/niveles a la vez.
+    Route::post('/modules',        [ModuleController::class, 'store']);
+    Route::put('/modules/{id}',    [ModuleController::class, 'update']);
+    Route::delete('/modules/{id}', [ModuleController::class, 'destroy']);
 
     // SCRUM-724 — override de visibilidad de módulos/menús por usuario, por encima
     // de la visibilidad por rol de arriba. Mismo permiso que la administración de

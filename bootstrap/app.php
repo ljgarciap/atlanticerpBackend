@@ -58,6 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')->prefix('api/departments')->group(base_path('routes/departments.php'));
             Route::middleware('api')->prefix('api/security-levels')->group(base_path('routes/security-levels.php'));
             Route::middleware('api')->prefix('api/roles')->group(base_path('routes/roles.php'));
+            Route::middleware('api')->prefix('api/modules')->group(base_path('routes/modules.php'));
             Route::middleware('api')->prefix('api/settings')->group(base_path('routes/settings.php'));
             Route::middleware('api')->prefix('api/notifications')->group(base_path('routes/notifications.php'));
             Route::middleware('api')->prefix('api/admin-contab')->group(base_path('routes/admin-contab.php'));
