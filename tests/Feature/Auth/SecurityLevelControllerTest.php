@@ -38,8 +38,12 @@ class SecurityLevelControllerTest extends FeatureTestCase
         $response->assertJsonPath('name', 'Gerencia — Whil');
         // Corrección 2026-07-10: el mapeo rol→nivel de ADR-006 reusa la escala 1-10 existente
         // (ver 2026_07_18_100002_reuse_existing_levels_for_role_defaults.php) en vez de crear
-        // niveles nuevos — el siguiente número disponible sigue siendo 11.
-        $response->assertJsonPath('level', 11);
+        // niveles nuevos — el siguiente número disponible seguía siendo 11 hasta la Fase 2 de la
+        // auditoría de permisos (2026-08-30, ver Atlantic/CLAUDE.md), que agregó los niveles 11,
+        // 13, 14 y 15 (garantías/asistente administrativa/lider_servicios/lider_admin_contab, cada
+        // uno separado para que ningún permiso fino de módulo se filtre a otro rol que comparta
+        // nivel) — el siguiente número disponible pasa a ser 16.
+        $response->assertJsonPath('level', 16);
         $response->assertJsonPath('is_active', true);
         $response->assertJsonPath('permissions', ['crm.read']);
     }

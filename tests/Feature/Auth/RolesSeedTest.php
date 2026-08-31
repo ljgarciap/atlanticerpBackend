@@ -121,7 +121,7 @@ class RolesSeedTest extends FeatureTestCase
         }
     }
 
-    public function test_security_level_module_permissions_tiene_38_filas(): void
+    public function test_security_level_module_permissions_tiene_60_filas(): void
     {
         // 35 filas (5 niveles × 7 módulos) desde 2026_07_22_100010 (Pre-QA CRÍTICO, SCRUM-329
         // Batch A2): se sumó el Nivel 3 "solo-Bodega" a los 4 arquetipos previos (1, 4, 8, 9).
@@ -131,9 +131,18 @@ class RolesSeedTest extends FeatureTestCase
         //   Nivel 5 "Team Lead" + servicios       (tecnico_servicios/garantias_servicios, can_edit=true)
         //   Nivel 6 "Supervisor" + ventas_diseno  (vendedor_disenador, can_edit=true, preserva su capacidad actual)
         //   Nivel 6 "Supervisor" + servicios      (vendedor_disenador, can_edit=false — el punto de crear este nivel)
+        //
+        // +22 filas — Fase 2 de la auditoría de permisos (2026-08-30, ver Atlantic/CLAUDE.md),
+        // 4 niveles nuevos para que ningún permiso fino de módulo se filtre a otro rol que
+        // comparta nivel (el escape hatch JSONB no respeta role_module_visibility, a diferencia
+        // de esta tabla — ver docblock de 2026_08_30_100001 y 100002 para el hallazgo completo):
+        //   Nivel 11 "Team Lead — Garantías"        + servicios (1 fila, clon angosto del Nivel 5)
+        //   Nivel 13 "Read Only — Admin & Contab"   (7 filas, clon completo del Nivel 1)
+        //   Nivel 14 "Power User — Servicios"       (7 filas, clon completo del Nivel 4)
+        //   Nivel 15 "Power User — Admin & Contab"  (7 filas, clon completo del Nivel 4)
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $count = DB::table("{$slug}_auth.security_level_module_permissions")->count();
-        $this->assertSame(38, $count);
+        $this->assertSame(60, $count);
     }
 
     public function test_nivel_3_edita_solo_bodega_resto_solo_lectura(): void
