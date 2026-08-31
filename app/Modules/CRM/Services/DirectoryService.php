@@ -6,6 +6,7 @@ namespace App\Modules\CRM\Services;
 
 use App\Models\User;
 use App\Modules\CRM\Models\Project;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
 final class DirectoryService
@@ -34,9 +35,9 @@ final class DirectoryService
      *   }>
      * }
      */
-    public function get(User $user, string $activeRole, string $type, string $search = ''): array
+    public function get(User $user, string $type, string $search = ''): array
     {
-        $projects = $this->visibleProjects($user, $activeRole)
+        $projects = $this->visibleProjects($user)
             ->with('latestActivity')
             ->get();
 
@@ -50,14 +51,14 @@ final class DirectoryService
 
             if (! isset($map[$key])) {
                 $map[$key] = [
-                    'nombre'           => $key,
-                    'projects'         => [],
-                    'areas'            => [],        // keyed set: ['value' => true]
-                    'ubicaciones'      => [],        // keyed set
-                    'valor_total'      => 0.0,
-                    'valor_cerrado'    => 0.0,
-                    'emails'           => [],        // keyed set
-                    'telefonos'        => [],        // keyed set
+                    'nombre' => $key,
+                    'projects' => [],
+                    'areas' => [],        // keyed set: ['value' => true]
+                    'ubicaciones' => [],        // keyed set
+                    'valor_total' => 0.0,
+                    'valor_cerrado' => 0.0,
+                    'emails' => [],        // keyed set
+                    'telefonos' => [],        // keyed set
                     'ultima_actividad' => null,
                 ];
             }
@@ -88,7 +89,7 @@ final class DirectoryService
             // ultima_actividad = max(latest activity fecha, project updated_at)
             $latestTs = null;
             if ($project->latestActivity !== null) {
-                $latestTs = $project->latestActivity->fecha instanceof \Carbon\Carbon
+                $latestTs = $project->latestActivity->fecha instanceof Carbon
                     ? $project->latestActivity->fecha->toDateString()
                     : (string) $project->latestActivity->fecha;
             }
@@ -117,40 +118,39 @@ final class DirectoryService
             if ($countDiff !== 0) {
                 return $countDiff;
             }
+
             return strcmp($a['nombre'], $b['nombre']);
         });
 
         // Build output entries (areas/ubicaciones/emails/telefonos were keyed sets)
         $entries = array_values(array_map(fn (array $e) => [
-            'nombre'           => $e['nombre'],
-            'project_count'    => count($e['projects']),
-            'areas'            => array_map('strval', array_keys($e['areas'])),
-            'ubicaciones'      => array_map('strval', array_keys($e['ubicaciones'])),
-            'valor_total'      => $e['valor_total'],
-            'valor_cerrado'    => $e['valor_cerrado'],
-            'emails'           => array_map('strval', array_keys($e['emails'])),
-            'telefonos'        => array_map('strval', array_keys($e['telefonos'])),
+            'nombre' => $e['nombre'],
+            'project_count' => count($e['projects']),
+            'areas' => array_map('strval', array_keys($e['areas'])),
+            'ubicaciones' => array_map('strval', array_keys($e['ubicaciones'])),
+            'valor_total' => $e['valor_total'],
+            'valor_cerrado' => $e['valor_cerrado'],
+            'emails' => array_map('strval', array_keys($e['emails'])),
+            'telefonos' => array_map('strval', array_keys($e['telefonos'])),
             'ultima_actividad' => $e['ultima_actividad'],
         ], $map));
 
         $stats = [
-            'total_entries'  => count($entries),
+            'total_entries' => count($entries),
             'total_projects' => array_sum(array_map(fn (array $e) => $e['project_count'], $entries)),
-            'total_valor'    => array_sum(array_map(fn (array $e) => $e['valor_total'], $entries)),
-            'total_cerrado'  => array_sum(array_map(fn (array $e) => $e['valor_cerrado'], $entries)),
+            'total_valor' => array_sum(array_map(fn (array $e) => $e['valor_total'], $entries)),
+            'total_cerrado' => array_sum(array_map(fn (array $e) => $e['valor_cerrado'], $entries)),
         ];
 
         return ['stats' => $stats, 'entries' => $entries];
     }
 
     /** @return Builder<Project> */
-    private function visibleProjects(User $user, string $activeRole): Builder
+    private function visibleProjects(User $user): Builder
     {
         $query = Project::query();
 
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
-
-        if (! $isManagement) {
+        if (! $user->canViewTeamV2('ventas_diseno')) {
             $query->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $user->id));
         }
 

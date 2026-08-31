@@ -16,7 +16,7 @@ final class ReminderController extends Controller
 {
     public function index(Request $request, int $projectId): JsonResponse
     {
-        $user    = $this->resolveUser($request);
+        $user = $this->resolveUser($request);
         $project = Project::with('assignees')->find($projectId);
 
         if ($user === null) {
@@ -27,7 +27,7 @@ final class ReminderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -42,7 +42,7 @@ final class ReminderController extends Controller
 
     public function store(StoreReminderRequest $request, int $projectId): JsonResponse
     {
-        $user    = $this->resolveUser($request);
+        $user = $this->resolveUser($request);
         $project = Project::with('assignees')->find($projectId);
 
         if ($user === null) {
@@ -53,7 +53,7 @@ final class ReminderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -61,9 +61,9 @@ final class ReminderController extends Controller
         $validated = $request->validated();
 
         $reminder = $project->reminders()->create([
-            'tipo'       => $validated['tipo'],
-            'fecha'      => $validated['fecha'],
-            'nota'       => $validated['nota'] ?? null,
+            'tipo' => $validated['tipo'],
+            'fecha' => $validated['fecha'],
+            'nota' => $validated['nota'] ?? null,
             'completado' => false,
         ]);
 
@@ -72,7 +72,7 @@ final class ReminderController extends Controller
 
     public function toggle(Request $request, int $projectId, int $remId): JsonResponse
     {
-        $user    = $this->resolveUser($request);
+        $user = $this->resolveUser($request);
         $project = Project::with('assignees')->find($projectId);
 
         if ($user === null) {
@@ -83,7 +83,7 @@ final class ReminderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -100,7 +100,7 @@ final class ReminderController extends Controller
 
     public function destroy(Request $request, int $projectId, int $remId): JsonResponse
     {
-        $user    = $this->resolveUser($request);
+        $user = $this->resolveUser($request);
         $project = Project::with('assignees')->find($projectId);
 
         if ($user === null) {
@@ -111,7 +111,7 @@ final class ReminderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -139,19 +139,9 @@ final class ReminderController extends Controller
         return User::find((int) $payload['sub']);
     }
 
-    private function activeRole(Request $request): string
+    private function canAccess(Project $project, User $user): bool
     {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? $payload['role'] : '';
-    }
-
-    private function canAccess(Request $request, Project $project, User $user): bool
-    {
-        $role = $this->activeRole($request);
-
-        if (in_array($role, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true)) {
+        if ($user->canViewTeamV2('ventas_diseno')) {
             return true;
         }
 
@@ -162,11 +152,11 @@ final class ReminderController extends Controller
     private function format(ProjectReminder $reminder): array
     {
         return [
-            'id'         => $reminder->id,
+            'id' => $reminder->id,
             'project_id' => $reminder->project_id,
-            'tipo'       => $reminder->tipo,
-            'fecha'      => $reminder->fecha->toDateString(),
-            'nota'       => $reminder->nota,
+            'tipo' => $reminder->tipo,
+            'fecha' => $reminder->fecha->toDateString(),
+            'nota' => $reminder->nota,
             'completado' => $reminder->completado,
             'created_at' => $reminder->created_at->toIso8601String(),
         ];

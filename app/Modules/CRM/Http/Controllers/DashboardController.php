@@ -22,7 +22,7 @@ final class DashboardController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        return response()->json($this->service->kpis($user, $this->activeRole($request)));
+        return response()->json($this->service->kpis($user));
     }
 
     /** GET /api/crm/dashboard/reminders */
@@ -34,7 +34,7 @@ final class DashboardController extends Controller
         }
 
         return response()->json([
-            'data' => $this->service->userReminders($user, $this->activeRole($request)),
+            'data' => $this->service->userReminders($user),
         ]);
     }
 
@@ -48,13 +48,5 @@ final class DashboardController extends Controller
         }
 
         return User::find((int) $payload['sub']);
-    }
-
-    private function activeRole(Request $request): string
-    {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? $payload['role'] : '';
     }
 }

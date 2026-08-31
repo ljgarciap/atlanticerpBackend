@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Modules\CRM\Http\Requests\StoreProjectRequest;
 use App\Modules\CRM\Http\Requests\UpdateProjectRequest;
 use App\Modules\CRM\Models\Project;
-use App\Modules\CRM\Models\ProjectActivity;
 use App\Modules\CRM\Models\ProjectReminder;
 use App\Modules\CRM\Services\ProjectService;
 use Illuminate\Http\JsonResponse;
@@ -33,19 +32,19 @@ final class ProjectController extends Controller
         ]);
 
         $filters = array_filter([
-            'search'    => isset($raw['search'])    ? (string) $raw['search']    : null,
-            'etapa'     => isset($raw['etapa'])     ? (string) $raw['etapa']     : null,
-            'urgency'   => isset($raw['urgency'])   ? (string) $raw['urgency']   : null,
+            'search' => isset($raw['search']) ? (string) $raw['search'] : null,
+            'etapa' => isset($raw['etapa']) ? (string) $raw['etapa'] : null,
+            'urgency' => isset($raw['urgency']) ? (string) $raw['urgency'] : null,
             'freshness' => isset($raw['freshness']) ? (string) $raw['freshness'] : null,
-            'area'      => isset($raw['area'])      ? (string) $raw['area']      : null,
-            'tipo'      => isset($raw['tipo'])      ? (string) $raw['tipo']      : null,
-            'despacho'  => isset($raw['despacho'])  ? (string) $raw['despacho']  : null,
+            'area' => isset($raw['area']) ? (string) $raw['area'] : null,
+            'tipo' => isset($raw['tipo']) ? (string) $raw['tipo'] : null,
+            'despacho' => isset($raw['despacho']) ? (string) $raw['despacho'] : null,
             'ubicacion' => isset($raw['ubicacion']) ? (string) $raw['ubicacion'] : null,
-            'user_id'   => isset($raw['user_id'])   ? (int)    $raw['user_id']   : null,
-            'dialux'    => isset($raw['dialux']) && $raw['dialux'] !== ''
+            'user_id' => isset($raw['user_id']) ? (int) $raw['user_id'] : null,
+            'dialux' => isset($raw['dialux']) && $raw['dialux'] !== ''
                              ? filter_var($raw['dialux'], FILTER_VALIDATE_BOOLEAN)
                              : null,
-            'per_page'  => isset($raw['per_page'])  ? (int)    $raw['per_page']  : null,
+            'per_page' => isset($raw['per_page']) ? (int) $raw['per_page'] : null,
         ], fn (mixed $v): bool => $v !== null);
 
         $paginator = $this->service->list($user, $filters);
@@ -55,10 +54,10 @@ final class ProjectController extends Controller
                 ->map(fn (Project $p) => $this->format($p))
                 ->values(),
             'meta' => [
-                'total'        => $paginator->total(),
-                'per_page'     => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
                 'current_page' => $paginator->currentPage(),
-                'last_page'    => $paginator->lastPage(),
+                'last_page' => $paginator->lastPage(),
             ],
         ]);
     }
@@ -110,7 +109,7 @@ final class ProjectController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -129,7 +128,7 @@ final class ProjectController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -172,7 +171,7 @@ final class ProjectController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -212,19 +211,9 @@ final class ProjectController extends Controller
         return User::find((int) $payload['sub']);
     }
 
-    private function activeRole(Request $request): string
+    private function canAccess(Project $project, User $user): bool
     {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? $payload['role'] : '';
-    }
-
-    private function canAccess(Request $request, Project $project, User $user): bool
-    {
-        $role = $this->activeRole($request);
-
-        if (in_array($role, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true)) {
+        if ($user->canViewTeamV2('ventas_diseno')) {
             return true;
         }
 
@@ -237,42 +226,42 @@ final class ProjectController extends Controller
         $latestActivity = $project->latestActivity;
 
         return [
-            'id'              => $project->id,
-            'nombre'          => $project->nombre,
-            'contacto'        => $project->contacto,
-            'email'           => $project->email,
-            'celular'         => $project->celular,
-            'encargado'       => $project->encargado,
-            'developer'       => $project->developer,
-            'arquitecto'      => $project->arquitecto,
-            'tipo'            => $project->tipo,
-            'dialux'          => $project->dialux,
-            'area'            => $project->area,
-            'despacho'        => $project->despacho,
-            'ubicacion'       => $project->ubicacion,
-            'etapa'           => $project->etapa,
-            'fecha_entrega'   => $project->fecha_entrega?->toDateString(),
-            'valor'           => $project->valor,
-            'notas'           => $project->notas,
-            'urgency'         => $this->service->getUrgency($project),
-            'freshness'       => $this->service->getFreshness($project),
-            'assignees'       => $project->assignees
+            'id' => $project->id,
+            'nombre' => $project->nombre,
+            'contacto' => $project->contacto,
+            'email' => $project->email,
+            'celular' => $project->celular,
+            'encargado' => $project->encargado,
+            'developer' => $project->developer,
+            'arquitecto' => $project->arquitecto,
+            'tipo' => $project->tipo,
+            'dialux' => $project->dialux,
+            'area' => $project->area,
+            'despacho' => $project->despacho,
+            'ubicacion' => $project->ubicacion,
+            'etapa' => $project->etapa,
+            'fecha_entrega' => $project->fecha_entrega?->toDateString(),
+            'valor' => $project->valor,
+            'notas' => $project->notas,
+            'urgency' => $this->service->getUrgency($project),
+            'freshness' => $this->service->getFreshness($project),
+            'assignees' => $project->assignees
                 ->map(fn (User $u) => [
-                    'id'         => $u->id,
+                    'id' => $u->id,
                     'first_name' => $u->first_name,
-                    'last_name'  => $u->last_name,
+                    'last_name' => $u->last_name,
                 ])
                 ->values()
                 ->all(),
             'latest_activity' => $latestActivity !== null ? [
-                'tipo'  => $latestActivity->tipo,
+                'tipo' => $latestActivity->tipo,
                 'fecha' => $latestActivity->fecha->toDateTimeString(),
                 'notas' => $latestActivity->notas,
             ] : null,
             'documents_count' => $project->documents_count,
-            'created_by'      => $project->created_by,
-            'created_at'      => $project->created_at->toIso8601String(),
-            'updated_at'      => $project->updated_at->toIso8601String(),
+            'created_by' => $project->created_by,
+            'created_at' => $project->created_at->toIso8601String(),
+            'updated_at' => $project->updated_at->toIso8601String(),
         ];
     }
 
@@ -283,10 +272,10 @@ final class ProjectController extends Controller
 
         $base['reminders'] = $project->reminders
             ->map(fn (ProjectReminder $r) => [
-                'id'         => $r->id,
-                'tipo'       => $r->tipo,
-                'fecha'      => $r->fecha->toDateString(),
-                'nota'       => $r->nota,
+                'id' => $r->id,
+                'tipo' => $r->tipo,
+                'fecha' => $r->fecha->toDateString(),
+                'nota' => $r->nota,
                 'completado' => $r->completado,
                 'created_at' => $r->created_at->toIso8601String(),
             ])

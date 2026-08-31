@@ -30,12 +30,11 @@ final class DirectoryController extends Controller
 
         $validated = $request->validate([
             'type' => ['required', 'string', Rule::in(DirectoryService::allowedTypes())],
-            'q'    => ['nullable', 'string', 'max:100'],
+            'q' => ['nullable', 'string', 'max:100'],
         ]);
 
         $result = $this->service->get(
             $user,
-            $this->activeRole($request),
             $validated['type'],
             (string) ($validated['q'] ?? '')
         );
@@ -53,13 +52,5 @@ final class DirectoryController extends Controller
         }
 
         return User::find((int) $payload['sub']);
-    }
-
-    private function activeRole(Request $request): string
-    {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? $payload['role'] : '';
     }
 }

@@ -7,6 +7,7 @@ namespace App\Modules\CRM\Services;
 use App\Models\User;
 use App\Modules\CRM\Models\Contact;
 use App\Modules\CRM\Models\Project;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -21,7 +22,7 @@ final class ContactService
      *   entries: array<int, array<string, mixed>>
      * }
      */
-    public function list(User $user, string $activeRole, string $type = '', string $q = ''): array
+    public function list(User $user, bool $isManagement, string $type = '', string $q = ''): array
     {
         $query = Contact::query()->orderBy('nombre');
 
@@ -30,7 +31,7 @@ final class ContactService
         }
 
         if ($q !== '') {
-            $query->where('nombre', 'ilike', '%' . $q . '%');
+            $query->where('nombre', 'ilike', '%'.$q.'%');
         }
 
         /** @var Collection<int, Contact> $contacts */
@@ -38,22 +39,22 @@ final class ContactService
 
         // Load visible projects once and attach stats per contact
         /** @var Collection<int, Project> $projects */
-        $projects = $this->visibleProjects($user, $activeRole)->with('latestActivity')->get();
+        $projects = $this->visibleProjects($user, $isManagement)->with('latestActivity')->get();
 
         $entries = $contacts->map(function (Contact $contact) use ($projects): array {
             return $this->enrichWithProjectStats($contact, $projects);
         })->values()->all();
 
         $totalProjects = (int) array_sum(array_column($entries, 'project_count'));
-        $totalValor    = (float) array_sum(array_column($entries, 'valor_total'));
-        $totalCerrado  = (float) array_sum(array_column($entries, 'valor_cerrado'));
+        $totalValor = (float) array_sum(array_column($entries, 'valor_total'));
+        $totalCerrado = (float) array_sum(array_column($entries, 'valor_cerrado'));
 
         return [
             'stats' => [
-                'total'          => count($entries),
+                'total' => count($entries),
                 'total_projects' => $totalProjects,
-                'total_valor'    => $totalValor,
-                'total_cerrado'  => $totalCerrado,
+                'total_valor' => $totalValor,
+                'total_cerrado' => $totalCerrado,
             ],
             'entries' => $entries,
         ];
@@ -189,7 +190,7 @@ final class ContactService
         }
 
         return [
-            'email'    => $project->email !== '' ? $project->email : null,
+            'email' => $project->email !== '' ? $project->email : null,
             'telefono' => $project->celular !== '' ? $project->celular : null,
         ];
     }
@@ -197,7 +198,7 @@ final class ContactService
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
-     * @param  Collection<int, Project> $projects
+     * @param  Collection<int, Project>  $projects
      * @return array<string, mixed>
      */
     private function enrichWithProjectStats(Contact $contact, Collection $projects): array
@@ -207,16 +208,16 @@ final class ContactService
             fn (Project $p): bool => trim((string) ($p->{$contact->tipo} ?? '')) === $contact->nombre
         );
 
-        $areas      = $matching->pluck('area')->filter()->unique()->values()->all();
+        $areas = $matching->pluck('area')->filter()->unique()->values()->all();
         $ubicaciones = $matching->pluck('ubicacion')->filter()->unique()->values()->all();
-        $valorTotal  = (float) $matching->sum('valor');
+        $valorTotal = (float) $matching->sum('valor');
         $valorCerrado = (float) $matching->filter(fn (Project $p): bool => $p->etapa === 'cerrado')->sum('valor');
 
         $ultimaActividad = null;
         foreach ($matching as $p) {
             $candidate = null;
             if ($p->latestActivity !== null) {
-                $candidate = $p->latestActivity->fecha instanceof \Carbon\Carbon
+                $candidate = $p->latestActivity->fecha instanceof Carbon
                     ? $p->latestActivity->fecha->toDateString()
                     : (string) $p->latestActivity->fecha;
             }
@@ -228,31 +229,29 @@ final class ContactService
         }
 
         return [
-            'id'               => $contact->id,
-            'nombre'           => $contact->nombre,
-            'tipo'             => $contact->tipo,
-            'email'            => $contact->email,
-            'telefono'         => $contact->telefono,
-            'empresa'          => $contact->empresa,
-            'notas'            => $contact->notas,
-            'source'           => 'contacts',
-            'project_count'    => $matching->count(),
-            'areas'            => array_map('strval', (array) $areas),
-            'ubicaciones'      => array_map('strval', (array) $ubicaciones),
-            'valor_total'      => $valorTotal,
-            'valor_cerrado'    => $valorCerrado,
+            'id' => $contact->id,
+            'nombre' => $contact->nombre,
+            'tipo' => $contact->tipo,
+            'email' => $contact->email,
+            'telefono' => $contact->telefono,
+            'empresa' => $contact->empresa,
+            'notas' => $contact->notas,
+            'source' => 'contacts',
+            'project_count' => $matching->count(),
+            'areas' => array_map('strval', (array) $areas),
+            'ubicaciones' => array_map('strval', (array) $ubicaciones),
+            'valor_total' => $valorTotal,
+            'valor_cerrado' => $valorCerrado,
             'ultima_actividad' => $ultimaActividad,
-            'created_at'       => $contact->created_at->toDateTimeString(),
-            'updated_at'       => $contact->updated_at->toDateTimeString(),
+            'created_at' => $contact->created_at->toDateTimeString(),
+            'updated_at' => $contact->updated_at->toDateTimeString(),
         ];
     }
 
     /** @return Builder<Project> */
-    private function visibleProjects(User $user, string $activeRole): Builder
+    private function visibleProjects(User $user, bool $isManagement): Builder
     {
         $query = Project::query();
-
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
 
         if (! $isManagement) {
             $query->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $user->id));

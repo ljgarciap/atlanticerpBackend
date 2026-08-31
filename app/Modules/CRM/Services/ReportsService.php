@@ -15,20 +15,19 @@ use Illuminate\Support\Facades\DB;
 
 final class ReportsService
 {
-    private const OPEN_STAGES    = ['lead', 'diseno', 'cotizacion', 'propuesta'];
+    private const OPEN_STAGES = ['lead', 'diseno', 'cotizacion', 'propuesta'];
+
     private const ACTIVITY_TYPES = ['llamada', 'email', 'reunion', 'whatsapp', 'visita', 'otro'];
 
     /** @return array<string, mixed> */
-    public function monthly(User $currentUser, string $activeRole, string $month, ?int $filterUserId): array
+    public function monthly(User $currentUser, bool $isManagement, string $month, ?int $filterUserId): array
     {
         $parts = explode('-', $month, 2);
-        $year  = (int) ($parts[0] ?? 0);
-        $mon   = (int) ($parts[1] ?? 0);
+        $year = (int) ($parts[0] ?? 0);
+        $mon = (int) ($parts[1] ?? 0);
 
         $start = Carbon::createFromDate($year, $mon, 1)->startOfDay();
-        $end   = $start->copy()->endOfMonth()->endOfDay();
-
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
+        $end = $start->copy()->endOfMonth()->endOfDay();
 
         // Resolve display title
         $filterUser = null;
@@ -45,7 +44,7 @@ final class ReportsService
         // Effective userId for project / activity scoping
         $effectiveUserId = $isManagement ? $filterUserId : $currentUser->id;
 
-        $baseQuery = $this->projectQuery($currentUser, $activeRole, $effectiveUserId);
+        $baseQuery = $this->projectQuery($currentUser, $isManagement, $effectiveUserId);
 
         /** @var Collection<int, Project> $nuevos */
         $nuevos = (clone $baseQuery)->whereBetween('created_at', [$start, $end])->with('assignees')->get();
@@ -57,7 +56,7 @@ final class ReportsService
         $perdidos = (clone $baseQuery)->where('etapa', 'perdido')->whereBetween('updated_at', [$start, $end])->get();
 
         $totalDecisions = $cerrados->count() + $perdidos->count();
-        $tasaCierre     = $totalDecisions > 0
+        $tasaCierre = $totalDecisions > 0
             ? (int) round($cerrados->count() / $totalDecisions * 100)
             : 0;
 
@@ -89,31 +88,31 @@ final class ReportsService
         }
 
         return [
-            'month'                => $month,
-            'month_label'          => $this->formatMonthLabel($start),
-            'user_title'           => $userTitle,
-            'kpis'                 => [
-                'leads_nuevos'  => $nuevos->count(),
-                'valor_nuevos'  => (float) $nuevos->sum('valor'),
-                'cerrados'      => $cerrados->count(),
+            'month' => $month,
+            'month_label' => $this->formatMonthLabel($start),
+            'user_title' => $userTitle,
+            'kpis' => [
+                'leads_nuevos' => $nuevos->count(),
+                'valor_nuevos' => (float) $nuevos->sum('valor'),
+                'cerrados' => $cerrados->count(),
                 'valor_cerrado' => (float) $cerrados->sum('valor'),
-                'perdidos'      => $perdidos->count(),
+                'perdidos' => $perdidos->count(),
                 'valor_perdido' => (float) $perdidos->sum('valor'),
-                'tasa_cierre'   => $tasaCierre,
-                'actividades'   => $activities->count(),
-                'documentos'    => 0,
+                'tasa_cierre' => $tasaCierre,
+                'actividades' => $activities->count(),
+                'documentos' => 0,
             ],
             'actividades_por_tipo' => $actByType,
-            'team_breakdown'       => $teamBreakdown,
-            'proyectos_nuevos'     => $this->formatNuevos($nuevos),
-            'bitacora'             => $this->formatBitacora($activities),
+            'team_breakdown' => $teamBreakdown,
+            'proyectos_nuevos' => $this->formatNuevos($nuevos),
+            'bitacora' => $this->formatBitacora($activities),
         ];
     }
 
     /** @return array<int, array<string, mixed>> */
     public function team(): array
     {
-        $tenant     = Tenant::current();
+        $tenant = Tenant::current();
         $pivotTable = $tenant !== null ? "{$tenant->slug}_crm.project_assignees" : 'project_assignees';
 
         $userIds = DB::table($pivotTable)->distinct()->pluck('user_id');
@@ -145,32 +144,29 @@ final class ReportsService
                 ->sum('valor');
 
             $vencidos = $userProjects
-                ->filter(fn (Project $p): bool =>
-                    in_array((string) $p->etapa, self::OPEN_STAGES, true)
+                ->filter(fn (Project $p): bool => in_array((string) $p->etapa, self::OPEN_STAGES, true)
                     && $p->fecha_entrega !== null
                     && $p->fecha_entrega->isPast()
                 )
                 ->count();
 
             return [
-                'user_id'       => $u->id,
-                'first_name'    => $u->first_name,
-                'last_name'     => $u->last_name,
-                'email'         => $u->email,
-                'counts'        => $counts,
-                'valor_activo'  => $valorActivo,
+                'user_id' => $u->id,
+                'first_name' => $u->first_name,
+                'last_name' => $u->last_name,
+                'email' => $u->email,
+                'counts' => $counts,
+                'valor_activo' => $valorActivo,
                 'valor_cerrado' => $valorCerrado,
-                'vencidos'      => $vencidos,
+                'vencidos' => $vencidos,
             ];
         })->values()->all();
     }
 
     /** @return Builder<Project> */
-    private function projectQuery(User $user, string $activeRole, ?int $filterUserId): Builder
+    private function projectQuery(User $user, bool $isManagement, ?int $filterUserId): Builder
     {
         $query = Project::query();
-
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
 
         if (! $isManagement) {
             $query->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $user->id));
@@ -182,7 +178,7 @@ final class ReportsService
     }
 
     /**
-     * @param  Collection<int, Project> $projects
+     * @param  Collection<int, Project>  $projects
      * @return array<int, array<string, mixed>>
      */
     private function formatNuevos(Collection $projects): array
@@ -191,18 +187,18 @@ final class ReportsService
             ->sortByDesc('created_at')
             ->map(function (Project $p): array {
                 return [
-                    'id'         => $p->id,
+                    'id' => $p->id,
                     'created_at' => $p->created_at->toDateString(),
-                    'nombre'     => $p->nombre,
-                    'contacto'   => $p->contacto,
-                    'tipo'       => $p->tipo,
-                    'ubicacion'  => $p->ubicacion,
-                    'etapa'      => $p->etapa,
-                    'valor'      => (float) ($p->valor ?? 0),
-                    'assignees'  => $p->assignees->map(fn (User $u) => [
-                        'id'         => $u->id,
+                    'nombre' => $p->nombre,
+                    'contacto' => $p->contacto,
+                    'tipo' => $p->tipo,
+                    'ubicacion' => $p->ubicacion,
+                    'etapa' => $p->etapa,
+                    'valor' => (float) ($p->valor ?? 0),
+                    'assignees' => $p->assignees->map(fn (User $u) => [
+                        'id' => $u->id,
                         'first_name' => $u->first_name,
-                        'last_name'  => $u->last_name,
+                        'last_name' => $u->last_name,
                     ])->values()->all(),
                 ];
             })
@@ -211,24 +207,25 @@ final class ReportsService
     }
 
     /**
-     * @param  Collection<int, ProjectActivity> $activities
+     * @param  Collection<int, ProjectActivity>  $activities
      * @return array<int, array<string, mixed>>
      */
     private function formatBitacora(Collection $activities): array
     {
         return $activities->map(function (ProjectActivity $a): array {
-            $actUser    = $a->user;
+            $actUser = $a->user;
             $actProject = $a->project;
+
             return [
-                'id'               => $a->id,
-                'fecha'            => $a->fecha->toDateString(),
-                'tipo'             => $a->tipo,
-                'user_id'          => $a->user_id,
-                'user_name'        => $actUser !== null ? $actUser->first_name : '',
-                'project_id'       => $a->project_id,
-                'project_nombre'   => $actProject !== null ? $actProject->nombre : '',
+                'id' => $a->id,
+                'fecha' => $a->fecha->toDateString(),
+                'tipo' => $a->tipo,
+                'user_id' => $a->user_id,
+                'user_name' => $actUser !== null ? $actUser->first_name : '',
+                'project_id' => $a->project_id,
+                'project_nombre' => $actProject !== null ? $actProject->nombre : '',
                 'project_contacto' => $actProject !== null ? $actProject->contacto : null,
-                'notas'            => $a->notas,
+                'notas' => $a->notas,
             ];
         })->values()->all();
     }
@@ -236,9 +233,9 @@ final class ReportsService
     /** @return array<int, array<string, mixed>> */
     private function teamMonthlyBreakdown(Carbon $start, Carbon $end): array
     {
-        $tenant     = Tenant::current();
+        $tenant = Tenant::current();
         $pivotTable = $tenant !== null ? "{$tenant->slug}_crm.project_assignees" : 'project_assignees';
-        $userIds    = DB::table($pivotTable)->distinct()->pluck('user_id');
+        $userIds = DB::table($pivotTable)->distinct()->pluck('user_id');
 
         /** @var Collection<int, User> $users */
         $users = User::whereIn('id', $userIds)->orderBy('first_name')->orderBy('last_name')->get();
@@ -259,7 +256,7 @@ final class ReportsService
                 ->where('etapa', 'cerrado')
                 ->whereBetween('updated_at', [$start, $end]);
             $cerradosCount = $cerradosBuilder->count();
-            $valorCerrado  = (float) $cerradosBuilder->sum('valor');
+            $valorCerrado = (float) $cerradosBuilder->sum('valor');
 
             $perdidosCount = Project::query()
                 ->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $u->id))
@@ -268,7 +265,7 @@ final class ReportsService
                 ->count();
 
             $totalDecisions = $cerradosCount + $perdidosCount;
-            $tasa           = $totalDecisions > 0 ? (int) round($cerradosCount / $totalDecisions * 100) : 0;
+            $tasa = $totalDecisions > 0 ? (int) round($cerradosCount / $totalDecisions * 100) : 0;
 
             $assignedProjectIds = Project::query()
                 ->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $u->id))
@@ -280,17 +277,17 @@ final class ReportsService
                 ->count();
 
             return [
-                'user_id'       => $u->id,
-                'first_name'    => $u->first_name,
-                'last_name'     => $u->last_name,
-                'leads_nuevos'  => $nuevosCount,
-                'cerrados'      => $cerradosCount,
-                'perdidos'      => $perdidosCount,
-                'tasa_cierre'   => $tasa,
-                'actividades'   => $actividadesCount,
-                'documentos'    => 0,
+                'user_id' => $u->id,
+                'first_name' => $u->first_name,
+                'last_name' => $u->last_name,
+                'leads_nuevos' => $nuevosCount,
+                'cerrados' => $cerradosCount,
+                'perdidos' => $perdidosCount,
+                'tasa_cierre' => $tasa,
+                'actividades' => $actividadesCount,
+                'documentos' => 0,
                 'valor_cerrado' => $valorCerrado,
-                'valor_nuevos'  => $valorNuevos,
+                'valor_nuevos' => $valorNuevos,
             ];
         })->values()->all();
     }
@@ -300,6 +297,6 @@ final class ReportsService
         /** @var array<int, string> $months */
         $months = trans('crm.months');
 
-        return ($months[$date->month] ?? '') . ' ' . $date->year;
+        return ($months[$date->month] ?? '').' '.$date->year;
     }
 }

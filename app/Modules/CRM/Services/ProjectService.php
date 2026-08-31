@@ -38,16 +38,16 @@ final class ProjectService
             ->orderBy('updated_at', 'desc');
 
         // Visibility: management/superadmin see all; others see only assigned projects
-        if (! $user->hasRole(User::ROLE_MANAGEMENT) && ! $user->hasRole(User::ROLE_SUPERADMIN)) {
+        if (! $user->canViewTeamV2('ventas_diseno')) {
             $query->whereHas('assignees', fn ($q) => $q->where('user_id', $user->id));
         }
 
         if (! empty($filters['search'])) {
             $term = $filters['search'];
             $query->where(function ($q) use ($term): void {
-                $q->where('nombre',    'ilike', "%{$term}%")
-                  ->orWhere('contacto', 'ilike', "%{$term}%")
-                  ->orWhere('encargado', 'ilike', "%{$term}%");
+                $q->where('nombre', 'ilike', "%{$term}%")
+                    ->orWhere('contacto', 'ilike', "%{$term}%")
+                    ->orWhere('encargado', 'ilike', "%{$term}%");
             });
         }
 
@@ -83,18 +83,18 @@ final class ProjectService
         if (! empty($filters['urgency'])) {
             match ($filters['urgency']) {
                 'vencido' => $query->whereNotNull('fecha_entrega')
-                                   ->whereDate('fecha_entrega', '<', now()),
+                    ->whereDate('fecha_entrega', '<', now()),
                 'proximo' => $query->whereNotNull('fecha_entrega')
-                                   ->whereDate('fecha_entrega', '>=', now())
-                                   ->whereDate('fecha_entrega', '<=', now()->addDays(3)),
-                default   => null,
+                    ->whereDate('fecha_entrega', '>=', now())
+                    ->whereDate('fecha_entrega', '<=', now()->addDays(3)),
+                default => null,
             };
         }
 
         // Freshness filter — based on last activity date, via EXISTS subqueries
         if (! empty($filters['freshness'])) {
             $cutRecent = now()->subDays(7);
-            $cutStale  = now()->subDays(21);
+            $cutStale = now()->subDays(21);
 
             match ($filters['freshness']) {
                 'recent' => $query->whereHas(
@@ -103,10 +103,10 @@ final class ProjectService
                 ),
                 'stale' => $query
                     ->whereDoesntHave('activities', fn ($q) => $q->where('fecha', '>=', $cutRecent))
-                    ->whereHas('activities',         fn ($q) => $q->where('fecha', '>=', $cutStale)),
+                    ->whereHas('activities', fn ($q) => $q->where('fecha', '>=', $cutStale)),
                 'cold' => $query->where(function ($q) use ($cutStale): void {
                     $q->doesntHave('activities')
-                      ->orWhereDoesntHave('activities', fn ($q) => $q->where('fecha', '>=', $cutStale));
+                        ->orWhereDoesntHave('activities', fn ($q) => $q->where('fecha', '>=', $cutStale));
                 }),
                 default => null,
             };
@@ -141,23 +141,23 @@ final class ProjectService
         return DB::transaction(function () use ($user, $data): Project {
             /** @var Project $project */
             $project = Project::create([
-                'nombre'        => $data['nombre'],
-                'tipo'          => $data['tipo'],
-                'etapa'         => $data['etapa'] ?? 'lead',
-                'contacto'      => $data['contacto'] ?? null,
-                'email'         => $data['email'] ?? null,
-                'celular'       => $data['celular'] ?? null,
-                'encargado'     => $data['encargado'] ?? null,
-                'developer'     => $data['developer'] ?? null,
-                'arquitecto'    => $data['arquitecto'] ?? null,
-                'dialux'        => $data['dialux'] ?? false,
-                'area'          => $data['area'] ?? null,
-                'despacho'      => $data['despacho'] ?? null,
-                'ubicacion'     => $data['ubicacion'] ?? null,
+                'nombre' => $data['nombre'],
+                'tipo' => $data['tipo'],
+                'etapa' => $data['etapa'] ?? 'lead',
+                'contacto' => $data['contacto'] ?? null,
+                'email' => $data['email'] ?? null,
+                'celular' => $data['celular'] ?? null,
+                'encargado' => $data['encargado'] ?? null,
+                'developer' => $data['developer'] ?? null,
+                'arquitecto' => $data['arquitecto'] ?? null,
+                'dialux' => $data['dialux'] ?? false,
+                'area' => $data['area'] ?? null,
+                'despacho' => $data['despacho'] ?? null,
+                'ubicacion' => $data['ubicacion'] ?? null,
                 'fecha_entrega' => $data['fecha_entrega'] ?? null,
-                'valor'         => $data['valor'] ?? null,
-                'notas'         => $data['notas'] ?? null,
-                'created_by'    => $user->id,
+                'valor' => $data['valor'] ?? null,
+                'notas' => $data['notas'] ?? null,
+                'created_by' => $user->id,
             ]);
 
             if (! empty($data['assignee_ids'])) {
@@ -166,10 +166,10 @@ final class ProjectService
 
             event(new ProjectCreated(
                 projectId: $project->id,
-                nombre:    $project->nombre,
-                etapa:     $project->etapa,
+                nombre: $project->nombre,
+                etapa: $project->etapa,
                 createdBy: $user->id,
-                tenant:    $this->requiredTenantSlug(),
+                tenant: $this->requiredTenantSlug(),
             ));
 
             $project->load(['assignees', 'latestActivity', 'reminders']);
@@ -237,11 +237,11 @@ final class ProjectService
 
         event(new ProjectStageChanged(
             projectId: $project->id,
-            nombre:    $project->nombre,
-            oldEtapa:  $oldEtapa,
-            newEtapa:  $newEtapa,
+            nombre: $project->nombre,
+            oldEtapa: $oldEtapa,
+            newEtapa: $newEtapa,
             changedBy: $user->id,
-            tenant:    $this->requiredTenantSlug(),
+            tenant: $this->requiredTenantSlug(),
         ));
 
         return $project;
@@ -303,11 +303,11 @@ final class ProjectService
     {
         event(new ActivityAdded(
             activityId: $activityId,
-            projectId:  $project->id,
-            tipo:       $tipo,
-            fecha:      $fecha,
-            userId:     $userId,
-            tenant:     $this->requiredTenantSlug(),
+            projectId: $project->id,
+            tipo: $tipo,
+            fecha: $fecha,
+            userId: $userId,
+            tenant: $this->requiredTenantSlug(),
         ));
     }
 

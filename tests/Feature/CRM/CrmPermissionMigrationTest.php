@@ -1,0 +1,122 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\CRM;
+
+use App\Shared\Multitenancy\Tenant;
+use Tests\Feature\FeatureTestCase;
+
+/**
+ * Fase 3 de la auditoría del esquema de permisos (Atlantic/CLAUDE.md, sesión 2026-08-30) —
+ * reemplaza el patrón `hasRole(MANAGEMENT)`/`isManagement` (13 archivos, enum legado `user_roles`)
+ * scattered por todo CRM por `$user->canViewTeamV2('ventas_diseno')` — reusa la visibilidad de
+ * Ventas & Diseño (ya sembrada correctamente, mismo dominio que el propio Sidebar del frontend ya
+ * trata como uno solo con CRM), sin seeding nuevo. Este test verifica el comportamiento con roles
+ * REALES del sistema nuevo (no solo los fixtures genéricos management/designer de
+ * ReportControllerTest), y el permiso nuevo `crm.projects.delete`.
+ */
+class CrmPermissionMigrationTest extends FeatureTestCase
+{
+    private const DANIELA = 'daniela@atlantic.com.pa'; // management
+
+    private const ALDO = 'servicio@atlantic.com.pa'; // lider_servicios — ajeno a ventas_diseno/crm
+
+    private const MILENA = 'milena.e@grupolafayette.com'; // vendedor_disenador — can_view_team=false
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+    }
+
+    private function tokenFor(string $email, string $roleKey): string
+    {
+        return $this->loginAs($email, $email, $roleKey);
+    }
+
+    // ── GET /api/crm/projects — alcance de equipo vs propio, con roles reales ───
+
+    public function test_management_ve_todos_los_proyectos_no_solo_los_propios(): void
+    {
+        $tokenDaniela = $this->tokenFor(self::DANIELA, 'management');
+        $tokenAldo = $this->tokenFor(self::ALDO, 'lider_servicios');
+
+        // Aldo (lider_servicios) crea un proyecto sin asignarse a sí mismo — no tiene alcance de
+        // equipo en ventas_diseno, pero SÍ tiene crm.write genérico (nivel 14, "Power User —
+        // Servicios").
+        $this->withHeaders($this->authHeaders($tokenAldo))
+            ->postJson('/api/crm/projects', ['nombre' => 'Proyecto de Aldo', 'tipo' => 'diseno', 'assignee_ids' => []])
+            ->assertStatus(201);
+
+        // Sin estar asignado, Aldo no ve su propio proyecto en el listado — confirma que el
+        // scoping es por asignación real, no por autoría (mismo comportamiento de siempre).
+        $aldoIndex = $this->withHeaders($this->authHeaders($tokenAldo))->getJson('/api/crm/projects');
+        $aldoIndex->assertStatus(200);
+        $this->assertNotContains('Proyecto de Aldo', collect($aldoIndex->json('data'))->pluck('nombre'));
+
+        // Daniela (management) sí lo ve, sin estar asignada — alcance de equipo.
+        $danielaIndex = $this->withHeaders($this->authHeaders($tokenDaniela))->getJson('/api/crm/projects');
+        $danielaIndex->assertStatus(200);
+        $nombresDaniela = collect($danielaIndex->json('data'))->pluck('nombre');
+        $this->assertContains('Proyecto de Aldo', $nombresDaniela);
+    }
+
+    // ── GET /api/crm/reports/team — permission:ventas_diseno.view_team ──────────
+
+    public function test_reports_team_management_si_lider_servicios_no(): void
+    {
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::ALDO, 'lider_servicios')))
+            ->getJson('/api/crm/reports/team')
+            ->assertStatus(403);
+
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::DANIELA, 'management')))
+            ->getJson('/api/crm/reports/team')
+            ->assertStatus(200);
+    }
+
+    public function test_reports_team_vendedor_disenador_no_puede(): void
+    {
+        // vendedor_disenador SÍ tiene fila en role_module_visibility para ventas_diseno
+        // (can_view=FULL) pero con can_view_team=false explícito — caso más estricto que un rol
+        // sin ninguna fila (como lider_servicios en el test de arriba).
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::MILENA, 'vendedor_disenador')))
+            ->getJson('/api/crm/reports/team')
+            ->assertStatus(403);
+    }
+
+    // ── DELETE /api/crm/projects/{id} — permission:crm.projects.delete, nuevo ──
+
+    public function test_delete_project_management_puede_lider_servicios_no(): void
+    {
+        $tokenAldo = $this->tokenFor(self::ALDO, 'lider_servicios');
+        $response = $this->withHeaders($this->authHeaders($tokenAldo))
+            ->postJson('/api/crm/projects', ['nombre' => 'A Borrar', 'tipo' => 'diseno', 'assignee_ids' => []]);
+        $response->assertStatus(201);
+        $projectId = (int) $response->json('id');
+
+        // Aldo tiene crm.delete genérico (nivel 14) pero NO crm.projects.delete (exclusivo nivel 9).
+        $this->withHeaders($this->authHeaders($tokenAldo))
+            ->deleteJson("/api/crm/projects/{$projectId}")
+            ->assertStatus(403);
+
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::DANIELA, 'management')))
+            ->deleteJson("/api/crm/projects/{$projectId}")
+            ->assertStatus(204);
+    }
+
+    // ── superadmin siempre pasa ───────────────────────────────────────────────────
+
+    public function test_superadmin_pasa_team_y_delete(): void
+    {
+        $token = $this->loginAs('andres.loi@atlantic.com.pa', 'andres.loi@atlantic.com.pa');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/crm/projects', ['nombre' => 'Superadmin Test', 'tipo' => 'diseno', 'assignee_ids' => []]);
+        $response->assertStatus(201);
+
+        $this->withHeaders($this->authHeaders($token))->getJson('/api/crm/reports/team')->assertStatus(200);
+        $this->withHeaders($this->authHeaders($token))
+            ->deleteJson('/api/crm/projects/'.$response->json('id'))
+            ->assertStatus(204);
+    }
+}

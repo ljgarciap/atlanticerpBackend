@@ -9,7 +9,6 @@ use App\Modules\CRM\Services\ReportsService;
 use App\Shared\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -25,18 +24,17 @@ final class ReportsController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $activeRole   = $this->activeRole($request);
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
+        $isManagement = $user->canViewTeamV2('ventas_diseno');
 
         $validated = $request->validate([
-            'month'   => ['sometimes', 'string', 'regex:/^\d{4}-\d{2}$/'],
+            'month' => ['sometimes', 'string', 'regex:/^\d{4}-\d{2}$/'],
             'user_id' => ['sometimes', 'integer', 'min:1'],
         ]);
 
-        $month        = isset($validated['month']) ? (string) $validated['month'] : now()->format('Y-m');
+        $month = isset($validated['month']) ? (string) $validated['month'] : now()->format('Y-m');
         $filterUserId = $isManagement && isset($validated['user_id']) ? (int) $validated['user_id'] : null;
 
-        return response()->json($this->service->monthly($user, $activeRole, $month, $filterUserId));
+        return response()->json($this->service->monthly($user, $isManagement, $month, $filterUserId));
     }
 
     /** GET /api/crm/reports/monthly/export */
@@ -47,27 +45,26 @@ final class ReportsController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $activeRole   = $this->activeRole($request);
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
+        $isManagement = $user->canViewTeamV2('ventas_diseno');
 
         $validated = $request->validate([
-            'month'   => ['sometimes', 'string', 'regex:/^\d{4}-\d{2}$/'],
+            'month' => ['sometimes', 'string', 'regex:/^\d{4}-\d{2}$/'],
             'user_id' => ['sometimes', 'integer', 'min:1'],
         ]);
 
-        $month        = isset($validated['month']) ? (string) $validated['month'] : now()->format('Y-m');
+        $month = isset($validated['month']) ? (string) $validated['month'] : now()->format('Y-m');
         $filterUserId = $isManagement && isset($validated['user_id']) ? (int) $validated['user_id'] : null;
 
-        $data     = $this->service->monthly($user, $activeRole, $month, $filterUserId);
-        $filename = 'reporte-' . $month . '.csv';
+        $data = $this->service->monthly($user, $isManagement, $month, $filterUserId);
+        $filename = 'reporte-'.$month.'.csv';
 
         // SCRUM-791 (Epic SCRUM-788 — Logs y Telemetría) — export real de datos, potencialmente
         // de todo el equipo cuando isManagement=true sin user_id (sin entityId puntual: es un
         // reporte agregado, no de una entidad específica).
         app(AuditService::class)->log(
-            action:     AuditService::CRM_REPORT_EXPORTED,
+            action: AuditService::CRM_REPORT_EXPORTED,
             entityType: 'monthly_report',
-            metadata:   ['month' => $month, 'filter_user_id' => $filterUserId, 'is_management' => $isManagement],
+            metadata: ['month' => $month, 'filter_user_id' => $filterUserId, 'is_management' => $isManagement],
         );
 
         return response()->streamDownload(function () use ($data, $isManagement): void {
@@ -78,7 +75,7 @@ final class ReportsController extends Controller
             fwrite($stream, "\xEF\xBB\xBF");
 
             // ── Encabezado ────────────────────────────────────────────────────
-            fputcsv($stream, ['Reporte Mensual — ' . $data['month_label']]);
+            fputcsv($stream, ['Reporte Mensual — '.$data['month_label']]);
             fputcsv($stream, ['Período', $data['month']]);
             fputcsv($stream, ['Filtro',  $data['user_title']]);
             fputcsv($stream, []);
@@ -91,7 +88,7 @@ final class ReportsController extends Controller
             fputcsv($stream, ['Valor cerrado',   $data['kpis']['valor_cerrado']]);
             fputcsv($stream, ['Perdidos',        $data['kpis']['perdidos']]);
             fputcsv($stream, ['Valor perdido',   $data['kpis']['valor_perdido']]);
-            fputcsv($stream, ['Tasa de cierre',  $data['kpis']['tasa_cierre'] . '%']);
+            fputcsv($stream, ['Tasa de cierre',  $data['kpis']['tasa_cierre'].'%']);
             fputcsv($stream, ['Actividades',     $data['kpis']['actividades']]);
             fputcsv($stream, []);
 
@@ -111,19 +108,19 @@ final class ReportsController extends Controller
             /** @var array<int, array<string, mixed>> $proyectos */
             $proyectos = (array) $data['proyectos_nuevos'];
             foreach ($proyectos as $p) {
-                $p         = (array) $p;
+                $p = (array) $p;
                 $assignees = array_map(
-                    fn (mixed $a): string => is_array($a) ? trim(($a['first_name'] ?? '') . ' ' . ($a['last_name'] ?? '')) : '',
+                    fn (mixed $a): string => is_array($a) ? trim(($a['first_name'] ?? '').' '.($a['last_name'] ?? '')) : '',
                     (array) ($p['assignees'] ?? []),
                 );
                 fputcsv($stream, [
-                    $p['id']         ?? '',
-                    $p['nombre']     ?? '',
-                    $p['contacto']   ?? '',
-                    $p['tipo']       ?? '',
-                    $p['etapa']      ?? '',
-                    $p['ubicacion']  ?? '',
-                    $p['valor']      ?? 0,
+                    $p['id'] ?? '',
+                    $p['nombre'] ?? '',
+                    $p['contacto'] ?? '',
+                    $p['tipo'] ?? '',
+                    $p['etapa'] ?? '',
+                    $p['ubicacion'] ?? '',
+                    $p['valor'] ?? 0,
                     implode(', ', $assignees),
                     $p['created_at'] ?? '',
                 ]);
@@ -138,12 +135,12 @@ final class ReportsController extends Controller
             foreach ($bitacora as $entry) {
                 $entry = (array) $entry;
                 fputcsv($stream, [
-                    $entry['fecha']            ?? '',
-                    $entry['tipo']             ?? '',
-                    $entry['user_name']        ?? '',
-                    $entry['project_nombre']   ?? '',
+                    $entry['fecha'] ?? '',
+                    $entry['tipo'] ?? '',
+                    $entry['user_name'] ?? '',
+                    $entry['project_nombre'] ?? '',
                     $entry['project_contacto'] ?? '',
-                    $entry['notas']            ?? '',
+                    $entry['notas'] ?? '',
                 ]);
             }
 
@@ -157,12 +154,12 @@ final class ReportsController extends Controller
                 foreach ($breakdown as $row) {
                     $row = (array) $row;
                     fputcsv($stream, [
-                        trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
-                        $row['leads_nuevos']  ?? 0,
-                        $row['cerrados']      ?? 0,
-                        $row['perdidos']      ?? 0,
-                        ($row['tasa_cierre']  ?? 0) . '%',
-                        $row['actividades']   ?? 0,
+                        trim(($row['first_name'] ?? '').' '.($row['last_name'] ?? '')),
+                        $row['leads_nuevos'] ?? 0,
+                        $row['cerrados'] ?? 0,
+                        $row['perdidos'] ?? 0,
+                        ($row['tasa_cierre'] ?? 0).'%',
+                        $row['actividades'] ?? 0,
                         $row['valor_cerrado'] ?? 0,
                     ]);
                 }
@@ -170,9 +167,9 @@ final class ReportsController extends Controller
 
             fclose($stream);
         }, $filename, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Cache-Control'       => 'no-store',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'no-store',
         ]);
     }
 
@@ -184,10 +181,10 @@ final class ReportsController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $activeRole   = $this->activeRole($request);
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
-
-        if (! $isManagement) {
+        // Fase 3 de la auditoría de permisos (Atlantic/CLAUDE.md, 2026-08-30) — la ruta ya está
+        // gateada por `permission:ventas_diseno.view_team`, este chequeo es defensa en profundidad
+        // (mismo criterio que el resto del proyecto, ej. AdminContInternalCommissionController).
+        if (! $user->canViewTeamV2('ventas_diseno')) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -204,13 +201,5 @@ final class ReportsController extends Controller
         }
 
         return User::find((int) $payload['sub']);
-    }
-
-    private function activeRole(Request $request): string
-    {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? $payload['role'] : '';
     }
 }

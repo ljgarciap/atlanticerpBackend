@@ -21,8 +21,8 @@ final class ShareLinkController extends Controller
 {
     public function __construct(
         private readonly DocumentService $documents,
-        private readonly TenantResolver  $tenantResolver,
-        private readonly AuditService    $audit,
+        private readonly TenantResolver $tenantResolver,
+        private readonly AuditService $audit,
     ) {}
 
     // ── GET /public/share/{token} — sin autenticación ─────────────────────────
@@ -76,9 +76,9 @@ final class ShareLinkController extends Controller
         $link = ShareLink::createFor($document, $user);
 
         $this->audit->log(
-            action:     AuditService::CRM_SHARE_LINK_CREATED,
+            action: AuditService::CRM_SHARE_LINK_CREATED,
             entityType: 'project_document',
-            entityId:   $document->id,
+            entityId: $document->id,
         );
 
         return response()->json($this->formatJustCreated($link), 201);
@@ -126,7 +126,7 @@ final class ShareLinkController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -134,9 +134,9 @@ final class ShareLinkController extends Controller
             $link->update(['revoked_at' => now()]);
 
             $this->audit->log(
-                action:     AuditService::CRM_SHARE_LINK_REVOKED,
+                action: AuditService::CRM_SHARE_LINK_REVOKED,
                 entityType: 'project_document',
-                entityId:   $link->document_id,
+                entityId: $link->document_id,
             );
         }
 
@@ -164,7 +164,7 @@ final class ShareLinkController extends Controller
             return [null, null, response()->json(['message' => 'Not found'], 404)];
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return [null, null, response()->json(['message' => trans('auth.unauthorized')], 403)];
         }
 
@@ -189,19 +189,9 @@ final class ShareLinkController extends Controller
         return User::find((int) $payload['sub']);
     }
 
-    private function activeRole(Request $request): string
+    private function canAccess(Project $project, User $user): bool
     {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? (string) $payload['role'] : '';
-    }
-
-    private function canAccess(Request $request, Project $project, User $user): bool
-    {
-        $role = $this->activeRole($request);
-
-        if (in_array($role, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true)) {
+        if ($user->canViewTeamV2('ventas_diseno')) {
             return true;
         }
 
@@ -229,15 +219,15 @@ final class ShareLinkController extends Controller
         $creator = $link->creator;
 
         return [
-            'id'                => $link->id,
-            'expires_at'        => $link->expires_at->toIso8601String(),
-            'revoked_at'        => $link->revoked_at?->toIso8601String(),
-            'access_count'      => $link->access_count,
-            'last_accessed_at'  => $link->last_accessed_at?->toIso8601String(),
-            'created_by'        => [
-                'id'         => $creator->id,
+            'id' => $link->id,
+            'expires_at' => $link->expires_at->toIso8601String(),
+            'revoked_at' => $link->revoked_at?->toIso8601String(),
+            'access_count' => $link->access_count,
+            'last_accessed_at' => $link->last_accessed_at?->toIso8601String(),
+            'created_by' => [
+                'id' => $creator->id,
                 'first_name' => $creator->first_name,
-                'last_name'  => $creator->last_name,
+                'last_name' => $creator->last_name,
             ],
             'created_at' => $link->created_at->toIso8601String(),
         ];

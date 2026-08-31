@@ -11,13 +11,14 @@ use Illuminate\Database\Eloquent\Builder;
 
 final class DashboardService
 {
-    private const OPEN_STAGES   = ['lead', 'diseno', 'cotizacion', 'propuesta'];
+    private const OPEN_STAGES = ['lead', 'diseno', 'cotizacion', 'propuesta'];
+
     private const CLOSED_STAGES = ['cerrado'];
 
     /** @return array<string, mixed> */
-    public function kpis(User $user, string $activeRole): array
+    public function kpis(User $user): array
     {
-        $base = $this->baseQuery($user, $activeRole);
+        $base = $this->baseQuery($user);
 
         // Stage counts — initialise all stages to 0, then fill from DB
         $counts = array_fill_keys(
@@ -41,13 +42,13 @@ final class DashboardService
             ->pluck('total', 'tipo');
 
         $countsByTipo = [
-            'diseno'     => (int) ($tipoPluck->get('diseno')     ?? 0),
+            'diseno' => (int) ($tipoPluck->get('diseno') ?? 0),
             'cotizacion' => (int) ($tipoPluck->get('cotizacion') ?? 0),
-            'ambos'      => (int) ($tipoPluck->get('ambos')      ?? 0),
+            'ambos' => (int) ($tipoPluck->get('ambos') ?? 0),
         ];
 
         // Pipeline values — sum() always returns a numeric string/int/float, never null
-        $pipelineActivo  = (float) (clone $base)->whereIn('etapa', self::OPEN_STAGES)->sum('valor');
+        $pipelineActivo = (float) (clone $base)->whereIn('etapa', self::OPEN_STAGES)->sum('valor');
         $pipelineCerrado = (float) (clone $base)->whereIn('etapa', self::CLOSED_STAGES)->sum('valor');
 
         // Alerts — SCRUM-14: QA 2026-07-05 encontró que el dashboard solo mostraba el conteo,
@@ -55,8 +56,8 @@ final class DashboardService
         // botón del mock es 100% client-side (arma un mailto: con el resumen) — por eso acá
         // solo se expone el detalle necesario para componerlo en el frontend, sin un endpoint
         // de envío nuevo.
-        $openBase       = (clone $base)->whereIn('etapa', self::OPEN_STAGES);
-        $vencidosQuery  = (clone $openBase)
+        $openBase = (clone $base)->whereIn('etapa', self::OPEN_STAGES);
+        $vencidosQuery = (clone $openBase)
             ->whereNotNull('fecha_entrega')
             ->whereDate('fecha_entrega', '<', now());
 
@@ -72,25 +73,25 @@ final class DashboardService
             ->get(['id', 'nombre', 'contacto', 'etapa', 'fecha_entrega']);
         $proximosProjects = (clone $proximosQuery)->with('assignees:id,first_name,last_name,email')
             ->get(['id', 'nombre', 'contacto', 'etapa', 'fecha_entrega']);
-        $friosProjects    = (clone $friosQuery)->get(['id', 'nombre']);
+        $friosProjects = (clone $friosQuery)->get(['id', 'nombre']);
 
-        $managementEmails = User::whereHas('userRoles', fn (Builder $q) => $q->where('role', User::ROLE_MANAGEMENT))
+        $managementEmails = User::whereHas('role', fn (Builder $q) => $q->where('key', 'management'))
             ->whereNotNull('email')
             ->pluck('email')
             ->all();
 
         return [
-            'counts_by_stage'          => $counts,
-            'counts_by_tipo'           => $countsByTipo,
-            'pipeline_activo'          => $pipelineActivo,
-            'pipeline_cerrado'         => $pipelineCerrado,
-            'alerts_vencidos'          => $vencidosProjects->count(),
-            'alerts_proximos'          => $proximosProjects->count(),
-            'alerts_frios'             => $friosProjects->count(),
+            'counts_by_stage' => $counts,
+            'counts_by_tipo' => $countsByTipo,
+            'pipeline_activo' => $pipelineActivo,
+            'pipeline_cerrado' => $pipelineCerrado,
+            'alerts_vencidos' => $vencidosProjects->count(),
+            'alerts_proximos' => $proximosProjects->count(),
+            'alerts_frios' => $friosProjects->count(),
             'alerts_vencidos_projects' => $vencidosProjects->map(fn (Project $p) => $this->alertProjectPayload($p))->values()->all(),
             'alerts_proximos_projects' => $proximosProjects->map(fn (Project $p) => $this->alertProjectPayload($p))->values()->all(),
-            'alerts_frios_projects'    => $friosProjects->map(fn (Project $p) => ['id' => $p->id, 'nombre' => $p->nombre])->values()->all(),
-            'management_emails'       => $managementEmails,
+            'alerts_frios_projects' => $friosProjects->map(fn (Project $p) => ['id' => $p->id, 'nombre' => $p->nombre])->values()->all(),
+            'management_emails' => $managementEmails,
         ];
     }
 
@@ -98,19 +99,19 @@ final class DashboardService
     private function alertProjectPayload(Project $p): array
     {
         $today = now()->startOfDay();
-        $due   = $p->fecha_entrega?->copy()->startOfDay();
+        $due = $p->fecha_entrega?->copy()->startOfDay();
 
         return [
-            'id'              => $p->id,
-            'nombre'          => $p->nombre,
-            'contacto'        => $p->contacto,
-            'etapa'           => $p->etapa,
-            'fecha_entrega'   => $due?->toDateString(),
+            'id' => $p->id,
+            'nombre' => $p->nombre,
+            'contacto' => $p->contacto,
+            'etapa' => $p->etapa,
+            'fecha_entrega' => $due?->toDateString(),
             // Positivo = días restantes, negativo = días de atraso — mismo criterio que
             // `daysUntil()` en el mock de referencia.
-            'dias'       => $due !== null ? (int) round(($due->getTimestamp() - $today->getTimestamp()) / 86400) : null,
-            'assignees'  => $p->assignees->map(fn (User $u) => [
-                'name'  => trim("{$u->first_name} {$u->last_name}"),
+            'dias' => $due !== null ? (int) round(($due->getTimestamp() - $today->getTimestamp()) / 86400) : null,
+            'assignees' => $p->assignees->map(fn (User $u) => [
+                'name' => trim("{$u->first_name} {$u->last_name}"),
                 'email' => $u->email,
             ])->values()->all(),
         ];
@@ -121,9 +122,9 @@ final class DashboardService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function userReminders(User $user, string $activeRole): array
+    public function userReminders(User $user): array
     {
-        $projectIds = $this->baseQuery($user, $activeRole)->pluck('id');
+        $projectIds = $this->baseQuery($user)->pluck('id');
 
         $reminders = ProjectReminder::whereIn('project_id', $projectIds)
             ->where('completado', false)
@@ -134,26 +135,25 @@ final class DashboardService
 
         return $reminders->map(function (ProjectReminder $r): array {
             $project = $r->project;
+
             return [
-                'id'            => $r->id,
-                'project_id'    => $r->project_id,
-                'project_name'  => $project->nombre,
+                'id' => $r->id,
+                'project_id' => $r->project_id,
+                'project_name' => $project->nombre,
                 'project_etapa' => $project->etapa,
-                'tipo'          => $r->tipo,
-                'fecha'         => $r->fecha->toDateString(),
-                'nota'          => $r->nota,
+                'tipo' => $r->tipo,
+                'fecha' => $r->fecha->toDateString(),
+                'nota' => $r->nota,
             ];
         })->values()->all();
     }
 
     /** @return Builder<Project> */
-    private function baseQuery(User $user, string $activeRole): Builder
+    private function baseQuery(User $user): Builder
     {
         $query = Project::query();
 
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
-
-        if (! $isManagement) {
+        if (! $user->canViewTeamV2('ventas_diseno')) {
             $query->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $user->id));
         }
 

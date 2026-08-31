@@ -26,14 +26,14 @@ final class ContactController extends Controller
 
         $validated = $request->validate([
             'type' => ['sometimes', 'string', Rule::in(Contact::ALLOWED_TYPES)],
-            'q'    => ['sometimes', 'nullable', 'string', 'max:100'],
+            'q' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         $result = $this->service->list(
             $user,
-            $this->activeRole($request),
+            $user->canViewTeamV2('ventas_diseno'),
             (string) ($validated['type'] ?? ''),
-            (string) ($validated['q']   ?? ''),
+            (string) ($validated['q'] ?? ''),
         );
 
         return response()->json($result);
@@ -48,12 +48,12 @@ final class ContactController extends Controller
         }
 
         $validated = $request->validate([
-            'nombre'   => ['required', 'string', 'max:200'],
-            'tipo'     => ['required', 'string', Rule::in(Contact::ALLOWED_TYPES)],
-            'email'    => ['sometimes', 'nullable', 'email', 'max:200'],
+            'nombre' => ['required', 'string', 'max:200'],
+            'tipo' => ['required', 'string', Rule::in(Contact::ALLOWED_TYPES)],
+            'email' => ['sometimes', 'nullable', 'email', 'max:200'],
             'telefono' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'empresa'  => ['sometimes', 'nullable', 'string', 'max:200'],
-            'notas'    => ['sometimes', 'nullable', 'string'],
+            'empresa' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'notas' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $contact = $this->service->create($validated);
@@ -75,12 +75,12 @@ final class ContactController extends Controller
         }
 
         $validated = $request->validate([
-            'nombre'   => ['sometimes', 'string', 'max:200'],
-            'tipo'     => ['sometimes', 'string', Rule::in(Contact::ALLOWED_TYPES)],
-            'email'    => ['sometimes', 'nullable', 'email', 'max:200'],
+            'nombre' => ['sometimes', 'string', 'max:200'],
+            'tipo' => ['sometimes', 'string', Rule::in(Contact::ALLOWED_TYPES)],
+            'email' => ['sometimes', 'nullable', 'email', 'max:200'],
             'telefono' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'empresa'  => ['sometimes', 'nullable', 'string', 'max:200'],
-            'notas'    => ['sometimes', 'nullable', 'string'],
+            'empresa' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'notas' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $updated = $this->service->update($contact, $validated);
@@ -104,7 +104,7 @@ final class ContactController extends Controller
         $activeCount = $this->service->activeProjectCount($contact);
         if ($activeCount > 0) {
             return response()->json([
-                'message'        => 'Contact has active projects',
+                'message' => 'Contact has active projects',
                 'active_projects' => $activeCount,
             ], 409);
         }
@@ -122,10 +122,7 @@ final class ContactController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $activeRole   = $this->activeRole($request);
-        $isManagement = in_array($activeRole, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
-
-        if (! $isManagement) {
+        if (! $user->canViewTeamV2('ventas_diseno')) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -144,13 +141,5 @@ final class ContactController extends Controller
         }
 
         return User::find((int) $payload['sub']);
-    }
-
-    private function activeRole(Request $request): string
-    {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? $payload['role'] : '';
     }
 }

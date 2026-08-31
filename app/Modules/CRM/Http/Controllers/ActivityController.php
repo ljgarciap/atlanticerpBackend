@@ -19,7 +19,7 @@ final class ActivityController extends Controller
 
     public function index(Request $request, int $projectId): JsonResponse
     {
-        $user    = $this->resolveUser($request);
+        $user = $this->resolveUser($request);
         $project = Project::with('assignees')->find($projectId);
 
         if ($user === null) {
@@ -30,7 +30,7 @@ final class ActivityController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -46,17 +46,17 @@ final class ActivityController extends Controller
                 ->map(fn (ProjectActivity $a) => $this->format($a))
                 ->values(),
             'meta' => [
-                'total'        => $paginator->total(),
-                'per_page'     => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
                 'current_page' => $paginator->currentPage(),
-                'last_page'    => $paginator->lastPage(),
+                'last_page' => $paginator->lastPage(),
             ],
         ]);
     }
 
     public function store(StoreActivityRequest $request, int $projectId): JsonResponse
     {
-        $user    = $this->resolveUser($request);
+        $user = $this->resolveUser($request);
         $project = Project::with('assignees')->find($projectId);
 
         if ($user === null) {
@@ -67,7 +67,7 @@ final class ActivityController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -75,21 +75,21 @@ final class ActivityController extends Controller
         $validated = $request->validated();
 
         $activity = $project->activities()->create([
-            'tipo'      => $validated['tipo'],
-            'fecha'     => $validated['fecha'],
-            'notas'     => $validated['notas'] ?? null,
+            'tipo' => $validated['tipo'],
+            'fecha' => $validated['fecha'],
+            'notas' => $validated['notas'] ?? null,
             'siguiente' => $validated['siguiente'] ?? null,
-            'user_id'   => $user->id,
+            'user_id' => $user->id,
         ]);
 
         $activity->load('user');
 
         $this->service->dispatchActivityAdded(
             activityId: $activity->id,
-            project:    $project,
-            tipo:       $activity->tipo,
-            fecha:      $activity->fecha->toDateTimeString(),
-            userId:     $user->id,
+            project: $project,
+            tipo: $activity->tipo,
+            fecha: $activity->fecha->toDateTimeString(),
+            userId: $user->id,
         );
 
         return response()->json($this->format($activity), 201);
@@ -97,8 +97,8 @@ final class ActivityController extends Controller
 
     public function destroy(Request $request, int $projectId, int $actId): JsonResponse
     {
-        $user     = $this->resolveUser($request);
-        $project  = Project::with('assignees')->find($projectId);
+        $user = $this->resolveUser($request);
+        $project = Project::with('assignees')->find($projectId);
 
         if ($user === null) {
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
@@ -108,7 +108,7 @@ final class ActivityController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -118,10 +118,7 @@ final class ActivityController extends Controller
         }
 
         // Non-management users can only delete their own activities
-        $role = $this->activeRole($request);
-        $isManagement = in_array($role, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
-
-        if (! $isManagement && $activity->user_id !== $user->id) {
+        if (! $user->canViewTeamV2('ventas_diseno') && $activity->user_id !== $user->id) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -144,19 +141,9 @@ final class ActivityController extends Controller
         return User::find((int) $payload['sub']);
     }
 
-    private function activeRole(Request $request): string
+    private function canAccess(Project $project, User $user): bool
     {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? $payload['role'] : '';
-    }
-
-    private function canAccess(Request $request, Project $project, User $user): bool
-    {
-        $role = $this->activeRole($request);
-
-        if (in_array($role, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true)) {
+        if ($user->canViewTeamV2('ventas_diseno')) {
             return true;
         }
 
@@ -169,16 +156,16 @@ final class ActivityController extends Controller
         $u = $activity->user;
 
         return [
-            'id'         => $activity->id,
+            'id' => $activity->id,
             'project_id' => $activity->project_id,
-            'tipo'       => $activity->tipo,
-            'fecha'      => $activity->fecha->toIso8601String(),
-            'notas'      => $activity->notas,
-            'siguiente'  => $activity->siguiente?->toDateString(),
-            'user'       => [
-                'id'         => $u->id,
+            'tipo' => $activity->tipo,
+            'fecha' => $activity->fecha->toIso8601String(),
+            'notas' => $activity->notas,
+            'siguiente' => $activity->siguiente?->toDateString(),
+            'user' => [
+                'id' => $u->id,
                 'first_name' => $u->first_name,
-                'last_name'  => $u->last_name,
+                'last_name' => $u->last_name,
             ],
             'created_at' => $activity->created_at->toIso8601String(),
         ];

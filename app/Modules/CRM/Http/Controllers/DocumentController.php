@@ -12,14 +12,17 @@ use App\Modules\CRM\Services\DocumentService;
 use App\Shared\Support\CircuitOpenException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
 
 final class DocumentController extends Controller
 {
     private const DEFAULT_MAX_SIZE_MB = 500;
-    private const CACHE_KEY           = 'global:documents.max_size_mb';
-    private const CACHE_TTL_SECONDS   = 300;
+
+    private const CACHE_KEY = 'global:documents.max_size_mb';
+
+    private const CACHE_TTL_SECONDS = 300;
 
     private const ALLOWED_MIMES = [
         'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx',
@@ -80,8 +83,7 @@ final class DocumentController extends Controller
 
         /** @var User $user */
         /** @var Project $project */
-
-        $maxKb      = $this->resolveMaxSizeKb();
+        $maxKb = $this->resolveMaxSizeKb();
         $allowedExt = implode(',', self::ALLOWED_MIMES);
 
         $validated = $request->validate([
@@ -89,12 +91,12 @@ final class DocumentController extends Controller
             // silently for extensions Symfony's MIME registry doesn't recognize (rvt,
             // and fbx before this fix) even when explicitly whitelisted, since it
             // validates via a MIME-type round trip rather than the extension string.
-            'file'      => "required|file|max:{$maxKb}|extensions:{$allowedExt}",
+            'file' => "required|file|max:{$maxKb}|extensions:{$allowedExt}",
             'categoria' => 'required|in:cotizacion,diseno,presentacion,plano,render,ficha,modelo_3d,otro',
-            'zone'      => 'sometimes|in:private,public',
+            'zone' => 'sometimes|in:private,public',
         ]);
 
-        /** @var \Illuminate\Http\UploadedFile $file */
+        /** @var UploadedFile $file */
         $file = $request->file('file');
 
         /** @var string $categoria */
@@ -125,12 +127,11 @@ final class DocumentController extends Controller
         }
 
         /** @var ProjectDocument $doc */
-
         if ($doc->storage_zone === ProjectDocument::ZONE_PUBLIC) {
             return response()->json([
-                'url'      => $doc->public_url,
+                'url' => $doc->public_url,
                 'filename' => $doc->nombre_archivo,
-                'zone'     => 'public',
+                'zone' => 'public',
             ]);
         }
 
@@ -138,9 +139,9 @@ final class DocumentController extends Controller
         $presignedUrl = $this->documents->getPresignedUrl($doc);
 
         return response()->json([
-            'url'      => $presignedUrl,
+            'url' => $presignedUrl,
             'filename' => $doc->nombre_archivo,
-            'zone'     => 'private',
+            'zone' => 'private',
         ]);
     }
 
@@ -214,7 +215,7 @@ final class DocumentController extends Controller
             return [null, null, response()->json(['message' => 'Not found'], 404)];
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return [null, null, response()->json(['message' => trans('auth.unauthorized')], 403)];
         }
 
@@ -246,7 +247,7 @@ final class DocumentController extends Controller
             return [null, null, response()->json(['message' => 'Not found'], 404)];
         }
 
-        if (! $this->canAccess($request, $project, $user)) {
+        if (! $this->canAccess($project, $user)) {
             return [null, null, response()->json(['message' => trans('auth.unauthorized')], 403)];
         }
 
@@ -257,9 +258,9 @@ final class DocumentController extends Controller
     {
         if ($document->storage_zone === ProjectDocument::ZONE_PUBLIC) {
             return response()->json([
-                'url'      => $document->public_url,
+                'url' => $document->public_url,
                 'filename' => $document->nombre_archivo,
-                'zone'     => 'public',
+                'zone' => 'public',
             ]);
         }
 
@@ -267,9 +268,9 @@ final class DocumentController extends Controller
         $presignedUrl = $this->documents->getPresignedUrl($document);
 
         return response()->json([
-            'url'      => $presignedUrl,
+            'url' => $presignedUrl,
             'filename' => $document->nombre_archivo,
-            'zone'     => 'private',
+            'zone' => 'private',
         ]);
     }
 
@@ -285,19 +286,9 @@ final class DocumentController extends Controller
         return User::find((int) $payload['sub']);
     }
 
-    private function activeRole(Request $request): string
+    private function canAccess(Project $project, User $user): bool
     {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-
-        return isset($payload['role']) ? (string) $payload['role'] : '';
-    }
-
-    private function canAccess(Request $request, Project $project, User $user): bool
-    {
-        $role = $this->activeRole($request);
-
-        if (in_array($role, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true)) {
+        if ($user->canViewTeamV2('ventas_diseno')) {
             return true;
         }
 
@@ -329,19 +320,19 @@ final class DocumentController extends Controller
         $uploader = $document->uploader;
 
         return [
-            'id'             => $document->id,
-            'project_id'     => $document->project_id,
-            'categoria'      => $document->categoria,
+            'id' => $document->id,
+            'project_id' => $document->project_id,
+            'categoria' => $document->categoria,
             'nombre_archivo' => $document->nombre_archivo,
-            'size_bytes'     => $document->size_bytes,
-            'mime_type'      => $document->mime_type,
-            'storage_zone'   => $document->storage_zone,
-            'is_current'     => $document->is_current,
-            'version'        => $document->version,
-            'uploader'       => [
-                'id'         => $uploader->id,
+            'size_bytes' => $document->size_bytes,
+            'mime_type' => $document->mime_type,
+            'storage_zone' => $document->storage_zone,
+            'is_current' => $document->is_current,
+            'version' => $document->version,
+            'uploader' => [
+                'id' => $uploader->id,
                 'first_name' => $uploader->first_name,
-                'last_name'  => $uploader->last_name,
+                'last_name' => $uploader->last_name,
             ],
             'created_at' => $document->created_at->toIso8601String(),
         ];
