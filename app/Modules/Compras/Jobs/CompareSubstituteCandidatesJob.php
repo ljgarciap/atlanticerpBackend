@@ -9,7 +9,9 @@ use App\Modules\AI\Models\AiAnalysis;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Services\AuditService;
+use App\Shared\Support\SafePhotoUrlGuard;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -171,13 +173,22 @@ final class CompareSubstituteCandidatesJob extends BaseAiJob
             return null;
         }
 
+        // SCRUM-1038 (S-01, SSRF): `photo_url` es texto libre de un usuario; solo https, host de la lista y sin IP interna.
+        $guard = app(SafePhotoUrlGuard::class);
+        if (! $guard->isAllowed($url) || ! $guard->resolvesToPublicIps($url)) {
+            Log::warning('CompareSubstituteCandidatesJob: photo_url descartada por la guarda SSRF', ['catalog_product_id' => $candidate->id]);
+
+            return null;
+        }
+
         try {
-            $response = Http::timeout(15)->get($url);
+            $response = Http::timeout(15)->withoutRedirecting()->get($url);
         } catch (\Throwable) {
             return null;
         }
 
-        if ($response->failed()) {
+        // Con redirecciones desactivadas un 3xx no es `failed()`: solo se acepta un 2xx.
+        if (! $response->successful()) {
             return null;
         }
 

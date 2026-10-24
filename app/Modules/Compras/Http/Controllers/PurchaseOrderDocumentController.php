@@ -10,6 +10,7 @@ use App\Modules\Compras\Http\Requests\StorePurchaseOrderDocumentRequest;
 use App\Modules\Compras\Jobs\ValidateProviderConfirmationJob;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderDocument;
+use App\Modules\Compras\Support\OrderMoneyVisibility;
 use App\Modules\Compras\Services\PurchaseOrderDocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,6 +49,14 @@ final class PurchaseOrderDocumentController extends Controller
 
         /** @var \Illuminate\Database\Eloquent\Collection<int, PurchaseOrderDocument> $documents */
         $documents = $order->documents;
+
+        // SCRUM-1013 (Pre-QA H3) — una factura comercial, la confirmación del proveedor o la declaración de
+        // nacionalización traen precios: para quien no ve montos solo se listan los documentos sin precios.
+        if (OrderMoneyVisibility::hiddenFor($request)) {
+            $documents = $documents->filter(
+                fn (PurchaseOrderDocument $d): bool => in_array($d->category, OrderMoneyVisibility::DOCUMENT_CATEGORIES_WITHOUT_PRICES, true),
+            );
+        }
 
         return response()->json([
             'data' => $documents->map(fn (PurchaseOrderDocument $d) => $this->format($d))->values(),

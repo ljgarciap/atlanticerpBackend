@@ -87,7 +87,12 @@ class PurchaseOrderPdfTest extends FeatureTestCase
             'statusLabel' => 'Ordenado', 'shippingTypeLabel' => 'Sin especificar',
         ])->render();
 
-        $this->assertStringNotContainsString('$', $html);
+        // SCRUM-886/893 — el documento ahora siempre lleva pie de página real
+        // (`pdf.partials.footer`), que es un bloque `<script type="text/php">` con variables PHP
+        // literales ($pdf, $font, ...) — el signo "$" ya no es exclusivo de un precio. La
+        // aserción real de REQ-136 Escenario 1 es "ningún monto en dólares", no "el carácter $ no
+        // aparece en ningún lado del HTML".
+        $this->assertDoesNotMatchRegularExpression('/\$[\d,]/', $html);
         $this->assertStringContainsString('Lámpara colgante', $html);
     }
 
@@ -103,6 +108,44 @@ class PurchaseOrderPdfTest extends FeatureTestCase
         ])->render();
 
         $this->assertStringContainsString('60.00', $html);
+    }
+
+    /** SCRUM-1123 — columna "Referencia de fábrica" inmediatamente a la izquierda de "Referencia". */
+    public function test_vista_incluye_columna_referencia_de_fabrica_antes_de_referencia(): void
+    {
+        $order = $this->makeOrderWithLine();
+        $order->lines->first()->catalogProduct->update(['factory_reference' => 'FAB-777']);
+        $order->load(['provider', 'lines.catalogProduct']);
+
+        foreach ([true, false] as $includeCost) {
+            $html = view('compras.purchase-order-pdf', [
+                'order' => $order, 'includeCost' => $includeCost,
+                'statusLabel' => 'Ordenado', 'shippingTypeLabel' => 'Sin especificar',
+            ])->render();
+
+            $this->assertMatchesRegularExpression('/<th>Referencia de fábrica<\/th>\s*<th>Referencia<\/th>/u', $html);
+            $this->assertMatchesRegularExpression('/<td>FAB-777<\/td>\s*<td>REF-1<\/td>/', $html);
+        }
+    }
+
+    /** SCRUM-1123 — sin referencia de fábrica la celda queda vacía y el PDF se genera sin error. */
+    public function test_producto_sin_referencia_de_fabrica_deja_celda_vacia_y_genera_pdf(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $order = $this->makeOrderWithLine();
+        $order->load(['provider', 'lines.catalogProduct']);
+
+        $html = view('compras.purchase-order-pdf', [
+            'order' => $order, 'includeCost' => true,
+            'statusLabel' => 'Ordenado', 'shippingTypeLabel' => 'Sin especificar',
+        ])->render();
+        $this->assertMatchesRegularExpression('/<td><\/td>\s*<td>REF-1<\/td>/', $html);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->get("/api/compras/orders/{$order->id}/pdf")
+            ->assertStatus(200)
+            ->assertHeader('content-type', 'application/pdf');
     }
 
     public function test_enviar_correo_sin_email_de_proveedor_retorna_422(): void

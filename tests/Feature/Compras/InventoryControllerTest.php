@@ -34,6 +34,9 @@ class InventoryControllerTest extends FeatureTestCase
         // string, null given" porque no hay bucket real configurado en el entorno de test. Mismo
         // patrón ya usado en CatalogControllerTest::setUp() para el mismo disco.
         Storage::fake('s3-private');
+        // SCRUM-830 — imagen de producto (CatalogService::uploadPhoto()), disco 's3-public', mismo
+        // motivo que el fake de arriba.
+        Storage::fake('s3-public');
     }
 
     /** @param list<string> $perms */
@@ -113,11 +116,49 @@ class InventoryControllerTest extends FeatureTestCase
             'rotation' => 'media',
             // SCRUM-426 — ficha técnica (Caso A/B: archivo O link) vuelve a ser obligatoria.
             'link' => 'https://proveedor.example.com/ficha.pdf',
+            // SCRUM-830 — imagen del producto ahora obligatoria (siempre archivo).
+            'photo' => UploadedFile::fake()->image('foto.jpg', 400, 400),
             ...$overrides,
         ];
     }
 
     // ── SCRUM-231/232/233/234 — index, KPIs, filtros, Estado ─────────────────
+
+    /**
+     * SCRUM-1013 (rebote de Daniela, 2026-10-02) — un vendedor/diseñador con un permiso de Compras
+     * de solo consulta que NO sea de Operaciones debe seguir viendo Inventario en el modo
+     * restringido de Ventas & Diseño (sin costo ni margen). `compras.limited.view` es de
+     * Operaciones: abre Inventario sin enmascarar costos, así que no debe llegar a un vendedor.
+     */
+    public function test_vendedor_con_logistica_view_sigue_en_modo_ventas_sin_costo_ni_margen(): void
+    {
+        $this->makeProduct();
+        $this->grantCompras('designer@atlantic.test', ['compras.logistica.view']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/inventory')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('restricted', true);
+        $this->assertArrayNotHasKey('cost', $response->json('data.0'));
+        $this->assertArrayNotHasKey('margin_percent', $response->json('data.0'));
+    }
+
+    /** Documenta por qué los vendedores NO pueden tener `compras.limited.view` (pasa a modo completo, con costos). */
+    public function test_compras_limited_view_desenmascara_costos_por_eso_no_es_para_vendedores(): void
+    {
+        $this->makeProduct();
+        $this->grantCompras('designer@atlantic.test', ['compras.limited.view']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/inventory')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('restricted', false);
+        $this->assertArrayHasKey('cost', $response->json('data.0'));
+    }
 
     public function test_modo_ventas_no_expone_costo_ni_margen(): void
     {
@@ -882,7 +923,8 @@ class InventoryControllerTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 120, 'unit_cost' => 10, 'subtotal' => 1200,
         ]);
-        $warehouseId = (int) DB::table('atlantic_bodega.warehouses')->value('id');
+        // SCRUM-1196 — antes tomaba «la primera bodega» sin orden definido; el Disponible solo cuenta Bodega Central (los showrooms lo excluyen).
+        $warehouseId = (int) DB::table('atlantic_bodega.warehouses')->where('name', 'Bodega Central')->value('id');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
@@ -1227,6 +1269,120 @@ class InventoryControllerTest extends FeatureTestCase
         $response->assertJsonPath('has_technical_sheet', true);
     }
 
+    // ── SCRUM-830 — imagen del producto ───────────────────────────────────────
+
+    public function test_crear_producto_sin_imagen_retorna_422(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $provider = $this->makeProvider();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $payload = $this->makeValidCreatePayload($provider->id);
+        unset($payload['photo']);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/inventory', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['photo']);
+    }
+
+    public function test_crear_producto_con_imagen_genera_miniatura_y_queda_disponible_de_inmediato(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $provider = $this->makeProvider();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id))
+            ->assertStatus(201);
+
+        $response->assertJsonPath('has_uploaded_photo', true);
+        $this->assertNotNull($response->json('photo_url'));
+        $this->assertNotNull($response->json('photo_full_url'));
+
+        // El request HTTP resetea el tenant "current" al terminar (mismo gotcha que el resto de
+        // este archivo, ver línea 1149) — hay que reactivarlo antes de consultar el modelo directo.
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $product = CatalogProduct::where('reference', $response->json('reference'))->firstOrFail();
+        Storage::disk('s3-public')->assertExists($product->photo_key);
+        Storage::disk('s3-public')->assertExists($product->photo_thumbnail_key);
+        // Miniatura y original no deben ser la MISMA key — RN12, distintas variantes.
+        $this->assertNotSame($product->photo_key, $product->photo_thumbnail_key);
+    }
+
+    public function test_reemplazar_imagen_desde_editar_informacion_actualiza_las_keys_y_borra_las_viejas(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $provider = $this->makeProvider();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $created = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id))
+            ->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $product = CatalogProduct::where('reference', $created->json('reference'))->firstOrFail();
+        $oldKey = $product->photo_key;
+        $oldThumbnailKey = $product->photo_thumbnail_key;
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/inventory/{$product->id}/photo", [
+                'photo' => UploadedFile::fake()->image('nueva.png', 600, 600),
+            ])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('has_uploaded_photo', true);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $product->refresh();
+        $this->assertNotSame($oldKey, $product->photo_key);
+        $this->assertNotSame($oldThumbnailKey, $product->photo_thumbnail_key);
+        Storage::disk('s3-public')->assertExists($product->photo_key);
+        Storage::disk('s3-public')->assertMissing($oldKey);
+        Storage::disk('s3-public')->assertMissing($oldThumbnailKey);
+    }
+
+    public function test_reemplazar_imagen_sin_archivo_retorna_422(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $product = $this->makeProduct();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/inventory/{$product->id}/photo", [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['photo']);
+    }
+
+    /**
+     * RN08/RN09/CA14 — la única forma de tocar la imagen es POST /{id}/photo (siempre exige un
+     * archivo válido); PUT /{id} (edición general) nunca la incluye en sus reglas, así que no hay
+     * ningún camino por el que "guardar" el resto del formulario pueda dejar al producto sin
+     * imagen o pisarla con null.
+     */
+    public function test_editar_informacion_general_nunca_toca_la_imagen_del_producto(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $provider = $this->makeProvider();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $created = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id))
+            ->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $product = CatalogProduct::where('reference', $created->json('reference'))->firstOrFail();
+        $photoKey = $product->photo_key;
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/compras/inventory/{$product->id}", ['name' => 'Nombre actualizado'])
+            ->assertStatus(200)
+            ->assertJsonPath('has_uploaded_photo', true);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame($photoKey, $product->refresh()->photo_key);
+    }
+
     public function test_detalle_de_producto_viejo_sin_ficha_tecnica_devuelve_null(): void
     {
         // Producto creado antes de SCRUM-426, directo por el modelo (sin pasar por la validación
@@ -1437,5 +1593,173 @@ class InventoryControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/inventory/{$product->id}", ['cost' => 1])
             ->assertStatus(403);
+    }
+
+    /** SCRUM-992 — búsqueda en SQL sobre `search_text`: sin acentos ni mayúsculas. */
+    public function test_busqueda_ignora_acentos_y_mayusculas(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->makeProduct(['reference' => 'ACC-1', 'name' => 'Lámpara colgante Iluminación']);
+        $this->makeProduct(['reference' => 'ACC-2', 'name' => 'Aplique de pared']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/inventory?search=LAMPARA iluminacion')
+            ->assertStatus(200);
+
+        $this->assertSame(['ACC-1'], collect($response->json('data'))->pluck('reference')->all());
+        $this->assertFalse($response->json('fuzzy'));
+        $this->assertSame(1, $response->json('meta.total'));
+    }
+
+    /** SCRUM-992 — el respaldo tolerante a typos solo entra con 0 resultados y prende `fuzzy`. */
+    public function test_busqueda_con_typo_usa_el_respaldo_y_marca_fuzzy(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->makeProduct(['reference' => 'TYP-1', 'name' => 'Iluminación exterior']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/inventory?search=iluminacon')
+            ->assertStatus(200);
+
+        $this->assertSame(['TYP-1'], collect($response->json('data'))->pluck('reference')->all());
+        $this->assertTrue($response->json('fuzzy'));
+
+        $none = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/inventory?search=zzqqxx')
+            ->assertStatus(200);
+        $this->assertSame([], $none->json('data'));
+        $this->assertFalse($none->json('fuzzy'));
+    }
+
+    // ── SCRUM-1010 — filtro por familia (`family_id`) ──────────────────────────
+
+    private function makeFamily(string $name, CatalogProduct ...$products): CatalogProductFamily
+    {
+        $family = CatalogProductFamily::create(['name' => $name, 'is_active' => true]);
+        $family->products()->attach(array_map(fn (CatalogProduct $p): int => $p->id, $products));
+
+        return $family;
+    }
+
+    /** @return list<string> */
+    private function inventoryReferences(string $token, string $query): array
+    {
+        return collect(
+            $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/inventory'.$query)->assertStatus(200)->json('data'),
+        )->pluck('reference')->all();
+    }
+
+    public function test_family_id_filtra_solo_los_productos_de_esa_familia(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $inA = $this->makeProduct(['reference' => 'FAM-A']);
+        $inB = $this->makeProduct(['reference' => 'FAM-B']);
+        $this->makeProduct(['reference' => 'FAM-NONE']);
+        $familyA = $this->makeFamily('Familia A', $inA);
+        $this->makeFamily('Familia B', $inB);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->assertSame(['FAM-A'], $this->inventoryReferences($token, "?family_id={$familyA->id}"));
+        $this->assertContains('FAM-NONE', $this->inventoryReferences($token, ''));
+    }
+
+    public function test_un_producto_compartido_aparece_al_filtrar_por_cualquiera_de_sus_familias(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $shared = $this->makeProduct(['reference' => 'FAM-SHARED']);
+        $only = $this->makeProduct(['reference' => 'FAM-ONLY-2']);
+        $one = $this->makeFamily('Familia 1', $shared);
+        $two = $this->makeFamily('Familia 2', $shared, $only);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->assertSame(['FAM-SHARED'], $this->inventoryReferences($token, "?family_id={$one->id}"));
+        $this->assertEqualsCanonicalizing(['FAM-SHARED', 'FAM-ONLY-2'], $this->inventoryReferences($token, "?family_id={$two->id}"));
+    }
+
+    public function test_family_id_inexistente_devuelve_lista_vacia(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->makeProduct(['reference' => 'FAM-X']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->assertSame([], $this->inventoryReferences($token, '?family_id=999999'));
+    }
+
+    public function test_family_id_vacio_o_invalido_se_ignora_y_no_filtra(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $inFamily = $this->makeProduct(['reference' => 'FAM-IN']);
+        $this->makeProduct(['reference' => 'FAM-OUT']);
+        $this->makeFamily('Familia I', $inFamily);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        foreach (['?family_id=', '?family_id=abc', '?family_id=0'] as $query) {
+            $this->assertEqualsCanonicalizing(['FAM-IN', 'FAM-OUT'], $this->inventoryReferences($token, $query), $query);
+        }
+    }
+
+    public function test_family_id_se_combina_con_el_filtro_de_bodega(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $match = $this->makeProduct(['reference' => 'FAM-COMBO-1']);
+        $otherWarehouse = $this->makeProduct(['reference' => 'FAM-COMBO-2']);
+        $this->makeStock($match, 'Bodega Central', 5);
+        $this->makeStock($otherWarehouse, 'Merma', 5);
+        $family = $this->makeFamily('Familia combo', $match, $otherWarehouse);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $centralId = $this->warehouseId('Bodega Central');
+
+        $this->assertSame(
+            ['FAM-COMBO-1'],
+            $this->inventoryReferences($token, "?family_id={$family->id}&warehouse_ids[]={$centralId}"),
+        );
+    }
+
+    public function test_family_id_respeta_el_acceso_sin_permiso_sigue_siendo_403(): void
+    {
+        $this->makeProduct(['reference' => 'FAM-403']);
+        $token = $this->loginAs('electrician@atlantic.test', 'Password123!', 'electrician');
+
+        $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/inventory?family_id=1')->assertStatus(403);
+    }
+
+    public function test_family_id_se_combina_con_la_busqueda_de_texto(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $match = $this->makeProduct(['reference' => 'FAM-TXT-1', 'name' => 'Bombillo especial LED']);
+        $sameFamilyOtherText = $this->makeProduct(['reference' => 'FAM-TXT-2', 'name' => 'Apliqu de pared distinto']);
+        $matchOtherFamily = $this->makeProduct(['reference' => 'FAM-TXT-3', 'name' => 'Bombillo especial LED']);
+        $family = $this->makeFamily('Familia texto', $match, $sameFamilyOtherText);
+        $this->makeFamily('Otra familia texto', $matchOtherFamily);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        // Solo el producto que está en la familia Y matchea el texto (AND, no unión).
+        $this->assertSame(
+            ['FAM-TXT-1'],
+            $this->inventoryReferences($token, "?family_id={$family->id}&search=Bombillo especial LED"),
+        );
+    }
+
+    public function test_modo_ventas_con_family_id_filtra_y_no_expone_costo_ni_margen(): void
+    {
+        // Sin grants de Compras: `designer` entra por ventas_diseno.read => modo restringido.
+        $in = $this->makeProduct(['reference' => 'FAM-RESTR-IN']);
+        $this->makeProduct(['reference' => 'FAM-RESTR-OUT']);
+        $family = $this->makeFamily('Familia restringida', $in);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/inventory?family_id={$family->id}")
+            ->assertStatus(200);
+
+        $response->assertJsonPath('restricted', true);
+        $this->assertSame(['FAM-RESTR-IN'], collect($response->json('data'))->pluck('reference')->all());
+        foreach ($response->json('data') as $row) {
+            foreach (['cost', 'cost_total', 'margin_percent'] as $hidden) {
+                $this->assertArrayNotHasKey($hidden, $row, "{$hidden} no debe salir en modo restringido");
+            }
+        }
     }
 }

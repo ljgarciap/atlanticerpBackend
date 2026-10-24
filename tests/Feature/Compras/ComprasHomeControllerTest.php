@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Compras;
 
+use App\Models\User;
+use App\Modules\Compras\Models\BodegaZonaLibreRequest;
+use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
+use App\Modules\Compras\Models\ReplacementRequest;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Modules\VentasDiseno\Models\Quote;
+use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
@@ -275,5 +282,123 @@ class ComprasHomeControllerTest extends FeatureTestCase
         $this->assertNotNull($item);
         $this->assertSame(3, $item['suggested_quantity']); // 5 - 2
         $this->assertSame('ProveedorSugerido', $item['provider_name']);
+    }
+
+    /**
+     * SCRUM-908 — tarjeta "Aprobaciones Pendientes". Senior Review: la autorización real de
+     * `purchase_order` es `AprobacionGate::esMark()` (`ComprasSettings.primary_approver_user_id`),
+     * no el permiso `compras.approve` (ese es solo el gate grueso de la ruta —
+     * `PurchaseOrderController::approve()` igual exige ser Mark, ver docblock de `AprobacionGate`).
+     * Este test fija a designer como `primary_approver_user_id` explícitamente para no depender del
+     * fallback "sin approver configurado, no bloquea a nadie" de `esMark()`. Solo cuentan las
+     * órdenes con `requires_primary_approval = true` (RN3/REQ-118) — sin ese flag, `PurchaseOrderController::
+     * approve()` las rechaza con 422 aunque el usuario sí sea Mark.
+     */
+    public function test_approvals_pending_incluye_orden_por_aprobar_para_mark(): void
+    {
+        $designer = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        ComprasSettings::current()->update(['primary_approver_user_id' => $designer->id]);
+        $provider = $this->makeProvider();
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 250, 'requires_primary_approval' => true]);
+        // Control negativo: una orden que NO requiere aprobación de Mark no debe aparecer.
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 90, 'requires_primary_approval' => false]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
+
+        $items = $response->json('data');
+        $this->assertCount(1, $items);
+        $this->assertSame('purchase_order', $items[0]['tipo']);
+        $this->assertStringStartsWith('/compras/ordenes/', (string) $items[0]['detail_route']);
+    }
+
+    public function test_approvals_pending_vacio_sin_ningun_permiso_de_aprobacion(): void
+    {
+        $this->grantCompras('designer@atlantic.test');
+        $provider = $this->makeProvider();
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 250]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
+
+        $this->assertSame([], $response->json('data'));
+    }
+
+    /**
+     * Senior Review SCRUM-908 — regresión real: la ruta llegó a tener `permission:compras.read`,
+     * lo que devolvía 403 para un Vendedor/Diseñador responsable de proyecto que SÍ puede decidir
+     * `replacement_request` vía `ventas_diseno.edit` (ver ReplacementRequestController::canDecide()),
+     * sin tener ningún permiso de Compras — nunca vería su propia aprobación pendiente. Sin ningún
+     * `extra_permissions` de Compras (a diferencia de los otros tests de esta clase, que llaman
+     * `grantCompras()`), solo el rol `designer` base.
+     */
+    public function test_approvals_pending_incluye_sustitucion_para_vendedor_responsable_sin_permiso_de_compras(): void
+    {
+        $product = $this->makeProduct();
+        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $salesProject = SalesProject::create(['name' => 'Proyecto Responsable']);
+        Quote::create([
+            'sales_project_id' => $salesProject->id, 'owner_id' => $owner->id,
+            'folio' => 'COT-'.random_int(1000, 9999), 'confirmed_at' => now(),
+        ]);
+        PipelineCard::create(['sales_project_id' => $salesProject->id, 'stage' => 'approved', 'owner_id' => $owner->id]);
+        ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE, 'margin_percent' => 20,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
+
+        $items = $response->json('data');
+        $this->assertCount(1, $items);
+        $this->assertSame('replacement_request', $items[0]['tipo']);
+    }
+
+    public function test_approvals_pending_incluye_zona_libre_para_quien_tiene_el_permiso(): void
+    {
+        $this->grantCompras('designer@atlantic.test');
+        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')
+            ->update(['extra_permissions' => json_encode(['compras.read', 'compras.zona-libre.approve'])]);
+        BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'zona_libre'));
+    }
+
+    /**
+     * Senior Review SCRUM-908 — bug real encontrado escribiendo este test: la query original
+     * consultaba `PurchaseOrderPayment::whereNotNull('pending_amount_change')`, columna que solo
+     * existe en `purchase_orders` (seteada por `PurchaseOrderPaymentController::requestAmountChange()`)
+     * — rompía con "column does not exist" para cualquier usuario real con `compras.edit`. Corregido
+     * a `PurchaseOrder::whereNotNull(...)`.
+     */
+    public function test_approvals_pending_incluye_cambio_de_monto_para_quien_tiene_compras_edit(): void
+    {
+        $this->grantCompras('designer@atlantic.test');
+        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')
+            ->update(['extra_permissions' => json_encode(['compras.read', 'compras.edit'])]);
+        $provider = $this->makeProvider();
+        $order = $this->makeOrder($provider->id, ['total_amount' => 500]);
+        $order->update(['pending_amount_change' => 1200, 'amount_change_requested_by' => $this->userIdByEmail('designer@atlantic.test')]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'purchase_order_amount_change'));
+    }
+
+    private function userIdByEmail(string $email): int
+    {
+        return (int) User::where('email', $email)->value('id');
     }
 }

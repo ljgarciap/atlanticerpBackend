@@ -32,6 +32,9 @@ class UpdateProviderRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', $this->uniqueNameRule()],
             'category' => ['nullable', 'string', Rule::in(Provider::CATEGORIES)],
+            'tax_id' => ['nullable', 'string', 'max:100', $this->uniqueTaxIdRule()],
+            // SCRUM-1014 — DV del RUC, mismo formato que clientes (SCRUM-928).
+            'tax_id_dv' => ['nullable', 'string', 'regex:/^\d{1,2}$/'],
             'currency' => ['nullable', 'string', 'size:3'],
             'is_active' => ['nullable', 'boolean'],
             'contact_name' => ['nullable', 'string', 'max:255'],
@@ -49,6 +52,12 @@ class UpdateProviderRequest extends FormRequest
         ];
     }
 
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return ['tax_id_dv.regex' => 'El DV debe tener 1 o 2 dígitos.'];
+    }
+
     private function uniqueNameRule(): \Closure
     {
         return function (string $attribute, mixed $value, \Closure $fail): void {
@@ -61,6 +70,23 @@ class UpdateProviderRequest extends FormRequest
                 ->exists();
             if ($exists) {
                 $fail("Ya existe un proveedor con el nombre '{$value}'.");
+            }
+        };
+    }
+
+    /** SCRUM-852 — mismo patrón que uniqueNameRule(). */
+    private function uniqueTaxIdRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            if (! is_string($value) || $value === '') {
+                return;
+            }
+            $providerId = $this->route('id');
+            $exists = Provider::whereRaw('LOWER(tax_id) = ?', [mb_strtolower($value)])
+                ->where('id', '!=', $providerId)
+                ->exists();
+            if ($exists) {
+                $fail("Ya existe un proveedor con el identificador fiscal '{$value}'.");
             }
         };
     }

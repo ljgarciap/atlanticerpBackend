@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Compras;
 
 use App\Models\User;
+use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
@@ -116,6 +117,41 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      * antes el backend lo pisaba siempre con el costo real del producto, dejando el campo de la
      * UI editable pero sin efecto real.
      */
+    /** SCRUM-1184 (Pre-QA M3) — antes una cantidad enorme llegaba a la BD y devolvía un 500 con el SQL a la vista. */
+    public function test_crear_orden_rechaza_con_422_una_cantidad_o_un_subtotal_que_no_caben_en_la_columna(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $provider = $this->makeProvider();
+        $product = $this->makeCatalogProduct($provider->id, ['cost' => 12.50]);
+        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+
+        // Cantidad por encima de la columna integer.
+        $this->withHeaders($headers)->postJson('/api/compras/orders', [
+            'provider_id' => $provider->id, 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 999999999999]],
+        ])->assertStatus(422)->assertJsonValidationErrors(['lines.0.quantity']);
+        $errors = $this->withHeaders($headers)->postJson('/api/compras/orders', [
+            'provider_id' => $provider->id, 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 999999999999]],
+        ])->json('errors');
+        $message = (string) ($errors['lines.0.quantity'][0] ?? '');
+        $this->assertStringContainsString('cantidad', $message);
+        $this->assertStringNotContainsString('lines.0.quantity', $message, 'El texto del error nombra «cantidad», no el campo técnico.');
+
+        // Cabe como entero pero cantidad × costo del catálogo no cabe en decimal(12,2).
+        $this->withHeaders($headers)->postJson('/api/compras/orders', [
+            'provider_id' => $provider->id, 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 2000000000]],
+        ])->assertStatus(422)->assertJsonValidationErrors(['lines.0.quantity']);
+
+        // Y con el costo editado en la línea.
+        $this->withHeaders($headers)->postJson('/api/compras/orders', [
+            'provider_id' => $provider->id, 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1000000, 'unit_cost' => 99999]],
+        ])->assertStatus(422)->assertJsonValidationErrors(['lines.0.quantity']);
+
+        // Una cantidad grande pero que sí cabe sigue creándose.
+        $this->withHeaders($headers)->postJson('/api/compras/orders', [
+            'provider_id' => $provider->id, 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 100000]],
+        ])->assertStatus(201);
+    }
+
     public function test_crear_orden_con_producto_existente_respeta_unit_cost_editado(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
@@ -784,6 +820,52 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     }
 
     /**
+     * SCRUM-954 — who_pays_shipping/shipping_cost son exclusivos de envío Aéreo (RN de
+     * REQ-134/SCRUM-197). Antes del fix, cambiar de Aéreo a otro tipo los ocultaba en el
+     * frontend pero los dejaba persistidos en BD tal cual venían en el payload.
+     */
+    public function test_cambiar_tipo_de_envio_de_aereo_a_terrestre_limpia_who_pays_y_costo(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit']);
+        $provider = $this->makeProvider();
+        $product = $this->makeCatalogProduct($provider->id);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $orderId = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/orders', [
+                'provider_id' => $provider->id,
+                'shipping_type' => 'aereo',
+                'who_pays_shipping' => 'atlantic',
+                'shipping_cost' => 500,
+                'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1]],
+            ])
+            ->assertStatus(201)
+            ->json('id');
+
+        // El payload sigue mandando who_pays_shipping/shipping_cost (como haría un cliente que
+        // no los limpió antes de cambiar el tipo) — el backend debe ignorarlos igual.
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/compras/orders/{$orderId}", [
+                'provider_id' => $provider->id,
+                'shipping_type' => 'terrestre',
+                'who_pays_shipping' => 'atlantic',
+                'shipping_cost' => 500,
+                'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1]],
+            ])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('shipping_type', 'terrestre');
+        $response->assertJsonPath('who_pays_shipping', null);
+        $response->assertJsonPath('shipping_cost', null);
+
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $this->assertDatabaseHas(
+            "{$slug}_compras.purchase_orders",
+            ['id' => $orderId, 'shipping_type' => 'terrestre', 'who_pays_shipping' => null, 'shipping_cost' => null],
+        );
+    }
+
+    /**
      * REQ-140 (SCRUM-203) — hallazgo de reconciliación contra el mockup 2A/Excel de requerimientos:
      * "Tipo de envío" y "Costo de envío" ya vivían en el modelo (capturados en Nueva Orden/Logística)
      * pero no se exponían en index()/formatSummary(), la fuente real de la tabla principal.
@@ -889,5 +971,72 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             'data.0.last_payment_date',
             now()->subDay()->toDateString(),
         );
+    }
+
+    /**
+     * SCRUM-861 punto 1 — el mismo producto no puede aparecer en 2+ líneas de la misma orden.
+     */
+    public function test_crear_orden_con_producto_repetido_en_2_lineas_es_rechazada(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $provider = $this->makeProvider();
+        $product = $this->makeCatalogProduct($provider->id);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/orders', [
+                'provider_id' => $provider->id,
+                'lines' => [
+                    ['catalog_product_id' => $product->id, 'quantity' => 3],
+                    ['catalog_product_id' => $product->id, 'quantity' => 2],
+                ],
+            ])
+            ->assertStatus(422);
+
+        $response->assertJsonValidationErrors(['lines.1.catalog_product_id']);
+    }
+
+    /**
+     * SCRUM-861 punto 2 — `shows_goods_receipt_link` debe apagarse una vez que la orden recibió
+     * TODO lo esperado, sin importar que la etapa (En aduana/En tránsito local) ya se haya
+     * alcanzado alguna vez. Antes del fix, `PurchaseOrder::showsGoodsReceiptLink()` nunca
+     * consultaba la completitud real de la recepción.
+     */
+    public function test_shows_goods_receipt_link_se_apaga_tras_recibir_todo_lo_esperado(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write', 'compras.edit']);
+        $provider = $this->makeProvider();
+        $product = $this->makeCatalogProduct($provider->id);
+        $warehouse = Warehouse::first()
+            ?? Warehouse::create(['name' => 'Bodega principal']);
+
+        $order = PurchaseOrder::create([
+            'provider_id' => $provider->id, 'currency' => 'USD', 'total_amount' => 100,
+            'status' => PurchaseOrder::STATUS_EN_ADUANA, 'status_changed_at' => now(),
+        ]);
+        $order->lines()->create(['catalog_product_id' => $product->id, 'quantity' => 5, 'unit_cost' => 20, 'subtotal' => 100]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        // Antes de ingresar mercancía: el enlace debe verse (orden en "En aduana", nada recibido).
+        $before = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/orders/{$order->id}")
+            ->assertStatus(200);
+        $before->assertJsonPath('shows_goods_receipt_link', true);
+
+        // Ingreso completo (5 de 5 unidades) — el enlace debe apagarse.
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/goods-receipts', [
+                'purchase_order_id' => $order->id,
+                'lines' => [
+                    ['catalog_product_id' => $product->id, 'quantity' => 5, 'unit_cost' => 20, 'warehouse_id' => $warehouse->id],
+                ],
+            ])
+            ->assertStatus(201);
+
+        $after = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/orders/{$order->id}")
+            ->assertStatus(200);
+        $after->assertJsonPath('shows_goods_receipt_link', false);
     }
 }

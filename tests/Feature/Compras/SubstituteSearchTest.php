@@ -9,6 +9,7 @@ use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Services\AuditService;
+use App\Shared\Support\SafePhotoUrlGuard;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,9 @@ class SubstituteSearchTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         Storage::fake('s3-private');
         Cache::flush(); // limpia también el estado de RateLimiter (usa el cache store default)
-        config(['services.anthropic.api_key' => 'sk-ant-test-fake-key-for-tests']);
+        config(['services.anthropic.api_key' => 'sk-ant-test-fake-key-for-tests', 'catalog.photo_hosts' => ['cdn.test']]);
+        // SCRUM-1038: la guarda SSRF resuelve DNS; en pruebas el host permitido resuelve a una IP pública fija.
+        $this->app->instance(SafePhotoUrlGuard::class, new SafePhotoUrlGuard(static fn (string $host): array => ['93.184.216.34']));
     }
 
     /** @param list<string> $perms */

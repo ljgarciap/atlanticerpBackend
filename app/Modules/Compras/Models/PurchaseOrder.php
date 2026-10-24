@@ -27,6 +27,10 @@ use Illuminate\Support\Collection;
  * @property string|null $shipping_type
  * @property string|null $who_pays_shipping
  * @property float|null $shipping_cost
+ * @property float|null $import_cost
+ * @property float|null $freight_cost
+ * @property float|null $handling_cost
+ * @property float|null $other_cost
  * @property int|null $liquidation_agency_id
  * @property string $modality
  * @property Carbon|null $estimated_arrival_date
@@ -39,6 +43,7 @@ use Illuminate\Support\Collection;
  * @property float $total_amount
  * @property string|null $notes
  * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property Carbon|null $approved_at
  * @property Carbon $status_changed_at
  * @property Carbon|null $payment_requested_at
@@ -175,6 +180,7 @@ class PurchaseOrder extends Model
     /** @var list<string> */
     protected $fillable = [
         'provider_id', 'status', 'shipping_type', 'who_pays_shipping', 'shipping_cost', 'modality',
+        'import_cost', 'freight_cost', 'handling_cost', 'other_cost',
         'estimated_arrival_date', 'actual_arrival_date', 'container_number', 'carrier',
         'requires_primary_approval', 'approved_by', 'approved_at', 'currency', 'total_amount',
         'notes', 'created_by', 'status_changed_at', 'liquidation_agency_id',
@@ -191,6 +197,10 @@ class PurchaseOrder extends Model
             'requires_primary_approval' => 'boolean',
             'total_amount' => 'float',
             'shipping_cost' => 'float',
+            'import_cost' => 'float',
+            'freight_cost' => 'float',
+            'handling_cost' => 'float',
+            'other_cost' => 'float',
             'approved_at' => 'datetime',
             'estimated_arrival_date' => 'date',
             'actual_arrival_date' => 'date',
@@ -279,16 +289,48 @@ class PurchaseOrder extends Model
         return (float) $this->payments->sum('amount');
     }
 
-    /** REQ-189 Escenario 2 — pendiente/parcial/completo según lo pagado contra `total_amount`. */
+    /**
+     * SCRUM-1145 — suma de los 4 costos adicionales opcionales (importación, flete, manejo, otros).
+     */
+    public function additionalCostsTotal(): float
+    {
+        return round((float) $this->import_cost + (float) $this->freight_cost
+            + (float) $this->handling_cost + (float) $this->other_cost, 2);
+    }
+
+    /**
+     * SCRUM-1145 — envío Aéreo pagado por Atlantic: es un gasto de la orden que se suma al pago
+     * al proveedor. Con cualquier otro tipo/pagador `shipping_cost` no cuenta (ver
+     * `normalizeShippingFields()`).
+     */
+    public function atlanticShippingCost(): float
+    {
+        return $this->shipping_type === self::SHIPPING_AEREO && $this->who_pays_shipping === self::PAYS_ATLANTIC
+            ? (float) $this->shipping_cost
+            : 0.0;
+    }
+
+    /**
+     * SCRUM-1145 — total a pagar al proveedor: productos (`total_amount`) + envío Aéreo pagado por
+     * Atlantic + costos adicionales. `total_amount` queda intacto a propósito (PDF, reportes,
+     * reclamos, KPI de Home).
+     */
+    public function payableTotal(): float
+    {
+        return round($this->total_amount + $this->atlanticShippingCost() + $this->additionalCostsTotal(), 2);
+    }
+
+    /** REQ-189 Escenario 2 — pendiente/parcial/completo según lo pagado contra `payableTotal()`. */
     public function paymentStatus(): string
     {
-        $paid = $this->paidAmount();
+        // Redondeado a centavos: con costos decimales la suma de pagos en float puede dar 1179.9999999 contra 1180.00.
+        $paid = round($this->paidAmount(), 2);
 
         if ($paid <= 0.0) {
             return self::PAYMENT_STATUS_PENDIENTE;
         }
 
-        return $paid >= $this->total_amount ? self::PAYMENT_STATUS_COMPLETO : self::PAYMENT_STATUS_PARCIAL;
+        return $paid >= $this->payableTotal() ? self::PAYMENT_STATUS_COMPLETO : self::PAYMENT_STATUS_PARCIAL;
     }
 
     /**
@@ -333,6 +375,24 @@ class PurchaseOrder extends Model
     public static function computeRequiresPrimaryApproval(?string $shippingType, ?string $whoPaysShipping): bool
     {
         return $shippingType === self::SHIPPING_AEREO && $whoPaysShipping === self::PAYS_ATLANTIC;
+    }
+
+    /**
+     * SCRUM-954 — `who_pays_shipping`/`shipping_cost` son exclusivos de envío Aéreo (RN de
+     * REQ-134/SCRUM-197). El frontend ya oculta esos campos para Marítimo/Terrestre, pero no
+     * garantiza que el payload los traiga vacíos (ej. el usuario los llenó en Aéreo y luego
+     * cambió el tipo antes de guardar) — se normaliza acá, server-side, para no depender de que
+     * el cliente siempre limpie su propio estado antes de enviar.
+     *
+     * @return array{who_pays_shipping: string|null, shipping_cost: float|null}
+     */
+    public static function normalizeShippingFields(?string $shippingType, ?string $whoPaysShipping, ?float $shippingCost): array
+    {
+        if ($shippingType !== self::SHIPPING_AEREO) {
+            return ['who_pays_shipping' => null, 'shipping_cost' => null];
+        }
+
+        return ['who_pays_shipping' => $whoPaysShipping, 'shipping_cost' => $shippingCost];
     }
 
     /**
@@ -479,9 +539,22 @@ class PurchaseOrder extends Model
      * una etapa anterior (REQ-165), ese remanente manda sobre el status real de la orden — "se
      * refleja como el estado visible... hasta que se registre otro ingreso" — y el enlace se
      * oculta hasta que el remanente vuelva a llegar a "En aduana"/"En tránsito local".
+     *
+     * SCRUM-861 punto 2 (hallazgo real, no solo reportado por el cliente): esta condición nunca
+     * consultaba si la orden ya recibió TODO lo esperado. Una vez que `pending_remainder_status`
+     * se limpia a null (recepción completa, ver `GoodsReceiptController::saveReceipt()`), caía
+     * siempre en la rama `hasReachedStage(...)` — que para una orden ya `Recibido` es
+     * necesariamente `true` (pasó por esas etapas para llegar ahí), así que el botón quedaba
+     * clickeable para siempre después de un ingreso completo. `$isFullyReceived` viene de
+     * `GoodsReceiptConfirmationService::isFullyReceived()` (fuente única, SCRUM-347) — manda sobre
+     * cualquier otra condición: una orden completamente recibida nunca vuelve a mostrar el enlace.
      */
-    public function showsGoodsReceiptLink(): bool
+    public function showsGoodsReceiptLink(bool $isFullyReceived): bool
     {
+        if ($isFullyReceived) {
+            return false;
+        }
+
         if ($this->pending_remainder_status !== null) {
             return in_array(
                 $this->pending_remainder_status,

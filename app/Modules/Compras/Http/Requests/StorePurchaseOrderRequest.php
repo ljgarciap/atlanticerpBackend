@@ -26,6 +26,24 @@ class StorePurchaseOrderRequest extends FormRequest
         return true;
     }
 
+    /**
+     * SCRUM-1145 (Pre-QA) — nombres en español de los costos adicionales para los mensajes 422 (sin esto salían
+     * "The import cost field must be at least 0").
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'import_cost' => 'costo de importación',
+            'freight_cost' => 'flete',
+            'handling_cost' => 'manejo',
+            'other_cost' => 'otros costos',
+            // SCRUM-1184 (Pre-QA B5) — el 422 por una cantidad enorme mostraba «lines.0.quantity».
+            'lines.*.quantity' => 'cantidad',
+        ];
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
@@ -37,6 +55,11 @@ class StorePurchaseOrderRequest extends FormRequest
             'who_pays_shipping' => ['nullable', 'string', Rule::in(['atlantic', 'cliente'])],
             // SCRUM-197 — RN de REQ-134: envío aéreo captura costo y quién lo paga.
             'shipping_cost' => ['nullable', 'numeric', 'min:0'],
+            // SCRUM-1145 — costos adicionales opcionales de la orden.
+            'import_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+            'freight_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+            'handling_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
+            'other_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             'modality' => ['nullable', 'string', Rule::in(['directo', 'zona_libre'])],
             'estimated_arrival_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
@@ -59,7 +82,8 @@ class StorePurchaseOrderRequest extends FormRequest
             // esperada del mockup, ausentes hasta ahora en el alta de producto nuevo.
             'lines.*.new_product.category' => ['nullable', 'string', Rule::in(CatalogProduct::CATEGORIES)],
             'lines.*.new_product.rotation' => ['nullable', 'string', Rule::in(CatalogProduct::ROTATIONS)],
-            'lines.*.quantity' => ['required', 'integer', 'min:1'],
+            // Tope técnico: la columna `quantity` es integer (SCRUM-1184, Pre-QA: 999999999999 llegaba a la BD y devolvía un 500 con el SQL a la vista).
+            'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:'.self::MAX_INT_COLUMN],
             // SCRUM-193 (REQ-130, hallazgo de Gerencia Test) — costo precargado del catálogo pero
             // editable por línea (ej. precio renegociado para esta orden puntual); si no se manda,
             // el controller sigue tomando el costo real del producto (compatibilidad).
@@ -104,9 +128,8 @@ class StorePurchaseOrderRequest extends FormRequest
             if (! is_numeric($providerId)) {
                 return;
             }
-            $existing = CatalogProduct::where('provider_id', (int) $providerId)
-                ->where('factory_reference', $value)
-                ->first();
+            // SCRUM-1126 — también cuenta el producto que tiene a este proveedor como secundario (pivote).
+            $existing = CatalogProduct::findByFactoryReferenceForProviders($value, [(int) $providerId]);
             if ($existing !== null) {
                 $fail("La referencia de fábrica '{$value}' ya pertenece al producto '{$existing->name}' de este proveedor.");
             }
@@ -125,6 +148,46 @@ class StorePurchaseOrderRequest extends FormRequest
                 $fail('Solo se pueden asignar Pedidos en estado Aprobado.');
             }
         };
+    }
+
+    /** Límite de una columna `integer` de PostgreSQL. */
+    private const MAX_INT_COLUMN = 2147483647;
+
+    /** Límite de `subtotal` (`decimal(12,2)`): 10 dígitos enteros. */
+    private const SUBTOTAL_LIMIT = 10_000_000_000;
+
+    /**
+     * SCRUM-1184 (Pre-QA M3) — cantidad × costo de una línea tiene que caber en `purchase_order_lines.subtotal`; si no, el INSERT fallaba con un 500.
+     * El costo es el editado en la línea o, si no viene, el del producto de catálogo (misma regla que el controller).
+     *
+     * @param  array<int|string, mixed>  $lines
+     */
+    private function validateLineSubtotalsFitTheColumn(Validator $validator, array $lines): void
+    {
+        if ($validator->errors()->has('lines.*.quantity')) {
+            return;
+        }
+
+        $productIds = [];
+        foreach ($lines as $line) {
+            if (is_array($line) && ! isset($line['unit_cost']) && ! empty($line['catalog_product_id'])) {
+                $productIds[] = (int) $line['catalog_product_id'];
+            }
+        }
+        $costs = $productIds === [] ? [] : CatalogProduct::query()->whereIn('id', array_unique($productIds))->pluck('cost', 'id')->all();
+
+        foreach ($lines as $i => $line) {
+            if (! is_array($line) || ! is_numeric($line['quantity'] ?? null) || $validator->errors()->has("lines.{$i}.quantity")) {
+                continue;
+            }
+            $unitCost = isset($line['unit_cost']) && is_numeric($line['unit_cost'])
+                ? (float) $line['unit_cost']
+                : (float) ($costs[(int) ($line['catalog_product_id'] ?? 0)] ?? 0);
+
+            if ($unitCost * (int) $line['quantity'] >= self::SUBTOTAL_LIMIT) {
+                $validator->errors()->add("lines.{$i}.quantity", 'La cantidad por el costo de esta línea supera el máximo que admite una orden.');
+            }
+        }
     }
 
     public function withValidator(ValidatorContract $validator): void
@@ -146,8 +209,36 @@ class StorePurchaseOrderRequest extends FormRequest
                 }
             }
 
+            $this->validateLineSubtotalsFitTheColumn($validator, $lines);
             $this->validateNewProductReferencesAreUniqueWithinPayload($validator, $lines);
+            $this->validateCatalogProductIdsAreUniqueWithinPayload($validator, $lines);
         });
+    }
+
+    /**
+     * SCRUM-861 punto 1 — un mismo producto existente no puede aparecer en 2+ líneas de la misma
+     * orden (el frontend ya lo evita ocultando el producto de la búsqueda una vez agregado, pero
+     * la validación de forma no dependía de eso — solo `Rule::exists`, sin `distinct`).
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     */
+    private function validateCatalogProductIdsAreUniqueWithinPayload(Validator $validator, array $lines): void
+    {
+        $seenProductIds = [];
+        foreach ($lines as $i => $line) {
+            $catalogProductId = $line['catalog_product_id'] ?? null;
+            if (empty($catalogProductId)) {
+                continue;
+            }
+
+            if (isset($seenProductIds[$catalogProductId])) {
+                $validator->errors()->add(
+                    "lines.{$i}.catalog_product_id",
+                    'Este producto ya está agregado en otra línea de la orden — modificá la cantidad de esa línea en vez de volver a seleccionarlo.',
+                );
+            }
+            $seenProductIds[$catalogProductId] = true;
+        }
     }
 
     /**

@@ -46,10 +46,18 @@ final class GoodsReceiptConfirmationService
             ->map(fn ($lines) => (int) $lines->sum('quantity'));
     }
 
-    /** SCRUM-347 — true solo si cada producto esperado ya recibió, al menos, la cantidad pedida. */
-    public function isFullyReceived(PurchaseOrder $order): bool
+    /**
+     * SCRUM-347 — true solo si cada producto esperado ya recibió, al menos, la cantidad pedida.
+     *
+     * SCRUM-861 punto 2 — `$receivedByProduct` opcional: si el caller ya tiene el mapa calculado
+     * en batch (ej. `PurchaseOrderController::index()`/`formatSummary()`, mismo patrón que evita
+     * N+1 en `receptionSummary()`), lo reusa en vez de disparar otra query acá.
+     *
+     * @param  Collection<int, int>|null  $receivedByProduct
+     */
+    public function isFullyReceived(PurchaseOrder $order, ?Collection $receivedByProduct = null): bool
     {
-        $received = $this->receivedQuantitiesByProduct($order);
+        $received = $receivedByProduct ?? $this->receivedQuantitiesByProduct($order);
         // SCRUM-347 seguimiento (rebote QA 2026-08-19): excluir líneas con catalog_product_id NULL
         // (producto catalogado borrado tras crear la orden, FK nullOnDelete) antes de groupBy —
         // sin el filtro, PHP agrupa ese valor bajo la key string "" y el closure tipado de abajo

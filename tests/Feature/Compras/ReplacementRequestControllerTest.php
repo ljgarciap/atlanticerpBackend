@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Compras;
 
 use App\Models\User;
+use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Models\RoleModuleVisibility;
 use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
@@ -50,9 +52,9 @@ class ReplacementRequestControllerTest extends FeatureTestCase
      * 20260718) — "Generar solicitud" solo acepta un sales_project_id con un Pedido Aprobado real,
      * no cualquier SalesProject suelto.
      */
-    private function makeApprovedSalesProject(string $name = 'Proyecto Test'): SalesProject
+    private function makeApprovedSalesProject(string $name = 'Proyecto Test', string $owner = 'designer@atlantic.test'): SalesProject
     {
-        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $owner = User::where('email', $owner)->firstOrFail();
         $salesProject = SalesProject::create(['name' => $name]);
         // SCRUM-723: confirmed_at (no folio) es lo que decide document_status == "approved".
         Quote::create([
@@ -84,8 +86,9 @@ class ReplacementRequestControllerTest extends FeatureTestCase
 
     public function test_generar_orden_precarga_el_producto_original_no_el_sustituto(): void
     {
-        // REQ-186 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
+        // REQ-186 Escenario 1. SCRUM-818 (CA13/CA14) — Generar Orden es exclusivo de Líder de
+        // Compras por role_key, no alcanza con compras.write — se loguea como Yirena (real
+        // lider_compras) en vez de designer@ con permisos ad-hoc.
         $original = $this->makeProduct(['description' => 'Bombillo decorativo E27 Ámbar', 'cost' => 12]);
         $substitute = $this->makeProduct(['description' => 'Bombillo genérico E27', 'cost' => 8]);
         $request = ReplacementRequest::create([
@@ -94,7 +97,7 @@ class ReplacementRequestControllerTest extends FeatureTestCase
             'status' => ReplacementRequest::STATUS_RECHAZADA,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/replacement-requests/{$request->id}/generate-order")
             ->assertStatus(200);
@@ -110,13 +113,12 @@ class ReplacementRequestControllerTest extends FeatureTestCase
 
     public function test_no_se_puede_generar_orden_de_solicitud_no_rechazada(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $product = $this->makeProduct();
         $request = ReplacementRequest::create([
             'original_catalog_product_id' => $product->id, 'status' => ReplacementRequest::STATUS_PENDIENTE,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/replacement-requests/{$request->id}/generate-order")
             ->assertStatus(422);
@@ -130,7 +132,6 @@ class ReplacementRequestControllerTest extends FeatureTestCase
      */
     public function test_no_se_puede_generar_orden_si_el_producto_no_tiene_proveedor(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $product = CatalogProduct::create([
             'reference' => 'REF-'.uniqid(), 'name' => 'Producto sin proveedor', 'description' => 'Producto sin proveedor',
             'price_full' => 20, 'cost' => 12, 'provider_id' => null, 'is_active' => true,
@@ -139,7 +140,7 @@ class ReplacementRequestControllerTest extends FeatureTestCase
             'original_catalog_product_id' => $product->id, 'status' => ReplacementRequest::STATUS_RECHAZADA,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/replacement-requests/{$request->id}/generate-order")
             ->assertStatus(422);
@@ -147,13 +148,12 @@ class ReplacementRequestControllerTest extends FeatureTestCase
 
     public function test_no_se_puede_generar_orden_dos_veces(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
         $product = $this->makeProduct();
         $request = ReplacementRequest::create([
             'original_catalog_product_id' => $product->id, 'status' => ReplacementRequest::STATUS_RECHAZADA,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/replacement-requests/{$request->id}/generate-order")
             ->assertStatus(200);
@@ -162,6 +162,44 @@ class ReplacementRequestControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/replacement-requests/{$request->id}/generate-order")
             ->assertStatus(422);
+    }
+
+    // ── SCRUM-818 (CA13/CA14) — exclusividad de Generar Orden por role_key ──────────────────────
+
+    /**
+     * Operaciones tiene compras.sustitutos.manage (acceso completo a Comparación de Referencias)
+     * pero NUNCA compras.write real — el gate de ruta (permission:compras.write, sin
+     * compras.sustitutos.manage a propósito, ver routes/compras.php) ya la bloquea acá; el
+     * siguiente test (Gerencia) cubre el caso donde SÍ hay compras.write real y hace falta el
+     * chequeo interno de role_key.
+     */
+    public function test_operaciones_no_puede_generar_orden_pese_a_tener_acceso_completo(): void
+    {
+        $this->grantCompras('lideroperaciones@test.com', ['compras.sustitutos.manage', 'compras.limited.view']);
+        $product = $this->makeProduct();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'status' => ReplacementRequest::STATUS_RECHAZADA,
+        ]);
+
+        $token = $this->loginAs('lideroperaciones@test.com', 'lideroperaciones@test.com', 'lider_operaciones');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/generate-order")
+            ->assertStatus(403);
+    }
+
+    /** Gerencia tiene compras.write real pero la exclusividad es por role_key, no por permission. */
+    public function test_gerencia_no_puede_generar_orden_pese_a_tener_compras_write(): void
+    {
+        $this->grantCompras('gerencia3@test.com', ['compras.write', 'compras.read', 'gerencia.view']);
+        $product = $this->makeProduct();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'status' => ReplacementRequest::STATUS_RECHAZADA,
+        ]);
+
+        $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/generate-order")
+            ->assertStatus(403);
     }
 
     /**
@@ -253,12 +291,55 @@ class ReplacementRequestControllerTest extends FeatureTestCase
         $response->assertJsonPath('status', ReplacementRequest::STATUS_PENDIENTE);
     }
 
-    public function test_generar_solicitud_sin_permiso_write_retorna_403(): void
+    /**
+     * SCRUM-818 — `makeApprovedSalesProject()` siempre asigna el PipelineCard a designer@, así que
+     * este caso usa un proyecto de OTRO responsable (supervisor@): sin compras.write y sin ser el
+     * responsable del proyecto, sigue dando 403 — a diferencia de
+     * `test_vendedor_responsable_puede_crear_solicitud_sin_permiso_de_compras` (mismo escenario,
+     * pero designer SÍ es el responsable).
+     */
+    public function test_generar_solicitud_sin_permiso_write_ni_ser_responsable_del_proyecto_retorna_403(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $original = $this->makeProduct();
         $substitute = $this->makeProduct();
-        $salesProject = $this->makeApprovedSalesProject();
+        $salesProject = $this->makeApprovedSalesProject(owner: 'supervisor@atlantic.test');
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/replacement-requests', [
+                'original_catalog_product_id' => $original->id,
+                'proposed_catalog_product_id' => $substitute->id,
+                'sales_project_id'            => $salesProject->id,
+            ])
+            ->assertStatus(403);
+    }
+
+    /** SCRUM-818 (REQ-818 rebote, sección 3.2) — el vendedor/diseñador responsable de SU PROPIO proyecto puede crear la solicitud aunque no tenga ningún permiso de Compras. */
+    public function test_vendedor_responsable_puede_crear_solicitud_sin_permiso_de_compras(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $original = $this->makeProduct();
+        $substitute = $this->makeProduct(['price_full' => 100, 'cost' => 80]); // margen 20%
+        $salesProject = $this->makeApprovedSalesProject(); // owner por defecto: designer@
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/replacement-requests', [
+                'original_catalog_product_id' => $original->id,
+                'proposed_catalog_product_id' => $substitute->id,
+                'sales_project_id'            => $salesProject->id,
+            ])
+            ->assertStatus(201);
+    }
+
+    /** SCRUM-818 — un vendedor/diseñador sin permiso de Compras no puede crear a nombre de un proyecto ajeno. */
+    public function test_vendedor_no_puede_crear_solicitud_para_proyecto_ajeno(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $original = $this->makeProduct();
+        $substitute = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject(owner: 'supervisor@atlantic.test');
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
@@ -309,5 +390,263 @@ class ReplacementRequestControllerTest extends FeatureTestCase
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(0, ReplacementRequest::count());
+    }
+
+    // ── SCRUM-818 — approve()/reject() y matriz de aprobación por margen ───────────────────────
+
+    /** margen ≥ umbral (pendiente) — el vendedor/diseñador responsable del proyecto SÍ puede aprobar. */
+    public function test_vendedor_responsable_puede_aprobar_solicitud_pendiente(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE, 'margin_percent' => 20,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/approve")
+            ->assertStatus(200);
+
+        $response->assertJsonPath('status', ReplacementRequest::STATUS_APROBADA);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame('designer@atlantic.test', $request->fresh()->approver?->email);
+    }
+
+    /** margen < umbral (pendiente_gerencia) — el vendedor responsable NO puede aprobar, solo Gerencia. */
+    public function test_vendedor_responsable_no_puede_aprobar_solicitud_pendiente_gerencia(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE_GERENCIA, 'margin_percent' => 10,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/approve")
+            ->assertStatus(403);
+    }
+
+    /** Gerencia (permission:gerencia.view) SÍ puede aprobar una pendiente_gerencia. */
+    public function test_gerencia_puede_aprobar_solicitud_pendiente_gerencia(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['gerencia.view']);
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject(owner: 'supervisor@atlantic.test');
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE_GERENCIA, 'margin_percent' => 10,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/approve")
+            ->assertStatus(200)
+            ->assertJsonPath('status', ReplacementRequest::STATUS_APROBADA);
+    }
+
+    /** Un vendedor/diseñador ajeno al proyecto no puede decidir ni una pendiente "normal". */
+    public function test_vendedor_no_responsable_no_puede_aprobar(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject(owner: 'supervisor@atlantic.test');
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE, 'margin_percent' => 20,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/approve")
+            ->assertStatus(403);
+    }
+
+    /** Rechazo sigue la misma autorización que aprobación (Escenario 2/4 del ticket). */
+    public function test_vendedor_responsable_puede_rechazar_solicitud_pendiente(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE, 'margin_percent' => 20,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/reject")
+            ->assertStatus(200);
+
+        $response->assertJsonPath('status', ReplacementRequest::STATUS_RECHAZADA);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame('designer@atlantic.test', $request->fresh()->rejecter?->email);
+    }
+
+    /** Una solicitud ya decidida (aprobada/rechazada) no se puede volver a decidir. */
+    public function test_no_se_puede_decidir_una_solicitud_ya_decidida(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['gerencia.view']);
+        $product = $this->makeProduct();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'status' => ReplacementRequest::STATUS_APROBADA,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/approve")
+            ->assertStatus(422);
+    }
+
+    /** Escenario 3/4 del ticket — el listado en sí ya scopea por proyecto propio para quien no tiene acceso completo a Compras. */
+    public function test_vendedor_solo_ve_solicitudes_de_sus_propios_proyectos_en_el_listado(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $product = $this->makeProduct();
+        $ownProject = $this->makeApprovedSalesProject('Proyecto Propio');
+        $otherProject = $this->makeApprovedSalesProject('Proyecto Ajeno', owner: 'supervisor@atlantic.test');
+        ReplacementRequest::create(['original_catalog_product_id' => $product->id, 'sales_project_id' => $ownProject->id, 'status' => ReplacementRequest::STATUS_PENDIENTE]);
+        ReplacementRequest::create(['original_catalog_product_id' => $product->id, 'sales_project_id' => $otherProject->id, 'status' => ReplacementRequest::STATUS_PENDIENTE]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/replacement-requests')
+            ->assertStatus(200);
+
+        $projectIds = collect($response->json('data'))->pluck('sales_project_id');
+        $this->assertEquals([$ownProject->id], $projectIds->all());
+    }
+
+    /** `can_decide` viaja en el JSON, calculado con la misma regla que el endpoint de verdad aplica. */
+    public function test_can_decide_refleja_si_el_usuario_actual_puede_decidir(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $product = $this->makeProduct();
+        $ownProject = $this->makeApprovedSalesProject();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $ownProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/replacement-requests')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('data.0.can_decide', true);
+    }
+
+    // ── SCRUM-818 (rebote 2026-09-03) — reproduce el bug real reportado por Daniela ────────────
+
+    /**
+     * Hallazgo 1 — a diferencia de `test_gerencia_puede_aprobar_solicitud_pendiente_gerencia`
+     * (que simula el caso "ya arreglado" otorgando `gerencia.view` manualmente vía
+     * `grantCompras()`, un permiso v1), este reproduce la cuenta REAL de David/Mark: acceso a
+     * Compras/Gerencia solo vía su ROL `management` (`RoleModuleVisibility`, v2) — nunca tuvieron
+     * `gerencia.view`/`compras.read` cargado en `extra_permissions`. Antes del fix,
+     * `hasFullComprasReadAccess()` usaba `$user->hasPermission()` (v1) y los trataba como si no
+     * tuvieran ningún acceso — la pestaña "Solicitudes" siempre vacía, aunque hubiera registros
+     * reales.
+     */
+    public function test_gerencia_ve_solicitudes_solo_con_acceso_de_rol_sin_permiso_v1_extra(): void
+    {
+        $role = Role::where('key', 'management')->firstOrFail();
+        RoleModuleVisibility::updateOrCreate(
+            ['role_id' => $role->id, 'module' => 'compras'],
+            ['can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => true],
+        );
+        RoleModuleVisibility::updateOrCreate(
+            ['role_id' => $role->id, 'module' => 'gerencia'],
+            ['can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => true],
+        );
+
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject(owner: 'supervisor@atlantic.test');
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE_GERENCIA, 'margin_percent' => 10,
+        ]);
+
+        $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
+
+        // Antes del fix: lista vacía pese a existir la solicitud (mismo síntoma exacto de Daniela).
+        $indexResponse = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/replacement-requests')
+            ->assertStatus(200);
+        $ids = collect($indexResponse->json('data'))->pluck('id');
+        $this->assertContains($request->id, $ids);
+
+        // Y, ya viéndola, también puede decidirla (gerencia.view real vía rol, no v1).
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/approve")
+            ->assertStatus(200)
+            ->assertJsonPath('status', ReplacementRequest::STATUS_APROBADA);
+    }
+
+    /**
+     * Hallazgo 3(b) — antes el frontend mostraba el botón "Generar orden" a cualquiera con la
+     * fila visible (sin chequear rol), y el backend recién bloqueaba tras el click. Ahora el
+     * backend informa `can_generate_order` explícito por usuario, mismo criterio que `can_decide`
+     * — el vendedor/diseñador responsable del proyecto NUNCA debe verlo en true, aunque vea la
+     * solicitud Rechazada (Escenario 3/4 del ticket: sigue viendo sus propias solicitudes).
+     */
+    public function test_can_generate_order_es_false_para_vendedor_responsable_en_solicitud_rechazada(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject();
+        ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_RECHAZADA,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/replacement-requests')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('data.0.can_generate_order', false);
+    }
+
+    /** Mismo caso, pero para Líder de Compras (Yirena) — la única con `can_generate_order` en true. */
+    public function test_can_generate_order_es_true_solo_para_lider_compras(): void
+    {
+        $product = $this->makeProduct();
+        ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'status' => ReplacementRequest::STATUS_RECHAZADA,
+        ]);
+
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/replacement-requests')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('data.0.can_generate_order', true);
+    }
+
+    /** Ya se generó la orden — `can_generate_order` debe pasar a false aunque sea Líder de Compras. */
+    public function test_can_generate_order_es_false_si_ya_se_genero_la_orden(): void
+    {
+        $product = $this->makeProduct();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'status' => ReplacementRequest::STATUS_RECHAZADA,
+        ]);
+
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/generate-order")
+            ->assertStatus(200);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/replacement-requests')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('data.0.can_generate_order', false);
     }
 }
