@@ -6,6 +6,7 @@ namespace App\Modules\Gerencia\Services;
 
 use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContInvoice;
+use App\Modules\AdminCont\Services\InvoiceService;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\Order as BodegaOrder;
@@ -42,7 +43,21 @@ final class GerenciaHomeService
     public function __construct(
         private readonly AprobacionGate $gate,
         private readonly InventoryKpiService $inventoryKpis,
+        private readonly InvoiceService $invoices,
     ) {}
+
+    /**
+     * SCRUM-908 — wrapper público de `pendingApprovalsSection()` para que
+     * `App\Shared\Support\ApprovalsPendingService` reuse esta misma bandeja (purchase_order/
+     * relocation/adjustment/general_count/zona_libre, con soporte de `ReglaAprobacion`) en el
+     * endpoint consolidado de Gerencia en vez de reimplementarla.
+     *
+     * @return array{aprobaciones: list<array<string, mixed>>, is_approver: bool, pending_total: int}
+     */
+    public function pendingApprovalsForUser(int $userId): array
+    {
+        return $this->pendingApprovalsSection($userId);
+    }
 
     /**
      * @param  array<string, mixed>  $filters
@@ -117,16 +132,27 @@ final class GerenciaHomeService
             ? round($margenRealPct - $margenCotizPct, 2)
             : null;
 
-        // CxC al día: snapshot en tiempo real (no filtrado por desde/hasta)
-        $cxcQuery = AdminContInvoice::where('es_incobrable', false)
-            ->when($clienteId, fn ($q) => $q->where('master_client_id', $clienteId));
+        // CxC al día: snapshot en tiempo real (no filtrado por desde/hasta). SCRUM-944/945 —
+        // reusa `InvoiceService::cobrablesConVencimientoSigned()` (misma fórmula de vencimiento
+        // que Antigüedad de Cartera/Estado de Cuenta/Posición de Caja, ya centralizada ahí para
+        // no reimplementarla una cuarta vez — regla dura de este módulo, ver CLAUDE.md de
+        // Gerencia) en vez de una query propia con un "30" hardcodeado (antes) o duplicada
+        // (después del primer fix). Cambia además de "monto" bruto a "saldo" neto
+        // (monto - saldo_aplicado) — decisión de Luis 2026-09-23: una factura con abono parcial
+        // ya no cuenta el monto completo como CxC pendiente, más correcto contablemente y
+        // también elimina invoices anuladas (`anulada_at`), que la query vieja no excluía.
+        $cobrables = $this->invoices->cobrablesConVencimientoSigned()
+            ->when($clienteId, fn (Collection $rows) => $rows->filter(
+                fn (array $r): bool => $r['invoice']->master_client_id === $clienteId,
+            ));
 
-        $totalCxC = $cxcQuery->sum('monto');
-        $vencidasCxC = (clone $cxcQuery)->where('created_at', '<', Carbon::now()->subDays(30))->sum('monto');
-        // Facturas que vencerán en los próximos 7 días = creadas hace 23-30 días
-        $porVencer7dCxC = (clone $cxcQuery)
-            ->whereBetween('created_at', [Carbon::now()->subDays(30), Carbon::now()->subDays(23)])
-            ->sum('monto');
+        $totalCxC = $cobrables->sum('saldo');
+        $vencidasCxC = $cobrables->filter(fn (array $r): bool => $r['dias_vencido'] > 0)->sum('saldo');
+        // "Por vencer en 7 días" = mismo bucket que InvoiceService::vencidosYPorVencer() (RN2/RN3
+        // REQ-434): -7 <= dias_vencido <= 0, "vence hoy" incluido acá, no en "vencidas".
+        $porVencer7dCxC = $cobrables
+            ->filter(fn (array $r): bool => $r['dias_vencido'] <= 0 && $r['dias_vencido'] >= -7)
+            ->sum('saldo');
 
         // Proyectos activos: tarjetas en etapas no terminadas
         $proyectosActivos = PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
@@ -467,12 +493,12 @@ final class GerenciaHomeService
         // ── Admin & Contabilidad ──────────────────────────────────────────────
         // SCRUM-167 (REQ-105) RN1/RN3 — CxC Total y Cuentas al día (Daniela 2026-08-25).
         // CxP total eliminado. cxc_total = suma de facturas no incobrables (CxC pendiente de cobro).
-        // cuentas_al_dia = CxC total menos lo vencido (> 30 días sin cobrar).
-        $cxcBase = AdminContInvoice::where('es_incobrable', false);
-        $cxcTotal = (float) $cxcBase->sum('monto');
-        $cxcVenc = (float) (clone $cxcBase)
-            ->where('created_at', '<', Carbon::now()->subDays(30))
-            ->sum('monto');
+        // SCRUM-944/945 — misma fórmula centralizada que kpis() arriba
+        // (`InvoiceService::cobrablesConVencimientoSigned()`, saldo neto, anuladas excluidas) en
+        // vez de reimplementarla acá con su propio "30"/duplicado.
+        $cobrablesModulos = $this->invoices->cobrablesConVencimientoSigned();
+        $cxcTotal = (float) $cobrablesModulos->sum('saldo');
+        $cxcVenc = (float) $cobrablesModulos->filter(fn (array $r): bool => $r['dias_vencido'] > 0)->sum('saldo');
         $ac = [
             'cxc_total' => $cxcTotal,
             'cuentas_al_dia' => (float) max(0, $cxcTotal - $cxcVenc),
@@ -532,12 +558,12 @@ final class GerenciaHomeService
                 ->whereNotNull('committed_delivery_date')
                 ->whereDate('committed_delivery_date', '<', $hoyDate)
                 ->count(),
-            'despachado_a_tiempo' => BodegaOrder::where('stage', BodegaOrder::STAGE_ENTREGADO)
+            'despachado_a_tiempo' => BodegaOrder::sinGemelosDeIcg()->where('stage', BodegaOrder::STAGE_ENTREGADO)
                 ->whereBetween('updated_at', [$inicioMes, $finMes])
                 ->whereNotNull('committed_delivery_date')
                 ->whereRaw('DATE(updated_at) <= committed_delivery_date')
                 ->count(),
-            'completados_hoy' => BodegaOrder::where('stage', BodegaOrder::STAGE_ENTREGADO)
+            'completados_hoy' => BodegaOrder::sinGemelosDeIcg()->where('stage', BodegaOrder::STAGE_ENTREGADO)
                 ->whereDate('updated_at', $hoyDate)
                 ->count(),
         ];
@@ -693,7 +719,8 @@ final class GerenciaHomeService
                     'amount' => null,
                     'created_at' => $rel->created_at->toIso8601String(),
                     'can_approve' => true,
-                    'action_url' => '/bodega/inventario',
+                    // SCRUM-1154 — misma pantalla que ApprovalsPendingService: Bodega → Bodegas → Solicitudes de reubicación.
+                    'action_url' => "/bodega/bodegas?relocation={$rel->id}",
                 ]);
             }
         }
