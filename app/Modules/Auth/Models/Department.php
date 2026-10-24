@@ -3,6 +3,7 @@
 namespace App\Modules\Auth\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Department extends Model
 {
+    use LogsAuditTrail;
+
     /** @var list<string> */
     protected $fillable = ['name', 'is_active'];
 

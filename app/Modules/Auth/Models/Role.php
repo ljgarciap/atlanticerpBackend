@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Role extends Model
 {
+    use LogsAuditTrail;
+
     /** @var list<string> */
     protected $fillable = ['key', 'name', 'is_superadmin', 'is_system', 'is_active', 'default_security_level_id'];
 

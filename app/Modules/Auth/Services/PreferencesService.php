@@ -6,6 +6,8 @@ namespace App\Modules\Auth\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Models\SystemSetting;
+use App\Modules\Integrations\Lafayette\Services\LafayetteSettings;
+use App\Shared\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 
 class PreferencesService
@@ -68,6 +70,21 @@ class PreferencesService
     }
 
     /**
+     * docs/specs/demo-mode.md — único lugar que combina los 2 gates de Modo Demo (global +
+     * personal). Los 3 endpoints que aplican `CatalogProduct::scopeVisibleForDemoMode()`
+     * (CatalogProductController, BodegaInventoryController, ProductLookupController) llaman
+     * este método en vez de repetir `$globalGate && $personalGate` cada uno por su cuenta.
+     */
+    public function isDemoModeActive(User $user): bool
+    {
+        $globalGate = $this->getSystemSettings()['demo_mode_enabled'];
+        $prefs      = is_array($user->preferences) ? $user->preferences : [];
+        $personalGate = (bool) ($prefs['demo_mode_enabled'] ?? false);
+
+        return $globalGate && $personalGate;
+    }
+
+    /**
      * @param  array<string, mixed> $data
      * @return array<string, mixed>
      */
@@ -83,6 +100,13 @@ class PreferencesService
         }
         if (isset($data['session_timeout_min']) && in_array((int) $data['session_timeout_min'], self::VALID_TIMEOUTS, true)) {
             $current['session_timeout_min'] = (int) $data['session_timeout_min'];
+        }
+        // Modo Demo (docs/specs/demo-mode.md) — gate PERSONAL, sin permiso especial: cada usuario
+        // gestiona su propia preferencia igual que theme/language. Solo tiene efecto real si el
+        // gate GLOBAL (system_settings.demo_mode_enabled) también está activo — ver
+        // CatalogProduct::scopeVisibleForDemoMode().
+        if (isset($data['demo_mode_enabled'])) {
+            $current['demo_mode_enabled'] = (bool) $data['demo_mode_enabled'];
         }
 
         $user->preferences = $current;
@@ -108,6 +132,11 @@ class PreferencesService
             'mfa_mode'            => is_string($rows->get('mfa_mode')?->value) ? $rows->get('mfa_mode')->value : 'optional',
             'share_links_expiration_days' => (int) ($rows->get('share_links_expiration_days') !== null ? $rows->get('share_links_expiration_days')->value : 30),
             'session_inactivity_hours' => (int) ($rows->get('session_inactivity_hours') !== null ? $rows->get('session_inactivity_hours')->value : self::DEFAULT_SESSION_INACTIVITY_HOURS),
+            // Modo Demo (docs/specs/demo-mode.md) — gate GLOBAL, default apagado. Mientras esté en
+            // false, el toggle personal de cada usuario se ignora (ver scopeVisibleForDemoMode()).
+            'demo_mode_enabled' => (bool) ($rows->get('demo_mode_enabled') !== null ? $rows->get('demo_mode_enabled')->value : false),
+            // SCRUM-990 — umbral de la guarda del sincronizador de Lafayette (0,5..1,0, defecto 0,9).
+            'lafayette_guarda_min_ratio' => app(LafayetteSettings::class)->guardaMinRatio(),
         ];
     }
 
@@ -172,6 +201,51 @@ class PreferencesService
                 'updated_at' => $now,
             ]);
         }
+        if (isset($data['demo_mode_enabled'])) {
+            $newValue = (bool) $data['demo_mode_enabled'];
+            $oldValue = (bool) (SystemSetting::where('key', 'demo_mode_enabled')->first()->value ?? false);
+
+            SystemSetting::updateOrCreate(['key' => 'demo_mode_enabled'], [
+                'value'      => $newValue,
+                'updated_by' => $updatedBy->id,
+                'updated_at' => $now,
+            ]);
+
+            // docs/specs/demo-mode.md — se audita solo el gate GLOBAL (afecta lo que ve todo el
+            // tenant); el toggle personal de cada usuario no se audita, es preferencia de UI.
+            if ($newValue !== $oldValue) {
+                app(AuditService::class)->log(
+                    action:       AuditService::SETTINGS_UPDATED,
+                    entityType:   'system_setting',
+                    entityId:     'demo_mode_enabled',
+                    oldValues:    ['demo_mode_enabled' => $oldValue],
+                    newValues:    ['demo_mode_enabled' => $newValue],
+                    actingUserId: $updatedBy->id,
+                );
+            }
+        }
+
+        if (isset($data['lafayette_guarda_min_ratio'])) {
+            $newRatio = round((float) $data['lafayette_guarda_min_ratio'], 4);
+            $oldRatio = app(LafayetteSettings::class)->guardaMinRatio();
+
+            SystemSetting::updateOrCreate(['key' => LafayetteSettings::GUARDA_MIN_RATIO], [
+                'value'      => $newRatio,
+                'updated_by' => $updatedBy->id,
+                'updated_at' => $now,
+            ]);
+
+            if ($newRatio !== $oldRatio) {
+                app(AuditService::class)->log(
+                    action:       AuditService::SETTINGS_UPDATED,
+                    entityType:   'system_setting',
+                    entityId:     LafayetteSettings::GUARDA_MIN_RATIO,
+                    oldValues:    [LafayetteSettings::GUARDA_MIN_RATIO => $oldRatio],
+                    newValues:    [LafayetteSettings::GUARDA_MIN_RATIO => $newRatio],
+                    actingUserId: $updatedBy->id,
+                );
+            }
+        }
 
         return $this->getSystemSettings();
     }
@@ -188,6 +262,10 @@ class PreferencesService
             'language'           => $prefs['language']           ?? $system['default_language'],
             'theme'              => $prefs['theme']              ?? $system['default_theme'],
             'session_timeout_min'=> $prefs['session_timeout_min'] ?? $system['session_timeout_min'],
+            // Sin fallback a un default de sistema — a diferencia de language/theme, el gate
+            // personal de Modo Demo no tiene "default de organización", arranca en false para
+            // todo usuario que nunca lo tocó.
+            'demo_mode_enabled'  => (bool) ($prefs['demo_mode_enabled'] ?? false),
         ];
     }
 }

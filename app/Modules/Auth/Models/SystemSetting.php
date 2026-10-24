@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class SystemSetting extends Model
 {
+    use LogsAuditTrail;
+
     public $timestamps    = false;
     public $incrementing  = false;
 

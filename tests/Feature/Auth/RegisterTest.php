@@ -19,109 +19,28 @@ class RegisterTest extends FeatureTestCase
             ->assertJsonCount(6, 'data'); // 6 departments seeded
     }
 
-    // ── POST /api/auth/register ───────────────────────────────────────────────
+    // ── POST /api/auth/register — cerrado (SCRUM-1177) ───────────────────────
 
-    public function test_register_con_datos_validos_retorna_201(): void
+    public function test_el_registro_publico_ya_no_existe(): void
     {
         $deptId = $this->firstDepartmentId();
 
         $this->postJson('/api/auth/register', [
-            'first_name'    => 'Juan',
-            'last_name'     => 'Pérez',
-            'email'         => 'nuevo@atlantic.test',
-            'department_id' => $deptId,
-        ])
-        ->assertStatus(201)
-        ->assertJsonStructure(['message']);
+            'first_name' => 'Juan', 'last_name' => 'Pérez', 'email' => 'nuevo@atlantic.test', 'department_id' => $deptId,
+        ])->assertStatus(404);
+
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('atlantic_auth.users')->where('email', 'nuevo@atlantic.test')->count());
     }
 
-    public function test_register_crea_usuario_con_rol_guest_inactivo(): void
+    public function test_una_cuenta_pendiente_existente_no_puede_loguearse(): void
     {
-        $deptId = $this->firstDepartmentId();
+        $this->crearCuentaPendiente('Roberto', 'Méndez', 'pendiente@atlantic.test');
 
-        $this->postJson('/api/auth/register', [
-            'first_name'    => 'Ana',
-            'last_name'     => 'López',
-            'email'         => 'nueva@atlantic.test',
-            'department_id' => $deptId,
-        ])->assertStatus(201);
-
-        /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
-        $tenant->makeCurrent();
-
-        try {
-            $user = User::where('email', 'nueva@atlantic.test')->firstOrFail();
-            $this->assertFalse($user->is_active);
-            $this->assertTrue($user->hasRole(User::ROLE_GUEST));
-        } finally {
-            Tenant::forgetCurrent();
-        }
-    }
-
-    public function test_register_usuario_pendiente_no_puede_loguearse(): void
-    {
-        $deptId = $this->firstDepartmentId();
-
-        $this->postJson('/api/auth/register', [
-            'first_name'    => 'Roberto',
-            'last_name'     => 'Méndez',
-            'email'         => 'pendiente@atlantic.test',
-            'department_id' => $deptId,
-        ])->assertStatus(201);
-
-        // Any login attempt is blocked — is_active=false is checked before password
+        // is_active=false se verifica antes que la contraseña.
         $this->postJson('/api/auth/login', [
             'email'    => 'pendiente@atlantic.test',
-            'password' => 'AnyPassword123!',
+            'password' => 'pendiente@atlantic.test',
         ])->assertStatus(401);
-    }
-
-    public function test_register_email_duplicado_retorna_422(): void
-    {
-        $deptId = $this->firstDepartmentId();
-        $payload = [
-            'first_name'    => 'Duplicate',
-            'last_name'     => 'User',
-            'email'         => 'nuevo@atlantic.test',
-            'department_id' => $deptId,
-        ];
-
-        $this->postJson('/api/auth/register', $payload)->assertStatus(201);
-        $this->postJson('/api/auth/register', $payload)->assertStatus(422)
-            ->assertJsonStructure(['errors' => ['email']]);
-    }
-
-    public function test_register_email_de_usuario_existente_retorna_422(): void
-    {
-        $deptId = $this->firstDepartmentId();
-
-        // designer@atlantic.test is seeded as an active user
-        $this->postJson('/api/auth/register', [
-            'first_name'    => 'Otro',
-            'last_name'     => 'Usuario',
-            'email'         => 'designer@atlantic.test',
-            'department_id' => $deptId,
-        ])->assertStatus(422)
-            ->assertJsonStructure(['errors' => ['email']]);
-    }
-
-    public function test_register_sin_campos_retorna_422(): void
-    {
-        $this->postJson('/api/auth/register', [])
-            ->assertStatus(422)
-            ->assertJsonStructure(['errors']);
-    }
-
-    public function test_register_email_invalido_retorna_422(): void
-    {
-        $this->postJson('/api/auth/register', [
-            'first_name'    => 'Test',
-            'last_name'     => 'User',
-            'email'         => 'no-es-un-email',
-            'department_id' => 1,
-        ])->assertStatus(422)
-            ->assertJsonStructure(['errors' => ['email']]);
     }
 
     // ── GET /api/users/pending ────────────────────────────────────────────────
@@ -131,12 +50,7 @@ class RegisterTest extends FeatureTestCase
         $deptId = $this->firstDepartmentId();
         $token  = $this->loginAs();
 
-        $this->postJson('/api/auth/register', [
-            'first_name'    => 'Pending',
-            'last_name'     => 'User',
-            'email'         => 'pending@atlantic.test',
-            'department_id' => $deptId,
-        ])->assertStatus(201);
+        $this->crearCuentaPendiente('Pending', 'User', 'pending@atlantic.test');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/users/pending');
@@ -159,12 +73,7 @@ class RegisterTest extends FeatureTestCase
         $deptId = $this->firstDepartmentId();
         $token  = $this->loginAs();
 
-        $this->postJson('/api/auth/register', [
-            'first_name'    => 'Approve',
-            'last_name'     => 'Me',
-            'email'         => 'approve@atlantic.test',
-            'department_id' => $deptId,
-        ])->assertStatus(201);
+        $this->crearCuentaPendiente('Approve', 'Me', 'approve@atlantic.test');
 
         $userId = $this->getPendingUserId('approve@atlantic.test');
 
@@ -198,12 +107,7 @@ class RegisterTest extends FeatureTestCase
         $deptId = $this->firstDepartmentId();
         $token  = $this->loginAs();
 
-        $this->postJson('/api/auth/register', [
-            'first_name'    => 'BadRole',
-            'last_name'     => 'User',
-            'email'         => 'badrole@atlantic.test',
-            'department_id' => $deptId,
-        ])->assertStatus(201);
+        $this->crearCuentaPendiente('BadRole', 'User', 'badrole@atlantic.test');
 
         $userId = $this->getPendingUserId('badrole@atlantic.test');
 
@@ -221,12 +125,7 @@ class RegisterTest extends FeatureTestCase
         $deptId = $this->firstDepartmentId();
         $token  = $this->loginAs();
 
-        $this->postJson('/api/auth/register', [
-            'first_name'    => 'Reject',
-            'last_name'     => 'Me',
-            'email'         => 'reject@atlantic.test',
-            'department_id' => $deptId,
-        ])->assertStatus(201);
+        $this->crearCuentaPendiente('Reject', 'Me', 'reject@atlantic.test');
 
         $userId = $this->getPendingUserId('reject@atlantic.test');
 

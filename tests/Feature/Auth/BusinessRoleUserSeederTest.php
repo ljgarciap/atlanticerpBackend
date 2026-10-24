@@ -6,7 +6,9 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\NoLoginAccounts;
 use App\Shared\Multitenancy\Tenant;
+use Illuminate\Support\Facades\Hash;
 use Tests\Feature\FeatureTestCase;
 
 /**
@@ -93,11 +95,50 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $this->assertSame(6, $neil->securityLevel?->level);
     }
 
-    public function test_los_3_sin_cargo_no_se_crearon(): void
+    public function test_dan_rosales_sigue_sin_cargo_y_sin_crear(): void
     {
-        $this->assertNull(User::where('first_name', 'Carlos')->where('last_name', 'Gonzalez')->first());
-        $this->assertNull(User::where('first_name', 'Joel')->first());
         $this->assertNull(User::where('first_name', 'Dan')->first());
+    }
+
+    // SCRUM-1142 — Picker Bodega Test (picker) y Repartidor Test (repartidor) ya tienen cargo.
+    public function test_carlos_gonzalez_es_picker_y_joel_somarriba_es_repartidor(): void
+    {
+        $picker = Role::where('key', 'ayudante_general_bodega')->firstOrFail();
+        $courier = Role::where('key', 'transporte')->firstOrFail();
+
+        $carlos = User::where('email', 'pickerbodega@test.com')->first();
+        $joel = User::where('email', 'repartidor@test.com')->first();
+
+        $this->assertNotNull($carlos);
+        $this->assertSame($picker->id, $carlos->role_id);
+        $this->assertSame('Picker Bodega Test', trim("{$carlos->first_name} {$carlos->last_name}"));
+        $this->assertNotNull($joel);
+        $this->assertSame($courier->id, $joel->role_id);
+        $this->assertSame('Repartidor Test', trim("{$joel->first_name} {$joel->last_name}"));
+    }
+
+    // SCRUM-1142 — Carlos, Joel y "Personal de Bodega" existen solo para aparecer en los selectores: nadie entra con ellos.
+    public function test_las_cuentas_de_bodega_sin_acceso_no_aceptan_contrasena_igual_al_correo(): void
+    {
+        $courier = Role::where('key', 'transporte')->firstOrFail();
+
+        foreach (NoLoginAccounts::EMAILS as $email) {
+            $user = User::where('email', $email)->first();
+            $this->assertNotNull($user, "{$email} debe existir para aparecer en los selectores.");
+            $this->assertTrue((bool) $user->is_active, 'assignCourier() rechaza repartidores inactivos.');
+            $this->assertFalse(Hash::check($email, $user->password_hash), "{$email} no debe poder entrar con su correo como contraseña.");
+        }
+
+        $personal = User::where('email', 'personalbodega@test.com')->firstOrFail();
+        $this->assertSame($courier->id, $personal->role_id);
+        $this->assertSame('Personal de Bodega', trim("{$personal->first_name} {$personal->last_name}"));
+    }
+
+    public function test_el_resto_del_roster_sigue_con_contrasena_igual_al_correo(): void
+    {
+        $apolonio = User::where('email', 'ayudantegeneralbodega@test.com')->firstOrFail();
+
+        $this->assertTrue(Hash::check('ayudantegeneralbodega@test.com', $apolonio->password_hash));
     }
 
     public function test_25_personas_nuevas_mas_mark_ya_existente_suman_26_del_roster_de_scrum_144(): void

@@ -68,7 +68,7 @@ class UserController extends Controller
 
     public function store(CreateUserRequest $request): JsonResponse
     {
-        /** @var array{first_name: string, last_name: string, email: string, phone?: string|null, department_id?: int|null, security_level_id?: int, extra_permissions?: list<string>, notes?: string|null, roles: list<string>} $validated */
+        /** @var array{first_name: string, last_name: string, email: string, phone?: string|null, job_title?: string|null, hire_date?: string|null, manager_id?: int|null, is_active?: bool, department_id?: int|null, security_level_id?: int, extra_permissions?: list<string>, notes?: string|null, roles: list<string>} $validated */
         $validated = $request->validated();
 
         [$actorLevel, $actorHasSuperadmin] = $this->actorContext($request);
@@ -86,7 +86,7 @@ class UserController extends Controller
     {
         $user = $this->service->findOrFail($id);
 
-        /** @var array{first_name?: string, last_name?: string, email?: string, phone?: string|null, department_id?: int|null, security_level_id?: int, extra_permissions?: list<string>, notes?: string|null, roles?: list<string>} $validated */
+        /** @var array{first_name?: string, last_name?: string, email?: string, phone?: string|null, job_title?: string|null, hire_date?: string|null, manager_id?: int|null, department_id?: int|null, security_level_id?: int, extra_permissions?: list<string>, notes?: string|null, roles?: list<string>} $validated */
         $validated = $request->validated();
 
         [$actorLevel, $actorHasSuperadmin] = $this->actorContext($request);
@@ -274,8 +274,9 @@ class UserController extends Controller
     /** @return array<string, mixed> */
     private function format(User $user): array
     {
-        $dept  = $user->department;
-        $level = $user->securityLevel;
+        $dept    = $user->department;
+        $level   = $user->securityLevel;
+        $manager = $user->manager;
 
         return [
             'id'               => $user->id,
@@ -283,6 +284,10 @@ class UserController extends Controller
             'last_name'        => $user->last_name,
             'email'            => $user->email,
             'phone'            => $user->phone,
+            // SCRUM-822 (REQ-548) — cargo/fecha de ingreso/jefe directo.
+            'job_title'        => $user->job_title,
+            'hire_date'        => $user->hire_date?->toDateString(),
+            'manager'          => $manager ? ['id' => $manager->id, 'name' => $manager->first_name . ' ' . $manager->last_name] : null,
             'is_active'        => $user->is_active,
             'mfa_enabled'      => $user->mfa_enabled,
             'notes'            => $user->notes,

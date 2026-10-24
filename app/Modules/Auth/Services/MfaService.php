@@ -6,9 +6,11 @@ namespace App\Modules\Auth\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Exceptions\MfaDeliveryException;
+use App\Modules\Auth\Exceptions\MfaThrottledException;
 use App\Modules\Auth\Mail\MfaCodeMail;
 use App\Modules\Auth\Models\MfaCode;
 use App\Modules\Auth\Models\SystemSetting;
+use App\Modules\Auth\Support\AuthThrottle;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -65,7 +67,7 @@ final class MfaService
     /**
      * Validates the code for a challenge.
      * Returns the user_id on success.
-     * Throws ValidationException on failure.
+     * Throws ValidationException on failure, MfaThrottledException when the per-user cap is exhausted (HTTP 429).
      */
     public function verify(string $challengeId, string $code): int
     {
@@ -76,6 +78,17 @@ final class MfaService
             throw ValidationException::withMessages([
                 'code' => ['El código es inválido o ha expirado.'],
             ]);
+        }
+
+        // H4: tope de códigos erróneos por USUARIO en la ventana (config/throttle.php `mfa_verify.user_*`). A diferencia de `attempts`
+        // (por reto), este contador NO se reinicia al reenviar el código: sin él, cada reenvío daba 5 intentos nuevos y un código de
+        // 6 dígitos se podía forzar. Se libera solo al vencer la ventana o con un código correcto.
+        $cfg     = (array) config('throttle.mfa_verify');
+        $userKey = 'mfa:verify:user:' . $mfa->user_id;
+        // El intento se RESERVA antes de comparar el código (incremento atómico: una ráfaga paralela no multiplica los intentos);
+        // un código correcto lo libera más abajo.
+        if (($retry = AuthThrottle::reservar([$userKey => [(int) $cfg['user_max'], (int) $cfg['user_decay']]], AuthThrottle::CERRAR)) !== null) {
+            throw new MfaThrottledException($retry);
         }
 
         if (! hash_equals($mfa->code_hash, $this->hash($code))) {
@@ -93,8 +106,18 @@ final class MfaService
         }
 
         $mfa->update(['used_at' => now()]);
+        AuthThrottle::limpiar($userKey);
 
         return $mfa->user_id;
+    }
+
+    /** Dueño de un reto, sin exigir que siga vigente (lo usa el límite de reenvíos). */
+    public function userIdForChallenge(string $challengeId): ?int
+    {
+        /** @var MfaCode|null $mfa */
+        $mfa = MfaCode::find($challengeId);
+
+        return $mfa?->user_id;
     }
 
     /**

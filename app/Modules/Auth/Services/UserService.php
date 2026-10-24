@@ -85,6 +85,9 @@ final class UserService
      *   last_name: string,
      *   email: string,
      *   phone?: string|null,
+     *   job_title?: string|null,
+     *   hire_date?: string|null,
+     *   manager_id?: int|null,
      *   department_id?: int|null,
      *   security_level_id?: int,
      *   extra_permissions?: list<string>,
@@ -92,6 +95,7 @@ final class UserService
      *   roles?: list<string>,
      *   role_id?: int|null,
      *   additional_role_ids?: list<int>,
+     *   is_active?: bool,
      * } $data
      * @throws \DomainException if actor's level is not high enough to assign the target security level
      */
@@ -118,6 +122,10 @@ final class UserService
                 'email'             => $data['email'],
                 'password_hash'     => $data['email'],
                 'phone'             => $data['phone'] ?? null,
+                // SCRUM-822 (REQ-548) — 3 campos del ticket original nunca implementados.
+                'job_title'         => $data['job_title'] ?? null,
+                'hire_date'         => $data['hire_date'] ?? null,
+                'manager_id'        => $data['manager_id'] ?? null,
                 'department_id'     => $data['department_id'] ?? null,
                 'security_level_id' => $defaultLevelId,
                 // ADR-006, Decisión 1 revisada — role_id es el rol base singular, cualquier actor
@@ -127,7 +135,9 @@ final class UserService
                 'role_id'           => $data['role_id'] ?? null,
                 'extra_permissions' => $actorHasSuperadmin ? ($data['extra_permissions'] ?? []) : [],
                 'notes'             => $data['notes'] ?? null,
-                'is_active'         => true,
+                // SCRUM-822 (REQ-548 RN3) — estado elegible al crear, default true si no se manda
+                // (comportamiento ya existente, sin cambios para quien no use el campo nuevo).
+                'is_active'         => $data['is_active'] ?? true,
             ]);
 
             foreach ($data['roles'] ?? [] as $role) {
@@ -143,11 +153,16 @@ final class UserService
             return $user->load(['userRoles', 'additionalRoles', 'department', 'securityLevel']);
         });
 
-        Mail::to($user->email)->send(new WelcomeMail(
-            firstName:         $user->first_name,
-            temporaryPassword: $user->email,
-            loginUrl:          (string) config('app.frontend_url', config('app.url')),
-        ));
+        // SCRUM-822 — sin sentido mandar instrucciones de login a alguien que se creó Inactivo
+        // (no puede loguear todavía, ver AuthController::login()). Antes de este ticket, is_active
+        // era siempre true al crear, así que esta condición nunca se evaluaba en false.
+        if ($user->is_active) {
+            Mail::to($user->email)->send(new WelcomeMail(
+                firstName:         $user->first_name,
+                temporaryPassword: $user->email,
+                loginUrl:          (string) config('app.frontend_url', config('app.url')),
+            ));
+        }
 
         return $user;
     }
@@ -158,6 +173,9 @@ final class UserService
      *   last_name?: string,
      *   email?: string,
      *   phone?: string|null,
+     *   job_title?: string|null,
+     *   hire_date?: string|null,
+     *   manager_id?: int|null,
      *   department_id?: int|null,
      *   security_level_id?: int,
      *   extra_permissions?: list<string>,
@@ -200,6 +218,16 @@ final class UserService
             }
             if (array_key_exists('phone', $data)) {
                 $user->phone = $data['phone'] !== null ? (string) $data['phone'] : null;
+            }
+            // SCRUM-822 (REQ-548) — mismos 3 campos que create().
+            if (array_key_exists('job_title', $data)) {
+                $user->job_title = $data['job_title'] !== null ? (string) $data['job_title'] : null;
+            }
+            if (array_key_exists('hire_date', $data)) {
+                $user->hire_date = $data['hire_date'] !== null ? \Carbon\Carbon::parse($data['hire_date']) : null;
+            }
+            if (array_key_exists('manager_id', $data)) {
+                $user->manager_id = $data['manager_id'] !== null ? (int) $data['manager_id'] : null;
             }
             if (array_key_exists('department_id', $data)) {
                 $user->department_id = $data['department_id'] !== null ? (int) $data['department_id'] : null;
@@ -340,6 +368,10 @@ final class UserService
 
             $user->is_active         = true;
             $user->security_level_id = $securityLevelId;
+            // SCRUM-1034 (H7): la contraseña inicial (= correo, ver WelcomeMail) obliga a cambiarla en el primer ingreso. SIN plazo de
+            // caducidad a propósito (decisión de Luis, 2026-10-05): `password_reset_at` queda nulo, así que la inicial vale hasta que la
+            // persona entre, sea cuando sea; no se puede saber si lo hará en 48 h. (Un reset administrativo sí caduca: es otro caso.)
+            $user->must_change_password = true;
             $user->save();
 
             $user->userRoles()->delete();
@@ -442,7 +474,13 @@ final class UserService
                     && $roleDefault['can_view_team'] === $row['can_view_team'];
 
                 if ($matchesRoleDefault) {
-                    UserModuleVisibility::where('user_id', $user->id)->where('module', $row['module'])->delete();
+                    // SCRUM-1150 — si la fila también fija edit/approve, solo se normaliza la visibilidad; no se borra.
+                    $existing = UserModuleVisibility::where('user_id', $user->id)->where('module', $row['module'])->first();
+                    if ($existing !== null && ($existing->can_edit !== null || $existing->can_approve !== null)) {
+                        $existing->update(['can_view' => $row['can_view'], 'can_view_team' => $row['can_view_team']]);
+                    } else {
+                        UserModuleVisibility::where('user_id', $user->id)->where('module', $row['module'])->delete();
+                    }
                     continue;
                 }
 

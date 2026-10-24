@@ -6,6 +6,7 @@ namespace App\Modules\Auth\Models;
 
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -20,13 +21,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $module
  * @property int    $can_view
  * @property bool   $can_view_team
+ * @property bool|null $can_edit    SCRUM-1150 — null = hereda del nivel de seguridad
+ * @property bool|null $can_approve SCRUM-1150 — null = hereda del nivel de seguridad
  */
 class UserModuleVisibility extends Model
 {
+    use LogsAuditTrail;
+
     public $timestamps = false;
 
     /** @var list<string> */
-    protected $fillable = ['user_id', 'module', 'can_view', 'can_view_team'];
+    protected $fillable = ['user_id', 'module', 'can_view', 'can_view_team', 'can_edit', 'can_approve'];
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -34,6 +39,8 @@ class UserModuleVisibility extends Model
         return [
             'can_view'      => 'integer',
             'can_view_team' => 'boolean',
+            'can_edit'      => 'boolean',
+            'can_approve'   => 'boolean',
         ];
     }
 

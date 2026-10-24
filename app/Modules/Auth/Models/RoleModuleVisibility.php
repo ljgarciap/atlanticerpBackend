@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -20,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class RoleModuleVisibility extends Model
 {
+    use LogsAuditTrail;
+
     public const VIEW_NONE     = 0;
     public const VIEW_READONLY = 1;
     public const VIEW_FULL     = 2;

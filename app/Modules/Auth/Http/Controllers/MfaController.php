@@ -6,9 +6,11 @@ namespace App\Modules\Auth\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\Auth\Exceptions\MfaDeliveryException;
+use App\Modules\Auth\Exceptions\MfaThrottledException;
 use App\Modules\Auth\Models\RefreshToken;
 use App\Modules\Auth\Services\MfaService;
 use App\Modules\Auth\Services\PreferencesService;
+use App\Modules\Auth\Support\AuthThrottle;
 use App\Shared\Auth\JwtClaimsBuilder;
 use App\Shared\Auth\JwtService;
 use App\Shared\Auth\TenantResolver;
@@ -43,10 +45,25 @@ final class MfaController extends Controller
             return response()->json(['message' => trans('auth.failed')], 401);
         }
 
+        // H4: tope de códigos erróneos por IP (solo fallos); el tope por usuario vive en MfaService::verify().
+        $ipKey = 'mfa:verify:ip:' . $request->ip();
+        $cfg   = (array) config('throttle.mfa_verify');
+        if (($retry = AuthThrottle::reservar([$ipKey => [(int) $cfg['ip_max'], (int) $cfg['ip_decay']]], AuthThrottle::CERRAR)) !== null) {
+            return AuthThrottle::respuesta($retry);
+        }
+
         $tenant->makeCurrent();
 
         try {
-            $userId = $this->mfaService->verify($data['mfa_challenge_id'], $data['code']);
+            try {
+                $userId = $this->mfaService->verify($data['mfa_challenge_id'], $data['code']);
+            } catch (MfaThrottledException $e) {
+                // R3-4: el tope por usuario responde 429 con retry_after, igual que los demás límites.
+                return AuthThrottle::respuesta($e->retryAfter);
+            }
+
+            // Código correcto: se devuelve el intento reservado de la IP (solo cuentan los fallos).
+            AuthThrottle::devolver($ipKey, (int) $cfg['ip_decay']);
 
             /** @var User|null $user */
             $user = User::find($userId);
@@ -74,6 +91,14 @@ final class MfaController extends Controller
         $tenant->makeCurrent();
 
         try {
+            // H4: tope de reenvíos por usuario (por IP si el reto no existe, sin revelar nada del reto).
+            $cfg       = (array) config('throttle.mfa_resend');
+            $ownerId   = $this->mfaService->userIdForChallenge($data['mfa_challenge_id']);
+            $resendKey = $ownerId !== null ? 'mfa:resend:user:' . $ownerId : 'mfa:resend:ip:' . $request->ip();
+            if (($retry = AuthThrottle::reservar([$resendKey => [(int) $cfg['max'], (int) $cfg['decay']]], AuthThrottle::CERRAR)) !== null) {
+                return AuthThrottle::respuesta($retry);
+            }
+
             $newId = $this->mfaService->resend($data['mfa_challenge_id']);
 
             return response()->json(['mfa_challenge_id' => $newId]);
@@ -151,6 +176,8 @@ final class MfaController extends Controller
 
         try {
             $challengeUserId = $this->mfaService->verify($data['mfa_challenge_id'], $data['code']);
+        } catch (MfaThrottledException $e) {
+            return AuthThrottle::respuesta($e->retryAfter);
         } catch (ValidationException $e) {
             return response()->json(['message' => $e->getMessage(), 'errors' => $e->errors()], 422);
         }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Auth;
 
+use App\Modules\Auth\Models\PermissionCatalog;
+use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
 class PermissionCatalogTest extends FeatureTestCase
@@ -26,6 +28,19 @@ class PermissionCatalogTest extends FeatureTestCase
         // finos nuevos de `servicios` (2026_08_30_100001) + 3 de `admin_contab`
         // (2026_08_30_100002), reemplazando los `role:` hardcodeados de esos 2 archivos de rutas.
         // Fase 3 (2026-08-30): crm.projects.delete (2026_08_30_100003), 5to permiso de `crm`.
+        // REQ-635 (SCRUM-811, 2026-09-01): admin_contab.settings.configure, 2do permiso de
+        // `admin_contab` (umbrales de alertas de fraude, ver AdminContSettingsController).
+        // SCRUM-925 (2026-09-16): lumo.view agrega el módulo `lumo` nuevo (permiso individual
+        // por persona vía SpecialPermissionSeeder, no de rol).
+        // SCRUM-984 (2026-09-30): manuales.manage agrega el módulo `manuales` nuevo (subir/borrar en
+        // la biblioteca de Manuales de Usuario; permiso por persona vía SpecialPermissionSeeder).
+        // SCRUM-1140 (2026-10-14): admin_contab.edit.receptor_fiscal y admin_contab.edit.receptor_consumidor_final,
+        // 3ro y 4to de `admin_contab` (permisos angostos de quien factura, asignables desde la pantalla de usuarios).
+        // SCRUM-1166 (2026-10-19): admin_contab.edit.client_itbms_exemption, 5to de `admin_contab` (marcar a un cliente fiscal como exento de ITBMS).
+        // SCRUM-1140 (Pre-QA M-A, 2026-10-14): ventas_diseno.edit.client_tax_data (15to de `ventas_diseno`) y bodega.read (3ro de
+        // `bodega`): se concedían por seeder sin estar en el catálogo, y guardar a quien ya los tenía daba 422.
+        // SCRUM-1013 (rebote) / SCRUM-1021 (2026-10-02): compras.logistica.view (5to de `compras`) y
+        // bodega.warehouses.view (2do de `bodega`), permisos angostos de consulta de los vendedores.
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -36,7 +51,7 @@ class PermissionCatalogTest extends FeatureTestCase
 
         $catalog = (array) $response->json('catalog');
 
-        $this->assertCount(11, $catalog, 'El catálogo debe tener exactamente 11 módulos');
+        $this->assertCount(13, $catalog, 'El catálogo debe tener exactamente 13 módulos');
 
         $this->assertArrayHasKey('crm', $catalog);
         $this->assertArrayHasKey('reports', $catalog);
@@ -49,6 +64,8 @@ class PermissionCatalogTest extends FeatureTestCase
         $this->assertArrayHasKey('bodega', $catalog);
         $this->assertArrayHasKey('servicios', $catalog);
         $this->assertArrayHasKey('admin_contab', $catalog);
+        $this->assertArrayHasKey('lumo', $catalog);
+        $this->assertArrayHasKey('manuales', $catalog);
 
         $this->assertCount(5, $catalog['crm'], 'crm debe tener 5 permisos');
         $this->assertCount(2, $catalog['reports'], 'reports debe tener 2 permisos');
@@ -56,14 +73,16 @@ class PermissionCatalogTest extends FeatureTestCase
         $this->assertCount(2, $catalog['security'], 'security debe tener 2 permisos');
         $this->assertCount(1, $catalog['settings'], 'settings debe tener 1 permiso');
         $this->assertCount(1, $catalog['superadmin'], 'superadmin debe tener 1 permiso');
-        $this->assertCount(12, $catalog['ventas_diseno'], 'ventas_diseno debe tener 12 permisos');
-        $this->assertCount(4, $catalog['compras'], 'compras debe tener 4 permisos');
-        $this->assertCount(1, $catalog['bodega'], 'bodega debe tener 1 permiso');
-        $this->assertCount(9, $catalog['servicios'], 'servicios debe tener 9 permisos');
-        $this->assertCount(4, $catalog['admin_contab'], 'admin_contab debe tener 4 permisos');
+        $this->assertCount(17, $catalog['ventas_diseno'], 'ventas_diseno debe tener 17 permisos'); // SCRUM-1150: + gerencia_scope
+        $this->assertCount(5, $catalog['compras'], 'compras debe tener 5 permisos');
+        $this->assertCount(3, $catalog['bodega'], 'bodega debe tener 3 permisos');
+        $this->assertCount(9, $catalog['servicios'], 'servicios debe tener 9 permisos'); // 1 de binax + 8 finos de la Fase 2 de Atlantic
+        $this->assertCount(8, $catalog['admin_contab'], 'admin_contab debe tener 8 permisos'); // 5 de binax + 3 finos de la Fase 2 de Atlantic; // SCRUM-1166: + edit.client_itbms_exemption
+        $this->assertCount(1, $catalog['lumo'], 'lumo debe tener 1 permiso');
+        $this->assertCount(1, $catalog['manuales'], 'manuales debe tener 1 permiso');
 
         $totalPermisos = array_sum(array_map('count', $catalog));
-        $this->assertSame(42, $totalPermisos, 'El total de permisos en el catálogo debe ser 42');
+        $this->assertSame(56, $totalPermisos, 'El total de permisos en el catálogo debe ser 56'); // SCRUM-1166: + admin_contab.edit.client_itbms_exemption
 
         $crmKeys = array_column((array) $catalog['crm'], 'key');
         $this->assertContains('crm.read', $crmKeys);
@@ -85,5 +104,15 @@ class PermissionCatalogTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/permission-catalog')
             ->assertStatus(403);
+    }
+
+    /** SCRUM-1140 — los permisos de quien factura están en el catálogo, así que un superadmin puede asignarlos desde la UI. */
+    public function test_los_permisos_de_quien_factura_estan_en_el_catalogo(): void
+    {
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $claves = PermissionCatalog::activeKeys();
+
+        $this->assertContains('admin_contab.edit.receptor_fiscal', $claves);
+        $this->assertContains('admin_contab.edit.receptor_consumidor_final', $claves);
     }
 }

@@ -99,13 +99,15 @@ class UatVisibilityControllerTest extends FeatureTestCase
     {
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
+        // SCRUM-1139 — el seeder deja 1 override real (operaciones ve Admin&Cont): lo que se prueba es que `hide` no AGREGA filas.
+        $antes = UserModuleVisibility::count();
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['ventas_diseno', 'compras'], 'menuItems' => [], 'action' => 'hide'])
             ->assertStatus(200);
 
         $this->activateTenant();
-        $this->assertSame(0, UserModuleVisibility::count());
+        $this->assertSame($antes, UserModuleVisibility::count());
     }
 
     /**

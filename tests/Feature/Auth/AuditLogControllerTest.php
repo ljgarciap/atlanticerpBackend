@@ -48,6 +48,32 @@ class AuditLogControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
+    public function test_entity_types_retorna_catalogo_distinct_sin_nulos(): void
+    {
+        $this->actingForAudit('management@atlantic.test');
+        MasterClient::create(['name' => '[SCRUM-813] Cliente Test']);
+        MasterClient::create(['name' => '[SCRUM-813] Cliente Test 2']);
+
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin/audit/logs/entity-types')
+            ->assertStatus(200);
+
+        $types = $response->json('data');
+        $this->assertContains('master_client', $types);
+        $this->assertSame($types, array_values(array_unique($types)));
+        $this->assertSame($types, collect($types)->sort()->values()->all());
+    }
+
+    public function test_entity_types_sin_permiso_superadmin_retorna_403(): void
+    {
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin/audit/logs/entity-types')
+            ->assertStatus(403);
+    }
+
     public function test_muestra_filas_de_cualquier_modulo_no_solo_ventas_diseno(): void
     {
         $this->actingForAudit('management@atlantic.test');
@@ -69,6 +95,31 @@ class AuditLogControllerTest extends FeatureTestCase
         $actions = collect($response->json('data'))->pluck('action');
         $this->assertTrue($actions->contains('servicios.ticket.created'));
         $this->assertTrue($actions->contains('ventas_diseno.master_client.created'));
+    }
+
+    public function test_metadata_de_uso_de_ia_llega_en_la_respuesta(): void
+    {
+        // SCRUM-814 — el prompt_preview capturado por AiUsageAuditor::log() se guardaba en
+        // audit_logs.metadata pero el endpoint nunca lo devolvía, así que la pantalla de Logs
+        // nunca podía mostrarlo (hallazgo real de Luis, 2026-09-03).
+        $user = \App\Models\User::where('email', 'management@atlantic.test')->firstOrFail();
+        app(AuditService::class)->log(
+            action:       AuditService::AI_USAGE_REQUESTED,
+            entityType:   'ai_analysis',
+            entityId:     123,
+            metadata:     ['job' => 'App\\Modules\\AI\\Jobs\\SummarizeJob', 'prompt_preview' => 'Resumí el estado del proyecto X'],
+            actingUserId: $user->id,
+        );
+
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin/audit/logs?module=ai')
+            ->assertStatus(200);
+
+        $rows = collect($response->json('data'));
+        $row  = $rows->firstWhere('action', AuditService::AI_USAGE_REQUESTED);
+        $this->assertNotNull($row);
+        $this->assertSame('Resumí el estado del proyecto X', $row['metadata']['prompt_preview']);
     }
 
     public function test_filtro_por_modulo(): void
@@ -168,5 +219,16 @@ class AuditLogControllerTest extends FeatureTestCase
         $rows = collect($response->json('data'));
         $this->assertTrue($rows->isNotEmpty());
         $this->assertTrue($rows->every(fn (array $r) => $r['user']['id'] === $managerId));
+    }
+
+    /** SCRUM-1020 (Pre-QA M2) — un rango inválido en la URL ya no revienta con 500. */
+    public function test_rango_de_fechas_invalido_retorna_422_y_no_500(): void
+    {
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
+        $h = $this->authHeaders($token);
+
+        $this->withHeaders($h)->getJson('/api/admin/audit/logs?from=garbage')->assertStatus(422);
+        $this->withHeaders($h)->getJson('/api/admin/audit/logs?to=2026-13-45')->assertStatus(422);
+        $this->withHeaders($h)->getJson('/api/admin/audit/logs?from=2026-09-01&to=2026-09-30')->assertStatus(200);
     }
 }
