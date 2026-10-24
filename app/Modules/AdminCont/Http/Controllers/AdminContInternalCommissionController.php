@@ -275,7 +275,11 @@ class AdminContInternalCommissionController
             ->map(fn (CarbonImmutable $m) => $m->format('Y-m'))
             ->values();
 
-        $banner = $this->orders->pendingAutoPayBanner();
+        // SCRUM-904 — el banner sigue la MISMA regla que $cardRows arriba (comentario "Rebote de
+        // QA SCRUM-577"): se angosta únicamente cuando el actor no tiene team-view (auto-scope a
+        // sí mismo), nunca por el filtro manual de vendedor_id que un admin aplique en el
+        // dropdown — ese filtro es de la tabla, no de las tarjetas/banner.
+        $banner = $this->orders->pendingAutoPayBanner($canViewTeam ? null : $actor->id);
 
         // Forma plana — coincide con `CommissionInternalSummary` (`types/adminContab.ts`) tal
         // como lo consume `ComisionesInternasPage.tsx`, no con una envoltura `tarjetas`/`banner`

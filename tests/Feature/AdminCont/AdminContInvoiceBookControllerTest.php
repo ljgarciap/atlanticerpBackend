@@ -8,17 +8,22 @@ use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContItbmsRate;
+use App\Modules\AdminCont\Support\ExcelMoney;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use Tests\Feature\AdminCont\Concerns\ReadsXlsxResponse;
 use Tests\Feature\FeatureTestCase;
 
 /** Batch 23 Grupo 3 de Admin&Cont (SCRUM-661→664, REQ-584→587) — "Libro de Facturas" (4M3). */
 class AdminContInvoiceBookControllerTest extends FeatureTestCase
 {
+    use ReadsXlsxResponse;
+
     private const FELIX_EMAIL = 'contabilidad@test.com';
 
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
@@ -124,6 +129,20 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         $this->assertEqualsWithDelta(549.53, $docs[1]['itbms'], 0.01);
     }
 
+    public function test_1175_el_libro_trae_el_vendedor_en_facturas_y_en_notas_de_credito(): void
+    {
+        $factura = $this->makeInvoiceWithRuc(1000.0, $this->makeRate(7.0), '2026-03-01 09:00:00', '8-1-1');
+        $this->makeCreditNote($factura, AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, null, 100.0, 93.46, 6.54, '2026-03-05');
+
+        $docs = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/reports/libro-facturas')->assertStatus(200)->json('documentos');
+
+        $this->assertCount(2, $docs);
+        foreach ($docs as $d) {
+            $this->assertNotEmpty($d['vendedor'], 'La nota hereda el vendedor del pedido de su factura de origen.');
+        }
+    }
+
     public function test_ruc_se_resuelve_desde_la_cadena_order_pipelinecard_subcliente(): void
     {
         $invoice = $this->makeInvoiceWithRuc(1000.0, null, '2026-03-01 09:00:00', '8-999-8888');
@@ -225,5 +244,41 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
+
+    // ------------------------------------------------- SCRUM-935 — formato de moneda ----
+
+    public function test_935_excel_del_libro_escribe_base_itbms_y_total_como_numeros_con_formato_de_moneda(): void
+    {
+        $this->makeInvoiceWithRuc(500.0, $this->makeRate(7.0), '2026-07-01 09:00:00', '155-1-1');
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->get('/api/admin-contab/reports/libro-facturas/excel?desde=2026-07-01&hasta=2026-07-31')
+            ->assertStatus(200);
+        $sheet = $this->loadWorkbook($response)->getActiveSheet();
+
+        $this->assertSame(
+            ['Fecha', 'RUC', 'Cliente', 'Tipo', 'Motivo', 'N° Documento', 'Base Imponible', '%', 'Cuota ITBMS', 'Total', 'Vendedor'],
+            $sheet->toArray()[0],
+        );
+        // SCRUM-1175 — el vendedor es el responsable del pedido de la factura (aquí, el dueño de la tarjeta: Felix).
+        $this->assertNotSame('—', $sheet->getCell('K2')->getValue());
+        $this->assertNotEmpty($sheet->getCell('K2')->getValue());
+
+        foreach ([2, 3] as $row) { // documento y fila "Total del período"
+            foreach (['G', 'I', 'J'] as $col) {
+                $cell = $sheet->getCell("{$col}{$row}");
+                $this->assertSame(DataType::TYPE_NUMERIC, $cell->getDataType(), "{$col}{$row} numérica");
+                $this->assertSame(ExcelMoney::FORMAT, $sheet->getStyle("{$col}{$row}")->getNumberFormat()->getFormatCode(), "{$col}{$row} formato");
+            }
+            $this->assertEqualsWithDelta(
+                (float) $sheet->getCell("G{$row}")->getValue() + (float) $sheet->getCell("I{$row}")->getValue(),
+                (float) $sheet->getCell("J{$row}")->getValue(),
+                0.01,
+                "fila {$row}: base + ITBMS = total, ahora como números sumables",
+            );
+        }
+        // El "%" no es moneda: sigue como texto ("7.0%").
+        $this->assertSame('7.0%', $sheet->getCell('H2')->getValue());
     }
 }

@@ -7,19 +7,26 @@ namespace Tests\Feature\AdminCont;
 use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContClientBillingProfile;
+use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
+use App\Modules\AdminCont\Services\AccountStatementPdfService;
+use App\Modules\AdminCont\Services\AccountStatementService;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
+use Illuminate\Support\Facades\DB;
+use Tests\Feature\AdminCont\Concerns\ReadsXlsxResponse;
 use Tests\Feature\FeatureTestCase;
 
 /** Batch 8/9 de Admin&Cont — Estado de Cuenta (SCRUM-529→538, REQ-452→461). */
 class AdminContAccountStatementControllerTest extends FeatureTestCase
 {
+    use ReadsXlsxResponse;
+
     private const FELIX_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
@@ -262,7 +269,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master] = $this->makeClientWithProject('Pago');
         AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::FELIX_EMAIL)]);
-        AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4521', 'moneda' => 'USD', 'activa' => true]);
+        AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '03-01-01-074521-4', 'moneda' => 'USD', 'activa' => true]);
         $token = $this->loginAsFelix();
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -277,6 +284,142 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     private function userIdByEmailHelper(string $email): int
     {
         return (int) User::where('email', $email)->value('id');
+    }
+
+    // SCRUM-857 (REQ-458) — con `numero_cuenta_completo` cargado, el bloque de pago usa el número
+    // real (el cliente lo necesita para pagar por transferencia), no el enmascarado.
+    public function test_bloque_de_pago_usa_el_numero_completo_cuando_la_cuenta_lo_tiene_cargado(): void
+    {
+        ['master' => $master] = $this->makeClientWithProject('PagoCompleto');
+        AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::FELIX_EMAIL)]);
+        AdminContBankAccount::create([
+            'banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4455',
+            'numero_cuenta_completo' => '03-01-01-074455-4', 'moneda' => 'USD', 'activa' => true,
+        ]);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
+            ->assertStatus(200);
+
+        $this->assertSame('03-01-01-074455-4', $response->json('numero_cuenta'));
+        $this->assertSame('Banco General', $response->json('banco'));
+        $this->assertSame('corriente', $response->json('tipo_cuenta'));
+        $this->assertStringContainsString('03-01-01-074455-4', (string) $response->json('cuenta_pago'));
+        $this->assertStringNotContainsString('****', (string) $response->json('cuenta_pago'));
+    }
+
+    /** SCRUM-928 (D-6) — antes este caso mostraba `****4521`; un documento al cliente nunca lleva asteriscos. */
+    public function test_928_bloque_de_pago_no_enmascara_si_la_cuenta_no_tiene_numero_completo(): void
+    {
+        ['master' => $master] = $this->makeClientWithProject('PagoSinNumero');
+        AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '4521', 'activa' => true]);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
+            ->assertStatus(200);
+
+        $this->assertNull($response->json('numero_cuenta'));
+        $this->assertNull($response->json('cuenta_pago'));
+        $this->assertStringNotContainsString('*', (string) json_encode($response->json()), 'ningún campo del estado de cuenta lleva asteriscos');
+        $this->assertSame('Banco General', $response->json('banco'), 'el banco sí se sigue mostrando');
+    }
+
+    public function test_928_numero_completo_en_blanco_cuenta_como_sin_numero(): void
+    {
+        ['master' => $master] = $this->makeClientWithProject('PagoBlanco');
+        AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '   ', 'activa' => true]);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
+            ->assertStatus(200);
+
+        $this->assertNull($response->json('numero_cuenta'));
+    }
+
+    // ── SCRUM-857 (REQ-456) — PDF real, ya no window.print() ─────────────────────────────────
+
+    public function test_pdf_devuelve_un_documento_con_content_type_correcto(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Pdf1');
+        $this->makeInvoice($master->id, $project->id, 100);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->get("/api/admin-contab/account-statement/pdf?master_client_id={$master->id}")
+            ->assertStatus(200);
+
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+    }
+
+    // Senior Review (2026-09-08) — el pie de página interpola nombre_comercial/direccion_fiscal
+    // dentro de un string PHP en el bloque <script type="text/php"> de dompdf (único mecanismo
+    // con paginación real). AccountStatementPdfService::viewData() escapa ese valor con
+    // addslashes() por las dudas — verificado que dompdf de hecho degrada en silencio (nunca un
+    // 500) si el string queda mal formado ahí, así que esto no previene un crash real, pero sigue
+    // siendo lo correcto para no perder/mostrar mal el pie de página cuando el nombre/dirección
+    // real de la empresa (dato editable por un admin) tenga una comilla.
+    public function test_pdf_no_se_rompe_si_el_nombre_o_direccion_fiscal_tienen_comillas(): void
+    {
+        ['master' => $master] = $this->makeClientWithProject('PdfComillas');
+        AdminContFiscalSettings::current()->update([
+            'nombre_comercial' => 'O\'Brien "Atlantic" S.A.',
+            'direccion_fiscal' => 'Calle "5", Panamá',
+        ]);
+        $token = $this->loginAsFelix();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->get("/api/admin-contab/account-statement/pdf?master_client_id={$master->id}")
+            ->assertStatus(200);
+    }
+
+    // Pre-QA (2026-09-09) — el test de arriba solo afirma HTTP 200; dompdf degrada en silencio
+    // (nunca 500) así que no hubiera agarrado que {{ $footerCompanyText }} en
+    // account-statement-pdf.blade.php le aplicaba un SEGUNDO escape (htmlspecialchars) al valor
+    // que PdfFooterText::forFiscal() ya había escapado con addslashes() para el contexto de
+    // <script type="text/php"> de dompdf — el pie de página real mostraba "Corp\&#039;s" en vez de
+    // "Corp's" (mismo helper compartido con payment-receipt-pdf.blade.php — ver PdfFooterTextTest
+    // y AdminContPaymentControllerTest::
+    // test_pdf_del_recibo_no_duplica_el_escape_de_comillas_en_el_pie_de_pagina). Este test
+    // renderiza la vista Blade directamente para verificar el HTML/PHP real, no el binario PDF.
+    public function test_pdf_no_duplica_el_escape_de_comillas_en_el_pie_de_pagina(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('PdfComillasEscape');
+        $this->makeInvoice($master->id, $project->id, 100);
+        AdminContFiscalSettings::current()->update([
+            'nombre_comercial' => "Atlantic USA Corp's",
+            'direccion_fiscal' => 'Calle 57 Este, Panama',
+        ]);
+
+        $detail = app(AccountStatementService::class)->detail($master->id, null, null, null);
+        $viewData = app(AccountStatementPdfService::class)->viewData($detail);
+        $html = view('admin-cont.account-statement-pdf', $viewData)->render();
+
+        // Scope al bloque <script type="text/php"> del pie de página — ver comentario equivalente
+        // en AdminContPaymentControllerTest.
+        $this->assertStringContainsString('<script type="text/php">', $html);
+        $footerScript = substr($html, (int) strpos($html, '<script type="text/php">'));
+        $this->assertStringContainsString('$companyText = "Atlantic USA Corp\'s - Calle 57 Este, Panama - www.atlantic.com.pa";', $footerScript);
+        $this->assertStringNotContainsString('&#039;', $footerScript);
+    }
+
+    public function test_pdf_sin_cliente_falla_422(): void
+    {
+        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/account-statement/pdf')
+            ->assertStatus(422);
+    }
+
+    public function test_pdf_rechaza_a_un_rol_sin_visibilidad_del_modulo(): void
+    {
+        ['master' => $master] = $this->makeClientWithProject('Pdf2');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/account-statement/pdf?master_client_id={$master->id}")
+            ->assertStatus(403);
     }
 
     // ── REQ-459 — nota automática de contexto ────────────────────────────────────────────────
@@ -474,5 +617,242 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             $response->headers->get('Content-Type'),
         );
+    }
+
+    // ── SCRUM-939 — formato de moneda (montos como celdas numéricas, no texto) ─────────────
+
+    public function test_939_excel_escribe_saldo_y_movimientos_como_celdas_numericas_con_formato_de_moneda(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Money');
+        $this->makeInvoice($master->id, $project->id, 250.0);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->get("/api/admin-contab/account-statement/export?master_client_id={$master->id}")
+            ->assertStatus(200);
+        $sheet = $this->loadWorkbook($response)->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        // El "Saldo actual"/"Saldo a favor del cliente" vive en la columna B, en una fila que depende
+        // del resto del bloque de encabezado — se ubica por etiqueta en vez de hardcodear el número de fila.
+        $saldoRow = null;
+        foreach ($rows as $i => $row) {
+            if (in_array($row[0], ['Saldo actual', 'Saldo a favor del cliente'], true)) {
+                $saldoRow = $i + 1;
+                break;
+            }
+        }
+        $this->assertNotNull($saldoRow, 'no se encontró la fila de Saldo en el encabezado');
+        $this->assertMoneyCell($sheet, "B{$saldoRow}", 250.0);
+
+        // Tabla de movimientos: Débito/Crédito/Saldo (columnas G/H/I) — se ubica por el encabezado
+        // de la tabla, que también depende del tamaño del bloque de encabezado superior.
+        $tableHeaderRow = null;
+        foreach ($rows as $i => $row) {
+            if (($row[6] ?? null) === 'Débito') {
+                $tableHeaderRow = $i + 1;
+                break;
+            }
+        }
+        $this->assertNotNull($tableHeaderRow, 'no se encontró el encabezado de la tabla de movimientos');
+        $dataRow = $tableHeaderRow + 1;
+        $this->assertMoneyCell($sheet, "G{$dataRow}", 250.0);
+        $this->assertMoneyCell($sheet, "H{$dataRow}", 0.0);
+        $this->assertMoneyCell($sheet, "I{$dataRow}", 250.0);
+    }
+
+    // ── SCRUM-877 parte 1 — notas de crédito y anulaciones en el Estado de Cuenta ────────────
+
+    /** @return array<string, mixed> */
+    private function creditNoteBase(int $masterClientId): array
+    {
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $registra = (int) DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)->value('id');
+
+        return [
+            'master_client_id' => $masterClientId, 'cliente' => 'Cliente Test',
+            'monto' => 0, 'subtotal' => 0, 'itbms' => 0, 'motivo' => 'Test',
+            'registrado_por' => $registra, 'fecha' => now(),
+            'estado' => AdminContCreditNote::ESTADO_APLICADA,
+        ];
+    }
+
+    private function movimientosFor(int $masterClientId): array
+    {
+        return $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson("/api/admin-contab/account-statement?master_client_id={$masterClientId}")
+            ->assertStatus(200)
+            ->json('movimientos');
+    }
+
+    public function test_877_descuento_comercial_aparece_como_credito_por_el_monto_completo(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Desc');
+        $invoice = $this->makeInvoice($master->id, $project->id, 1000, 0.0, '2026-05-01 09:00:00');
+        AdminContCreditNote::create([
+            ...$this->creditNoteBase($master->id), 'numero' => 'NC-D1', 'factura_origen_id' => $invoice->id,
+            'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'resultado' => AdminContCreditNote::RESULTADO_APLICADO_SALDO,
+            'monto' => 250, 'monto_aplicado_saldo' => 250, 'fecha' => '2026-05-10',
+        ]);
+
+        $movimientos = $this->movimientosFor($master->id);
+        $descuento = collect($movimientos)->firstWhere('tipo', 'descuento');
+        $this->assertNotNull($descuento);
+        $this->assertSame(250.0, (float) $descuento['credito']);
+        $this->assertSame('2026-05-10', $descuento['fecha']);
+        // Saldo final: 1000 débito - 250 crédito.
+        $this->assertSame(750.0, (float) collect($movimientos)->last()['saldo']);
+    }
+
+    public function test_877_devolucion_con_excedente_devuelto_solo_muestra_lo_que_redujo_la_factura(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Dev');
+        $invoice = $this->makeInvoice($master->id, $project->id, 300, 0.0, '2026-05-01 09:00:00');
+        // Nota por 500, de los cuales solo 300 redujeron la factura; 200 se devolvieron en efectivo.
+        AdminContCreditNote::create([
+            ...$this->creditNoteBase($master->id), 'numero' => 'NC-DEV', 'factura_origen_id' => $invoice->id,
+            'tipo' => AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, 'resultado' => AdminContCreditNote::RESULTADO_DEVUELTO,
+            'monto' => 500, 'monto_aplicado_saldo' => 300, 'fecha' => '2026-05-05', 'fecha_decision' => '2026-05-06',
+        ]);
+
+        $movimientos = $this->movimientosFor($master->id);
+        $devolucion = collect($movimientos)->firstWhere('tipo', 'devolucion');
+        $this->assertSame(300.0, (float) $devolucion['credito']);
+        $this->assertSame('2026-05-06', $devolucion['fecha']); // fecha_decision
+        $this->assertSame(0.0, (float) collect($movimientos)->last()['saldo']);
+    }
+
+    public function test_877_nota_saldo_favor_puede_dejar_el_saldo_a_favor(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('SF');
+        $invoice = $this->makeInvoice($master->id, $project->id, 200, 0.0, '2026-05-01 09:00:00');
+        AdminContCreditNote::create([
+            ...$this->creditNoteBase($master->id), 'numero' => 'NC-SF', 'factura_origen_id' => $invoice->id,
+            'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR,
+            'monto' => 350, 'monto_aplicado_saldo' => 200, 'fecha' => '2026-05-08',
+        ]);
+
+        $movimientos = $this->movimientosFor($master->id);
+        // Crédito = monto completo (350), no solo lo que redujo la factura → saldo -150.
+        $this->assertSame(350.0, (float) collect($movimientos)->firstWhere('tipo', 'descuento')['credito']);
+        $this->assertSame(-150.0, (float) collect($movimientos)->last()['saldo']);
+    }
+
+    public function test_877_factura_anulada_se_muestra_con_fila_de_reversa_neto_cero(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Anul');
+        $invoice = $this->makeInvoice($master->id, $project->id, 800, 0.0, '2026-05-01 09:00:00');
+        $invoice->forceFill(['anulada_at' => '2026-05-20 10:00:00'])->save();
+        AdminContCreditNote::create([
+            ...$this->creditNoteBase($master->id), 'numero' => 'NC-ANU', 'factura_origen_id' => $invoice->id,
+            'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA, 'resultado' => AdminContCreditNote::RESULTADO_APLICADO_SALDO,
+            'monto' => 800, 'monto_aplicado_saldo' => 800, 'fecha' => '2026-05-20', 'fecha_decision' => '2026-05-21',
+        ]);
+
+        $movimientos = $this->movimientosFor($master->id);
+        $tipos = collect($movimientos)->pluck('tipo')->all();
+        $this->assertContains('factura', $tipos);
+        $this->assertContains('anulacion', $tipos);
+        // La anulación NO genera una fila extra de tipo "descuento"/"devolucion".
+        $this->assertNotContains('descuento', $tipos);
+        $this->assertSame(800.0, (float) collect($movimientos)->firstWhere('tipo', 'anulacion')['credito']);
+        $this->assertSame('2026-05-21', collect($movimientos)->firstWhere('tipo', 'anulacion')['fecha']);
+        $this->assertSame(0.0, (float) collect($movimientos)->last()['saldo']);
+    }
+
+    public function test_877_notas_pendientes_de_aprobacion_no_aparecen(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Pend');
+        $invoice = $this->makeInvoice($master->id, $project->id, 500, 0.0, '2026-05-01 09:00:00');
+        AdminContCreditNote::create([
+            ...$this->creditNoteBase($master->id), 'numero' => 'NC-P', 'factura_origen_id' => $invoice->id,
+            'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'resultado' => AdminContCreditNote::RESULTADO_APLICADO_SALDO,
+            'monto' => 100, 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION,
+        ]);
+
+        $movimientos = $this->movimientosFor($master->id);
+        $this->assertCount(1, $movimientos); // solo la factura
+        $this->assertSame(500.0, (float) collect($movimientos)->last()['saldo']);
+    }
+
+    // ── SCRUM-947 — paginación estándar sobre `movimientos` ─────────────────────────────────
+
+    public function test_947_pagina_1_con_20_por_pagina_por_defecto(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Pag947Default');
+        $this->makeInvoice($master->id, $project->id, 100);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
+            ->assertStatus(200);
+
+        $this->assertSame(20, $response->json('meta.per_page'));
+        $this->assertSame(1, $response->json('meta.current_page'));
+        $this->assertSame(1, $response->json('meta.total'));
+    }
+
+    /**
+     * El saldo/nota de la tarjeta y el saldo CORRIDO de cada fila siguen calculados sobre el
+     * TOTAL de movimientos (`detail()` los calcula antes de paginar) — paginar solo recorta qué
+     * filas viajan en la respuesta, nunca las cifras agregadas ni el saldo corrido de cada una.
+     */
+    public function test_947_pagina_movimientos_sin_afectar_saldo_de_la_tarjeta_ni_el_saldo_corrido(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Pag947');
+        for ($i = 1; $i <= 12; $i++) {
+            $this->makeInvoice($master->id, $project->id, 100, 0, sprintf('2026-01-%02d 00:00:00', $i));
+        }
+        $token = $this->loginAsFelix();
+
+        $page1 = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}&per_page=10&page=1")
+            ->assertStatus(200);
+
+        $this->assertCount(10, $page1->json('movimientos'));
+        $this->assertSame(12, $page1->json('meta.total'));
+        $this->assertSame(10, $page1->json('meta.per_page'));
+        $this->assertSame(1, $page1->json('meta.current_page'));
+        $this->assertSame(2, $page1->json('meta.last_page'));
+        // Tarjeta de saldo: 12 x 100 = 1200, el TOTAL, no solo lo que viajó en esta página.
+        $this->assertSame(1200.0, (float) $page1->json('saldo'));
+        // Saldo corrido de la última fila de la página 1 — acumulado real hasta ahí (10 x 100).
+        $this->assertSame(1000.0, (float) collect($page1->json('movimientos'))->last()['saldo']);
+
+        $page2 = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}&per_page=10&page=2")
+            ->assertStatus(200);
+
+        $this->assertCount(2, $page2->json('movimientos'));
+        $this->assertSame(2, $page2->json('meta.current_page'));
+        $this->assertSame(1200.0, (float) $page2->json('saldo'));
+        // El saldo corrido de la página 2 sigue acumulando desde donde terminó la página 1 (no
+        // reinicia en 0) — confirma que el corte de paginación pasa DESPUÉS de calcular el saldo
+        // corrido sobre el total, nunca antes.
+        $this->assertSame(1200.0, (float) collect($page2->json('movimientos'))->last()['saldo']);
+    }
+
+    // ── SCRUM-955 punto 5 — columna "Cobro" (referencia al recibo por fila) ─────────────────────
+
+    public function test_movimiento_de_cobro_incluye_referencia_al_recibo(): void
+    {
+        ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Recibo');
+        $invoice = $this->makeInvoice($master->id, $project->id, 300);
+        $payment = $this->makeConfirmedPayment($master->id, $invoice, 300);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
+            ->assertStatus(200);
+
+        $filaFactura = collect($response->json('movimientos'))->firstWhere('tipo', 'factura');
+        $filaCobro = collect($response->json('movimientos'))->firstWhere('tipo', 'cobro');
+
+        $this->assertNull($filaFactura['recibo']);
+        $this->assertSame([
+            'tipo' => 'cobro',
+            'id' => $payment->id,
+            'numero_recibo' => $payment->numero_recibo,
+        ], $filaCobro['recibo']);
     }
 }

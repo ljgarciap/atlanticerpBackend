@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Batch 18 de Admin&Cont (SCRUM-597→601, REQ-524 RN2) — observación editable de una fila del
  * Arqueo del día. `movement_type`/`movement_id` referencian polimórficamente un cobro
- * (`AdminContPayment`) o una nota de crédito (`AdminContCreditNote`) — sin FK real, la integridad
- * la garantiza `DailyCashCountService`.
+ * (`AdminContPayment`), una nota de crédito (`AdminContCreditNote`) o, desde SCRUM-879, un pago de
+ * comisión (`AdminContBankMovement` tipo `comision`) — sin FK real, la integridad la garantiza
+ * `DailyCashCountService`.
  *
  * @property int         $id
  * @property int         $daily_cash_count_id
@@ -22,8 +24,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AdminContDailyCashCountEntry extends Model
 {
+    use LogsAuditTrail;
+
     public const TYPE_PAYMENT     = 'payment';
     public const TYPE_CREDIT_NOTE = 'credit_note';
+    /** SCRUM-879 — comisión (externa o interna) pagada, reflejada como salida real del día. */
+    public const TYPE_COMMISSION = 'commission';
+    /** SCRUM-1168 F4/F5 — salida de caja por anular un cobro o devolver dinero al cliente. */
+    public const TYPE_REVERSAL = 'reversal';
 
     /** @var list<string> */
     protected $fillable = ['daily_cash_count_id', 'movement_type', 'movement_id', 'observacion'];

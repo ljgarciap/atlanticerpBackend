@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
+use App\Modules\AdminCont\Support\ExcelMoney;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -25,8 +27,8 @@ final class ClientCollectionReportExportService
         $sheet->setTitle('Reporte');
 
         $headers = $agrupacion === 'dia'
-            ? ['Fecha', 'Núm.', 'Importe', 'Media', 'Transferencia', 'Cheque', 'Efectivo', 'Yappy', 'Otros', 'Total Caja']
-            : ['Año', 'Mes', 'Núm.', 'Importe', 'Media', 'Transferencia', 'Cheque', 'Efectivo', 'Yappy', 'Otros', 'Total Caja'];
+            ? ['Fecha', 'Núm.', 'Importe', 'Transferencia', 'Cheque', 'Efectivo', 'Yappy', 'Otros', 'Total Caja']
+            : ['Año', 'Mes', 'Núm.', 'Importe', 'Transferencia', 'Cheque', 'Efectivo', 'Yappy', 'Otros', 'Total Caja'];
 
         $sheet->fromArray($headers, null, 'A1');
         $sheet->getStyle('A1:'.chr(64 + count($headers)).'1')->getFont()->setBold(true);
@@ -34,7 +36,15 @@ final class ClientCollectionReportExportService
         $rows = array_map(fn (array $f): array => $this->rowValues($f, $agrupacion), $report['filas']);
         $rows[] = $this->rowValues(['fecha' => 'Total del período'] + $report['totales'], $agrupacion, esTotal: true);
 
-        $sheet->fromArray($rows, null, 'A2');
+        // strictNullComparison: con la comparación laxa por defecto `0.0 == null` y PhpSpreadsheet omitiría
+        // las celdas en cero (saldrían vacías en vez de $0.00) — solo `null` cuenta como celda vacía.
+        $sheet->fromArray($rows, null, 'A2', strictNullComparison: true);
+
+        // SCRUM-935 — Importe + las 5 columnas de medio de pago + Total Caja son moneda; "Núm." y
+        // las columnas de fecha/año/mes no. Mismo orden en ambas agrupaciones, solo cambia el offset.
+        $firstMoneyCol = $agrupacion === 'dia' ? 3 : 4;
+        ExcelMoney::apply($sheet, Coordinate::stringFromColumnIndex($firstMoneyCol).'2:'.Coordinate::stringFromColumnIndex(count($headers)).(count($rows) + 1));
+
         foreach (range(1, count($headers)) as $col) {
             $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
         }
@@ -45,8 +55,9 @@ final class ClientCollectionReportExportService
             $pendientesSheet->fromArray(['Fecha', 'N° Factura', 'Proyecto', 'Monto'], null, 'A1');
             $pendientesSheet->getStyle('A1:D1')->getFont()->setBold(true);
             $pendientesSheet->fromArray(array_map(fn (array $p): array => [
-                $p['fecha'], $p['factura'], $p['proyecto'] ?? '—', number_format((float) $p['monto'], 2),
-            ], $report['pendientes']), null, 'A2');
+                $p['fecha'], $p['factura'], $p['proyecto'] ?? '—', ExcelMoney::value($p['monto']),
+            ], $report['pendientes']), null, 'A2', strictNullComparison: true);
+            ExcelMoney::apply($pendientesSheet, 'D2:D'.(count($report['pendientes']) + 1));
             foreach (range(1, 4) as $col) {
                 $pendientesSheet->getColumnDimensionByColumn($col)->setAutoSize(true);
             }
@@ -74,23 +85,22 @@ final class ClientCollectionReportExportService
     }
 
     /** @param array<string, mixed> $fila
-     *  @return list<string> */
+     *  @return list<string|int|float|null> */
     private function rowValues(array $fila, string $agrupacion, bool $esTotal = false): array
     {
         $labelCols = $agrupacion === 'dia'
-            ? [$esTotal ? (string) $fila['fecha'] : (string) $fila['fecha']]
-            : ($esTotal ? [(string) $fila['fecha'], ''] : [(string) $fila['anio'], (string) $fila['mes']]);
+            ? [(string) $fila['fecha']]
+            : ($esTotal ? [(string) $fila['fecha'], null] : [(string) $fila['anio'], (string) $fila['mes']]);
 
         return [...$labelCols,
-            (string) $fila['num'],
-            number_format((float) $fila['importe'], 2),
-            number_format((float) $fila['media'], 2),
-            number_format((float) $fila['transferencia'], 2),
-            number_format((float) $fila['cheque'], 2),
-            number_format((float) $fila['efectivo'], 2),
-            number_format((float) $fila['yappy'], 2),
-            number_format((float) $fila['otros'], 2),
-            number_format((float) $fila['total_caja'], 2),
+            (int) $fila['num'],
+            ExcelMoney::value($fila['importe']),
+            ExcelMoney::value($fila['transferencia']),
+            ExcelMoney::value($fila['cheque']),
+            ExcelMoney::value($fila['efectivo']),
+            ExcelMoney::value($fila['yappy']),
+            ExcelMoney::value($fila['otros']),
+            ExcelMoney::value($fila['total_caja']),
         ];
     }
 }

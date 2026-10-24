@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Controllers;
 
 use App\Modules\AdminCont\Http\Requests\StoreBankAccountRequest;
+use App\Modules\AdminCont\Http\Requests\UpdateBankAccountRequest;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,13 +28,16 @@ class AdminContBankAccountController
 
         $accounts = $query->get()
             ->map(fn (AdminContBankAccount $a): array => [
-                'id'                => $a->id,
-                'banco'             => $a->banco,
-                'tipo_cuenta'       => $a->tipo_cuenta,
-                'ultimos_4_digitos' => $a->ultimos_4_digitos,
-                'moneda'            => $a->moneda,
-                'activa'            => $a->activa,
-                'movimientos_count' => $a->movements_count,
+                'id'                     => $a->id,
+                'banco'                  => $a->banco,
+                'tipo_cuenta'            => $a->tipo_cuenta,
+                'ultimos_4_digitos'      => $a->ultimos_4_digitos,
+                // SCRUM-857 — solo para que la UI de edición pueda precargar el valor actual; el
+                // resto del sistema (selectores, listados) sigue mostrando ultimos_4_digitos.
+                'numero_cuenta_completo' => $a->numero_cuenta_completo,
+                'moneda'                 => $a->moneda,
+                'activa'                 => $a->activa,
+                'movimientos_count'      => $a->movements_count,
             ]);
 
         return response()->json($accounts);
@@ -53,6 +57,23 @@ class AdminContBankAccountController
         $account->save();
 
         return response()->json($account, 201);
+    }
+
+    /**
+     * SCRUM-857 (REQ-458) — antes no existía ningún endpoint para editar una cuenta ya creada
+     * (solo activar/desactivar); agregado principalmente para poder completar
+     * `numero_cuenta_completo` sin borrar y recrear la cuenta, pero acepta cualquier campo.
+     */
+    public function update(UpdateBankAccountRequest $request, int $id): JsonResponse
+    {
+        $account = AdminContBankAccount::find($id);
+        if ($account === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $account->update($request->validated());
+
+        return response()->json($account->fresh());
     }
 
     public function deactivate(int $id): JsonResponse

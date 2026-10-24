@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\AdminCont\Http\Requests\StoreItbmsRateRequest;
 use App\Modules\AdminCont\Http\Requests\UpdateItbmsRateRequest;
 use App\Modules\AdminCont\Models\AdminContItbmsRate;
+use App\Modules\VentasDiseno\Models\SubClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -46,6 +47,17 @@ class AdminContItbmsRateController
         $rate = AdminContItbmsRate::find($id);
         if ($rate === null) {
             return response()->json(['message' => 'Not found'], 404);
+        }
+
+        // SCRUM-1166 — la tasa base «0% — Exento» no se desactiva mientras haya clientes exentos: sus cotizaciones y facturas la necesitan y, sin ella,
+        // cotizar y facturar a esos clientes fallaría. Hay que quitar primero la exención de los clientes (Datos fiscales de clientes).
+        if ($rate->es_base && (float) $rate->porcentaje === 0.0 && ! (bool) $request->validated('activa')) {
+            $exentos = SubClient::query()->where('itbms_exento', true)->count();
+            if ($exentos > 0) {
+                return response()->json([
+                    'message' => "No se puede desactivar la tasa «{$rate->nombre}»: hay {$exentos} cliente(s) exento(s) de ITBMS que la usan. Quita primero su exención en Datos fiscales de clientes.",
+                ], 422);
+            }
         }
 
         $rate->update($request->validated());

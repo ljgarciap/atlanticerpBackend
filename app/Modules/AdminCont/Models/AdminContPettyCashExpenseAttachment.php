@@ -6,6 +6,7 @@ namespace App\Modules\AdminCont\Models;
 
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AdminContPettyCashExpenseAttachment extends Model
 {
+    use LogsAuditTrail;
+
     public const UPDATED_AT = null;
 
     /** @var list<string> */

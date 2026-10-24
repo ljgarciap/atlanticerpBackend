@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
+use App\Modules\AdminCont\Models\AdminContCreditNote;
+use App\Modules\AdminCont\Models\AdminContDailyCashCount;
+use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
+use App\Modules\AdminCont\Models\AdminContPettyCashReport;
+use App\Modules\AdminCont\Models\ArchitectCommission;
 use App\Modules\AdminCont\Services\ArchitectCommissionService;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Bodega\Models\Order;
+use App\Modules\VentasDiseno\Models\Architect;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\SalesProject;
@@ -241,5 +247,107 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals($esperado, $response->json('comisiones_por_pagar.externas'));
+    }
+
+    // ------------------------------------------------------- SCRUM-908 "Aprobaciones Pendientes" ----
+
+    private const APPROVALS_URL = '/api/admin-contab/home/approvals-pending';
+
+    /** Los 5 tipos de Admin&Cont son exclusivos de "Mark" (`AdminContFiscalSettings.primary_approver_user_id`). */
+    private function makeMark(): int
+    {
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $felixId]);
+
+        return $felixId;
+    }
+
+    public function test_approvals_pending_incluye_incobrable_para_mark(): void
+    {
+        $this->makeMark();
+        $this->makeInvoice(500, 0, now()->toDateTimeString(), false, true);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'invoice_uncollectible'));
+    }
+
+    public function test_approvals_pending_incluye_nota_de_credito_para_mark(): void
+    {
+        $felixId = $this->makeMark();
+        $invoice = $this->makeInvoice(300, 0, now()->toDateTimeString());
+        AdminContCreditNote::create([
+            'numero' => 'NC-'.self::uniqueTestNumber(),
+            'master_client_id' => MasterClient::create(['name' => 'Cliente NC '.self::uniqueTestNumber()])->id,
+            'cliente' => 'Cliente NC', 'monto' => 100, 'subtotal' => 100, 'itbms' => 0, 'motivo' => 'Test SCRUM-908',
+            'tipo' => AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, 'factura_origen_id' => $invoice->id,
+            'registrado_por' => $felixId, 'fecha' => now(), 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION,
+        ]);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'credit_note_decision'));
+    }
+
+    public function test_approvals_pending_incluye_comision_arquitecto_para_mark(): void
+    {
+        $felixId = $this->makeMark();
+        $architect = Architect::create(['name' => 'Arq. '.uniqid(), 'email' => uniqid().'@arq.test']);
+        $master = MasterClient::create(['name' => 'Cliente Arq '.self::uniqueTestNumber()]);
+        $card = PipelineCard::create([
+            'sales_project_id' => SalesProject::create(['sub_client_id' => SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Arq '.self::uniqueTestNumber(), 'tax_id' => '155-0000-3-'.random_int(1000, 9999)])->id, 'name' => 'Proyecto Arq '.self::uniqueTestNumber()])->id,
+            'stage' => 'approved', 'master_client_id' => $master->id, 'owner_id' => $felixId, 'amount' => 1000, 'stage_changed_at' => now(),
+        ]);
+        ArchitectCommission::create([
+            'pipeline_card_id' => $card->id, 'architect_id' => $architect->id,
+            'porcentaje_pendiente' => 5.0, 'porcentaje_pendiente_propuesto_por' => $felixId,
+            'porcentaje_pendiente_propuesto_at' => now(),
+        ]);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'architect_commission_percent'));
+    }
+
+    public function test_approvals_pending_incluye_arqueo_para_mark(): void
+    {
+        $this->makeMark();
+        AdminContDailyCashCount::create(['fecha' => now()->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION]);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'cash_count_approval'));
+    }
+
+    public function test_approvals_pending_incluye_caja_chica_para_mark(): void
+    {
+        $this->makeMark();
+        AdminContPettyCashReport::create(['numero' => 'CC-'.self::uniqueTestNumber(), 'forma_pago' => AdminContPettyCashReport::FORMA_PAGO_EFECTIVO]);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'petty_cash_report'));
+    }
+
+    /** Yaneth (asistente_administrativa) tiene acceso al Home, pero no es Mark. */
+    public function test_approvals_pending_vacio_para_quien_no_es_mark(): void
+    {
+        $this->makeMark();
+        $this->makeInvoice(500, 0, now()->toDateTimeString(), false, true);
+
+        $token = $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
+
+        $this->assertSame([], $response->json('data'));
     }
 }

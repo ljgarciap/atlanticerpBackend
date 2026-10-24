@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
+use App\Modules\AdminCont\Support\ExcelMoney;
 use Barryvdh\DomPDF\Facade\Pdf;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -37,50 +38,51 @@ final class CashPositionExportService
     private function proyectadoExcel(array $data): string
     {
         $headers = ['Tipo', 'Concepto', 'Referencia', 'Monto'];
-        $rows    = [];
+        $rows = [];
         /** @var list<array<string, mixed>> $entradas */
         $entradas = $data['entradas'];
         /** @var list<array<string, mixed>> $salidas */
         $salidas = $data['salidas'];
 
         foreach ($entradas as $e) {
-            $rows[] = ['Entrada', (string) $e['nombre'], (string) $e['referencia'], number_format((float) $e['monto'], 2)];
+            $rows[] = ['Entrada', (string) $e['nombre'], (string) $e['referencia'], ExcelMoney::value($e['monto'])];
         }
         foreach ($salidas as $s) {
-            $rows[] = ['Salida', (string) $s['nombre'], (string) $s['referencia'], number_format(-1 * (float) $s['monto'], 2)];
+            $rows[] = ['Salida', (string) $s['nombre'], (string) $s['referencia'], ExcelMoney::value(-1 * (float) $s['monto'])];
         }
-        $rows[] = ['', '', 'Neto proyectado', number_format((float) $data['neto'], 2)];
+        $rows[] = [null, null, 'Neto proyectado', ExcelMoney::value($data['neto'])];
 
-        return $this->buildSheet('Flujo de caja - Proyectado', $headers, $rows);
+        return $this->buildSheet('Flujo de caja - Proyectado', $headers, $rows, 'D');
     }
 
     /** @param array<string, mixed> $data */
     private function realExcel(array $data): string
     {
         $headers = ['Fecha', 'Concepto', 'Origen', 'Entrada', 'Salida', 'Saldo acumulado'];
-        $rows    = [];
+        $rows = [];
         /** @var list<array<string, mixed>> $movimientos */
         $movimientos = $data['movimientos'];
 
         foreach ($movimientos as $m) {
             $rows[] = [
                 (string) $m['fecha'], (string) $m['concepto'], (string) $m['origen'],
-                number_format((float) $m['entrada'], 2), number_format((float) $m['salida'], 2),
-                number_format((float) $m['saldo_acumulado'], 2),
+                ExcelMoney::value($m['entrada']), ExcelMoney::value($m['salida']),
+                ExcelMoney::value($m['saldo_acumulado']),
             ];
         }
 
-        return $this->buildSheet('Flujo de caja - Real', $headers, $rows);
+        return $this->buildSheet('Flujo de caja - Real', $headers, $rows, 'D:F');
     }
 
     /**
-     * @param list<string> $headers
-     * @param list<list<string>> $rows
+     * @param  list<string>  $headers
+     * @param  list<list<mixed>>  $rows
+     * @param  string|null  $moneyRange  Rango de columnas de moneda (ej. 'D' o 'D:F'), sin fila — se calcula acá.
      */
-    private function buildSheet(string $title, array $headers, array $rows): string
+    private function buildSheet(string $title, array $headers, array $rows, ?string $moneyRange = null): string
     {
-        $spreadsheet = new Spreadsheet();
-        $sheet       = $spreadsheet->getActiveSheet();
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle(mb_substr($title, 0, 31));
 
         $sheet->fromArray($headers, null, 'A1');
@@ -91,7 +93,14 @@ final class CashPositionExportService
         }
 
         if ($rows !== []) {
-            $sheet->fromArray($rows, null, 'A2');
+            // strictNullComparison: `0.0 == null` con la comparación laxa por defecto omitiría montos en
+            // cero (saldrían vacíos en vez de $0.00) — solo `null` cuenta como celda vacía.
+            $sheet->fromArray($rows, null, 'A2', strictNullComparison: true);
+            if ($moneyRange !== null) {
+                $lastRow = count($rows) + 1;
+                [$fromCol, $toCol] = str_contains($moneyRange, ':') ? explode(':', $moneyRange) : [$moneyRange, $moneyRange];
+                ExcelMoney::apply($sheet, "{$fromCol}2:{$toCol}{$lastRow}");
+            }
         }
 
         $tmpPath = tempnam(sys_get_temp_dir(), 'cash_position_export_');

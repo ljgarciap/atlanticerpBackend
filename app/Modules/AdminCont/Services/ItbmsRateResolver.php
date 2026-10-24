@@ -40,6 +40,25 @@ class ItbmsRateResolver
         return $rate;
     }
 
+    /**
+     * SCRUM-1166 — tasa de una operación exenta: la base activa con porcentaje 0 («0% — Exento», sembrada junto con las otras dos tasas base).
+     * Falla con un mensaje claro si Configuración Fiscal la desactivó, en vez de facturar con una tasa equivocada.
+     */
+    public static function exemptRate(): AdminContItbmsRate
+    {
+        $rate = AdminContItbmsRate::query()
+            ->where('es_base', true)
+            ->where('activa', true)
+            ->where('porcentaje', 0)
+            ->first();
+
+        if ($rate === null) {
+            throw new \DomainException('Falta la tasa base «0% — Exento» activa en Configuración Fiscal: no se puede cotizar ni facturar a un cliente exento de ITBMS.');
+        }
+
+        return $rate;
+    }
+
     public static function defaultPercentage(): float
     {
         return self::defaultRate()->porcentaje;

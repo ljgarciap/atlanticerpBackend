@@ -7,6 +7,7 @@ namespace App\Modules\AdminCont\Services;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
+use App\Modules\AdminCont\Services\Billing\InvoiceTaxBreakdown;
 use App\Modules\VentasDiseno\Models\Quote;
 use App\Modules\VentasDiseno\Models\SalesProject;
 
@@ -29,10 +30,31 @@ use App\Modules\VentasDiseno\Models\SalesProject;
  */
 final class PaymentMethodSalesReportService
 {
+    /**
+     * SCRUM-880 — orden de las columnas de método de pago DESPUÉS de "Total", en pantalla y en el
+     * Excel. Deliberadamente distinto del orden de `AdminContPayment::METODOS` (vocabulario
+     * canónico compartido con Arqueo/Cobros — nunca se reordena): negocio pidió, solo para este
+     * reporte, que Yappy y Link de pago vayan antes de Tarjeta y Depósito bancario. Las columnas
+     * previas a "Total" (Fecha, Cliente, N° Documento, Base Imponible, ITBMS, Total) no cambian.
+     *
+     * @var list<string>
+     */
+    public const COLUMNAS_METODO_ORDEN = [
+        AdminContPayment::METODO_TRANSFERENCIA,
+        AdminContPayment::METODO_CHEQUE,
+        AdminContPayment::METODO_EFECTIVO,
+        AdminContPayment::METODO_YAPPY,
+        AdminContPayment::METODO_LINK_PAGO,
+        AdminContPayment::METODO_TARJETA,
+        AdminContPayment::METODO_DEPOSITO,
+        AdminContPayment::METODO_RETENCION_IMPUESTOS,
+        AdminContPayment::METODO_AJUSTE_CUENTA,
+    ];
+
     /** @return array{resumen: array{facturas_cobradas: int, base_imponible: float, itbms: float, total: float}, filas: list<PaymentMethodSalesRow>, pendientes: list<PaymentMethodSalesPendiente>} */
     public function report(?int $masterClientId, ?string $desde, ?string $hasta): array
     {
-        $query = AdminContInvoice::query()->whereNull('anulada_at')->with('itbmsRate');
+        $query = AdminContInvoice::query()->whereNull('anulada_at')->with('itbmsRate', 'lines');
         if ($masterClientId !== null) {
             $query->where('master_client_id', $masterClientId);
         }
@@ -48,25 +70,19 @@ final class PaymentMethodSalesReportService
         $pendientes = $invoices->filter(fn (AdminContInvoice $i) => $i->saldo_aplicado < $i->monto)->values();
 
         $metodoPorFactura = $this->metodoPrincipalPorFactura($cobradas->pluck('id'));
-        // Misma fuente que InvoiceBookService::facturaRows() — Quote::netTotal()/itbms() cuando hay
-        // cotización vinculada, nunca una división paralela (monto/(1+tasa)) que puede desviarse
-        // por redondeo acumulado y, más importante acá, mostrar una base/ITBMS distinta a la que
-        // ya ve la misma factura en Libro de Facturas.
-        $quotes = Quote::whereIn('id', $cobradas->pluck('quote_id')->filter()->unique())
+        // Misma fuente que InvoiceBookService::facturaRows() (`Billing\InvoiceTaxBreakdown`) — las
+        // `invoice_lines` de la factura si las tiene (SCRUM-929, B3b: una parcial no puede mostrar la base
+        // y el ITBMS de la cotización ENTERA) y, solo para las legadas sin líneas, `Quote::netTotal()`/
+        // `itbms()`, nunca una división paralela (monto/(1+tasa)) que puede desviarse por redondeo
+        // acumulado y, más importante acá, mostrar una base/ITBMS distinta a la que ya ve la misma
+        // factura en Libro de Facturas.
+        $quotes = Quote::withIcgLegacy()->whereIn('id', $cobradas->filter(fn (AdminContInvoice $i): bool => $i->lines->isEmpty())->pluck('quote_id')->filter()->unique())
             ->with('parts.items')->get()->keyBy('id');
 
         $filas = $cobradas->sortBy('created_at')->map(function (AdminContInvoice $invoice) use ($metodoPorFactura, $quotes): array {
-            $rate       = $invoice->itbmsRate;
-            $porcentaje = $rate !== null ? $rate->porcentaje : 0.0;
             /** @var Quote|null $quote */
             $quote = $invoice->quote_id !== null ? $quotes->get($invoice->quote_id) : null;
-            if ($quote !== null) {
-                $base  = round($quote->netTotal(), 2);
-                $itbms = round($quote->itbms(), 2);
-            } else {
-                $base  = round($invoice->monto / (1 + $porcentaje / 100), 2);
-                $itbms = round($invoice->monto - $base, 2);
-            }
+            [$base, $itbms] = InvoiceTaxBreakdown::of($invoice, $quote);
             $metodo = $metodoPorFactura[$invoice->id] ?? null;
 
             $row = [
@@ -77,7 +93,7 @@ final class PaymentMethodSalesReportService
                 'itbms'          => $itbms,
                 'total'          => round($invoice->monto, 2),
             ];
-            foreach (AdminContPayment::METODOS as $m) {
+            foreach (self::COLUMNAS_METODO_ORDEN as $m) {
                 $row[$m] = $metodo === $m ? round($invoice->monto, 2) : 0.0;
             }
 

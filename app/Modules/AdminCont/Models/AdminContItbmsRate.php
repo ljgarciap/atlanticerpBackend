@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -22,6 +23,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class AdminContItbmsRate extends Model
 {
+    use LogsAuditTrail;
+
     /** @var list<string> */
     protected $fillable = ['nombre', 'descripcion', 'porcentaje', 'activa', 'created_by'];
 

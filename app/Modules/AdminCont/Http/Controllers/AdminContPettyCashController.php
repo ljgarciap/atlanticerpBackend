@@ -20,6 +20,7 @@ use App\Modules\AdminCont\Models\AdminContPettyCashReport;
 use App\Modules\AdminCont\Services\AdminContPettyCashAttachmentService;
 use App\Modules\AdminCont\Services\AdminContPettyCashReportPdfService;
 use App\Modules\AdminCont\Services\AdminContPettyCashService;
+use App\Shared\Http\Pagination;
 use App\Shared\Support\CircuitOpenException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,16 +47,36 @@ class AdminContPettyCashController
         return response()->json($this->pettyCash->summary());
     }
 
-    /** GET /api/admin-contab/petty-cash/pending — REQ-537. */
-    public function pending(): JsonResponse
+    /**
+     * GET /api/admin-contab/petty-cash/pending — REQ-537. SCRUM-947 — paginación estándar A
+     * NIVEL DE GRUPO (nunca parte las líneas de un mismo solicitante entre 2 páginas): 20
+     * solicitantes por página, no 20 líneas. `total_general` sigue siendo el total real de TODO
+     * lo pendiente, no solo la página (mismo criterio que `indicadores` en Saldo a Favor).
+     */
+    public function pending(Request $request): JsonResponse
     {
-        return response()->json($this->pettyCash->pending());
+        $result = $this->pettyCash->pending();
+        $pagination = Pagination::params($request, [], 'solicitante_nombre');
+        $paginator = Pagination::ofArray(array_values($result['grupos']), $pagination['per_page'], $pagination['page']);
+
+        return response()->json([
+            'grupos' => $paginator->items(),
+            'total_general' => $result['total_general'],
+            'meta' => Pagination::meta($paginator),
+        ]);
     }
 
-    /** GET /api/admin-contab/petty-cash/rejected — REQ-536, tab "Rechazados". */
-    public function rejected(): JsonResponse
+    /**
+     * GET /api/admin-contab/petty-cash/rejected — REQ-536, tab "Rechazados". SCRUM-947 —
+     * paginación estándar sobre `lineas`.
+     */
+    public function rejected(Request $request): JsonResponse
     {
-        return response()->json($this->pettyCash->rejected());
+        $result = $this->pettyCash->rejected();
+        $pagination = Pagination::params($request, [], 'fecha', 'desc');
+        $paginator = Pagination::ofArray(array_values($result['lineas']), $pagination['per_page'], $pagination['page']);
+
+        return response()->json(['lineas' => $paginator->items(), 'meta' => Pagination::meta($paginator)]);
     }
 
     /** POST /api/admin-contab/petty-cash/expenses — REQ-535, multi-línea. */
@@ -104,10 +125,13 @@ class AdminContPettyCashController
         return response()->json(['numero' => $report->numero], 201);
     }
 
-    /** GET /api/admin-contab/petty-cash/reports — REQ-539. */
-    public function reports(): JsonResponse
+    /** GET /api/admin-contab/petty-cash/reports — REQ-539. SCRUM-947 — paginación estándar. */
+    public function reports(Request $request): JsonResponse
     {
-        return response()->json($this->pettyCash->reports());
+        $pagination = Pagination::params($request, [], 'fecha_creacion', 'desc');
+        $paginator = Pagination::ofArray(array_values($this->pettyCash->reports()), $pagination['per_page'], $pagination['page']);
+
+        return response()->json(['data' => $paginator->items(), 'meta' => Pagination::meta($paginator)]);
     }
 
     /** GET /api/admin-contab/petty-cash/reports/{numero} — REQ-539/540. `puede_aprobar` depende
@@ -371,7 +395,7 @@ class AdminContPettyCashController
     }
 
     /** Batch 21 — mismo roster de rol que el grupo `role:superadmin,lider_admin_contab,
-     *  asistente_administrativa` que protege `PUT /expenses/{id}/reopen` (ver routes/admin-contab.php).
+     *  asistente_administrativa,lider_operaciones` que protege `PUT /expenses/{id}/reopen` (ver routes/admin-contab.php).
      *  Se duplica acá solo para calcular `puede_reabrir` en el detalle, que SÍ es visible para
      *  Gerencia (no está detrás de ese `role:`) — mismo criterio que `isPrimaryApprover()`. */
     private function isFelixOrYaneth(Request $request): bool
@@ -379,6 +403,6 @@ class AdminContPettyCashController
         /** @var array{role?: string}|null $payload */
         $payload = $request->attributes->get('jwt');
 
-        return in_array($payload['role'] ?? null, ['superadmin', 'lider_admin_contab', 'asistente_administrativa'], true);
+        return in_array($payload['role'] ?? null, ['superadmin', 'lider_admin_contab', 'asistente_administrativa', 'lider_operaciones'], true);
     }
 }

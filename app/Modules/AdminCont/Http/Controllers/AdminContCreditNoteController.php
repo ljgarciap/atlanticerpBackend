@@ -6,6 +6,8 @@ namespace App\Modules\AdminCont\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\CreditNoteStateException;
+use App\Modules\AdminCont\FacturacionElectronica\Services\FiscalCertificationService;
+use App\Modules\AdminCont\FacturacionElectronica\Services\FiscalDocumentPreviewService;
 use App\Modules\AdminCont\Http\Requests\CreditNoteDecisionRequest;
 use App\Modules\AdminCont\Http\Requests\PreviewCreditNoteCorreccionRequest;
 use App\Modules\AdminCont\Http\Requests\RegisterCreditNoteCorreccionRequest;
@@ -15,6 +17,8 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Services\CreditNotePdfService;
 use App\Modules\AdminCont\Services\CreditNoteService;
 use App\Modules\Bodega\Exceptions\CustomerReturnException;
+use App\Shared\Http\Pagination;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -31,6 +35,8 @@ class AdminContCreditNoteController
     public function __construct(
         private readonly CreditNoteService $creditNotes,
         private readonly CreditNotePdfService $creditNotePdf,
+        private readonly FiscalDocumentPreviewService $documentPreview,
+        private readonly FiscalCertificationService $certification,
     ) {}
 
     /** GET /api/admin-contab/notas-credito/summary — REQ-477, 5 tarjetas de indicadores del mes. */
@@ -105,14 +111,20 @@ class AdminContCreditNoteController
     /** POST /api/admin-contab/notas-credito/correccion/preview — REQ-489, solo lectura. */
     public function previewCorreccion(PreviewCreditNoteCorreccionRequest $request): JsonResponse
     {
-        $result = $this->creditNotes->previewCorreccion([
-            'master_client_id' => (int) $request->validated('master_client_id'),
-            'factura_origen_id' => (int) $request->validated('factura_origen_id'),
-            'motivo_correccion' => (string) $request->validated('motivo_correccion'),
-            'nuevo_tratamiento_itbms_rate_id' => $request->validated('nuevo_tratamiento_itbms_rate_id') !== null ? (int) $request->validated('nuevo_tratamiento_itbms_rate_id') : null,
-            'nueva_fecha' => $request->validated('nueva_fecha'),
-            'motivo' => (string) $request->validated('motivo'),
-        ]);
+        try {
+            $result = $this->creditNotes->previewCorreccion([
+                'master_client_id' => (int) $request->validated('master_client_id'),
+                'factura_origen_id' => (int) $request->validated('factura_origen_id'),
+                'motivo_correccion' => (string) $request->validated('motivo_correccion'),
+                'nuevo_tratamiento_itbms_rate_id' => $request->validated('nuevo_tratamiento_itbms_rate_id') !== null ? (int) $request->validated('nuevo_tratamiento_itbms_rate_id') : null,
+                'nueva_fecha' => $request->validated('nueva_fecha'),
+                'motivo' => (string) $request->validated('motivo'),
+            ]);
+        } catch (CreditNoteStateException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (ModelNotFoundException) {
+            return response()->json(['message' => CreditNoteService::MSG_FACTURA_NO_CORREGIBLE], 404); // SCRUM-1019
+        }
 
         return response()->json($result);
     }
@@ -125,23 +137,32 @@ class AdminContCreditNoteController
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $note = $this->creditNotes->registerCorreccion(
-            data: [
-                'master_client_id' => (int) $request->validated('master_client_id'),
-                'factura_origen_id' => (int) $request->validated('factura_origen_id'),
-                'motivo_correccion' => (string) $request->validated('motivo_correccion'),
-                'nuevo_tratamiento_itbms_rate_id' => $request->validated('nuevo_tratamiento_itbms_rate_id') !== null ? (int) $request->validated('nuevo_tratamiento_itbms_rate_id') : null,
-                'nueva_fecha' => $request->validated('nueva_fecha'),
-                'motivo' => (string) $request->validated('motivo'),
-            ],
-            comprobante: $request->file('comprobante'),
-            actor: $actor,
-        );
+        try {
+            $note = $this->creditNotes->registerCorreccion(
+                data: [
+                    'master_client_id' => (int) $request->validated('master_client_id'),
+                    'factura_origen_id' => (int) $request->validated('factura_origen_id'),
+                    'motivo_correccion' => (string) $request->validated('motivo_correccion'),
+                    'nuevo_tratamiento_itbms_rate_id' => $request->validated('nuevo_tratamiento_itbms_rate_id') !== null ? (int) $request->validated('nuevo_tratamiento_itbms_rate_id') : null,
+                    'nueva_fecha' => $request->validated('nueva_fecha'),
+                    'motivo' => (string) $request->validated('motivo'),
+                ],
+                comprobante: $request->file('comprobante'),
+                actor: $actor,
+            );
+        } catch (CreditNoteStateException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (ModelNotFoundException) {
+            return response()->json(['message' => CreditNoteService::MSG_FACTURA_NO_CORREGIBLE], 404); // SCRUM-1019
+        }
 
         return response()->json($this->present($note), 201);
     }
 
-    /** GET /api/admin-contab/notas-credito — REQ-492, historial combinado + filtros. */
+    /**
+     * GET /api/admin-contab/notas-credito — REQ-492, historial combinado + filtros. SCRUM-947 —
+     * paginación estándar (el servicio ya devuelve el array ordenado por fecha desc).
+     */
     public function index(Request $request): JsonResponse
     {
         $rows = $this->creditNotes->index([
@@ -151,7 +172,10 @@ class AdminContCreditNoteController
             'estado' => $request->query('estado'),
         ]);
 
-        return response()->json(['data' => $rows]);
+        $pagination = Pagination::params($request, [], 'fecha', 'desc');
+        $paginator = Pagination::ofArray(array_values($rows), $pagination['per_page'], $pagination['page']);
+
+        return response()->json(['data' => $paginator->items(), 'meta' => Pagination::meta($paginator)]);
     }
 
     /** GET /api/admin-contab/notas-credito/{creditNote} — REQ-493, detalle. */
@@ -171,18 +195,18 @@ class AdminContCreditNoteController
         // actor acá mismo). Mismo criterio: `superadmin.all` bypassa, igual que `primary_approver_only`.
         /** @var array{sub?: int, permissions?: mixed}|null $payload */
         $payload = $request->attributes->get('jwt');
-
-        /** @var list<string> $permissions */
-        $permissions = is_array($payload['permissions'] ?? null)
-            ? array_values(array_filter($payload['permissions'], 'is_string'))
-            : [];
-
-        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
-        $isMark = in_array('superadmin.all', $permissions, true)
-            || ($payload !== null && isset($payload['sub']) && $primaryApproverId !== null
-                && (int) $payload['sub'] === $primaryApproverId);
+        $isMark = AdminContFiscalSettings::actorEsMarkOSuperadmin($payload);
 
         $result['puede_aprobar_rechazar'] = $result['puede_aprobar_rechazar'] && $isMark;
+        // El texto del rechazo del PAC es información de Configuración Fiscal: solo Mark/superadmin.
+        // Se agrega acá (deny-by-default) y no en `CreditNoteService::show()`, que también consumen
+        // Bodega y un job de correo sin este gate.
+        $result['puede_ver_fe_transmisiones'] = $isMark;
+        $notaMark = $isMark ? AdminContCreditNote::query()->whereKey($creditNote)->first() : null;
+        $result['fe_detalle'] = $notaMark?->fe_detalle;
+        // SCRUM-1007 — 'reintentar' | 'actualizar_estado' | null; solo Mark/superadmin y solo si el documento lo admite.
+        $result['accion_fe'] = $notaMark !== null ? $this->certification->accionDisponible($notaMark, 'nota_credito') : null;
+        $result['puede_reconciliar_fe'] = $notaMark !== null && $this->certification->reconciliacionDisponible($notaMark, 'nota_credito'); // SCRUM-1019
 
         return response()->json($result);
     }
@@ -212,7 +236,18 @@ class AdminContCreditNoteController
         // `show()` en vez de `present()` — trae estado/aprobado_por/fecha_decision/motivo_rechazo
         // ya resueltos, mismo shape que el modal de detalle consume, así el frontend refresca sin
         // pegarle a un segundo endpoint.
-        return response()->json($this->creditNotes->show($note->id));
+        $result = $this->creditNotes->show($note->id);
+        if ($result !== null) {
+            // Ruta `primary_approver_only`: quien llega acá ya puede ver Configuración Fiscal. Sin esto el
+            // frontend (`setQueryData` con esta respuesta) no mostraría el motivo hasta recargar.
+            $notaDecidida = AdminContCreditNote::query()->whereKey($note->id)->first();
+            $result['fe_detalle'] = $notaDecidida?->fe_detalle;
+            $result['puede_ver_fe_transmisiones'] = true; // idem: sin esto el visor se desmontaría al aprobar (setQueryData)
+            $result['accion_fe'] = $notaDecidida !== null ? $this->certification->accionDisponible($notaDecidida, 'nota_credito') : null;
+            $result['puede_reconciliar_fe'] = $notaDecidida !== null && $this->certification->reconciliacionDisponible($notaDecidida, 'nota_credito');
+        }
+
+        return response()->json($result);
     }
 
     /** GET /api/admin-contab/notas-credito/{creditNote}/comprobante — REQ-495. */
@@ -224,6 +259,22 @@ class AdminContCreditNoteController
         }
 
         return response()->json($result);
+    }
+
+    /**
+     * GET /api/admin-contab/notas-credito/{creditNote}/fe-preview — SCRUM-943, mismo criterio que
+     * `AdminContInvoiceController::fePreview()`: valida la estructura del documento que se armaría
+     * para el PAC sin certificar nada.
+     */
+    public function fePreview(int $creditNote): JsonResponse
+    {
+        /** @var AdminContCreditNote|null $note */
+        $note = AdminContCreditNote::find($creditNote);
+        if ($note === null) {
+            return response()->json(['message' => 'Nota de crédito no encontrada.'], 404);
+        }
+
+        return response()->json($this->documentPreview->paraNotaCredito($note));
     }
 
     /** GET /api/admin-contab/notas-credito/{creditNote}/pdf — REQ-496, documento formal. */
@@ -247,6 +298,21 @@ class AdminContCreditNoteController
         }
 
         return response()->json($result);
+    }
+
+    /**
+     * GET /api/admin-contab/notas-credito/devoluciones/{customerReturn}/signed-document —
+     * SCRUM-865 punto 2, presign bajo el permiso de Notas de Crédito (ver docblock del método
+     * homónimo en `CreditNoteService`).
+     */
+    public function devolucionSignedDocumentUrl(int $customerReturn): JsonResponse
+    {
+        $url = $this->creditNotes->devolucionSignedDocumentUrl($customerReturn);
+        if ($url === null) {
+            return response()->json(['message' => 'Esta devolución no tiene documento firmado.'], 404);
+        }
+
+        return response()->json(['url' => $url]);
     }
 
     /** @return array<string, mixed> */

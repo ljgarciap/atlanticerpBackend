@@ -6,6 +6,7 @@ namespace App\Modules\AdminCont\Services;
 
 use App\Modules\AdminCont\Models\AdminContCompanyProfile;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
+use App\Modules\AdminCont\Support\PdfFooterText;
 use App\Shared\Support\PdfLogo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as PdfDocument;
@@ -22,7 +23,14 @@ final class PaymentReceiptPdfService
     /** @param array<string, mixed> $detail Salida de `AdminContPaymentController::presentDetail()`. */
     public function generate(array $detail): PdfDocument
     {
-        return Pdf::loadView('admin-cont.payment-receipt-pdf', $this->viewData($detail))
+        // Rebote de Pre-QA (SCRUM-858) — `isPhpEnabled` necesario para que el pie de página use
+        // `page_text()` (ver `<script type="text/php">` en `payment-receipt-pdf.blade.php`);
+        // dompdf trae `enable_php => false` por defecto, así que sin este flag el bloque se
+        // ignora en silencio y el PDF sale sin footer, mismo patrón que `QuotePdfService` y
+        // `OrderDocumentService::generateGuiaEntrega()`. Nunca se evalúa contenido de usuario
+        // como PHP — la vista es 100% generada por este servicio, valores interpolados vía Blade.
+        return Pdf::setOption('isPhpEnabled', true)
+            ->loadView('admin-cont.payment-receipt-pdf', $this->viewData($detail))
             ->setPaper('letter');
     }
 
@@ -36,10 +44,18 @@ final class PaymentReceiptPdfService
         $company = AdminContCompanyProfile::current();
 
         return [
-            'detail'      => $detail,
-            'fiscal'      => $fiscal,
-            'moneda'      => $company->moneda,
-            'logoDataUri' => PdfLogo::dataUri(),
+            'detail'            => $detail,
+            'fiscal'            => $fiscal,
+            'moneda'            => $company->moneda,
+            'logoDataUri'       => PdfLogo::dataUri(),
+            // Rebote de QA (SCRUM-858, marly.rangel 2026-09-08) — el footer viejo tenía un texto
+            // propio hardcodeado ("Atlantic - Panama - Documento generado por AtlanticERP"), en vez
+            // de leer los datos reales de la empresa como ya hacía quote-pdf.blade.php. Ver
+            // PdfFooterText, compartido con AccountStatementPdfService (SCRUM-857).
+            'footerCompanyText' => PdfFooterText::forFiscal($fiscal),
+            // AdminContFiscalSettings está vacío en dev/test/prod (ver docblock de PdfFooterText)
+            // — sin esto el nombre de empresa del encabezado salía en blanco.
+            'companyName'       => PdfFooterText::companyName($fiscal),
         ];
     }
 }

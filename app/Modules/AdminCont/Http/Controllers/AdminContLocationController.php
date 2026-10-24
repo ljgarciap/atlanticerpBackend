@@ -11,8 +11,8 @@ use App\Modules\Bodega\Models\Warehouse;
 use Illuminate\Http\JsonResponse;
 
 /**
- * SCRUM-640 (REQ-563) — combina las 7 bodegas/showrooms oficiales (App\Modules\Bodega\Models\Warehouse,
- * solo lectura acá — RN1: nunca un nombre distinto al de Bodega) con las ubicaciones administrativas
+ * SCRUM-640 (REQ-563) — combina las bodegas/showrooms operativas de Atlantic (App\Modules\Bodega\Models\Warehouse::operativas(): las 6
+ * oficiales; desde SCRUM-990 Bodega Zona Libre queda fuera, es de solo consulta y su catálogo es de Lafayette), solo lectura acá — RN1: nunca un nombre distinto al de Bodega) con las ubicaciones administrativas
  * propias de este módulo (`editable: true`). El frontend arma su key de fila como `{source}-{id}` —
  * los ids de ambas tablas NO son mutuamente exclusivos.
  */
@@ -20,7 +20,8 @@ class AdminContLocationController
 {
     public function index(): JsonResponse
     {
-        $warehouses = Warehouse::query()
+        // SCRUM-990: Zona Libre (solo consulta, catálogo de Lafayette) no es una ubicación de Atlantic.
+        $warehouses = Warehouse::operativas()
             ->orderBy('id')
             ->get()
             ->map(fn (Warehouse $w): array => [

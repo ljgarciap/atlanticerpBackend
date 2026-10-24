@@ -6,8 +6,10 @@ namespace App\Modules\AdminCont\Http\Controllers;
 
 use App\Modules\AdminCont\Http\Requests\AssignBankMovementAccountRequest;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
+use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * SCRUM-610→611 (REQ-533→534) — Movimientos. Ledger fundacional, ver docblock de la migración de
@@ -16,6 +18,7 @@ use Illuminate\Http\Request;
  */
 class AdminContBankMovementController
 {
+    /** SCRUM-947 — paginación estándar (query Eloquent pura, `->paginate()` directo). */
     public function index(Request $request): JsonResponse
     {
         $query = AdminContBankMovement::query()->with('bankAccount')->orderByDesc('fecha');
@@ -24,7 +27,11 @@ class AdminContBankMovementController
             $query->where('bank_account_id', (int) $request->query('bank_account_id'));
         }
 
-        $movements = $query->get()->map(fn (AdminContBankMovement $m): array => [
+        $pagination = Pagination::params($request, [], 'fecha', 'desc');
+        /** @var LengthAwarePaginator<int, AdminContBankMovement> $paginator */
+        $paginator = $query->paginate($pagination['per_page'], ['*'], 'page', $pagination['page']);
+
+        $movements = collect($paginator->items())->map(fn (AdminContBankMovement $m): array => [
             'id'                 => $m->id,
             'fecha'              => $m->fecha->toDateString(),
             'tipo'               => $m->tipo,
@@ -35,7 +42,7 @@ class AdminContBankMovementController
             'bank_account_label' => $m->bankAccount?->label(),
         ]);
 
-        return response()->json($movements);
+        return response()->json(['data' => $movements, 'meta' => Pagination::meta($paginator)]);
     }
 
     public function assignAccount(AssignBankMovementAccountRequest $request, int $id): JsonResponse

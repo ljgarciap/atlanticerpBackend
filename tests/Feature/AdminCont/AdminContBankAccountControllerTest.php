@@ -105,7 +105,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_store_nunca_acepta_un_numero_de_cuenta_completo(): void
+    public function test_store_ignora_un_campo_con_nombre_distinto_al_real(): void
     {
         $token = $this->loginAsFelix();
 
@@ -116,12 +116,80 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
             ])
             ->assertStatus(201);
 
-        // `numero_completo` no está en las reglas de StoreBankAccountRequest ni en $fillable —
-        // estructuralmente no puede persistirse por este endpoint. No se usa assertDatabaseMissing
-        // acá porque requeriría calificar el schema `admin_contab` a mano (el search_path del
-        // tenant en tests solo resuelve `auth`, no todos los schemas — mismo gotcha de
-        // Rule::unique documentado en CLAUDE.md, pero a la inversa).
+        // `numero_completo` (nombre distinto al campo real, ver test siguiente) no está en las
+        // reglas de StoreBankAccountRequest ni en $fillable — estructuralmente no puede
+        // persistirse por este endpoint.
         $this->assertArrayNotHasKey('numero_completo', $response->json());
+    }
+
+    // SCRUM-857 (REQ-458) — excepción deliberada a RN4 de REQ-530 ("nunca se captura el número
+    // completo"): `numero_cuenta_completo` SÍ se acepta ahora, a propósito, para que el Estado de
+    // Cuenta pueda mostrarle al cliente el dato real que necesita para pagar por transferencia.
+    public function test_store_acepta_numero_cuenta_completo(): void
+    {
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/admin-contab/bank-accounts', [
+                'banco' => 'Banco General', 'ultimos_4_digitos' => '4455',
+                'numero_cuenta_completo' => '03-01-01-074455-4',
+            ])
+            ->assertStatus(201);
+
+        $response->assertJsonFragment(['numero_cuenta_completo' => '03-01-01-074455-4']);
+    }
+
+    // ── update (nueva — antes solo existía deactivate/reactivate) ───────────────
+
+    public function test_update_completa_el_numero_de_cuenta_completo_de_una_cuenta_ya_creada(): void
+    {
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '4455']);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/bank-accounts/{$account->id}", [
+                'numero_cuenta_completo' => '03-01-01-074455-4',
+            ])
+            ->assertStatus(200);
+
+        $response->assertJsonFragment(['numero_cuenta_completo' => '03-01-01-074455-4', 'banco' => 'Banco General']);
+    }
+
+    public function test_update_parcial_no_pisa_el_resto_de_los_campos(): void
+    {
+        $account = AdminContBankAccount::create([
+            'banco' => 'Banco General', 'ultimos_4_digitos' => '4455', 'moneda' => 'USD',
+        ]);
+        $token = $this->loginAsFelix();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/bank-accounts/{$account->id}", ['numero_cuenta_completo' => '03-01-01-074455-4'])
+            ->assertStatus(200);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $fresh = $account->fresh();
+        $this->assertSame('Banco General', $fresh->banco);
+        $this->assertSame('4455', $fresh->ultimos_4_digitos);
+        $this->assertSame('USD', $fresh->moneda);
+    }
+
+    public function test_update_rechaza_a_un_rol_no_autorizado(): void
+    {
+        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/bank-accounts/{$account->id}", ['numero_cuenta_completo' => '1234567890'])
+            ->assertStatus(403);
+    }
+
+    public function test_update_cuenta_inexistente_retorna_404(): void
+    {
+        $token = $this->loginAsFelix();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/bank-accounts/999999', ['numero_cuenta_completo' => '1234567890'])
+            ->assertStatus(404);
     }
 
     public function test_deactivate_y_reactivate(): void

@@ -5,20 +5,35 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Services;
 
 use App\Models\User;
+use App\Modules\AdminCont\Events\InvoiceCreated;
 use App\Modules\AdminCont\Exceptions\CreditNoteStateException;
+use App\Modules\AdminCont\FacturacionElectronica\Exceptions\UnmappableItbmsRateException;
+use App\Modules\AdminCont\FacturacionElectronica\Services\FiscalCertificationService;
+use App\Modules\AdminCont\FacturacionElectronica\Services\ItbmsCodeMapper;
+use App\Modules\AdminCont\Jobs\SendCreditNoteConfirmedEmailJob;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContItbmsRate;
+use App\Modules\AdminCont\Services\Billing\InvoiceLineMath;
+use App\Modules\AdminCont\Support\GuiaEntregaResolver;
 use App\Modules\Bodega\Models\CustomerReturn;
+use App\Modules\Bodega\Models\CustomerReturnLine;
 use App\Modules\Bodega\Models\Order as BodegaOrder;
 use App\Modules\Bodega\Models\OrderDocument;
+use App\Modules\Bodega\Services\CustomerReturnDocumentService;
 use App\Modules\Bodega\Services\CustomerReturnService as BodegaCustomerReturnService;
 use App\Modules\VentasDiseno\Models\Quote;
-use Illuminate\Database\Eloquent\Collection;
+use App\Modules\VentasDiseno\Models\SalesProject;
+use App\Shared\Multitenancy\Tenant;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Batch 10 (SCRUM-553→558, REQ-476→481) — apertura de Notas Crédito y Devoluciones (solo lectura,
@@ -29,6 +44,8 @@ use Illuminate\Support\Facades\DB;
 final class CreditNoteService
 {
     /** Labels de `previewCorreccion()` (tarjeta "Corrección aplicada") — ver docblock ahí. */
+    public const MSG_FACTURA_NO_CORREGIBLE = 'La factura ya fue anulada o no existe: no se puede corregir.';
+
     private const MOTIVO_CORRECCION_LABELS = [
         AdminContCreditNote::MOTIVO_CORRECCION_ITBMS => 'Tratamiento de ITBMS incorrecto',
         AdminContCreditNote::MOTIVO_CORRECCION_FECHA => 'Fecha de facturación incorrecta',
@@ -36,11 +53,18 @@ final class CreditNoteService
     ];
 
     public function __construct(
-        private readonly CreditBalanceService $creditBalance,
         private readonly AdminContCreditNoteFolioService $folio,
         private readonly AdminContCreditNoteAttachmentService $attachments,
         private readonly AdminContInvoiceFolioService $invoiceFolio,
         private readonly BodegaCustomerReturnService $bodegaReturns,
+        private readonly CustomerReturnDocumentService $bodegaReturnDocuments,
+        private readonly FiscalCertificationService $certification,
+        // SCRUM-1116 — fuente única del valor acreditable restante de una factura.
+        private readonly CreditableBalanceService $creditable,
+        // SCRUM-1168 F1 — único escritor de `invoices.saldo_aplicado`.
+        private readonly InvoiceBalanceWriter $balance,
+        // SCRUM-1183 — el pago de una factura corregida pasa a la factura de reemplazo.
+        private readonly InvoiceReplacementPaymentTransfer $paymentTransfer,
     ) {}
 
     /**
@@ -142,29 +166,66 @@ final class CreditNoteService
      * Mismo filtro base que Cobros (`es_incobrable=false`, sin `anulada_at`) — una nota nunca debe
      * referenciar una factura incobrable o ya anulada.
      *
-     * @return list<array{id: int, numero: string, monto: float, saldo_pendiente: float, itbms_percentage: float, itbms_rate_id: int|null}>
+     * SCRUM-932 — `sales_project_id`/`proyecto`/`quote_id`/`cotizacion_folio` agregados para que el
+     * modal de creación pueda filtrar Proyecto/# Cotización en el frontend sobre esta misma lista
+     * (sin endpoint de cascada nuevo, mismo criterio que `PaymentService::openInvoicesForClient()`
+     * en SCRUM-931, pero query independiente — este método SIGUE trayendo facturas ya pagadas,
+     * Cobros no). Cotización resuelta vía `Order::linkedQuote()`, no vía `AdminContInvoice.quote_id`
+     * directo, mismo criterio ya establecido en Cobros/Estado de Cuenta.
+     *
+     * @return list<array{id: int, numero: string, monto: float, saldo_pendiente: float, itbms_percentage: float, itbms_rate_id: int|null, tipo_factura: string, order_id: int, sales_project_id: ?int, proyecto: ?string, quote_id: ?int, cotizacion_folio: ?string}>
      */
     public function invoicesForClient(int $masterClientId): array
     {
-        $rows = AdminContInvoice::query()
+        $invoices = AdminContInvoice::query()
             ->where('master_client_id', $masterClientId)
             ->where('es_incobrable', false)
             ->whereNull('anulada_at')
             ->with('itbmsRate')
+            ->get();
+
+        $projectNames = SalesProject::query()
+            ->whereIn('id', $invoices->pluck('sales_project_id')->filter()->unique())
+            ->pluck('name', 'id');
+
+        $orders = BodegaOrder::query()
+            ->whereIn('id', $invoices->pluck('order_id')->filter()->unique())
             ->get()
-            ->map(fn (AdminContInvoice $i): array => [
-                'id' => $i->id,
-                'numero' => $i->numero,
-                'monto' => $i->monto,
-                'saldo_pendiente' => round($i->monto - $i->saldo_aplicado, 2),
-                'itbms_percentage' => $i->itbmsRate->porcentaje ?? 0.0,
-                // REQ-489 — id real de la tasa ya aplicada, para que "Corrección de datos" pueda
-                // excluirla de "tratamiento correcto" (`NotaCreditoFacturaOrigen.itbms_rate_id`,
-                // ver docblock del tipo en el frontend — faltaba acá, Pre-QA Batch 12 2026-08-24:
-                // sin este campo `facturaActualRateId` siempre resolvía null en el frontend, así
-                // que ninguna tasa se excluía y "Tratamiento actual" siempre mostraba "—").
-                'itbms_rate_id' => $i->itbms_rate_id,
-            ])
+            ->keyBy('id');
+
+        // SCRUM-1116 — valor acreditable y notas previas de todas las facturas en 2 consultas (sin N+1).
+        $acreditables = $this->creditable->valoresAcreditables(array_values($invoices->pluck('id')->map(fn ($id): int => (int) $id)->all()));
+
+        $rows = $invoices
+            ->map(function (AdminContInvoice $i) use ($projectNames, $orders, $acreditables): array {
+                $quote = $orders->get($i->order_id)?->linkedQuote();
+
+                return [
+                    'id' => $i->id,
+                    'numero' => $i->numero,
+                    'monto' => $i->monto,
+                    'saldo_pendiente' => round($i->monto - $i->saldo_aplicado, 2),
+                    // SCRUM-1116 — lo que AÚN se puede acreditar (total − notas aplicadas o pendientes, todos los tipos).
+                    // No es el saldo por cobrar: los cobros no lo reducen. Tope del monto y base de la anulación completa.
+                    'monto_acreditable' => $acreditables[$i->id]['acreditable'] ?? round((float) $i->monto, 2),
+                    'notas_previas_total' => $acreditables[$i->id]['notas_previas'] ?? 0.0,
+                    'itbms_percentage' => $i->itbmsRate->porcentaje ?? 0.0,
+                    // REQ-489 — id real de la tasa ya aplicada, para que "Corrección de datos" pueda
+                    // excluirla de "tratamiento correcto" (`NotaCreditoFacturaOrigen.itbms_rate_id`,
+                    // ver docblock del tipo en el frontend — faltaba acá, Pre-QA Batch 12 2026-08-24:
+                    // sin este campo `facturaActualRateId` siempre resolvía null en el frontend, así
+                    // que ninguna tasa se excluía y "Tratamiento actual" siempre mostraba "—").
+                    'itbms_rate_id' => $i->itbms_rate_id,
+                    // SCRUM-929 (B3a) — un pedido puede tener varias facturas activas (parcial por entrega
+                    // + completo): cada una es una fila propia; `tipo_factura`/`order_id` las distinguen.
+                    'tipo_factura' => $i->tipo,
+                    'order_id' => $i->order_id,
+                    'sales_project_id' => $i->sales_project_id,
+                    'proyecto' => $i->sales_project_id !== null ? $projectNames->get($i->sales_project_id) : null,
+                    'quote_id' => $quote?->id,
+                    'cotizacion_folio' => $quote?->folio,
+                ];
+            })
             ->all();
 
         return array_values($rows);
@@ -197,11 +258,30 @@ final class CreditNoteService
 
             $saldoPendiente = round($facturaOrigen->monto - $facturaOrigen->saldo_aplicado, 2);
 
-            // REQ-484 RN4 — Anulación completa: el monto SIEMPRE es el total exacto de la factura,
-            // nunca lo que mande el cliente (si mandó algo distinto, se ignora, no es un error).
-            $monto = $data['tipo'] === AdminContCreditNote::TIPO_ANULACION_COMPLETA
-                ? $facturaOrigen->monto
-                : (float) $data['monto'];
+            // SCRUM-1116 — valor que TODAVÍA se puede acreditar: total de la factura menos las notas previas (aplicadas y
+            // pendientes de aprobación, de todos los tipos). Se calcula DENTRO de la transacción y con la factura ya
+            // bloqueada, así dos registros simultáneos sobre la misma factura no pueden sumar más que su valor. NO es el
+            // saldo por cobrar: los cobros no reducen lo acreditable (anular una factura cobrada devuelve lo cobrado).
+            $acreditable = $this->creditable->valorAcreditableRestante($facturaOrigen);
+            $notasPrevias = $this->creditable->notasPrevias((int) $facturaOrigen->id);
+
+            if ($data['tipo'] === AdminContCreditNote::TIPO_ANULACION_COMPLETA) {
+                // REQ-484 RN4 (corregido por SCRUM-1116) — Anulación completa: el monto SIEMPRE es lo que queda por
+                // acreditar (el total de la factura si no hay notas previas), nunca lo que mande el cliente (si mandó
+                // algo distinto se ignora, no es un error). Sin nada por acreditar no hay anulación posible.
+                if ($acreditable <= 0.0) {
+                    throw ValidationException::withMessages(['factura_origen_id' => [$this->creditable->mensajeSinSaldo($facturaOrigen->numero)]]);
+                }
+                $monto = $acreditable;
+            } else {
+                $monto = (float) $data['monto'];
+                // SCRUM-1116 RN4 — en NINGÚN tipo el acumulado de notas puede superar el valor de la factura.
+                if (round($monto - $acreditable, 2) > 0.0) {
+                    throw ValidationException::withMessages(['monto' => [
+                        $this->creditable->mensajeExceso($facturaOrigen->numero, $monto, $acreditable, $notasPrevias, (float) $facturaOrigen->monto),
+                    ]]);
+                }
+            }
 
             // REQ-485 RN1 — desglose según la tasa ITBMS de la propia factura de origen (la misma
             // que ya se le aplicó al cliente en esa factura, no una tasa nueva).
@@ -215,7 +295,13 @@ final class CreditNoteService
             // necesitar una rama aparte — es el mismo caso límite de RN1.
             $excedente = round($monto - $saldoPendiente, 2);
             if ($excedente > 0) {
-                $resultado = $data['resultado']; // 'devuelto' | 'saldo_favor' — ya validado obligatorio en el Form Request
+                // 'devuelto' | 'saldo_favor' — el Form Request lo exige, pero lo valida ANTES de bloquear la factura: si
+                // entre medio otra operación cambió el saldo y aparece un excedente nuevo, se pide acá con un 422
+                // claro en vez de romper por un índice inexistente.
+                $resultado = $data['resultado'] ?? null;
+                if ($resultado === null) {
+                    throw ValidationException::withMessages(['resultado' => ['Indique si el excedente se devuelve al cliente o queda como saldo a favor.']]);
+                }
             } else {
                 $resultado = AdminContCreditNote::RESULTADO_APLICADO_SALDO;
                 $excedente = 0.0;
@@ -266,7 +352,7 @@ final class CreditNoteService
             // creación de la nota completa revierte — decisión explícita de Luis, ver
             // ADR-SCRUM565-570 (atómico, no evento+listener con try/catch aislado).
             if (($data['devolucion_bodega_id'] ?? null) !== null) {
-                $this->bodegaReturns->finalizeForCreditNote((int) $data['devolucion_bodega_id'], $note->numero, $actor);
+                $this->bodegaReturns->finalizeForCreditNote((int) $data['devolucion_bodega_id'], $note->id, $note->numero, $actor);
             }
 
             return $note;
@@ -280,7 +366,95 @@ final class CreditNoteService
             $note->update(['comprobante_url' => $key]);
         }
 
+        $this->dispatchConfirmationEmail($note);
+        $this->certificarSiCorresponde($note);
+
         return $note;
+    }
+
+    /**
+     * REQ-486 — encola el correo de confirmación al cliente (Nota de Crédito + Estado de Cuenta)
+     * solo cuando la nota quedó `aplicada` de verdad — nunca para `pendiente_aprobacion` (se
+     * dispara recién cuando `decide()` la aprueba, ver ahí) ni `rechazada`. Encolado (nunca
+     * síncrono) para que un fallo de envío no bloquee ni revierta la nota ya aplicada — mismo
+     * criterio que `SendPurchaseOrderEmailJob`.
+     */
+    private function dispatchConfirmationEmail(AdminContCreditNote $note): void
+    {
+        if ($note->estado === AdminContCreditNote::ESTADO_APLICADA) {
+            SendCreditNoteConfirmedEmailJob::dispatch($note->id);
+        }
+    }
+
+    /**
+     * SCRUM-943 — mismo gate que `dispatchConfirmationEmail()`: certificar ante el PAC solo tiene
+     * sentido cuando la nota quedó `aplicada` de verdad, nunca mientras sigue `pendiente_aprobacion`
+     * (podría rechazarse y no llegar a tener efecto real) ni si Mark la rechazó. Síncrono (no
+     * `ShouldQueue`) — mismo criterio que `CertifyInvoiceOnCreated` sobre `InvoiceCreated`;
+     * `FiscalCertificationService` ya atrapa cualquier error como `error_configuracion`, nunca
+     * bloquea ni revierte la nota ya aplicada.
+     */
+    private function certificarSiCorresponde(AdminContCreditNote $note): void
+    {
+        if ($note->estado === AdminContCreditNote::ESTADO_APLICADA) {
+            $this->certification->certificarNotaCredito($note);
+        }
+    }
+
+    /**
+     * SCRUM-943 — `executeCorreccion()` genera una factura de REEMPLAZO (`factura_nueva_id`), que
+     * necesita su propia certificación como factura — no como parte de la nota. Reusa el mismo
+     * evento de dominio `InvoiceCreated` que `InvoiceService::confirm()` ya dispara (mismo
+     * listener `CertifyInvoiceOnCreated`, cero código nuevo de FE para este caso). Se dispara FUERA
+     * de la transacción de `registerCorreccion()`/`decide()` — mismo criterio que `InvoiceCreated`
+     * en `InvoiceService::confirm()`, nunca certificar con una transacción todavía abierta.
+     */
+    private function certificarFacturaDeReemplazoSiCorresponde(AdminContCreditNote $note): void
+    {
+        if ($note->factura_nueva_id === null) {
+            return;
+        }
+
+        /** @var AdminContInvoice|null $facturaNueva */
+        $facturaNueva = AdminContInvoice::find($note->factura_nueva_id);
+        if ($facturaNueva === null) {
+            return;
+        }
+
+        // SCRUM-1009 (D2) — el reemplazo NO se certifica mientras la NC de anulación no esté
+        // certificada: si la DGI rechazó la NC, la original sigue vigente ante la DGI y emitir el
+        // reemplazo dejaría DOS facturas vigentes por el mismo hecho (doble facturación). Se retiene
+        // en `en_espera_nc`; `FiscalCertificationService::persistirResultado()` lo libera cuando la NC
+        // certifica, por cualquier camino (inicial, reintento manual o polling). `no_aplica` (FE
+        // apagada / tipo deshabilitado) sigue su curso: el listener deja el reemplazo `no_aplica`.
+        // Cualquier otro estado, incluido null inesperado, falla cerrado (retiene).
+        $estadoNota = $note->fresh()?->fe_estado;
+        if (! in_array($estadoNota, ['certificado', 'no_aplica'], true)) {
+            $facturaNueva->forceFill(['fe_estado' => FiscalCertificationService::ESTADO_EN_ESPERA_NC])->save();
+            Log::warning('Facturación electrónica: reemplazo retenido hasta que la nota de anulación certifique', [
+                'nota_credito_id' => $note->id,
+                'factura_nueva_id' => $facturaNueva->id,
+                'estado_nota' => $estadoNota,
+            ]);
+
+            // Senior Review S1 — si el polling o un reintento certificó la NC ENTRE la lectura de arriba y la escritura
+            // de `en_espera_nc`, el compare-and-set de `persistirResultado()` corrió con el reemplazo aún sin retener
+            // (no-op) y nadie lo liberaría nunca. Se relee la NC y, si ya certificó, se libera acá (mismo CAS: seguro
+            // de correr dos veces).
+            $notaActual = $note->fresh();
+            if ($notaActual !== null && $notaActual->fe_estado === 'certificado') {
+                $this->certification->liberarReemplazoRetenido($notaActual);
+            }
+
+            return;
+        }
+
+        Event::dispatch(new InvoiceCreated(
+            invoiceId: $facturaNueva->id,
+            orderId: $facturaNueva->order_id,
+            numero: $facturaNueva->numero,
+            tenant: Tenant::current()->slug ?? '',
+        ));
     }
 
     /**
@@ -303,7 +477,13 @@ final class CreditNoteService
             ? 0.0
             : max(0.0, round($note->monto - $saldoPendiente, 2));
 
-        $facturaOrigen->update(['saldo_aplicado' => $facturaOrigen->saldo_aplicado + min($note->monto, $saldoPendiente)]);
+        // SCRUM-877 p1 — monto que REALMENTE redujo el saldo de la factura (lo demás, si lo hay,
+        // fue excedente devuelto/saldo a favor). El Estado de Cuenta lo lee tal cual (decisión D-6).
+        $montoAplicadoSaldo = round(min($note->monto, max(0.0, $saldoPendiente)), 2);
+        $note->update(['monto_aplicado_saldo' => $montoAplicadoSaldo]);
+
+        // SCRUM-1168 F1 — única puerta de escritura de `saldo_aplicado`; la nota conserva su regla propia (valor acreditable), por eso sin tope.
+        $this->balance->apply($facturaOrigen, $montoAplicadoSaldo, permitirExceso: true);
 
         if ($note->resultado === AdminContCreditNote::RESULTADO_DEVUELTO && $excedente > 0) {
             AdminContBankMovement::create([
@@ -315,9 +495,13 @@ final class CreditNoteService
                 'source_type' => AdminContBankMovement::SOURCE_CREDIT_NOTE,
                 'source_id' => $note->id,
             ]);
-        } elseif ($note->resultado === AdminContCreditNote::RESULTADO_SALDO_FAVOR && $excedente > 0) {
-            $this->creditBalance->add($note->master_client_id, $excedente);
         }
+        // SCRUM-902/903 — cuando resultado=saldo_favor, no hace falta escribir el excedente a
+        // ninguna tabla aparte: `AdminContCreditNote::montoDisponibleSaldoFavor()` ya lo deriva de
+        // `monto`/`monto_aplicado_saldo`/`monto_usado` de esta misma nota (única fuente de verdad,
+        // consumida por Cobros/Saldo a Favor — ver `AbonoService::saldoClienteDisponible()`).
+        // Antes de este batch escribía a `CreditBalanceService::add()` (retirado, ver docblock de
+        // la migración de drop de `customer_credit_balances`).
     }
 
     /**
@@ -331,7 +515,7 @@ final class CreditNoteService
      */
     public function decide(int $id, bool $approve, ?string $motivoRechazo, User $actor): AdminContCreditNote
     {
-        return DB::transaction(function () use ($id, $approve, $motivoRechazo, $actor): AdminContCreditNote {
+        $note = DB::transaction(function () use ($id, $approve, $motivoRechazo, $actor): AdminContCreditNote {
             /** @var AdminContCreditNote $note */
             $note = AdminContCreditNote::query()->lockForUpdate()->findOrFail($id);
 
@@ -345,8 +529,36 @@ final class CreditNoteService
                     throw new CreditNoteStateException("La nota {$note->numero} requiere comprobante de soporte adjunto antes de poder aprobarse.");
                 }
 
-                /** @var AdminContInvoice $facturaOrigen */
-                $facturaOrigen = AdminContInvoice::query()->lockForUpdate()->findOrFail($note->factura_origen_id);
+                // SCRUM-929 (Senior Review B3a-1) — sin `whereNull('anulada_at')`, dos notas pendientes sobre la
+                // MISMA factura (F1) podían aprobarse una tras otra: la 1ª anula F1 y crea F2; la 2ª volvía a
+                // cargar F1 (ya anulada) sin error, la re-anulaba (pisando `anulada_at`) e intentaba crear F3 con
+                // el mismo `(order_id, tipo)` que F2 activa → 500 crudo del índice único en vez de un 422 claro.
+                $facturaOrigen = AdminContInvoice::query()->lockForUpdate()->whereNull('anulada_at')->find($note->factura_origen_id);
+                if ($facturaOrigen === null) {
+                    throw new CreditNoteStateException("La factura de origen de la nota {$note->numero} ya no está vigente — no se puede aprobar.");
+                }
+
+                // SCRUM-1116 (D3) — al aprobar se revalida contra el valor acreditable SIN contar a la propia nota: una nota
+                // registrada antes de este fix (o con otra pendiente en paralelo) que haría pasar el acumulado del valor de
+                // la factura no se puede aprobar; Mark solo puede rechazarla. Las de corrección de datos ya lo cubren al
+                // registrarse (no admiten notas previas ni pendientes), por eso quedan fuera.
+                if (! $note->correccion_pendiente_aprobacion) {
+                    $acreditable = $this->creditable->valorAcreditableRestante($facturaOrigen, (int) $note->id);
+                    // Una anulación completa es por TODO lo que quedaba: si el valor restante cambió desde que se registró
+                    // (otra nota pendiente que se rechazó, por ejemplo), aprobarla dejaría una "anulación completa" parcial.
+                    // Descuentos y devoluciones solo no pueden pasarse del valor restante.
+                    $desactualizada = $note->tipo === AdminContCreditNote::TIPO_ANULACION_COMPLETA
+                        ? abs(round((float) $note->monto - $acreditable, 2)) > 0.0
+                        : round((float) $note->monto - $acreditable, 2) > 0.0;
+                    if ($desactualizada) {
+                        throw new CreditNoteStateException(
+                            "La nota {$note->numero} no se puede aprobar: su monto USD ".number_format((float) $note->monto, 2, '.', ',')
+                            .($note->tipo === AdminContCreditNote::TIPO_ANULACION_COMPLETA ? ' ya no coincide con' : ' supera')
+                            ." el valor que aún se puede acreditar de la factura {$facturaOrigen->numero} (USD "
+                            .number_format($acreditable, 2, '.', ',').'), porque cambiaron las notas de crédito de esa factura. Recházala y regístrala de nuevo por el valor correcto.'
+                        );
+                    }
+                }
 
                 if ($note->correccion_pendiente_aprobacion) {
                     $this->executeCorreccion($note, $facturaOrigen);
@@ -371,6 +583,12 @@ final class CreditNoteService
 
             return $note;
         });
+
+        $this->dispatchConfirmationEmail($note);
+        $this->certificarSiCorresponde($note);
+        $this->certificarFacturaDeReemplazoSiCorresponde($note);
+
+        return $note;
     }
 
     /**
@@ -439,7 +657,12 @@ final class CreditNoteService
      */
     public function itbmsTreatmentForInvoice(int $orderId): ?array
     {
-        $invoice = AdminContInvoice::where('order_id', $orderId)->whereNull('anulada_at')->with('itbmsRate')->first();
+        // SCRUM-929 (B3a) — `$orderId` es la ENTREGA: su factura según la regla central (la parcial vigente
+        // de esa entrega o el `completo` vigente que la cubre), no una factura cualquiera del pedido.
+        $invoice = InvoiceService::pickInvoiceForDelivery(
+            AdminContInvoice::forOrder($orderId)->with('itbmsRate')->orderBy('id')->get(),
+            $orderId,
+        );
         if ($invoice === null) {
             return null;
         }
@@ -551,6 +774,26 @@ final class CreditNoteService
             return null;
         }
 
+        // SCRUM-932 — Cotización/Guía de Entrega de la factura de origen (una sola, no una
+        // colección como en Cobros/SCRUM-931) — mismo `GuiaEntregaResolver` ya extraído en
+        // SCRUM-930, reusado tal cual.
+        $creditNoteQuoteId = null;
+        $creditNoteCotizacionFolio = null;
+        $creditNoteGuiaNumero = null;
+        $creditNoteGuiaOrderId = null;
+        if ($note->facturaOrigen !== null) {
+            $facturaOrigenOrder = BodegaOrder::find($note->facturaOrigen->order_id);
+            $creditNoteQuote = $facturaOrigenOrder?->linkedQuote();
+            $creditNoteQuoteId = $creditNoteQuote?->id;
+            $creditNoteCotizacionFolio = $creditNoteQuote?->folio;
+            $facturaOrigenOrdersById = $facturaOrigenOrder !== null
+                ? collect([$facturaOrigenOrder->id => $facturaOrigenOrder])
+                : collect();
+            [$creditNoteGuiaNumero, $creditNoteGuiaOrderId] = GuiaEntregaResolver::resolve(
+                $note->facturaOrigen, $facturaOrigenOrder, $facturaOrigenOrdersById,
+            );
+        }
+
         $payload = [
             'id' => $note->id,
             'numero' => $note->numero,
@@ -566,8 +809,20 @@ final class CreditNoteService
             // directo, por eso se expone acá el identificador correcto para que el frontend pegue
             // al endpoint que ya existe sin construir uno nuevo.
             'factura_origen_order_id' => $note->facturaOrigen?->order_id,
+            // SCRUM-932 — Cotización/Guía de Entrega de la factura de origen, para que el detalle
+            // pueda enlazarlas (mismo patrón que `AdminContPaymentController::presentDetail()`,
+            // SCRUM-931): la cotización se resuelve vía `Order::linkedQuote()`, no vía
+            // `AdminContInvoice.quote_id` directo, mismo criterio ya establecido en Cobros/Estado
+            // de Cuenta. `null` si la factura no tiene pedido o el pedido no tiene proyecto/guía.
+            'quote_id' => $creditNoteQuoteId,
+            'cotizacion_folio' => $creditNoteCotizacionFolio,
+            'guia_entrega_numero' => $creditNoteGuiaNumero,
+            'guia_entrega_order_id' => $creditNoteGuiaOrderId,
             'factura_nueva_numero' => $note->facturaNueva?->numero,
             'factura_nueva_order_id' => $note->facturaNueva?->order_id,
+            // SCRUM-1060 — la factura de reemplazo conserva `order_id` de la original, así que el
+            // `order_id` solo no basta para abrir SU detalle: el modal necesita el PK (`invoice_id`).
+            'factura_nueva_id' => $note->factura_nueva_id,
             'monto' => $note->monto,
             'subtotal' => $note->subtotal,
             'itbms' => $note->itbms,
@@ -577,6 +832,12 @@ final class CreditNoteService
             // solo tiene sentido cuando resultado=devuelto (ver `applyToBalance()`).
             'cuenta_bancaria_salida' => $note->cuentaBancariaSalida?->label(),
             'estado' => $note->estado,
+            // SCRUM-943 — mismo criterio que InvoiceService::detail(): null | no_aplica | pendiente
+            // | certificado | rechazado | error_configuracion (nunca "rechazado por la DGI").
+            'fe_estado' => $note->fe_estado,
+            'cufe' => $note->cufe,
+            'qr_content' => $note->qr_content,
+            'pac_provider_usado' => $note->pac_provider_usado,
             'tiene_comprobante' => $note->comprobante_url !== null,
             'fecha' => $note->fecha->toDateString(),
             // RN1 REQ-493 — solo se exponen si aplican al estado real, nunca vacíos por default.
@@ -622,15 +883,31 @@ final class CreditNoteService
     public function devolucionDetail(int $customerReturnId): ?array
     {
         /** @var CustomerReturn|null $customerReturn */
-        $customerReturn = CustomerReturn::with('lines')->find($customerReturnId);
+        $customerReturn = CustomerReturn::with(['lines', 'order.pipelineCard.salesProject'])->find($customerReturnId);
         if ($customerReturn === null || ! $customerReturn->isAwaitingCreditNote()) {
             return null;
         }
 
-        /** @var AdminContInvoice|null $invoice */
-        $invoice = AdminContInvoice::where('order_id', $customerReturn->order_id)->whereNull('anulada_at')->first();
+        // SCRUM-929 (B3a) — la devolución es de UNA entrega: apunta a la factura de SU entrega (regla central).
+        $invoice = InvoiceService::pickInvoiceForDelivery(
+            AdminContInvoice::forOrder($customerReturn->order_id)->orderBy('id')->get(),
+            $customerReturn->order_id,
+        );
         if ($invoice === null) {
             return null;
+        }
+
+        // `unit_price` de Bodega es el precio de cotización SIN ITBMS (snapshot de `OrderItem.unit_price`), pero el
+        // monto de una NC es el total CON ITBMS (de ahí se deriva el desglose). Se entrega ya convertido con la tasa de
+        // la factura de origen para que ningún consumidor tenga que adivinar que el precio era neto (NC-0001: se acreditó
+        // 128.76, el neto, en vez de 137.77, y quedaron 9.01 sin acreditar).
+        $invoice->loadMissing('itbmsRate');
+        $itbmsPercentage = (float) ($invoice->itbmsRate->porcentaje ?? 0.0);
+        $montoSugerido = $this->montoSugeridoDevolucion($customerReturn->lines, $itbmsPercentage);
+        // SCRUM-1116 — la sugerencia nunca supera lo que aún se puede acreditar de la factura.
+        $acreditable = $this->creditable->valorAcreditableRestante($invoice);
+        if ($montoSugerido !== null) {
+            $montoSugerido = min($montoSugerido, $acreditable);
         }
 
         return [
@@ -640,6 +917,22 @@ final class CreditNoteService
             'cliente' => $invoice->cliente,
             'factura_origen_id' => $invoice->id,
             'factura_origen_numero' => $invoice->numero,
+            // Referencia para quien registra la nota: total de la factura y lo que aún se puede acreditar.
+            'factura_monto' => round((float) $invoice->monto, 2),
+            'factura_saldo_pendiente' => round((float) $invoice->monto - (float) $invoice->saldo_aplicado, 2),
+            'monto_acreditable' => $acreditable,
+            'notas_previas_total' => $this->creditable->notasPrevias((int) $invoice->id),
+            'itbms_percentage' => $itbmsPercentage,
+            // Σ cantidad × precio sin ITBMS × (1 + tasa). NULL si alguna línea no tiene precio (pedidos previos al
+            // backfill de SCRUM-786): el formulario no debe sugerir un total parcial.
+            'monto_sugerido' => $montoSugerido,
+            // SCRUM-865 punto 2 — estos 3 campos SÍ se capturan en Bodega (mismo shape que
+            // `CustomerReturnController::formatRow()`) pero nunca se traían acá; el formulario
+            // mostraba "No disponible" aunque el dato existiera.
+            'project' => $customerReturn->order->pipelineCard?->salesProject?->name,
+            'contact_name' => $customerReturn->contact_name,
+            'contact_phone' => $customerReturn->contact_phone,
+            'has_signed_document' => $customerReturn->hasSignedDocument(),
             'productos' => $customerReturn->lines->map(fn ($line): array => [
                 'reference' => $line->reference_snapshot,
                 'description' => $line->description_snapshot,
@@ -651,6 +944,42 @@ final class CreditNoteService
                 'reason_detail' => $line->reasonDetail(),
             ])->values()->all(),
         ];
+    }
+
+    /**
+     * Total CON ITBMS sugerido para una devolución: Σ (qty_received ?? qty_requested) × unit_price (neto) × (1 + tasa).
+     * NULL si alguna línea no tiene `unit_price`.
+     *
+     * @param  Collection<int, CustomerReturnLine>  $lines
+     */
+    private function montoSugeridoDevolucion(Collection $lines, float $itbmsPercentage): ?float
+    {
+        $neto = 0.0;
+        foreach ($lines as $line) {
+            if ($line->unit_price === null) {
+                return null;
+            }
+            $neto += ($line->qty_received ?? $line->qty_requested) * $line->unit_price;
+        }
+
+        return round($neto * (1 + $itbmsPercentage / 100), 2);
+    }
+
+    /**
+     * SCRUM-865 punto 2 — `CustomerReturnController::signedDocumentUrl()` (Bodega) está gateado
+     * por `permission:bodega.read`, que un usuario de Notas de Crédito (Felix/Yaneth/Mark/
+     * Gerencia) no necesariamente tiene. Mismo mecanismo de presign, gateado acá por el permiso ya
+     * exigido a toda la ruta de `notas-credito/*`.
+     */
+    public function devolucionSignedDocumentUrl(int $customerReturnId): ?string
+    {
+        /** @var CustomerReturn|null $customerReturn */
+        $customerReturn = CustomerReturn::find($customerReturnId);
+        if ($customerReturn === null || $customerReturn->signed_document_path === null) {
+            return null;
+        }
+
+        return $this->bodegaReturnDocuments->presignUrl($customerReturn->signed_document_path);
     }
 
     /**
@@ -666,7 +995,7 @@ final class CreditNoteService
     {
         $alreadyLinked = AdminContCreditNote::query()->whereNotNull('devolucion_bodega_id')->pluck('devolucion_bodega_id')->all();
 
-        /** @var Collection<int, CustomerReturn> $returns */
+        /** @var \Illuminate\Database\Eloquent\Collection<int, CustomerReturn> $returns */
         $returns = CustomerReturn::query()
             ->where('status', CustomerReturn::STATUS_ESPERANDO_NOTA_CREDITO)
             ->whereNotIn('id', $alreadyLinked === [] ? [0] : $alreadyLinked)
@@ -677,17 +1006,25 @@ final class CreditNoteService
             return [];
         }
 
-        $orderIds = $returns->pluck('order_id')->unique()->values()->all();
-        $invoicesByOrder = AdminContInvoice::query()
-            ->whereIn('order_id', $orderIds)
-            ->whereNull('anulada_at')
+        // SCRUM-876 — la factura vive en la tarjeta raíz del pedido; una devolución sobre una
+        // entrega hermana debe resolverse contra esa raíz.
+        $rootByOrder = BodegaOrder::whereIn('id', $returns->pluck('order_id')->unique())
             ->get()
-            ->keyBy('order_id');
+            ->mapWithKeys(fn (BodegaOrder $o): array => [$o->id => $o->familyRootId()]);
+        // SCRUM-929 (B3a) — varias facturas activas por pedido: se agrupan por raíz y la de cada
+        // devolución se elige con la regla central (la de SU entrega), no `keyBy('order_id')`.
+        $invoicesByRoot = AdminContInvoice::query()
+            ->whereIn('family_root_id', $rootByOrder->values()->unique()->values())
+            ->whereNull('anulada_at')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('family_root_id');
 
         $rows = [];
         foreach ($returns as $return) {
-            /** @var AdminContInvoice|null $invoice */
-            $invoice = $invoicesByOrder->get($return->order_id);
+            /** @var Collection<int, AdminContInvoice> $familia */
+            $familia = $invoicesByRoot->get($rootByOrder->get($return->order_id), new Collection);
+            $invoice = InvoiceService::pickInvoiceForDelivery($familia, $return->order_id);
             if ($invoice === null) {
                 // Sin factura activa para ese Order — no debería pasar en el flujo normal (una
                 // devolución solo nace de una Guía de Entrega ya facturada), se omite en vez de
@@ -730,7 +1067,7 @@ final class CreditNoteService
     {
         [$facturaOrigen, $order, $quote, $rate] = $this->correccionContext($data);
 
-        $breakdown = self::correctionBreakdown($quote, $rate);
+        $breakdown = self::correctionBreakdown($facturaOrigen, $quote, $rate);
         $guia = $order->documents()->where('tipo', OrderDocument::TIPO_GUIA_ENTREGA)->latest('created_at')->first();
         $card = $order->pipelineCard;
 
@@ -786,7 +1123,7 @@ final class CreditNoteService
     {
         $note = DB::transaction(function () use ($data, $actor): AdminContCreditNote {
             [$facturaOrigen, , $quote, $rate] = $this->correccionContext($data, lockForUpdate: true);
-            $breakdown = self::correctionBreakdown($quote, $rate);
+            $breakdown = self::correctionBreakdown($facturaOrigen, $quote, $rate);
             $threshold = $this->primaryApprovalThreshold();
             $pendiente = $breakdown['total'] > $threshold;
 
@@ -825,6 +1162,10 @@ final class CreditNoteService
             $note->update(['comprobante_url' => $key]);
         }
 
+        $this->dispatchConfirmationEmail($note);
+        $this->certificarSiCorresponde($note);
+        $this->certificarFacturaDeReemplazoSiCorresponde($note);
+
         return $note;
     }
 
@@ -832,6 +1173,22 @@ final class CreditNoteService
      * REQ-490 RN3 — ejecuta de verdad la corrección: anula la factura original y genera la
      * factura nueva. Reusable tal cual desde Batch 13 (`approve()`, todavía no implementado) para
      * el caso `pendiente_aprobacion` — no reimplementar esta lógica ahí.
+     *
+     * SCRUM-929 (B3a) — la factura de REEMPLAZO conserva `order_id`, `family_root_id` y `tipo` de la que
+     * reemplaza (una parcial sigue colgando de SU entrega y siendo `parcial`; un completo, `completo`) y
+     * copia sus `invoice_lines` con la corrección aplicada (`correctedLines()`), de modo que el pedido
+     * sigue viendo lo ya facturado por ítem y el próximo cierre cuadra. La original se anula ANTES de
+     * crear el reemplazo (mismo `order_id` + `tipo`: el índice único `(order_id, tipo) WHERE anulada_at
+     * IS NULL` solo admite uno activo) y todo corre en la transacción de `registerCorreccion()`. Una
+     * factura legada (sin líneas) se reemplaza como siempre, sin líneas.
+     *
+     * SCRUM-929 (B3b Punto 4, decisión de Luis 2026-09-19) — `ajuste_itbms_delta` de la nueva factura
+     * = el de la que reemplaza (se acumula a través de correcciones encadenadas) + el delta de ESTE
+     * evento (`note->monto − facturaOrigen->monto`). Una corrección por FECHA (motivo que no cambia
+     * la tasa) da delta 0 automáticamente: `correctedLines()` copia las líneas tal cual, así que
+     * `note->monto` sale igual a `facturaOrigen->monto`. `InvoiceBillingPlanner` suma este campo de
+     * las facturas activas de la familia para dejar de comparar/cerrar contra `card->amount` crudo
+     * (ver ADR §"Decisiones de Luis" y el docblock de la migración `add_ajuste_itbms_delta_...`).
      */
     private function executeCorreccion(AdminContCreditNote $note, AdminContInvoice $facturaOrigen): void
     {
@@ -840,6 +1197,8 @@ final class CreditNoteService
         $facturaNueva = AdminContInvoice::create([
             'numero' => $this->invoiceFolio->next(),
             'order_id' => $facturaOrigen->order_id,
+            'family_root_id' => $facturaOrigen->family_root_id,
+            'tipo' => $facturaOrigen->tipo,
             'quote_id' => $facturaOrigen->quote_id,
             'itbms_rate_id' => $note->nuevo_tratamiento_itbms_rate_id ?? $facturaOrigen->itbms_rate_id,
             'sales_project_id' => $facturaOrigen->sales_project_id,
@@ -847,10 +1206,46 @@ final class CreditNoteService
             'cliente' => $facturaOrigen->cliente,
             'monto' => $note->monto,
             'saldo_aplicado' => 0.0,
+            'ajuste_itbms_delta' => round((float) $facturaOrigen->ajuste_itbms_delta + ((float) $note->monto - (float) $facturaOrigen->monto), 2),
             'created_by' => $note->registrado_por,
+            // SCRUM-1140 (Senior Review M1) — la NC de anulación lleva el receptor de la factura original CERTIFICADA (la DGI exige
+            // el mismo, 9026); el reemplazo hereda ese mismo receptor congelado. Si la original nunca se certificó (rechazada,
+            // error de configuración, FE apagada) no hay nada que igualar: el reemplazo queda sin receptor congelado y toma el
+            // cliente vigente, que es justo lo que se suele corregir en ese caso.
+            ...($facturaOrigen->cufe !== null && $facturaOrigen->receptor_tipo !== null
+                ? [
+                    'receptor_tipo' => $facturaOrigen->receptor_tipo,
+                    'receptor_ruc' => $facturaOrigen->receptor_ruc,
+                    'receptor_dv' => $facturaOrigen->receptor_dv,
+                    'receptor_nombre' => $facturaOrigen->receptor_nombre,
+                    'receptor_validado_at' => $facturaOrigen->receptor_validado_at,
+                ]
+                : []),
         ]);
 
+        $facturaOrigen->loadMissing(['lines', 'itbmsRate']);
+        if ($facturaOrigen->lines->isNotEmpty()) {
+            $rate = $note->nuevo_tratamiento_itbms_rate_id !== null
+                ? AdminContItbmsRate::findOrFail($note->nuevo_tratamiento_itbms_rate_id)
+                : ($facturaOrigen->itbmsRate ?? ItbmsRateResolver::defaultRate());
+            $lines = self::correctedLines($facturaOrigen, $rate);
+
+            // Σ líneas == monto de la factura (que es el de la nota, ya calculado con estas mismas líneas
+            // al registrarla; si entre el registro y la ejecución algo cambió, la diferencia va a la base).
+            $diff = round((float) $note->monto - (float) array_sum(array_column($lines, 'total')), 2);
+            [$lines] = InvoiceLineMath::repartir($lines, 'subtotal', $diff);
+
+            foreach ($lines as $line) {
+                $facturaNueva->lines()->create($line + ['itbms_rate_id' => $rate->id]);
+            }
+        }
+
         $note->update(['factura_nueva_id' => $facturaNueva->id]);
+
+        // SCRUM-1183 — el dinero cobrado es del cliente: lo aplicado a la original (ya anulada) se asigna al reemplazo, hasta su monto.
+        $this->paymentTransfer->transfer(
+            $facturaOrigen, $facturaNueva, "Corrección de datos {$note->numero}: el pago pasa a {$facturaNueva->numero}", $note->aprobado_por ?? $note->registrado_por,
+        );
     }
 
     /**
@@ -863,16 +1258,101 @@ final class CreditNoteService
      */
     private function correccionContext(array $data, bool $lockForUpdate = false): array
     {
-        $query = AdminContInvoice::query()->with('itbmsRate');
+        $query = AdminContInvoice::query()->with('itbmsRate', 'lines');
         if ($lockForUpdate) {
             $query->lockForUpdate();
         }
-        /** @var AdminContInvoice $facturaOrigen */
-        $facturaOrigen = $query->whereNull('anulada_at')->findOrFail($data['factura_origen_id']);
+        /** @var AdminContInvoice|null $facturaOrigen */
+        $facturaOrigen = $query->whereNull('anulada_at')->find($data['factura_origen_id']);
+        if ($facturaOrigen === null) {
+            // SCRUM-1019 (menor de 957) — una factura ya anulada (o inexistente) no se corrige: 404 con mensaje en español
+            // (el controller lo traduce), en vez del 404 genérico "No query results for model" del framework.
+            throw (new ModelNotFoundException(self::MSG_FACTURA_NO_CORREGIBLE))->setModel(AdminContInvoice::class, [$data['factura_origen_id']]);
+        }
+
+        // SCRUM-929 (Senior Review B3a-3) — una `parcial` SIN líneas (hoy solo posible por datos manuales/
+        // seeders: `confirm()` siempre crea líneas para una parcial) caería a la ruta legada de
+        // `correctionBreakdown()` y se "corregiría" con el monto de la cotización ENTERA, inflando Σ del
+        // pedido muy por encima de lo que esa entrega factura. Fail closed en vez de adivinar.
+        if ($facturaOrigen->tipo === AdminContInvoice::TIPO_PARCIAL && $facturaOrigen->lines->isEmpty()) {
+            throw new CreditNoteStateException("La factura {$facturaOrigen->numero} es una entrega parcial sin detalle de líneas — no se puede corregir automáticamente. Contacte a Administración.");
+        }
+
+        // SCRUM-929 (Senior Review B3b, hallazgo ALTO 2026-09-19) — una segunda corrección registrada
+        // mientras la primera sigue `pendiente_aprobacion` sobre la MISMA factura queda condenada a
+        // fallar: cuando Mark aprueba la primera, la factura de origen se anula y nace su reemplazo: la
+        // segunda corrección, que sigue apuntando a la factura YA ANULADA, ahora se rechaza limpio en
+        // `decide()` (ver el `whereNull('anulada_at')` de esa consulta — B3a-1) en vez de un 500, pero
+        // sigue siendo una nota que nunca podrá aprobarse (Mark solo puede rechazarla y volver a
+        // registrarla contra el reemplazo). Se corta en el origen: no se admite una segunda corrección
+        // pendiente sobre una factura que ya tiene una sin resolver.
+        $pendientes = AdminContCreditNote::where('factura_origen_id', $facturaOrigen->id)
+            ->where('estado', AdminContCreditNote::ESTADO_PENDIENTE_APROBACION)
+            ->orderBy('id')
+            ->get(['numero', 'correccion_pendiente_aprobacion']);
+        if ($pendientes->isNotEmpty()) {
+            // Pre-QA SCRUM-1116 (obs. 2): el mensaje distingue una corrección pendiente de cualquier otra nota pendiente
+            // (descuento, devolución, anulación), que también bloquea corregir pero no es "una corrección".
+            throw new CreditNoteStateException(
+                $pendientes->contains(fn (AdminContCreditNote $n): bool => (bool) $n->correccion_pendiente_aprobacion)
+                    ? "La factura {$facturaOrigen->numero} ya tiene una corrección pendiente de aprobación de Mark — resuelve esa antes de registrar otra."
+                    : "La factura {$facturaOrigen->numero} tiene notas de crédito pendientes de aprobación de Mark ({$pendientes->pluck('numero')->implode(', ')}) — resuélvelas antes de corregirla."
+            );
+        }
+
+        // SCRUM-1009 (D1, decisión de Luis 2026-09-30) — una factura que YA tiene notas de crédito
+        // aplicadas no se corrige: la NC de anulación se calcula sobre el total original y no
+        // descuenta lo ya acreditado (la DGI la rechaza por saldo, VALIDATE_B606_BALANCE), y el
+        // reemplazo se emitiría por el total entero. Las `rechazada` por Mark no cuentan (nunca tuvieron
+        // efecto). Una NC aplicada en AtlanticERP pero rechazada por la DGI SÍ bloquea: hay que resolverla
+        // primero (Reintentar certificación). Las `pendiente_aprobacion` ya las cubre `$pendientes`.
+        $notasAplicadas = AdminContCreditNote::where('factura_origen_id', $facturaOrigen->id)
+            ->where('estado', AdminContCreditNote::ESTADO_APLICADA)
+            ->orderBy('id')
+            ->pluck('numero');
+        if ($notasAplicadas->isNotEmpty()) {
+            throw new CreditNoteStateException(
+                "La factura {$facturaOrigen->numero} ya tiene notas de crédito ({$notasAplicadas->implode(', ')}) — no se puede corregir. "
+                .'Resuélvelas primero, o acredita el saldo y emite una factura nueva.'
+            );
+        }
+
+        // SCRUM-1009 (Senior Review B1/S3) — dos configuraciones en las que la corrección no puede hacerse de forma
+        // fiscalmente segura, y se bloquean en vez de dejar la factura de reemplazo en un limbo:
+        //  · la original está `pendiente` de certificación (202 sin resolver): puede certificarse después y el
+        //    reemplazo la duplicaría ante la DGI — hay que esperar a que se resuelva.
+        //  · la FE está activa para facturas pero DESHABILITADA para notas de crédito: la NC de anulación quedaría
+        //    `no_aplica`, la original seguiría vigente ante la DGI y el reemplazo sí se certificaría (doble factura).
+        $settings = AdminContFiscalSettings::current();
+        if ($settings->pac_ambiente !== 'apagado') {
+            if ($facturaOrigen->fe_estado === 'pendiente') {
+                throw new CreditNoteStateException("La factura {$facturaOrigen->numero} todavía está pendiente de certificación ante la DGI — espera a que se resuelva antes de corregirla.");
+            }
+            // SCRUM-1009 (b) / SCRUM-1019 — la original figura rechazada / con error pero MSL puede YA tenerla (se certificó y la
+            // respuesta se perdió, o contestó 9022): la NC de anulación quedaría `no_aplica` (nada que anular según AtlanticERP) y el
+            // reemplazo se certificaría → DOBLE factura ante la DGI. Se bloquea hasta reconciliar con MSL.
+            if ($facturaOrigen->cufe === null && $settings->pac_doc_factura_habilitado
+                && in_array($facturaOrigen->fe_estado, ['rechazado', 'error_configuracion'], true)) {
+                $mslLaTiene = $this->certification->mslYaTieneLaFactura($facturaOrigen);
+                if ($mslLaTiene === true) {
+                    throw new CreditNoteStateException("MSL ya tiene la factura {$facturaOrigen->numero} aunque figura como {$facturaOrigen->fe_estado} — no se puede corregir. Usa «Reconciliar con MSL» en la factura para recuperar su CUFE y luego corrígela.");
+                }
+                if ($mslLaTiene === null) {
+                    throw new CreditNoteStateException("No se pudo verificar con MSL si la factura {$facturaOrigen->numero} ya existe ante la DGI — inténtalo de nuevo en unos minutos.");
+                }
+            }
+            if ($facturaOrigen->cufe !== null && $settings->pac_doc_factura_habilitado && ! $settings->pac_doc_nota_credito_habilitado) {
+                throw new CreditNoteStateException('No se puede corregir una factura ya certificada mientras las notas de crédito electrónicas estén deshabilitadas en Configuración Fiscal.');
+            }
+        }
 
         /** @var BodegaOrder $order */
         $order = BodegaOrder::findOrFail($facturaOrigen->order_id);
-        $quote = $order->linkedQuote();
+        // SCRUM-929 (B3a) — una factura con líneas se corrige desde SUS líneas (la cotización solo se usa
+        // para mostrar); se prefiere la cotización con la que se emitió (`quote_id`) a la vigente hoy.
+        $quote = $facturaOrigen->lines->isNotEmpty() && $facturaOrigen->quote_id !== null
+            ? (Quote::withIcgLegacy()->with('parts.items')->find($facturaOrigen->quote_id) ?? $order->linkedQuote())
+            : $order->linkedQuote();
         if ($quote === null) {
             throw new \RuntimeException("La factura {$facturaOrigen->numero} no tiene una cotización vinculada — no se puede armar la factura de corrección.");
         }
@@ -882,6 +1362,17 @@ final class CreditNoteService
             : $facturaOrigen->itbms_rate_id;
         /** @var AdminContItbmsRate $rate */
         $rate = AdminContItbmsRate::findOrFail($rateId);
+
+        // Guarda de la opción A (2026-10-05) — si la factura de origen ya está certificada ante la DGI, la NC de
+        // anulación se certificaría pero la factura de REEMPLAZO con una tasa sin código DGI (hoy la retención 3.5%)
+        // no podría emitirse: quedaría anulada fiscalmente sin reemplazo. Se rechaza ANTES de crear nada.
+        if ($facturaOrigen->cufe !== null) {
+            try {
+                (new ItbmsCodeMapper)->map($rate->porcentaje);
+            } catch (UnmappableItbmsRateException $e) {
+                throw new CreditNoteStateException('No se puede corregir a esta tasa: la factura ya está certificada ante la DGI y su reemplazo no se podría emitir. '.$e->getMessage());
+            }
+        }
 
         return [$facturaOrigen, $order, $quote, $rate];
     }
@@ -893,10 +1384,20 @@ final class CreditNoteService
      * tasa por defecto que usa `Quote::itbms()` — es exactamente el dato que "Corrección de datos"
      * puede estar corrigiendo.
      *
+     * SCRUM-929 (B3a) — si la factura de origen tiene `invoice_lines` (una `parcial`, o un `completo`
+     * emitido desde SCRUM-929), el desglose sale de ESAS líneas (`correctedLines()`), no de la
+     * cotización entera: una parcial de una entrega no se "corrige" al total del pedido.
+     *
      * @return array{subtotal: float, descuentos: float, itbms: float, total: float, items: list<array<string, mixed>>}
      */
-    private static function correctionBreakdown(Quote $quote, AdminContItbmsRate $rate): array
+    private static function correctionBreakdown(AdminContInvoice $facturaOrigen, Quote $quote, AdminContItbmsRate $rate): array
     {
+        if ($facturaOrigen->lines->isNotEmpty()) {
+            $quoteItems = $quote->parts->flatMap(fn ($part) => $part->items)->keyBy('id');
+
+            return InvoiceService::breakdownFromLines(self::correctedLines($facturaOrigen, $rate), $quoteItems, $quote);
+        }
+
         $breakdown = InvoiceService::fiscalBreakdown($quote);
 
         $itbms = round($quote->netTotal() * ($rate->porcentaje / 100), 2);
@@ -905,5 +1406,43 @@ final class CreditNoteService
         $breakdown['total'] = round($quote->netTotal() + $itbms, 2);
 
         return $breakdown;
+    }
+
+    /**
+     * Líneas de la factura de reemplazo: copia de las de la original. Si la corrección no cambia la tasa
+     * (`$rate` es la que la factura ya tenía: motivo "fecha"), se copian tal cual — mismo monto, así Σ
+     * facturas del pedido no se mueve. Si cambia la tasa, el ITBMS de cada línea se recalcula sobre su
+     * base (que no cambia) y el redondeo del ITBMS de la factura entera se reparte sin líneas negativas.
+     *
+     * @return list<array{quote_item_id: int|null, order_item_id: int|null, descripcion: string, cantidad: float, precio_unitario: float, subtotal: float, itbms: float, total: float}>
+     */
+    private static function correctedLines(AdminContInvoice $facturaOrigen, AdminContItbmsRate $rate): array
+    {
+        $lines = array_values($facturaOrigen->lines->map(fn ($l): array => [
+            'quote_item_id' => $l->quote_item_id,
+            'order_item_id' => $l->order_item_id,
+            'descripcion' => $l->descripcion,
+            'cantidad' => $l->cantidad,
+            'precio_unitario' => $l->precio_unitario,
+            'subtotal' => $l->subtotal,
+            'itbms' => $l->itbms,
+            'total' => $l->total,
+        ])->all());
+
+        if ($rate->id === (int) $facturaOrigen->itbms_rate_id) {
+            return $lines;
+        }
+
+        /** @var list<array{quote_item_id: int|null, order_item_id: int|null, descripcion: string, cantidad: float, precio_unitario: float, subtotal: float, itbms: float, total: float}> $lines */
+        $lines = array_map(static function (array $l) use ($rate): array {
+            $itbms = round($l['subtotal'] * $rate->porcentaje / 100, 2);
+
+            return [...$l, 'itbms' => $itbms, 'total' => round($l['subtotal'] + $itbms, 2)];
+        }, $lines);
+
+        $objetivo = round((float) array_sum(array_column($lines, 'subtotal')) * $rate->porcentaje / 100, 2);
+        [$lines] = InvoiceLineMath::repartir($lines, 'itbms', round($objetivo - (float) array_sum(array_column($lines, 'itbms')), 2));
+
+        return $lines;
     }
 }

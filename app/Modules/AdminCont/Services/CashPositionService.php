@@ -53,7 +53,8 @@ final class CashPositionService
 
         $entradas = (float) AdminContBankMovement::whereIn('bank_account_id', $activeAccountIds)
             ->where('tipo', AdminContBankMovement::TIPO_COBRO)->sum('monto');
-        $salidas = (float) AdminContBankMovement::whereIn('bank_account_id', $activeAccountIds)
+        // SCRUM-879 — las comisiones sin cuenta asignada igual salieron de la empresa.
+        $salidas = (float) AdminContBankMovement::realCashImpact($activeAccountIds)
             ->whereIn('tipo', [AdminContBankMovement::TIPO_DEVOLUCION, AdminContBankMovement::TIPO_COMISION])
             ->sum('monto');
 
@@ -271,7 +272,7 @@ final class CashPositionService
             ->where('tipo', AdminContBankMovement::TIPO_COBRO)
             ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
             ->sum('monto');
-        $salidas = (float) AdminContBankMovement::whereIn('bank_account_id', $activeAccountIds)
+        $salidas = (float) AdminContBankMovement::realCashImpact($activeAccountIds)
             ->whereIn('tipo', [AdminContBankMovement::TIPO_DEVOLUCION, AdminContBankMovement::TIPO_COMISION])
             ->whereBetween('fecha', [$desde->toDateString(), $hasta->toDateString()])
             ->sum('monto');
@@ -298,7 +299,7 @@ final class CashPositionService
         $since            = now()->subDays($windowDays)->startOfDay();
         $activeAccountIds = AdminContBankAccount::where('activa', true)->pluck('id');
 
-        $movements = AdminContBankMovement::whereIn('bank_account_id', $activeAccountIds)
+        $movements = AdminContBankMovement::realCashImpact($activeAccountIds)
             ->where('fecha', '>=', $since->toDateString())
             ->orderBy('fecha')->orderBy('id')
             ->get();

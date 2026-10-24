@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Models\User;
+use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
-use App\Modules\AdminCont\Models\AdminContCustomerCreditBalance;
+use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
+use App\Modules\AdminCont\Services\PaymentReceiptPdfService;
+use App\Modules\AdminCont\Support\PdfFooterText;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\UploadedFile;
@@ -63,16 +67,84 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         return ['master' => $master, 'invoice' => $invoice];
     }
 
+    // ── SCRUM-865 — filtro only_with_invoice, reusado por "Registrar nueva nota" ────────────────
+
+    public function test_clients_only_with_invoice_excluye_clientes_sin_ninguna_factura(): void
+    {
+        ['master' => $conFactura] = $this->makeClientWithInvoice(500);
+        $sinFactura = MasterClient::create(['name' => 'Cliente Sin Factura '.uniqid()]);
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/payments/clients?only_with_invoice=1')
+            ->assertStatus(200);
+
+        $ids = array_column($response->json('data'), 'id');
+        $this->assertContains($conFactura->id, $ids);
+        $this->assertNotContains($sinFactura->id, $ids);
+    }
+
+    public function test_clients_sin_only_with_invoice_incluye_todos_los_clientes(): void
+    {
+        ['master' => $conFactura] = $this->makeClientWithInvoice(500);
+        $sinFactura = MasterClient::create(['name' => 'Cliente Sin Factura '.uniqid()]);
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/payments/clients')
+            ->assertStatus(200);
+
+        $ids = array_column($response->json('data'), 'id');
+        $this->assertContains($conFactura->id, $ids);
+        $this->assertContains($sinFactura->id, $ids);
+    }
+
+    // ── SCRUM-905 — only_with_pending_invoice, más angosto que only_with_invoice, usado por
+    //    "Registrar nuevo cobro" (independiente de SCRUM-865, nunca reusar uno para el otro) ────
+
+    public function test_clients_only_with_pending_invoice_excluye_clientes_sin_nada_pendiente(): void
+    {
+        ['master' => $conPendiente] = $this->makeClientWithInvoice(500, saldoAplicado: 0);
+        ['master' => $yaSaldado] = $this->makeClientWithInvoice(500, saldoAplicado: 500);
+        $sinFactura = MasterClient::create(['name' => 'Cliente Sin Factura '.uniqid()]);
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/payments/clients?only_with_pending_invoice=1')
+            ->assertStatus(200);
+
+        $ids = array_column($response->json('data'), 'id');
+        $this->assertContains($conPendiente->id, $ids);
+        $this->assertNotContains($yaSaldado->id, $ids, 'Cliente con factura 100% cobrada no tiene nada pendiente.');
+        $this->assertNotContains($sinFactura->id, $ids);
+    }
+
+    public function test_clients_only_with_invoice_no_excluye_cliente_ya_saldado(): void
+    {
+        // SCRUM-905 — confirma que los 2 flags son independientes: only_with_invoice (SCRUM-865)
+        // sigue incluyendo un cliente sin nada pendiente, a diferencia de only_with_pending_invoice.
+        ['master' => $yaSaldado] = $this->makeClientWithInvoice(500, saldoAplicado: 500);
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/payments/clients?only_with_invoice=1')
+            ->assertStatus(200);
+
+        $this->assertContains($yaSaldado->id, array_column($response->json('data'), 'id'));
+    }
+
     // ── Gate de permisos — REQ-463 es más angosto (sin Yaneth) que el resto del batch ──────────
 
-    public function test_summary_visible_para_felix_mark_pero_no_yaneth(): void
+    /**
+     * Corrección SCRUM-881 (Daniela, 2026-09-09) — REQ-463 originalmente excluía a Yaneth de las
+     * tarjetas de indicadores de Cobros ("Visible para Felix, Mark y Gerencia"), inconsistente con
+     * el resto del módulo donde Yaneth sí tiene el mismo alcance que Felix (ella veía el Historial
+     * de cobros completo pero las 4 tarjetas en guion). Se corrige el gate de ruta para incluirla.
+     */
+    public function test_summary_visible_para_felix_mark_y_yaneth(): void
     {
         $this->withHeaders($this->authHeaders($this->loginAsFelix()))
             ->getJson('/api/admin-contab/payments/summary')->assertStatus(200);
         $this->withHeaders($this->authHeaders($this->loginAsMark()))
             ->getJson('/api/admin-contab/payments/summary')->assertStatus(200);
         $this->withHeaders($this->authHeaders($this->loginAsYaneth()))
-            ->getJson('/api/admin-contab/payments/summary')->assertStatus(403);
+            ->getJson('/api/admin-contab/payments/summary')->assertStatus(200);
     }
 
     public function test_open_invoices_si_visible_para_yaneth(): void
@@ -185,17 +257,36 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         ]);
     }
 
+    /** SCRUM-902 §4.4 — reemplaza `AdminContCustomerCreditBalance` (retirado) por un Abono nivel Cliente confirmado. */
+    private function makeAbonoNivelCliente(int $masterClientId, float $monto): AdminContAbono
+    {
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '9999']);
+
+        return AdminContAbono::create([
+            'master_client_id' => $masterClientId,
+            'monto_original' => $monto,
+            'monto_usado' => 0,
+            'metodo_pago' => 'transferencia',
+            'cuenta_bancaria_id' => $account->id,
+            'referencia' => 'TRF-SALDO-TEST',
+            'estado' => AdminContAbono::ESTADO_CONFIRMADO,
+            'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'),
+            'fecha_registro' => now(),
+            'fecha_confirmacion' => now(),
+        ]);
+    }
+
     public function test_register_aplica_saldo_a_favor_y_reduce_monto_recibido(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        AdminContCustomerCreditBalance::create(['master_client_id' => $master->id, 'saldo' => 500]);
+        $this->makeAbonoNivelCliente($master->id, 500);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         // Efectivo (confirma de inmediato, REQ-469 RN3) — `transferencia` ya no consume el saldo a
         // favor al registrar, ver bloque REQ-469 (RN5 diferido hasta la confirmación, Batch 7).
         $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
-            'aplicar_saldo_favor' => true, 'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id,
+            'monto_saldo_cliente_aplicado' => 500, 'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id,
             'monto_recibido_estimado' => 5700,
         ])->assertStatus(201);
 
@@ -203,17 +294,18 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $this->assertSame(500.0, (float) $response->json('saldo_favor_aplicado'));
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $this->assertSame(0.0, (float) AdminContCustomerCreditBalance::where('master_client_id', $master->id)->value('saldo'));
+        $abono = AdminContAbono::where('master_client_id', $master->id)->first();
+        $this->assertSame(0.0, $abono->montoDisponible());
     }
 
     public function test_register_saldo_favor_cubre_100_por_ciento_no_exige_cuenta_bancaria(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        AdminContCustomerCreditBalance::create(['master_client_id' => $master->id, 'saldo' => 6200]);
+        $this->makeAbonoNivelCliente($master->id, 6200);
 
         $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
-            'aplicar_saldo_favor' => true, 'metodo_pago' => 'transferencia',
+            'monto_saldo_cliente_aplicado' => 6200, 'metodo_pago' => 'transferencia',
             'monto_recibido_estimado' => 0,
         ])->assertStatus(201);
 
@@ -221,6 +313,23 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $this->assertNull($response->json('bank_account_id'));
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseCount("{$slug}_admin_contab.bank_movements", 0);
+    }
+
+    /** SCRUM-902 §4.4 Escenario 8 — el backend nunca confía en el monto que mande el HTTP: si
+     *  supera el disponible real, 422 con el mensaje exacto del ticket. */
+    public function test_register_rechaza_monto_de_saldo_cliente_mayor_al_disponible(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
+        $this->makeAbonoNivelCliente($master->id, 400);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '2222']);
+
+        $this->withHeaders($this->authHeaders($this->loginAsFelix()))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'monto_saldo_cliente_aplicado' => 500, 'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id,
+            'monto_recibido_estimado' => 5700,
+        ])
+            ->assertStatus(422)
+            ->assertJson(['message' => 'El monto ingresado supera el saldo a favor disponible de $400.00.']);
     }
 
     public function test_register_sin_cuenta_bancaria_cuando_monto_es_mayor_a_cero_falla(): void
@@ -514,6 +623,67 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $this->assertSame(2200.0, (float) $invoiceB->refresh()->saldo_aplicado);
     }
 
+    // ── Rebote Pre-QA (SCRUM-858) — factura ya saldada rechaza el cobro ─────────────────────────
+
+    public function test_register_sobre_factura_ya_saldada_falla_422(): void
+    {
+        // saldo_aplicado === monto → factura 100% cubierta, mismo criterio de `puede_registrar_cobro`.
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(500, 500);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 0,
+        ])->assertStatus(422);
+
+        $this->assertNotEmpty($response->json('message'));
+
+        // No debe haber consumido folio ni creado el pago de $0.
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $this->assertDatabaseCount("{$slug}_admin_contab.payments", 0);
+        $this->assertSame(500.0, (float) $invoice->refresh()->saldo_aplicado);
+    }
+
+    public function test_register_sobre_factura_con_saldo_parcial_sigue_permitido(): void
+    {
+        // saldo_aplicado (200) < monto (500) → todavía pendiente, no debe verse afectado por el
+        // guard nuevo (no regresión del camino ya cubierto por otros tests de este bloque).
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(500, 200);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 300,
+        ])->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame(500.0, (float) $invoice->refresh()->saldo_aplicado);
+    }
+
+    public function test_register_con_una_factura_saldada_entre_varias_rechaza_todo_el_lote(): void
+    {
+        // Una sola factura ya saldada dentro de un lote de varias debe rechazar el cobro completo
+        // (nunca registrar parcialmente sobre las demás).
+        ['master' => $master, 'invoice' => $invoiceOpen] = $this->makeClientWithInvoice(500);
+        $invoicePaid = AdminContInvoice::create([
+            'numero' => 'F-PAID2', 'order_id' => self::uniqueTestNumber(), 'master_client_id' => $master->id,
+            'cliente' => $master->name, 'monto' => 300, 'saldo_aplicado' => 300,
+        ]);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoiceOpen->id, $invoicePaid->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 500,
+        ])->assertStatus(422);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame(0.0, (float) $invoiceOpen->refresh()->saldo_aplicado);
+    }
+
     // ── REQ-463 — 4 tarjetas del mes ─────────────────────────────────────────────────────────
 
     public function test_summary_calcula_total_cantidad_promedio_y_metodo_principal(): void
@@ -616,22 +786,378 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             ->assertStatus(404);
     }
 
-    // ── REQ-475 — confirmación manual ────────────────────────────────────────────────────────
+    // ── SCRUM-936 (PQ-928-2, hallazgo de Pre-QA de SCRUM-928 fuera de su alcance original) ──────
+    // El Recibo de pago es un documento que recibe el cliente — nunca debe mostrar la cuenta
+    // enmascarada (****XXXX), mismo criterio D-6 ya aplicado en Factura/Estado de Cuenta por
+    // SCRUM-928. Smoke test contra el endpoint real (wiring de pdf()) + tests de contenido
+    // bypasseando dompdf, mismo patrón que test_pdf_del_recibo_no_duplica_el_escape_de_comillas_...
+    // arriba — dompdf comprime el stream de texto, no es buscable como string plano en el binario.
 
-    public function test_confirm_aplica_saldo_de_factura_saldo_favor_y_ledger_bancario(): void
+    public function test_pdf_del_recibo_no_se_rompe_con_cuenta_sin_numero_completo_cargado(): void
     {
-        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        AdminContCustomerCreditBalance::create(['master_client_id' => $master->id, 'saldo' => 500]);
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
         $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
-            'aplicar_saldo_favor' => true, 'metodo_pago' => 'transferencia', 'bank_account_id' => $account->id,
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->get('/api/admin-contab/payments/'.$created->json('id').'/pdf')
+            ->assertStatus(200);
+    }
+
+    public function test_pdf_del_recibo_muestra_numero_de_cuenta_completo_y_nunca_asteriscos(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
+        $account = AdminContBankAccount::create([
+            'banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE,
+            'ultimos_4_digitos' => '1111', 'numero_cuenta_completo' => '04-72-99-123456-1',
+        ]);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/payments/'.$created->json('id'))
+            ->assertStatus(200)->json();
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+
+        // La misma línea que ejecuta AdminContPaymentController::pdf() antes de generar el PDF —
+        // presentDetail() (show(), arriba) se mantiene enmascarado a propósito, solo el PDF pisa
+        // esta clave puntual.
+        $detail['bank_account'] = $account->fresh()->receiptLabel();
+
+        $html = view(
+            'admin-cont.payment-receipt-pdf',
+            app(PaymentReceiptPdfService::class)->viewData($detail),
+        )->render();
+
+        $this->assertStringContainsString('Cuenta destino: Banco General — corriente 04-72-99-123456-1', $html);
+        $this->assertStringNotContainsString('****', $html);
+    }
+
+    public function test_pdf_del_recibo_muestra_guion_cuando_no_hay_numero_de_cuenta_completo(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/payments/'.$created->json('id'))
+            ->assertStatus(200)->json();
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $detail['bank_account'] = $account->fresh()->receiptLabel();
+
+        $html = view(
+            'admin-cont.payment-receipt-pdf',
+            app(PaymentReceiptPdfService::class)->viewData($detail),
+        )->render();
+
+        $this->assertStringContainsString('Cuenta destino: Banco General — corriente -', $html);
+        $this->assertStringNotContainsString('****', $html);
+    }
+
+    public function test_label_sigue_enmascarado_para_selectores_internos(): void
+    {
+        $account = AdminContBankAccount::create([
+            'banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE,
+            'ultimos_4_digitos' => '4554', 'numero_cuenta_completo' => '04-72-99-123456-1',
+        ]);
+
+        $this->assertSame('Banco General — corriente ****4554', $account->label());
+        $this->assertSame('Banco General — corriente 04-72-99-123456-1', $account->receiptLabel());
+    }
+
+    // Rebote de QA (SCRUM-858, marly.rangel 2026-09-08) — sin RUC cargado en Configuración Fiscal,
+    // el PDF no debe romperse (antes mostraba "RUC -" en el header; el guard nuevo simplemente
+    // oculta la línea, ver payment-receipt-pdf.blade.php).
+    public function test_pdf_del_recibo_no_se_rompe_sin_ruc_cargado(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        AdminContFiscalSettings::current()->update(['ruc' => '', 'dv' => '']);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->get('/api/admin-contab/payments/'.$created->json('id').'/pdf')
+            ->assertStatus(200);
+    }
+
+    // ── SCRUM-550 (rebote de Daniela, 2026-09-10) — RUC/contacto de empresa, saldo a favor, y
+    // eliminación de la línea de confirmación en el recibo de cobro ────────────────────────────
+
+    public function test_pdf_del_recibo_muestra_ruc_y_contacto_de_la_empresa(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        AdminContFiscalSettings::current()->update([
+            'ruc' => '155646789-2-2019', 'dv' => '44',
+            'telefono_contacto' => '+507 6000-9999', 'correo_contacto' => 'facturacion@atlantic.com.pa',
+        ]);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/payments/'.$created->json('id'))
+            ->assertStatus(200)->json();
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $html = view(
+            'admin-cont.payment-receipt-pdf',
+            app(PaymentReceiptPdfService::class)->viewData($detail),
+        )->render();
+
+        $this->assertStringContainsString('RUC 155646789-2-2019-44', $html);
+        $this->assertStringContainsString('+507 6000-9999', $html);
+        $this->assertStringContainsString('facturacion@atlantic.com.pa', $html);
+    }
+
+    public function test_pdf_del_recibo_omite_bloque_de_saldo_a_favor_cuando_no_aplica(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/payments/'.$created->json('id'))
+            ->assertStatus(200)->json();
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $html = view(
+            'admin-cont.payment-receipt-pdf',
+            app(PaymentReceiptPdfService::class)->viewData($detail),
+        )->render();
+
+        $this->assertStringNotContainsString('Saldo a favor aplicado', $html);
+        $this->assertStringNotContainsString('Total facturas', $html);
+    }
+
+    public function test_pdf_del_recibo_muestra_saldo_a_favor_aplicado_y_total_facturas_antes(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
+        $this->makeAbonoNivelCliente($master->id, 500);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        // Efectivo confirma de inmediato (RN3) — no hace falta el paso de confirm() para este caso.
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'monto_saldo_cliente_aplicado' => 500, 'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id,
+            'monto_recibido_estimado' => 5700,
+        ])->assertStatus(201);
+        $this->assertSame(500.0, (float) $created->json('saldo_favor_aplicado'));
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/payments/'.$created->json('id'))
+            ->assertStatus(200)->json();
+        $this->assertSame(6200.0, (float) $detail['total_facturas'], 'Total de facturas ANTES de aplicar el saldo a favor.');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $html = view(
+            'admin-cont.payment-receipt-pdf',
+            app(PaymentReceiptPdfService::class)->viewData($detail),
+        )->render();
+
+        $this->assertStringContainsString('Saldo a favor aplicado', $html);
+        $this->assertStringContainsString('Total facturas', $html);
+        $this->assertStringContainsString('6,200.00', $html, 'Total de facturas antes de aplicar el saldo a favor.');
+        $this->assertStringContainsString('500.00', $html, 'Monto de saldo a favor aplicado.');
+        $this->assertStringContainsString('5,700.00', $html, 'Total recibido final, ya con el saldo a favor aplicado.');
+    }
+
+    public function test_pdf_del_recibo_nunca_muestra_la_linea_de_confirmacion(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'transferencia', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+        $paymentId = (int) $created->json('id');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/payments/{$paymentId}/confirm")
+            ->assertStatus(200);
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/payments/{$paymentId}")
+            ->assertStatus(200)->json();
+        $this->assertNotNull($detail['confirmacion'], 'El detalle sigue trayendo la confirmación — solo el PDF la elimina.');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $html = view(
+            'admin-cont.payment-receipt-pdf',
+            app(PaymentReceiptPdfService::class)->viewData($detail),
+        )->render();
+
+        $this->assertStringNotContainsString('Confirmación CONF-', $html);
+        $this->assertStringNotContainsString((string) $detail['confirmacion']['numero_confirmacion'], $html);
+    }
+
+    /**
+     * RN2 — el recibo de un cobro "Esperando confirmación" debe mostrar ese estado de forma
+     * visible, nunca "Confirmado". Daniela no pudo validarlo con la evidencia que tenía a mano
+     * (su cobro de prueba ya estaba confirmado) — este test lo cubre en vivo con un cobro real en
+     * ese estado (transferencia, arranca `esperando_confirmacion` por RN2 de REQ-469).
+     */
+    public function test_pdf_del_recibo_esperando_confirmacion_muestra_estado_visible_no_confirmado(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'transferencia', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+        $this->assertSame('esperando_confirmacion', $created->json('estado'));
+
+        // También debe seguir sirviendo un PDF válido vía el endpoint real, sin romperse.
+        $this->withHeaders($this->authHeaders($token))
+            ->get('/api/admin-contab/payments/'.$created->json('id').'/pdf')
+            ->assertStatus(200);
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/payments/'.$created->json('id'))
+            ->assertStatus(200)->json();
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $html = view(
+            'admin-cont.payment-receipt-pdf',
+            app(PaymentReceiptPdfService::class)->viewData($detail),
+        )->render();
+
+        $this->assertStringContainsString('estado-pill esperando_confirmacion', $html);
+        $this->assertStringContainsString('Esperando confirmación', $html);
+        $this->assertStringNotContainsString('Confirmado', $html, 'Nunca debe mostrar "Confirmado" mientras espera confirmación.');
+    }
+
+    // Pre-QA (2026-09-09) — encontrado en vivo contra dev.atlanticerp.ai al poblar Configuración Fiscal
+    // con una comilla (justamente para probar el escaping): el PDF mostraba literalmente
+    // "Corp\&#039;s" en el pie de página en vez de "Corp's". PdfFooterText::forFiscal() ya hacía
+    // addslashes() para el contexto de <script type="text/php"> de dompdf, pero
+    // payment-receipt-pdf.blade.php interpolaba el resultado con {{ }} (htmlspecialchars),
+    // aplicando un segundo escape sobre uno que ya estaba hecho. El test anterior
+    // (test_pdf_del_recibo_no_se_rompe_sin_ruc_cargado) solo afirmaba HTTP 200 — nunca hubiera
+    // agarrado esto (dompdf degrada en silencio, nunca tira 500 ahí). Este test renderiza la vista
+    // Blade directamente (sin pasar por dompdf/PDF binario) para verificar el HTML/PHP que
+    // realmente se genera, mismo criterio que QuotePdfLayoutEstimatorTest (tests/Unit).
+    public function test_pdf_del_recibo_no_duplica_el_escape_de_comillas_en_el_pie_de_pagina(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        AdminContFiscalSettings::current()->update([
+            'nombre_comercial' => "Atlantic USA Corp's",
+            'direccion_fiscal' => 'Calle 57 Este, Panama',
+        ]);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id, 'monto_recibido_estimado' => 100,
+        ])->assertStatus(201);
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/payments/'.$created->json('id'))
+            ->assertStatus(200)
+            ->json();
+
+        // Las llamadas HTTP simuladas de arriba (withHeaders()->postJson()/getJson()) resetean el
+        // search_path del tenant al terminar cada request-cycle simulado — sin esto, la llamada
+        // directa a AdminContFiscalSettings::current() (vía viewData()) de abajo falla con
+        // "relation fiscal_settings does not exist" (busca en el schema public).
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+
+        $viewData = app(PaymentReceiptPdfService::class)->viewData($detail);
+        $html = view('admin-cont.payment-receipt-pdf', $viewData)->render();
+
+        // Scope al bloque <script type="text/php"> del pie de página — la línea "empresa-nombre"
+        // del header SÍ debe seguir usando {{ }} normal (HTML-escapado correctamente ahí, un
+        // "&#039;" legítimo en ese contexto no es el bug: dompdf lo decodifica de vuelta a un
+        // apóstrofe visible como cualquier otro texto HTML).
+        $this->assertStringContainsString('<script type="text/php">', $html);
+        $footerScript = substr($html, (int) strpos($html, '<script type="text/php">'));
+        $this->assertStringContainsString('$companyText = "Atlantic USA Corp\'s - Calle 57 Este, Panama - www.atlantic.com.pa";', $footerScript);
+        $this->assertStringNotContainsString('&#039;', $footerScript);
+    }
+
+    // Hallazgo real al re-verificar SCRUM-858 en dev.atlanticerp.ai (2026-09-08) — la pantalla de
+    // Configuración Fiscal (exclusiva de Mark) nunca se llenó en NINGÚN entorno (dev/test/prod,
+    // confirmado por tinker en vivo); `nombre_comercial`/`direccion_fiscal` quedan en '' por
+    // default de la migración. Sin el fallback de PdfFooterText, el encabezado/pie del recibo
+    // salían en blanco (nunca "AtlanticERP", pero tampoco "Atlantic") — que es lo que marly vio y
+    // reportó como "el pie de página real no se ve". Fix es a nivel de dato (Mark debe cargar la
+    // config real, ticket de seguimiento pendiente), pero el código nunca debe mostrar un
+    // encabezado/pie vacío mientras tanto. Prueba pura sobre PdfFooterText — sin tocar DB/tenant,
+    // no necesita el modelo persistido, solo su forma.
+    // Pre-QA (2026-09-09) — el pie de página con AdminContFiscalSettings vacío (el estado real
+    // hoy en dev/test/prod) debe mostrar el mismo texto estándar completo ya hardcodeado en
+    // quote-pdf.blade.php/service-quote-pdf.blade.php ("ATLANTIC USA CORP - Calle 57
+    // Este..."), no solo "Atlantic" a secas — eso incumplía el criterio literal del ticket
+    // (SCRUM-858 AC #4) y la consistencia visual pedida contra cotizaciones (AC #6). El nombre de
+    // marca en el encabezado (companyName(), usado en la línea "empresa-nombre" del header, no en
+    // el pie) sigue cayendo a "Atlantic" a secas — ver PdfFooterTextTest para el detalle
+    // completo del fallback.
+    public function test_pdf_footer_text_usa_el_pie_de_pagina_estandar_cuando_configuracion_fiscal_esta_vacia(): void
+    {
+        $fiscal = new AdminContFiscalSettings(['nombre_comercial' => '', 'direccion_fiscal' => '']);
+
+        $this->assertSame('Atlantic', PdfFooterText::companyName($fiscal));
+        $this->assertSame(
+            'ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza - Obarrio, Panama - www.atlantic.com.pa',
+            PdfFooterText::forFiscal($fiscal)
+        );
+    }
+
+    // ── REQ-475 — confirmación manual ────────────────────────────────────────────────────────
+
+    public function test_confirm_aplica_saldo_de_factura_saldo_favor_y_ledger_bancario(): void
+    {
+        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
+        $abono = $this->makeAbonoNivelCliente($master->id, 500);
+        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $token = $this->loginAsFelix();
+
+        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
+            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
+            'monto_saldo_cliente_aplicado' => 500, 'metodo_pago' => 'transferencia', 'bank_account_id' => $account->id,
             'monto_recibido_estimado' => 5700,
         ])->assertStatus(201);
         $paymentId = (int) $created->json('id');
         $this->assertSame('esperando_confirmacion', $created->json('estado'));
+
+        // El abono todavía NO se consumió — diferido hasta confirm() (RN5 de REQ-469, mismo
+        // criterio ya establecido para saldo_aplicado/bank_movements).
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame(500.0, $abono->refresh()->montoDisponible());
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/payments/{$paymentId}/confirm")
@@ -643,7 +1169,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(6200.0, (float) $invoice->refresh()->saldo_aplicado);
-        $this->assertSame(0.0, (float) AdminContCustomerCreditBalance::where('master_client_id', $master->id)->value('saldo'));
+        $this->assertSame(0.0, $abono->refresh()->montoDisponible());
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas("{$slug}_admin_contab.bank_movements", [
             'bank_account_id' => $account->id, 'tipo' => 'cobro', 'monto' => 5700,
@@ -761,5 +1287,30 @@ class AdminContPaymentControllerTest extends FeatureTestCase
                 'file' => UploadedFile::fake()->create('constancia.pdf', 100, 'application/pdf'),
             ])
             ->assertStatus(422);
+    }
+
+    // ── SCRUM-947 — paginación estándar ─────────────────────────────────────────────────────
+
+    public function test_historial_pagina_20_por_defecto_sin_afectar_total_global(): void
+    {
+        for ($i = 0; $i < 25; $i++) {
+            AdminContPayment::create([
+                'numero_recibo' => 'REC-PAG-'.$i, 'master_client_id' => 1, 'monto_recibido' => 100, 'saldo_favor_aplicado' => 0,
+                'metodo_pago' => AdminContPayment::METODO_EFECTIVO, 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
+            ]);
+        }
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/payments')
+            ->assertStatus(200)->json();
+
+        $this->assertCount(20, $response['rows']);
+        $this->assertSame(25, $response['total']);
+        $this->assertSame(['total' => 25, 'per_page' => 20, 'current_page' => 1, 'last_page' => 2], $response['meta']);
+
+        $page2 = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/payments?page=2')
+            ->assertStatus(200)->json();
+        $this->assertCount(5, $page2['rows']);
     }
 }

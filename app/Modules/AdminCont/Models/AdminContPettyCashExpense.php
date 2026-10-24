@@ -7,6 +7,7 @@ namespace App\Modules\AdminCont\Models;
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class AdminContPettyCashExpense extends Model
 {
+    use LogsAuditTrail;
+
     public const ESTADO_PENDIENTE = 'pendiente';
 
     /** REQ-537 RN3 — "Rechazado (1/2)", primer rechazo, todavía puede corregirse. */

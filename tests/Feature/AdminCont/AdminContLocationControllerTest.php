@@ -23,7 +23,7 @@ class AdminContLocationControllerTest extends FeatureTestCase
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
-    public function test_index_incluye_las_7_bodegas_oficiales_como_solo_lectura(): void
+    public function test_index_incluye_las_ubicaciones_oficiales_de_atlantic_como_solo_lectura(): void
     {
         $token = $this->loginAsMark();
 
@@ -32,9 +32,12 @@ class AdminContLocationControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json())->pluck('nombre')->all();
-        foreach (['Bodega Central', 'Bodega Zona Libre', 'Showroom Obarrio', 'Showroom SM', 'Showroom Cliente', 'Merma', 'Reclamos y Devoluciones'] as $expected) {
+        foreach (['Bodega Central', 'Showroom Obarrio', 'Showroom SM', 'Showroom Cliente', 'Merma', 'Reclamos y Devoluciones'] as $expected) {
             $this->assertContains($expected, $names, "Falta la ubicación oficial: {$expected}");
         }
+
+        // SCRUM-990: Zona Libre es de solo consulta (catálogo de Lafayette) y ya no es una ubicación de Atlantic.
+        $this->assertNotContains('Bodega Zona Libre', $names);
 
         $showroom = collect($response->json())->firstWhere('nombre', 'Showroom Obarrio');
         $this->assertSame('showroom', $showroom['tipo']);

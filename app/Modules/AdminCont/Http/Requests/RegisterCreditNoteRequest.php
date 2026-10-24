@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Requests;
 
 use App\Modules\AdminCont\Models\AdminContCreditNote;
-use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
+use App\Modules\AdminCont\Services\CreditableBalanceService;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,9 +19,14 @@ use Illuminate\Validation\Rule;
  * - REQ-484 RN2: `resultado` obligatorio cuando el monto efectivo supera el saldo pendiente de la
  *   factura de origen; `cuenta_bancaria_salida_id` obligatorio solo cuando `resultado=devuelto`.
  * - REQ-485 RN2: `motivo` siempre obligatorio. `monto` obligatorio salvo en Anulación completa
- *   (ahí el service lo recalcula del total de la factura, ignorando cualquier valor mandado).
- * - REQ-487 RN1/RN2: `comprobante` obligatorio en Anulación completa o monto>umbral — EXCEPTO en
- *   Devolución de mercancía, donde nunca es obligatorio (RN2 pisa a RN1).
+ *   (ahí el service lo recalcula como el valor que AÚN se puede acreditar de la factura — el total si no hay
+ *   notas previas, menos las notas aplicadas o pendientes si las hay —, ignorando cualquier valor mandado).
+ * - SCRUM-1116 RN3/RN4: sin nada por acreditar no hay Anulación completa, y en ningún tipo el monto puede superar lo
+ *   que aún se puede acreditar (ver `CreditableBalanceService`). Se valida acá ANTES de abrir la transacción para que
+ *   el 422 salga rápido; `CreditNoteService::register()` lo vuelve a comprobar bajo el bloqueo de la factura.
+ * - `comprobante` siempre obligatorio, para cualquier tipo (SCRUM-865 punto 3 — reemplaza la regla
+ *   condicional original de REQ-487 RN1/RN2, que solo lo exigía en Anulación completa o
+ *   monto>umbral y nunca en Devolución de mercancía).
  *
  * El subtipo "Corrección de datos" (REQ-480) queda explícitamente rechazado — su submit real
  * (crear la factura nueva) es Batch 12, no este.
@@ -42,21 +47,29 @@ class RegisterCreditNoteRequest extends FormRequest
         $facturaOrigen = is_numeric($facturaOrigenId) ? AdminContInvoice::find((int) $facturaOrigenId) : null;
 
         $montoInput = is_numeric($this->input('monto')) ? (float) $this->input('monto') : 0.0;
+        // SCRUM-1116 — una Anulación completa es por lo que AÚN se puede acreditar (no por el total de la factura): si no,
+        // con una nota previa se calculaba un "excedente" inexistente y se pedía elegir devuelto / saldo a favor.
+        $acreditable = $facturaOrigen !== null ? app(CreditableBalanceService::class)->valorAcreditableRestante($facturaOrigen) : 0.0;
         $montoEfectivo = $tipo === AdminContCreditNote::TIPO_ANULACION_COMPLETA && $facturaOrigen !== null
-            ? $facturaOrigen->monto
+            ? $acreditable
             : $montoInput;
 
         $saldoPendiente = $facturaOrigen !== null
             ? round($facturaOrigen->monto - $facturaOrigen->saldo_aplicado, 2)
             : 0.0;
-        $hayExcedente = $facturaOrigen !== null && round($montoEfectivo - $saldoPendiente, 2) > 0;
+        // Un monto que ya supera lo acreditable se rechaza por `monto` (ver `validarValorAcreditable`): no tiene sentido pedir además
+        // "resultado" por un excedente que nunca se va a registrar (Pre-QA SCRUM-1116, obs. 1).
+        $hayExcedente = $facturaOrigen !== null
+            && round($montoEfectivo - $acreditable, 2) <= 0
+            && round($montoEfectivo - $saldoPendiente, 2) > 0;
 
-        $threshold = (float) AdminContFiscalSettings::current()->primary_approval_threshold;
-
-        // REQ-487 RN1/RN2 — la devolución nunca lo exige, sin importar tipo/monto. Predicado
-        // compartido con `CreditNoteService::decide()` (Batch 13, RN2 de REQ-494) — ver docblock
-        // del método en el modelo, nunca replicar esta regla a mano en otro lado.
-        $requiereComprobante = AdminContCreditNote::requiresComprobante($tipo, $montoEfectivo, $threshold);
+        // SCRUM-865 punto 3 — antes condicional (REQ-487 RN1/RN2: solo Anulación completa o
+        // monto>umbral, NUNCA en Devolución de mercancía). Ahora obligatorio siempre, para
+        // cualquier tipo — regla de negocio nueva y explícita (trazabilidad: "no queda evidencia
+        // de soporte de por qué se hizo cada nota"), reemplaza la condición de REQ-487 en el
+        // registro. `AdminContCreditNote::requiresComprobante()` se deja intacta — sigue siendo el
+        // gate defensivo de `CreditNoteService::decide()` para notas históricas que quedaron sin
+        // comprobante antes de este cambio.
 
         return [
             'master_client_id' => ['required', 'integer'],
@@ -90,10 +103,7 @@ class RegisterCreditNoteRequest extends FormRequest
                 Rule::requiredIf($hayExcedente && $this->input('resultado') === AdminContCreditNote::RESULTADO_DEVUELTO),
                 'nullable', 'integer',
             ],
-            'comprobante' => [
-                Rule::requiredIf($requiereComprobante),
-                'nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240',
-            ],
+            'comprobante' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
             'mercancia_regresa_bodega' => ['sometimes', 'boolean'],
             'devolucion_bodega_id' => ['sometimes', 'nullable', 'integer'],
         ];
@@ -102,6 +112,8 @@ class RegisterCreditNoteRequest extends FormRequest
     public function withValidator(ValidatorContract $validator): void
     {
         $validator->after(function (ValidatorContract $v): void {
+            $this->validarValorAcreditable($v);
+
             if ($this->input('subtipo_anulacion') === AdminContCreditNote::SUBTIPO_CORRECCION) {
                 $v->errors()->add(
                     'subtipo_anulacion',
@@ -109,5 +121,44 @@ class RegisterCreditNoteRequest extends FormRequest
                 );
             }
         });
+    }
+
+    /**
+     * SCRUM-1116 RN3/RN4 — validación previa contra el valor que aún se puede acreditar de la factura. Misma regla y
+     * mismos mensajes que `CreditNoteService::register()` (que la repite bajo el bloqueo de la factura).
+     */
+    private function validarValorAcreditable(ValidatorContract $v): void
+    {
+        $facturaId = $this->input('factura_origen_id');
+        $factura = is_numeric($facturaId) ? AdminContInvoice::find((int) $facturaId) : null;
+        if ($factura === null) {
+            return; // la regla `exists` ya reportó el problema
+        }
+
+        $creditable = app(CreditableBalanceService::class);
+        $acreditable = $creditable->valorAcreditableRestante($factura);
+
+        if ($this->input('tipo') === AdminContCreditNote::TIPO_ANULACION_COMPLETA) {
+            if ($acreditable <= 0.0) {
+                $v->errors()->add('factura_origen_id', $creditable->mensajeSinSaldo($factura->numero));
+            }
+
+            return;
+        }
+
+        $monto = $this->input('monto');
+        if (! is_numeric($monto) || $v->errors()->has('monto')) {
+            return; // el monto ya es inválido por otra regla
+        }
+
+        if (round((float) $monto - $acreditable, 2) > 0.0) {
+            $v->errors()->add('monto', $creditable->mensajeExceso(
+                $factura->numero,
+                (float) $monto,
+                $acreditable,
+                $creditable->notasPrevias((int) $factura->id),
+                (float) $factura->monto,
+            ));
+        }
     }
 }

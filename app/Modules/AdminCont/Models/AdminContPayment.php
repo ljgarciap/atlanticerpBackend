@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,9 +32,16 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string          $estado
  * @property int|null        $created_by
  * @property \Carbon\Carbon  $created_at
+ * @property bool            $cobros_v2
+ * @property \Carbon\Carbon|null $anulado_at
+ * @property int|null        $anulado_by
+ * @property string|null     $motivo_anulacion
+ * @property AdminContPaymentConfirmation|null $confirmation
  */
 class AdminContPayment extends Model
 {
+    use LogsAuditTrail;
+
     public const METODO_TRANSFERENCIA       = 'transferencia';
     public const METODO_CHEQUE              = 'cheque';
     public const METODO_EFECTIVO            = 'efectivo';
@@ -85,13 +93,15 @@ class AdminContPayment extends Model
     ];
 
     public const ESTADO_CONFIRMADO             = 'confirmado';
+    // SCRUM-1168 F4 — cobro anulado (aprobado por Mark): queda en el historial; sus efectos se reversaron con contra-movimientos.
+    public const ESTADO_ANULADO                = 'anulado';
     public const ESTADO_ESPERANDO_CONFIRMACION = 'esperando_confirmacion';
 
     /** @var list<string> */
     protected $fillable = [
         'numero_recibo', 'master_client_id', 'monto_recibido', 'saldo_favor_aplicado', 'metodo_pago',
         'referencia', 'bank_account_id', 'numero_documento_retencion', 'comentario_ajuste', 'estado',
-        'created_by',
+        'created_by', 'cobros_v2', 'anulado_at', 'anulado_by', 'motivo_anulacion',
     ];
 
     /** @return array<string, string> */
@@ -100,6 +110,8 @@ class AdminContPayment extends Model
         return [
             'monto_recibido'       => 'float',
             'saldo_favor_aplicado' => 'float',
+            'cobros_v2'            => 'boolean',
+            'anulado_at'           => 'datetime',
             'created_at'           => 'datetime',
             'updated_at'           => 'datetime',
         ];
