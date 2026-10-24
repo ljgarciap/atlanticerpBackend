@@ -133,7 +133,7 @@ Route::prefix('clients')->group(function (): void {
 
 // SCRUM-684→689 (REQ-604 a REQ-609, Batch C) — Dashboard CRM, exclusivo de Gerencia
 // (REQ-609): siempre alcance de equipo completo, sin selector Mío/Equipo.
-Route::prefix('dashboard')->middleware('role:superadmin,management')->group(function (): void {
+Route::prefix('dashboard')->middleware('permission:platform.management')->group(function (): void {
     Route::get('/summary', [DashboardController::class, 'summary'])->middleware('permission:ventas_diseno.read');
     Route::post('/remind', [DashboardController::class, 'remind'])->middleware('permission:ventas_diseno.read');
 });
@@ -245,7 +245,7 @@ Route::prefix('quotes')->group(function () use ($quoteChildRoutes): void {
 // Pipeline): el gate es de ROL — Compras, Gerencia y superadmin, y nadie más. `lider_compras` no
 // tiene `ventas_diseno.read`, por eso tampoco se exige acá; `OrdersController` le da alcance de
 // equipo completo (ver `OrdersService::list()`).
-Route::prefix('orders')->middleware('role:lider_compras,management,superadmin')->group(function (): void {
+Route::prefix('orders')->middleware('permission:ventas_diseno.orders.access')->group(function (): void {
     Route::get('/', [OrdersController::class, 'index']);
     Route::get('/{id}', [OrdersController::class, 'show'])->whereNumber('id');
 });

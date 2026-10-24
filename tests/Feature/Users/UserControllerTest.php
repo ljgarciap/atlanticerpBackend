@@ -495,8 +495,8 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_management_no_puede_asignar_extra_permissions(): void
     {
-        // 'multi' user has 'management' role but level 8 (not superadmin.all)
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        // Gerencia pura (rol management, nivel 9): no tiene superadmin.all
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/users', [
@@ -596,8 +596,8 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_management_no_superadmin_no_puede_asignar_additional_role_ids(): void
     {
-        // 'multi' user has 'management' role but level 8 (not superadmin.all)
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        // Gerencia pura (rol management, nivel 9): no tiene superadmin.all
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/users', [
@@ -621,7 +621,7 @@ class UserControllerTest extends FeatureTestCase
         // Senior Review 2026-07-13, blocker 1 (crítico) — role_id no tenía el mismo gate que
         // additional_role_ids/extra_permissions: cualquier actor con security.users podía
         // convertir a un usuario en superadmin eligiéndolo como rol base.
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/users', [
@@ -673,7 +673,7 @@ class UserControllerTest extends FeatureTestCase
             ]);
         $id = $created->json('id');
 
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/users/{$id}", [
@@ -699,7 +699,7 @@ class UserControllerTest extends FeatureTestCase
             ]);
         $id = $created->json('id');
 
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/users/{$id}", ['role_id' => $this->roleId('superadmin')]);

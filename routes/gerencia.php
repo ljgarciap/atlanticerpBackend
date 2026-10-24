@@ -55,7 +55,7 @@ Route::prefix('aprobaciones')->middleware('permission:gerencia.view')->group(fun
 // Excel 6__Requerimientos_Gerencia.xlsx) — hasta entonces, exclusivo de superadmin, nadie de
 // Mark/David/Whil individualmente lo ve todavía.
 Route::prefix('reglas-aprobacion')->group(function (): void {
-    Route::middleware('role:superadmin')->group(function (): void {
+    Route::middleware('permission:superadmin.all')->group(function (): void {
         Route::get('/', [ReglaAprobacionController::class, 'index']);
         Route::post('/', [ReglaAprobacionController::class, 'store']);
         Route::put('/{id}', [ReglaAprobacionController::class, 'update']);

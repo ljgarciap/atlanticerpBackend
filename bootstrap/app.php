@@ -77,7 +77,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')->prefix('api/legacy')->group(base_path('routes/legacy.php'));
 
             // Catálogo de permisos — acceso restringido a superadmin y management
-            Route::middleware(['api', 'role:superadmin,management'])
+            Route::middleware(['api', 'permission:platform.management'])
                 ->get('/api/permission-catalog', [SecurityLevelController::class, 'permissionCatalog']);
             Route::middleware('api')->prefix('api/admin')->group(base_path('routes/admin.php'));
 

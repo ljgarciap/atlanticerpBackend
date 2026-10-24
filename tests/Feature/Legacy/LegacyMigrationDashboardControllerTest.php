@@ -38,7 +38,7 @@ final class LegacyMigrationDashboardControllerTest extends FeatureTestCase
     // ver el dashboard, mismo criterio que Pagos ICG/Vista ICG (antes sí podía, ver docblock).
     public function test_management_ya_no_puede_ver_el_dashboard(): void
     {
-        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/legacy/migracion/dashboard/counts')

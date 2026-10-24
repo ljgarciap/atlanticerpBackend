@@ -30,7 +30,8 @@ class FelixComoMarkVentasDisenoTest extends FeatureTestCase
     /** @return list<string> */
     private function vd(User $u): array
     {
-        $p = array_values(array_filter($u->effectivePermissionsV2(), fn (string $x) => str_starts_with($x, 'ventas_diseno.')));
+        $p = array_values(array_filter($u->effectivePermissionsV2(), fn (string $x) => str_starts_with($x, 'ventas_diseno.') && $x !== 'ventas_diseno.orders.access'));
+        // `ventas_diseno.orders.access` (permiso de rol completo de Gerencia) lo recibe quien tiene gerencia_scope dentro de las rutas, vía ApplyGerenciaScope, no en el claim.
         sort($p);
         return $p;
     }

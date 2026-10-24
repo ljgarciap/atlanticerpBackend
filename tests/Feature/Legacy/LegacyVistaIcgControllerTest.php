@@ -61,7 +61,7 @@ final class LegacyVistaIcgControllerTest extends FeatureTestCase
 
     public function test_management_no_puede_ver_vista_icg(): void
     {
-        $token = $this->loginAs();
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/legacy/migracion/vista/cotizaciones')
