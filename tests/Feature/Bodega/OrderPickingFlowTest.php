@@ -187,7 +187,8 @@ class OrderPickingFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING]);
         $order->items()->create(['qty_requested' => 3, 'location_snapshot' => 'A-01', 'reference_snapshot' => 'A']);
-        $order->items()->first()->update(['location_snapshot' => 'Z-99']);
+        // Sin `orderBy`, Postgres no garantiza cuál fila devuelve `first()`: a veces era el ítem A-01 y no el de `makeOrder()` (flaky en CI).
+        $order->items()->orderBy('id')->first()->update(['location_snapshot' => 'Z-99']);
         $order->items()->create(['qty_requested' => 2, 'location_snapshot' => 'B-02', 'reference_snapshot' => 'B']);
 
         $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read']);
