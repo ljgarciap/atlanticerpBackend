@@ -12,9 +12,9 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-610→611 (REQ-533→534) — Movimientos. */
 class AdminContBankMovementControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
-    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+    private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
     private const APPROVER_EMAIL = 'gerencia3@test.com';
 
@@ -26,12 +26,12 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsYaneth(): string
     {
-        return $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
 
     private function loginAsMark(): string
@@ -95,7 +95,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         $this->assertSame(['total' => 25, 'per_page' => 20, 'current_page' => 1, 'last_page' => 2], $response['meta']);
     }
 
-    public function test_assign_account_yaneth_puede_asignar_cuenta_a_comision_sin_cuenta(): void
+    public function test_assign_account_asistente_puede_asignar_cuenta_a_comision_sin_cuenta(): void
     {
         $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
         $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
@@ -108,7 +108,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
             ->assertJsonFragment(['bank_account_id' => $account->id]);
     }
 
-    public function test_assign_account_rechaza_a_mark_gerencia_no_incluido_en_req534(): void
+    public function test_assign_account_rechaza_a_aprobador_gerencia_no_incluido_en_req534(): void
     {
         $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
         $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);

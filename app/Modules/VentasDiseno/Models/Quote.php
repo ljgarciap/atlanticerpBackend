@@ -398,7 +398,7 @@ class Quote extends Model
      * misma lista unificada en vez de vivir en un flujo de error aparte (el
      * bloqueo real de "Guardar y generar" seguía viviendo solo en confirm()/
      * QuoteController, sin aparecer nunca en el banner de "todos los faltantes a
-     * la vez"). $skipMarginCheck es la excepción nombrada de Mark/David
+     * la vez"). $skipMarginCheck es la excepción nombrada de Gerencia/David
      * (`ventas_diseno.override_min_margin`, SCRUM-725) — para ellos "generar" no
      * bloquea por margen, el bloqueo/confirmación real sigue en confirm().
      *

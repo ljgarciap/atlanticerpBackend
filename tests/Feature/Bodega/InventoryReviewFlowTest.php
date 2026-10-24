@@ -170,7 +170,7 @@ class InventoryReviewFlowTest extends FeatureTestCase
         );
     }
 
-    // SCRUM-1153 — Compras (Yirena) recibe el aviso de sin stock con el producto que falta y un enlace a Compras → Inventario
+    // SCRUM-1153 — Compras (Lider Compras) recibe el aviso de sin stock con el producto que falta y un enlace a Compras → Inventario
     // con ese producto ya buscado (antes: sin enlace, clic = nada). Ventas & Diseño conserva su aviso de siempre.
     public function test_aviso_de_sin_stock_a_compras_lleva_el_producto_y_el_enlace_a_inventario(): void
     {
@@ -193,12 +193,12 @@ class InventoryReviewFlowTest extends FeatureTestCase
             ->where('source_ref', "order:{$review->id}")
             ->get()->first(fn (NotificationSend $n): bool => in_array($yirenaId, $n->audience, true));
 
-        $this->assertNotNull($send, 'Yirena (lider_compras) recibe el aviso.');
+        $this->assertNotNull($send, 'Lider Compras (lider_compras) recibe el aviso.');
         $this->assertSame('/inventario?search=ML-10097BWH-1', $send->content['cta_url']);
         $this->assertStringContainsString('ML-10097BWH-1 (x4)', $send->content['body']);
         $this->assertStringContainsString($review->order_number, $send->content['subject']);
 
-        // La campana de Yirena guarda ese enlace: el clic navega a Inventario con el producto buscado.
+        // La campana de Lider Compras guarda ese enlace: el clic navega a Inventario con el producto buscado.
         $this->assertSame(
             '/inventario?search=ML-10097BWH-1',
             Notification::where('user_id', $yirenaId)->where('notification_send_id', $send->id)->value('link_url'),

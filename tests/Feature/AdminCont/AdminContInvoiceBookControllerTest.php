@@ -24,7 +24,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
 {
     use ReadsXlsxResponse;
 
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
@@ -36,7 +36,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsDesigner(): string
@@ -57,7 +57,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Libro '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
-            'sub_client_id' => $sub->id, 'owner_id' => $this->userId(self::FELIX_EMAIL), 'amount' => $monto, 'stage_changed_at' => now(),
+            'sub_client_id' => $sub->id, 'owner_id' => $this->userId(self::CONTABILIDAD_EMAIL), 'amount' => $monto, 'stage_changed_at' => now(),
         ]);
         $order = Order::create([
             'order_number' => 'PED-LIB-'.random_int(1000, 999999), 'pipeline_card_id' => $card->id,
@@ -81,7 +81,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
             'numero' => 'NC-LIB-'.self::uniqueTestNumber(), 'master_client_id' => $factura->master_client_id,
             'cliente' => $factura->cliente, 'tipo' => $tipo, 'subtipo_anulacion' => $subtipo, 'factura_origen_id' => $factura->id,
             'monto' => $monto, 'subtotal' => $subtotal, 'itbms' => $itbms, 'motivo' => 'Motivo de prueba',
-            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => $this->userId(self::FELIX_EMAIL), 'fecha' => $fecha,
+            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => $this->userId(self::CONTABILIDAD_EMAIL), 'fecha' => $fecha,
         ]);
     }
 
@@ -261,7 +261,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
             ['Fecha', 'RUC', 'Cliente', 'Tipo', 'Motivo', 'N° Documento', 'Base Imponible', '%', 'Cuota ITBMS', 'Total', 'Vendedor'],
             $sheet->toArray()[0],
         );
-        // SCRUM-1175 — el vendedor es el responsable del pedido de la factura (aquí, el dueño de la tarjeta: Felix).
+        // SCRUM-1175 — el vendedor es el responsable del pedido de la factura (aquí, el dueño de la tarjeta: Contabilidad).
         $this->assertNotSame('—', $sheet->getCell('K2')->getValue());
         $this->assertNotEmpty($sheet->getCell('K2')->getValue());
 

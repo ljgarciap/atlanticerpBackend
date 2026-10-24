@@ -11,7 +11,7 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 
 /**
  * SCRUM-943 — único punto que arma un `PacProviderContract` real, leyendo la configuración de
- * NEGOCIO del tenant (`fiscal_settings.pac_provider`/`pac_ambiente`, editable por Mark en
+ * NEGOCIO del tenant (`fiscal_settings.pac_provider`/`pac_ambiente`, editable por Gerencia en
  * Configuración Fiscal) en vez de que cada adapter se resuelva solo desde `.env`. Mismo principio
  * que `FiscalDocumentItemsBuilder`: el resto de la capa `FacturacionElectronica` (DTOs, mappers,
  * adapters) no conoce `AdminContFiscalSettings` a propósito — este factory es la única costura.

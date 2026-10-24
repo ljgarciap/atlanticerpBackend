@@ -238,7 +238,7 @@ class QuoteControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-930/931/932 (rebote Daniela 2026-09-20) — `lider_admin_contab`/`asistente_administrativa`
+     * SCRUM-930/931/932 (rebote Gerencia 2026-09-20) — `lider_admin_contab`/`asistente_administrativa`
      * no tienen (ni deben tener) `ventas_diseno.read` real: sin esto, `QuoteViewerModal` (abierto
      * desde Cobros/Estado de Cuenta/Notas de Crédito) quedaba en "Cargando" para siempre. El acceso
      * es de solo lectura, sin depender de `canAccess()` (no son dueños ni tienen visibilidad de
@@ -1406,7 +1406,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->assertSame($first, $second);
     }
 
-    // ── SCRUM-725/734: margen mínimo en generate()+confirm() + excepción Mark/David ─
+    // ── SCRUM-725/734: margen mínimo en generate()+confirm() + excepción Gerencia/David ─
 
     /**
      * SCRUM-734 (RN10) — "generar" ahora bloquea por margen igual que cualquier
@@ -1462,7 +1462,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->assertSame('Este cambio dejaría el margen por debajo del mínimo permitido', $response->json('message'));
     }
 
-    public function test_confirmar_cotizacion_con_margen_violado_avisa_a_mark_sin_confirmar_todavia(): void
+    public function test_confirmar_cotizacion_con_margen_violado_avisa_a_aprobador_sin_confirmar_todavia(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
@@ -2021,7 +2021,7 @@ class QuoteControllerTest extends FeatureTestCase
 
     public function test_pdf_encabezado_secundario_muestra_la_descripcion_real_no_apto_hardcodeado(): void
     {
-        // SCRUM-766 — rebote de Daniela 2026-08-20: el badge del encabezado secundario (§4) había
+        // SCRUM-766 — rebote de Gerencia 2026-08-20: el badge del encabezado secundario (§4) había
         // quedado con el texto literal "APTO" hardcodeado en el Blade en vez del campo Descripción
         // real de la cotización — "APTO" en el mockup del ticket era solo un valor de EJEMPLO de
         // ese campo, nunca texto fijo. Regresión: si alguien vuelve a hardcodear el literal, este
@@ -2045,7 +2045,7 @@ class QuoteControllerTest extends FeatureTestCase
 
     public function test_pdf_encabezado_muestra_el_logo_real_no_svg_inline(): void
     {
-        // SCRUM-766 — mismo rebote de Daniela 2026-08-20: el encabezado principal seguía con el
+        // SCRUM-766 — mismo rebote de Gerencia 2026-08-20: el encabezado principal seguía con el
         // <svg> inline original, que dompdf NO renderiza en este entorno (ver docblock de
         // App\Shared\Support\PdfLogo — el gap ya se había diagnosticado y arreglado en los 3 PDFs
         // de Servicios vía SCRUM-781, pero nunca se retrofiteó acá). Regresión: si alguien vuelve
@@ -2127,7 +2127,7 @@ class QuoteControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-849.6 rebote (Daniela, 2026-09-10) — "cuando guardo la cotización esta no muestra la
+     * SCRUM-849.6 rebote (Gerencia, 2026-09-10) — "cuando guardo la cotización esta no muestra la
      * foto": el test de arriba (`test_pdf_incluye_foto_del_producto_cuando_existe`) solo cubría
      * un producto de CATÁLOGO (`is_custom: false`, `catalogProduct->photo_url`) — nunca el camino
      * real de la foto ad-hoc (`is_custom: true`, subida vía `QuoteItemPhotoService`, ver
@@ -2171,7 +2171,7 @@ class QuoteControllerTest extends FeatureTestCase
 
     public function test_pdf_instrucciones_de_pago_muestra_nombre_legal_y_cuenta_ach(): void
     {
-        // SCRUM-801 (3er rebote, 2026-09-01) — Daniela reportó nombre de empresa incorrecto
+        // SCRUM-801 (3er rebote, 2026-09-01) — Gerencia reportó nombre de empresa incorrecto
         // ("Atlantic" en vez de "ATLANTIC USA CORP") y el mensaje "consultar con su
         // diseñador" en vez de la cuenta ACH real en Instrucciones de pago.
         $this->grantVentasDisenoEdit('designer@atlantic.test');

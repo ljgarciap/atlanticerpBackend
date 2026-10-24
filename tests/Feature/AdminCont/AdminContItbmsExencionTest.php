@@ -436,13 +436,13 @@ class AdminContItbmsExencionTest extends FeatureTestCase
 
     public function test_quien_solo_marca_exentos_lee_el_directorio_fiscal_y_puede_marcar(): void
     {
-        $yaneth = $this->loginAs('asistenteadministrativa@test.com', 'asistenteadministrativa@test.com', 'asistente_administrativa');
+        $asistente = $this->loginAs('asistenteadministrativa@test.com', 'asistenteadministrativa@test.com', 'asistente_administrativa');
         $this->reTenant();
-        $this->api($yaneth, 'GET', '/api/ventas-diseno/clients/fiscal-directory')->assertStatus(200);
+        $this->api($asistente, 'GET', '/api/ventas-diseno/clients/fiscal-directory')->assertStatus(200);
 
-        // Yaneth tiene el permiso angosto y puede marcar.
+        // Asistente Administrativa tiene el permiso angosto y puede marcar.
         $sub = $this->subCliente();
-        $this->marcar($yaneth, $sub, ['exento' => true, 'documento' => 'Resolución 201-1234'])->assertStatus(200);
+        $this->marcar($asistente, $sub, ['exento' => true, 'documento' => 'Resolución 201-1234'])->assertStatus(200);
     }
 
     public function test_el_detalle_y_el_pdf_de_la_cotizacion_dicen_exento_y_una_normal_no(): void

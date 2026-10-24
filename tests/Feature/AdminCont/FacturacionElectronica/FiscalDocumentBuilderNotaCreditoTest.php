@@ -292,7 +292,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
         $devolucion = CustomerReturn::create([
             'return_number' => 'DEV-2026-'.self::uniqueTestNumber(), 'order_id' => $root->id,
             'status' => CustomerReturn::STATUS_FINALIZADO, 'finalized_at' => now(),
-            'contact_name' => 'Felix', 'contact_phone' => '6000-0000', 'created_by' => $this->ownerId(),
+            'contact_name' => 'Contabilidad', 'contact_phone' => '6000-0000', 'created_by' => $this->ownerId(),
         ]);
         $orderItemId = $root->items()->firstOrFail()->id;
         foreach ($lineas as $l) {

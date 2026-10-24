@@ -120,7 +120,7 @@ class InsumoReservaTest extends FeatureTestCase
 
         // Pre-QA 2026-08-13 (REQ-274 RN3) — hallazgo real: `origin_module` ya se guardaba en BD
         // pero `PurchaseOrderController::formatSummary()`/`formatDetail()` nunca lo exponían, así
-        // que Yirena no tenía forma real de "diferenciarla de solicitudes que vienen de Ventas &
+        // que Lider Compras no tenía forma real de "diferenciarla de solicitudes que vienen de Ventas &
         // Diseño u otras áreas" (RN3 explícita) — la orden era indistinguible en Compras. Corregido
         // en el mismo dispatch (PurchaseOrderController.php + OriginBadge.tsx). Se verifica acá vía
         // el endpoint HTTP real que usa Compras, no solo el modelo, para que una futura regresión de

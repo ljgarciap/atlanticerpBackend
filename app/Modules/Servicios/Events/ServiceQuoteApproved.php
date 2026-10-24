@@ -6,7 +6,7 @@ namespace App\Modules\Servicios\Events;
 
 use App\Shared\Contracts\DomainEvent;
 
-/** Fase 4 — Servicios, Batch 11 (REQ-234). Enviada -> Aprobada, exclusivo de Aaron/lider_servicios. */
+/** Fase 4 — Servicios, Batch 11 (REQ-234). Enviada -> Aprobada, exclusivo de Lider Servicios/lider_servicios. */
 class ServiceQuoteApproved implements DomainEvent
 {
     public function __construct(

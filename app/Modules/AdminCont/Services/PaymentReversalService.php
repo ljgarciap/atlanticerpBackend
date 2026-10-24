@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * SCRUM-1168 F4 — anular un cobro (recibo mal hecho). Felix o Yaneth lo SOLICITAN con motivo; Mark lo APRUEBA o RECHAZA (decisión de Luis, 2026-10-19);
+ * SCRUM-1168 F4 — anular un cobro (recibo mal hecho). Contabilidad o Asistente Administrativa lo SOLICITAN con motivo; Gerencia lo APRUEBA o RECHAZA (decisión de Luis, 2026-10-19);
  * al aprobar se ejecuta, todo en una transacción bajo el bloqueo del cliente. Nada se borra: el cobro queda en el historial con estado `anulado` y todos
  * sus efectos se reversan con contra-movimientos (libro, facturas, caja). Reglas ya decididas:
  *   - la fecha del reverso es la del día en que se anula; el movimiento original conserva la suya;
@@ -72,7 +72,7 @@ final class PaymentReversalService
     }
 
     /**
-     * Decide una solicitud (Mark): rechazarla la deja asentada; aprobarla la ejecuta.
+     * Decide una solicitud (Gerencia): rechazarla la deja asentada; aprobarla la ejecuta.
      *
      * @return array{request: AdminContPaymentReversalRequest, ajustes_comision: list<array{vendedor_id: int, pedido_id: int, monto: float}>}
      * @throws PaymentStateException
@@ -247,8 +247,8 @@ final class PaymentReversalService
     private const DISK = 's3-private';
 
     /**
-     * Devolución de dinero al cliente (F5): Felix o Yaneth SOLICITAN sacar plata del saldo a favor del cliente (de una fuente concreta: un cobro sin
-     * aplicar, un abono o una nota de crédito) y Mark la aprueba. Exige cuenta o caja de salida, referencia y comprobante; el motivo queda en la solicitud.
+     * Devolución de dinero al cliente (F5): Contabilidad o Asistente Administrativa SOLICITAN sacar plata del saldo a favor del cliente (de una fuente concreta: un cobro sin
+     * aplicar, un abono o una nota de crédito) y Gerencia la aprueba. Exige cuenta o caja de salida, referencia y comprobante; el motivo queda en la solicitud.
      * No se puede pedir más de lo disponible de la fuente (descontando otras solicitudes pendientes sobre la misma).
      *
      * @throws PaymentStateException

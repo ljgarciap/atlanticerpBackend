@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 /**
  * SCRUM-1007 — acciones fiscales manuales sobre un documento electrónico: reintentar la certificación de uno
  * `rechazado`/`error_configuracion` y actualizar el estado de uno `pendiente`; SCRUM-1019 agrega "Reconciliar con MSL". Las rutas viven bajo el
- * middleware `primary_approver_only` (solo Mark/superadmin, decisión de Luis) con `throttle:6,1`; ver
+ * middleware `primary_approver_only` (solo Gerencia/superadmin, decisión de Luis) con `throttle:6,1`; ver
  * `routes/admin-contab.php` y `docs/specs/scrum-1007-recertificar-documentos-fe.md`.
  *
  * Un resultado fiscal negativo (la DGI vuelve a rechazar) NO es un error HTTP: responde 200 con el estado

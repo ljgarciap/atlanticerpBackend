@@ -35,7 +35,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/external-technicians', [
-                'nombre' => 'Pedro Gómez',
+                'nombre' => 'Tecnico Servicios Gómez',
                 'empresa' => 'Gómez Instalaciones',
                 'tarifa_dia' => 28,
             ])
@@ -64,7 +64,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    /** RN4 (REQ-264) — solo Aaron/Líder de Servicios y Gerencia registran técnicos. */
+    /** RN4 (REQ-264) — solo Lider Servicios/Líder de Servicios y Gerencia registran técnicos. */
     public function test_tecnico_interno_no_puede_registrar(): void
     {
         $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
@@ -93,7 +93,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
 
     /**
      * Hallazgo Pre-QA 2026-08-09 (fix en routes/servicios.php) — RN5 (REQ-263) solo otorga
-     * solo-consulta a Aaron/técnicos internos/Gerencia; vendedor_disenador tiene servicios.read
+     * solo-consulta a Lider Servicios/técnicos internos/Gerencia; vendedor_disenador tiene servicios.read
      * por otras razones del módulo (crear/ver tickets) pero la matriz de permisos del Excel marca
      * N/A para Vendedor/Diseñador en las 5 filas de Técnicos Externos — antes del fix, el permiso
      * de módulo compartido le daba acceso real de lectura (incl. tarifa) pese a que el frontend ya
@@ -222,7 +222,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
         $this->assertSame('25.00', $technician->tarifa_dia);
     }
 
-    /** RN1 (REQ-266) — solo Aaron/Gerencia editan tarifa. */
+    /** RN1 (REQ-266) — solo Lider Servicios/Gerencia editan tarifa. */
     public function test_tecnico_interno_no_puede_editar_tarifa(): void
     {
         $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -271,7 +271,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
             ->assertJsonPath('estado', 'active');
     }
 
-    /** RN1 (REQ-265) — solo Aaron/Gerencia activan/inactivan. */
+    /** RN1 (REQ-265) — solo Lider Servicios/Gerencia activan/inactivan. */
     public function test_tecnico_interno_no_puede_inactivar(): void
     {
         $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -286,7 +286,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    /** REQ-267 RN2 — costo/margen (acá, la bandera que los habilita) solo para Aaron/Gerencia. */
+    /** REQ-267 RN2 — costo/margen (acá, la bandera que los habilita) solo para Lider Servicios/Gerencia. */
     public function test_puede_ver_costos_gateado_por_rol(): void
     {
         $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');

@@ -9,7 +9,7 @@ use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-632/633/634/637 (REQ-555/556/557/560) — Configuración Fiscal, exclusiva de Mark
+ * SCRUM-632/633/634/637 (REQ-555/556/557/560) — Configuración Fiscal, exclusiva de Gerencia
  * (`gerencia3@test.com`, sembrado por CoreUserSeeder, password default = email).
  */
 class AdminContFiscalSettingsControllerTest extends FeatureTestCase
@@ -54,7 +54,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    /** superadmin.all bypassa el gate exclusivo de Mark (decisión de Luis, 2026-08-22) — a
+    /** superadmin.all bypassa el gate exclusivo de Gerencia (decisión de Luis, 2026-08-22) — a
      *  diferencia de Gerencia genérica, que sigue bloqueada (test de arriba). */
     public function test_show_permite_a_superadmin_aunque_no_sea_mark(): void
     {
@@ -182,7 +182,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    // SCRUM-550 (rebote de Daniela 2026-09-10) — contacto de la empresa (teléfono/correo), nuevo
+    // SCRUM-550 (rebote de Gerencia 2026-09-10) — contacto de la empresa (teléfono/correo), nuevo
     // en Configuración Fiscal para que el recibo de cobro pueda mostrarlo (RN1).
     public function test_update_carga_y_vacia_el_contacto_de_la_empresa(): void
     {

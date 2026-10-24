@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  * BusinessRoleUserSeeder. Corre en TODOS los entornos (dato de negocio real,
  * mismo criterio que CoreUserSeeder/BusinessRoleUserSeeder) — sin esto, Reportes
  * muestra "Sin Meta configurada todavía" para el roster real (síntoma reportado
- * por Daniela el 2026-07-27 en SCRUM-146).
+ * por Gerencia el 2026-07-27 en SCRUM-146).
  *
  * Create-only-if-not-exists (igual que CoreUserSeeder): la Meta es un valor que
  * Gerencia edita a mano desde Reportes > Configuración (REQ-072, "no es un
@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\DB;
  * "MAURICIO" del ticket original no corresponde a ningún vendedor_disenador real
  * (BusinessRoleUserSeeder no tiene ese nombre) — decisión de Luis (2026-07-29):
  * esos valores ($812.48/$700,000) son de Vendedor Disenador Test 5 (vendedordisenador5@test.com).
- * Anelhys "Annie" Nuez (vendedordisenador6@test.com) queda sin Meta configurada — el
+ * Vendedor Disenador "Vendedor Disenador" Vendedor Disenador (vendedordisenador6@test.com) queda sin Meta configurada — el
  * ticket no trae su valor real, pendiente de que Luis lo confirme por separado.
  */
 class VentasDisenoSalesGoalsSeeder extends Seeder
@@ -33,7 +33,7 @@ class VentasDisenoSalesGoalsSeeder extends Seeder
     private const GOALS_BY_EMAIL = [
         'vendedordisenador8@test.com' => ['goal_amount' => 4328.87, 'goal_plus_amount' => 1500000.00], // JUANMA
         'vendedordisenador9@test.com' => ['goal_amount' => 494.60,  'goal_plus_amount' => 420000.00],  // BERNARDO
-        'vendedordisenador5@test.com' => ['goal_amount' => 812.48,  'goal_plus_amount' => 700000.00],  // "MAURICIO" del ticket -> Paola (decisión Luis 2026-07-29)
+        'vendedordisenador5@test.com' => ['goal_amount' => 812.48,  'goal_plus_amount' => 700000.00],  // "MAURICIO" del ticket -> Vendedor Disenador (decisión Luis 2026-07-29)
         'vendedordisenador10@test.com' => ['goal_amount' => 951.07,  'goal_plus_amount' => 700000.00],  // IDMAR
         'vendedordisenador2@test.com' => ['goal_amount' => 603.28,  'goal_plus_amount' => 420000.00],  // NEIL
         'vendedordisenador@test.com' => ['goal_amount' => 779.10,  'goal_plus_amount' => 420000.00],  // MILE

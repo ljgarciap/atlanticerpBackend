@@ -44,7 +44,7 @@ final class ToolController extends Controller
 
     /**
      * GET /api/servicios/tools/purchase-requests — companion de REQ-271 RN2 ("visible como
-     * pendiente de recibir, con botón 'Solicitado a Felix'"). No estaba en la lista original de
+     * pendiente de recibir, con botón 'Solicitado a Contabilidad'"). No estaba en la lista original de
      * endpoints del ticket — sin él, el frontend no tiene forma de listar solicitudes ni de
      * descubrir el {id} que `POST .../recibir` necesita, dejando REQ-271/272 no funcionales de
      * punta a punta. Agregado como decisión técnica dentro del diseño ya aprobado (mismo criterio

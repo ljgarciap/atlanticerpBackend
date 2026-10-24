@@ -15,7 +15,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContFiscalIdentitySeederTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -30,7 +30,7 @@ class AdminContFiscalIdentitySeederTest extends FeatureTestCase
 
     public function test_la_identidad_fiscal_queda_seteada_tras_el_seeding_normal(): void
     {
-        $felix    = User::where('email', self::FELIX_EMAIL)->firstOrFail();
+        $contabilidad    = User::where('email', self::CONTABILIDAD_EMAIL)->firstOrFail();
         $settings = AdminContFiscalSettings::current();
 
         $this->assertSame('ATLANTIC USA CORP', $settings->nombre_comercial);
@@ -38,7 +38,7 @@ class AdminContFiscalIdentitySeederTest extends FeatureTestCase
         $this->assertSame('1838853-1-711641', $settings->ruc);
         $this->assertSame('81', $settings->dv, 'SCRUM-928 — DV del RUC de Atlantic');
         $this->assertSame('Calle 57 Este, Times Square Plaza - Obarrio, Panama', $settings->direccion_fiscal);
-        $this->assertSame($felix->id, $settings->responsable_administracion_user_id);
+        $this->assertSame($contabilidad->id, $settings->responsable_administracion_user_id);
     }
 
     public function test_el_seeder_rellena_solo_los_campos_vacios(): void
@@ -62,7 +62,7 @@ class AdminContFiscalIdentitySeederTest extends FeatureTestCase
 
     public function test_el_seeder_no_pisa_valores_ya_cargados(): void
     {
-        $otro = User::where('email', '!=', self::FELIX_EMAIL)->firstOrFail();
+        $otro = User::where('email', '!=', self::CONTABILIDAD_EMAIL)->firstOrFail();
         AdminContFiscalSettings::current()->update([
             'nombre_comercial' => 'Atlantic Panamá S.A.',
             'ruc'              => '999-999-999',

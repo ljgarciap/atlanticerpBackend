@@ -138,11 +138,11 @@ class AssociatesBaseTest extends FeatureTestCase
     public function test_correo_telefono_o_documento_iguales_bloquean_y_ofrecen_el_existente(): void
     {
         $token = $this->token();
-        $first = $this->create($token, ['name' => 'Carlos Vega', 'email' => 'Carlos.Vega@Estudio.test', 'phone' => '+507 6000-1111', 'document' => '8-111-222'])
+        $first = $this->create($token, ['name' => 'Tecnico Servicios Vega', 'email' => 'Tecnico.Vega@Estudio.test', 'phone' => '+507 6000-1111', 'document' => '8-111-222'])
             ->assertStatus(201)->json('id');
 
         foreach ([
-            ['name' => 'Otro Nombre', 'email' => 'carlos.vega@estudio.test'],        // correo (mayúsculas distintas)
+            ['name' => 'Otro Nombre', 'email' => 'tecnico.vega@estudio.test'],        // correo (mayúsculas distintas)
             ['name' => 'Otro Nombre', 'phone' => '507-6000.1111'],                    // teléfono (formato distinto, mismos dígitos)
             ['name' => 'Otro Nombre', 'document' => '8 111 222'],                     // documento (separadores distintos)
         ] as $payload) {
@@ -152,7 +152,7 @@ class AssociatesBaseTest extends FeatureTestCase
         }
 
         $this->tenant();
-        $this->assertSame(1, Architect::where('name', 'Carlos Vega')->count());
+        $this->assertSame(1, Architect::where('name', 'Tecnico Servicios Vega')->count());
         $this->assertSame(0, Architect::where('name', 'Otro Nombre')->count());
     }
 

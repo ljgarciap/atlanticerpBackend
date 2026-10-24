@@ -192,7 +192,7 @@ final class DailyCashCountService
 
     /**
      * REQ-527 — el "arqueo activo" es siempre el más antiguo sin cerrar (`estado=abierto`, o sin
-     * fila todavía, que es lo mismo). Piso: `arqueo_tracking_start_date` (editable por Mark) o, si
+     * fila todavía, que es lo mismo). Piso: `arqueo_tracking_start_date` (editable por Gerencia) o, si
      * nunca se fijó, la fecha más vieja que ya tenga fila, o hoy si la tabla está vacía — ver ADR,
      * reconciliación punto 4. Rango acotado (semanas desde el go-live de Batch 19), escaneo día a
      * día sin problema de performance a este volumen.
@@ -294,7 +294,7 @@ final class DailyCashCountService
             $numero = (int) (AdminContDailyCashCount::whereNotNull('numero')->max('numero') ?? 0) + 1;
 
             // Pre-QA SCRUM-878/879 (2026-09-10) — el total se congela ACÁ, en el instante del
-            // cierre (forDate() en vivo, sin $asOf — es exactamente lo que Felix ve al confirmar),
+            // cierre (forDate() en vivo, sin $asOf — es exactamente lo que Contabilidad ve al confirmar),
             // y nunca se vuelve a recalcular mientras el arqueo no esté `abierto` (ver totalsFor()).
             $record->update([
                 'numero' => $numero,
@@ -366,7 +366,7 @@ final class DailyCashCountService
     }
 
     /**
-     * REQ-528 RN2/RN4 — exclusivo de Mark (gate real: middleware `primary_approver_only`, ver routes/admin-contab.php).
+     * REQ-528 RN2/RN4 — exclusivo de Gerencia (gate real: middleware `primary_approver_only`, ver routes/admin-contab.php).
      *
      * @return array<string, mixed>
      *
@@ -449,8 +449,8 @@ final class DailyCashCountService
      * Pre-QA SCRUM-878/879 (2026-09-10, hallazgo CRÍTICO) — un arqueo que ya no está `abierto` es
      * un registro histórico FIJO: usa el `snapshot` congelado en `close()`, nunca recalcula en
      * vivo. Antes, `forDate()` se recomputaba en cada consulta, así que un movimiento retroactivo
-     * (ej. `commissions:backfill-cash-movements`) cambiaba en silencio el `total_neto` que Felix ya
-     * había cerrado y que Mark aprobaba sin saberlo — sin ningún rastro en `audit_logs`.
+     * (ej. `commissions:backfill-cash-movements`) cambiaba en silencio el `total_neto` que Contabilidad ya
+     * había cerrado y que Gerencia aprobaba sin saberlo — sin ningún rastro en `audit_logs`.
      * `retenciones` es la única excepción, siempre en vivo (RN4 — constancia subible post-cierre),
      * reconstruida a partir de los IDs de pago congelados en el snapshot (el pago en sí no cambia,
      * solo si tiene constancia adjunta). Un registro `abierto`, o cerrado pero sin snapshot todavía

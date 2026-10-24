@@ -15,8 +15,8 @@ use Tests\Feature\FeatureTestCase;
  * frontera real de acceso (quién entra, quién no) se mantiene idéntica a la de los `role:` que
  * reemplaza — no es un test de negocio, es la regresión de seguridad del propio refactor.
  *
- * Roles reales usados (BusinessRoleUserSeeder): lider_servicios=Aldo, tecnico_servicios=Carlos,
- * garantias_servicios=Miguel, vendedor_disenador=Milena. management=Daniela (CoreUserSeeder).
+ * Roles reales usados (BusinessRoleUserSeeder): lider_servicios=Lider Servicios, tecnico_servicios=Tecnico Servicios,
+ * garantias_servicios=Garantias Servicios, vendedor_disenador=Vendedor Disenador. management=Gerencia (CoreUserSeeder).
  */
 class ServiciosPermissionMatrixTest extends FeatureTestCase
 {

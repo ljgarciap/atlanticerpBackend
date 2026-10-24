@@ -180,10 +180,10 @@ Route::prefix('replacement-requests')->group(function (): void {
     Route::get('/search/{jobId}', [ReplacementSearchController::class, 'show'])->middleware('permission:compras.read,compras.sustitutos.manage');
 });
 
-// SCRUM-440 (REQ-370, Bloque B3 Zona Libre de Colón) — decisión de Yirena sobre una solicitud
+// SCRUM-440 (REQ-370, Bloque B3 Zona Libre de Colón) — decisión de Lider Compras sobre una solicitud
 // generada por Bodega (ver `routes/bodega.php`, prefijo `zona-libre`). Permiso angosto nuevo
 // `compras.zona-libre.approve` — a propósito NO reusa `compras.approve` (aprobación de flete
-// aéreo de Mark, REQ-143), ver ADR-SCRUM433-445-zona-libre-colon.md.
+// aéreo de Gerencia, REQ-143), ver ADR-SCRUM433-445-zona-libre-colon.md.
 Route::prefix('zona-libre/requests')->group(function (): void {
     Route::post('/{id}/approve', [ComprasZonaLibreRequestController::class, 'approve'])->middleware('permission:compras.zona-libre.approve');
     Route::post('/{id}/reject', [ComprasZonaLibreRequestController::class, 'reject'])->middleware('permission:compras.zona-libre.approve');

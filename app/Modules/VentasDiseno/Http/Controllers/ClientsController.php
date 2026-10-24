@@ -124,12 +124,12 @@ final class ClientsController extends Controller
          */
         $validated = $request->validated();
 
-        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Mark/Felix).
+        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Gerencia/Felix).
         if (($validated['receptor_tipo'] ?? null) === ReceptorTipo::CONSUMIDOR_FINAL && ! $user->hasPermission(ReceptorTipo::PERMISO_CONSUMIDOR_FINAL)) {
             return response()->json(['message' => ReceptorTipo::MENSAJE_SIN_PERMISO], 403);
         }
 
-        // REQ-034/067: solo Mark (grant individual, no de rol) puede seleccionar Precio Socio.
+        // REQ-034/067: solo Gerencia (grant individual, no de rol) puede seleccionar Precio Socio.
         if (($validated['default_price_type'] ?? null) === 'partner' && ! $user->hasPermission('ventas_diseno.select_partner_price')) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
@@ -162,7 +162,7 @@ final class ClientsController extends Controller
          */
         $validated = $request->validated();
 
-        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Mark/Felix).
+        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Gerencia/Felix).
         if (($validated['receptor_tipo'] ?? null) === ReceptorTipo::CONSUMIDOR_FINAL && ! $user->hasPermission(ReceptorTipo::PERMISO_CONSUMIDOR_FINAL)) {
             return response()->json(['message' => ReceptorTipo::MENSAJE_SIN_PERMISO], 403);
         }

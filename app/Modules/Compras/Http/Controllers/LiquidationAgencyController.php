@@ -35,7 +35,7 @@ use Illuminate\Routing\Controller;
  * `add_payment_tracking_to_compras_liquidation_agencies_table`) — NO un historial de pagos con
  * comprobante como `purchase_order_payments`, porque eso implicaría inventar RN que nadie definió.
  * El saldo pendiente (`pending_payment_amount - paid_amount`) se deriva en el frontend, igual que
- * en el mockup de Daniela. Si más adelante Analista define las RN reales, este mock se reemplaza.
+ * en el mockup de Gerencia. Si más adelante Analista define las RN reales, este mock se reemplaza.
  */
 final class LiquidationAgencyController extends Controller
 {

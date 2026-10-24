@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * SCRUM-1168 F4 — reversar una APLICACIÓN (desaplicar): el dinero que se había aplicado a una factura vuelve al saldo a favor de su fuente y la factura
- * recupera su saldo pendiente. No necesita aprobación (decisión de Luis, 2026-10-19: solo anular un cobro y devolver dinero pasan por Mark); queda en
+ * recupera su saldo pendiente. No necesita aprobación (decisión de Luis, 2026-10-19: solo anular un cobro y devolver dinero pasan por Gerencia); queda en
  * el libro con motivo y autor, y la fecha es la del reverso (el movimiento original conserva la suya).
  *
  * Solo se pueden reversar aplicaciones que el libro conoce por componente: las de cobros del concepto nuevo (directas o por cruce) y las de cruces desde

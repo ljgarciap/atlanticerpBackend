@@ -243,7 +243,7 @@ final class ComprasReportsController extends Controller
      *
      * ⚠️ AMBIGÜEDAD DE ALCANCE (sin resolver acá, ver comentario de Jira en SCRUM-268): "Liquidado"
      * sigue usando `PurchaseOrder::isLiquidated()` (llegó a "Recibido"), NO "llegó a En aduana"
-     * pese a que el texto de Daniela lo describe como equivalente ("Ya pasaron por aduana" /
+     * pese a que el texto de Gerencia lo describe como equivalente ("Ya pasaron por aduana" /
      * nota al pie "equivalente al paso 'En aduana' completado"). Ese cambio de definición ya se
      * intentó y se revirtió a propósito el 2026-07-18 (ver docblock de `isLiquidated()`): un
      * proveedor `local` SALTA la etapa "en_aduana" en su secuencia de estados

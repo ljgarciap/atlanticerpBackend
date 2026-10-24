@@ -37,11 +37,11 @@
 </head>
 <body>
     <div class="header">
-        {{-- Rebote de Daniela (SCRUM-858, 2026-09-10) — el encabezado repetía "ATLANTIC"
+        {{-- Rebote de Gerencia (SCRUM-858, 2026-09-10) — el encabezado repetía "ATLANTIC"
              (isótipo + marca + nombre_comercial + RUC/dirección). Se unifica con el estándar ya
              aprobado de cotizaciones y Estado de Cuenta: isótipo + "ATLANTIC" una sola vez,
              nombre legal completo + dirección en el pie de página (PdfFooterText).
-             Corrección SCRUM-550 (rebote de Daniela 2026-09-10): PdfFooterText::forFiscal() NUNCA
+             Corrección SCRUM-550 (rebote de Gerencia 2026-09-10): PdfFooterText::forFiscal() NUNCA
              incluyó el RUC (solo nombre/dirección/sitio web, ver su docblock) — la premisa de la
              nota de arriba ("RUC vive en el pie de página") era falsa, el dato simplemente
              desapareció del documento. Se restaura acá, en el header, junto con el contacto de la
@@ -112,7 +112,7 @@
         </tbody>
     </table>
 
-    {{-- Corrección SCRUM-550 (rebote de Daniela 2026-09-10) — RN1: "saldo a favor aplicado (si
+    {{-- Corrección SCRUM-550 (rebote de Gerencia 2026-09-10) — RN1: "saldo a favor aplicado (si
          aplica), mostrando también el total de facturas antes de aplicarlo" y "debe quedar claro
          cómo esto se relaciona con el Total recibido". La clase .tachado ya existía en el CSS de
          este archivo desde el batch original (REQ-473) pero nunca se usaba en el markup — este

@@ -12,13 +12,13 @@ use Illuminate\Database\Seeder;
 /**
  * SCRUM-857 / SCRUM-858 — la fila de Configuración Fiscal nunca fue poblada en ningún entorno, así
  * que el "Pago a" del Estado de Cuenta, el "Responsable" del bloque de pago y el pie de página /
- * RUC del Recibo de Cobro salían en blanco (rebotes de Daniela 2026-09-10). Los datos reales de la
+ * RUC del Recibo de Cobro salían en blanco (rebotes de Gerencia 2026-09-10). Los datos reales de la
  * empresa los pasó Luis; van acá — mismo criterio que `AdminContPrimaryApproverBackfillSeeder` y
  * `CoreUserSeeder`: son datos de la EMPRESA, no data demo, y deben existir en cada entorno.
  *
  * Rellena por campo, solo si está vacío — nunca pisa un valor ya cargado desde Configuración Fiscal
  * (pantalla SCRUM-632→637). Idempotente por fusión. Corre después de `BusinessRoleUserSeeder` en
- * `DatabaseSeeder` (Felix solo existe a partir de ese seeder, no de `CoreUserSeeder`).
+ * `DatabaseSeeder` (Contabilidad solo existe a partir de ese seeder, no de `CoreUserSeeder`).
  *
  * Aprobado por Luis para correr en todos los entornos, incluida producción (2026-09-13/14) —
  * corre automáticamente como parte de `db:seed --force` en cada deploy, mismo patrón que
@@ -33,7 +33,7 @@ class AdminContFiscalIdentitySeeder extends Seeder
         'razon_social'     => 'ATLANTIC USA CORP',
         'nombre_comercial' => 'ATLANTIC USA CORP',
         'ruc'              => '1838853-1-711641',
-        // SCRUM-928 — DV del RUC, aportado por Felix (2026-09-18). Antes vacío en todos los
+        // SCRUM-928 — DV del RUC, aportado por Contabilidad (2026-09-18). Antes vacío en todos los
         // entornos → el PDF de la Factura imprimía el RUC sin DV.
         'dv'               => '81',
         // Sin acento a propósito — string idéntico al footer ya hardcodeado y aprobado en
@@ -64,11 +64,11 @@ class AdminContFiscalIdentitySeeder extends Seeder
             }
 
             if ($settings->responsable_administracion_user_id === null) {
-                $felix = User::where('email', self::RESPONSABLE_EMAIL)->first();
-                if ($felix === null) {
-                    $this->command->warn('Usuario Felix ('.self::RESPONSABLE_EMAIL.') no encontrado — responsable_administracion_user_id sigue NULL.');
+                $contabilidad = User::where('email', self::RESPONSABLE_EMAIL)->first();
+                if ($contabilidad === null) {
+                    $this->command->warn('Usuario Contabilidad ('.self::RESPONSABLE_EMAIL.') no encontrado — responsable_administracion_user_id sigue NULL.');
                 } else {
-                    $patch['responsable_administracion_user_id'] = $felix->id;
+                    $patch['responsable_administracion_user_id'] = $contabilidad->id;
                 }
             }
 

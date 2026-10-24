@@ -23,7 +23,7 @@ use Illuminate\Routing\Controller;
  * POST /api/gerencia/aprobaciones/{type}/{id}/aprobar
  * POST /api/gerencia/aprobaciones/{type}/{id}/rechazar  (acepta body: { razon?: string })
  *
- * Autorización: `AprobacionGate::canAct($user, $type)` — Mark (purchase_order/relocation/
+ * Autorización: `AprobacionGate::canAct($user, $type)` — Gerencia (purchase_order/relocation/
  * adjustment/general_count) o el permiso real `compras.zona-libre.approve` (zona_libre), más
  * `ReglaAprobacion` activa para el tipo exacto en los 4 tipos no-PO (SCRUM-163).
  *

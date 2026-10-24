@@ -414,7 +414,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_aprobar_no_siendo_mark_retorna_403(): void
+    public function test_aprobar_no_siendo_aprobador_retorna_403(): void
     {
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
@@ -429,7 +429,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
         $this->grantBodega('multi@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');

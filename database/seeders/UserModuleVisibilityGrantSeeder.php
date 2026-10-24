@@ -16,8 +16,8 @@ use Illuminate\Database\Seeder;
  * `user_module_visibility` (SCRUM-724). Mismo criterio que `SpecialPermissionSeeder`: corre en TODOS los
  * entornos y reemplaza el "grant manual" que un reseed no restauraría.
  *
- * Hoy: el líder de operaciones (Mariam Díaz, rol `lider_operaciones`) ve Administración & Contabilidad igual que
- * Félix (ver y alcance de equipo). El rol NO se toca: sus rutas de Admin&Cont las abre `role:` en
+ * Hoy: el líder de operaciones (Lider Operaciones Díaz, rol `lider_operaciones`) ve Administración & Contabilidad igual que
+ * Contabilidad (ver y alcance de equipo). El rol NO se toca: sus rutas de Admin&Cont las abre `role:` en
  * `routes/admin-contab.php` y su edición no depende del nivel de seguridad.
  *
  * Idempotente y no destructivo: solo CREA la fila cuando no existe ninguna para ese usuario y módulo. Si ya hay una
@@ -30,14 +30,14 @@ class UserModuleVisibilityGrantSeeder extends Seeder
         'lideroperaciones@test.com' => [
             ['module' => 'admin_contab', 'can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => true],
         ],
-        // SCRUM-1150 — Félix replica a Mark en Ventas & Diseño (ver, equipo, editar y aprobar) sin subir su nivel de seguridad.
+        // SCRUM-1150 — Contabilidad replica a Gerencia en Ventas & Diseño (ver, equipo, editar y aprobar) sin subir su nivel de seguridad.
         'contabilidad@test.com' => [
             ['module' => 'ventas_diseno', 'can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => true, 'can_edit' => true, 'can_approve' => true],
         ],
     ];
 
     /**
-     * SCRUM-1157 — ítems de menú OCULTOS por persona (`user_module_menu_visibility`, solo filas `visible=false`). Mariam ve Compras
+     * SCRUM-1157 — ítems de menú OCULTOS por persona (`user_module_menu_visibility`, solo filas `visible=false`). Lider Operaciones ve Compras
      * únicamente en modo consulta (Órdenes, Logística, Inventario, Ingresos, Sustitutos): el resto de Compras no es suyo. SCRUM-771 lo dejó
      * "por configuración del panel admin" para aplicar a mano en cada entorno; dev y prod lo tenían y test no, y en test aparecían enlaces
      * a pantallas que la redirigían a inicio. Solo siembra sobre una configuración vacía del módulo: nunca pisa ni borra lo que alguien ajustó.

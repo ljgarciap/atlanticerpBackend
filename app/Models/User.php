@@ -375,7 +375,7 @@ class User extends Authenticatable
             if ($viewTeam) {
                 $perms[] = "{$module}.view_team";
                 // SCRUM-1128 — Gerencia (alcance de equipo en Ventas & Diseño) puede pasar un
-                // proyecto aprobado a Pedido; Félix lo recibe por grant individual.
+                // proyecto aprobado a Pedido; Contabilidad lo recibe por grant individual.
                 if ($module === 'ventas_diseno') {
                     $perms[] = 'ventas_diseno.pass_to_order';
                 }

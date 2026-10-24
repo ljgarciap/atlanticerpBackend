@@ -49,7 +49,7 @@ final class FiscalCertificationService
 {
     private const DISK = 's3-private';
 
-    /** SCRUM-1007 — acciones fiscales manuales que la UI puede ofrecer (solo Mark/superadmin). */
+    /** SCRUM-1007 — acciones fiscales manuales que la UI puede ofrecer (solo Gerencia/superadmin). */
     public const ACCION_REINTENTAR         = 'reintentar';
     public const ACCION_ACTUALIZAR_ESTADO  = 'actualizar_estado';
 
@@ -126,14 +126,14 @@ final class FiscalCertificationService
         );
     }
 
-    // ─── SCRUM-1007 — acciones fiscales manuales (Mark/superadmin) ───────────────────────────
+    // ─── SCRUM-1007 — acciones fiscales manuales (Gerencia/superadmin) ───────────────────────────
 
     /**
      * Qué acción manual está disponible AHORA para el documento (o null): `reintentar` para
      * `rechazado`/`error_configuracion`, `actualizar_estado` para `pendiente`. Ninguna si el documento
      * está anulado, la NC no está aplicada, la FE está apagada o el ambiente cambió desde su último envío.
      * Deny-by-default: la UI solo ofrece el botón si esto devuelve algo (y el controlador de detalle además
-     * exige Mark/superadmin).
+     * exige Gerencia/superadmin).
      */
     public function accionDisponible(AdminContInvoice|AdminContCreditNote $modelo, string $tipoDocumento): ?string
     {
@@ -208,7 +208,7 @@ final class FiscalCertificationService
     }
 
     /**
-     * SCRUM-1019 — "Reconciliar con MSL" (solo Mark/superadmin): recupera el CUFE de un documento que MSL YA tiene pero que
+     * SCRUM-1019 — "Reconciliar con MSL" (solo Gerencia/superadmin): recupera el CUFE de un documento que MSL YA tiene pero que
      * AtlanticERP figura como `rechazado`/`error_configuracion`/`pendiente` (p. ej. se certificó y la respuesta se perdió, o MSL
      * respondió 9022). Primero consulta `GET /v1/documentos/{serie}/{numero}`; si MSL no lo tiene en su cola reenvía la MISMA
      * serie+número (MSL es idempotente: si ya lo certificó responde 200 con el CUFE original, ver `MslPacAdapter`). Al certificar una

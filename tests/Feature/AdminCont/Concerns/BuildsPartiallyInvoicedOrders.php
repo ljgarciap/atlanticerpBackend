@@ -28,7 +28,7 @@ use Illuminate\Testing\TestResponse;
  */
 trait BuildsPartiallyInvoicedOrders
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     private function reTenant(): void
     {
@@ -37,7 +37,7 @@ trait BuildsPartiallyInvoicedOrders
 
     private function token(): string
     {
-        $token = $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        $token = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
         $this->reTenant();
 
         return $token;
@@ -47,7 +47,7 @@ trait BuildsPartiallyInvoicedOrders
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
-        return (int) DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)->value('id');
+        return (int) DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)->value('id');
     }
 
     /** @param array<string, mixed> $data */

@@ -43,7 +43,7 @@ use Illuminate\Support\Str;
  *
  * Batch 17 (SCRUM-591→596, REQ-514→519) agrega: comprobante de retención (solo régimen 50%),
  * "Marcar como pagado" con validación en cadena, % de comisión por proyecto (propuesta + aprobación
- * de Mark), cuenta de pago editable, recordatorio por correo al arquitecto, y modal de detalle por
+ * de Gerencia), cuenta de pago editable, recordatorio por correo al arquitecto, y modal de detalle por
  * proyecto (consolida REQ-508→518, sin lógica nueva propia).
  *
  * @phpstan-type ArchitectProjectRow array{pipeline_card_id: int, architect_id: int,
@@ -284,7 +284,7 @@ final class ArchitectCommissionService
      * relación, ver su descripción), calcularlo como mitad del % vigente sigue el texto literal del
      * REQ ("la mitad del 7% de ITBMS") y se mantiene correcto si el % base cambia alguna vez.
      *
-     * REQ-516 RN1 — `$porcentajeOverride` es el % aprobado por Mark para ESTE proyecto puntual
+     * REQ-516 RN1 — `$porcentajeOverride` es el % aprobado por Gerencia para ESTE proyecto puntual
      * (`ArchitectCommission.porcentaje_aprobado`); `null` cae al default global.
      *
      * @return array{comision: float, impuesto: float|null, total: float|null}
@@ -552,7 +552,7 @@ final class ArchitectCommissionService
                 'uploaded_at' => $p['comprobante_retencion_uploaded_at']?->toIso8601String(),
             ] : null,
             'fecha_pago' => $p['fecha_pago']?->toDateString(),
-            // REQ-516 — propuesta de % pendiente de aprobación de Mark, null si no hay ninguna.
+            // REQ-516 — propuesta de % pendiente de aprobación de Gerencia, null si no hay ninguna.
             'porcentaje_pendiente' => $p['porcentaje_pendiente'],
             'porcentaje_pendiente_motivo' => $p['porcentaje_pendiente_motivo'],
             // REQ-517 — cuenta de pago; `null` hasta que se resuelva el default (REQ-517 RN1) o se
@@ -729,7 +729,7 @@ final class ArchitectCommissionService
      * "Banco General — Cuenta Corriente", deliberadamente duplicado en vez de depender de ese
      * servicio — mismo criterio de independencia entre motores ya establecido en el docblock de
      * clase. `null` si esa cuenta específica no existe todavía en este tenant (nunca bloquea nada,
-     * el campo queda sin resolver hasta que Felix/Yaneth la creen en Cuentas Bancarias).
+     * el campo queda sin resolver hasta que Contabilidad/Yaneth la creen en Cuentas Bancarias).
      */
     public function defaultBankAccount(): ?AdminContBankAccount
     {
@@ -767,7 +767,7 @@ final class ArchitectCommissionService
 
     /**
      * REQ-516 RN2/RN3 — propone un % de comisión distinto para ESTE proyecto. El % vigente sigue
-     * siendo el actual (aprobado o default) hasta que Mark decida — nunca se aplica de inmediato.
+     * siendo el actual (aprobado o default) hasta que Gerencia decida — nunca se aplica de inmediato.
      */
     public function proponerPorcentaje(int $pipelineCardId, int $architectId, float $nuevoPorcentaje, string $motivo, int $actorId): ArchitectCommission
     {
@@ -795,7 +795,7 @@ final class ArchitectCommissionService
     }
 
     /**
-     * REQ-516 RN4 — exclusivo de Mark (gateado en la ruta, no acá). Al aprobar, el % pendiente pasa
+     * REQ-516 RN4 — exclusivo de Gerencia (gateado en la ruta, no acá). Al aprobar, el % pendiente pasa
      * a ser el % aprobado (aplica de inmediato al cálculo). Al rechazar, se descarta sin tocar
      * `porcentaje_aprobado` — el % vuelve exactamente al valor anterior porque nunca se tocó.
      */

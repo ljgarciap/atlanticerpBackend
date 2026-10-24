@@ -38,7 +38,7 @@ use Illuminate\Support\Collection;
  * SOLO el gate grueso de la ruta — `RelocationRequestController::resolveMarkAccess()`,
  * `AdjustmentRequestController`, `GeneralCountController` y `PurchaseOrderController::approve()`
  * delegan la decisión real 100% a `AprobacionGate`/`primary_approver_user_id` (`compras.approve`
- * no es Mark, ver docblock de `AprobacionGate::esMark()`). Usar la unión ahí mostraba items a
+ * no es Gerencia, ver docblock de `AprobacionGate::esMark()`). Usar la unión ahí mostraba items a
  * usuarios que después recibían 403/422 al intentar actuar — por eso esos 4 usan SOLO
  * `$this->gate->canAct()`, sin el permiso nativo.
  *

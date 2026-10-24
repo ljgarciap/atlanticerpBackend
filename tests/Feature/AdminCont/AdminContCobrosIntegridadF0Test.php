@@ -23,7 +23,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContCobrosIntegridadF0Test extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -33,7 +33,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function remakeTenant(): void
@@ -61,7 +61,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         return AdminContAbono::create([
             'master_client_id' => $masterId, 'monto_original' => $monto, 'monto_usado' => 0, 'metodo_pago' => 'transferencia',
             'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF-F0', 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'),
+            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
             'fecha_registro' => now(), 'fecha_confirmacion' => now(),
         ]);
     }

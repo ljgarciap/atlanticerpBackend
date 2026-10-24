@@ -89,7 +89,7 @@ class AdminContFiscalSettings extends Model
 
     /** La fila única de configuración — sembrada por la migración, siempre existe. */
     /**
-     * ¿El actor del JWT es Mark (approver configurado) o superadmin? Misma regla que
+     * ¿El actor del JWT es Gerencia (approver configurado) o superadmin? Misma regla que
      * `EnsureIsPrimaryApprover` (`superadmin.all` bypassa); la usan los controllers de detalle para
      * decidir qué datos de Configuración Fiscal exponen.
      *

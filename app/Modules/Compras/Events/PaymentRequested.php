@@ -6,7 +6,7 @@ namespace App\Modules\Compras\Events;
 
 use App\Shared\Contracts\DomainEvent;
 
-/** SCRUM-252 (REQ-189) — Compras notifica a Mark que hay que pagar. No bloquea nada por sí solo. */
+/** SCRUM-252 (REQ-189) — Compras notifica a Gerencia que hay que pagar. No bloquea nada por sí solo. */
 final class PaymentRequested implements DomainEvent
 {
     public function __construct(

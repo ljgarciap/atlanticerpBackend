@@ -90,7 +90,7 @@ class CrmDemoSeeder extends Seeder
             // ── Lead ──────────────────────────────────────────────────────────
             'torre_pacifica' => [
                 'nombre'        => '[DEMO] Torre Pacífica',
-                'contacto'      => 'Carlos Mendez',
+                'contacto'      => 'Tecnico Servicios Mendez',
                 'email'         => 'c.mendez@grupopacifico.com',
                 'celular'       => '6615-2244',
                 'developer'     => 'Grupo Pacífico',
@@ -126,7 +126,7 @@ class CrmDemoSeeder extends Seeder
             // ── Diseño ────────────────────────────────────────────────────────
             'hotel_decameron' => [
                 'nombre'        => '[DEMO] Hotel Decameron Farallon',
-                'contacto'      => 'Miguel Torres',
+                'contacto'      => 'Garantias Servicios Torres',
                 'email'         => 'm.torres@decameron.com',
                 'celular'       => '6644-9900',
                 'developer'     => 'Decameron Hotels',
@@ -147,8 +147,8 @@ class CrmDemoSeeder extends Seeder
                 'contacto'      => 'Dra. Laura Sánchez',
                 'email'         => 'l.sanchez@clinicasf.com',
                 'celular'       => '6671-3355',
-                'encargado'     => 'Ing. Pedro Castillo',
-                'arquitecto'    => 'Arq. Vanessa Ríos',
+                'encargado'     => 'Ing. Tecnico Servicios Garantias Servicios',
+                'arquitecto'    => 'Arq. Vendedor Disenador Ríos',
                 'tipo'          => 'diseno',
                 'dialux'        => true,
                 'area'          => 'Salud',

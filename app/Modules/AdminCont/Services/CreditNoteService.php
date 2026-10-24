@@ -308,10 +308,10 @@ final class CreditNoteService
             }
 
             // Batch 13 (REQ-494 RN1) — cualquier Anulación completa queda pendiente de aprobación
-            // de Mark SIN IMPORTAR el monto, no solo por superar el umbral (a diferencia de los
+            // de Gerencia SIN IMPORTAR el monto, no solo por superar el umbral (a diferencia de los
             // otros 3 tipos). Fix confirmado por Luis sobre el comportamiento de Batch 11: antes
             // de esto, una anulación completa de una factura chica quedaba `aplicada` directo, sin
-            // pasar por Mark. Alcance acotado a este método — `registerCorreccion()` (subtipo
+            // pasar por Gerencia. Alcance acotado a este método — `registerCorreccion()` (subtipo
             // `correccion`, REQ-490) ya tiene su propia regla intencional de solo-umbral.
             $threshold = $this->primaryApprovalThreshold();
             $estado = ($monto > $threshold || $data['tipo'] === AdminContCreditNote::TIPO_ANULACION_COMPLETA)
@@ -341,7 +341,7 @@ final class CreditNoteService
             // REQ-482 — solo si NO quedó pendiente de aprobación se aplica de verdad: saldo de la
             // factura, y el destino del excedente (banco o saldo a favor). Si quedó pendiente,
             // esta decisión ya quedó persistida arriba (resultado/cuenta_bancaria_salida_id) — Batch
-            // 13 (`decide()`, exclusivo Mark) llama a `applyToBalance()` para ejecutarla al aprobar,
+            // 13 (`decide()`, exclusivo Gerencia) llama a `applyToBalance()` para ejecutarla al aprobar,
             // mismo método que este caso inmediato para no duplicar la lógica.
             if ($estado === AdminContCreditNote::ESTADO_APLICADA) {
                 $this->applyToBalance($note, $facturaOrigen);
@@ -389,7 +389,7 @@ final class CreditNoteService
     /**
      * SCRUM-943 — mismo gate que `dispatchConfirmationEmail()`: certificar ante el PAC solo tiene
      * sentido cuando la nota quedó `aplicada` de verdad, nunca mientras sigue `pendiente_aprobacion`
-     * (podría rechazarse y no llegar a tener efecto real) ni si Mark la rechazó. Síncrono (no
+     * (podría rechazarse y no llegar a tener efecto real) ni si Gerencia la rechazó. Síncrono (no
      * `ShouldQueue`) — mismo criterio que `CertifyInvoiceOnCreated` sobre `InvoiceCreated`;
      * `FiscalCertificationService` ya atrapa cualquier error como `error_configuracion`, nunca
      * bloquea ni revierte la nota ya aplicada.
@@ -465,7 +465,7 @@ final class CreditNoteService
      * `saldoPendiente`/`excedente` contra el estado ACTUAL de `$facturaOrigen` (bajo lock del
      * llamador), no contra valores guardados de un instante anterior — mismo criterio tanto si se
      * llama desde `register()` (nota recién creada, aplicación inmediata) como desde `decide()`
-     * (nota que estuvo pendiente y Mark recién aprueba, posiblemente más tarde). El `resultado`
+     * (nota que estuvo pendiente y Gerencia recién aprueba, posiblemente más tarde). El `resultado`
      * (devuelto/saldo_favor/aplicado_saldo) y `cuenta_bancaria_salida_id` NUNCA se recalculan acá —
      * ya quedaron decididos por el usuario al registrar la nota (REQ-484 RN2), esto solo ejecuta esa
      * decisión.
@@ -505,7 +505,7 @@ final class CreditNoteService
     }
 
     /**
-     * Batch 13 (REQ-494) — Mark aprueba o rechaza una nota `pendiente_aprobacion`. RN2 bloquea la
+     * Batch 13 (REQ-494) — Gerencia aprueba o rechaza una nota `pendiente_aprobacion`. RN2 bloquea la
      * aprobación si la nota exige comprobante (mismo predicado que `register()`, ver
      * `AdminContCreditNote::requiresComprobante()`) y no lo tiene adjunto. RN3/RN4: al aprobar, se
      * ejecuta el efecto real diferido — `executeCorreccion()` si era "Corrección de datos"
@@ -540,7 +540,7 @@ final class CreditNoteService
 
                 // SCRUM-1116 (D3) — al aprobar se revalida contra el valor acreditable SIN contar a la propia nota: una nota
                 // registrada antes de este fix (o con otra pendiente en paralelo) que haría pasar el acumulado del valor de
-                // la factura no se puede aprobar; Mark solo puede rechazarla. Las de corrección de datos ya lo cubren al
+                // la factura no se puede aprobar; Gerencia solo puede rechazarla. Las de corrección de datos ya lo cubren al
                 // registrarse (no admiten notas previas ni pendientes), por eso quedan fuera.
                 if (! $note->correccion_pendiente_aprobacion) {
                     $acreditable = $this->creditable->valorAcreditableRestante($facturaOrigen, (int) $note->id);
@@ -625,7 +625,7 @@ final class CreditNoteService
      * real de factura de origen es REQ-483/Batch 11 — hasta entonces el formulario no puede excluir
      * "la tasa actual" porque no hay ninguna factura elegida, ver `RegistrarNotaCreditoModal`
      * `facturaActualRateId`). Deliberadamente un endpoint propio de Notas Crédito, distinto de
-     * `GET /admin-contab/itbms-rates` (ese es `primary_approver_only` — Felix/Yaneth/Gerencia no tienen acceso
+     * `GET /admin-contab/itbms-rates` (ese es `primary_approver_only` — Contabilidad/Yaneth/Gerencia no tienen acceso
      * ahí pero sí necesitan ver el catálogo para elegir "tratamiento correcto").
      *
      * @return list<array{id: int, nombre: string, descripcion: string, porcentaje: float, es_base: bool}>
@@ -853,7 +853,7 @@ final class CreditNoteService
                 : null,
             'nueva_fecha_factura' => $note->nueva_fecha_factura?->toDateString(),
             // RN4 REQ-493 — el frontend decide si renderiza los botones Aprobar/Rechazar según este
-            // estado; Batch 13 conecta la acción real (`decide()`, exclusivo Mark).
+            // estado; Batch 13 conecta la acción real (`decide()`, exclusivo Gerencia).
             'puede_aprobar_rechazar' => $note->estado === AdminContCreditNote::ESTADO_PENDIENTE_APROBACION,
             'bodega_trazabilidad' => null,
         ];
@@ -875,7 +875,7 @@ final class CreditNoteService
 
     /**
      * REQ-491 — precarga del formulario de registro al hacer clic en una fila ámbar de la cola.
-     * Endpoint propio de Notas Crédito (no llama a `bodega.read`, que Felix/Yaneth/Mark/Gerencia no
+     * Endpoint propio de Notas Crédito (no llama a `bodega.read`, que Contabilidad/Yaneth/Mark/Gerencia no
      * tienen) — mismo criterio de "cross-schema directo" ya usado en `pendingBodegaReturns()`.
      *
      * @return array<string, mixed>|null null si la devolución no existe o ya no está en la cola
@@ -967,7 +967,7 @@ final class CreditNoteService
 
     /**
      * SCRUM-865 punto 2 — `CustomerReturnController::signedDocumentUrl()` (Bodega) está gateado
-     * por `permission:bodega.read`, que un usuario de Notas de Crédito (Felix/Yaneth/Mark/
+     * por `permission:bodega.read`, que un usuario de Notas de Crédito (Contabilidad/Yaneth/Mark/
      * Gerencia) no necesariamente tiene. Mismo mecanismo de presign, gateado acá por el permiso ya
      * exigido a toda la ruta de `notas-credito/*`.
      */
@@ -1149,7 +1149,7 @@ final class CreditNoteService
 
             // REQ-490 RN1/RN5 — solo se ejecuta de inmediato si NO quedó pendiente de aprobación.
             // Si quedó pendiente, `executeCorreccion()` se difiere hasta que Batch 13 (aprobar,
-            // exclusivo Mark) la invoque — el payload para ejecutarla ya quedó persistido arriba.
+            // exclusivo Gerencia) la invoque — el payload para ejecutarla ya quedó persistido arriba.
             if (! $pendiente) {
                 $this->executeCorreccion($note, $facturaOrigen);
             }
@@ -1280,10 +1280,10 @@ final class CreditNoteService
 
         // SCRUM-929 (Senior Review B3b, hallazgo ALTO 2026-09-19) — una segunda corrección registrada
         // mientras la primera sigue `pendiente_aprobacion` sobre la MISMA factura queda condenada a
-        // fallar: cuando Mark aprueba la primera, la factura de origen se anula y nace su reemplazo: la
+        // fallar: cuando Gerencia aprueba la primera, la factura de origen se anula y nace su reemplazo: la
         // segunda corrección, que sigue apuntando a la factura YA ANULADA, ahora se rechaza limpio en
         // `decide()` (ver el `whereNull('anulada_at')` de esa consulta — B3a-1) en vez de un 500, pero
-        // sigue siendo una nota que nunca podrá aprobarse (Mark solo puede rechazarla y volver a
+        // sigue siendo una nota que nunca podrá aprobarse (Gerencia solo puede rechazarla y volver a
         // registrarla contra el reemplazo). Se corta en el origen: no se admite una segunda corrección
         // pendiente sobre una factura que ya tiene una sin resolver.
         $pendientes = AdminContCreditNote::where('factura_origen_id', $facturaOrigen->id)
@@ -1295,15 +1295,15 @@ final class CreditNoteService
             // (descuento, devolución, anulación), que también bloquea corregir pero no es "una corrección".
             throw new CreditNoteStateException(
                 $pendientes->contains(fn (AdminContCreditNote $n): bool => (bool) $n->correccion_pendiente_aprobacion)
-                    ? "La factura {$facturaOrigen->numero} ya tiene una corrección pendiente de aprobación de Mark — resuelve esa antes de registrar otra."
-                    : "La factura {$facturaOrigen->numero} tiene notas de crédito pendientes de aprobación de Mark ({$pendientes->pluck('numero')->implode(', ')}) — resuélvelas antes de corregirla."
+                    ? "La factura {$facturaOrigen->numero} ya tiene una corrección pendiente de aprobación de Gerencia — resuelve esa antes de registrar otra."
+                    : "La factura {$facturaOrigen->numero} tiene notas de crédito pendientes de aprobación de Gerencia ({$pendientes->pluck('numero')->implode(', ')}) — resuélvelas antes de corregirla."
             );
         }
 
         // SCRUM-1009 (D1, decisión de Luis 2026-09-30) — una factura que YA tiene notas de crédito
         // aplicadas no se corrige: la NC de anulación se calcula sobre el total original y no
         // descuenta lo ya acreditado (la DGI la rechaza por saldo, VALIDATE_B606_BALANCE), y el
-        // reemplazo se emitiría por el total entero. Las `rechazada` por Mark no cuentan (nunca tuvieron
+        // reemplazo se emitiría por el total entero. Las `rechazada` por Gerencia no cuentan (nunca tuvieron
         // efecto). Una NC aplicada en AtlanticERP pero rechazada por la DGI SÍ bloquea: hay que resolverla
         // primero (Reintentar certificación). Las `pendiente_aprobacion` ya las cubre `$pendientes`.
         $notasAplicadas = AdminContCreditNote::where('factura_origen_id', $facturaOrigen->id)

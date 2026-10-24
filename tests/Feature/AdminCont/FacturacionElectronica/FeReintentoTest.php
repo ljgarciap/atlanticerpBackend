@@ -24,14 +24,14 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-1007 — reintento manual de certificación ("Reintentar certificación") y "Actualizar estado" de un
- * documento pendiente. Solo Mark/superadmin. Ver docs/specs/scrum-1007-recertificar-documentos-fe.md.
+ * documento pendiente. Solo Gerencia/superadmin. Ver docs/specs/scrum-1007-recertificar-documentos-fe.md.
  */
 final class FeReintentoTest extends FeatureTestCase
 {
     use BuildsPartiallyInvoicedOrders;
     use StubsReceptorGuard;
 
-    private const MARK_EMAIL = 'gerencia3@test.com';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     private const RECHAZO = ['ok' => false, 'estado' => 'RECHAZADO', 'detalles' => ['9026 - Falló la validación de algunos escenarios.']];
     private const CERTIFICADO = ['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE0120000...reintento', 'qr' => 'https://qr.test'];
@@ -48,7 +48,7 @@ final class FeReintentoTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     /** La creación de la factura ya dispara la primera certificación (listener): `$respuestas` son las respuestas en orden. */
@@ -164,14 +164,14 @@ final class FeReintentoTest extends FeatureTestCase
             ->assertJsonPath('codigo', 'documento_anulado');
     }
 
-    public function test_solo_mark_puede_reintentar_y_sin_token_es_401(): void
+    public function test_solo_aprobador_puede_reintentar_y_sin_token_es_401(): void
     {
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
 
         // Sin token primero: `withHeaders()` persiste entre llamadas del mismo test.
         $this->flushHeaders();
         $this->postJson($this->urlFactura($factura, 'fe-reintentar'))->assertStatus(401);
-        $this->api($this->token(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(403); // Felix
+        $this->api($this->token(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(403); // Contabilidad
         $this->api($this->token(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(403);
         Http::assertSentCount(1);
     }
@@ -356,13 +356,13 @@ final class FeReintentoTest extends FeatureTestCase
 
     // ── Indicador accion_fe en el detalle ────────────────────────────────────────────────────
 
-    public function test_el_detalle_ofrece_la_accion_solo_a_mark_y_segun_el_estado(): void
+    public function test_el_detalle_ofrece_la_accion_solo_a_aprobador_y_segun_el_estado(): void
     {
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         $detalle = "/api/admin-contab/invoices/{$factura->order_id}/detail?invoice_id={$factura->id}";
 
         $this->assertSame('reintentar', $this->api($this->loginAsMark(), 'GET', $detalle)->json('accion_fe'));
-        $this->assertNull($this->api($this->token(), 'GET', $detalle)->json('accion_fe')); // Felix
+        $this->assertNull($this->api($this->token(), 'GET', $detalle)->json('accion_fe')); // Contabilidad
 
         $factura->forceFill(['fe_estado' => 'pendiente'])->save();
         $this->assertSame('actualizar_estado', $this->api($this->loginAsMark(), 'GET', $detalle)->json('accion_fe'));
@@ -489,15 +489,15 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         AdminContFiscalSettings::current()->forceFill(['pac_ambiente' => 'apagado'])->save();
         $url = $this->urlFactura($factura, 'fe-reintentar');
-        $felix = $this->token();
+        $contabilidad = $this->token();
 
-        // Felix (misma IP de los tests) agota SU cupo: 6 respuestas 403 y luego 429.
+        // Contabilidad (misma IP de los tests) agota SU cupo: 6 respuestas 403 y luego 429.
         for ($i = 1; $i <= 6; $i++) {
-            $this->api($felix, 'POST', $url)->assertStatus(403);
+            $this->api($contabilidad, 'POST', $url)->assertStatus(403);
         }
-        $this->api($felix, 'POST', $url)->assertStatus(429);
+        $this->api($contabilidad, 'POST', $url)->assertStatus(429);
 
-        // Mark, desde la misma IP, conserva el suyo: recibe la respuesta normal (409 por FE apagada), no un 429.
+        // Gerencia, desde la misma IP, conserva el suyo: recibe la respuesta normal (409 por FE apagada), no un 429.
         $this->api($this->loginAsMark(), 'POST', $url)->assertStatus(409)->assertJsonPath('codigo', 'fe_apagada');
     }
 
@@ -648,11 +648,11 @@ final class FeReintentoTest extends FeatureTestCase
         $this->assertNull($factura->fresh()->cufe);
     }
 
-    public function test_reconciliar_exige_mark_y_un_estado_reconciliable(): void
+    public function test_reconciliar_exige_aprobador_y_un_estado_reconciliable(): void
     {
         $factura = $this->facturaConRespuestas([[self::CERTIFICADO, 200]]);
 
-        $this->api($this->token(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))->assertStatus(403); // Felix
+        $this->api($this->token(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))->assertStatus(403); // Contabilidad
         $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
             ->assertStatus(409)
             ->assertJsonPath('codigo', 'estado_no_reconciliable');
@@ -671,7 +671,7 @@ final class FeReintentoTest extends FeatureTestCase
             ->assertJsonPath('cufe', 'FE0420000...nc-msl');
     }
 
-    public function test_el_detalle_ofrece_reconciliar_solo_a_mark_y_solo_si_el_estado_lo_admite(): void
+    public function test_el_detalle_ofrece_reconciliar_solo_a_aprobador_y_solo_si_el_estado_lo_admite(): void
     {
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         $url = "/api/admin-contab/invoices/{$factura->order_id}/detail?invoice_id={$factura->id}";

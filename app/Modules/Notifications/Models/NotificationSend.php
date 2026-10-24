@@ -56,7 +56,7 @@ class NotificationSend extends Model
 
     /**
      * SCRUM-445 (REQ-375, Bloque B3 Zona Libre de Colón) — Bodega presiona "Recordar" sobre una
-     * solicitud `pendiente`, avisa al rol `lider_compras` (Yirena) para que la resuelva.
+     * solicitud `pendiente`, avisa al rol `lider_compras` (Lider Compras) para que la resuelva.
      */
     public const SOURCE_BODEGA_ZONA_LIBRE_REMINDER = 'bodega_zona_libre_reminder';
 

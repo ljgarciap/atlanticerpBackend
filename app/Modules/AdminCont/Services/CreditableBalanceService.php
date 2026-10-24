@@ -18,7 +18,7 @@ use App\Modules\AdminCont\Models\AdminContInvoice;
  * devuelve lo cobrado, REQ-484). Los cobros por eso NO entran acá.
  *
  * Qué notas cuentan (decisión de Luis 2026-10-06, D1): las `aplicada` y también las `pendiente_aprobacion`, que
- * reservan valor mientras Mark decide (si se rechaza, la nota deja de contar y el valor se libera sola). Las
+ * reservan valor mientras Gerencia decide (si se rechaza, la nota deja de contar y el valor se libera sola). Las
  * `rechazada` nunca cuentan. Cuentan las notas de cualquier tipo (descuento, devolución, anulación y las de
  * "Corrección de datos"), no solo la última.
  *

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Fila única (id=1) de parámetros configurables del módulo Compras — `low_rating_threshold`
- * (REQ-121/122) y `primary_approver_user_id` (SCRUM-206: quién es "Mark" para el gate de
+ * (REQ-121/122) y `primary_approver_user_id` (SCRUM-206: quién es "Gerencia" para el gate de
  * aprobación de REQ-143, configurable en vez de hardcodeado por email). Mismo patrón que
  * App\Modules\VentasDiseno\Models\ReportSettings::current().
  *

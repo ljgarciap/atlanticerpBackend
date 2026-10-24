@@ -28,9 +28,9 @@ use Illuminate\Support\Facades\DB;
  * SCRUM-460→466 (REQ-390→396, Bloque B5 "Conteos generales de inventario") — ver
  * ADR-SCRUM460-466-conteos-generales.md. Bodega inicia un conteo de TODA una bodega
  * (`store()`, precarga automática desde `ProductWarehouseStock`), evalúa diferencias
- * (`evaluate()`), envía a aprobación de Mark (`submit()`, que además limpia solicitudes de
+ * (`evaluate()`), envía a aprobación de Gerencia (`submit()`, que además limpia solicitudes de
  * ajuste cruzadas — REQ-394), y solo tras aprobar aplica el ajuste al Kardex (`apply()`,
- * SCRUM-466) — el primer bloque del proyecto donde "Mark aprueba" y "se aplica al inventario"
+ * SCRUM-466) — el primer bloque del proyecto donde "Gerencia aprueba" y "se aplica al inventario"
  * son dos pasos desacoplados (a diferencia de `AdjustmentRequestController`/
  * `RelocationRequestController`, donde aprobar = aplicar de inmediato).
  */
@@ -67,10 +67,10 @@ final class GeneralCountController extends Controller
             'data' => collect($paginator->items())->map(fn (GeneralCountRequest $r) => $this->formatRequest($r))->values(),
             'meta' => Pagination::meta($paginator),
             // SCRUM-463 (rebote de Gerencia Test 2026-08-14) — mismo gap que SCRUM-466 (apply()):
-            // el frontend no tenía forma de saber quién es "Mark" (primary_approver_user_id es
+            // el frontend no tenía forma de saber quién es "Gerencia" (primary_approver_user_id es
             // puramente de backend, sin claim en el JWT), así que Aprobar/Rechazar quedaban
             // visibles+clicables para TODOS con un candado decorativo — el backend ya rechazaba
-            // (403) a quien no fuera Mark, pero el botón seguía pareciendo funcional. Se expone
+            // (403) a quien no fuera Gerencia, pero el botón seguía pareciendo funcional. Se expone
             // acá para que el frontend oculte el botón por completo, no solo con un candado.
             'can_approve' => $this->canApprove($request),
         ]);
@@ -280,7 +280,7 @@ final class GeneralCountController extends Controller
     }
 
     /**
-     * SCRUM-463/464 (REQ-393/394) — "Enviar a aprobación de Mark": RN1 exige `estado=evaluado`.
+     * SCRUM-463/464 (REQ-393/394) — "Enviar a aprobación de Gerencia": RN1 exige `estado=evaluado`.
      * En la misma transacción ejecuta el cruce de REQ-394: por cada línea con `diferencia != 0`
      * que cruce con una `AdjustmentRequestLine` pendiente (mismo `catalog_product_id` +
      * `warehouse_id`, ver criterio de cruce en el ADR), la elimina; si la `AdjustmentRequest`
@@ -314,7 +314,7 @@ final class GeneralCountController extends Controller
 
             $linesWithDifference = $generalCountRequest->lines()->where('diferencia', '!=', 0)->get();
 
-            // SCRUM-797 (rebote 2026-08-27) — "al enviar a aprobación de Mark": si MIENTRAS TANTO
+            // SCRUM-797 (rebote 2026-08-27) — "al enviar a aprobación de Gerencia": si MIENTRAS TANTO
             // otro conteo de la misma bodega ya dejó una línea con diferencia real sin resolver
             // para alguno de los MISMOS productos que este conteo también encontró con diferencia,
             // requiere confirmación explícita antes de reemplazar esa línea puntual (nunca el
@@ -357,7 +357,7 @@ final class GeneralCountController extends Controller
             $generalCountRequest->update([
                 'estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION,
                 // SCRUM-797 RN8 — momento exacto en que se pidió la aprobación, distinto de
-                // `created_at` (creación del borrador) y de `resuelto_at` (decisión de Mark).
+                // `created_at` (creación del borrador) y de `resuelto_at` (decisión de Gerencia).
                 'fecha_solicitud_aprobacion' => now(),
             ]);
 
@@ -381,7 +381,7 @@ final class GeneralCountController extends Controller
     }
 
     /**
-     * SCRUM-465 (REQ-395) — Mark aprueba. Nunca toca el Kardex (a diferencia de
+     * SCRUM-465 (REQ-395) — Gerencia aprueba. Nunca toca el Kardex (a diferencia de
      * Ajustes/Reubicaciones) — ver SCRUM-466/`apply()` para el paso separado que sí lo hace.
      * Mismo fix de concurrencia que `RelocationRequestController::approve()`: lock + chequeo de
      * estado dentro de la transacción.
@@ -426,7 +426,7 @@ final class GeneralCountController extends Controller
         return response()->json($this->formatDetail($this->freshDetail($generalCountRequest)));
     }
 
-    /** SCRUM-465 (REQ-395 RN2) — Mark rechaza, motivo obligatorio, no toca el Kardex. */
+    /** SCRUM-465 (REQ-395 RN2) — Gerencia rechaza, motivo obligatorio, no toca el Kardex. */
     public function reject(Request $request, int $id): JsonResponse
     {
         $access = $this->resolveMarkAccess($request);
@@ -478,10 +478,10 @@ final class GeneralCountController extends Controller
      * `diferencia` (positiva si sobró, negativa si faltó).
      *
      * Rebote de Gerencia Test (2026-08-14) — RN1 del REQ define este paso como una confirmación
-     * manual EXCLUSIVA del Líder de Bodega (doble validación humana: Mark aprueba el conteo,
+     * manual EXCLUSIVA del Líder de Bodega (doble validación humana: Gerencia aprueba el conteo,
      * Líder de Bodega confirma que el ajuste ya se aplicó físicamente). El endpoint solo estaba
      * gateado por `permission:bodega.write` — un permiso amplio que cualquier perfil de Bodega
-     * tiene (Asistentes/Operativos) y que Mark también tiene vía su security level de Gerencia,
+     * tiene (Asistentes/Operativos) y que Gerencia también tiene vía su security level de Gerencia,
      * dejando el botón funcional para gente que nunca debió poder accionarlo. `resolveUser()` no
      * alcanza por sí solo — mismo patrón que `resolveMarkAccess()` en este mismo controller y en
      * `RelocationRequestController`, pero gateando por `role_key` en vez de por
@@ -573,7 +573,7 @@ final class GeneralCountController extends Controller
      * SCRUM-462 (REQ-392, rebote de Gerencia Test 2026-08-14) — "Eliminar" el borrador completo.
      * Mismo criterio de estado que `continueDraft()`: solo si NUNCA se envió a aprobación
      * (`pendiente_evaluacion`/`evaluado`) — a partir de `pendiente_aprobacion` ya no es "solo un
-     * borrador" de Bodega, es una decisión de Mark, no se puede eliminar por acá. Las líneas se
+     * borrador" de Bodega, es una decisión de Gerencia, no se puede eliminar por acá. Las líneas se
      * borran solas (`cascadeOnDelete`, ver migración de `general_count_request_lines`) — nunca
      * toca `AdjustmentRequestLine` ni el Kardex, un conteo en este estado no pudo haber cruzado ni
      * aplicado nada todavía.
@@ -611,10 +611,10 @@ final class GeneralCountController extends Controller
     }
 
     /**
-     * Gate "exclusivo de Mark" — mismo mecanismo que
+     * Gate "exclusivo de Gerencia" — mismo mecanismo que
      * `AdjustmentRequestController::resolveMarkAccess()` (`ComprasSettings::primary_approver_user_id`).
      *
-     * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Mark acepta cualquier
+     * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Gerencia acepta cualquier
      * usuario con una `ReglaAprobacion` activa para tipo=general_count (SCRUM-163) — ver docblock
      * de `AprobacionGate` para el porqué.
      *
@@ -793,7 +793,7 @@ final class GeneralCountController extends Controller
      * SCRUM-797 (rebote de Gerencia Test 2026-08-27) — reemplaza el viejo `findUnresolvedForWarehouse()`
      * (bloqueo de bodega completa). Un producto está "en conflicto" únicamente si ya tiene una
      * línea EVALUADA con diferencia real (`diferencia != 0`) en OTRO conteo de la misma bodega que
-     * sigue sin aprobar/rechazar por Mark (`evaluado`/`pendiente_aprobacion`) — decisión explícita
+     * sigue sin aprobar/rechazar por Gerencia (`evaluado`/`pendiente_aprobacion`) — decisión explícita
      * de Luis 2026-08-27: pertenecer a un conteo todavía sin evaluar (`pendiente_evaluacion`,
      * `diferencia` siempre NULL en ese estado) no cuenta como conflicto, nada está en disputa
      * todavía. `replaced_by_id IS NULL` — una línea ya reemplazada por confirmación previa no
@@ -839,7 +839,7 @@ final class GeneralCountController extends Controller
     /**
      * SCRUM-800 — `findConflictingLines()` colapsa a UNA línea por producto (`keyBy`) para el
      * chequeo/aviso 409, correcto para ese propósito. Pero si hubo más de un ciclo de conteo sin
-     * resolver para el mismo producto+bodega (varios `store()`/`submit()` sin que Mark
+     * resolver para el mismo producto+bodega (varios `store()`/`submit()` sin que Gerencia
      * apruebe/rechace los anteriores), solo la línea "colapsada" quedaba marcada como
      * reemplazada — las demás quedaban huérfanas (`replaced_by_id` NULL) y seguían bloqueando
      * ajustes/conteos nuevos para siempre, aunque ya no reflejaran el estado real más reciente.

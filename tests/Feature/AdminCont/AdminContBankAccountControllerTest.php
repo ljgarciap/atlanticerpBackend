@@ -11,9 +11,9 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-607→609 (REQ-530→532) — Cuentas Bancarias. */
 class AdminContBankAccountControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
-    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+    private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
     protected function setUp(): void
     {
@@ -23,15 +23,15 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsYaneth(): string
     {
-        return $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
 
-    public function test_index_visible_para_felix(): void
+    public function test_index_visible_para_contabilidad(): void
     {
         AdminContBankAccount::create([
             'banco' => 'Banistmo', 'ultimos_4_digitos' => '9034',
@@ -70,7 +70,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
         ]);
     }
 
-    public function test_store_yaneth_tambien_puede_crear_cuentas(): void
+    public function test_store_asistente_tambien_puede_crear_cuentas(): void
     {
         $token = $this->loginAsYaneth();
 

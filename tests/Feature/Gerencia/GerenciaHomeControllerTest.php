@@ -190,12 +190,12 @@ class GerenciaHomeControllerTest extends FeatureTestCase
             'cantidad' => 2, 'motivo' => 'Prueba SCRUM-1154', 'solicitado_por' => $solicitante->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
-        $mark = User::where('email', 'gerencia3@test.com')->firstOrFail();
+        $approver = User::where('email', 'gerencia3@test.com')->firstOrFail();
 
-        $items = collect(app(GerenciaHomeService::class)->pendingApprovalsForUser($mark->id)['aprobaciones']);
+        $items = collect(app(GerenciaHomeService::class)->pendingApprovalsForUser($approver->id)['aprobaciones']);
         $item = $items->first(fn (array $i) => $i['type'] === 'relocation' && $i['id'] === $relocation->id);
 
-        $this->assertNotNull($item, 'Mark ve la reubicación pendiente en sus aprobaciones.');
+        $this->assertNotNull($item, 'Gerencia ve la reubicación pendiente en sus aprobaciones.');
         $this->assertSame("/bodega/bodegas?relocation={$relocation->id}", $item['action_url']);
     }
 

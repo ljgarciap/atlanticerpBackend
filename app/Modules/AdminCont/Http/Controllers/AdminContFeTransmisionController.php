@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
  * SCRUM-987 — historial de transmisiones al PAC de una factura o nota de crédito (payload enviado +
  * respuesta recibida). Las rutas viven bajo el middleware `primary_approver_only` (routes/admin-contab.php):
  * el payload lleva datos del receptor (RUC, nombre, correo) y la respuesta cruda del proveedor, así
- * que es deny-by-default para cualquier actor que no sea Mark/superadmin.
+ * que es deny-by-default para cualquier actor que no sea Gerencia/superadmin.
  */
 class AdminContFeTransmisionController
 {

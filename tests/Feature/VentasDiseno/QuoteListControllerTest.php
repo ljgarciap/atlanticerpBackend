@@ -142,7 +142,7 @@ class QuoteListControllerTest extends FeatureTestCase
 
     public function test_resumen_excluye_borradores_y_clasifica_por_estado_de_documento(): void
     {
-        // SCRUM-102 (hallazgo Marly 2026-07-15): "vigente" mostraba $0 pese a
+        // SCRUM-102 (hallazgo Gerencia 2026-07-15): "vigente" mostraba $0 pese a
         // 3 cotizaciones Enviadas (porque el summary viejo solo miraba el
         // stage de PipelineCard, no document_status), y "Aprobado" contaba
         // borradores ($0, sin folio) de proyectos ya en etapa Aprobado.

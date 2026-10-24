@@ -41,7 +41,7 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
     use BuildsPartiallyInvoicedOrders;
     use StubsReceptorGuard;
 
-    private const MARK_EMAIL = 'gerencia3@test.com';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -209,20 +209,20 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
     public function test_b3a_decidir_incobrable_opera_sobre_la_factura_elegida(): void
     {
         ['root' => $root, 'entregas' => $entregas] = $this->familia();
-        $felix = $this->token();
-        $this->facturar($felix, [$entregas[1]->id], 'entrega')->assertStatus(201);
-        $this->facturar($felix, [$root->id], 'completo')->assertStatus(201);
+        $contabilidad = $this->token();
+        $this->facturar($contabilidad, [$entregas[1]->id], 'entrega')->assertStatus(201);
+        $this->facturar($contabilidad, [$root->id], 'completo')->assertStatus(201);
         $parcial  = $this->parcialDe($root, $entregas[1]);
         $completo = $this->completoDe($root);
-        $this->api($felix, 'POST', "/api/admin-contab/invoices/{$root->id}/mark-uncollectible", ['motivo' => 'x', 'invoice_id' => $parcial->id])->assertStatus(200);
-        $mark = $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        $this->api($contabilidad, 'POST', "/api/admin-contab/invoices/{$root->id}/mark-uncollectible", ['motivo' => 'x', 'invoice_id' => $parcial->id])->assertStatus(200);
+        $approver = $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
         $this->reTenant();
 
-        $this->api($mark, 'PUT', "/api/admin-contab/invoices/{$root->id}/uncollectible-decision", ['approve' => true])
+        $this->api($approver, 'PUT', "/api/admin-contab/invoices/{$root->id}/uncollectible-decision", ['approve' => true])
             ->assertStatus(422)
             ->assertJsonPath('message', 'Este pedido tiene varias facturas activas: indique sobre cuál operar con invoice_id.');
 
-        $this->api($mark, 'PUT', "/api/admin-contab/invoices/{$root->id}/uncollectible-decision", ['approve' => true, 'invoice_id' => $parcial->id])->assertStatus(200);
+        $this->api($approver, 'PUT', "/api/admin-contab/invoices/{$root->id}/uncollectible-decision", ['approve' => true, 'invoice_id' => $parcial->id])->assertStatus(200);
         $this->assertTrue((bool) $parcial->fresh()->es_incobrable);
         $this->assertFalse((bool) $completo->fresh()->es_incobrable);
     }
@@ -526,13 +526,13 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
 
     /**
      * Senior Review B3a-1 (2026-09-19) — no se admite una segunda corrección mientras la primera sigue
-     * pendiente de aprobación de Mark sobre la MISMA factura: esa segunda nota quedaría condenada a
+     * pendiente de aprobación de Gerencia sobre la MISMA factura: esa segunda nota quedaría condenada a
      * fallar (cuando la primera se aprueba, la factura de origen se anula y nace su reemplazo). Se corta
-     * en el REGISTRO, no se espera a que Mark intente aprobarla para descubrirlo.
+     * en el REGISTRO, no se espera a que Gerencia intente aprobarla para descubrirlo.
      */
     public function test_b3a_1_registrar_una_segunda_correccion_mientras_la_primera_sigue_pendiente_se_rechaza(): void
     {
-        // Ítem caro para superar el umbral de aprobación de Mark (5000 por defecto) y quedar pendiente.
+        // Ítem caro para superar el umbral de aprobación de Gerencia (5000 por defecto) y quedar pendiente.
         ['root' => $root] = $this->makePedido([['desc' => 'Ítem caro', 'qty' => 1, 'price' => 6000.00]], [[1]]);
         $token = $this->token();
         $this->facturar($token, [$root->id], 'completo')->assertStatus(201);
@@ -540,7 +540,7 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
 
         $this->corregir($token, $original, AdminContCreditNote::MOTIVO_CORRECCION_FECHA, ['nueva_fecha' => now()->toDateString()])->assertStatus(201);
         $n1 = AdminContCreditNote::where('factura_origen_id', $original->id)->firstOrFail();
-        $this->assertTrue((bool) $n1->correccion_pendiente_aprobacion, 'Monto > umbral: queda pendiente de Mark.');
+        $this->assertTrue((bool) $n1->correccion_pendiente_aprobacion, 'Monto > umbral: queda pendiente de Gerencia.');
 
         // Preview y registro rechazan la 2ª mientras N1 sigue sin resolver — ANTES de tocar nada.
         $this->api($token, 'POST', '/api/admin-contab/notas-credito/correccion/preview', [
@@ -583,14 +583,14 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
             'correccion_pendiente_aprobacion' => true, 'registrado_por' => $this->ownerId(), 'fecha' => now()->toDateString(),
         ]);
 
-        $mark = $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        $approver = $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
         $this->reTenant();
 
-        $this->api($mark, 'PUT', "/api/admin-contab/notas-credito/{$n1->id}/decision", ['approve' => true])->assertStatus(200);
+        $this->api($approver, 'PUT', "/api/admin-contab/notas-credito/{$n1->id}/decision", ['approve' => true])->assertStatus(200);
         $reemplazo1 = AdminContInvoice::findOrFail($n1->fresh()->factura_nueva_id);
 
         // Antes del fix: 500 (violación del índice único al re-anular F1 e intentar crear F3). Ahora: 422.
-        $this->api($mark, 'PUT', "/api/admin-contab/notas-credito/{$n2->id}/decision", ['approve' => true])->assertStatus(422);
+        $this->api($approver, 'PUT', "/api/admin-contab/notas-credito/{$n2->id}/decision", ['approve' => true])->assertStatus(422);
         $this->assertSame(AdminContCreditNote::ESTADO_PENDIENTE_APROBACION, $n2->fresh()->estado, 'N2 sigue pendiente, no se rompió nada.');
         $this->assertNotNull($reemplazo1->fresh(), 'El reemplazo de N1 sigue intacto.');
         $this->assertCount(1, $this->activas($root));

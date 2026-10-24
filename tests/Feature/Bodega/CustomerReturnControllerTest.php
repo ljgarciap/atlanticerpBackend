@@ -473,7 +473,7 @@ class CustomerReturnControllerTest extends FeatureTestCase
         Event::assertDispatched(ReturnReceived::class);
     }
 
-    /** REQ-411 — potestad EXCLUSIVA de Bodega, sin aprobación de Mark. */
+    /** REQ-411 — potestad EXCLUSIVA de Bodega, sin aprobación de Gerencia. */
     public function test_reject_no_toca_inventario_y_no_requiere_aprobacion_de_mark(): void
     {
         $product = $this->makeCatalogProduct();
@@ -482,7 +482,7 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $this->setStock($product, 2, 'Bodega Central');
 
         // Solo bodega.write, SIN bodega.approve ni ComprasSettings::primary_approver_user_id —
-        // a diferencia de Reubicación/Ajuste, rechazar una devolución no exige a Mark.
+        // a diferencia de Reubicación/Ajuste, rechazar una devolución no exige a Gerencia.
         $this->grantBodegaPermissions('designer@atlantic.test', ['bodega.read', 'bodega.write']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 

@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * SCRUM-329 Oleada A / Batch A1 (REQ-307, ticket SCRUM-377) — mapeo real vendedor→Asistente de
  * Bodega, confirmado contra la RN1/RN2 del ticket de Jira (no inventado): Asistente Bodega Test 2 recibe
- * los pedidos de Juan Manuel, Fefi, Neil, Bernardo y Annie; Asistente Bodega Test recibe los de Idmar,
- * Vanessa, Paola, Milena y Maribel. Los 12 emails vienen de `BusinessRoleUserSeeder::USERS`
+ * los pedidos de Vendedor Disenador, Vendedor Disenador, Vendedor Disenador, Vendedor Disenador y Vendedor Disenador; Asistente Bodega Test recibe los de Vendedor Disenador,
+ * Vendedor Disenador, Vendedor Disenador, Vendedor Disenador y Vendedor Disenador. Los 12 emails vienen de `BusinessRoleUserSeeder::USERS`
  * (roster real ya sembrado) — ninguno se inventa acá.
  *
  * Corre en TODOS los entornos (bloque "Tipo A" de `DatabaseSeeder`, después de

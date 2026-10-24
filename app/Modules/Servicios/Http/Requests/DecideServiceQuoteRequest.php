@@ -8,7 +8,7 @@ use App\Modules\Servicios\Models\ServiceQuote;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** REQ-234 — Aprobar/Rechazar, exclusivo de Aaron/lider_servicios (ver `role:` en la ruta). */
+/** REQ-234 — Aprobar/Rechazar, exclusivo de Lider Servicios/lider_servicios (ver `role:` en la ruta). */
 class DecideServiceQuoteRequest extends FormRequest
 {
     public function authorize(): bool

@@ -127,7 +127,7 @@ final class InspectionReportService
     }
 
     /**
-     * REQ-238 RN5 — solo Aaron/Líder de Servicios (superadmin) o el técnico interno asignado a
+     * REQ-238 RN5 — solo Lider Servicios/Líder de Servicios (superadmin) o el técnico interno asignado a
      * ESTE ticket pueden generar/editar su informe. Gerencia y el resto quedan solo con lectura
      * (validado por la Matriz de Permisos por Rol del Excel, fila "Generar/editar Informe de
      * Inspección").

@@ -45,14 +45,14 @@ final class QuoteController extends Controller
     }
 
     /**
-     * SCRUM-725 — excepción nombrada por el ticket para Mark y David (grant angosto
+     * SCRUM-725 — excepción nombrada por el ticket para Gerencia y Gerencia (grant angosto
      * por persona, ver SpecialPermissionSeeder — mismo patrón que
      * ventas_diseno.select_partner_price, nunca hardcodear el email acá).
      */
     private const MARGIN_OVERRIDE_PERMISSION = 'ventas_diseno.override_min_margin';
 
     /**
-     * SCRUM-930/931/932 (rebote Daniela 2026-09-20) — mismos roles que
+     * SCRUM-930/931/932 (rebote Gerencia 2026-09-20) — mismos roles que
      * `OrderStatusController::ADMIN_CONTAB_ROLES`/`OrderBoardController::ADMIN_CONTAB_ROLES`.
      * `superadmin` no hace falta acá porque ya cae en `superadmin.all` (bypass de `hasPermission()`
      * más abajo no aplica aquí, pero `management` sí tiene `ventas_diseno.read` real y jamás llega
@@ -224,7 +224,7 @@ final class QuoteController extends Controller
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        // SCRUM-725 — con permiso de excepción (Mark/David), el margen bajo el mínimo
+        // SCRUM-725 — con permiso de excepción (Gerencia/David), el margen bajo el mínimo
         // no bloquea el guardado del borrador: se avisa y bloquea recién en confirm().
         if (
             ! $this->hasMarginOverride($user)
@@ -286,9 +286,9 @@ final class QuoteController extends Controller
      * el resto del detalle.
      *
      * SCRUM-725: guardar/generar (saveDraft/update/QuoteItemController) ya dejan
-     * pasar un margen por debajo del mínimo para Mark/David sin bloquear — el
+     * pasar un margen por debajo del mínimo para Gerencia/David sin bloquear — el
      * bloqueo real (para todos los demás) y la advertencia con confirmación
-     * explícita (para Mark/David) quedan acá, en el paso que realmente publica la
+     * explícita (para Gerencia/David) quedan acá, en el paso que realmente publica la
      * cotización. `override_margin_warning: true` en el body es la confirmación
      * explícita de "Continuar" del modal de advertencia — sin ese flag, con
      * violaciones y permiso de excepción, se responde el resumen para que el
@@ -453,7 +453,7 @@ final class QuoteController extends Controller
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        // SCRUM-725 — misma excepción que saveDraft(): Mark/David pueden guardar por
+        // SCRUM-725 — misma excepción que saveDraft(): Gerencia/David pueden guardar por
         // debajo del margen mínimo, el bloqueo real queda para confirm().
         if (
             ! $this->hasMarginOverride($user)
@@ -792,7 +792,7 @@ final class QuoteController extends Controller
     /**
      * REQ-045: un descuento de Totales (% o $) que deje el neto en $0 o negativo
      * se rechaza siempre, sin excepción de margen — no es una regla de negocio de
-     * rentabilidad (que sí tiene la excepción Mark/David de SCRUM-725), es una
+     * rentabilidad (que sí tiene la excepción Gerencia/David de SCRUM-725), es una
      * integridad de datos mínima (un total en $0 o negativo no es un documento
      * válido para nadie).
      *
@@ -918,7 +918,7 @@ final class QuoteController extends Controller
             'global_discount_percent' => $quote->global_discount_percent,
             // SCRUM-725 — advertencia de margen a nivel de Totales (no por producto,
             // ver 'below_min_margin' en cada ítem) + si el usuario actual puede
-            // guardar/confirmar igual pese a la violación (Mark/David). Decisión de
+            // guardar/confirmar igual pese a la violación (Gerencia/David). Decisión de
             // Luis 2026-08-05: el % real ahora se expone (antes nunca se revelaba).
             'global_below_min_margin' => $marginViolation['global'],
             'can_override_min_margin' => $this->hasMarginOverride($user),

@@ -100,7 +100,7 @@ class AdminContInternalCommissionController
 
     /**
      * GET /api/admin-contab/commissions/internal/vendors — opciones del selector de vendedor
-     * (Felix/Mark/Gerencia, REQ-500). Todo `vendedor_disenador`, tenga o no pedidos en el mes
+     * (Contabilidad/Mark/Gerencia, REQ-500). Todo `vendedor_disenador`, tenga o no pedidos en el mes
      * filtrado — un vendedor sin pedidos este mes igual debe poder elegirse para revisar su
      * historial de meses anteriores.
      */
@@ -142,7 +142,7 @@ class AdminContInternalCommissionController
 
     /**
      * GET /api/admin-contab/commissions/internal/{vendedorId}/account-statement?mes=YYYY-MM —
-     * REQ-507. Felix/Mark/Gerencia de cualquier vendedor; un vendedor solo el propio, verificado
+     * REQ-507. Contabilidad/Mark/Gerencia de cualquier vendedor; un vendedor solo el propio, verificado
      * server-side (nunca solo ocultando el botón en la UI, mismo criterio que el resto del
      * módulo).
      */
@@ -201,7 +201,7 @@ class AdminContInternalCommissionController
         $actor = $this->resolveUser($request);
         if ($actor === null || ! $actor->canViewTeamV2('admin_contab')) {
             // RN de REQ-498: cada vendedor consulta la tabla de tramos, pero no exporta el
-            // reporte completo — exportar es exclusivo de Felix/Mark/Gerencia (view_team).
+            // reporte completo — exportar es exclusivo de Contabilidad/Mark/Gerencia (view_team).
             abort(403, 'No autorizado para exportar este reporte.');
         }
 
@@ -294,11 +294,11 @@ class AdminContInternalCommissionController
             'puede_exportar' => $canViewTeam,
             // Bug real de Pre-QA (Visual Review, 2026-08-25): el frontend gateaba el CRUD de
             // tramos (botones editar/eliminar/agregar en el modal "Tabla de comisión
-            // escalonada") con `admin_contab.edit`, que Felix también tiene — pero `POST/PUT/
+            // escalonada") con `admin_contab.edit`, que Contabilidad también tiene — pero `POST/PUT/
             // DELETE .../tiers` está gateado por `primary_approver_only` en routes/admin-contab.php, así que
-            // Felix veía controles que siempre devolvían 403 al guardar. Mismo patrón ya
+            // Contabilidad veía controles que siempre devolvían 403 al guardar. Mismo patrón ya
             // establecido en `AdminContInvoiceController::detail()` (`puede_decidir_incobrable`)
-            // — el frontend nunca decide por su cuenta quién es Mark, el backend expone el
+            // — el frontend nunca decide por su cuenta quién es Gerencia, el backend expone el
             // cómputo dependiente del actor en el endpoint de acceso general.
             'puede_editar_tramos' => $this->isPrimaryApprover($actor, $request),
             'total_pedidos_mes' => round((float) $cardRows->sum('total_pedidos_mes'), 2),
@@ -326,7 +326,7 @@ class AdminContInternalCommissionController
 
     /** Mismo criterio que `EnsureIsPrimaryApprover` (el middleware `primary_approver_only` real que gatea
      *  storeTier/updateTier/destroyTier) y `AdminContInvoiceController::detail()` —
-     *  `superadmin.all` bypassa, si no hay `primary_approver_user_id` configurado nadie es Mark. */
+     *  `superadmin.all` bypassa, si no hay `primary_approver_user_id` configurado nadie es Gerencia. */
     private function isPrimaryApprover(User $actor, Request $request): bool
     {
         /** @var array{permissions?: mixed}|null $payload */

@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
 /**
  * REQ-125 Escenario 2: nombre sigue siendo obligatorio al editar, no se puede vaciar.
  * `category`/`country`/al-menos-un-contacto (SCRUM-189, 2026-08-06 — hallazgo Gerencia Test) NO
- * se replican acá a propósito: el AC de Daniela habla literalmente de "crear un proveedor
+ * se replican acá a propósito: el AC de Gerencia habla literalmente de "crear un proveedor
  * sin..." (StoreProviderRequest); acá conviven (a) un test de regresión protegido
  * (`test_editar_proveedor_vaciando_categoria_recalcula_origin_a_internacional`, Senior Review
  * 2026-07-30) que depende de poder vaciar `category` al editar, y (b) llamadas PUT con payload

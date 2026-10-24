@@ -33,7 +33,7 @@ final class InternalTechnicianService
      * (Batch 15, Panel Indicadores del mes — tampoco existe). No se inventa un cálculo propio acá
      * para no divergir del REQ-211 real el día que se construya.
      *
-     * `herramientas_asignadas` (SCRUM-777, rebote de Daniela 2026-08-19) — este docblock decía
+     * `herramientas_asignadas` (SCRUM-777, rebote de Gerencia 2026-08-19) — este docblock decía
      * "placeholder, Herramientas es Batch 13, no existe tools todavía"; quedó desactualizado
      * desde que Batch 13 (REQ-268→272) creó `tools.assigned_to_technician_id` sin que nadie
      * volviera acá a reemplazar el `0` fijo por el conteo real.
@@ -56,7 +56,7 @@ final class InternalTechnicianService
             return [
                 'id' => $t->id,
                 // Batch 10 (REQ-258 RN8) — el frontend necesita saber "es este técnico el usuario
-                // en sesión" para mostrar el mini-indicador de comisión solo a Carlos mismo o
+                // en sesión" para mostrar el mini-indicador de comisión solo a Tecnico Servicios mismo o
                 // Gerencia (el backend igual re-valida esto mismo en GET .../commission, esto solo
                 // decide si mostrar el botón).
                 'user_id' => $t->user_id,

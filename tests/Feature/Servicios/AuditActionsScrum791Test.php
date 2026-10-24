@@ -53,7 +53,7 @@ class AuditActionsScrum791Test extends FeatureTestCase
             'descripcion_problema' => 'Producto llegó dañado',
             'fecha_reclamo' => now()->toDateString(),
             'diagnostico' => 'Golpe en tránsito',
-            'firma_responsable' => 'Aaron Leis',
+            'firma_responsable' => 'Lider Servicios Leis',
             'estado' => ClaimSheet::ESTADO_COMPLETED,
         ]);
 

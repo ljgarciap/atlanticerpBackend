@@ -66,7 +66,7 @@ class Scrum711SalesForceDemoSeeder extends Seeder
      * @var array<int, list<array{stage: string, monthsAgo?: int, stagnant?: bool}>>
      */
     private const PIPELINE_PLAN = [
-        // 0 Milena — bajo desempeño: 3 meses consecutivos de Aprobado bajo $20,000.
+        // 0 Vendedor Disenador — bajo desempeño: 3 meses consecutivos de Aprobado bajo $20,000.
         0 => [
             ['stage' => 'lead'],
             ['stage' => 'design', 'stagnant' => true],
@@ -243,7 +243,7 @@ class Scrum711SalesForceDemoSeeder extends Seeder
                 // -- si varias tarjetas comparten sales_project_id, keyBy() colapsa todas
                 // menos la última creada, y TODAS las cotizaciones de ese proyecto terminan
                 // mostrando la etapa de esa única tarjeta sobreviviente (hallazgo real de
-                // Pre-QA 2026-07-28: las 5 cotizaciones de Neil aparecían "Perdido" porque
+                // Pre-QA 2026-07-28: las 5 cotizaciones de Vendedor Disenador aparecían "Perdido" porque
                 // sus 7 tarjetas compartían un solo SalesProject y la última era 'lost').
                 $project = SalesProject::create([
                     'sub_client_id' => $sub->id,
@@ -278,7 +278,7 @@ class Scrum711SalesForceDemoSeeder extends Seeder
      * SCRUM-499 sembró 13 tarjetas 'approved' + 1 SalesGoal sobre el usuario legado
      * "designer@atlantic.test" (rol 'designer', ver QaTicketsBatch20260725Seeder,
      * que no está commiteado en esta rama — corrió a mano vía tinker). Se retira acá
-     * porque Daniela (QA) no podía ver Ventas&Diseño con ese usuario y el propio
+     * porque Gerencia (QA) no podía ver Ventas&Diseño con ese usuario y el propio
      * ticket 711 §6.1 pide la misma data sobre los vendedores reales.
      */
     private function retireScrum499DesignerDemoSeed(string $slug): void

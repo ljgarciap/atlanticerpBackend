@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1121 (corrección de Daniela) — los contactos de la cotización pasan al campo «Contacto» de la tarjeta de Pipeline al confirmarla
+ * SCRUM-1121 (corrección de Gerencia) — los contactos de la cotización pasan al campo «Contacto» de la tarjeta de Pipeline al confirmarla
  * (o al agregarlos después, si ya está confirmada): solo agrega, sin duplicar y sin borrar nada de la tarjeta.
  */
 class QuoteContactsToPipelineCardTest extends FeatureTestCase

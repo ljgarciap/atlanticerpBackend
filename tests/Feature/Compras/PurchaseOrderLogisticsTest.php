@@ -128,7 +128,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-215 — hallazgo de QA (Daniela, 2026-08-04): un envío "Ordenado" con llegada
+     * SCRUM-215 — hallazgo de QA (Gerencia, 2026-08-04): un envío "Ordenado" con llegada
      * estimada vencida no aparecía como retrasado. El único test previo de este chip usaba
      * status=en_transito; este cierra el gap de cobertura para "ordenado" específicamente.
      * Verificado manualmente (tinker, sesión 2026-08-05) que isCritical() ya evalúa esto

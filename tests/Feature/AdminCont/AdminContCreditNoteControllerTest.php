@@ -37,7 +37,7 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 10 de Admin&Cont (SCRUM-553→558, REQ-476→481) — apertura de Notas Crédito y Devoluciones. */
 class AdminContCreditNoteControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     /** Batch 13 — mismo email real que `AdminContInvoiceControllerTest`/`AdminContFiscalSettingsControllerTest`. */
     private const APPROVER_EMAIL = 'gerencia3@test.com';
@@ -50,7 +50,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsMark(): string
@@ -130,7 +130,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      */
     public function test_devolucion_detail_incluye_unit_price_de_la_linea(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order, 'invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
 
         $item = $order->items()->create([
@@ -170,7 +170,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     /** @return array{0: CustomerReturn, 1: AdminContInvoice} */
     private function makeDevolucionConLineas(float $montoFactura, array $lineas): array
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order, 'invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: $montoFactura);
 
         $customerReturn = CustomerReturn::create([
@@ -237,7 +237,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      */
     public function test_devolucion_detail_expone_persona_que_devuelve_proyecto_y_documento_firmado(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $master = MasterClient::create(['name' => 'Cliente Devolución '.uniqid()]);
         $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Paso a Bodega 1']);
@@ -291,7 +291,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     /** Sin documento firmado — 404 con mensaje claro, no un presign vacío. */
     public function test_devolucion_signed_document_url_404_sin_documento_firmado(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeInvoicedOrder($ownerId, monto: 500);
         $customerReturn = CustomerReturn::create([
             'return_number' => 'DEV-2026-'.random_int(1000, 999999), 'order_id' => $order->id,
@@ -337,7 +337,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_summary_agrega_notas_aplicadas_del_mes_y_separa_pendientes_de_aprobacion(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoiceA] = $this->makeInvoicedOrder($ownerId);
         ['invoice' => $invoiceB] = $this->makeInvoicedOrder($ownerId);
         ['invoice' => $invoiceOutsideMonth] = $this->makeInvoicedOrder($ownerId);
@@ -375,7 +375,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_itbms_treatment_devuelve_tratamiento_actual_y_las_otras_2_tasas(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeInvoicedOrder($ownerId);
 
         $token = $this->loginAsFelix();
@@ -448,7 +448,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_facturas_del_cliente_incluye_las_ya_pagadas_con_saldo_cero(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $pagada] = $this->makeInvoicedOrder($ownerId, monto: 300, saldoAplicado: 300);
         $masterClientId = $pagada->master_client_id;
         ['invoice' => $conSaldo] = $this->makeInvoicedOrder($ownerId, monto: 200, saldoAplicado: 50);
@@ -475,7 +475,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      */
     public function test_facturas_del_cliente_incluye_itbms_rate_id_para_excluirlo_en_correccion_de_datos(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
         $token = $this->loginAsFelix();
 
@@ -489,7 +489,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_registrar_descuento_comercial_dentro_del_saldo_se_aplica_sin_preguntar_excedente(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 6200);
         $token = $this->loginAsFelix();
 
@@ -503,7 +503,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_registrar_con_excedente_devuelto_crea_movimiento_bancario_de_devolucion(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         // Factura de 300 YA COBRADA (saldo por cobrar 0) y nota de 300: todo el valor de la nota es excedente → se devuelve
         // lo cobrado. SCRUM-1116 (D2): antes este test usaba una nota de 1.000 sobre una factura de 300, es decir un
         // acumulado MAYOR que la factura, que el ticket prohíbe en cualquier tipo de nota (ver
@@ -526,7 +526,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_registrar_con_excedente_como_saldo_a_favor_aumenta_el_saldo_del_cliente(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         // Factura de 300 ya cobrada y nota de 300 (SCRUM-1116: antes 400 sobre 300, un acumulado mayor que la factura).
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 300, saldoAplicado: 300);
         $token = $this->loginAsFelix();
@@ -548,7 +548,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     public function test_excedente_sin_resultado_es_rechazado(): void
     {
         // SCRUM-1116: el excedente es la nota (300) sobre una factura de 300 YA cobrada; antes era 400, una nota mayor que la factura.
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 300, saldoAplicado: 300);
         $token = $this->loginAsFelix();
 
@@ -560,7 +560,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_resultado_devuelto_sin_cuenta_bancaria_es_rechazado(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 300, saldoAplicado: 300);
         $token = $this->loginAsFelix();
 
@@ -574,7 +574,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_motivo_es_siempre_obligatorio(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 6200);
         $token = $this->loginAsFelix();
 
@@ -590,7 +590,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     public function test_anulacion_completa_ignora_el_monto_del_request_y_usa_el_total_de_la_factura(): void
     {
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
         $token = $this->loginAsFelix();
 
@@ -609,9 +609,9 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
             ->post('/api/admin-contab/notas-credito', $payload)
             ->assertStatus(201);
 
-        // Batch 13 (REQ-494 RN1) — toda Anulación completa queda pendiente de aprobación de Mark
+        // Batch 13 (REQ-494 RN1) — toda Anulación completa queda pendiente de aprobación de Gerencia
         // sin importar el monto (acá $500, bajo el umbral de $5,000), así que `saldo_aplicado`
-        // NO se mueve todavía — recién se aplica cuando Mark aprueba (ver `decide()`).
+        // NO se mueve todavía — recién se aplica cuando Gerencia aprueba (ver `decide()`).
         $response->assertJson(['monto' => 500, 'resultado' => AdminContCreditNote::RESULTADO_APLICADO_SALDO, 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION]);
         $this->assertEquals(0.0, DB::table($this->tableFqn('invoices'))->where('id', $invoice->id)->value('saldo_aplicado'));
     }
@@ -619,7 +619,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     public function test_anulacion_completa_de_factura_nunca_cobrada_no_mueve_dinero(): void
     {
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500, saldoAplicado: 0);
         $token = $this->loginAsFelix();
 
@@ -646,7 +646,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_anulacion_completa_sin_comprobante_es_rechazada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
         $token = $this->loginAsFelix();
 
@@ -668,7 +668,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     public function test_monto_mayor_al_umbral_exige_comprobante_y_queda_pendiente_de_aprobacion_sin_aplicar(): void
     {
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 10000);
         $token = $this->loginAsFelix();
 
@@ -696,7 +696,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      */
     public function test_devolucion_de_mercancia_ahora_tambien_exige_comprobante(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 10000);
         $token = $this->loginAsFelix();
 
@@ -724,7 +724,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_correccion_de_datos_todavia_no_soportada_es_rechazada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
         $token = $this->loginAsFelix();
 
@@ -793,7 +793,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      */
     public function test_preview_correccion_tarjetas_no_manda_booleans_ni_objetos_crudos(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeCorreccionFixture($ownerId);
         // Mismo gotcha ya documentado en este archivo — loginAs() hace un round-trip HTTP real y
         // spatie/laravel-multitenancy olvida el tenant "actual" al terminar el request, así que
@@ -828,7 +828,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      */
     public function test_correccion_a_tasa_de_retencion_de_factura_certificada_es_rechazada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeCorreccionFixture($ownerId);
         AdminContInvoice::whereKey($invoice->id)->update(['cufe' => 'FE-CUFE-DE-PRUEBA', 'fe_estado' => 'certificado']);
         $retencionId = AdminContItbmsRate::where('nombre', '3.5% — Retención de impuesto')->value('id');
@@ -851,7 +851,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_store_y_facturas_rechazan_a_un_rol_no_autorizado(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
@@ -864,15 +864,15 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    /** REQ-494 Escenario 1 — Mark aprueba una nota pendiente: pasa a aplicada y mueve el saldo. */
+    /** REQ-494 Escenario 1 — Gerencia aprueba una nota pendiente: pasa a aplicada y mueve el saldo. */
     public function test_decision_aprobar_aplica_la_nota_y_mueve_el_saldo(): void
     {
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
-        $felix = $this->loginAsFelix();
+        $contabilidad = $this->loginAsFelix();
 
-        $store = $this->withHeaders($this->authHeaders($felix))->post('/api/admin-contab/notas-credito', [
+        $store = $this->withHeaders($this->authHeaders($contabilidad))->post('/api/admin-contab/notas-credito', [
             ...$this->baseRegisterPayload($invoice, 500),
             'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
@@ -881,8 +881,8 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $noteId = $store->json('id');
         $this->assertSame(AdminContCreditNote::ESTADO_PENDIENTE_APROBACION, $store->json('estado'));
 
-        $mark = $this->loginAsMark();
-        $response = $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $response = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => true])
             ->assertStatus(200);
 
@@ -892,15 +892,15 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $this->assertEquals(500.0, DB::table($this->tableFqn('invoices'))->where('id', $invoice->id)->value('saldo_aplicado'));
     }
 
-    /** REQ-494 Escenario 3 — Mark rechaza: motivo obligatorio, no mueve dinero. */
+    /** REQ-494 Escenario 3 — Gerencia rechaza: motivo obligatorio, no mueve dinero. */
     public function test_decision_rechazar_exige_motivo_y_no_mueve_dinero(): void
     {
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
-        $felix = $this->loginAsFelix();
+        $contabilidad = $this->loginAsFelix();
 
-        $store = $this->withHeaders($this->authHeaders($felix))->post('/api/admin-contab/notas-credito', [
+        $store = $this->withHeaders($this->authHeaders($contabilidad))->post('/api/admin-contab/notas-credito', [
             ...$this->baseRegisterPayload($invoice, 500),
             'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
@@ -908,15 +908,15 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         ])->assertStatus(201);
         $noteId = $store->json('id');
 
-        $mark = $this->loginAsMark();
+        $approver = $this->loginAsMark();
 
         // RN4 — sin motivo, 422.
-        $this->withHeaders($this->authHeaders($mark))
+        $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => false])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['motivo_rechazo']);
 
-        $response = $this->withHeaders($this->authHeaders($mark))
+        $response = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => false, 'motivo_rechazo' => 'Documentación insuficiente'])
             ->assertStatus(200);
 
@@ -929,7 +929,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     /** RN2 REQ-494 — no se puede aprobar una nota que exige comprobante y no lo tiene. */
     public function test_decision_aprobar_sin_comprobante_requerido_es_bloqueada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
         AdminContCreditNote::create([
             'numero' => 'NC-BLOQ', 'master_client_id' => $invoice->master_client_id, 'cliente' => 'X',
@@ -941,8 +941,8 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         ]);
         $noteId = DB::table($this->tableFqn('credit_notes'))->where('numero', 'NC-BLOQ')->value('id');
 
-        $mark = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => true])
             ->assertStatus(422);
 
@@ -952,10 +952,10 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         );
     }
 
-    /** `primary_approver_only` — un rol distinto de Mark, aunque sea Gerencia genérica, no puede decidir. */
+    /** `primary_approver_only` — un rol distinto de Gerencia, aunque sea Gerencia genérica, no puede decidir. */
     public function test_decision_rechaza_a_un_no_mark(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 6000);
         AdminContCreditNote::create([
             'numero' => 'NC-NOMARK', 'master_client_id' => $invoice->master_client_id, 'cliente' => 'X',
@@ -966,17 +966,17 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         ]);
         $noteId = DB::table($this->tableFqn('credit_notes'))->where('numero', 'NC-NOMARK')->value('id');
 
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => true])
             ->assertStatus(403);
     }
 
-    /** Batch endurecimiento FE/MSL — el motivo textual del rechazo del PAC solo lo ve Mark/superadmin,
+    /** Batch endurecimiento FE/MSL — el motivo textual del rechazo del PAC solo lo ve Gerencia/superadmin,
      *  tanto en `show()` como en la respuesta de `decision()` (ruta `primary_approver_only`). */
     public function test_show_y_decision_exponen_fe_detalle_solo_a_mark(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 6000);
         AdminContCreditNote::create([
             'numero' => 'NC-FEDETALLE', 'master_client_id' => $invoice->master_client_id, 'cliente' => 'X',
@@ -995,14 +995,14 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $this->assertNull($asFelix->json('fe_detalle'));
         $this->assertFalse($asFelix->json('puede_ver_fe_transmisiones'));
 
-        $mark = $this->loginAsMark();
-        $asMark = $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $asMark = $this->withHeaders($this->authHeaders($approver))
             ->getJson("/api/admin-contab/notas-credito/{$noteId}")
             ->assertStatus(200);
         $this->assertSame('9026 - Falló la validación', $asMark->json('fe_detalle'));
         $this->assertTrue($asMark->json('puede_ver_fe_transmisiones'));
 
-        $decision = $this->withHeaders($this->authHeaders($mark))
+        $decision = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => false, 'motivo_rechazo' => 'Documentación insuficiente'])
             ->assertStatus(200);
         $this->assertSame('9026 - Falló la validación', $decision->json('fe_detalle'));
@@ -1013,12 +1013,12 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      * Pre-QA Batch 13 (2026-08-24) — `puede_aprobar_rechazar` es dependiente del actor, no solo
      * del estado de la nota (mismo criterio que `puede_decidir_incobrable` en
      * `AdminContInvoiceController::detail()`, REQ-448). Sin este chequeo, GET .../{id} le mostraba
-     * `true` a Felix en una nota pendiente aunque el backend igual bloqueara el intento real de
+     * `true` a Contabilidad en una nota pendiente aunque el backend igual bloqueara el intento real de
      * decidir con 403 — no era un gap de seguridad, pero sí un botón que siempre iba a fallar.
      */
-    public function test_show_puede_aprobar_rechazar_es_false_para_un_no_mark_aunque_la_nota_este_pendiente(): void
+    public function test_show_puede_aprobar_rechazar_es_false_para_un_no_aprobador_aunque_la_nota_este_pendiente(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 6000);
         AdminContCreditNote::create([
             'numero' => 'NC-ACTORGATE', 'master_client_id' => $invoice->master_client_id, 'cliente' => 'X',
@@ -1029,14 +1029,14 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         ]);
         $noteId = DB::table($this->tableFqn('credit_notes'))->where('numero', 'NC-ACTORGATE')->value('id');
 
-        $felix = $this->loginAsFelix();
-        $asFelix = $this->withHeaders($this->authHeaders($felix))
+        $contabilidad = $this->loginAsFelix();
+        $asFelix = $this->withHeaders($this->authHeaders($contabilidad))
             ->getJson("/api/admin-contab/notas-credito/{$noteId}")
             ->assertStatus(200);
         $this->assertFalse($asFelix->json('puede_aprobar_rechazar'));
 
-        $mark = $this->loginAsMark();
-        $asMark = $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $asMark = $this->withHeaders($this->authHeaders($approver))
             ->getJson("/api/admin-contab/notas-credito/{$noteId}")
             ->assertStatus(200);
         $this->assertTrue($asMark->json('puede_aprobar_rechazar'));
@@ -1045,7 +1045,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     /** SCRUM-943 — el detalle expone el estado real de Facturación Electrónica, nunca oculto. */
     public function test_show_expone_el_estado_de_facturacion_electronica(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
         $note = AdminContCreditNote::create([
             'numero' => 'NC-FE-TEST', 'master_client_id' => $invoice->master_client_id, 'cliente' => 'X',
@@ -1056,8 +1056,8 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         ]);
         $note->forceFill(['fe_estado' => 'error_configuracion', 'pac_provider_usado' => 'msl'])->save();
 
-        $felix = $this->loginAsFelix();
-        $response = $this->withHeaders($this->authHeaders($felix))
+        $contabilidad = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($contabilidad))
             ->getJson("/api/admin-contab/notas-credito/{$note->id}")
             ->assertStatus(200);
 
@@ -1070,7 +1070,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     public function test_comprobante_devuelve_url_y_metadata_cuando_existe(): void
     {
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 6000);
         $token = $this->loginAsFelix();
 
@@ -1096,7 +1096,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      */
     public function test_comprobante_devuelve_false_cuando_no_tiene_adjunto(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 100);
         $token = $this->loginAsFelix();
 
@@ -1141,7 +1141,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     /** REQ-496 — el documento formal se genera como PDF descargable. */
     public function test_pdf_genera_el_documento_formal(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 100);
         $token = $this->loginAsFelix();
 
@@ -1159,7 +1159,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
      *  `GET /invoices/{order}/detail` (ese endpoint espera el Order de Bodega, no el PK de la factura). */
     public function test_show_expone_factura_origen_order_id_para_la_vista_de_factura_relacionada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order, 'invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 100);
         $token = $this->loginAsFelix();
 
@@ -1234,15 +1234,15 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     }
 
     /** REQ-486 (rebote SCRUM-563) — la nota queda `aplicada` de inmediato (monto bajo el umbral de
-     *  Mark), el correo se encola en el mismo request (QUEUE_CONNECTION=sync en testing). */
+     *  Gerencia), el correo se encola en el mismo request (QUEUE_CONNECTION=sync en testing). */
     public function test_confirmar_nota_aplicada_de_inmediato_encola_correo_al_cliente_con_copia_al_vendedor(): void
     {
         Mail::fake();
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
-        ['invoice' => $invoice, 'contactEmail' => $contactEmail] = $this->makeInvoicedOrderWithQuote($ownerId, self::FELIX_EMAIL, monto: 500);
-        $felix = $this->loginAsFelix();
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        ['invoice' => $invoice, 'contactEmail' => $contactEmail] = $this->makeInvoicedOrderWithQuote($ownerId, self::CONTABILIDAD_EMAIL, monto: 500);
+        $contabilidad = $this->loginAsFelix();
 
-        $response = $this->withHeaders($this->authHeaders($felix))
+        $response = $this->withHeaders($this->authHeaders($contabilidad))
             ->post('/api/admin-contab/notas-credito', $this->baseRegisterPayloadConComprobante($invoice, 100))
             ->assertStatus(201);
 
@@ -1250,23 +1250,23 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         Mail::assertSent(CreditNoteConfirmedMail::class, function (CreditNoteConfirmedMail $mail) use ($response, $contactEmail) {
             return $mail->hasTo($contactEmail)
-                && $mail->hasCc(self::FELIX_EMAIL)
+                && $mail->hasCc(self::CONTABILIDAD_EMAIL)
                 && $mail->numero === $response->json('numero')
                 && count($mail->attachments()) === 2;
         });
     }
 
     /** REQ-486 — una nota que queda `pendiente_aprobacion` (Anulación completa, sin importar el
-     *  monto, RN1 Batch 13) no notifica al cliente hasta que Mark realmente la aprueba. */
-    public function test_nota_pendiente_de_aprobacion_no_envia_correo_hasta_que_mark_aprueba(): void
+     *  monto, RN1 Batch 13) no notifica al cliente hasta que Gerencia realmente la aprueba. */
+    public function test_nota_pendiente_de_aprobacion_no_envia_correo_hasta_que_aprobador_aprueba(): void
     {
         Mail::fake();
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
-        ['invoice' => $invoice, 'contactEmail' => $contactEmail] = $this->makeInvoicedOrderWithQuote($ownerId, self::FELIX_EMAIL, monto: 500);
-        $felix = $this->loginAsFelix();
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        ['invoice' => $invoice, 'contactEmail' => $contactEmail] = $this->makeInvoicedOrderWithQuote($ownerId, self::CONTABILIDAD_EMAIL, monto: 500);
+        $contabilidad = $this->loginAsFelix();
 
-        $store = $this->withHeaders($this->authHeaders($felix))->post('/api/admin-contab/notas-credito', [
+        $store = $this->withHeaders($this->authHeaders($contabilidad))->post('/api/admin-contab/notas-credito', [
             ...$this->baseRegisterPayload($invoice, 500),
             'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA,
             'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
@@ -1276,13 +1276,13 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         Mail::assertNothingSent();
 
-        $mark = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$store->json('id')}/decision", ['approve' => true])
             ->assertStatus(200);
 
         Mail::assertSent(CreditNoteConfirmedMail::class, function (CreditNoteConfirmedMail $mail) use ($contactEmail) {
-            return $mail->hasTo($contactEmail) && $mail->hasCc(self::FELIX_EMAIL);
+            return $mail->hasTo($contactEmail) && $mail->hasCc(self::CONTABILIDAD_EMAIL);
         });
         Mail::assertSentCount(1);
     }
@@ -1293,11 +1293,11 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     {
         Mail::fake();
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
-        ['invoice' => $invoice, 'contactEmail' => $contactEmail] = $this->makeInvoicedOrderWithQuote($ownerId, self::FELIX_EMAIL, monto: 100);
-        $felix = $this->loginAsFelix();
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        ['invoice' => $invoice, 'contactEmail' => $contactEmail] = $this->makeInvoicedOrderWithQuote($ownerId, self::CONTABILIDAD_EMAIL, monto: 100);
+        $contabilidad = $this->loginAsFelix();
 
-        $this->withHeaders($this->authHeaders($felix))
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->post('/api/admin-contab/notas-credito/correccion', [
                 'master_client_id' => $invoice->master_client_id,
                 'factura_origen_id' => $invoice->id,
@@ -1316,8 +1316,8 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     {
         Mail::fake();
         Storage::fake('s3-private');
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
-        ['invoice' => $invoice] = $this->makeInvoicedOrderWithQuote($ownerId, self::FELIX_EMAIL, monto: 107);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        ['invoice' => $invoice] = $this->makeInvoicedOrderWithQuote($ownerId, self::CONTABILIDAD_EMAIL, monto: 107);
         $invoice->lines()->create([
             'quote_item_id' => static::uniqueTestNumber(), 'descripcion' => 'Lámpara', 'cantidad' => 1, 'precio_unitario' => 100.00,
             'subtotal' => 100.00, 'itbms_rate_id' => $invoice->itbms_rate_id, 'itbms' => 7.00, 'total' => 107.00,
@@ -1334,9 +1334,9 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
             AdminContPaymentInvoice::create(['payment_id' => $payment->id, 'invoice_id' => $invoice->id, 'monto_aplicado' => 107, 'fecha_aplicacion' => now()]);
             app(InvoiceBalanceWriter::class)->apply(AdminContInvoice::query()->lockForUpdate()->findOrFail($invoice->id), 107);
         });
-        $felix = $this->loginAsFelix();
+        $contabilidad = $this->loginAsFelix();
 
-        $this->withHeaders($this->authHeaders($felix))
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->post('/api/admin-contab/notas-credito/correccion', [
                 'master_client_id' => $invoice->master_client_id,
                 'factura_origen_id' => $invoice->id,
@@ -1361,16 +1361,16 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $this->assertSame([], $r['anuladas']);
     }
 
-    /** REQ-486 — caso real que reportó Daniela (SCRUM-563): una factura sin cotización de origen
+    /** REQ-486 — caso real que reportó Gerencia (SCRUM-563): una factura sin cotización de origen
      *  asociada no debe romper la confirmación de la nota, solo omitir el correo. */
     public function test_nota_sin_cotizacion_de_origen_no_envia_correo_pero_no_rompe_la_confirmacion(): void
     {
         Mail::fake();
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
-        $felix = $this->loginAsFelix();
+        $contabilidad = $this->loginAsFelix();
 
-        $this->withHeaders($this->authHeaders($felix))
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->post('/api/admin-contab/notas-credito', $this->baseRegisterPayloadConComprobante($invoice, 100))
             ->assertStatus(201);
 
@@ -1381,7 +1381,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_index_pagina_20_por_defecto_y_expone_meta(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
         for ($i = 0; $i < 25; $i++) {
             ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId);

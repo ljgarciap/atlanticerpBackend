@@ -448,7 +448,7 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_agregar_contacto_con_nombre_puramente_numerico_retorna_422(): void
     {
-        // SCRUM-96 (hallazgo Marly 2026-07-15): antes se aceptaba y guardaba sin aviso.
+        // SCRUM-96 (hallazgo Gerencia 2026-07-15): antes se aceptaba y guardaba sin aviso.
         $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
@@ -467,7 +467,7 @@ class ClientsControllerTest extends FeatureTestCase
 
     public function test_agregar_contacto_con_telefono_con_letras_retorna_422(): void
     {
-        // SCRUM-96 (hallazgo Marly 2026-07-15): antes se aceptaba y guardaba sin aviso.
+        // SCRUM-96 (hallazgo Gerencia 2026-07-15): antes se aceptaba y guardaba sin aviso.
         $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write', 'ventas_diseno.edit');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 

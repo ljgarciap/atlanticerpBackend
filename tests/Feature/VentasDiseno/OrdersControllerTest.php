@@ -591,8 +591,8 @@ class OrdersControllerTest extends FeatureTestCase
         }
     }
 
-    /** SCRUM-1150 (decisión de Luis, 2026-10-15): Félix replica a Mark, así que abre Pedidos por `ventas_diseno.gerencia_scope`; sin ese permiso vuelve a 403 (SCRUM-1119). */
-    public function test_felix_accede_a_pedidos_solo_por_el_alcance_de_gerencia(): void
+    /** SCRUM-1150 (decisión de Luis, 2026-10-15): Contabilidad replica a Gerencia, así que abre Pedidos por `ventas_diseno.gerencia_scope`; sin ese permiso vuelve a 403 (SCRUM-1119). */
+    public function test_contabilidad_accede_a_pedidos_solo_por_el_alcance_de_gerencia(): void
     {
         $token = $this->loginAs('contabilidad@test.com', 'contabilidad@test.com', 'lider_admin_contab');
         $this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/orders')->assertStatus(200);

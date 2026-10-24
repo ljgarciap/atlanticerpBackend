@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * Batch 17 (SCRUM-591→596, REQ-514/516/517) agrega: comprobante de retención (mismo patrón que
  * cuenta de cobro), cuenta de pago (`bank_account_id`, FK real — mismo schema), y el % de comisión
- * por proyecto (aprobado + propuesta pendiente de Mark).
+ * por proyecto (aprobado + propuesta pendiente de Gerencia).
  *
  * @property int         $id
  * @property int         $architect_id

@@ -13,7 +13,7 @@ use App\Modules\VentasDiseno\Models\CatalogProduct;
  * calcula por ahora (foto/ficha técnica quedan con el hueco documentado a propósito — capacidad de
  * IA que no existe hoy / contradicción de alcance sin resolver, ver comentario del ticket).
  *
- * Fórmula exacta especificada por Daniela, con ejemplo numérico verificado:
+ * Fórmula exacta especificada por Gerencia, con ejemplo numérico verificado:
  *   % = (peso_texto × similitud_texto) + (peso_precio × similitud_precio) + (peso_margen × similitud_margen)
  *       − penalización_categoría (si el candidato es de otra categoría)
  * Filtro previo: solo candidatos de la misma categoría que el original; si ninguno, se amplía a
@@ -80,7 +80,7 @@ final class SubstituteSimilarityService
         return round(max(0.0, $percent), 1);
     }
 
-    /** "Método estándar de similitud de texto" (Daniela, ej. Levenshtein) — `similar_text()` nativo de PHP. */
+    /** "Método estándar de similitud de texto" (Gerencia, ej. Levenshtein) — `similar_text()` nativo de PHP. */
     private function textSimilarity(string $a, string $b): float
     {
         $a = mb_strtolower($a);
@@ -94,7 +94,7 @@ final class SubstituteSimilarityService
         return $percent;
     }
 
-    /** `100 − |Δ| / original × 100`, mínimo 0 — mismo cálculo para precio y margen (ejemplo de Daniela). */
+    /** `100 − |Δ| / original × 100`, mínimo 0 — mismo cálculo para precio y margen (ejemplo de Gerencia). */
     private function closenessScore(?float $original, ?float $candidate): float
     {
         if ($original === null || $original === 0.0 || $candidate === null) {

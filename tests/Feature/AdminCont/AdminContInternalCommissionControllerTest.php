@@ -28,9 +28,9 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 {
     private const APPROVER_EMAIL = 'gerencia3@test.com';
 
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
-    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+    private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
@@ -47,12 +47,12 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsYaneth(): string
     {
-        return $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
 
     /**
@@ -115,7 +115,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             'numero' => 'NC-'.random_int(1000, 999999), 'master_client_id' => $factura->master_client_id, 'cliente' => $factura->cliente,
             'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'factura_origen_id' => $factura->id,
             'monto' => $monto, 'subtotal' => $monto, 'itbms' => 0, 'motivo' => 'Ajuste de prueba',
-            'estado' => $estado, 'registrado_por' => $this->userIdByEmail(self::FELIX_EMAIL), 'fecha' => Carbon::now(),
+            'estado' => $estado, 'registrado_por' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'fecha' => Carbon::now(),
         ]);
     }
 
@@ -292,7 +292,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     /**
      * Regresión de Pre-QA/Visual Review (2026-08-25): el frontend gateaba el CRUD de tramos
      * (botones editar/eliminar/agregar del modal "Tabla de comisión escalonada") con
-     * `admin_contab.edit` — Felix también tiene ese flag sin ser Mark, así que veía los
+     * `admin_contab.edit` — Contabilidad también tiene ese flag sin ser Gerencia, así que veía los
      * controles y se encontraba con un 403 real al intentar guardar (`primary_approver_only` gatea
      * POST/PUT/DELETE .../tiers). `puede_editar_tramos` es el cómputo server-side dependiente
      * del actor (`current_user_id === primary_approver_user_id`), mismo criterio ya establecido en
@@ -319,7 +319,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $this->makeCommissionableOrder($vendorId, 10000.0, 10000.0);
 
         // Otro vendedor — no debería aparecer en la vista del designer.
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
 
         $token = $this->loginAsDesigner();
@@ -336,18 +336,18 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-881 (corrección de Daniela, 2026-09-09) — regresión del bug real: Asistente
-     * Administrativa (Yaneth) quedaba auto-filtrada a su propia fila, como si fuera vendedora
+     * SCRUM-881 (corrección de Gerencia, 2026-09-09) — regresión del bug real: Asistente
+     * Administrativa (Asistente Administrativa) quedaba auto-filtrada a su propia fila, como si fuera vendedora
      * (`can_view_team` en `false` para su rol en `admin_contab`, ver
      * `AdminContRoleVisibilityBackfillSeeder`). Debe ver la tabla COMPLETA de vendedores (11
-     * reales + el fixture de este test), igual que Felix, con `puede_ver_equipo`/`puede_exportar`
+     * reales + el fixture de este test), igual que Contabilidad, con `puede_ver_equipo`/`puede_exportar`
      * en `true` y los indicadores agregados sobre TODOS los vendedores, no solo ella.
      */
-    public function test_yaneth_ve_la_tabla_completa_de_vendedores_no_solo_su_propia_fila(): void
+    public function test_asistente_ve_la_tabla_completa_de_vendedores_no_solo_su_propia_fila(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($designerId, 20000.0, 20000.0);
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
 
         $token = $this->loginAsYaneth();
@@ -359,11 +359,11 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $response->assertJsonPath('puede_ver_equipo', true);
         $response->assertJsonPath('puede_exportar', true);
         // total_pedidos_mes agregado sobre TODOS los vendedores (50000 = 20000 + 30000), no solo
-        // el de Yaneth (que no tiene ningún pedido propio acá — confirma que no se auto-filtró).
+        // el de Asistente Administrativa (que no tiene ningún pedido propio acá — confirma que no se auto-filtró).
         $response->assertJsonPath('total_pedidos_mes', 50000);
 
         $vendedores = collect($response->json('vendedores'));
-        $this->assertGreaterThan(1, $vendedores->count(), 'Yaneth debe ver la tabla completa, no una sola fila.');
+        $this->assertGreaterThan(1, $vendedores->count(), 'Asistente Administrativa debe ver la tabla completa, no una sola fila.');
         $this->assertNotNull($vendedores->firstWhere('vendedor_id', $designerId), 'Debe incluir vendedores que no son ella misma.');
         $this->assertNotNull($vendedores->firstWhere('vendedor_id', $felixId), 'Debe incluir vendedores que no son ella misma.');
     }
@@ -384,7 +384,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
      * reshape del contrato — habría tirado 500 en el primer export real. `format` (no `formato`)
      * es a propósito, mismo nombre que manda el frontend.
      */
-    public function test_export_pdf_exitoso_para_felix(): void
+    public function test_export_pdf_exitoso_para_contabilidad(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0);
@@ -398,7 +398,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $this->assertStringContainsString('application/pdf', (string) $response->headers->get('Content-Type'));
     }
 
-    public function test_export_excel_exitoso_para_felix(): void
+    public function test_export_excel_exitoso_para_contabilidad(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0);
@@ -412,7 +412,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $this->assertStringContainsString('spreadsheetml', (string) $response->headers->get('Content-Type'));
     }
 
-    public function test_vendor_options_lista_vendedor_disenador_para_felix(): void
+    public function test_vendor_options_lista_vendedor_disenador_para_contabilidad(): void
     {
         $token = $this->loginAsFelix();
 
@@ -557,7 +557,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_banner_auto_pago_se_angosta_al_vendedor_sin_view_team_scrum904(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
         // Designer: pedido propio, cobrado, "por pagar" — 8000 * 1.5% = 120.
         $this->makeCommissionableOrder($designerId, 8000.0, 8000.0);
@@ -580,11 +580,11 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_banner_auto_pago_en_cero_no_muestra_comisiones_ajenas_scrum904(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
         // Designer: facturado pero todavía NO cobrado → pendiente_cobro, no cuenta para el banner.
         $this->makeCommissionableOrder($designerId, 8000.0, 0.0);
-        // Felix: comisión "por pagar" real de otro vendedor — no debe "prestarse" al designer.
+        // Contabilidad: comisión "por pagar" real de otro vendedor — no debe "prestarse" al designer.
         $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
 
         $token = $this->loginAsDesigner();
@@ -709,7 +709,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_divide_el_monto_en_partes_iguales_entre_2(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, null, [$felixId]);
 
@@ -735,7 +735,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_divide_el_monto_en_partes_iguales_entre_3(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
         $this->makeCommissionableOrder($vendorId, 30000.0, 30000.0, null, [$felixId, $markId]);
@@ -764,7 +764,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_no_triplica_la_comision_caso_real_scrum906(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
         $this->makeCommissionableOrder($designerId, 10700.0, 10700.0, null, [$felixId, $markId]);
@@ -790,7 +790,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_divide_la_comision_entre_4_responsables_scrum906(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
         $neilId = $this->userIdByEmail('vendedordisenador2@test.com');
 
@@ -855,7 +855,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     public function test_estado_de_cuenta_prohibido_para_ver_el_de_otro_vendedor(): void
     {
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsDesigner();
 
         $this->withHeaders($this->authHeaders($token))

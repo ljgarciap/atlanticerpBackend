@@ -45,7 +45,7 @@ return [
 
     // SCRUM-943 — 2 sets de credenciales simultáneos (antes 1 solo, seleccionado por
     // MSL_FE_AMBIENTE): el ambiente real a usar por certificación ya no es una constante de
-    // despliegue, es `fiscal_settings.pac_ambiente` (dato de negocio, editable por Mark en
+    // despliegue, es `fiscal_settings.pac_ambiente` (dato de negocio, editable por Gerencia en
     // Configuración Fiscal) — ver PacProviderFactory. Ambos sets viven en el .env de CADA
     // entorno de AtlanticERP (dev/test/prod) a la vez, nunca uno solo por entorno.
     'msl_fe' => [

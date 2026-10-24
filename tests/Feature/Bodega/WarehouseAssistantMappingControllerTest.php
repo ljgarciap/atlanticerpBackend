@@ -22,8 +22,8 @@ class WarehouseAssistantMappingControllerTest extends FeatureTestCase
     public function test_jefe_de_bodega_puede_crear_el_mapeo(): void
     {
         $sellerId = $this->userIdByEmail('vendedordisenador6@test.com');
-        $assistantId = $this->userIdByEmail('asistentebodega2@test.com'); // Mariano
-        $this->grantBodegaPermissions('liderbodega@test.com'); // Esteban
+        $assistantId = $this->userIdByEmail('asistentebodega2@test.com'); // Asistente Bodega
+        $this->grantBodegaPermissions('liderbodega@test.com'); // Lider Bodega
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 
         $this->withHeaders($this->authHeaders($token))
@@ -39,7 +39,7 @@ class WarehouseAssistantMappingControllerTest extends FeatureTestCase
     {
         $sellerId = $this->userIdByEmail('vendedordisenador6@test.com');
         $assistantId = $this->userIdByEmail('asistentebodega2@test.com');
-        $this->grantBodegaPermissions('asistentebodega@test.com'); // Osvaldo, asistente_bodega
+        $this->grantBodegaPermissions('asistentebodega@test.com'); // Asistente Bodega, asistente_bodega
         $token = $this->loginAs('asistentebodega@test.com', 'asistentebodega@test.com', 'asistente_bodega');
 
         $this->withHeaders($this->authHeaders($token))
@@ -69,7 +69,7 @@ class WarehouseAssistantMappingControllerTest extends FeatureTestCase
     {
         $sellerId = $this->userIdByEmail('vendedordisenador6@test.com');
         $assistantId = $this->userIdByEmail('asistentebodega2@test.com');
-        // WarehouseAssistantMappingSeeder (Batch A1) ya siembra un mapeo activo real para Annie
+        // WarehouseAssistantMappingSeeder (Batch A1) ya siembra un mapeo activo real para Vendedor Disenador
         // (REQ-307 RN1) — se limpia acá para que este test controle su propio estado, sin
         // acoplarse al roster real de vendedores/asistentes del seeder.
         WarehouseAssistantMapping::where('seller_user_id', $sellerId)->delete();

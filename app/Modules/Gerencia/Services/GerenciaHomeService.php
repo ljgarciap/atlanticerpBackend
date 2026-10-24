@@ -491,7 +491,7 @@ final class GerenciaHomeService
         ];
 
         // ── Admin & Contabilidad ──────────────────────────────────────────────
-        // SCRUM-167 (REQ-105) RN1/RN3 — CxC Total y Cuentas al día (Daniela 2026-08-25).
+        // SCRUM-167 (REQ-105) RN1/RN3 — CxC Total y Cuentas al día (Gerencia 2026-08-25).
         // CxP total eliminado. cxc_total = suma de facturas no incobrables (CxC pendiente de cobro).
         // SCRUM-944/945 — misma fórmula centralizada que kpis() arriba
         // (`InvoiceService::cobrablesConVencimientoSigned()`, saldo neto, anuladas excluidas) en
@@ -518,7 +518,7 @@ final class GerenciaHomeService
 
         $compras = [
             'ordenes_criticas' => $ordenesCriticas,
-            // SCRUM-168 RN2 (Daniela 2026-08-25) — "Bajo stock sin ordenar": bajo_stock/sin_stock
+            // SCRUM-168 RN2 (Gerencia 2026-08-25) — "Bajo stock sin ordenar": bajo_stock/sin_stock
             // sin ninguna orden de compra abierta cubriéndolo. Chip destino:
             // InventoryController@index ?chip=bajo_stock_sin_ordenar (InventoryKpiService::
             // isLowStockWithoutOpenOrder(), misma clasificación, nunca un cálculo paralelo).
@@ -534,7 +534,7 @@ final class GerenciaHomeService
 
         // ── Bodega ─────────────────────────────────────────────────────────────
         // SCRUM-169 (REQ-107) RN1-RN4 — Despachos urgentes/atrasados/a tiempo/completados hoy
-        // (Daniela 2026-08-25). Eliminados: pedidos_activos, entregados_mes.
+        // (Gerencia 2026-08-25). Eliminados: pedidos_activos, entregados_mes.
         // urgentes  = activos con committed_delivery_date <= hoy (vencidos o para hoy).
         // atrasados = activos con committed_delivery_date estrictamente pasado (< hoy).
         // a_tiempo  = entregados este mes donde la fecha de entrega real <= fecha comprometida.
@@ -569,7 +569,7 @@ final class GerenciaHomeService
         ];
 
         // ── Servicios ─────────────────────────────────────────────────────────
-        // SCRUM-170 (REQ-108) RN1/RN3 — Sin responder y Completados este mes (Daniela 2026-08-25).
+        // SCRUM-170 (REQ-108) RN1/RN3 — Sin responder y Completados este mes (Gerencia 2026-08-25).
         // "Resuelto en 1ra visita" eliminado. cancelados_mes eliminado.
         // sin_responder   = tickets en estado REPORTED (sin atender aún).
         // completados_mes = tickets RESOLVED en el mes actual.

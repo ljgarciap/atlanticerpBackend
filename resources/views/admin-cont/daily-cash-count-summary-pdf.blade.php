@@ -65,7 +65,7 @@
                 @if ($aprobado_por)
                     <span class="k">Aprobado por Gerencia —</span> {{ $aprobado_por }}@if ($aprobado_at) el {{ \Carbon\Carbon::parse($aprobado_at)->format('d/m/Y') }}@endif
                 @elseif ($cerrado_por)
-                    <span class="estado-pendiente">Pendiente de aprobación de Gerencia (Mark)</span>
+                    <span class="estado-pendiente">Pendiente de aprobación de Gerencia (Gerencia)</span>
                 @endif
             </div>
         </div>

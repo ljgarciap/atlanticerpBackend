@@ -16,9 +16,9 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-1128 — aprobación explícita "Pasar a Pedido": el pedido en Bodega ya NO nace al aprobar la
- * cotización en Pipeline, solo cuando Gerencia o Félix confirman. Cubre el camino feliz, los
+ * cotización en Pipeline, solo cuando Gerencia o Contabilidad confirman. Cubre el camino feliz, los
  * negativos de permiso (Vendedor/Diseñador por ruta directa), la idempotencia, la trazabilidad
- * (quién/cuándo), el filtro `orders` y el acceso de SOLO LECTURA de Félix.
+ * (quién/cuándo), el filtro `orders` y el acceso de SOLO LECTURA de Contabilidad.
  */
 class PipelinePassToOrderTest extends FeatureTestCase
 {
@@ -98,7 +98,7 @@ class PipelinePassToOrderTest extends FeatureTestCase
             ->assertJsonPath('order_approved_by.id', $this->userIdByEmail('management@atlantic.test'));
     }
 
-    public function test_felix_puede_pasar_a_pedido_un_proyecto_ajeno(): void
+    public function test_contabilidad_puede_pasar_a_pedido_un_proyecto_ajeno(): void
     {
         $card    = $this->makeCard($this->sellerId());
         $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
@@ -169,7 +169,7 @@ class PipelinePassToOrderTest extends FeatureTestCase
         $this->tenant();
         $firstAt = PipelineCard::find($card->id)->order_approved_at;
 
-        // Otra persona (Félix) repite la acción: no debe pisar quién aprobó ni crear otro pedido.
+        // Otra persona (Contabilidad) repite la acción: no debe pisar quién aprobó ni crear otro pedido.
         $felixHeaders = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
         $this->withHeaders($felixHeaders)->postJson("/api/ventas-diseno/pipeline/{$card->id}/pass-to-order")
             ->assertStatus(409)
@@ -271,13 +271,13 @@ class PipelinePassToOrderTest extends FeatureTestCase
         $this->assertSame([$a->id], $ids);
     }
 
-    public function test_felix_ve_el_pipeline_de_todo_el_equipo_y_el_detalle_en_solo_lectura(): void
+    public function test_contabilidad_ve_el_pipeline_de_todo_el_equipo_y_el_detalle_en_solo_lectura(): void
     {
         $this->felixComoEnScrum1139();
-        // SCRUM-1139 — Félix hoy SÍ edita el Pipeline (`pipeline.edit`); este test protege la lectura SOLA (`pipeline.read_all`),
+        // SCRUM-1139 — Contabilidad hoy SÍ edita el Pipeline (`pipeline.edit`); este test protege la lectura SOLA (`pipeline.read_all`),
         // así que se le quita el permiso de escritura para reproducir ese perfil.
-        $felix = \App\Models\User::where('email', self::FELIX)->firstOrFail();
-        $felix->update(['extra_permissions' => array_values(array_diff($felix->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
+        $contabilidad = \App\Models\User::where('email', self::FELIX)->firstOrFail();
+        $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
 
         $card    = $this->makeCard($this->sellerId());
         $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
@@ -291,13 +291,13 @@ class PipelinePassToOrderTest extends FeatureTestCase
             ->assertJsonPath('can_pass_to_order', true);
     }
 
-    public function test_felix_no_puede_escribir_nada_en_el_pipeline(): void
+    public function test_contabilidad_no_puede_escribir_nada_en_el_pipeline(): void
     {
         $this->felixComoEnScrum1139();
-        // SCRUM-1139 — Félix hoy SÍ edita el Pipeline (`pipeline.edit`); este test protege la lectura SOLA (`pipeline.read_all`),
+        // SCRUM-1139 — Contabilidad hoy SÍ edita el Pipeline (`pipeline.edit`); este test protege la lectura SOLA (`pipeline.read_all`),
         // así que se le quita el permiso de escritura para reproducir ese perfil.
-        $felix = \App\Models\User::where('email', self::FELIX)->firstOrFail();
-        $felix->update(['extra_permissions' => array_values(array_diff($felix->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
+        $contabilidad = \App\Models\User::where('email', self::FELIX)->firstOrFail();
+        $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
 
         $card    = $this->makeCard($this->sellerId(), 'proposal');
         $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');

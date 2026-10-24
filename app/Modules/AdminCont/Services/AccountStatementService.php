@@ -148,7 +148,7 @@ final class AccountStatementService
      *   - Notas de crédito APLICADAS de tipo `descuento_comercial` / `devolucion_mercancia` como
      *     crédito. Monto: el completo de la nota, salvo devolución con excedente devuelto en
      *     efectivo, donde solo cuenta lo que redujo la factura (`monto_aplicado_saldo`, D-6).
-     *     Fecha: la de la decisión de Mark (`fecha_decision ?? fecha`, D-3). Notas
+     *     Fecha: la de la decisión de Gerencia (`fecha_decision ?? fecha`, D-3). Notas
      *     `pendiente_aprobacion`/`rechazada` NO aparecen (D-2).
      *   - Facturas ANULADAS (antes se excluían): se muestran con su fila de Factura (débito) + una
      *     fila de Anulación (crédito por el mismo monto) → efecto neto cero (D-5).

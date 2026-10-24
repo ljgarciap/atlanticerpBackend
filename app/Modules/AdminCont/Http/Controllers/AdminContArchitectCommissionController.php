@@ -29,7 +29,7 @@ use Illuminate\Http\Request;
  * docs/adr/ADR-SCRUM591-596-batch17-comisiones-externas.md.
  *
  * Sin lógica de autorización propio-vs-ajeno acá (a diferencia de
- * `AdminContInternalCommissionController`): la audiencia de esta pantalla es Felix/Yaneth/Mark/
+ * `AdminContInternalCommissionController`): la audiencia de esta pantalla es Contabilidad/Yaneth/Mark/
  * Gerencia únicamente (REQ-508→512, ningún arquitecto ni vendedor la consulta), gateada por rol
  * directo en `routes/admin-contab.php` — no hace falta el patrón "vendedor solo ve lo suyo".
  */
@@ -270,7 +270,7 @@ class AdminContArchitectCommissionController
         return response()->json(['porcentaje_pendiente' => $commission->porcentaje_pendiente]);
     }
 
-    /** POST .../projects/{pipelineCardId}/percent/decide — REQ-516, exclusivo de Mark. */
+    /** POST .../projects/{pipelineCardId}/percent/decide — REQ-516, exclusivo de Gerencia. */
     public function decidePercent(DecideArchitectPercentRequest $request, int $pipelineCardId): JsonResponse
     {
         /** @var array{approve: bool} $validated */
@@ -310,7 +310,7 @@ class AdminContArchitectCommissionController
     }
 
     /** Mismo criterio que `AdminContInternalCommissionController::isPrimaryApprover()` —
-     *  `superadmin.all` bypassa, si no hay `primary_approver_user_id` configurado nadie es Mark. */
+     *  `superadmin.all` bypassa, si no hay `primary_approver_user_id` configurado nadie es Gerencia. */
     private function isPrimaryApprover(Request $request): bool
     {
         /** @var array{sub?: int, permissions?: mixed}|null $payload */

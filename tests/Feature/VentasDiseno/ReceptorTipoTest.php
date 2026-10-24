@@ -205,12 +205,12 @@ final class ReceptorTipoTest extends FeatureTestCase
 
     public function test_sin_el_permiso_angosto_nadie_puede_crear_un_cliente_como_consumidor_final(): void
     {
-        $token = $this->token('ventas_diseno.edit'); // escribe y edita, pero no es Mark/Felix
+        $token = $this->token('ventas_diseno.edit'); // escribe y edita, pero no es Gerencia/Felix
         $this->reTenant(); // el login olvida el tenant
         $master = MasterClient::create(['name' => 'Master Permiso '.uniqid()]);
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/ventas-diseno/clients', $this->altaCliente('SinPermiso', ['receptor_tipo' => '02']))
-            ->assertStatus(403)->assertJsonPath('message', 'Solo Mark y Felix pueden marcar un cliente como Consumidor final.');
+            ->assertStatus(403)->assertJsonPath('message', 'Solo Gerencia y Contabilidad pueden marcar un cliente como Consumidor final.');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/ventas-diseno/clients/{$master->id}/sub-clients", [
             'business_name' => 'Mostrador', 'receptor_tipo' => '02', 'contacts' => [['name' => 'Ana', 'role' => 'client', 'phone' => '6000-0000']],
         ])->assertStatus(403);

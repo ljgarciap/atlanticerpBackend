@@ -220,7 +220,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     {
         // SCRUM-145 (hallazgo Pre-QA 2026-07-16): el flag transversal "Gestionar usuarios"
         // no otorgaba ninguna capacidad real -- routes/users.php sigue gateado por el
-        // permiso legado security.users, sin relacion con este flag. Un actor como Felix
+        // permiso legado security.users, sin relacion con este flag. Un actor como Contabilidad
         // (Lider Admin & Contab, manage_users=true por el criterio de aceptacion del
         // ticket) no podia acceder a la administracion de usuarios pese a tener el flag.
         $level = SecurityLevel::where('level', 3)->firstOrFail();

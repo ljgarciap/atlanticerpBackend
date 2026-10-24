@@ -40,7 +40,7 @@ final class ClientTaxDataController extends Controller
 
     /**
      * GET /api/ventas-diseno/clients/fiscal-directory — directorio de SubClientes con sus datos fiscales para quien los
-     * edita (Mark/Felix desde Admin&Cont, o Ventas & Diseño). Paginado, máx. 100 por página ("all" se recorta a 100);
+     * edita (Gerencia/Felix desde Admin&Cont, o Ventas & Diseño). Paginado, máx. 100 por página ("all" se recorta a 100);
      * `bloqueado` = ya tiene documentos certificados/pendientes y el PATCH lo rechazaría con 409.
      */
     public function directory(Request $request): JsonResponse
@@ -82,7 +82,7 @@ final class ClientTaxDataController extends Controller
         /** @var array{business_name: string, receptor_tipo?: string|null, tax_id?: string|null, tax_id_dv?: string|null} $data */
         $data = $request->validated();
 
-        // SCRUM-1003 — PASAR un cliente a Consumidor Final exige el permiso angosto (Mark/Felix). Editar otros datos de uno que
+        // SCRUM-1003 — PASAR un cliente a Consumidor Final exige el permiso angosto (Gerencia/Felix). Editar otros datos de uno que
         // ya lo es (p. ej. la razón social) no cambia el tipo y queda abierto a quien ya edita en Ventas & Diseño.
         if (($data['receptor_tipo'] ?? null) === ReceptorTipo::CONSUMIDOR_FINAL
             && $subClient->receptor_tipo !== ReceptorTipo::CONSUMIDOR_FINAL

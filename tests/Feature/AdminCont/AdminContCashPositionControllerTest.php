@@ -31,9 +31,9 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 {
     use ReadsXlsxResponse;
 
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
-    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+    private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
     private const APPROVER_EMAIL = 'gerencia3@test.com';
 
@@ -45,12 +45,12 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsYaneth(): string
     {
-        return $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
 
     private function loginAsMark(): string
@@ -119,14 +119,14 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     // ---------------------------------------------------------------- REQ-521/522 projected, gates ----
 
     /**
-     * Aclarado por Luis 2026-08-25 (Pre-QA Batch 18): REQ-521 le veda a Yaneth el detalle línea
+     * Aclarado por Luis 2026-08-25 (Pre-QA Batch 18): REQ-521 le veda a Asistente Administrativa el detalle línea
      * por línea, no los 3 totales agregados del encabezado (esos son de REQ-520, que sí la
      * incluye) — antes esta prueba esperaba 403 acá, ahora espera 200 con entradas/salidas vacíos
      * pero los totales calculados sobre el dato completo.
      */
-    public function test_projected_permite_a_yaneth_pero_sin_el_detalle_linea_por_linea(): void
+    public function test_projected_permite_a_asistente_pero_sin_el_detalle_linea_por_linea(): void
     {
-        AdminContInvoice::create(['numero' => 'F-9199', 'order_id' => 919900, 'cliente' => 'Cliente Yaneth', 'monto' => 750]);
+        AdminContInvoice::create(['numero' => 'F-9199', 'order_id' => 919900, 'cliente' => 'Cliente Asistente Administrativa', 'monto' => 750]);
 
         $token = $this->loginAsYaneth();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -137,7 +137,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $this->assertEquals(750.0, $response->json('total_entradas'));
     }
 
-    public function test_real_rechaza_a_yaneth(): void
+    public function test_real_rechaza_a_asistente(): void
     {
         $token = $this->loginAsYaneth();
 
@@ -188,7 +188,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_projected_salidas_incluye_nota_credito_pendiente_con_excedente_calculado(): void
     {
-        $userId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $userId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $invoice = AdminContInvoice::create(['numero' => 'F-9105', 'order_id' => 910104, 'cliente' => 'Fam. Herrera', 'monto' => 1000, 'saldo_aplicado' => 800]);
 
         AdminContCreditNote::create([
@@ -259,9 +259,9 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     /**
      * Defensa en profundidad (Pre-QA Batch 18, 2026-08-25): el PDF/Excel de Proyectado lleva el
      * detalle completo sin la limpieza que sí aplica `projected()` — a diferencia de esa ruta,
-     * acá no hay versión "solo totales" para Yaneth, así que la ruta se rechaza directo.
+     * acá no hay versión "solo totales" para Asistente Administrativa, así que la ruta se rechaza directo.
      */
-    public function test_export_rechaza_a_yaneth(): void
+    public function test_export_rechaza_a_asistente(): void
     {
         $token = $this->loginAsYaneth();
 
@@ -351,7 +351,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
      */
     public function test_939_excel_proyectado_escribe_salida_de_nota_de_credito_como_celda_numerica_negativa(): void
     {
-        $userId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $userId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $invoice = AdminContInvoice::create(['numero' => 'F-9202', 'order_id' => 920101, 'cliente' => 'Fam. Herrera 939', 'monto' => 1000, 'saldo_aplicado' => 800]);
         AdminContCreditNote::create([
             'numero' => 'NC-9002', 'master_client_id' => 1, 'cliente' => 'Fam. Herrera 939',
@@ -431,7 +431,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_daily_count_incluye_nota_credito_devuelta_hoy_con_el_monto_del_bank_movement(): void
     {
-        $userId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $userId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $invoice = AdminContInvoice::create(['numero' => 'F-9106', 'order_id' => 910105, 'cliente' => 'Fam. Herrera', 'monto' => 1000, 'saldo_aplicado' => 700]);
 
         $note = AdminContCreditNote::create([
@@ -457,7 +457,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-879 (rebote PM Review 2026-09-10) — Daniela reportó que una comisión ya pagada
+     * SCRUM-879 (rebote PM Review 2026-09-10) — Gerencia reportó que una comisión ya pagada
      * aparecía en Real 30/90d (`bank_movements`) pero no en "Real (histórico)" + "Hoy", que en
      * realidad es el Arqueo del día (`DailyCashCountService`, no `CashPositionService::real()`).
      * Cubre también el pago sin cuenta asignada (REQ-534) — igual debe contar como salida real.
@@ -554,7 +554,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     /**
      * Pre-QA SCRUM-878/879 (2026-09-10) — hallazgo CRÍTICO confirmado en vivo en dev: un
      * `bank_movement` de comisión creado DESPUÉS del cierre, pero fechado el mismo día del arqueo,
-     * cambiaba en silencio el `total_neto` que Felix ya había cerrado (y que Mark aprobaría sin
+     * cambiaba en silencio el `total_neto` que Contabilidad ya había cerrado (y que Gerencia aprobaría sin
      * saberlo). El fix congela el total en `close()` — este test reproduce exactamente el
      * escenario real (arqueo #1, 2026-08-25) para que no vuelva a pasar.
      */
@@ -744,7 +744,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ->assertStatus(200);
         $id = $close->json('id');
 
-        // Felix (lider_admin_contab) no es Mark — rechazado.
+        // Contabilidad (lider_admin_contab) no es Gerencia — rechazado.
         $this->withHeaders($felixHeaders)
             ->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])
             ->assertStatus(403);
@@ -773,7 +773,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     // ---------------------------------------------------------------- puede_aprobar (gap encontrado por Frontend Dev) ----
 
-    public function test_history_detail_puede_aprobar_true_para_mark_cuando_esta_pendiente(): void
+    public function test_history_detail_puede_aprobar_true_para_aprobador_cuando_esta_pendiente(): void
     {
         $felixHeaders = $this->authHeaders($this->loginAsFelix());
         $close = $this->withHeaders($felixHeaders)
@@ -788,7 +788,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $this->assertTrue($response->json('puede_aprobar'));
     }
 
-    public function test_history_detail_puede_aprobar_false_para_felix(): void
+    public function test_history_detail_puede_aprobar_false_para_contabilidad(): void
     {
         $felixHeaders = $this->authHeaders($this->loginAsFelix());
         $close = $this->withHeaders($felixHeaders)

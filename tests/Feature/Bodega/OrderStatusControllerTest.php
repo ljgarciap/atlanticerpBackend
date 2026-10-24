@@ -165,7 +165,7 @@ class OrderStatusControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-895 (2da vuelta) — regresión del rebote real de Daniela (2026-09-11): `qty_delivered`
+     * SCRUM-895 (2da vuelta) — regresión del rebote real de Gerencia (2026-09-11): `qty_delivered`
      * se setea en `DeliveryService::registerDelivery()` en la transición Packing → Por despachar
      * (declarado al despachar, no confirmado en destino) — una tarjeta que sigue en Por despachar
      * o Despachado (todavía no llegó a Entregado) NO debe contar como "entregado" aunque su
@@ -380,8 +380,8 @@ class OrderStatusControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-897 — Administración & Contabilidad replica "Status de Pedidos" en Facturación (mismo
-     * endpoint, frontend en paralelo). Felix (lider_admin_contab), Yaneth
-     * (asistente_administrativa) y Mark (management) — mismos roles que ya gatean
+     * endpoint, frontend en paralelo). Contabilidad (lider_admin_contab), Asistente Administrativa
+     * (asistente_administrativa) y Gerencia (management) — mismos roles que ya gatean
      * Facturación/Cobros (`routes/admin-contab.php`) — deben poder consultar el listado completo
      * y el detalle, sin `bodega.read` ni `ventas_diseno.read`, solo por su rol de Admin&Cont.
      */
@@ -482,7 +482,7 @@ class OrderStatusControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-741, revisado tras hallazgo real de Pre-QA (2026-08-09, con las cuentas reales del
-     * ticket): David y Mark (Gerencia) tienen bodega.read REAL vía su rol `management` — no solo
+     * ticket): Gerencia y Gerencia (Gerencia) tienen bodega.read REAL vía su rol `management` — no solo
      * el fallback restringido de ventas_diseno.read. Luis decidió que, mientras Bodega esté oculto
      * por UAT, NADIE no-superadmin accede de verdad, ni siquiera con bodega.read real.
      */

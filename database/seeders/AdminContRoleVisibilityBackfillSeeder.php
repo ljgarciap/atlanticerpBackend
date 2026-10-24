@@ -10,14 +10,14 @@ use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Seeder;
 
 /**
- * SCRUM-881 (corrección de Daniela, 2026-09-09) — el rol `asistente_administrativa` (Yaneth) tenía
+ * SCRUM-881 (corrección de Gerencia, 2026-09-09) — el rol `asistente_administrativa` (Asistente Administrativa) tenía
  * `can_view_team = false` para el módulo `admin_contab` en `role_module_visibility` (fila ausente
  * o en su valor por defecto — nunca hubo un seeder que la poblara; esa tabla se edita en vivo desde
  * la pantalla de Roles y Permisos, ver `RoleController`/`RoleService`). `canViewTeamV2('admin_contab')`
- * (`App\Models\User`) hacía exactamente lo que la fila decía: sin `can_view_team`, Yaneth quedaba
+ * (`App\Models\User`) hacía exactamente lo que la fila decía: sin `can_view_team`, Asistente Administrativa quedaba
  * auto-filtrada a "solo yo misma" en `AdminContInternalCommissionController::buildSummary()` —
  * como si fuera una vendedora más — y en cualquier otro cómputo del módulo que dependa del mismo
- * flag. El código no tenía ningún bug: era la fila de permisos la que le daba a Yaneth un alcance
+ * flag. El código no tenía ningún bug: era la fila de permisos la que le daba a Asistente Administrativa un alcance
  * de "solo yo" en vez de "todo el equipo", pese a que el resto de Cobros/Movimientos/Reportes del
  * módulo ya la trataban con acceso completo (su rol ya tenía `can_view = VIEW_FULL`).
  *

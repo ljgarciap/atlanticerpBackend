@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * SCRUM-433→445 (REQ-363→375) — solicitud de orden al proveedor fijo "Zona Libre de Colón",
- * creada por Bodega, resuelta por Compras (Yirena). Mismo patrón exacto que `ReplacementRequest`
+ * creada por Bodega, resuelta por Compras (Lider Compras). Mismo patrón exacto que `ReplacementRequest`
  * (ver docblock de la migración de creación): `status`/`requested_by`/`approved_by`/
  * `generated_order_id` solo se llena al aprobar. Ver ADR-SCRUM433-445 sección "Aclaración de
  * ubicación de módulo" para por qué vive en `Compras\Models` pese a que Bodega es quien la crea.

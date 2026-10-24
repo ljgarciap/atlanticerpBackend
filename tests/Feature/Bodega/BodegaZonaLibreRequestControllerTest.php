@@ -236,7 +236,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $this->assertContains($yirenaId, $send->audience);
 
         // SCRUM-1167/1170 — el aviso lleva a la pantalla donde Compras aprueba/rechaza Y a esa solicitud concreta (`?request={id}`), tanto en el contenido
-        // como en la notificación in-app de Yirena.
+        // como en la notificación in-app de Lider Compras.
         $esperado = "/bodega/ordenes-zona-libre?request={$zonaLibreRequest->id}";
         $this->assertSame($esperado, $send->content['cta_url']);
         $this->assertSame(

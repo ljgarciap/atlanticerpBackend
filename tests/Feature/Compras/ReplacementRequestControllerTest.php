@@ -87,7 +87,7 @@ class ReplacementRequestControllerTest extends FeatureTestCase
     public function test_generar_orden_precarga_el_producto_original_no_el_sustituto(): void
     {
         // REQ-186 Escenario 1. SCRUM-818 (CA13/CA14) — Generar Orden es exclusivo de Líder de
-        // Compras por role_key, no alcanza con compras.write — se loguea como Yirena (real
+        // Compras por role_key, no alcanza con compras.write — se loguea como Lider Compras (real
         // lider_compras) en vez de designer@ con permisos ad-hoc.
         $original = $this->makeProduct(['description' => 'Bombillo decorativo E27 Ámbar', 'cost' => 12]);
         $substitute = $this->makeProduct(['description' => 'Bombillo genérico E27', 'cost' => 8]);
@@ -204,7 +204,7 @@ class ReplacementRequestControllerTest extends FeatureTestCase
 
     /**
      * REQ-184 — Regla de Negocio literal del Excel: margen ≥ umbral (default 15%,
-     * `compras_settings.replacement_margin_threshold`) nace "Pendiente", sin escalar a Mark.
+     * `compras_settings.replacement_margin_threshold`) nace "Pendiente", sin escalar a Gerencia.
      */
     public function test_generar_solicitud_con_margen_suficiente_nace_pendiente(): void
     {
@@ -227,7 +227,7 @@ class ReplacementRequestControllerTest extends FeatureTestCase
         $response->assertJsonPath('sales_project_id', $salesProject->id);
     }
 
-    /** REQ-184 — margen < umbral escala a "Pendiente Gerencia" (notifica a Mark). */
+    /** REQ-184 — margen < umbral escala a "Pendiente Gerencia" (notifica a Gerencia). */
     public function test_generar_solicitud_con_margen_bajo_escala_a_gerencia(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.write']);
@@ -541,12 +541,12 @@ class ReplacementRequestControllerTest extends FeatureTestCase
         $response->assertJsonPath('data.0.can_decide', true);
     }
 
-    // ── SCRUM-818 (rebote 2026-09-03) — reproduce el bug real reportado por Daniela ────────────
+    // ── SCRUM-818 (rebote 2026-09-03) — reproduce el bug real reportado por Gerencia ────────────
 
     /**
      * Hallazgo 1 — a diferencia de `test_gerencia_puede_aprobar_solicitud_pendiente_gerencia`
      * (que simula el caso "ya arreglado" otorgando `gerencia.view` manualmente vía
-     * `grantCompras()`, un permiso v1), este reproduce la cuenta REAL de David/Mark: acceso a
+     * `grantCompras()`, un permiso v1), este reproduce la cuenta REAL de Gerencia/Mark: acceso a
      * Compras/Gerencia solo vía su ROL `management` (`RoleModuleVisibility`, v2) — nunca tuvieron
      * `gerencia.view`/`compras.read` cargado en `extra_permissions`. Antes del fix,
      * `hasFullComprasReadAccess()` usaba `$user->hasPermission()` (v1) y los trataba como si no
@@ -574,7 +574,7 @@ class ReplacementRequestControllerTest extends FeatureTestCase
 
         $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
 
-        // Antes del fix: lista vacía pese a existir la solicitud (mismo síntoma exacto de Daniela).
+        // Antes del fix: lista vacía pese a existir la solicitud (mismo síntoma exacto de Gerencia).
         $indexResponse = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/replacement-requests')
             ->assertStatus(200);
@@ -613,7 +613,7 @@ class ReplacementRequestControllerTest extends FeatureTestCase
         $response->assertJsonPath('data.0.can_generate_order', false);
     }
 
-    /** Mismo caso, pero para Líder de Compras (Yirena) — la única con `can_generate_order` en true. */
+    /** Mismo caso, pero para Líder de Compras (Lider Compras) — la única con `can_generate_order` en true. */
     public function test_can_generate_order_es_true_solo_para_lider_compras(): void
     {
         $product = $this->makeProduct();

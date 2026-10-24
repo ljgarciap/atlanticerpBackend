@@ -29,7 +29,7 @@ use Illuminate\Validation\Rule;
 /**
  * SCRUM-428/429/430/446/447/448/449/450 (REQ-358/359/360/376/377/378/379/380) — "Solicitud de
  * ajuste": Bodega solicita (con motivo + evidencia, puede incluir varias bodegas a la vez) →
- * Mark aprueba o rechaza CADA línea por separado → aprobar ajusta el inventario automáticamente
+ * Gerencia aprueba o rechaza CADA línea por separado → aprobar ajusta el inventario automáticamente
  * vía `KardexService` (tipo Ajuste), rechazar no toca nada.
  *
  * REQ-427/431/432 (confirmar llegada física, modal de detalle de producto, deep-link) quedaron
@@ -121,10 +121,10 @@ final class AdjustmentRequestController extends Controller
             'data' => collect($paginator->items())->map(fn (AdjustmentRequestLine $l) => $this->formatLine($l))->values(),
             'meta' => Pagination::meta($paginator),
             // SCRUM-429 (rebote de Gerencia Test 2026-08-13) — mismo gap que SCRUM-463/466: el
-            // frontend no tenía forma de saber quién es "Mark" (primary_approver_user_id es
+            // frontend no tenía forma de saber quién es "Gerencia" (primary_approver_user_id es
             // puramente de backend), así que Aprobar/Rechazar quedaban visibles+clicables para
             // TODOS con un candado decorativo — el backend ya rechazaba (403) a quien no fuera
-            // Mark, pero el botón seguía pareciendo funcional para Bodega. Se expone acá para que
+            // Gerencia, pero el botón seguía pareciendo funcional para Bodega. Se expone acá para que
             // el frontend oculte el botón por completo, no solo con un candado.
             'can_approve' => $this->canApprove($request),
         ]);
@@ -144,7 +144,7 @@ final class AdjustmentRequestController extends Controller
     /**
      * SCRUM-428/429/446 (REQ-358/359/376) — crea la solicitud con N líneas de bodega.
      *
-     * SCRUM-797 RN5→RN7 — al crear ES el único momento de "enviar a aprobación de Mark" de este
+     * SCRUM-797 RN5→RN7 — al crear ES el único momento de "enviar a aprobación de Gerencia" de este
      * flujo (a diferencia de Inventario General, acá no hay borrador previo — ver diseño acordado
      * con Luis 2026-08-26), así que la advertencia (RN6) y la confirmación de reemplazo (RN7)
      * ocurren en el mismo request. Por cada línea (producto fijo de la solicitud + bodega de esa
@@ -331,7 +331,7 @@ final class AdjustmentRequestController extends Controller
     }
 
     /**
-     * SCRUM-448/449 (REQ-378/379 Escenario 1) — Mark aprueba, ajusta el inventario real.
+     * SCRUM-448/449 (REQ-378/379 Escenario 1) — Gerencia aprueba, ajusta el inventario real.
      *
      * Hallazgo de Pre-QA 2026-07-21 (subagente real, CRÍTICO): el fetch + chequeo de
      * `isPending()` vivía ANTES de abrir la transacción, sin lock — 5 approve concurrentes
@@ -396,7 +396,7 @@ final class AdjustmentRequestController extends Controller
     }
 
     /**
-     * SCRUM-448 (REQ-378 RN1/Escenario 1/2) — Mark rechaza, motivo obligatorio, no toca
+     * SCRUM-448 (REQ-378 RN1/Escenario 1/2) — Gerencia rechaza, motivo obligatorio, no toca
      * inventario. Mismo fix de concurrencia que `approve()` — lock + chequeo de estado dentro
      * de la transacción.
      */
@@ -446,11 +446,11 @@ final class AdjustmentRequestController extends Controller
     }
 
     /**
-     * SCRUM-430 (REQ-360) — el aprobador es "Mark", mismo `primary_approver_user_id` configurable
+     * SCRUM-430 (REQ-360) — el aprobador es "Gerencia", mismo `primary_approver_user_id` configurable
      * ya usado por el gate de aprobación de órdenes de Compras (SCRUM-206) — una sola fuente de
-     * verdad de quién es Mark, no una config paralela por módulo.
+     * verdad de quién es Gerencia, no una config paralela por módulo.
      *
-     * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Mark acepta cualquier
+     * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Gerencia acepta cualquier
      * usuario con una `ReglaAprobacion` activa para tipo=adjustment (SCRUM-163) — antes ese
      * mecanismo solo se consultaba en Gerencia (de forma incorrecta, sin filtrar por tipo) y
      * nunca acá, así que un aprobador designado por regla para este tipo específico igual recibía

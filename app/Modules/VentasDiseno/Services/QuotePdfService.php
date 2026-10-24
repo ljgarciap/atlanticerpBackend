@@ -27,7 +27,7 @@ use Barryvdh\DomPDF\PDF as PdfDocument;
  * soporte real para "Página X de Y"; nunca se evalúa contenido de usuario como PHP, la vista es
  * 100% generada por este servicio, todos los valores interpolados van escapados por Blade (`{{ }}`).
  *
- * `logoDataUri` — rebote de Daniela 2026-08-20: el encabezado seguía con el SVG inline original
+ * `logoDataUri` — rebote de Gerencia 2026-08-20: el encabezado seguía con el SVG inline original
  * (dompdf en este entorno no lo renderiza, ver docblock de `PdfLogo`) — ese gap ya se había
  * diagnosticado y arreglado en los 3 PDFs de Servicios (SCRUM-781) pero nunca se retrofiteó acá.
  */

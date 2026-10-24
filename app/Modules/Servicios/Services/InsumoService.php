@@ -128,7 +128,7 @@ final class InsumoService
      * `PurchaseOrder::computeRequiresPrimaryApproval()` siempre da `false` (RN3/REQ-118 solo aplica a
      * envíos aéreos pagados por Atlantic, que este flujo interno nunca captura), así que la
      * orden nace directo en "Pendiente/Por liquidar", sin bloquear en un gate de aprobación de
-     * Mark que este formulario no tiene forma de satisfacer.
+     * Gerencia que este formulario no tiene forma de satisfacer.
      *
      * @throws \InvalidArgumentException el producto del insumo ya no existe, o no tiene proveedor asignado
      */

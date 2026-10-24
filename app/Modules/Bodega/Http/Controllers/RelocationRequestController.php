@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * SCRUM-454/457/458/459 (REQ-384/387/388/389, Bloque B4 "Reubicación entre bodegas") — ver
  * ADR-SCRUM454-459-reubicacion-bodegas.md. Mismo patrón que `AdjustmentRequestController`
- * (Bodega solicita → Mark aprueba/rechaza → automático), simplificado a una sola tabla porque
+ * (Bodega solicita → Gerencia aprueba/rechaza → automático), simplificado a una sola tabla porque
  * cada solicitud es siempre 1 producto/1 origen/1 destino (nunca N bodegas a la vez).
  */
 final class RelocationRequestController extends Controller
@@ -119,7 +119,7 @@ final class RelocationRequestController extends Controller
     }
 
     /**
-     * SCRUM-458 (REQ-388) — Mark aprueba: ajusta el inventario automáticamente, dos movimientos
+     * SCRUM-458 (REQ-388) — Gerencia aprueba: ajusta el inventario automáticamente, dos movimientos
      * de Kardex (`TIPO_REUBICACION`) atómicos con la resolución de la solicitud. Mismo fix de
      * concurrencia que `AdjustmentRequestController::approve()` (Pre-QA 2026-07-21, CRÍTICO):
      * el lock (`lockForUpdate()`) y el chequeo de `isPending()` viven DENTRO de la transacción,
@@ -190,7 +190,7 @@ final class RelocationRequestController extends Controller
     }
 
     /**
-     * SCRUM-458/459 (REQ-388, REQ-389 RN1) — Mark rechaza, motivo obligatorio, no toca
+     * SCRUM-458/459 (REQ-388, REQ-389 RN1) — Gerencia rechaza, motivo obligatorio, no toca
      * inventario. Mismo lock + chequeo de estado dentro de la transacción que `approve()`.
      */
     public function reject(Request $request, int $id): JsonResponse
@@ -239,11 +239,11 @@ final class RelocationRequestController extends Controller
     }
 
     /**
-     * Gate "exclusivo de Mark" — mismo mecanismo que
+     * Gate "exclusivo de Gerencia" — mismo mecanismo que
      * `AdjustmentRequestController::resolveMarkAccess()` (`ComprasSettings::primary_approver_user_id`,
      * no un permiso de rol nuevo).
      *
-     * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Mark acepta cualquier
+     * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Gerencia acepta cualquier
      * usuario con una `ReglaAprobacion` activa para tipo=relocation (SCRUM-163) — ver docblock de
      * `AprobacionGate` para el porqué.
      *

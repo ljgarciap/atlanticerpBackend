@@ -188,7 +188,7 @@ final class AuditService
     // un endpoint de detalle de una comisión puntual, solo el listado (summary()).
     public const ADMIN_CONT_CUENTA_COBRO_VIEWED            = 'admin_cont.cuenta_cobro.viewed';
     public const ADMIN_CONT_COMPROBANTE_RETENCION_VIEWED   = 'admin_cont.comprobante_retencion.viewed';
-    // SCRUM-1007 — acciones fiscales manuales sobre un documento electrónico (Mark/superadmin).
+    // SCRUM-1007 — acciones fiscales manuales sobre un documento electrónico (Gerencia/superadmin).
     public const ADMIN_CONT_FE_DOCUMENTO_RECERTIFICADO     = 'admin_cont.fe_documento.recertificado';
     public const ADMIN_CONT_FE_DOCUMENTO_ESTADO_ACTUALIZADO = 'admin_cont.fe_documento.estado_actualizado';
     // SCRUM-1019 — "Reconciliar con MSL" (consulta/reenvío para recuperar el CUFE de un documento que MSL ya tiene).

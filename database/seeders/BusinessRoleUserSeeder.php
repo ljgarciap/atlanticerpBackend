@@ -57,7 +57,7 @@ class BusinessRoleUserSeeder extends Seeder
         ['first_name' => 'Vendedor Disenador', 'last_name' => 'Test 7', 'email' => 'vendedordisenador7@test.com', 'role_key' => 'vendedor_disenador'],
         ['first_name' => 'Vendedor Disenador', 'last_name' => 'Test 8', 'email' => 'vendedordisenador8@test.com', 'role_key' => 'vendedor_disenador'],
         ['first_name' => 'Vendedor Disenador', 'last_name' => 'Test 9', 'email' => 'vendedordisenador9@test.com', 'role_key' => 'vendedor_disenador'],
-        // 10mo Vendedor/Diseñador — SCRUM-144 documentaba 9, SCRUM-148 sumó a Idmar con cargo
+        // 10mo Vendedor/Diseñador — SCRUM-144 documentaba 9, SCRUM-148 sumó a Vendedor Disenador con cargo
         // explícito, se incluye igual (no es de los 3 sin cargo).
         ['first_name' => 'Vendedor Disenador', 'last_name' => 'Test 10', 'email' => 'vendedordisenador10@test.com', 'role_key' => 'vendedor_disenador'],
         ['first_name' => 'Lider Operaciones', 'last_name' => 'Test', 'email' => 'lideroperaciones@test.com', 'role_key' => 'lider_operaciones'],

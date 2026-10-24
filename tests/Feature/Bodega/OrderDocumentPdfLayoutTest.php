@@ -13,7 +13,7 @@ use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-783 (rebote Daniela 2026-08-20): la Guía de Entrega ("Imprimir" en Pedidos) mostraba la
+ * SCRUM-783 (rebote Gerencia 2026-08-20): la Guía de Entrega ("Imprimir" en Pedidos) mostraba la
  * información montada/superpuesta con la tabla de ítems. Causa raíz: `.meta-block` en
  * `guia-entrega-pdf.blade.php` usaba position:absolute para las 2 columnas + un min-height fijo
  * adivinado (110px) — los hijos absolutos no aportan altura real al contenedor, así que el bloque
@@ -114,7 +114,7 @@ class OrderDocumentPdfLayoutTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-894 (rebote Daniela, 2026-09-13) — el fix anterior (test de arriba) solo probaba
+     * SCRUM-894 (rebote Gerencia, 2026-09-13) — el fix anterior (test de arriba) solo probaba
      * `generateGuiaEntrega()` con un `$order->fresh([...])` recién cargado, así que nunca
      * reprodujo el bug real: `DeliveryService::registerDelivery()` carga `items` ANTES de
      * actualizar `qty_delivered` de cada item vía instancias de Eloquent separadas

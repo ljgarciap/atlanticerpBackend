@@ -388,7 +388,7 @@ final class PurchaseOrderController extends Controller
             );
 
             // SCRUM-204 (REQ-141, 2026-08-06 — hallazgo Gerencia Test): antes toda orden nacía en
-            // "Por aprobar" sin importar si de verdad requería la aprobación de Mark (RN3/REQ-118)
+            // "Por aprobar" sin importar si de verdad requería la aprobación de Gerencia (RN3/REQ-118)
             // — $requiresApproval ya se calculaba arriba pero nunca se usaba para el estado
             // inicial. Ahora solo las que la requieren nacen en "Por aprobar"; el resto arranca
             // directo en "Pendiente/Por liquidar" (misma etiqueta interna, texto derivado de
@@ -497,7 +497,7 @@ final class PurchaseOrderController extends Controller
         return response()->json($this->formatDetail($order));
     }
 
-    /** RN3 de REQ-118 — gate de aprobación de Mark. */
+    /** RN3 de REQ-118 — gate de aprobación de Gerencia. */
     public function approve(Request $request, int $id): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -517,10 +517,10 @@ final class PurchaseOrderController extends Controller
             return response()->json(['message' => 'Esta orden ya fue aprobada.'], 422);
         }
 
-        // SCRUM-206 (hallazgo QA): la spec de REQ-143 pide la aprobación de Mark específicamente,
+        // SCRUM-206 (hallazgo QA): la spec de REQ-143 pide la aprobación de Gerencia específicamente,
         // no de cualquier usuario con el permiso compras.approve — sin este chequeo, cualquier
         // Gerencia podía aprobar y quedaba registrada con trazabilidad correcta en `approved_by`
-        // pero la UI mostraba el texto fijo "Aprobada por Mark" igual, sin importar quién aprobó.
+        // pero la UI mostraba el texto fijo "Aprobada por Gerencia" igual, sin importar quién aprobó.
         // superadmin.all bypassa este gate (decisión de Luis, 2026-08-22) — mismo criterio que
         // el resto de la app, ver EnsureIsPrimaryApprover en Admin&Cont.
         $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
@@ -540,7 +540,7 @@ final class PurchaseOrderController extends Controller
     /**
      * SCRUM-210 (REQ-147, alcance reducido) — asigna/cambia la agencia de liquidación de una
      * orden Zona Libre y dispara el evento de dominio para que Bodega lo consuma (RN6 del
-     * ticket, "avisar a Miguel", queda para cuando ese módulo exista — ver docblock del evento).
+     * ticket, "avisar a Garantias Servicios", queda para cuando ese módulo exista — ver docblock del evento).
      * No cambia `status` — la secuencia de estados no se toca en este alcance reducido.
      */
     public function liquidate(Request $request, int $id): JsonResponse
@@ -585,7 +585,7 @@ final class PurchaseOrderController extends Controller
 
     /**
      * REQ-141/142/143 — avanza al siguiente estado de la secuencia (según origen del proveedor),
-     * bloqueando de verdad si falta la aprobación de Mark (REQ-143, ya no es solo un aviso).
+     * bloqueando de verdad si falta la aprobación de Gerencia (REQ-143, ya no es solo un aviso).
      * El efecto "auto-confirma productos Por ingresar en Inventario" (REQ-142 Escenario 1) — fix
      * Pre-QA 2026-07-20, rechazado por marly: quedaba diferido desde que se escribió este método
      * porque Ingreso de Mercancía no existía. Ya existe (SCRUM-220→230); al llegar a "Recibido" se
@@ -594,7 +594,7 @@ final class PurchaseOrderController extends Controller
      * confirmar manualmente desde Inventario).
      *
      * REQ-153/154 (SCRUM-216/217, batch fusionado 2026-08-05, RN1/RN3 de los comentarios de
-     * Daniela) — además del `status`/`status_changed_at` de siempre, este método ahora deja un
+     * Gerencia) — además del `status`/`status_changed_at` de siempre, este método ahora deja un
      * registro histórico permanente de CUÁNDO se alcanzó cada etapa
      * (`PurchaseOrder::STAGE_DATE_COLUMNS`), consumido por el timeline visual de Logística
      * (REQ-154). Al llegar a "Recibido" (etapa terminal, sin columna propia en el mapa) se
@@ -785,8 +785,8 @@ final class PurchaseOrderController extends Controller
      * usada por `advance()`), pero la única forma de dispararla manualmente era
      * `GoodsReceiptController::confirmPendingForProduct()` — acotado por PRODUCTO a través de
      * TODAS las órdenes, y solo alcanzable desde la pantalla genérica `/inventario`, desconectada
-     * del contexto de la orden que Compras está mirando (root cause real del reporte de Daniela
-     * Amaya: la unidad ya recibida no aparecía en Inventario porque nadie la confirmaba desde acá,
+     * del contexto de la orden que Compras está mirando (root cause real del reporte de Gerencia
+     * Test: la unidad ya recibida no aparecía en Inventario porque nadie la confirmaba desde acá,
      * no porque la plataforma no pudiera hacerlo).
      */
     public function confirmPendingReceipts(Request $request, int $id): JsonResponse
@@ -948,7 +948,7 @@ final class PurchaseOrderController extends Controller
      * `update()`/REQ-144): un envío "En tránsito" es justo cuando estos datos empiezan a existir,
      * editar la orden completa ya está bloqueada en ese punto.
      *
-     * REQ-153/154 (SCRUM-216, RN3/RN4 del comentario de Daniela 2026-08-05) — `actual_arrival_date`
+     * REQ-153/154 (SCRUM-216, RN3/RN4 del comentario de Gerencia 2026-08-05) — `actual_arrival_date`
      * ("Llegada real") YA NO se acepta acá. El fix de SCRUM-216 del 2026-08-05 (commit f5b42a6) lo
      * había dejado editable a mano justificándolo con REQ-156, lectura incorrecta: el AC real de
      * REQ-156 es sobre auto-guardado de contenedor/naviera, nunca mencionó "Llegada real". Con
@@ -1108,7 +1108,7 @@ final class PurchaseOrderController extends Controller
             'created_by_name' => $this->creatorName($order),
             // REQ-274 RN3 (Servicios, SCRUM-344/347 Grupo D parte 2) — Pre-QA 2026-08-13: la orden
             // ya nacía marcada `origin_module=servicios` en BD, pero nunca se exponía acá ni se
-            // pintaba en el frontend — Yirena no tenía forma real de "diferenciarla de solicitudes
+            // pintaba en el frontend — Lider Compras no tenía forma real de "diferenciarla de solicitudes
             // que vienen de Ventas & Diseño u otras áreas" (RN3 explícita del ticket) pese a que el
             // dato ya existía. `null` para el resto de órdenes (creadas a mano en Compras/Ventas &
             // Diseño) — ver `PurchaseOrder::ORIGIN_SERVICIOS`, único origen automático hoy.
@@ -1127,7 +1127,7 @@ final class PurchaseOrderController extends Controller
             'blocked_by_primary_approval' => $order->isBlockedByPrimaryApproval(),
             'approved_by' => $order->approved_by,
             // SCRUM-206 — nombre real de quien aprobó, para que la UI no siga mostrando el
-            // texto fijo "Aprobada por Mark" sin importar quién aprobó de verdad.
+            // texto fijo "Aprobada por Gerencia" sin importar quién aprobó de verdad.
             'approved_by_name' => $this->approvedByName($order),
             'total_amount' => $order->total_amount,
             // SCRUM-1145 — costos adicionales + total a pagar al proveedor (total_amount NO los incluye).

@@ -17,10 +17,10 @@ use Database\Seeders\SpecialPermissionSeeder;
 final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
 {
     protected const GRANTS = [
-        // Mark — REQ-034 (Precio Socio) + REQ-046 (Condiciones, junto con Felix) + REQ-008
+        // Gerencia — REQ-034 (Precio Socio) + REQ-046 (Condiciones, junto con Contabilidad) + REQ-008
         // (editar proyectos Aprobado, SCRUM-77 — único usuario de negocio que el criterio nombra)
-        // + SCRUM-725 (excepción de margen mínimo, junto con David) + SCRUM-925 (LUMO, junto con
-        // David/Felix)
+        // + SCRUM-725 (excepción de margen mínimo, junto con Gerencia) + SCRUM-925 (LUMO, junto con
+        // Gerencia/Felix)
         'gerencia3@test.com' => [
             'ventas_diseno.select_partner_price',
             'ventas_diseno.edit.conditions',
@@ -30,33 +30,33 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
             'ventas_diseno.edit.client_tax_data',
             'admin_contab.edit.receptor_fiscal',
             'admin_contab.edit.receptor_consumidor_final',
-            // SCRUM-1166 — marcar a un cliente fiscal como exento de ITBMS (con documento), junto con Felix y Yaneth.
+            // SCRUM-1166 — marcar a un cliente fiscal como exento de ITBMS (con documento), junto con Contabilidad y Asistente Administrativa.
             'admin_contab.edit.client_itbms_exemption',
         ],
-        // Felix — REQ-046 (Condiciones) + SCRUM-925 (LUMO, junto con Mark/David) + SCRUM-1002 (editar
-        // razón social/RUC/DV de un SubCliente, junto con Mark; Ventas & Diseño lo tiene por `ventas_diseno.edit`)
-        // SCRUM-1128 — Felix pasa proyectos aprobados a Pedido y ve el Pipeline en SOLO LECTURA
+        // Contabilidad — REQ-046 (Condiciones) + SCRUM-925 (LUMO, junto con Gerencia/David) + SCRUM-1002 (editar
+        // razón social/RUC/DV de un SubCliente, junto con Gerencia; Ventas & Diseño lo tiene por `ventas_diseno.edit`)
+        // SCRUM-1128 — Contabilidad pasa proyectos aprobados a Pedido y ve el Pipeline en SOLO LECTURA
         // (`ventas_diseno.pipeline.read_all` no desbloquea ninguna ruta de escritura).
-        // SCRUM-1139 — Félix edita el Pipeline (`ventas_diseno.pipeline.edit`, SOLO rutas de /pipeline) y los proyectos Aprobados
+        // SCRUM-1139 — Contabilidad edita el Pipeline (`ventas_diseno.pipeline.edit`, SOLO rutas de /pipeline) y los proyectos Aprobados
         // (`edit.approved`).
-        // SCRUM-1150 (2026-10-15, decisión de Luis) — Félix replica a Mark en Ventas & Diseño: suma select_partner_price y
+        // SCRUM-1150 (2026-10-15, decisión de Luis) — Contabilidad replica a Gerencia en Ventas & Diseño: suma select_partner_price y
         // override_min_margin (reemplaza la exclusión de SCRUM-1139); ver/editar/aprobar vienen del override en user_module_visibility.
         'contabilidad@test.com' => ['ventas_diseno.edit.conditions', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.receptor_fiscal', 'admin_contab.edit.receptor_consumidor_final', 'ventas_diseno.pass_to_order', 'ventas_diseno.pipeline.read_all', 'ventas_diseno.pipeline.edit', 'ventas_diseno.edit.approved', 'ventas_diseno.select_partner_price', 'ventas_diseno.override_min_margin', 'ventas_diseno.gerencia_scope', 'admin_contab.edit.client_itbms_exemption'],
         // Guarda de RUC al facturar (docs/specs/guarda-validacion-ruc-al-facturar.md): `admin_contab.edit.receptor_fiscal`
-        // permite corregir RUC/DV/razón social desde la vista previa de "Crear factura". Mark y Felix son quienes facturan;
+        // permite corregir RUC/DV/razón social desde la vista previa de "Crear factura". Gerencia y Contabilidad son quienes facturan;
         // otras personas de Admin&Cont las asigna un superadmin desde la pantalla de usuarios.
         // SCRUM-1140 — `admin_contab.edit.receptor_consumidor_final` (facturar a Consumidor Final por decisión de quien factura)
-        // va a quien factura: hoy Mark y Felix; las personas nuevas que facturen lo reciben de un superadmin junto con el permiso
+        // va a quien factura: hoy Gerencia y Contabilidad; las personas nuevas que facturen lo reciben de un superadmin junto con el permiso
         // de facturar y `receptor_fiscal` (ver docs/runbooks/alta-de-facturador.md).
-        // David — SCRUM-725 (excepción de margen mínimo, junto con Mark; el ticket los nombra a
+        // Gerencia — SCRUM-725 (excepción de margen mínimo, junto con Gerencia; el ticket los nombra a
         // los dos por email explícitamente, no es un grant de rol) + SCRUM-295 (desglose de costo
-        // del ítem Subcontratado, junto con Aaron/Mark/Whil) + SCRUM-925 (LUMO, junto con Mark/Felix)
+        // del ítem Subcontratado, junto con Lider Servicios/Mark/Whil) + SCRUM-925 (LUMO, junto con Gerencia/Felix)
         'gerencia2@test.com' => ['ventas_diseno.override_min_margin', 'servicios.quotes.view_cost_breakdown'],
-        // Aaron (lider_servicios) — SCRUM-295: aunque lidera el módulo, ver el desglose de
+        // Lider Servicios (lider_servicios) — SCRUM-295: aunque lidera el módulo, ver el desglose de
         // costo/margen del ítem Subcontratado es un grant angosto por persona (el ticket lo nombra
-        // explícitamente junto con Mark/David/Whil), no algo que su rol/nivel otorgue por defecto.
+        // explícitamente junto con Gerencia/David/Whil), no algo que su rol/nivel otorgue por defecto.
         'liderservicios@test.com' => ['servicios.quotes.view_cost_breakdown'],
-        // Whil (Gerencia Test 5, management con nivel restringido) — SCRUM-295, mismo grant.
+        // Gerencia (Gerencia Test 5, management con nivel restringido) — SCRUM-295, mismo grant.
         'gerencia5@test.com' => ['servicios.quotes.view_cost_breakdown'],
         // Lider Compras Test (lider_compras) — compras.settings.configure (umbral configurable de
         // "calificación baja" de proveedores, ver compras_settings), aprobado por Luis 2026-07-16
@@ -86,7 +86,7 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // que de verdad habilita Ver Órdenes/Logística/Inventario/Ver Registros de Ingreso —
         // ver routes/compras.php (OR en esas rutas puntuales) e InventoryController::resolveAccess().
         'lideroperaciones@test.com' => ['compras.sustitutos.manage', 'compras.limited.view', 'admin_contab.edit.receptor_fiscal'],
-        // SCRUM-1139 — la asistente administrativa (Yaneth) replica `receptor_fiscal` de Félix (corregir RUC/DV/razón social del receptor).
+        // SCRUM-1139 — la asistente administrativa (Asistente Administrativa) replica `receptor_fiscal` de Contabilidad (corregir RUC/DV/razón social del receptor).
         // Sus rutas de Admin&Cont las da el ROL (`role:`); este es el único permiso angosto que le faltaba.
         'asistenteadministrativa@test.com' => ['admin_contab.edit.receptor_fiscal', 'admin_contab.edit.client_itbms_exemption'],
         // Los 10 vendedores/diseñadores reales (rol vendedor_disenador, ver

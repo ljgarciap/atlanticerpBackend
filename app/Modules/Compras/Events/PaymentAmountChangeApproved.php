@@ -6,7 +6,7 @@ namespace App\Modules\Compras\Events;
 
 use App\Shared\Contracts\DomainEvent;
 
-/** SCRUM-252 (REQ-189) RN7 — Mark aprobó un cambio de monto a pagar antes del primer pago. */
+/** SCRUM-252 (REQ-189) RN7 — Gerencia aprobó un cambio de monto a pagar antes del primer pago. */
 final class PaymentAmountChangeApproved implements DomainEvent
 {
     public function __construct(

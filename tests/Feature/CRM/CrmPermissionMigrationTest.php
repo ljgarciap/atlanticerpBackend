@@ -42,24 +42,24 @@ class CrmPermissionMigrationTest extends FeatureTestCase
         $tokenDaniela = $this->tokenFor(self::DANIELA, 'management');
         $tokenAldo = $this->tokenFor(self::ALDO, 'lider_servicios');
 
-        // Aldo (lider_servicios) crea un proyecto sin asignarse a sí mismo — no tiene alcance de
+        // Lider Servicios (lider_servicios) crea un proyecto sin asignarse a sí mismo — no tiene alcance de
         // equipo en ventas_diseno, pero SÍ tiene crm.write genérico (nivel 14, "Power User —
         // Servicios").
         $this->withHeaders($this->authHeaders($tokenAldo))
-            ->postJson('/api/crm/projects', ['nombre' => 'Proyecto de Aldo', 'tipo' => 'diseno', 'assignee_ids' => []])
+            ->postJson('/api/crm/projects', ['nombre' => 'Proyecto de Lider Servicios', 'tipo' => 'diseno', 'assignee_ids' => []])
             ->assertStatus(201);
 
-        // Sin estar asignado, Aldo no ve su propio proyecto en el listado — confirma que el
+        // Sin estar asignado, Lider Servicios no ve su propio proyecto en el listado — confirma que el
         // scoping es por asignación real, no por autoría (mismo comportamiento de siempre).
         $aldoIndex = $this->withHeaders($this->authHeaders($tokenAldo))->getJson('/api/crm/projects');
         $aldoIndex->assertStatus(200);
-        $this->assertNotContains('Proyecto de Aldo', collect($aldoIndex->json('data'))->pluck('nombre'));
+        $this->assertNotContains('Proyecto de Lider Servicios', collect($aldoIndex->json('data'))->pluck('nombre'));
 
-        // Daniela (management) sí lo ve, sin estar asignada — alcance de equipo.
+        // Gerencia (management) sí lo ve, sin estar asignada — alcance de equipo.
         $danielaIndex = $this->withHeaders($this->authHeaders($tokenDaniela))->getJson('/api/crm/projects');
         $danielaIndex->assertStatus(200);
         $nombresDaniela = collect($danielaIndex->json('data'))->pluck('nombre');
-        $this->assertContains('Proyecto de Aldo', $nombresDaniela);
+        $this->assertContains('Proyecto de Lider Servicios', $nombresDaniela);
     }
 
     // ── GET /api/crm/reports/team — permission:ventas_diseno.view_team ──────────
@@ -95,7 +95,7 @@ class CrmPermissionMigrationTest extends FeatureTestCase
         $response->assertStatus(201);
         $projectId = (int) $response->json('id');
 
-        // Aldo tiene crm.delete genérico (nivel 14) pero NO crm.projects.delete (exclusivo nivel 9).
+        // Lider Servicios tiene crm.delete genérico (nivel 14) pero NO crm.projects.delete (exclusivo nivel 9).
         $this->withHeaders($this->authHeaders($tokenAldo))
             ->deleteJson("/api/crm/projects/{$projectId}")
             ->assertStatus(403);

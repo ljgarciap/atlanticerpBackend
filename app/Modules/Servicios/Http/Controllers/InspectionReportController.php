@@ -95,7 +95,7 @@ final class InspectionReportController extends Controller
     /**
      * GET /api/servicios/tickets/{ticketId}/inspection-report/pdf/blank — REQ-244, plantilla en
      * blanco por tipo/subtipo. No requiere informe existente — RN "Descargar plantilla en blanco":
-     * Aaron + técnico interno (rol validado en la ruta, más angosto que el resto del recurso).
+     * Lider Servicios + técnico interno (rol validado en la ruta, más angosto que el resto del recurso).
      */
     public function pdfBlank(int $ticketId): Response
     {
@@ -114,7 +114,7 @@ final class InspectionReportController extends Controller
     /**
      * PUT /api/servicios/tickets/{ticketId}/inspection-report — REQ-238→243, "Guardar informe".
      * Crea en el primer guardado (asigna folio, RN1) y actualiza después — RN5 (REQ-238): solo
-     * Aaron/Líder de Servicios o el técnico interno asignado a este ticket.
+     * Lider Servicios/Líder de Servicios o el técnico interno asignado a este ticket.
      */
     public function save(SaveInspectionReportRequest $request, int $ticketId): JsonResponse
     {

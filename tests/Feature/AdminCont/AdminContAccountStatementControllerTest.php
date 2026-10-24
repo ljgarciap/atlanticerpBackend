@@ -27,7 +27,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
 {
     use ReadsXlsxResponse;
 
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -37,7 +37,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     /** @return array{master: MasterClient, sub: SubClient, project: SalesProject} */
@@ -268,7 +268,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_bloque_de_pago_siempre_presente_y_consistente_con_facturacion(): void
     {
         ['master' => $master] = $this->makeClientWithProject('Pago');
-        AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::FELIX_EMAIL)]);
+        AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::CONTABILIDAD_EMAIL)]);
         AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '03-01-01-074521-4', 'moneda' => 'USD', 'activa' => true]);
         $token = $this->loginAsFelix();
 
@@ -291,7 +291,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_bloque_de_pago_usa_el_numero_completo_cuando_la_cuenta_lo_tiene_cargado(): void
     {
         ['master' => $master] = $this->makeClientWithProject('PagoCompleto');
-        AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::FELIX_EMAIL)]);
+        AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::CONTABILIDAD_EMAIL)]);
         AdminContBankAccount::create([
             'banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4455',
             'numero_cuenta_completo' => '03-01-01-074455-4', 'moneda' => 'USD', 'activa' => true,
@@ -667,7 +667,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     private function creditNoteBase(int $masterClientId): array
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        $registra = (int) DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)->value('id');
+        $registra = (int) DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)->value('id');
 
         return [
             'master_client_id' => $masterClientId, 'cliente' => 'Cliente Test',

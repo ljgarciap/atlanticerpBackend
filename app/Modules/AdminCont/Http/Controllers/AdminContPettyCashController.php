@@ -263,7 +263,7 @@ class AdminContPettyCashController
         return $this->expenseDetail($id, $request);
     }
 
-    /** PUT /api/admin-contab/petty-cash/expenses/{id}/reject — REQ-541, exclusivo Mark
+    /** PUT /api/admin-contab/petty-cash/expenses/{id}/reject — REQ-541, exclusivo Gerencia
      *  (`primary_approver_only` en la ruta). */
     public function rejectExpense(int $id, RejectPettyCashExpenseRequest $request): JsonResponse
     {
@@ -289,7 +289,7 @@ class AdminContPettyCashController
         return response()->json($result);
     }
 
-    /** PUT /api/admin-contab/petty-cash/reports/{numero}/reject — REQ-541, exclusivo Mark
+    /** PUT /api/admin-contab/petty-cash/reports/{numero}/reject — REQ-541, exclusivo Gerencia
      *  (`primary_approver_only` en la ruta). */
     public function rejectReport(string $numero, RejectPettyCashReportRequest $request): JsonResponse
     {
@@ -315,8 +315,8 @@ class AdminContPettyCashController
         return response()->json($result);
     }
 
-    /** PUT /api/admin-contab/petty-cash/expenses/{id}/reopen — REQ-544, Felix/Yaneth (mismo
-     *  roster que `storeExpenses`, deliberadamente SIN `primary_approver_only` — reabrir no es de Mark). */
+    /** PUT /api/admin-contab/petty-cash/expenses/{id}/reopen — REQ-544, Contabilidad/Yaneth (mismo
+     *  roster que `storeExpenses`, deliberadamente SIN `primary_approver_only` — reabrir no es de Gerencia). */
     public function reopenExpense(int $id, ReopenPettyCashExpenseRequest $request): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -371,7 +371,7 @@ class AdminContPettyCashController
     }
 
     /** Redundante con el gate `primary_approver_only` de la ruta de aprobar (ver docblock ahí) — se reusa acá
-     *  solo para calcular `puede_aprobar` en el detalle, que SÍ es visible para Felix/Yaneth/
+     *  solo para calcular `puede_aprobar` en el detalle, que SÍ es visible para Contabilidad/Yaneth/
      *  Gerencia (no está detrás de `primary_approver_only`). Mismo criterio que
      *  `AdminContCashPositionController::historyDetail()`. */
     private function isPrimaryApprover(Request $request): bool

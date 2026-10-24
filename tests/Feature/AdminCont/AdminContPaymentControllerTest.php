@@ -21,11 +21,11 @@ use Tests\Feature\FeatureTestCase;
 /** Batch 5 de Admin&Cont (SCRUM-539→544, REQ-462→467) — Cobros. */
 class AdminContPaymentControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     private const APPROVER_EMAIL = 'gerencia3@test.com';
 
-    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+    private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
     protected function setUp(): void
     {
@@ -35,7 +35,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsMark(): string
@@ -45,7 +45,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     private function loginAsYaneth(): string
     {
-        return $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
 
     /**
@@ -129,15 +129,15 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $this->assertContains($yaSaldado->id, array_column($response->json('data'), 'id'));
     }
 
-    // ── Gate de permisos — REQ-463 es más angosto (sin Yaneth) que el resto del batch ──────────
+    // ── Gate de permisos — REQ-463 es más angosto (sin Asistente Administrativa) que el resto del batch ──────────
 
     /**
-     * Corrección SCRUM-881 (Daniela, 2026-09-09) — REQ-463 originalmente excluía a Yaneth de las
-     * tarjetas de indicadores de Cobros ("Visible para Felix, Mark y Gerencia"), inconsistente con
-     * el resto del módulo donde Yaneth sí tiene el mismo alcance que Felix (ella veía el Historial
+     * Corrección SCRUM-881 (Gerencia, 2026-09-09) — REQ-463 originalmente excluía a Asistente Administrativa de las
+     * tarjetas de indicadores de Cobros ("Visible para Contabilidad, Gerencia y Gerencia"), inconsistente con
+     * el resto del módulo donde Asistente Administrativa sí tiene el mismo alcance que Contabilidad (ella veía el Historial
      * de cobros completo pero las 4 tarjetas en guion). Se corrige el gate de ruta para incluirla.
      */
-    public function test_summary_visible_para_felix_mark_y_yaneth(): void
+    public function test_summary_visible_para_contabilidad_aprobador_y_asistente(): void
     {
         $this->withHeaders($this->authHeaders($this->loginAsFelix()))
             ->getJson('/api/admin-contab/payments/summary')->assertStatus(200);
@@ -147,7 +147,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             ->getJson('/api/admin-contab/payments/summary')->assertStatus(200);
     }
 
-    public function test_open_invoices_si_visible_para_yaneth(): void
+    public function test_open_invoices_si_visible_para_asistente(): void
     {
         ['master' => $master] = $this->makeClientWithInvoice(500);
 
@@ -270,7 +270,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'cuenta_bancaria_id' => $account->id,
             'referencia' => 'TRF-SALDO-TEST',
             'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'),
+            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
             'fecha_registro' => now(),
             'fecha_confirmacion' => now(),
         ]);
@@ -901,7 +901,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
-    // ── SCRUM-550 (rebote de Daniela, 2026-09-10) — RUC/contacto de empresa, saldo a favor, y
+    // ── SCRUM-550 (rebote de Gerencia, 2026-09-10) — RUC/contacto de empresa, saldo a favor, y
     // eliminación de la línea de confirmación en el recibo de cobro ────────────────────────────
 
     public function test_pdf_del_recibo_muestra_ruc_y_contacto_de_la_empresa(): void
@@ -1024,7 +1024,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     /**
      * RN2 — el recibo de un cobro "Esperando confirmación" debe mostrar ese estado de forma
-     * visible, nunca "Confirmado". Daniela no pudo validarlo con la evidencia que tenía a mano
+     * visible, nunca "Confirmado". Gerencia no pudo validarlo con la evidencia que tenía a mano
      * (su cobro de prueba ya estaba confirmado) — este test lo cubre en vivo con un cobro real en
      * ese estado (transferencia, arranca `esperando_confirmacion` por RN2 de REQ-469).
      */
@@ -1110,11 +1110,11 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     }
 
     // Hallazgo real al re-verificar SCRUM-858 en dev.atlanticerp.ai (2026-09-08) — la pantalla de
-    // Configuración Fiscal (exclusiva de Mark) nunca se llenó en NINGÚN entorno (dev/test/prod,
+    // Configuración Fiscal (exclusiva de Gerencia) nunca se llenó en NINGÚN entorno (dev/test/prod,
     // confirmado por tinker en vivo); `nombre_comercial`/`direccion_fiscal` quedan en '' por
     // default de la migración. Sin el fallback de PdfFooterText, el encabezado/pie del recibo
     // salían en blanco (nunca "AtlanticERP", pero tampoco "Atlantic") — que es lo que marly vio y
-    // reportó como "el pie de página real no se ve". Fix es a nivel de dato (Mark debe cargar la
+    // reportó como "el pie de página real no se ve". Fix es a nivel de dato (Gerencia debe cargar la
     // config real, ticket de seguimiento pendiente), pero el código nunca debe mostrar un
     // encabezado/pie vacío mientras tanto. Prueba pura sobre PdfFooterText — sin tocar DB/tenant,
     // no necesita el modelo persistido, solo su forma.

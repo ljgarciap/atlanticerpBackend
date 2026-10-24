@@ -24,7 +24,7 @@ class ComprasSettingsRequest extends FormRequest
             'claim_attention_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
             'critical_days_por_aprobar' => ['sometimes', 'integer', 'min:1', 'max:365'],
             // SCRUM-247 (REQ-184) — umbral de margen del sustituto que decide si la solicitud
-            // escala a Mark. Nunca hardcodeado, ver docblock de la migración.
+            // escala a Gerencia. Nunca hardcodeado, ver docblock de la migración.
             'replacement_margin_threshold' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             // Lote 4 (SCRUM-246) — pesos de la fórmula de "% de similitud" (deben sumar 100, ver
             // SubstituteSimilarityServiceTest) y umbral mínimo para mostrar un candidato.

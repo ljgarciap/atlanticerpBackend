@@ -22,14 +22,14 @@ use Illuminate\Http\Request;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-735. Daniela (gerencia@test.com, seedeada por CoreUserSeeder en TODOS
- * los entornos, incl. `testing`) y Neil (vendedordisenador2@test.com, seedeado por
+ * SCRUM-735. Gerencia (gerencia@test.com, seedeada por CoreUserSeeder en TODOS
+ * los entornos, incl. `testing`) y Vendedor Disenador (vendedordisenador2@test.com, seedeado por
  * BusinessRoleUserSeeder, rol vendedor_disenador real) son usuarios reales — no hace falta
  * ningún fixture de usuario propio.
  */
 class TestDataCleanupServiceTest extends FeatureTestCase
 {
-    private User $daniela;
+    private User $gerencia;
 
     private User $neil;
 
@@ -116,20 +116,20 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         return compact('master', 'sub', 'project', 'card', 'quote', 'part', 'item');
     }
 
-    public function test_dry_run_identifica_toda_la_data_de_daniela_y_excluye_lo_de_otro_usuario(): void
+    public function test_dry_run_identifica_toda_la_data_de_gerencia_y_excluye_lo_de_otro_usuario(): void
     {
-        $daniela = $this->seedFullPipeline($this->daniela, '[Daniela QA]');
-        $neil = $this->seedFullPipeline($this->neil, '[Neil Real]');
+        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia QA]');
+        $neil = $this->seedFullPipeline($this->neil, '[Vendedor Disenador Real]');
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
-        $this->assertContains($daniela['master']->id, $report['candidates']['master_client']);
-        $this->assertContains($daniela['sub']->id, $report['candidates']['sub_client']);
-        $this->assertContains($daniela['project']->id, $report['candidates']['sales_project']);
-        $this->assertContains($daniela['card']->id, $report['candidates']['pipeline_card']);
-        $this->assertContains($daniela['quote']->id, $report['candidates']['quote']);
-        $this->assertContains($daniela['part']->id, $report['candidates']['quote_part']);
-        $this->assertContains($daniela['item']->id, $report['candidates']['quote_item']);
+        $this->assertContains($gerencia['master']->id, $report['candidates']['master_client']);
+        $this->assertContains($gerencia['sub']->id, $report['candidates']['sub_client']);
+        $this->assertContains($gerencia['project']->id, $report['candidates']['sales_project']);
+        $this->assertContains($gerencia['card']->id, $report['candidates']['pipeline_card']);
+        $this->assertContains($gerencia['quote']->id, $report['candidates']['quote']);
+        $this->assertContains($gerencia['part']->id, $report['candidates']['quote_part']);
+        $this->assertContains($gerencia['item']->id, $report['candidates']['quote_item']);
 
         $this->assertNotContains($neil['master']->id, $report['candidates']['master_client']);
         $this->assertNotContains($neil['sub']->id, $report['candidates']['sub_client']);
@@ -140,10 +140,10 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->assertNotContains($neil['item']->id, $report['candidates']['quote_item']);
     }
 
-    public function test_marcador_demo_711_protege_incluso_si_lo_creo_daniela(): void
+    public function test_marcador_demo_711_protege_incluso_si_lo_creo_gerencia(): void
     {
         $this->actingForAudit($this->daniela);
-        $master = MasterClient::create(['name' => '[DEMO-711] Cliente de Daniela', 'default_price_type' => 'project']);
+        $master = MasterClient::create(['name' => '[DEMO-711] Cliente de Gerencia', 'default_price_type' => 'project']);
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
@@ -173,9 +173,9 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     public function test_actualizar_un_registro_de_otro_usuario_no_lo_marca_como_candidato(): void
     {
         $this->actingForAudit($this->neil);
-        $master = MasterClient::create(['name' => 'Cliente real de Neil']);
+        $master = MasterClient::create(['name' => 'Cliente real de Vendedor Disenador']);
 
-        // Daniela solo EDITA (action=updated) — nunca lo creó. No debe quedar candidato.
+        // Gerencia solo EDITA (action=updated) — nunca lo creó. No debe quedar candidato.
         $this->actingForAudit($this->daniela);
         $master->update(['default_price_type' => 'special']);
 
@@ -186,32 +186,32 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_sales_project_inferido_por_relacion_y_ventana_de_created_at(): void
     {
-        $daniela = $this->seedFullPipeline($this->daniela, '[Daniela Inferido]');
+        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia Inferido]');
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         // SalesProject nunca tiene su propia fila en audit_logs (no usa LogsAuditTrail) —
         // si aparece como candidato, es porque la inferencia por sub_client_id + ventana
         // de created_at funcionó.
-        $this->assertContains($daniela['project']->id, $report['candidates']['sales_project']);
+        $this->assertContains($gerencia['project']->id, $report['candidates']['sales_project']);
     }
 
     public function test_active_reference_protege_master_client_con_subcliente_vivo_de_otro_usuario(): void
     {
         $this->actingForAudit($this->daniela);
-        $master = MasterClient::create(['name' => '[Daniela] Cliente compartido']);
-        $subDaniela = SubClient::create(['master_client_id' => $master->id, 'business_name' => '[Daniela] Sub propio', 'tax_id' => '155-1111-1-2026']);
+        $master = MasterClient::create(['name' => '[Gerencia] Cliente compartido']);
+        $subDaniela = SubClient::create(['master_client_id' => $master->id, 'business_name' => '[Gerencia] Sub propio', 'tax_id' => '155-1111-1-2026']);
 
         $this->actingForAudit($this->neil);
-        $subNeil = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Neil', 'tax_id' => '155-2222-1-2026']);
+        $subNeil = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Vendedor Disenador', 'tax_id' => '155-2222-1-2026']);
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
-        // El subcliente de Daniela sigue siendo candidato en sí mismo...
+        // El subcliente de Gerencia sigue siendo candidato en sí mismo...
         $this->assertContains($subDaniela->id, $report['candidates']['sub_client']);
         $this->assertNotContains($subNeil->id, $report['candidates']['sub_client']);
         // ...pero el MasterClient compartido NO se borra: sub_clients.master_client_id es
-        // CASCADE, y borrarlo se llevaría puesto el subcliente real de Neil.
+        // CASCADE, y borrarlo se llevaría puesto el subcliente real de Vendedor Disenador.
         $this->assertNotContains($master->id, $report['candidates']['master_client']);
         $excludedIds = collect($report['excluded'])->where('entity_type', 'master_client')->pluck('id')->all();
         $this->assertContains($master->id, $excludedIds);
@@ -223,15 +223,15 @@ class TestDataCleanupServiceTest extends FeatureTestCase
      * SCRUM-735 — gap encontrado en Senior Review del commit c1e1a99: CatalogProduct es
      * referenciado desde FUERA de Ventas & Diseño (Compras/Bodega/Servicios reutilizan el
      * Catálogo). `compras.purchase_order_lines.catalog_product_id` es nullOnDelete — sin
-     * guardCatalogProducts(), borrar un CatalogProduct de prueba de Daniela referenciado
+     * guardCatalogProducts(), borrar un CatalogProduct de prueba de Gerencia referenciado
      * por una línea de orden de compra REAL le nulificaría la trazabilidad en silencio.
      */
     public function test_active_reference_protege_catalog_product_referenciado_por_purchase_order_line_real(): void
     {
         $this->actingForAudit($this->daniela);
         $product = CatalogProduct::create([
-            'reference' => '[Daniela] REF-TEST',
-            'name' => '[Daniela] Producto de prueba', 'description' => '[Daniela] Producto de prueba',
+            'reference' => '[Gerencia] REF-TEST',
+            'name' => '[Gerencia] Producto de prueba', 'description' => '[Gerencia] Producto de prueba',
             'price_full' => 100.0,
             'is_active' => true,
         ]);
@@ -270,7 +270,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     }
 
     /**
-     * Un CatalogProduct de prueba de Daniela SIN ninguna referencia real (ni dentro de
+     * Un CatalogProduct de prueba de Gerencia SIN ninguna referencia real (ni dentro de
      * ventas_diseno ni en Compras/Bodega/Servicios) sí debe poder borrarse — guardCatalogProducts()
      * no debe sobre-bloquear cuando no hay ninguna fila real involucrada.
      */
@@ -278,8 +278,8 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         $this->actingForAudit($this->daniela);
         $product = CatalogProduct::create([
-            'reference' => '[Daniela] REF-LIBRE',
-            'name' => '[Daniela] Producto sin referencias', 'description' => '[Daniela] Producto sin referencias',
+            'reference' => '[Gerencia] REF-LIBRE',
+            'name' => '[Gerencia] Producto sin referencias', 'description' => '[Gerencia] Producto sin referencias',
             'price_full' => 50.0,
             'is_active' => true,
         ]);
@@ -296,24 +296,24 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_force_borra_los_candidatos_y_preserva_lo_protegido(): void
     {
-        $daniela = $this->seedFullPipeline($this->daniela, '[Daniela Force]');
+        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia Force]');
 
         $this->actingForAudit($this->daniela);
         $protectedMaster = MasterClient::create(['name' => '[QA-VD] Cliente protegido']);
 
-        $neil = $this->seedFullPipeline($this->neil, '[Neil Force]');
+        $neil = $this->seedFullPipeline($this->neil, '[Vendedor Disenador Force]');
 
         $service = app(TestDataCleanupService::class);
         $report = $service->buildReport('gerencia@test.com');
         $service->execute($report);
 
-        $this->assertNull(MasterClient::find($daniela['master']->id));
-        $this->assertNull(SubClient::find($daniela['sub']->id));
-        $this->assertNull(SalesProject::find($daniela['project']->id));
-        $this->assertNull(PipelineCard::find($daniela['card']->id));
-        $this->assertNull(Quote::find($daniela['quote']->id));
-        $this->assertNull(QuotePart::find($daniela['part']->id));
-        $this->assertNull(QuoteItem::find($daniela['item']->id));
+        $this->assertNull(MasterClient::find($gerencia['master']->id));
+        $this->assertNull(SubClient::find($gerencia['sub']->id));
+        $this->assertNull(SalesProject::find($gerencia['project']->id));
+        $this->assertNull(PipelineCard::find($gerencia['card']->id));
+        $this->assertNull(Quote::find($gerencia['quote']->id));
+        $this->assertNull(QuotePart::find($gerencia['part']->id));
+        $this->assertNull(QuoteItem::find($gerencia['item']->id));
 
         $this->assertNotNull(MasterClient::find($protectedMaster->id));
 
@@ -339,16 +339,16 @@ class TestDataCleanupServiceTest extends FeatureTestCase
      */
     public function test_deleted_count_no_subreporta_filas_borradas_por_cascade(): void
     {
-        $daniela = $this->seedFullPipeline($this->daniela, '[Daniela Cascade Count]');
+        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia Cascade Count]');
 
         $service = app(TestDataCleanupService::class);
         $report = $service->buildReport('gerencia@test.com');
-        $this->assertContains($daniela['sub']->id, $report['candidates']['sub_client']);
-        $this->assertContains($daniela['project']->id, $report['candidates']['sales_project']);
+        $this->assertContains($gerencia['sub']->id, $report['candidates']['sub_client']);
+        $this->assertContains($gerencia['project']->id, $report['candidates']['sales_project']);
 
         $deleted = $service->execute($report);
 
-        $this->assertNull(SalesProject::find($daniela['project']->id));
+        $this->assertNull(SalesProject::find($gerencia['project']->id));
         $this->assertSame(
             1,
             $deleted['sales_project'],
@@ -359,7 +359,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_artisan_command_dry_run_por_default_no_borra_nada(): void
     {
-        $daniela = $this->seedFullPipeline($this->daniela, '[Daniela CLI]');
+        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia CLI]');
 
         $this->artisan('ventas-diseno:cleanup-test-data', ['--env-override' => true])
             ->assertExitCode(0);
@@ -368,21 +368,21 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         // volver a activar el tenant antes de poder resolver el schema correcto.
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        $this->assertNotNull(MasterClient::find($daniela['master']->id));
-        $this->assertNotNull(Quote::find($daniela['quote']->id));
+        $this->assertNotNull(MasterClient::find($gerencia['master']->id));
+        $this->assertNotNull(Quote::find($gerencia['quote']->id));
     }
 
     public function test_artisan_command_con_force_borra_de_verdad(): void
     {
-        $daniela = $this->seedFullPipeline($this->daniela, '[Daniela CLI Force]');
+        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia CLI Force]');
 
         $this->artisan('ventas-diseno:cleanup-test-data', ['--env-override' => true, '--force' => true])
             ->assertExitCode(0);
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        $this->assertNull(MasterClient::find($daniela['master']->id));
-        $this->assertNull(Quote::find($daniela['quote']->id));
+        $this->assertNull(MasterClient::find($gerencia['master']->id));
+        $this->assertNull(Quote::find($gerencia['quote']->id));
     }
 
     public function test_artisan_command_aborta_fuera_de_qa_sin_env_override(): void

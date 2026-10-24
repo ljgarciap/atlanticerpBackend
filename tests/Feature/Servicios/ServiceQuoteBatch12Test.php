@@ -23,13 +23,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class ServiceQuoteBatch12Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'liderservicios@test.com'; // Aaron Leis
+    private const LIDER_SERVICIOS = 'liderservicios@test.com'; // Lider Servicios Leis
 
     private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com'; // Tecnico Servicios Test
 
     private const OTRO_TECNICO = 'tecnicoservicios2@test.com'; // Tecnico Servicios Test 2
 
-    private const MANAGEMENT = 'gerencia3@test.com'; // Mark — Gerencia
+    private const MANAGEMENT = 'gerencia3@test.com'; // Gerencia — Gerencia
 
     // SCRUM-300 (rebote QA 2026-08-13) — texto real del RN3 (ver docblock del constant en
     // ServiciosSettingsService), no el texto de ejemplo del mockup que se sembraba antes.
@@ -162,9 +162,9 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     }
 
     /**
-     * SCRUM-780 (rebote de Daniela 2026-08-19) — reemplaza la decisión original de Batch 10
+     * SCRUM-780 (rebote de Gerencia 2026-08-19) — reemplaza la decisión original de Batch 10
      * (lectura amplia con permission:servicios.read). Ajustes de Servicios son parámetros
-     * administrativos que ningún perfil operativo debe poder leer, ni siquiera Aaron/Líder de
+     * administrativos que ningún perfil operativo debe poder leer, ni siquiera Lider Servicios/Líder de
      * Servicios, mismo gate que ya tenía la escritura.
      */
     public function test_lider_servicios_no_puede_leer_ajustes(): void
@@ -178,7 +178,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
 
     public function test_lider_servicios_no_puede_editar_condiciones(): void
     {
-        // REQ-237 — "Edición exclusiva superadmin/management": ni siquiera Aaron/Líder de
+        // REQ-237 — "Edición exclusiva superadmin/management": ni siquiera Lider Servicios/Líder de
         // Servicios, pese a poder casi todo lo demás del módulo.
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
@@ -670,11 +670,11 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
 
     public function test_historial_global_incluye_todas_las_versiones_sin_filtrar_por_tecnico(): void
     {
-        $ticketCarlos = $this->makeTicket(); // asignado a Carlos por defecto (ver makeTicket())
+        $ticketCarlos = $this->makeTicket(); // asignado a Tecnico Servicios por defecto (ver makeTicket())
         $tokenCarlos = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
         $this->generateAndSendQuote($ticketCarlos, $tokenCarlos);
 
-        // Pedro (otro técnico interno, NO asignado a ningún ticket de arriba) consulta el
+        // Tecnico Servicios (otro técnico interno, NO asignado a ningún ticket de arriba) consulta el
         // historial global — RN de REQ-250: visibilidad transversal, nunca filtrada por técnico.
         $tokenPedro = $this->loginAs(self::OTRO_TECNICO, self::OTRO_TECNICO, 'tecnico_servicios');
 

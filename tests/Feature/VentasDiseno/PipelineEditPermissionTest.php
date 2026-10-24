@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1139 — Félix edita el Pipeline con el permiso angosto `ventas_diseno.pipeline.edit` (hermano de
+ * SCRUM-1139 — Contabilidad edita el Pipeline con el permiso angosto `ventas_diseno.pipeline.edit` (hermano de
  * `pipeline.read_all`, SCRUM-1128) y los proyectos Aprobados con `ventas_diseno.edit.approved`, SIN abrir ninguna otra
  * ruta de Ventas & Diseño (cotizaciones, asociados...). Sin ese permiso sigue en solo lectura.
  */
@@ -58,8 +58,8 @@ class PipelineEditPermissionTest extends FeatureTestCase
     /** @param list<string> $quitar */
     private function quitarPermisosDeFelix(array $quitar): void
     {
-        $felix = User::where('email', self::FELIX)->firstOrFail();
-        $felix->update(['extra_permissions' => array_values(array_diff($felix->extra_permissions ?? [], $quitar))]);
+        $contabilidad = User::where('email', self::FELIX)->firstOrFail();
+        $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], $quitar))]);
     }
 
     /** @return list<array{0: string}> */
@@ -69,7 +69,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     }
 
     /** @dataProvider etapasNoAprobadas */
-    public function test_felix_edita_tarjetas_del_equipo_en_etapas_no_aprobadas(string $stage): void
+    public function test_contabilidad_edita_tarjetas_del_equipo_en_etapas_no_aprobadas(string $stage): void
     {
         $card    = $this->makeCard($stage);
         $headers = $this->felixHeaders();
@@ -77,11 +77,11 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}")
             ->assertOk()->assertJsonPath('can_edit', true);
 
-        $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['name' => 'Renombrado por Félix'])
+        $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['name' => 'Renombrado por Contabilidad'])
             ->assertOk();
     }
 
-    public function test_felix_mueve_etapas_de_tarjetas_del_equipo(): void
+    public function test_contabilidad_mueve_etapas_de_tarjetas_del_equipo(): void
     {
         $card = $this->makeCard('lead');
 
@@ -91,7 +91,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->assertSame('lost', PipelineCard::find($card->id)->stage);
     }
 
-    public function test_felix_ve_la_lista_del_equipo(): void
+    public function test_contabilidad_ve_la_lista_del_equipo(): void
     {
         $card = $this->makeCard('lead');
 
@@ -99,7 +99,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
             ->assertOk()->assertJsonFragment(['id' => $card->id]);
     }
 
-    public function test_felix_puede_editar_un_proyecto_aprobado_por_edit_approved(): void
+    public function test_contabilidad_puede_editar_un_proyecto_aprobado_por_edit_approved(): void
     {
         $card    = $this->makeCard('approved');
         $headers = $this->felixHeaders();
@@ -117,7 +117,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
             ->assertOk()->assertJsonPath('can_edit', false);
     }
 
-    public function test_sin_pipeline_edit_felix_vuelve_a_solo_lectura(): void
+    public function test_sin_pipeline_edit_contabilidad_vuelve_a_solo_lectura(): void
     {
         $this->felixComoEnScrum1139();
         $this->quitarPermisosDeFelix(['ventas_diseno.pipeline.edit']);
@@ -142,7 +142,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->withHeaders($headers)->postJson('/api/ventas-diseno/quotes', [])->assertStatus(403);
     }
 
-    public function test_felix_lee_y_guarda_las_entregas_parciales_de_una_tarjeta_del_equipo(): void
+    public function test_contabilidad_lee_y_guarda_las_entregas_parciales_de_una_tarjeta_del_equipo(): void
     {
         $card    = $this->makeCard('quote');
         $headers = $this->felixHeaders();
@@ -152,7 +152,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments", [])->assertStatus(422);
     }
 
-    public function test_felix_vincula_cliente_desde_nuevo_proyecto_pero_no_entra_a_la_pantalla_clientes(): void
+    public function test_contabilidad_vincula_cliente_desde_nuevo_proyecto_pero_no_entra_a_la_pantalla_clientes(): void
     {
         $this->felixComoEnScrum1139();
         $headers = $this->felixHeaders();
@@ -172,7 +172,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->withHeaders($headers)->patchJson('/api/ventas-diseno/clients/sub-clients/1/category', [])->assertStatus(403);
     }
 
-    public function test_sin_pipeline_edit_felix_no_vincula_clientes(): void
+    public function test_sin_pipeline_edit_contabilidad_no_vincula_clientes(): void
     {
         $this->felixComoEnScrum1139();
         $this->quitarPermisosDeFelix(['ventas_diseno.pipeline.edit']);
@@ -182,13 +182,13 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->withHeaders($headers)->postJson('/api/ventas-diseno/sub-clients', [])->assertStatus(403);
     }
 
-    public function test_felix_con_pipeline_edit_tambien_replica_los_permisos_de_mark(): void
+    public function test_contabilidad_con_pipeline_edit_tambien_replica_los_permisos_de_mark(): void
     {
         $permisos = User::where('email', self::FELIX)->firstOrFail()->effectivePermissionsV2();
 
         $this->assertContains('ventas_diseno.pipeline.edit', $permisos);
         $this->assertContains('ventas_diseno.edit.approved', $permisos);
-        // SCRUM-1150 (decisión de Luis, 2026-10-15): Félix replica a Mark, así que ya SÍ tiene margen, precio socio, edit y approve.
+        // SCRUM-1150 (decisión de Luis, 2026-10-15): Contabilidad replica a Gerencia, así que ya SÍ tiene margen, precio socio, edit y approve.
         $this->assertContains('ventas_diseno.override_min_margin', $permisos);
         $this->assertContains('ventas_diseno.select_partner_price', $permisos);
         $this->assertContains('ventas_diseno.edit', $permisos);

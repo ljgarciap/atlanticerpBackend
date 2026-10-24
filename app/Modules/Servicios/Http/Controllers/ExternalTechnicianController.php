@@ -18,7 +18,7 @@ use Illuminate\Validation\Rule;
 /** Fase 4 — Servicios, Batch 5 (REQ-263→267). Técnicos externos. */
 final class ExternalTechnicianController extends Controller
 {
-    // REQ-267 RN2 — costo/día y margen visibles únicamente para Aaron/Líder de Servicios y
+    // REQ-267 RN2 — costo/día y margen visibles únicamente para Lider Servicios/Líder de Servicios y
     // Gerencia (superadmin incluido por consistencia con el resto del módulo). Igual que
     // EnforceRole, se lee del claim `role` del JWT, no de una consulta a BD aparte.
     private const COST_VISIBILITY_ROLES = ['superadmin', 'lider_servicios', 'management'];
@@ -83,9 +83,9 @@ final class ExternalTechnicianController extends Controller
             //
             // SCRUM-337 (rebote QA 2026-08-13, decisión de Luis en el daily 2026-08-18: bug, no
             // excepción intencional) — antes SOLO dependía de `tarifa_visible`, así que un técnico
-            // interno sin `puede_ver_costos` (ej. Carlos) veía la tarifa/día real de un externo con
+            // interno sin `puede_ver_costos` (ej. Tecnico Servicios) veía la tarifa/día real de un externo con
             // el toggle activado, aunque RN2 dice que el costo/día es exclusivo de
-            // Aaron/Mark/David/Whil. Ahora exige ambos, igual que el resto de esta ficha.
+            // Lider Servicios/Mark/David/Whil. Ahora exige ambos, igual que el resto de esta ficha.
             'tarifa_dia'         => ($technician->tarifa_visible && $canSeeCosts) ? $technician->tarifa_dia : null,
             'tarifa_visible'     => $technician->tarifa_visible,
             'estado'             => $technician->estado,

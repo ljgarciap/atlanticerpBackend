@@ -28,7 +28,7 @@ final class PasswordResetService
             return;
         }
 
-        // SCRUM-1142 — las cuentas sin acceso (Carlos, Joel, Personal de Bodega) nunca reciben enlace: «olvidé mi contraseña»
+        // SCRUM-1142 — las cuentas sin acceso (Tecnico Servicios, Repartidor, Personal de Bodega) nunca reciben enlace: «olvidé mi contraseña»
         // les permitiría fijar una contraseña y entrar. Misma respuesta silenciosa que un correo inexistente (no se revela nada).
         if (NoLoginAccounts::isNoLogin($user->email)) {
             return;
@@ -78,7 +78,7 @@ final class PasswordResetService
         $user = User::query()->where('email', $record->email)->first();
 
         // SCRUM-1142 — defensa en profundidad: un token emitido ANTES de que `sendResetLink()` ignorara a las cuentas sin acceso
-        // (Carlos, Joel, Personal de Bodega) seguiría vigente y les daría una contraseña y acceso. Mismo error que un enlace inválido.
+        // (Tecnico Servicios, Repartidor, Personal de Bodega) seguiría vigente y les daría una contraseña y acceso. Mismo error que un enlace inválido.
         if ($user === null || NoLoginAccounts::isNoLogin($user->email)) {
             throw ValidationException::withMessages([
                 'token' => ['El enlace es inválido o ha expirado.'],

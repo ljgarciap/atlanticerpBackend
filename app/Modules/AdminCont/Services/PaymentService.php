@@ -178,7 +178,7 @@ final class PaymentService
      * REQ-466 RN1/RN2/RN4/RN5 — auto-selección de cuenta bancaria destino por método. Métodos sin
      * cuenta bancaria (RN4) devuelven null directo, sin consultar nada. El match es por nombre real
      * de banco+tipo — si la cuenta esperada todavía no existe en Cuentas Bancarias (creada a mano
-     * por Felix/Yaneth), devuelve null y el campo queda vacío para completar manualmente (RN3: el
+     * por Contabilidad/Yaneth), devuelve null y el campo queda vacío para completar manualmente (RN3: el
      * campo sigue siendo editable, esto nunca bloquea el registro).
      */
     public function defaultBankAccountFor(string $metodoPago): ?AdminContBankAccount

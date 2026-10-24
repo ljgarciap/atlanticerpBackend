@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-440 (REQ-370, Bloque B3 Zona Libre de Colón) — decisión de Yirena (Compras) sobre una
- * solicitud generada por Bodega. `lidercompras@test.com` (Yirena, role_key
+ * SCRUM-440 (REQ-370, Bloque B3 Zona Libre de Colón) — decisión de Lider Compras (Compras) sobre una
+ * solicitud generada por Bodega. `lidercompras@test.com` (Lider Compras, role_key
  * `lider_compras`) ya sale de `SpecialPermissionSeeder` con `compras.zona-libre.approve`
  * concedido — no hace falta otorgarlo a mano.
  */

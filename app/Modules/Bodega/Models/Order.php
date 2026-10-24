@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * SCRUM-329 Oleada A / Batch A1 (REQ-305 a 341) — pedido de Bodega: unidad central del tablero
- * Kanban "Pedidos". Nace cuando Gerencia o Félix ejecutan "Pasar a Pedido" sobre un proyecto Aprobado del Pipeline
+ * Kanban "Pedidos". Nace cuando Gerencia o Contabilidad ejecutan "Pasar a Pedido" sobre un proyecto Aprobado del Pipeline
  * de Ventas & Diseño (REQ-308, SCRUM-1128) — ver `App\Modules\VentasDiseno\Services\PipelineService::passToOrder()` +
  * `App\Modules\Bodega\Services\OrderService`, ya asignado al Asistente de Bodega correcto
  * (REQ-307, ver `WarehouseAssistantMapping`).

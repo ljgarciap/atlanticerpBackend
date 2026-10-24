@@ -11,7 +11,7 @@ use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1157 — `flags.mark_approver` es la identidad del aprobador Mark (`primary_approver_user_id`). «Datos de la Empresa» y «Configuración
+ * SCRUM-1157 — `flags.mark_approver` es la identidad del aprobador Gerencia (`primary_approver_user_id`). «Datos de la Empresa» y «Configuración
  * Fiscal» son `primary_approver_only` en el backend; el menú del frontend usa este flag para no ofrecer a nadie más pantallas que responden 403.
  */
 class JwtClaimsMarkApproverFlagTest extends FeatureTestCase
@@ -34,11 +34,11 @@ class JwtClaimsMarkApproverFlagTest extends FeatureTestCase
 
     public function test_solo_el_aprobador_configurado_lleva_el_flag(): void
     {
-        $mark   = $this->user('management@atlantic.test');
+        $approver   = $this->user('management@atlantic.test');
         $otra   = $this->user('lideroperaciones@test.com');
-        AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $mark->id]);
+        AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $approver->id]);
 
-        $this->assertTrue($this->flagFor($mark));
+        $this->assertTrue($this->flagFor($approver));
         $this->assertFalse($this->flagFor($otra));
     }
 
@@ -52,10 +52,10 @@ class JwtClaimsMarkApproverFlagTest extends FeatureTestCase
 
     public function test_el_flag_viaja_en_el_objeto_user_de_las_respuestas_de_auth(): void
     {
-        $mark = $this->user('management@atlantic.test');
-        AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $mark->id]);
+        $approver = $this->user('management@atlantic.test');
+        AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $approver->id]);
 
-        $payload = app(JwtClaimsBuilder::class)->userPayload($mark, 'es');
+        $payload = app(JwtClaimsBuilder::class)->userPayload($approver, 'es');
 
         $this->assertTrue($payload['flags']['mark_approver']);
         $this->assertArrayHasKey('approve_large_amounts', $payload['flags'], 'Los flags existentes no cambian.');

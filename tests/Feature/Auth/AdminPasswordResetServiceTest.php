@@ -103,7 +103,7 @@ class AdminPasswordResetServiceTest extends FeatureTestCase
         $this->assertContains($normal->id, $ids);
     }
 
-    // SCRUM-1142 — un reset masivo las reactivaría con contraseña = correo: Carlos/Joel/Personal de Bodega quedan siempre fuera.
+    // SCRUM-1142 — un reset masivo las reactivaría con contraseña = correo: Tecnico Servicios/Joel/Personal de Bodega quedan siempre fuera.
     public function test_resolve_targets_excluye_las_cuentas_sin_acceso_de_bodega(): void
     {
         $normal = $this->makeUser();

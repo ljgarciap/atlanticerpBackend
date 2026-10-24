@@ -125,7 +125,7 @@ class InventoryControllerTest extends FeatureTestCase
     // ── SCRUM-231/232/233/234 — index, KPIs, filtros, Estado ─────────────────
 
     /**
-     * SCRUM-1013 (rebote de Daniela, 2026-10-02) — un vendedor/diseñador con un permiso de Compras
+     * SCRUM-1013 (rebote de Gerencia, 2026-10-02) — un vendedor/diseñador con un permiso de Compras
      * de solo consulta que NO sea de Operaciones debe seguir viendo Inventario en el modo
      * restringido de Ventas & Diseño (sin costo ni margen). `compras.limited.view` es de
      * Operaciones: abre Inventario sin enmascarar costos, así que no debe llegar a un vendedor.
@@ -275,7 +275,7 @@ class InventoryControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-741 — hallazgo real en producción: David/Mark (Gerencia, ventas_diseno.read
+     * SCRUM-741 — hallazgo real en producción: Gerencia/Mark (Gerencia, ventas_diseno.read
      * transversal) seguían con acceso funcional completo a Inventario pese a que Compras ya
      * estaba oculto por la máscara UAT para todos los no-superadmin. La rama restringida es el
      * único camino que un usuario sin compras.read tiene hacia estos datos, así que acá (a
@@ -307,12 +307,12 @@ class InventoryControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-741, revisado tras hallazgo real de Pre-QA (2026-08-09, con las cuentas reales del
-     * ticket): David y Mark (Gerencia) tienen compras.read REAL vía su rol `management`
+     * ticket): Gerencia y Gerencia (Gerencia) tienen compras.read REAL vía su rol `management`
      * (role_module_visibility, "Gerencia ve todo, transversal") — no solo el fallback restringido
      * de ventas_diseno.read. La primera versión de este test (y del fix) asumía que compras.read
      * real debía conservar acceso siempre; Luis decidió lo contrario para esta etapa de rollout:
      * mientras Compras esté oculto por UAT, NADIE no-superadmin accede de verdad, ni siquiera con
-     * el permiso real — es exactamente el camino que David/Mark usaban en producción.
+     * el permiso real — es exactamente el camino que Gerencia/Mark usaban en producción.
      */
     public function test_modo_compras_pierde_acceso_cuando_compras_esta_oculto_por_uat(): void
     {

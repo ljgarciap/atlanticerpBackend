@@ -15,16 +15,16 @@ use App\Modules\Gerencia\Models\ReglaAprobacion;
  * de un chequeo binario ("¿es aprobador de ALGO?"), sin filtrar por tipo (hallazgo Pre-QA v6/v7).
  *
  * Reglas reales por tipo, en `Shared` (no en `Gerencia`) porque cruza Compras/Bodega/Gerencia:
- *   - purchase_order: EXCLUSIVO de Mark (ComprasSettings.primary_approver_user_id) — a propósito SIN
+ *   - purchase_order: EXCLUSIVO de Gerencia (ComprasSettings.primary_approver_user_id) — a propósito SIN
  *     override de ReglaAprobacion. Es el flujo de dinero real ya endurecido una vez (SCRUM-206);
  *     extenderlo requiere una decisión aparte, no forma parte de este batch (ver
  *     docs/architecture/gerencia-epic-analisis-20260826.md).
- *   - relocation/adjustment/general_count: Mark, O cualquier usuario con una ReglaAprobacion
+ *   - relocation/adjustment/general_count: Gerencia, O cualquier usuario con una ReglaAprobacion
  *     activa para ese tipo específico (SCRUM-163) — esto es la extensión real que faltaba: antes
  *     una ReglaAprobacion de tipo=adjustment volvía al usuario "aprobador" de TODO, pero el gate
  *     nativo de cada controller de Bodega (`resolveMarkAccess()`) igual lo rechazaba por no ser
- *     Mark. Ahora esos 3 controllers consultan este mismo gate.
- *   - zona_libre: el permiso real `compras.zona-libre.approve` (Yirena/lider_compras, vía
+ *     Gerencia. Ahora esos 3 controllers consultan este mismo gate.
+ *   - zona_libre: el permiso real `compras.zona-libre.approve` (Lider Compras/lider_compras, vía
  *     middleware de ruta normalmente — bypaseado cuando Gerencia delega la llamada directamente,
  *     por eso se revalida acá), O una ReglaAprobacion activa para zona_libre.
  *   - superadmin.all bypassa todo siempre (mismo criterio que cada gate nativo ya usaba).

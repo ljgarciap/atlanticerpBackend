@@ -45,7 +45,7 @@ class AdminContCashPositionController
 
     /**
      * GET /api/admin-contab/cash-position/projected?window=0|30|90 — REQ-521.
-     * Aclarado por Luis 2026-08-25 (Pre-QA Batch 18): Yaneth puede pedir este endpoint (para las 3
+     * Aclarado por Luis 2026-08-25 (Pre-QA Batch 18): Asistente Administrativa puede pedir este endpoint (para las 3
      * tarjetas del encabezado, REQ-520) pero nunca recibe el detalle línea por línea — eso es lo
      * que REQ-521 le veda. Los totales/neto siempre se calculan sobre el dato completo.
      */
@@ -150,9 +150,9 @@ class AdminContCashPositionController
      * RN2) es dependiente del actor, no del arqueo — mismo criterio que
      * `puede_decidir_incobrable`/`puede_aprobar_rechazar` en el resto del módulo
      * (AdminContInvoiceController::detail()/AdminContCreditNoteController), calculado acá porque
-     * esta ruta no está gateada por `primary_approver_only` (accesible a Felix/Yaneth/Mark/Gerencia) — el
+     * esta ruta no está gateada por `primary_approver_only` (accesible a Contabilidad/Yaneth/Mark/Gerencia) — el
      * frontend lo usa solo para mostrar/ocultar el botón "Aprobar", nunca decide por su cuenta
-     * quién es Mark.
+     * quién es Gerencia.
      */
     public function historyDetail(int $id, Request $request): JsonResponse
     {
@@ -169,7 +169,7 @@ class AdminContCashPositionController
             ? array_values(array_filter($payload['permissions'], 'is_string'))
             : [];
 
-        // superadmin.all bypassa el gate de Mark (decisión de Luis, 2026-08-22) — mismo criterio
+        // superadmin.all bypassa el gate de Gerencia (decisión de Luis, 2026-08-22) — mismo criterio
         // que EnsureIsPrimaryApprover, que ya lo aplica sobre la acción real de aprobar.
         $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
         $isMark = in_array('superadmin.all', $permissions, true)
@@ -195,7 +195,7 @@ class AdminContCashPositionController
         return response()->streamDownload(fn () => print $bytes, $filename, ['Content-Type' => 'application/pdf']);
     }
 
-    /** POST /api/admin-contab/cash-position/history/{id}/approve — REQ-528 RN2/RN4, exclusivo Mark. */
+    /** POST /api/admin-contab/cash-position/history/{id}/approve — REQ-528 RN2/RN4, exclusivo Gerencia. */
     public function approveDailyCashCount(int $id, Request $request): JsonResponse
     {
         $actor = $this->resolveUser($request);

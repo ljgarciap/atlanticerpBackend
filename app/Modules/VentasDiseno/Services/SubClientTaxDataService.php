@@ -110,7 +110,7 @@ final class SubClientTaxDataService
     }
 
     /**
-     * Directorio paginado de SubClientes para quien edita datos fiscales fuera de Ventas & Diseño (Felix, desde
+     * Directorio paginado de SubClientes para quien edita datos fiscales fuera de Ventas & Diseño (Contabilidad, desde
      * Admin&Cont). Busca por razón social, RUC o cliente master; ordena por razón social.
      *
      * @return \Illuminate\Pagination\LengthAwarePaginator<int, SubClient>

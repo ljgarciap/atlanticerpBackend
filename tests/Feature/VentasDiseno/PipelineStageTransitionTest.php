@@ -303,7 +303,7 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     // ── REQ-603 RN2 / REQ-597 RN3 (Epic CRM Batch B): Aprobado es terminal ──────
     // Hallazgo real: un usuario con RESTRICTED_EDIT_PERMISSION (ventas_diseno.edit.approved,
-    // ej. Mark en producción) podía mover una tarjeta Aprobada a Perdido — isEditableBy() la
+    // ej. Gerencia en producción) podía mover una tarjeta Aprobada a Perdido — isEditableBy() la
     // trata como editable para ese permiso, y el gate no excluía 'approved' como origen.
 
     public function test_tarjeta_aprobada_no_puede_marcarse_perdida_retorna_422(): void

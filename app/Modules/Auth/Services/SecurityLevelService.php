@@ -34,7 +34,7 @@ final class SecurityLevelService
 
     /**
      * ADR-006, Decisión 9 — sin esto, asignar un nivel de capacidad distinto a un usuario puntual
-     * (ej. el caso Whil) requeriría una migración manual por cada excepción.
+     * (ej. el caso Gerencia) requeriría una migración manual por cada excepción.
      *
      * @param array{
      *   name: string,

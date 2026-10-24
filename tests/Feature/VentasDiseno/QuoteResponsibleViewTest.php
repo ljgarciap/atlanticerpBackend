@@ -44,15 +44,15 @@ class QuoteResponsibleViewTest extends FeatureTestCase
     }
 
     /**
-     * Proyecto con tarjeta cuyo Responsable es Bernardo, una versión propia confirmada (v1), una versión de Gerencia
-     * confirmada (v2, `owner_id` = Mark) y un borrador de Gerencia sin confirmar.
+     * Proyecto con tarjeta cuyo Responsable es Vendedor Disenador, una versión propia confirmada (v1), una versión de Gerencia
+     * confirmada (v2, `owner_id` = Gerencia) y un borrador de Gerencia sin confirmar.
      *
      * @return array{card: PipelineCard, own: Quote, gerencia: Quote, draft: Quote}
      */
     private function makeProjectWithGerenciaVersion(array $cardOverrides = []): array
     {
         $bernardo = $this->userIdByEmail(self::RESPONSABLE);
-        $mark     = $this->userIdByEmail(self::MARK);
+        $approver     = $this->userIdByEmail(self::MARK);
 
         $master  = MasterClient::create(['name' => 'Cliente 1143 '.uniqid()]);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub 1143 '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
@@ -76,7 +76,7 @@ class QuoteResponsibleViewTest extends FeatureTestCase
         };
 
         return [
-            'card' => $card, 'own' => $make($bernardo, true), 'gerencia' => $make($mark, true), 'draft' => $make($mark, false),
+            'card' => $card, 'own' => $make($bernardo, true), 'gerencia' => $make($approver, true), 'draft' => $make($approver, false),
         ];
     }
 

@@ -32,8 +32,8 @@ use Illuminate\Support\Facades\Log;
 final class OrderService
 {
     /**
-     * `role_key` real del catálogo de roles (`roles.key`, ver `BusinessRoleUserSeeder`) — Esteban
-     * Cardenas hoy. No hay un settings configurable dedicado (a diferencia de "Mark" en Compras,
+     * `role_key` real del catálogo de roles (`roles.key`, ver `BusinessRoleUserSeeder`) — Lider Bodega
+     * Lider Bodega hoy. No hay un settings configurable dedicado (a diferencia de "Gerencia" en Compras,
      * `ComprasSettings.primary_approver_user_id`) porque acá la audiencia es un ROL, no una persona
      * puntual configurable — cualquiera con este rol recibe la alerta, sin necesidad de un campo
      * de configuración aparte (decisión 2026-07-22, revisión de Luis sobre el batch).

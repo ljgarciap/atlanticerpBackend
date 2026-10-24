@@ -97,16 +97,16 @@ class SpecialPermissionSeederTest extends FeatureTestCase
         $this->assertNull(User::where('email', 'no-existe@test.com')->first());
     }
 
-    public function test_felix_pasa_a_pedido_y_ve_el_pipeline_en_solo_lectura(): void
+    public function test_contabilidad_pasa_a_pedido_y_ve_el_pipeline_en_solo_lectura(): void
     {
         // SCRUM-1128 — grants angostos por persona, no de rol.
-        $felix = User::where('email', 'contabilidad@test.com')->firstOrFail();
+        $contabilidad = User::where('email', 'contabilidad@test.com')->firstOrFail();
 
-        $this->assertContains('ventas_diseno.pass_to_order', $felix->extra_permissions ?? []);
-        $this->assertContains('ventas_diseno.pipeline.read_all', $felix->extra_permissions ?? []);
+        $this->assertContains('ventas_diseno.pass_to_order', $contabilidad->extra_permissions ?? []);
+        $this->assertContains('ventas_diseno.pipeline.read_all', $contabilidad->extra_permissions ?? []);
         // Nunca los permisos de escritura del módulo.
-        $this->assertNotContains('ventas_diseno.edit', $felix->extra_permissions ?? []);
-        $this->assertNotContains('ventas_diseno.write', $felix->extra_permissions ?? []);
+        $this->assertNotContains('ventas_diseno.edit', $contabilidad->extra_permissions ?? []);
+        $this->assertNotContains('ventas_diseno.write', $contabilidad->extra_permissions ?? []);
     }
 
     /**
@@ -130,7 +130,7 @@ class SpecialPermissionSeederTest extends FeatureTestCase
         $this->assertSame([], $fuera, 'Permisos concedidos por el seeder que faltan en permission_catalog: '.json_encode($fuera));
     }
 
-    public function test_1139_felix_edita_el_pipeline_y_1150_replica_los_permisos_de_mark(): void
+    public function test_1139_contabilidad_edita_el_pipeline_y_1150_replica_los_permisos_de_mark(): void
     {
         $extra = User::where('email', 'contabilidad@test.com')->firstOrFail()->extra_permissions ?? [];
 
@@ -138,7 +138,7 @@ class SpecialPermissionSeederTest extends FeatureTestCase
         $this->assertContains('ventas_diseno.edit.approved', $extra);
         $this->assertContains('ventas_diseno.pipeline.read_all', $extra); // se conserva
         $this->assertContains('ventas_diseno.pass_to_order', $extra);     // se conserva
-        // SCRUM-1150 (decisión de Luis, 2026-10-15): Félix replica a Mark; antes de esa fecha estos dos estaban excluidos.
+        // SCRUM-1150 (decisión de Luis, 2026-10-15): Contabilidad replica a Gerencia; antes de esa fecha estos dos estaban excluidos.
         $this->assertContains('ventas_diseno.override_min_margin', $extra);
         $this->assertContains('ventas_diseno.select_partner_price', $extra);
         // El permiso amplio de escritura del módulo sigue sin concederse: solo el angosto del Pipeline.
@@ -146,7 +146,7 @@ class SpecialPermissionSeederTest extends FeatureTestCase
         $this->assertNotContains('ventas_diseno.write', $extra);
     }
 
-    public function test_1139_la_asistente_y_operaciones_replican_receptor_fiscal_de_felix(): void
+    public function test_1139_la_asistente_y_operaciones_replican_receptor_fiscal_de_contabilidad(): void
     {
         $asistente = User::where('email', 'asistenteadministrativa@test.com')->firstOrFail();
         $operaciones = User::where('email', 'lideroperaciones@test.com')->firstOrFail();
@@ -160,11 +160,11 @@ class SpecialPermissionSeederTest extends FeatureTestCase
         $this->assertNotContains('admin_contab.edit.receptor_consumidor_final', $operaciones->extra_permissions ?? []);
     }
 
-    public function test_1139_mark_no_cambia(): void
+    public function test_1139_aprobador_no_cambia(): void
     {
-        $mark = User::where('email', 'gerencia3@test.com')->firstOrFail();
+        $approver = User::where('email', 'gerencia3@test.com')->firstOrFail();
 
-        $this->assertNotContains('ventas_diseno.pipeline.edit', $mark->extra_permissions ?? []);
+        $this->assertNotContains('ventas_diseno.pipeline.edit', $approver->extra_permissions ?? []);
     }
 
     public function test_1139_el_seeder_es_idempotente_y_no_pisa_extras_ajenos(): void

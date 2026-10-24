@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Fase 4 — Servicios, Batch 13 parte 1 (REQ-271/REQ-272) — solicitud de compra de herramientas
- * (a Felix/Administración, conceptual, sin integración real). Ver docblock de la migración
+ * (a Contabilidad/Administración, conceptual, sin integración real). Ver docblock de la migración
  * `..._create_servicios_tool_purchase_requests_table.php`.
  *
  * @property int         $id

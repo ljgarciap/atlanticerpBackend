@@ -192,7 +192,7 @@ final class PipelineService
      * del gate (PipelineCard::validationErrorForTransitionTo) corre antes en el controller.
      *
      * SCRUM-1128 — entrar a "approved" YA NO genera el Pedido en Bodega (antes lo hacía el evento
-     * `QuoteApproved`, REQ-308): el proyecto queda "por aprobar" hasta que Gerencia o Félix
+     * `QuoteApproved`, REQ-308): el proyecto queda "por aprobar" hasta que Gerencia o Contabilidad
      * ejecutan `passToOrder()`. El lock sigue siendo necesario para que dos cambios de etapa
      * concurrentes no se pisen.
      */
@@ -273,9 +273,9 @@ final class PipelineService
         // Alcance (REQ-002): Diseñador ve solo lo propio; Gerencia ve "Equipo".
         // ADR-006, Fase C Task 4 — canViewTeamV2('ventas_diseno') reemplaza el supuesto viejo
         // (hasRole(MANAGEMENT)), ya resuelto por SCRUM-144/145 (rol vendedor_disenador vs gerencia).
-        // SCRUM-1128 — `ventas_diseno.pipeline.read_all` (Félix) da el alcance de equipo SOLO para
+        // SCRUM-1128 — `ventas_diseno.pipeline.read_all` (Contabilidad) da el alcance de equipo SOLO para
         // leer; ninguna ruta de escritura lo consulta.
-        // SCRUM-1139 — `ventas_diseno.pipeline.edit` (Félix) también da el alcance de equipo: quien edita el Pipeline lo ve completo.
+        // SCRUM-1139 — `ventas_diseno.pipeline.edit` (Contabilidad) también da el alcance de equipo: quien edita el Pipeline lo ve completo.
         $canSeeTeam = $user->canViewTeamV2('ventas_diseno')
             || in_array('ventas_diseno.pipeline.read_all', $user->effectivePermissionsV2(), true)
             || PipelineCard::userHasPipelineEdit($user);

@@ -201,7 +201,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
      * fix (`MODULES_WITH_TEAM_CALENDAR`), forjar `scope=team` directo contra el API (sin pasar
      * por `ServiciosMyCalendarPanel.tsx`, que nunca lo manda) devolvía el calendario real de
      * otros usuarios del "equipo" de `servicios` — confirmado en vivo contra el stack local con
-     * Aaron viendo eventos de Garantias Servicios Test/Gerencia Test.
+     * Lider Servicios viendo eventos de Garantias Servicios Test/Gerencia Test.
      */
     public function test_servicios_scope_team_forjado_nunca_devuelve_calendario_de_otro_usuario(): void
     {

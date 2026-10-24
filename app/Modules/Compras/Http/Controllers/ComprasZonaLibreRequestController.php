@@ -16,7 +16,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 
 /**
- * SCRUM-440 (REQ-370) — decisión de Yirena (Compras) sobre una solicitud de Zona Libre generada
+ * SCRUM-440 (REQ-370) — decisión de Lider Compras (Compras) sobre una solicitud de Zona Libre generada
  * por Bodega. Mismo mecanismo exacto que `ReplacementRequestController::generateOrder()`: al
  * aprobar, crea un `PurchaseOrder` completamente normal (`status = STATUS_POR_APROBAR`,
  * `modality = MODALITY_ZONA_LIBRE`, constante ya existente en `PurchaseOrder`, ver REQ-153) que de

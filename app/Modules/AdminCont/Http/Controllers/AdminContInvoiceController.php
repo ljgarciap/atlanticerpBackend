@@ -210,8 +210,8 @@ class AdminContInvoiceController
 
     /** GET /api/admin-contab/invoices/{order}/detail — REQ-447, modal de detalle/trazabilidad.
      *  `puede_decidir_incobrable` (REQ-448) es dependiente del actor, no de la factura — se calcula
-     *  acá en vez de en el service, ya que este endpoint es de acceso general (Felix/Mark/Gerencia),
-     *  no gateado por `primary_approver_only`; el frontend lo usa para mostrar Aprobar/Rechazar solo a Mark. */
+     *  acá en vez de en el service, ya que este endpoint es de acceso general (Contabilidad/Mark/Gerencia),
+     *  no gateado por `primary_approver_only`; el frontend lo usa para mostrar Aprobar/Rechazar solo a Gerencia. */
     public function detail(int $order, Request $request): JsonResponse
     {
         $detail = $this->invoices->detail($order, $this->invoiceIdFromRequest($request));
@@ -219,20 +219,20 @@ class AdminContInvoiceController
         /** @var array{sub?: int, permissions?: mixed}|null $payload */
         $payload = $request->attributes->get('jwt');
 
-        // superadmin.all bypassa el gate de Mark (decisión de Luis, 2026-08-22) — mismo criterio
+        // superadmin.all bypassa el gate de Gerencia (decisión de Luis, 2026-08-22) — mismo criterio
         // que EnsureIsPrimaryApprover, que ya lo aplica sobre la acción real de decidir.
         $isMark = AdminContFiscalSettings::actorEsMarkOSuperadmin($payload);
 
         $detail['puede_decidir_incobrable'] = $detail['cobrabilidad'] === 'pendiente_aprobacion' && $isMark;
-        // El texto del rechazo del PAC es información de Configuración Fiscal: solo Mark/superadmin.
+        // El texto del rechazo del PAC es información de Configuración Fiscal: solo Gerencia/superadmin.
         // Se agrega acá (deny-by-default) y no en `InvoiceService::detail()`, que también sirven los
         // controllers de Bodega sin este gate.
         $detail['puede_ver_fe_transmisiones'] = $isMark;
         $facturaMark = $isMark && isset($detail['invoice_id']) ? AdminContInvoice::query()->whereKey($detail['invoice_id'])->first() : null;
         $detail['fe_detalle'] = $facturaMark?->fe_detalle;
-        // SCRUM-1007 — 'reintentar' | 'actualizar_estado' | null; solo Mark/superadmin y solo si el documento lo admite.
+        // SCRUM-1007 — 'reintentar' | 'actualizar_estado' | null; solo Gerencia/superadmin y solo si el documento lo admite.
         $detail['accion_fe'] = $facturaMark !== null ? $this->certification->accionDisponible($facturaMark, 'factura') : null;
-        // SCRUM-1019 — "Reconciliar con MSL" disponible (rechazado/error_configuracion/pendiente); mismo gate Mark/superadmin.
+        // SCRUM-1019 — "Reconciliar con MSL" disponible (rechazado/error_configuracion/pendiente); mismo gate Gerencia/superadmin.
         $detail['puede_reconciliar_fe'] = $facturaMark !== null && $this->certification->reconciliacionDisponible($facturaMark, 'factura');
 
         return response()->json($detail);
@@ -280,7 +280,7 @@ class AdminContInvoiceController
         return $this->invoicePdf->generate($detail)->stream("factura-{$numero}.pdf");
     }
 
-    /** POST /api/admin-contab/invoices/{order}/mark-uncollectible — REQ-448, propone (Felix/Mark/Gerencia).
+    /** POST /api/admin-contab/invoices/{order}/mark-uncollectible — REQ-448, propone (Contabilidad/Mark/Gerencia).
      *  SCRUM-929 (B3a) — `invoice_id` opcional: obligatorio (422) si el pedido tiene varias facturas activas;
      *  una factura de otro pedido → 404. Ver ADR-SCRUM929 §4.8. */
     public function markUncollectible(int $order, Request $request): JsonResponse
@@ -296,7 +296,7 @@ class AdminContInvoiceController
         return response()->json($invoice);
     }
 
-    /** PUT /api/admin-contab/invoices/{order}/uncollectible-decision — REQ-448, exclusivo de Mark (primary_approver_only).
+    /** PUT /api/admin-contab/invoices/{order}/uncollectible-decision — REQ-448, exclusivo de Gerencia (primary_approver_only).
      *  SCRUM-929 (B3a) — mismo criterio de `invoice_id` que `markUncollectible()`. */
     public function uncollectibleDecision(int $order, Request $request): JsonResponse
     {

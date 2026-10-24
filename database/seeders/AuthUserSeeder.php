@@ -30,7 +30,7 @@ class AuthUserSeeder extends Seeder
         // vendedor_disenador (migración 2026_07_18_100002), que es el único nivel con fila de
         // capacidad ventas_diseno.can_edit=true. Antes estaba en nivel 3 (sin fila en
         // security_level_module_permissions -- ver ADR-006 corrección 2026-07-10), por lo que
-        // esta cuenta demo podía ver pero nunca crear proyectos/cotizaciones -- el bug que Marly
+        // esta cuenta demo podía ver pero nunca crear proyectos/cotizaciones -- el bug que Gerencia
         // reportó. Los tests de VentasDiseno no lo detectaron porque cada uno otorga
         // extra_permissions manualmente vía grantVentasDisenoEdit(), sin pasar por el bridge
         // rol+nivel real.

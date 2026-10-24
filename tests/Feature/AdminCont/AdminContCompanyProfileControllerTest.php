@@ -10,7 +10,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
-/** SCRUM-638/639/642 (REQ-561/562/565) — Datos de la Empresa, exclusiva de Mark. */
+/** SCRUM-638/639/642 (REQ-561/562/565) — Datos de la Empresa, exclusiva de Gerencia. */
 class AdminContCompanyProfileControllerTest extends FeatureTestCase
 {
     private const APPROVER_EMAIL = 'gerencia3@test.com';
@@ -52,7 +52,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     public function test_show_rechaza_a_un_usuario_que_no_es_mark(): void
     {
         // `management@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
         $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 
@@ -143,7 +143,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     public function test_upload_logo_rechaza_a_un_usuario_que_no_es_mark(): void
     {
         // `management@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
         $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
 

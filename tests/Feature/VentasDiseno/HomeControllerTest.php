@@ -122,7 +122,7 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_summary_final_stage_incluye_dias_en_etapa_y_valor(): void
     {
-        // SCRUM-68 — Marly encontró que el modal de detalle solo traía Subcliente y
+        // SCRUM-68 — Gerencia encontró que el modal de detalle solo traía Subcliente y
         // Observaciones, sin contexto de etapa/días/valor que pide el criterio.
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');

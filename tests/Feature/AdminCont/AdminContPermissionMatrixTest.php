@@ -13,9 +13,9 @@ use Tests\Feature\FeatureTestCase;
  * permisos finos asignados por security_level (ver migración 2026_08_30_100002). Este test
  * verifica que la frontera real de acceso se mantiene idéntica a la de los `role:` que reemplaza.
  *
- * Roles reales usados (BusinessRoleUserSeeder/CoreUserSeeder): lider_admin_contab=Felix,
- * asistente_administrativa=Yaneth, management=Daniela, lider_operaciones=Mariam (comparte nivel
- * "Read Only" original con Yaneth ANTES de esta migración — verifica que no se afectó).
+ * Roles reales usados (BusinessRoleUserSeeder/CoreUserSeeder): lider_admin_contab=Contabilidad,
+ * asistente_administrativa=Asistente Administrativa, management=Gerencia, lider_operaciones=Lider Operaciones (comparte nivel
+ * "Read Only" original con Asistente Administrativa ANTES de esta migración — verifica que no se afectó).
  */
 class AdminContPermissionMatrixTest extends FeatureTestCase
 {
@@ -40,9 +40,9 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
         return $this->loginAs($email, $email, $roleKey);
     }
 
-    // ── admin_contab.records.manage — Felix + Yaneth + Daniela, los 3 pueden ────
+    // ── admin_contab.records.manage — Contabilidad + Asistente Administrativa + Gerencia, los 3 pueden ────
 
-    public function test_bank_accounts_store_felix_yaneth_y_daniela_pueden(): void
+    public function test_bank_accounts_store_contabilidad_asistente_y_gerencia_pueden(): void
     {
         foreach ([
             [self::FELIX, 'lider_admin_contab'],
@@ -56,9 +56,9 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
         }
     }
 
-    // ── admin_contab.operations.manage — Felix + Yaneth, NO Daniela ─────────────
+    // ── admin_contab.operations.manage — Contabilidad + Asistente Administrativa, NO Gerencia ─────────────
 
-    public function test_retention_attachment_felix_y_yaneth_pueden_daniela_no(): void
+    public function test_retention_attachment_contabilidad_y_asistente_pueden_gerencia_no(): void
     {
         $this->withHeaders($this->authHeaders($this->tokenFor(self::DANIELA, 'management')))
             ->postJson('/api/admin-contab/payments/1/retention-attachment', [])
@@ -72,7 +72,7 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
         }
     }
 
-    public function test_daily_count_felix_y_yaneth_pueden_daniela_no(): void
+    public function test_daily_count_contabilidad_y_asistente_pueden_gerencia_no(): void
     {
         $this->withHeaders($this->authHeaders($this->tokenFor(self::DANIELA, 'management')))
             ->getJson('/api/admin-contab/cash-position/daily-count')
@@ -85,9 +85,9 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
     }
 
     // ── payments/summary — SCRUM-881 (binax, 2026-09-09): la asistente entra al resumen de cobros, mismo alcance que
-    //    Félix; SCRUM-1139 (2026-10-14): operaciones espeja a la asistente. La ruta pasó a records.manage. ─────────────
+    //    Contabilidad; SCRUM-1139 (2026-10-14): operaciones espeja a la asistente. La ruta pasó a records.manage. ─────────────
 
-    public function test_payments_summary_felix_daniela_yaneth_y_operaciones_pueden(): void
+    public function test_payments_summary_contabilidad_gerencia_asistente_y_operaciones_pueden(): void
     {
         foreach ([
             [self::FELIX, 'lider_admin_contab'],
@@ -102,7 +102,7 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
         }
     }
 
-    public function test_cash_position_real_yaneth_no_puede(): void
+    public function test_cash_position_real_asistente_no_puede(): void
     {
         $this->withHeaders($this->authHeaders($this->tokenFor(self::YANETH, 'asistente_administrativa')))
             ->getJson('/api/admin-contab/cash-position/real')
@@ -110,7 +110,7 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
     }
 
     // ── lider_operaciones (nivel propio «Read Only») espeja a la asistente (SCRUM-1139) pero NO gana el
-    //    permiso de supervisión (oversight.manage: Félix + Gerencia), que binax tampoco le da. ─────────────
+    //    permiso de supervisión (oversight.manage: Contabilidad + Gerencia), que binax tampoco le da. ─────────────
 
     public function test_lider_operaciones_espeja_a_la_asistente_pero_no_gana_oversight(): void
     {

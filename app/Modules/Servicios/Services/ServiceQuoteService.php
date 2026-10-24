@@ -31,7 +31,7 @@ use Illuminate\Support\Facades\DB;
  * `App\Modules\VentasDiseno\Models\PricingSettings::min_margin_percent` — el MISMO valor
  * parametrizado que ya usa Ventas & Diseño (SCRUM-293 lo pide explícito: "igual que la regla ya
  * usada en el módulo Ventas & Diseño"), no una copia/tabla nueva. A diferencia de Ventas & Diseño
- * (que tiene `ventas_diseno.override_min_margin` para Mark/David), acá NO hay excepción — el
+ * (que tiene `ventas_diseno.override_min_margin` para Gerencia/David), acá NO hay excepción — el
  * ticket lo describe como bloqueo sin salvedad.
  */
 final class ServiceQuoteService
@@ -42,7 +42,7 @@ final class ServiceQuoteService
     ) {}
 
     /**
-     * REQ-229 RN — solo Aaron/Líder de Servicios (superadmin) o el técnico interno asignado a ESTE
+     * REQ-229 RN — solo Lider Servicios/Líder de Servicios (superadmin) o el técnico interno asignado a ESTE
      * ticket pueden generar/editar su Cotización. Mismo patrón que
      * `InspectionReportService::assertCanEdit()`.
      *
@@ -372,7 +372,7 @@ final class ServiceQuoteService
     }
 
     /**
-     * REQ-234 — Aprobar/Rechazar. Exclusivo de Aaron/Líder de Servicios (role: en la ruta ya lo
+     * REQ-234 — Aprobar/Rechazar. Exclusivo de Lider Servicios/Líder de Servicios (role: en la ruta ya lo
      * garantiza; acá solo se valida el estado previo). `tickets.quote_status` se actualiza siempre
      * que ESTA sea la cotización más reciente del ticket (siempre lo es — REQ-234 solo permite
      * generar una nueva cuando la anterior ya está Rechazada, así que nunca hay 2 en estado

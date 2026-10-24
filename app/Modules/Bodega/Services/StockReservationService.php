@@ -49,7 +49,7 @@ use Illuminate\Support\Facades\DB;
  * de reparto nueva (`order_items` no la tiene hoy), cambio de esquema fuera de alcance de esta
  * extensión.
  *
- * SCRUM-1196 (reglas de Esteban Cárdenas, Líder de Bodega, 22-10-2026) — el «bin por bin» ya NO usa todas las bodegas operativas ni la de más remanente
+ * SCRUM-1196 (reglas de Lider Bodega Cárdenas, Líder de Bodega, 22-10-2026) — el «bin por bin» ya NO usa todas las bodegas operativas ni la de más remanente
  * (`bestFitAllocation()`, eliminado: tomaba Reclamos, Merma o un Showroom y los dejaba en negativo). Solo cuentan las bodegas `permite_venta`; la reserva
  * AUTOMÁTICA sale únicamente de la bodega `despacho_por_defecto` (Bodega Central), nunca más que su saldo (jamás negativo); lo que no alcance queda sin reservar
  * y al completar el picking cae en el flujo de faltante (REQ-316/317, «pendiente de compra»). Una bodega de venta distinta (1 pieza de Showroom Obarrio) solo

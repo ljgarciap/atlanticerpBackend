@@ -26,7 +26,7 @@ final class ClientLookupService
     /**
      * RN2 — modal de búsqueda con resultados filtrados en vivo.
      *
-     * Rebote SCRUM-917 (Daniela, 2026-09-14) — el buscador no encontraba clientes que SÍ
+     * Rebote SCRUM-917 (Gerencia, 2026-09-14) — el buscador no encontraba clientes que SÍ
      * existían en CRM → Clientes. Causa raíz confirmada contra dev.atlanticerp.ai (7568 Clientes
      * Master reales): la versión anterior pre-cargaba solo los primeros 200 registros
      * ordenados por nombre y recién ahí filtraba en PHP por el término buscado — cualquier

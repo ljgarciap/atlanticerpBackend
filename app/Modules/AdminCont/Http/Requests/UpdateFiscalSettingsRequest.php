@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
  * están en las reglas — `validated()` solo devuelve las llaves declaradas acá, así que aunque el
  * cliente los mande en el body nunca llegan al `update()` del modelo (RN3 de REQ-555, RN1 de
  * REQ-557; `serie_fiscal` — SCRUM-941, es un identificador registrado ante el PAC, no un valor que
- * Mark deba poder cambiar sin coordinar con el proveedor).
+ * Gerencia deba poder cambiar sin coordinar con el proveedor).
  */
 class UpdateFiscalSettingsRequest extends FormRequest
 {
@@ -75,7 +75,7 @@ class UpdateFiscalSettingsRequest extends FormRequest
             // cartera" para calcular la fecha de vencimiento de cada factura.
             'dias_credito_factura' => ['sometimes', 'integer', 'min:1', 'max:365'],
             // Batch 11 de Notas Crédito (REQ-482 RN3) — umbral de monto que dispara "pendiente de
-            // aprobación de Mark", compartido a futuro con Facturación y Comisiones Externas.
+            // aprobación de Gerencia", compartido a futuro con Facturación y Comisiones Externas.
             'primary_approval_threshold' => ['sometimes', 'numeric', 'min:0'],
             // Batch 18 de Arqueo de Caja (REQ-520 RN1) — ver ADR-SCRUM597-601, reconciliación
             // punto 1: valor manual hasta que Batch 20 (Caja Chica) lo reemplace por un saldo

@@ -147,7 +147,7 @@ class ServiciosBatch10Test extends FeatureTestCase
         $this->assertSame(47.06, $desglose['actitud']['monto_max']);
     }
 
-    /** RN8 — exclusivo del propio técnico o Gerencia; Aaron (lider_servicios) puede CAPTURAR pero no ver el resultado. */
+    /** RN8 — exclusivo del propio técnico o Gerencia; Lider Servicios (lider_servicios) puede CAPTURAR pero no ver el resultado. */
     public function test_aaron_no_puede_ver_el_resultado_calculado(): void
     {
         $id = $this->carlos()->id;
@@ -281,7 +281,7 @@ class ServiciosBatch10Test extends FeatureTestCase
 
     public function test_tecnico_no_asignado_no_puede_completar_informe_movil(): void
     {
-        $ticket = $this->makeTicket(); // sin internal_technician_id asignado a Carlos
+        $ticket = $this->makeTicket(); // sin internal_technician_id asignado a Tecnico Servicios
         $token = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico_servicios');
 
         $this->withHeaders($this->authHeaders($token))

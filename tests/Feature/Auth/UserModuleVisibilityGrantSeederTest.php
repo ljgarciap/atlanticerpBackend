@@ -87,7 +87,7 @@ class UserModuleVisibilityGrantSeederTest extends FeatureTestCase
         $this->assertSame(0, UserModuleVisibility::where('user_id', $operaciones->id)->count());
     }
 
-    // SCRUM-1157 — el menú de Compras de Mariam: solo consulta. Test no tenía la configuración (se aplicaba a mano) y mostraba enlaces fantasma.
+    // SCRUM-1157 — el menú de Compras de Lider Operaciones: solo consulta. Test no tenía la configuración (se aplicaba a mano) y mostraba enlaces fantasma.
     private const COMPRAS_OCULTOS = ['agencias', 'inicio', 'nueva_orden', 'pagos', 'proveedores', 'reclamos', 'reportes'];
 
     /** @return list<string> */

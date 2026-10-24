@@ -12,7 +12,7 @@ use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * Fase 4 — Servicios, Batch 1 (REQ-216→221, REQ-249). Usuarios reales de Servicios (Aaron Leis/
+ * Fase 4 — Servicios, Batch 1 (REQ-216→221, REQ-249). Usuarios reales de Servicios (Lider Servicios Leis/
  * lider_servicios, Tecnico Servicios Test/tecnico_servicios, Garantias Servicios Test/garantias_servicios) y de
  * Ventas & Diseño (vendedor_disenador) ya existen vía `BusinessRoleUserSeeder` en TODOS los
  * entornos incl. testing — password = el email (cast `hashed`, ver `User::casts()`). Los permisos
@@ -463,7 +463,7 @@ class TicketFlowTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
-    // ── REQ-245 RN4 — quién puede crear: Aaron/Líder de Servicios, superadmin, Gerencia y
+    // ── REQ-245 RN4 — quién puede crear: Lider Servicios/Líder de Servicios, superadmin, Gerencia y
     //    Vendedor/Diseñador. Técnico interno/Garantías tienen servicios.write (editan su propio
     //    ticket asignado) pero "no tienen el botón de Nuevo ticket disponible" — `role:` en la
     //    ruta es más angosto que el permiso de módulo a propósito, ver routes/servicios.php. ──
