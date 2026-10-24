@@ -291,7 +291,7 @@ class WarehouseControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-754 (rebote de Daniela 2026-08-18) — "Bodega → Bodegas" era el único listado sin
+     * SCRUM-754 (rebote de Gerencia 2026-08-18) — "Bodega → Bodegas" era el único listado sin
      * paginar del batch de estandarización. `per_page` respeta la página pedida y `meta` refleja
      * el total REAL (11), no solo lo devuelto en `data` (10) — cubre el bug de contar sobre la
      * página en vez del set filtrado completo. `per_page` usa 10 (mínimo de

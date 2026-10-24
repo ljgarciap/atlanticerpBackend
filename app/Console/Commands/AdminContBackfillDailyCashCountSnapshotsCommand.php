@@ -19,7 +19,7 @@ use Illuminate\Console\Command;
  * este backfill corrige (congelaría el total YA contaminado por `commissions:backfill-cash-movements`
  * u otro movimiento retroactivo). En cambio reconstruye el total tal como existía en `cerrado_at`
  * (`DailyCashCountService::forDate($fecha, asOf: cerrado_at)`), filtrando cada fuente por su propio
- * `created_at` — lo que Felix efectivamente vio al cerrar.
+ * `created_at` — lo que Contabilidad efectivamente vio al cerrar.
  *
  * SCRUM-937 (PQ-934-2, hallazgo de Pre-QA de SCRUM-934) — extiende el mismo comando para un
  * segundo caso: arqueos que YA tienen `snapshot` (congelado antes de que SCRUM-934 agregara

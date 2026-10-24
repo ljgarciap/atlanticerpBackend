@@ -201,7 +201,7 @@ class RolesSeedTest extends FeatureTestCase
         $this->assertTrue($rows->every(fn ($r) => (bool) $r->can_edit === true));
         $this->assertTrue(
             $rows->where('module', 'ventas_diseno')->first()->can_approve,
-            'Gerencia Restringida (Whil) debe poder aprobar en Ventas & Diseño.',
+            'Gerencia Restringida (Gerencia) debe poder aprobar en Ventas & Diseño.',
         );
         $this->assertSame(
             1,

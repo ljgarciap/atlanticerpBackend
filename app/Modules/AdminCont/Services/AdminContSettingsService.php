@@ -21,6 +21,11 @@ final class AdminContSettingsService
 
     private const DEFAULT_FRAUDE_MONTO_DESVIACIONES = 3;
 
+    /** Fase 1 (aislamiento del núcleo): antes `PendingAlertsService::DIAS_UMBRAL_COMISION_PENDIENTE = 10` fijo en código. */
+    private const KEY_COMISION_PENDIENTE_DIAS = 'comision_pendiente_dias';
+
+    private const DEFAULT_COMISION_PENDIENTE_DIAS = 10;
+
     private const KEY_FRAUDE_MONTO_VENTANA_DIAS = 'fraude_monto_ventana_dias';
 
     private const DEFAULT_FRAUDE_MONTO_VENTANA_DIAS = 90;
@@ -37,6 +42,12 @@ final class AdminContSettingsService
     public function fraudeMontoDesviaciones(): int
     {
         return $this->intSetting(self::KEY_FRAUDE_MONTO_DESVIACIONES, self::DEFAULT_FRAUDE_MONTO_DESVIACIONES);
+    }
+
+    /** Días de antigüedad (estrictamente mayores) a partir de los cuales una comisión pendiente genera alerta en Inicio. */
+    public function comisionPendienteDias(): int
+    {
+        return $this->intSetting(self::KEY_COMISION_PENDIENTE_DIAS, self::DEFAULT_COMISION_PENDIENTE_DIAS);
     }
 
     /** REQ-635 (Hallazgo 5) — ventana (días) de la media móvil usada para calibrar el umbral de monto. */
@@ -69,6 +80,7 @@ final class AdminContSettingsService
             'fraude_monto_ventana_dias'              => $this->fraudeMontoVentanaDias(),
             'fraude_aprobaciones_repetidas_n'        => $this->fraudeAprobacionesRepetidasN(),
             'fraude_aprobaciones_repetidas_minutos'  => $this->fraudeAprobacionesRepetidasMinutos(),
+            'comision_pendiente_dias'                => $this->comisionPendienteDias(),
         ];
     }
 
@@ -85,6 +97,7 @@ final class AdminContSettingsService
             'fraude_monto_ventana_dias'             => self::KEY_FRAUDE_MONTO_VENTANA_DIAS,
             'fraude_aprobaciones_repetidas_n'       => self::KEY_FRAUDE_APROBACIONES_REPETIDAS_N,
             'fraude_aprobaciones_repetidas_minutos' => self::KEY_FRAUDE_APROBACIONES_REPETIDAS_MINUTOS,
+            'comision_pendiente_dias'               => self::KEY_COMISION_PENDIENTE_DIAS,
         ];
 
         foreach ($map as $apiField => $storageKey) {

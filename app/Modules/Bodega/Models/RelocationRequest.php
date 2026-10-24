@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * SCRUM-454/457/458/459 (REQ-384/387/388/389, Bloque B4) — solicitud de reubicación de un
- * producto entre dos bodegas. Bodega solicita → Mark aprueba/rechaza (mismo gate que
+ * producto entre dos bodegas. Bodega solicita → Gerencia aprueba/rechaza (mismo gate que
  * `AdjustmentRequestController::resolveMarkAccess()`) → aprobar ajusta el inventario
  * automáticamente vía `KardexService` (dos movimientos `TIPO_REUBICACION`, uno negativo en
  * origen y otro positivo en destino), rechazar no toca nada.

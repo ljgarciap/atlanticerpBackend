@@ -10,10 +10,10 @@ use App\Modules\AdminCont\Models\CarteraCommissionTier;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Batch 22 de Admin&Cont (SCRUM-643→647, REQ-567) — CRUD de los tramos de la comisión de Felix
+ * Batch 22 de Admin&Cont (SCRUM-643→647, REQ-567) — CRUD de los tramos de la comisión de Contabilidad
  * por gestión de cartera +90 días. Mismo patrón que `AdminContInternalCommissionController::
  * tiers/storeTier/updateTier/destroyTier` (Batch 14) — lectura para el roster amplio de Reportes,
- * escritura exclusiva de Mark (`primary_approver_only` en routes/admin-contab.php).
+ * escritura exclusiva de Gerencia (`primary_approver_only` en routes/admin-contab.php).
  */
 class AdminContCarteraCommissionController
 {

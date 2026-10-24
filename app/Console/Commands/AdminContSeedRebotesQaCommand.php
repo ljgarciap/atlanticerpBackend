@@ -86,7 +86,7 @@ final class AdminContSeedRebotesQaCommand extends Command
         $fefiId = (int) User::where('email', 'vendedordisenador3@test.com')->value('id');
 
         if ($felixId === 0 || $neilId === 0 || $fefiId === 0) {
-            $this->error('Faltan usuarios base del roster real (Felix/Neil/Fefi) — abortando.');
+            $this->error('Faltan usuarios base del roster real (Contabilidad/Vendedor) — abortando.');
 
             return self::FAILURE;
         }

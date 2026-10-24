@@ -101,9 +101,6 @@ class PurchaseOrder extends Model
      */
     public const ORIGIN_SERVICIOS = 'servicios';
 
-    /** REQ-139: umbral de días "Por aprobar" para considerar la orden crítica. */
-    private const CRITICAL_DAYS_POR_APROBAR = 3;
-
     public const PAYMENT_STATUS_PENDIENTE = 'pendiente';
 
     public const PAYMENT_STATUS_PARCIAL = 'parcial';
@@ -113,8 +110,8 @@ class PurchaseOrder extends Model
     /**
      * REQ-165 — secuencia completa, incluso etapas anteriores al `status` real de la orden.
      *
-     * `REMAINDER_ORDENADO` agregado 2026-08-07 (Pre-QA, hallazgo real contra el rebote de Daniela
-     * Amaya en SCRUM-208, 2026-08-06): el AC pide que "las etapas de selección de lo que no va a
+     * `REMAINDER_ORDENADO` agregado 2026-08-07 (Pre-QA, hallazgo real contra el rebote de Gerencia
+     * Test en SCRUM-208, 2026-08-06): el AC pide que "las etapas de selección de lo que no va a
      * llegar aún deben estar todas desde ordenado en adelante", pero el selector solo ofrecía
      * `salio_de_origen`/`en_transito`/`en_aduana`/`en_transito_local` — un remanente que todavía
      * no salió del proveedor (ej. una línea que ni siquiera se despachó) no tenía ninguna opción
@@ -247,7 +244,7 @@ class PurchaseOrder extends Model
 
     /**
      * SCRUM-206 — quien realmente aprobó (para mostrar el nombre real en la UI, en vez del
-     * texto fijo "Aprobada por Mark" que no reflejaba `approved_by`).
+     * texto fijo "Aprobada por Gerencia" que no reflejaba `approved_by`).
      *
      * @return BelongsTo<User, $this>
      */
@@ -370,7 +367,7 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * RN3 (REQ-118, aplica a Nueva Orden): aéreo + paga Atlantic requiere aprobación de Mark.
+     * RN3 (REQ-118, aplica a Nueva Orden): aéreo + paga Atlantic requiere aprobación de Gerencia.
      */
     public static function computeRequiresPrimaryApproval(?string $shippingType, ?string $whoPaysShipping): bool
     {
@@ -488,7 +485,7 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * REQ-143: mientras la orden siga en "Por aprobar" y requiera aprobación de Mark que todavía
+     * REQ-143: mientras la orden siga en "Por aprobar" y requiera aprobación de Gerencia que todavía
      * no se dio, no se puede avanzar — el aviso deja de ser meramente informativo (brecha que el
      * propio REQ-143 marcó como "deber ser", no construida en el mockup original).
      */
@@ -507,7 +504,7 @@ class PurchaseOrder extends Model
     public function isCritical(): bool
     {
         if ($this->status === self::STATUS_POR_APROBAR) {
-            return $this->status_changed_at->diffInDays(now()) >= self::CRITICAL_DAYS_POR_APROBAR;
+            return $this->status_changed_at->diffInDays(now()) >= app(\App\Modules\Compras\Services\ComprasThresholds::class)->criticalDaysPorAprobar();
         }
 
         if ($this->status !== self::STATUS_RECIBIDO && $this->estimated_arrival_date !== null) {

@@ -105,7 +105,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
     }
 
     /**
-     * SCRUM-777 (rebote de Daniela 2026-08-19) — herramientas_asignadas quedó hardcodeado a 0
+     * SCRUM-777 (rebote de Gerencia 2026-08-19) — herramientas_asignadas quedó hardcodeado a 0
      * desde Batch 6 (docblock decía "Herramientas es Batch 13, no existe tools todavía") y nunca
      * se actualizó cuando Batch 13 sí creó tools.assigned_to_technician_id. Debe reflejar el
      * conteo real, sincronizado con Insumos y Herramientas.

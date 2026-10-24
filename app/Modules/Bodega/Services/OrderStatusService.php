@@ -184,7 +184,7 @@ final class OrderStatusService
      * REQ-340, corregido SCRUM-895 (2 vueltas) — por cada producto distinto de la familia:
      * `solicitada` se toma exclusivamente de los ítems de la tarjeta RAÍZ (1ra vuelta, ver más
      * abajo); `entregado` suma `qty_delivered` SOLO de las tarjetas miembro cuyo `stage` actual es
-     * `Order::STAGE_ENTREGADO` (2da vuelta, rebote de Daniela 2026-09-11).
+     * `Order::STAGE_ENTREGADO` (2da vuelta, rebote de Gerencia 2026-09-11).
      *
      * 2da vuelta — root cause real: `DeliveryService::registerDelivery()` setea `qty_delivered` en
      * la transición Packing → Por despachar (ver su docblock), NO al llegar a Entregado — el

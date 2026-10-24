@@ -21,7 +21,7 @@ use Illuminate\Routing\Controller;
 
 /**
  * SCRUM-250→253 (REQ-187→190) — Pagos a Proveedores. "Enviar a pago" (RN de REQ-189) es
- * puramente informativo (notifica a Mark, no bloquea el registro real del pago); el registro de
+ * puramente informativo (notifica a Gerencia, no bloquea el registro real del pago); el registro de
  * un pago NO depende de una aprobación previa — solo el CAMBIO DE MONTO antes del primer pago sí
  * (RN7). Ver docs/architecture/compras-sustitutos-pagos-agencias-reclamos-reportes.md.
  */
@@ -64,7 +64,7 @@ final class PurchaseOrderPaymentController extends Controller
         }
 
         // SCRUM-252 (hallazgo de Gerencia Test 2026-08-09) — mientras haya un cambio de monto
-        // pendiente de aprobación de Mark, "Registrar pago" queda BLOQUEADO de verdad (antes solo
+        // pendiente de aprobación de Gerencia, "Registrar pago" queda BLOQUEADO de verdad (antes solo
         // se mostraba el aviso, pero el registro seguía funcionando con el monto viejo).
         if ($order->pending_amount_change !== null) {
             return response()->json([
@@ -128,7 +128,7 @@ final class PurchaseOrderPaymentController extends Controller
 
     /**
      * REQ-189 RN7 — cambiar el monto ANTES del primer pago registrado requiere aprobación de
-     * Mark; queda pendiente hasta que approveAmountChange() lo aplique.
+     * Gerencia; queda pendiente hasta que approveAmountChange() lo aplique.
      */
     public function requestAmountChange(Request $request, int $orderId): JsonResponse
     {
@@ -160,10 +160,10 @@ final class PurchaseOrderPaymentController extends Controller
     }
 
     /**
-     * REQ-189 RN7 — solo Mark (mismo gate que PurchaseOrderController::approve()).
+     * REQ-189 RN7 — solo Gerencia (mismo gate que PurchaseOrderController::approve()).
      *
      * Hallazgo de Pre-QA (2026-07-18, no cubierto por ningún escenario literal del ticket): si
-     * se registra un pago DESPUÉS de pedir el cambio de monto pero ANTES de que Mark lo apruebe,
+     * se registra un pago DESPUÉS de pedir el cambio de monto pero ANTES de que Gerencia lo apruebe,
      * la solicitud queda obsoleta — aprobarla igual podría dejar `total_amount` por debajo de lo
      * ya pagado (`paid_amount > total_amount`, `payment_status` calculando mal). Mismo guard que
      * `requestAmountChange()` ya usa para bloquear un pedido nuevo con pagos existentes, acá se
@@ -218,9 +218,9 @@ final class PurchaseOrderPaymentController extends Controller
     }
 
     /**
-     * SCRUM-252 (hallazgo de Gerencia Test) — "Si Mark rechaza/cancela el cambio, el nuevo monto
-     * no debe aplicarse. La orden debe conservar el monto anterior." Mismo gate de Mark que
-     * approveAmountChange() — Yirena no puede rechazar su propio pedido tampoco (solo Mark
+     * SCRUM-252 (hallazgo de Gerencia Test) — "Si Gerencia rechaza/cancela el cambio, el nuevo monto
+     * no debe aplicarse. La orden debe conservar el monto anterior." Mismo gate de Gerencia que
+     * approveAmountChange() — Lider Compras no puede rechazar su propio pedido tampoco (solo Gerencia
      * resuelve la solicitud, en cualquier sentido).
      */
     public function rejectAmountChange(Request $request, int $orderId): JsonResponse

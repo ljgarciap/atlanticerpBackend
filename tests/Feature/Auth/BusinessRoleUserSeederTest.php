@@ -13,9 +13,9 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-148 ("Usuarios - Correos") — roster real de 25 personas de negocio de SCRUM-144 que no
- * tenían cuenta (Mark ya existía vía CoreUserSeeder). Verifica los casos puntuales acordados con
- * Luis: el override de nivel de Whil, el correo "Correo 1" de Felix, el correo genérico de
- * Apolonio, que Idmar (10mo Vendedor/Diseñador) se creó igual, y que los 3 sin cargo NO se crearon.
+ * tenían cuenta (Gerencia ya existía vía CoreUserSeeder). Verifica los casos puntuales acordados con
+ * Luis: el override de nivel de Gerencia, el correo "Correo 1" de Contabilidad, el correo genérico de
+ * Ayudante General Bodega, que Vendedor Disenador (10mo Vendedor/Diseñador) se creó igual, y que los 3 sin cargo NO se crearon.
  *
  * No hay test de "no se manda WelcomeMail" — RefreshDatabase siembra una sola vez por proceso de
  * test, antes de que `Mail::fake()` (en `FeatureTestCase::setUp()`) empiece a interceptar, así que
@@ -31,26 +31,26 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    public function test_whil_queda_en_rol_gerencia_con_override_de_nivel_restringido(): void
+    public function test_restringido_queda_en_rol_gerencia_con_override_de_nivel_restringido(): void
     {
         $gerencia = Role::where('key', 'management')->firstOrFail();
-        $whil = User::where('email', 'gerencia5@test.com')->firstOrFail();
+        $restricted = User::where('email', 'gerencia5@test.com')->firstOrFail();
 
-        $this->assertSame($gerencia->id, $whil->role_id);
-        $this->assertSame(8, $whil->securityLevel?->level, 'Whil debe quedar en "Gerencia Restringida" (Nivel 8), no el default del rol (Nivel 9).');
-        $this->assertFalse((bool) $whil->approve_large_amounts);
-        $this->assertFalse((bool) $whil->manage_users);
+        $this->assertSame($gerencia->id, $restricted->role_id);
+        $this->assertSame(8, $restricted->securityLevel?->level, 'Gerencia debe quedar en "Gerencia Restringida" (Nivel 8), no el default del rol (Nivel 9).');
+        $this->assertFalse((bool) $restricted->approve_large_amounts);
+        $this->assertFalse((bool) $restricted->manage_users);
     }
 
-    public function test_felix_usa_el_correo_1_del_ticket(): void
+    public function test_contabilidad_usa_el_correo_1_del_ticket(): void
     {
         $liderAdminContab = Role::where('key', 'lider_admin_contab')->firstOrFail();
-        $felix = User::where('email', 'contabilidad@test.com')->first();
+        $contabilidad = User::where('email', 'contabilidad@test.com')->first();
 
-        $this->assertNotNull($felix, 'Felix debe existir con el correo de la columna "Correo 1" (contabilidad@test.com).');
-        $this->assertNull(User::where('email', 'contabilidad-alterno@test.com')->first(), 'El "Correo 2" de Felix no debe usarse.');
-        $this->assertSame($liderAdminContab->id, $felix->role_id);
-        $this->assertTrue((bool) $felix->manage_users);
+        $this->assertNotNull($contabilidad, 'Contabilidad debe existir con el correo de la columna "Correo 1" (contabilidad@test.com).');
+        $this->assertNull(User::where('email', 'contabilidad-alterno@test.com')->first(), 'El "Correo 2" de Contabilidad no debe usarse.');
+        $this->assertSame($liderAdminContab->id, $contabilidad->role_id);
+        $this->assertTrue((bool) $contabilidad->manage_users);
     }
 
     public function test_apolonio_usa_correo_generico_nombre_apellido(): void
@@ -58,7 +58,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $ayudanteBodega = Role::where('key', 'ayudante_general_bodega')->firstOrFail();
         $apolonio = User::where('email', 'ayudantegeneralbodega@test.com')->first();
 
-        $this->assertNotNull($apolonio, 'Apolonio debe existir con el correo genérico del rol (ayudantegeneralbodega@test.com).');
+        $this->assertNotNull($apolonio, 'Ayudante General Bodega debe existir con el correo genérico del rol (ayudantegeneralbodega@test.com).');
         $this->assertSame($ayudanteBodega->id, $apolonio->role_id);
     }
 
@@ -78,7 +78,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $vendedor = Role::where('key', 'vendedor_disenador')->firstOrFail();
         $count = User::where('role_id', $vendedor->id)->whereIn('email', $roster)->count();
 
-        // 9 originales de SCRUM-144 + Idmar (cargo confirmado en SCRUM-148, aunque no contado
+        // 9 originales de SCRUM-144 + Vendedor Disenador (cargo confirmado en SCRUM-148, aunque no contado
         // originalmente) = 10.
         $this->assertSame(10, $count);
         $this->assertNotNull(User::where('email', 'vendedordisenador10@test.com')->first());
@@ -117,7 +117,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $this->assertSame('Repartidor Test', trim("{$joel->first_name} {$joel->last_name}"));
     }
 
-    // SCRUM-1142 — Carlos, Joel y "Personal de Bodega" existen solo para aparecer en los selectores: nadie entra con ellos.
+    // SCRUM-1142 — Tecnico Servicios, Repartidor y "Personal de Bodega" existen solo para aparecer en los selectores: nadie entra con ellos.
     public function test_las_cuentas_de_bodega_sin_acceso_no_aceptan_contrasena_igual_al_correo(): void
     {
         $courier = Role::where('key', 'transporte')->firstOrFail();
@@ -141,7 +141,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $this->assertTrue(Hash::check('ayudantegeneralbodega@test.com', $apolonio->password_hash));
     }
 
-    public function test_25_personas_nuevas_mas_mark_ya_existente_suman_26_del_roster_de_scrum_144(): void
+    public function test_25_personas_nuevas_mas_aprobador_ya_existente_suman_26_del_roster_de_scrum_144(): void
     {
         $emails = [
             'gerencia5@test.com', 'contabilidad@test.com', 'asistenteadministrativa@test.com',
@@ -157,6 +157,6 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
 
         $this->assertCount(25, $emails);
         $this->assertSame(25, User::whereIn('email', $emails)->count());
-        $this->assertNotNull(User::where('email', 'gerencia3@test.com')->first(), 'Mark ya existía vía CoreUserSeeder.');
+        $this->assertNotNull(User::where('email', 'gerencia3@test.com')->first(), 'Gerencia ya existía vía CoreUserSeeder.');
     }
 }

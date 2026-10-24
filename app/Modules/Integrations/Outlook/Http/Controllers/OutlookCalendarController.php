@@ -32,7 +32,7 @@ final class OutlookCalendarController extends Controller
      * `scope=team` directo contra `GET /api/servicios/calendar` (sin pasar por el frontend, que
      * a propósito nunca manda ese param — ver `ServiciosMyCalendarPanel.tsx`) devolvía eventos
      * reales de Outlook de OTROS usuarios para cualquier actor con `servicios.view_team=true`
-     * (ej. Aaron/`lider_servicios` veía el calendario de Garantias Servicios Test y Gerencia Test,
+     * (ej. Lider Servicios/`lider_servicios` veía el calendario de Garantias Servicios Test y Gerencia Test,
      * confirmado en vivo contra el stack local). Viola PERMISOS de SCRUM-272 ("nadie puede ver
      * el calendario personal de otro usuario desde aquí") — regla deliberadamente MÁS estricta
      * que Ventas & Diseño/Compras/Bodega, que sí exponen team-view como funcionalidad aprobada.

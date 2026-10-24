@@ -29,7 +29,7 @@ final class ClaimSheetService
     }
 
     /**
-     * REQ-278 RN — solo Aaron/Líder de Servicios (superadmin) o el técnico interno asignado a ESTE
+     * REQ-278 RN — solo Lider Servicios/Líder de Servicios (superadmin) o el técnico interno asignado a ESTE
      * ticket pueden generar/editar su Hoja de Reclamo. Sin rama `garantias_servicios` a propósito
      * (excluida del rol de escritura en `routes/servicios.php`, ver docblock ahí) — Reclamos no es
      * un tipo de ticket que atienda el especialista de garantías.

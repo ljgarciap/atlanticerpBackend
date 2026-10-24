@@ -166,7 +166,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
     }
 
     /**
-     * Rebote SCRUM-917 (Daniela, 2026-09-14) — reproduce el bug real: con más de 200
+     * Rebote SCRUM-917 (Gerencia, 2026-09-14) — reproduce el bug real: con más de 200
      * Clientes Master, uno cuyo nombre cae alfabéticamente DESPUÉS del top 200 nunca entraba
      * al pool de búsqueda de la versión vieja (`ClientLookupService::searchMasterClients()`
      * pre-cargaba `LIMIT 200` ordenado por nombre y recién ahí filtraba en PHP). Confirmado

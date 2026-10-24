@@ -138,7 +138,7 @@ class OrderBoardControllerTest extends FeatureTestCase
     {
         $mariano = $this->userIdByEmail('asistentebodega2@test.com');
         $osvaldo = $this->userIdByEmail('asistentebodega@test.com');
-        // Solo Mariano tiene pedidos asignados — Osvaldo se queda en 0.
+        // Solo Asistente Bodega tiene pedidos asignados — Asistente Bodega se queda en 0.
         $this->makeOrder(['assistant_id' => $mariano]);
         $this->makeOrder(['assistant_id' => $mariano]);
 
@@ -158,7 +158,7 @@ class OrderBoardControllerTest extends FeatureTestCase
         // así que decodifica como int — assertEquals en vez de assertSame evita el falso negativo
         // por tipo (mismo criterio que el resto de este test file, ver `assertEqualsWithDelta` arriba).
         $this->assertEquals(100.0, $marianoRow['percent_of_total']);
-        $this->assertSame(0, $osvaldoRow['orders_count'], 'Osvaldo sin pedidos NO debe desaparecer del panel.');
+        $this->assertSame(0, $osvaldoRow['orders_count'], 'Asistente Bodega sin pedidos NO debe desaparecer del panel.');
         $this->assertEquals(0.0, $osvaldoRow['percent_of_total']);
     }
 

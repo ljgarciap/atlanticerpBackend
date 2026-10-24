@@ -28,7 +28,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
@@ -42,7 +42,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsDesigner(): string
@@ -111,11 +111,11 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa Pend '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
-            'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'amount' => $amount,
+            'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'amount' => $amount,
             'stage_changed_at' => now(),
         ]);
         Quote::create([
-            'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'sales_project_id' => $project->id,
+            'owner_id' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'sales_project_id' => $project->id,
             'architect_id' => $architect->id, 'status' => 'approved',
         ]);
         $order = Order::create([

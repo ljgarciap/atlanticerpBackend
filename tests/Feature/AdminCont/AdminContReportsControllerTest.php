@@ -28,9 +28,9 @@ use Tests\Feature\FeatureTestCase;
  *  home de Reportes. */
 class AdminContReportsControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
-    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+    private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
     private const APPROVER_EMAIL = 'gerencia3@test.com';
 
@@ -44,7 +44,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsMark(): string
@@ -128,11 +128,11 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa Reportes '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
-            'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'amount' => $amount,
+            'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'amount' => $amount,
             'stage_changed_at' => Carbon::now(),
         ]);
         Quote::create([
-            'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'sales_project_id' => $project->id,
+            'owner_id' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'sales_project_id' => $project->id,
             'architect_id' => $architect->id, 'status' => 'approved',
         ]);
         $order = Order::create([
@@ -157,7 +157,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
             'numero' => 'NC-REP-'.random_int(1000, 999999), 'master_client_id' => $masterClient->id,
             'cliente' => $invoice->cliente, 'tipo' => $tipo, 'subtipo_anulacion' => $subtipo, 'factura_origen_id' => $invoice->id,
             'monto' => $monto, 'subtotal' => $monto, 'itbms' => 0, 'motivo' => 'Motivo de prueba Reportes',
-            'estado' => $estado, 'registrado_por' => $this->userIdByEmail(self::FELIX_EMAIL), 'fecha' => $fecha,
+            'estado' => $estado, 'registrado_por' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'fecha' => $fecha,
         ]);
     }
 
@@ -173,9 +173,9 @@ class AdminContReportsControllerTest extends FeatureTestCase
         }
     }
 
-    public function test_yaneth_puede_ver_cartera_ventas_y_flujo_caja(): void
+    public function test_asistente_puede_ver_cartera_ventas_y_flujo_caja(): void
     {
-        $token = $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        $token = $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
 
         foreach (['/api/admin-contab/reports/cartera',
             '/api/admin-contab/reports/ventas', '/api/admin-contab/reports/flujo-caja'] as $url) {
@@ -184,15 +184,15 @@ class AdminContReportsControllerTest extends FeatureTestCase
     }
 
     /**
-     * Corrección SCRUM-881 (Daniela, 2026-09-09) — "Comisión por gestión de cartera +90 días —
-     * Felix" debe verse SOLO para Felix y Gerencia, no para Yaneth. Antes de esta corrección,
-     * Yaneth SÍ veía este endpoint junto con el resto de Reportes (matriz de permisos original) —
-     * `test_yaneth_puede_ver_los_4_endpoints_de_reportes` cubría exactamente lo contrario y se
+     * Corrección SCRUM-881 (Gerencia, 2026-09-09) — "Comisión por gestión de cartera +90 días —
+     * Contabilidad" debe verse SOLO para Contabilidad y Gerencia, no para Asistente Administrativa. Antes de esta corrección,
+     * Asistente Administrativa SÍ veía este endpoint junto con el resto de Reportes (matriz de permisos original) —
+     * `test_asistente_puede_ver_los_4_endpoints_de_reportes` cubría exactamente lo contrario y se
      * divide acá.
      */
-    public function test_yaneth_recibe_403_en_felix_commission(): void
+    public function test_asistente_recibe_403_en_contabilidad_commission(): void
     {
-        $token = $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        $token = $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/felix-commission')
@@ -213,9 +213,9 @@ class AdminContReportsControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    // ------------------------------------------------------------------- REQ-567 comisión Felix ----
+    // ------------------------------------------------------------------- REQ-567 comisión Contabilidad ----
 
-    public function test_felix_commission_tramo_1_menos_de_15k(): void
+    public function test_contabilidad_commission_tramo_1_menos_de_15k(): void
     {
         $invoice = $this->makeInvoice(8400, 0, now()->subDays(140)->toDateTimeString());
         $this->makeConfirmedPayment($invoice, 8400, now()->toDateTimeString());
@@ -229,7 +229,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $this->assertStringContainsString('Menos de', (string) $response->json('rango_actual'));
     }
 
-    public function test_felix_commission_tramo_2_entre_15k_y_20k(): void
+    public function test_contabilidad_commission_tramo_2_entre_15k_y_20k(): void
     {
         $invoice = $this->makeInvoice(17000, 0, now()->subDays(140)->toDateTimeString());
         $this->makeConfirmedPayment($invoice, 17000, now()->toDateTimeString());
@@ -242,7 +242,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $response->assertJson(['cobrado_mes' => 17000.0, 'porcentaje' => 1.5, 'comision' => 255.0]);
     }
 
-    public function test_felix_commission_tramo_3_mas_de_20k(): void
+    public function test_contabilidad_commission_tramo_3_mas_de_20k(): void
     {
         $invoice = $this->makeInvoice(25000, 0, now()->subDays(140)->toDateTimeString());
         $this->makeConfirmedPayment($invoice, 25000, now()->toDateTimeString());
@@ -255,7 +255,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $response->assertJson(['cobrado_mes' => 25000.0, 'porcentaje' => 2.0, 'comision' => 500.0]);
     }
 
-    public function test_felix_commission_expone_los_3_tramos_con_el_actual_marcado(): void
+    public function test_contabilidad_commission_expone_los_3_tramos_con_el_actual_marcado(): void
     {
         $token = $this->loginAsFelix();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -378,7 +378,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $this->assertCount(3, $response->json());
     }
 
-    public function test_store_tier_rechaza_a_felix_solo_mark_puede_escribir(): void
+    public function test_store_tier_rechaza_a_contabilidad_solo_aprobador_puede_escribir(): void
     {
         $token = $this->loginAsFelix();
 
@@ -387,7 +387,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    public function test_mark_puede_crear_actualizar_y_borrar_un_tramo(): void
+    public function test_aprobador_puede_crear_actualizar_y_borrar_un_tramo(): void
     {
         $token = $this->loginAsMark();
 
@@ -430,7 +430,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
     public function test_comisiones_hoy_suma_internas_y_externas_ya_realizadas(): void
     {
         // Interna: pedido de $10,000 (tramo 1.5% seed) cobrado por completo hoy → $150.
-        $invoice = $this->makeCommissionableOrder($this->userIdByEmail(self::FELIX_EMAIL), 10000.0);
+        $invoice = $this->makeCommissionableOrder($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 10000.0);
         $this->makeConfirmedPayment($invoice, 10000.0, now()->toDateTimeString());
 
         // Externa: proyecto de $8,000, régimen exento (comisión 10% default) pagada hoy → $800.
@@ -448,7 +448,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_comisiones_periodo_3m_devuelve_serie_mensual_terminando_en_mes_actual(): void
     {
-        $invoice = $this->makeCommissionableOrder($this->userIdByEmail(self::FELIX_EMAIL), 10000.0);
+        $invoice = $this->makeCommissionableOrder($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 10000.0);
         $this->makeConfirmedPayment($invoice, 10000.0, now()->toDateTimeString());
 
         $token = $this->loginAsFelix();

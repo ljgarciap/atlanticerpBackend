@@ -11,7 +11,6 @@ use App\Modules\VentasDiseno\Http\Controllers\CatalogController;
 use App\Modules\VentasDiseno\Http\Controllers\CatalogProductController;
 use App\Modules\VentasDiseno\Http\Controllers\CatalogProductFamilyController;
 use App\Modules\VentasDiseno\Http\Controllers\ClientController;
-use App\Modules\VentasDiseno\Http\Controllers\CotizaYaController;
 use App\Modules\VentasDiseno\Http\Controllers\ClientsController;
 use App\Modules\VentasDiseno\Http\Controllers\ClientTaxDataController;
 use App\Modules\VentasDiseno\Http\Controllers\HomeController;
@@ -46,7 +45,7 @@ Route::prefix('pipeline')->group(function (): void {
     // Grupo 1d (REQ-019/020/023): creación manual — hasta acá la única forma de que
     // nazca una tarjeta era la regla de Lead automático (REQ-068) al crear un cliente.
     Route::post('/', [PipelineController::class, 'store'])->middleware('permission:ventas_diseno.write,ventas_diseno.pipeline.edit');
-    // SCRUM-1128 — `ventas_diseno.pipeline.read_all` (Félix) abre SOLO estas lecturas del Pipeline.
+    // SCRUM-1128 — `ventas_diseno.pipeline.read_all` (Contabilidad) abre SOLO estas lecturas del Pipeline.
     Route::get('/{id}', [PipelineController::class, 'show'])->middleware('permission:ventas_diseno.read,ventas_diseno.pipeline.read_all');
     // SCRUM-1128 — aprobación explícita "Pasar a Pedido" (única vía para generar el pedido en Bodega).
     Route::post('/{id}/pass-to-order', [PipelineController::class, 'passToOrder'])->middleware('permission:ventas_diseno.pass_to_order');
@@ -81,7 +80,7 @@ Route::prefix('projects')->group(function (): void {
 });
 
 // REQ-010: buscar/crear Cliente Master y Subcliente desde el flujo de vinculación de Pipeline.
-// SCRUM-1139 — `ventas_diseno.pipeline.edit` (Félix) abre SOLO estas 4 rutas del flujo mínimo de vinculación («Nuevo proyecto»);
+// SCRUM-1139 — `ventas_diseno.pipeline.edit` (Contabilidad) abre SOLO estas 4 rutas del flujo mínimo de vinculación («Nuevo proyecto»);
 // la pantalla Clientes completa (`/clients`, contactos, historial ICG, datos fiscales) sigue exigiendo `ventas_diseno.read/.write/.edit`.
 Route::prefix('master-clients')->group(function (): void {
     Route::get('/', [ClientController::class, 'masterClients'])->middleware('permission:ventas_diseno.read,ventas_diseno.pipeline.edit');
@@ -120,21 +119,21 @@ Route::prefix('sub-clients')->group(function (): void {
 Route::prefix('clients')->group(function (): void {
     Route::get('/', [ClientsController::class, 'index'])->middleware('permission:ventas_diseno.read');
     Route::post('/', [ClientsController::class, 'store'])->middleware('permission:ventas_diseno.write');
-    // SCRUM-1002 — directorio de datos fiscales (antes de `/{id}` para que no lo capture). Sin `ventas_diseno.read`: Felix lo usa desde Admin&Cont.
+    // SCRUM-1002 — directorio de datos fiscales (antes de `/{id}` para que no lo capture). Sin `ventas_diseno.read`: Contabilidad lo usa desde Admin&Cont.
     Route::get('/fiscal-directory', [ClientTaxDataController::class, 'directory'])->middleware('permission:ventas_diseno.edit,ventas_diseno.edit.client_tax_data,admin_contab.edit.client_itbms_exemption');
     Route::get('/{id}', [ClientsController::class, 'show'])->middleware('permission:ventas_diseno.read');
     Route::get('/{id}/projects', [ClientsController::class, 'projects'])->middleware('permission:ventas_diseno.read');
     Route::post('/{id}/sub-clients', [ClientsController::class, 'storeSubClient'])->middleware('permission:ventas_diseno.write');
     Route::patch('/sub-clients/{subClientId}/category', [ClientsController::class, 'updateSubClientCategory'])->middleware('permission:ventas_diseno.edit');
     // SCRUM-1002 — validar RUC/Cédula contra la DGI (vía MSL, 20/min por usuario) y editar los datos fiscales de un SubCliente.
-    // Edición: quien ya edita en Ventas & Diseño (`.edit`) o tiene el permiso angosto (Mark/Felix, SpecialPermissionSeeder).
+    // Edición: quien ya edita en Ventas & Diseño (`.edit`) o tiene el permiso angosto (Gerencia/Felix, SpecialPermissionSeeder).
     Route::post('/validate-tax-id', [ClientTaxDataController::class, 'validateTaxId'])->middleware(['permission:ventas_diseno.write,ventas_diseno.edit.client_tax_data', 'throttle:tax-lookup']);
     Route::patch('/sub-clients/{subClientId}/tax-data', [ClientTaxDataController::class, 'updateTaxData'])->middleware('permission:ventas_diseno.edit,ventas_diseno.edit.client_tax_data');
 });
 
 // SCRUM-684→689 (REQ-604 a REQ-609, Batch C) — Dashboard CRM, exclusivo de Gerencia
 // (REQ-609): siempre alcance de equipo completo, sin selector Mío/Equipo.
-Route::prefix('dashboard')->middleware('role:superadmin,management')->group(function (): void {
+Route::prefix('dashboard')->middleware('permission:platform.management')->group(function (): void {
     Route::get('/summary', [DashboardController::class, 'summary'])->middleware('permission:ventas_diseno.read');
     Route::post('/remind', [DashboardController::class, 'remind'])->middleware('permission:ventas_diseno.read');
 });
@@ -168,8 +167,7 @@ Route::prefix('calendar-events')->group(function (): void {
 
 // Cotización-A (REQ-024 a 032) — ver memory/project_backlog_ventas_diseno_req.md
 // para el desglose completo (Cotización-B/C/D, todavía sin implementar).
-// SCRUM-1120 — contactos, partidas e ítems de una cotización: las MISMAS rutas sirven a Cotizaciones y a CotizaYA
-// (bajo `/cotizaya/{quoteId}/...`, con el contexto de CotizaYA), así la lógica de Partidas se reutiliza sin copiarla.
+// Contactos, partidas e ítems de una cotización (rutas hijas de `/{quoteId}`).
 $quoteChildRoutes = function (): void {
 Route::prefix('/{quoteId}/contacts')->group(function (): void {
     Route::post('/', [QuoteContactController::class, 'store'])->middleware('permission:ventas_diseno.edit');
@@ -207,7 +205,7 @@ Route::prefix('quotes')->group(function () use ($quoteChildRoutes): void {
     // Grupo 5 (REQ-079 a 085) — listado con tarjetas resumen, búsqueda y filtros.
     Route::get('/', [QuoteListController::class, 'index'])->middleware('permission:ventas_diseno.read');
     Route::post('/', [QuoteController::class, 'store'])->middleware('permission:ventas_diseno.write');
-    // SCRUM-930/931/932 (rebote Daniela 2026-09-20) — sin middleware `permission:` de ruta a
+    // SCRUM-930/931/932 (rebote Gerencia 2026-09-20) — sin middleware `permission:` de ruta a
     // propósito, mismo patrón que `OrderStatusController` (ver su docblock): Cobros/Estado de
     // Cuenta/Notas de Crédito (Admin&Contab) abren el detalle/PDF de UNA cotización puntual desde
     // `QuoteViewerModal`, pero `lider_admin_contab`/`asistente_administrativa` no tienen (ni deben
@@ -242,26 +240,12 @@ Route::prefix('quotes')->group(function () use ($quoteChildRoutes): void {
     $quoteChildRoutes();
 });
 
-// SCRUM-1120 — CotizaYA: cotizaciones de venta chica, independientes del flujo comercial. El middleware activa el contexto
-// que hace visibles estas cotizaciones (fuera de él ninguna consulta las ve) y exige que el id de la ruta sea de CotizaYA.
-Route::prefix('cotizaya')->middleware('cotizaya.context')->group(function () use ($quoteChildRoutes): void {
-    Route::get('/context', [CotizaYaController::class, 'context'])->middleware('permission:ventas_diseno.read');
-    Route::get('/', [CotizaYaController::class, 'index'])->middleware('permission:ventas_diseno.read');
-    Route::post('/', [CotizaYaController::class, 'store'])->middleware('permission:ventas_diseno.write');
-    Route::get('/{id}', [CotizaYaController::class, 'show'])->whereNumber('id')->middleware('permission:ventas_diseno.read');
-    Route::put('/{id}', [CotizaYaController::class, 'update'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
-    Route::post('/{id}/generate', [CotizaYaController::class, 'generate'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
-    Route::get('/{id}/pdf', [CotizaYaController::class, 'pdf'])->whereNumber('id')->middleware('permission:ventas_diseno.read');
-
-    $quoteChildRoutes();
-});
-
 // SCRUM-703→710 (REQ-623→630, Epic CRM Batch F) — "Pedidos". SCRUM-1119: muestra márgenes, montos y
 // estado de compra, así que ya no cuelga de `ventas_diseno.read` (lo tiene todo vendedor por el
 // Pipeline): el gate es de ROL — Compras, Gerencia y superadmin, y nadie más. `lider_compras` no
 // tiene `ventas_diseno.read`, por eso tampoco se exige acá; `OrdersController` le da alcance de
 // equipo completo (ver `OrdersService::list()`).
-Route::prefix('orders')->middleware('role:lider_compras,management,superadmin')->group(function (): void {
+Route::prefix('orders')->middleware('permission:ventas_diseno.orders.access')->group(function (): void {
     Route::get('/', [OrdersController::class, 'index']);
     Route::get('/{id}', [OrdersController::class, 'show'])->whereNumber('id');
 });
@@ -290,7 +274,7 @@ Route::prefix('sales-commission-tiers')->middleware('permission:superadmin.all')
 });
 
 // SCRUM-138: texto global de Condiciones — reemplaza la edición por-cotización de
-// REQ-046 (Daniela pidió cambiarlo una vez y que aplique a toda cotización nueva desde
+// REQ-046 (Gerencia pidió cambiarlo una vez y que aplique a toda cotización nueva desde
 // ese momento). Mismo permiso individual que antes gateaba la edición por-cotización.
 Route::prefix('quote-conditions-settings')->group(function (): void {
     Route::get('/', [QuoteConditionsSettingsController::class, 'show'])->middleware('permission:ventas_diseno.edit.conditions');

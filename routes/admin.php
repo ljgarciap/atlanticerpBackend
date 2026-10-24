@@ -90,6 +90,6 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
 // ADR-006, Decisión 10 — flags transversales por persona, mismo permiso que el resto de
 // administración de usuarios (security.users), no superadmin.all.
 // SCRUM-1012 — también exige rol management/superadmin.
-Route::middleware(['role:superadmin,management', 'permission:security.users'])->group(function (): void {
+Route::middleware(['permission:platform.management', 'permission:security.users'])->group(function (): void {
     Route::patch('/users/{id}/flags', [UserController::class, 'updateFlags'])->whereNumber('id');
 });

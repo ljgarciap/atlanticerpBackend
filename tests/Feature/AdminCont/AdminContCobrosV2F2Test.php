@@ -26,7 +26,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContCobrosV2F2Test extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -39,10 +39,10 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    /** Inicia sesión como Felix y deja la bandera del concepto nuevo como se pide. */
+    /** Inicia sesión como Contabilidad y deja la bandera del concepto nuevo como se pide. */
     private function headers(bool $v2 = true): array
     {
-        $token = $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        $token = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
         $this->remakeTenant();
         app(CobrosConfigService::class)->setV2Activo($v2);
 

@@ -288,11 +288,11 @@ class ComprasHomeControllerTest extends FeatureTestCase
      * SCRUM-908 — tarjeta "Aprobaciones Pendientes". Senior Review: la autorización real de
      * `purchase_order` es `AprobacionGate::esMark()` (`ComprasSettings.primary_approver_user_id`),
      * no el permiso `compras.approve` (ese es solo el gate grueso de la ruta —
-     * `PurchaseOrderController::approve()` igual exige ser Mark, ver docblock de `AprobacionGate`).
+     * `PurchaseOrderController::approve()` igual exige ser Gerencia, ver docblock de `AprobacionGate`).
      * Este test fija a designer como `primary_approver_user_id` explícitamente para no depender del
      * fallback "sin approver configurado, no bloquea a nadie" de `esMark()`. Solo cuentan las
      * órdenes con `requires_primary_approval = true` (RN3/REQ-118) — sin ese flag, `PurchaseOrderController::
-     * approve()` las rechaza con 422 aunque el usuario sí sea Mark.
+     * approve()` las rechaza con 422 aunque el usuario sí sea Gerencia.
      */
     public function test_approvals_pending_incluye_orden_por_aprobar_para_mark(): void
     {
@@ -300,7 +300,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
         ComprasSettings::current()->update(['primary_approver_user_id' => $designer->id]);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 250, 'requires_primary_approval' => true]);
-        // Control negativo: una orden que NO requiere aprobación de Mark no debe aparecer.
+        // Control negativo: una orden que NO requiere aprobación de Gerencia no debe aparecer.
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 90, 'requires_primary_approval' => false]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');

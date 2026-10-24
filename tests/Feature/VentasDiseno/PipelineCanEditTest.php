@@ -15,7 +15,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-1128 (rebote de Pre-QA) — `can_edit` del detalle del Pipeline debe reflejar el permiso real
- * de escritura (`ventas_diseno.edit`, el mismo que exigen las rutas). Félix (solo lectura vía
+ * de escritura (`ventas_diseno.edit`, el mismo que exigen las rutas). Contabilidad (solo lectura vía
  * `pipeline.read_all`) lo recibía en true en toda etapa no Aprobada y la UI le ofrecía acciones
  * que el backend rechazaba con 403.
  */
@@ -67,7 +67,7 @@ class PipelineCanEditTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-1139 — Félix ahora SÍ edita el Pipeline (`ventas_diseno.pipeline.edit`, ver PipelineEditPermissionTest). Lo que
+     * SCRUM-1139 — Contabilidad ahora SÍ edita el Pipeline (`ventas_diseno.pipeline.edit`, ver PipelineEditPermissionTest). Lo que
      * este test protege (SCRUM-1128) es que `can_edit` refleje el permiso real: quien solo lee con `pipeline.read_all`
      * (sin `.edit` ni `pipeline.edit`) recibe false, y las rutas de escritura lo rechazan con 403.
      *
@@ -76,8 +76,8 @@ class PipelineCanEditTest extends FeatureTestCase
     public function test_quien_solo_lee_con_read_all_recibe_can_edit_false_en_etapas_no_aprobadas(string $stage): void
     {
         $this->felixComoEnScrum1139();
-        $felix = \App\Models\User::where('email', self::FELIX)->firstOrFail();
-        $felix->update(['extra_permissions' => array_values(array_diff($felix->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
+        $contabilidad = \App\Models\User::where('email', self::FELIX)->firstOrFail();
+        $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
 
         $card    = $this->makeCard($stage);
         $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');

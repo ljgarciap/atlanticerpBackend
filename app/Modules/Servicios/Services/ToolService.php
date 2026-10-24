@@ -87,7 +87,7 @@ final class ToolService
      * campo que se perdía, nunca se capturó. Buen estado no genera movimiento, así que `$detalle`
      * no aplica ahí (se ignora si llega).
      *
-     * SCRUM-779 (2do rebote de Daniela, 2026-08-24) — 2 correcciones más sobre el mismo método:
+     * SCRUM-779 (2do rebote de Gerencia, 2026-08-24) — 2 correcciones más sobre el mismo método:
      * (1) el texto de REQ-276 punto 3 pide literal "Dañada por [Nombre]"/"Pérdida por [Nombre]" en
      * Detalle — antes solo se guardaba el motivo de texto libre del modal, sin el responsable
      * (`incidentDetalle()` compone ambos). (2) restaurar a Buen estado desde Dañada/Perdida/
@@ -272,7 +272,7 @@ final class ToolService
      * SCRUM-346 es 100% frontend salvo este endpoint de lectura: filtros combinables por
      * herramienta/tipo/persona que realizó el movimiento, más reciente primero.
      *
-     * SCRUM-779 (rebote Daniela 2026-08-20 + decisión de Luis 2026-08-23) — "Saldo" se calcula
+     * SCRUM-779 (rebote Gerencia 2026-08-20 + decisión de Luis 2026-08-23) — "Saldo" se calcula
      * sobre unidades EN BUEN ESTADO agrupadas por `nombre` de herramienta (ej. "Escalera"): Ingreso
      * suma, Dañada/Perdida/Desgaste resta — ver `saldoDeltaFor()`. El saldo SIEMPRE se calcula
      * sobre el historial COMPLETO en orden cronológico (nunca sobre el subconjunto ya filtrado),

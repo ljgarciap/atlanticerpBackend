@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
  * REQ-066: nombre + rol obligatorios; al menos uno de teléfono/correo obligatorio.
  * Reusado para store y update (mismo patrón que StorePipelineCardContactRequest).
  *
- * Validación de formato agregada 2026-07-16 (hallazgo Marly, SCRUM-96): antes
+ * Validación de formato agregada 2026-07-16 (hallazgo Gerencia, SCRUM-96): antes
  * solo se rechazaba vacío/espacios, así que un nombre puramente numérico o un
  * teléfono con letras se guardaban sin aviso. `name` no puede ser solo
  * dígitos; `phone` usa el mismo patrón que `UpdateProfileRequest` (dígitos,

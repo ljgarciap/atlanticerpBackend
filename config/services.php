@@ -45,7 +45,7 @@ return [
 
     // SCRUM-943 — 2 sets de credenciales simultáneos (antes 1 solo, seleccionado por
     // MSL_FE_AMBIENTE): el ambiente real a usar por certificación ya no es una constante de
-    // despliegue, es `fiscal_settings.pac_ambiente` (dato de negocio, editable por Mark en
+    // despliegue, es `fiscal_settings.pac_ambiente` (dato de negocio, editable por Gerencia en
     // Configuración Fiscal) — ver PacProviderFactory. Ambos sets viven en el .env de CADA
     // entorno de AtlanticERP (dev/test/prod) a la vez, nunca uno solo por entorno.
     'msl_fe' => [
@@ -65,20 +65,6 @@ return [
         'tenant_id'     => env('AZURE_TENANT_ID'),
         'client_id'     => env('AZURE_CLIENT_ID'),
         'client_secret' => env('AZURE_CLIENT_SECRET'),
-    ],
-
-    // Illumination Support Tickets — Identity Bridge (SCRUM-923), ver
-    // App\Modules\Soporte\Services\TicketsIdentityBridgeService.
-    'tickets' => [
-        'base_url' => env('TICKETS_BASE_URL', 'https://tickets.atlanticerp.ai'),
-        'api_key' => env('TICKETS_API_KEY'),
-    ],
-
-    // LUMO — Bitácora de Ventas — Identity Bridge (SCRUM-925), ver
-    // App\Modules\Lumo\Services\LumoIdentityBridgeService.
-    'lumo' => [
-        'base_url' => env('LUMO_BASE_URL', 'https://lumo.atlanticerp.ai'),
-        'api_key'  => env('LUMO_API_KEY'),
     ],
 
     // Digifact — PAC directo para Facturación Electrónica (Panamá/DGI), prep sin ticket todavía,

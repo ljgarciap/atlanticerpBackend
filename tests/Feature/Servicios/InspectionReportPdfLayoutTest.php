@@ -72,7 +72,7 @@ class InspectionReportPdfLayoutTest extends FeatureTestCase
         $this->assertStringNotContainsString('border-top: 1px solid #2a2520', $html);
 
         // El espaciado antes del bloque de firmas quedó en +2 líneas en blanco (~28px sobre los
-        // 20px originales), no el valor viejo que Daniela reportó como insuficiente.
+        // 20px originales), no el valor viejo que Gerencia reportó como insuficiente.
         $this->assertStringContainsString('.signatures { display: table; width: 100%; margin-top: 48px; }', $html);
     }
 }

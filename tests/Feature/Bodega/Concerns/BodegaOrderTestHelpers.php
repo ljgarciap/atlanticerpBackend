@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * SCRUM-329 Oleada A / Batch A2 — helpers compartidos entre los tests del tablero de Pedidos.
- * Los usuarios reales de Bodega (Esteban/lider_bodega, Mariano+Osvaldo/asistente_bodega, Apolonio/
- * ayudante_general_bodega, Gary/transporte) ya existen vía `BusinessRoleUserSeeder` en TODOS los
+ * Los usuarios reales de Bodega (Lider Bodega/lider_bodega, Asistente Bodega+Asistente Bodega/asistente_bodega, Ayudante General Bodega/
+ * ayudante_general_bodega, Transporte/transporte) ya existen vía `BusinessRoleUserSeeder` en TODOS los
  * entornos incl. testing — password = el email (cast `hashed`, ver `User::casts()`). Igual que
  * `OrderCreationFromApprovedQuoteTest::grantVentasDisenoEdit()`, `bodega.read`/`bodega.write`/
  * `bodega.approve` todavía no están wireados end-to-end vía RoleModuleVisibility (Fase D pendiente

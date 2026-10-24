@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
         $this->call(AdminContPrimaryApproverBackfillSeeder::class);
         $this->call(RoleBackfillSeeder::class);
         $this->call(BusinessRoleUserSeeder::class);
-        // Después de BusinessRoleUserSeeder a propósito — resuelve al usuario Felix
+        // Después de BusinessRoleUserSeeder a propósito — resuelve al usuario Contabilidad
         // (contabilidad@test.com), que solo existe a partir de ese seeder.
         $this->call(AdminContFiscalIdentitySeeder::class);
         // SCRUM-928 — cuentas bancarias de la empresa: las crea solo si la tabla está vacía (prod) y
@@ -36,10 +36,8 @@ class DatabaseSeeder extends Seeder
             $this->call(AdminContBankAccountSeeder::class);
         }
         $this->call(VentasDisenoSalesGoalsSeeder::class);
-        // SCRUM-1120 — Cliente Master/Subcliente «CotizaYA» y su fila de ajustes (idempotente; reutiliza el de prod).
-        $this->call(CotizaYaClientSeeder::class);
         $this->call(SpecialPermissionSeeder::class);
-        // SCRUM-1139 — override de visibilidad de módulo por persona (líder de operaciones ve Admin&Cont como Félix).
+        // SCRUM-1139 — override de visibilidad de módulo por persona (líder de operaciones ve Admin&Cont como Contabilidad).
         $this->call(UserModuleVisibilityGrantSeeder::class);
         // SCRUM-881 — corrección de rol (no de persona puntual, por eso va separado de
         // SpecialPermissionSeeder): asistente_administrativa necesita can_view_team en admin_contab.

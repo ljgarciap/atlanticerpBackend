@@ -12,7 +12,7 @@ namespace App\Modules\Bodega\Support;
  * (Jefe, Asistentes, Picker, Repartidor), no solo uno.
  *
  * No hay un modelo de "picker"/"repartidor" nuevo — REQ-313/326 ya hablan de personas reales
- * sembradas por `BusinessRoleUserSeeder` con estos `role_key` (Apolonio González =
+ * sembradas por `BusinessRoleUserSeeder` con estos `role_key` (Ayudante General Bodega González =
  * `ayudante_general_bodega`, Transporte Test = `transporte`), confirmado contra Jira y el seeder
  * antes de escribir código nuevo (regla del proyecto).
  */
@@ -36,7 +36,7 @@ final class BodegaRoles
      * Bodega" en el PERMISOS del ticket (SCRUM-384/385/386), pero eso nunca se validó a nivel de
      * rol en `PickingService::startPicking()`/`updatePickingSheet()`/`completePicking()` — solo
      * `assignPicker()` (REQ-313 RN3, alcance distinto: "quién puede ASIGNAR" vs "quién ejecuta el
-     * picking ya asignado") tenía gate de rol. Un actor con rol `COURIER` (Gary/transporte, cuya
+     * picking ya asignado") tenía gate de rol. Un actor con rol `COURIER` (Transporte/transporte, cuya
      * función real es la entrega en Packing/Despacho, no el picking) podía operar picking de
      * cualquier pedido con solo tener `bodega.write` — que la migración de permisos ya le concede
      * también a `transporte`. `CAN_PICK` es deliberadamente `CAN_OPERATE` + `PICKER`, sin incluir
@@ -62,8 +62,8 @@ final class BodegaRoles
      * alcance "Equipo" en Home de Bodega debe listar ÚNICAMENTE Asistentes de Bodega, no los 4
      * roles de `ALL`. El ticket describe el selector como "una [opción] por cada Asistente/
      * Operativo de Bodega (ej. Asistente Bodega Test 2, Asistente Bodega Test)" — ambos ejemplos son
-     * `ASISTENTE_BODEGA`; QA confirmó en vivo que el Jefe (Esteban, `LIDER_BODEGA`), el Ayudante
-     * General (Apolonio, `PICKER`) y Transporte (Gary, `COURIER`) NO deben aparecer como opciones
+     * `ASISTENTE_BODEGA`; QA confirmó en vivo que el Jefe (Lider Bodega, `LIDER_BODEGA`), el Ayudante
+     * General (Ayudante General Bodega, `PICKER`) y Transporte (Transporte, `COURIER`) NO deben aparecer como opciones
      * filtrables, pese a que los 3 sí participan del flujo operativo de Pedidos — "Asistente/
      * Operativo" en el ticket es un único rol de negocio, no una unión de roles distintos.
      *

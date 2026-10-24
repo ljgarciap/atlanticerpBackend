@@ -18,7 +18,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
@@ -32,7 +32,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsDesigner(): string

@@ -39,7 +39,7 @@ final class ReplacementRequestController extends Controller
 {
     /**
      * REQ-184 — Regla de Negocio literal del Excel: "Si el margen del sustituto es MENOR a 15%,
-     * la solicitud escala a Pendiente Gerencia (notifica a Mark)". El 15% es
+     * la solicitud escala a Pendiente Gerencia (notifica a Gerencia)". El 15% es
      * `compras_settings.replacement_margin_threshold` (nunca hardcodeado, ver ADR-SCRUM245 gap #3
      * de Cybersecurity), mismo criterio de margen que `QuoteItem::violatesMinMargin()`
      * ((precio-costo)/precio × 100). Nunca crea la orden ni la aprueba sola — siempre nace
@@ -147,8 +147,8 @@ final class ReplacementRequestController extends Controller
      *
      * SCRUM-818 (rebote 2026-09-03) — `gerencia.view` se evalúa contra el JWT (`$jwtPermissions`,
      * poblado por `effectivePermissionsV2()`/`RoleModuleVisibility`), NUNCA contra
-     * `$user->hasPermission()` (v1, `security_levels.permissions ∪ extra_permissions`). David/
-     * Mark tienen `management` con acceso real a Gerencia vía v2 (rol → módulo), pero jamás
+     * `$user->hasPermission()` (v1, `security_levels.permissions ∪ extra_permissions`). Gerencia/
+     * Gerencia tienen `management` con acceso real a Gerencia vía v2 (rol → módulo), pero jamás
      * tuvieron `gerencia.view` cargado en v1 — por eso nunca podían decidir nada pese a ver la
      * pantalla. Mismo patrón ya usado en `InventoryController::resolveAccess()`/
      * `CatalogProductSearchController` para este mismo problema en otras pantallas de Compras.

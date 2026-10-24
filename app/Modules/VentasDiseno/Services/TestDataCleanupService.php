@@ -34,11 +34,11 @@ use RuntimeException;
  *
  * DISEÑO (ver docblocks de los métodos privados para el detalle de cada paso):
  *
- * 1. Candidatos DIRECTOS: audit_logs con user_id=Daniela, action='...created' (nunca
+ * 1. Candidatos DIRECTOS: audit_logs con user_id=Gerencia, action='...created' (nunca
  *    updated/deleted — editar un registro real de otra persona no lo marca), sobre los 10
  *    modelos con LogsAuditTrail (ver AUDITED_ENTITIES).
  * 2. SalesProject NO usa LogsAuditTrail — se infiere: su sub_client_id ya es candidato Y su
- *    created_at cae en la ventana [mínimo, máximo] de los audit_logs de Daniela.
+ *    created_at cae en la ventana [mínimo, máximo] de los audit_logs de Gerencia.
  * 3. Exclusión por marcador: cualquier candidato cuyo campo de label (o el de cualquier
  *    entidad en su cadena de FKs hacia arriba — ej. un QuoteItem cuyo Quote.description
  *    tiene [QA-VD]) contenga uno de los 3 marcadores queda excluido, pase lo que pase.
@@ -291,7 +291,7 @@ final class TestDataCleanupService
         }
 
         // SalesProject — inferido (no tiene LogsAuditTrail): sub_client_id ya candidato +
-        // created_at dentro de la ventana de audit_logs de Daniela.
+        // created_at dentro de la ventana de audit_logs de Gerencia.
         $candidateIds['sales_project'] = [];
         if ($candidateIds['sub_client'] !== [] && $windowFrom !== null && $windowTo !== null) {
             $rows = SalesProject::whereIn('sub_client_id', $candidateIds['sub_client'])

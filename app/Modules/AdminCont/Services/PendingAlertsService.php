@@ -22,17 +22,11 @@ use Illuminate\Support\Collection;
  */
 final class PendingAlertsService
 {
-    /**
-     * Umbral de "hace más de 10 días" para la Regla 3 — estrictamente mayor a 10 (10 días exactos
-     * todavía no alerta, 11 sí). Mismo criterio de borde ya usado en Grupo 1 para "vence hoy = ya
-     * es mora" (el límite exacto no cuenta como alerta todavía).
-     */
-    private const DIAS_UMBRAL_COMISION_PENDIENTE = 10;
-
     public function __construct(
         private readonly InvoiceService $invoices,
         private readonly CommissionOrderService $internalCommissions,
         private readonly ArchitectCommissionService $externalCommissions,
+        private readonly AdminContSettingsService $settings,
     ) {}
 
     /** @return array{count: int, items: list<PendingAlertItem>} */
@@ -146,7 +140,7 @@ final class PendingAlertsService
             // "27.607690584572 dias" (hallazgo QA SCRUM-510, 2026-08-28), mismo patrón ya
             // resuelto en ComprasHomeService::pendingOrders().
             $diasPendiente       = (int) $mesCierreMasAntiguo->diffInDays($today);
-            if ($diasPendiente <= self::DIAS_UMBRAL_COMISION_PENDIENTE) {
+            if ($diasPendiente <= $this->settings->comisionPendienteDias()) {
                 continue;
             }
 
@@ -208,7 +202,7 @@ final class PendingAlertsService
             /** @var CarbonImmutable $fechaMasAntigua */
             $fechaMasAntigua = $proyectos->min('fecha_cobro_completo');
             $diasPendiente   = (int) $fechaMasAntigua->diffInDays($today);
-            if ($diasPendiente <= self::DIAS_UMBRAL_COMISION_PENDIENTE) {
+            if ($diasPendiente <= $this->settings->comisionPendienteDias()) {
                 continue;
             }
 

@@ -30,7 +30,7 @@ use PHPUnit\Framework\TestCase;
  *
  * También cubre el fallback agregado el mismo día: con AdminContFiscalSettings totalmente vacío
  * (nombre_comercial Y direccion_fiscal — el estado real hoy en dev/test/prod, nadie llenó esa
- * pantalla todavía, exclusiva de Mark), el footer debe mostrar el mismo texto estándar ya
+ * pantalla todavía, exclusiva de Gerencia), el footer debe mostrar el mismo texto estándar ya
  * hardcodeado en quote-pdf.blade.php/service-quote-pdf.blade.php, no solo "Atlantic" a secas
  * (eso incumplía el criterio literal del ticket y la consistencia visual pedida contra
  * cotizaciones).

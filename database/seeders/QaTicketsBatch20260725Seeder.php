@@ -41,7 +41,7 @@ use Illuminate\Support\Facades\DB;
  *   (new \Database\Seeders\QaTicketsBatch20260725Seeder)->run();
  *
  * Idempotente: cada bloque se guarda por un marcador propio y no vuelve a insertar si ya corrió
- * en ese entorno. SCRUM-502 (usuario Mark + permiso Precio Socio) NO se siembra acá — ya existe
+ * en ese entorno. SCRUM-502 (usuario Gerencia + permiso Precio Socio) NO se siembra acá — ya existe
  * como dato real Tipo A (CoreUserSeeder + SpecialPermissionSeeder), solo se verifica.
  *
  * SCRUM-406/409 (agregados 2026-07-27/28, devueltos por marly.rangel el 2026-07-26 por falta de
@@ -214,7 +214,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         $gary = $this->resolveUser('transporte@test.com', 'transporte');
 
         if ($osvaldo === null || $mariano === null || $apolonio === null || $gary === null) {
-            $this->command?->warn('SCRUM-501: falta algún usuario de Bodega (Osvaldo/Mariano/Apolonio/Gary) — skip.');
+            $this->command?->warn('SCRUM-501: falta algún usuario de Bodega (Asistente Bodega/Mariano/Apolonio/Gary) — skip.');
 
             return;
         }
@@ -398,7 +398,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         $yirena = $this->resolveUser('lidercompras@test.com', 'lider_compras');
 
         if ($osvaldo === null || $mariano === null || $yirena === null) {
-            $this->command?->warn('SCRUM-670: falta Osvaldo/Mariano/Yirena — skip.');
+            $this->command?->warn('SCRUM-670: falta Asistente Bodega/Mariano/Yirena — skip.');
 
             return;
         }
@@ -498,7 +498,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         $yirena = $this->resolveUser('lidercompras@test.com', 'lider_compras');
 
         if ($osvaldo === null || $apolonio === null || $yirena === null) {
-            $this->command?->warn('SCRUM-406: falta algún usuario (Osvaldo/Apolonio/Yirena) — skip.');
+            $this->command?->warn('SCRUM-406: falta algún usuario (Asistente Bodega/Apolonio/Yirena) — skip.');
 
             return;
         }

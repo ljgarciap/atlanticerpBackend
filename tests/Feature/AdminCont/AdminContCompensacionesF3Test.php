@@ -28,7 +28,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContCompensacionesF3Test extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -43,7 +43,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
 
     private function headers(bool $v2 = true): array
     {
-        $token = $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        $token = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
         $this->remakeTenant();
         app(CobrosConfigService::class)->setV2Activo($v2);
 
@@ -84,7 +84,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         return AdminContAbono::create([
             'numero_recibo' => 'ABN-'.static::uniqueTestNumber(), 'master_client_id' => $masterId, 'invoice_id' => $invoiceId, 'monto_original' => $monto, 'monto_usado' => 0,
             'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF-F3', 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
+            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
         ]);
     }
 
@@ -94,7 +94,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
             'numero' => 'NC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'cliente' => $master->name,
             'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'factura_origen_id' => $origen->id, 'monto' => $monto, 'subtotal' => $monto, 'itbms' => 0,
             'monto_aplicado_saldo' => 0, 'monto_usado' => 0, 'motivo' => 'Saldo de nota', 'resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR,
-            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'), 'fecha' => now(),
+            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha' => now(),
         ]);
     }
 
@@ -292,7 +292,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         $h = $this->headers();
         $cobro = $this->cobroACuenta($h, $master, 70);
 
-        // El ejemplo de Luis: pagó 70, Felix decide que son solo para la de 50 (aplica 50) y conserva 20 a favor.
+        // El ejemplo de Luis: pagó 70, Contabilidad decide que son solo para la de 50 (aplica 50) y conserva 20 a favor.
         $r = $this->withHeaders($h)->postJson('/api/admin-contab/compensaciones', $this->cruce($master->id, [
             ['source_type' => 'cobro', 'source_id' => $cobro, 'invoice_id' => $f2->id, 'monto' => 50],
         ]))->assertStatus(201);
@@ -304,7 +304,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
 
         $this->remakeTenant();
         $this->assertEqualsWithDelta(50.0, (float) $f2->refresh()->saldo_aplicado, 0.001);
-        $this->assertEqualsWithDelta(0.0, (float) $f1->refresh()->saldo_aplicado, 0.001, 'La que Felix no tocó sigue pendiente.');
+        $this->assertEqualsWithDelta(0.0, (float) $f1->refresh()->saldo_aplicado, 0.001, 'La que Contabilidad no tocó sigue pendiente.');
         $this->assertEqualsWithDelta(20.0, app(PaymentLedger::class)->remanenteDeCobro($cobro), 0.001, 'Los $20 siguen como saldo a favor del cobro.');
         $linea = AdminContPaymentInvoice::where('payment_id', $cobro)->where('invoice_id', $f2->id)->firstOrFail();
         $this->assertEqualsWithDelta(50.0, (float) $linea->monto_aplicado, 0.001);
@@ -421,7 +421,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
             'numero' => 'NC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'cliente' => $master->name,
             'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA, 'factura_origen_id' => $factura->id, 'monto' => 300, 'subtotal' => 300, 'itbms' => 0,
             'monto_aplicado_saldo' => 0, 'monto_usado' => 0, 'motivo' => 'Anulación', 'resultado' => AdminContCreditNote::RESULTADO_DEVUELTO,
-            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'), 'fecha' => now(),
+            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha' => now(),
         ]);
 
         $d     = app(AccountStatementService::class)->detail($master->id, null, null, null);
@@ -546,7 +546,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
             'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA, 'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CORRECCION,
             'factura_origen_id' => $original->id, 'factura_nueva_id' => $reemplazo->id, 'monto' => 300, 'subtotal' => 300, 'itbms' => 0,
             'monto_aplicado_saldo' => 0, 'monto_usado' => 0, 'motivo' => 'Corrección', 'estado' => AdminContCreditNote::ESTADO_APLICADA,
-            'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'), 'fecha' => now(),
+            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha' => now(),
         ]);
         $remake = fn () => Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 

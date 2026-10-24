@@ -86,7 +86,7 @@ final class QuoteItemPhotoService
     }
 
     /**
-     * Rebote SCRUM-849 (Daniela, 2026-09-14) — funcionaba en dev.atlanticerp.ai, no en test.atlanticerp.ai.
+     * Rebote SCRUM-849 (Gerencia, 2026-09-14) — funcionaba en dev.atlanticerp.ai, no en test.atlanticerp.ai.
      * Causa raíz verificada en vivo: el archivo SÍ se sube correctamente a S3 en los dos entornos
      * (`Storage::disk('s3-public')->exists()` confirma su existencia), pero este método devolvía
      * la URL directa del bucket (`Storage::disk()->url()`, resuelve a `AWS_URL`) — en dev el
@@ -112,7 +112,7 @@ final class QuoteItemPhotoService
      * ítem original, la limpieza de la key vieja en uploadPhoto() no debe dejar sin imagen a la
      * copia.
      *
-     * Rebote de Daniela (2026-09-11, tercera vuelta de SCRUM-849.6) — CRÍTICO real: la foto de
+     * Rebote de Gerencia (2026-09-11, tercera vuelta de SCRUM-849.6) — CRÍTICO real: la foto de
      * TODO ítem duplicado aparecía rota (ícono roto de dompdf en Vista previa/PDF, ícono roto del
      * navegador en el formulario). Root cause verificado en vivo contra dev.atlanticerp.ai: `photo_key`
      * quedaba seteado en BD apuntando a una key que NUNCA se creó en S3. `Storage::disk()->copy()`

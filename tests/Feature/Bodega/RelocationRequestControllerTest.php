@@ -333,7 +333,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_aprobar_no_siendo_mark_retorna_403(): void
+    public function test_aprobar_no_siendo_aprobador_retorna_403(): void
     {
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
@@ -351,7 +351,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
         $this->grantBodega('multi@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
@@ -462,11 +462,11 @@ class RelocationRequestControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-458 (rebote de Gerencia Test 2026-08-13) — Daniela reportó los botones Aprobar/
+     * SCRUM-458 (rebote de Gerencia Test 2026-08-13) — Gerencia reportó los botones Aprobar/
      * Rechazar visibles para el Líder de Bodega (Lider Bodega Test) en la bandeja de
      * "Solicitudes de reubicación". Pre-QA/QA ya habían confirmado 403 real en el backend contra
-     * usuarios de Gerencia distintos de Mark (`test_aprobar_no_siendo_mark_retorna_403` arriba) y
-     * contra un usuario de Bodega genérico (QA 2026-07-26, Esteban vía UI real) — este test cierra
+     * usuarios de Gerencia distintos de Gerencia (`test_aprobar_no_siendo_aprobador_retorna_403` arriba) y
+     * contra un usuario de Bodega genérico (QA 2026-07-26, Lider Bodega vía UI real) — este test cierra
      * el mismo caso con el actor EXACTO que nombra el rebote (`lider_bodega`, no "management" ni
      * "bodega genérico"), incluso concediéndole `bodega.approve` de más (defensa en profundidad:
      * el gate real es `resolveMarkAccess()` por `primary_approver_user_id`, no el permiso de ruta).

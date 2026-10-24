@@ -15,7 +15,7 @@ use Illuminate\Console\Command;
  * confirmadas antes del fix (las nuevas ya se copian al confirmar, ver `QuoteContactCardSyncService`).
  *
  * Misma regla que el fix: SOLO AGREGA (nunca borra ni modifica un contacto de la tarjeta) y no duplica. Idempotente: una segunda corrida no
- * encuentra nada que agregar. Las CotizaYA se omiten (están aisladas de Pipeline).
+ * encuentra nada que agregar.
  */
 final class VentasDisenoBackfillCardContactsCommand extends Command
 {
@@ -58,7 +58,7 @@ final class VentasDisenoBackfillCardContactsCommand extends Command
             ->chunkById(200, function ($quotes) use ($dryRun, &$quotesSeen, &$contactsAdded): void {
                 /** @var Quote $quote */
                 foreach ($quotes as $quote) {
-                    if ($quote->isCotizaYa() || $quote->contacts->isEmpty()) {
+                    if ($quote->contacts->isEmpty()) {
                         continue;
                     }
                     $card = PipelineCard::where('sales_project_id', $quote->sales_project_id)->first();

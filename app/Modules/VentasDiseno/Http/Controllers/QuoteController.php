@@ -45,14 +45,14 @@ final class QuoteController extends Controller
     }
 
     /**
-     * SCRUM-725 — excepción nombrada por el ticket para Mark y David (grant angosto
+     * SCRUM-725 — excepción nombrada por el ticket para Gerencia y Gerencia (grant angosto
      * por persona, ver SpecialPermissionSeeder — mismo patrón que
      * ventas_diseno.select_partner_price, nunca hardcodear el email acá).
      */
     private const MARGIN_OVERRIDE_PERMISSION = 'ventas_diseno.override_min_margin';
 
     /**
-     * SCRUM-930/931/932 (rebote Daniela 2026-09-20) — mismos roles que
+     * SCRUM-930/931/932 (rebote Gerencia 2026-09-20) — mismos roles que
      * `OrderStatusController::ADMIN_CONTAB_ROLES`/`OrderBoardController::ADMIN_CONTAB_ROLES`.
      * `superadmin` no hace falta acá porque ya cae en `superadmin.all` (bypass de `hasPermission()`
      * más abajo no aplica aquí, pero `management` sí tiene `ventas_diseno.read` real y jamás llega
@@ -224,7 +224,7 @@ final class QuoteController extends Controller
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        // SCRUM-725 — con permiso de excepción (Mark/David), el margen bajo el mínimo
+        // SCRUM-725 — con permiso de excepción (Gerencia/David), el margen bajo el mínimo
         // no bloquea el guardado del borrador: se avisa y bloquea recién en confirm().
         if (
             ! $this->hasMarginOverride($user)
@@ -286,9 +286,9 @@ final class QuoteController extends Controller
      * el resto del detalle.
      *
      * SCRUM-725: guardar/generar (saveDraft/update/QuoteItemController) ya dejan
-     * pasar un margen por debajo del mínimo para Mark/David sin bloquear — el
+     * pasar un margen por debajo del mínimo para Gerencia/David sin bloquear — el
      * bloqueo real (para todos los demás) y la advertencia con confirmación
-     * explícita (para Mark/David) quedan acá, en el paso que realmente publica la
+     * explícita (para Gerencia/David) quedan acá, en el paso que realmente publica la
      * cotización. `override_margin_warning: true` en el body es la confirmación
      * explícita de "Continuar" del modal de advertencia — sin ese flag, con
      * violaciones y permiso de excepción, se responde el resumen para que el
@@ -453,7 +453,7 @@ final class QuoteController extends Controller
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        // SCRUM-725 — misma excepción que saveDraft(): Mark/David pueden guardar por
+        // SCRUM-725 — misma excepción que saveDraft(): Gerencia/David pueden guardar por
         // debajo del margen mínimo, el bloqueo real queda para confirm().
         if (
             ! $this->hasMarginOverride($user)
@@ -660,7 +660,7 @@ final class QuoteController extends Controller
      * la fila), el Responsable del proyecto —dueño de la tarjeta del Pipeline o en `compartido_con`— puede leer las
      * versiones CONFIRMADAS de su proyecto aunque las haya generado otra persona: cuando Gerencia guarda una versión
      * nueva, `quotes.owner_id` de esa fila es Gerencia («Generado por»), pero el Responsable sigue siendo el Vendedor.
-     * Nunca abre borradores ajenos, ni cotizaciones sin proyecto (ej. CotizaYA), y NO concede ninguna escritura: todos
+     * Nunca abre borradores ajenos, ni cotizaciones sin proyecto, y NO concede ninguna escritura: todos
      * los métodos que modifican siguen con `canAccess()`.
      */
     private function canView(Quote $quote, User $user): bool
@@ -792,7 +792,7 @@ final class QuoteController extends Controller
     /**
      * REQ-045: un descuento de Totales (% o $) que deje el neto en $0 o negativo
      * se rechaza siempre, sin excepción de margen — no es una regla de negocio de
-     * rentabilidad (que sí tiene la excepción Mark/David de SCRUM-725), es una
+     * rentabilidad (que sí tiene la excepción Gerencia/David de SCRUM-725), es una
      * integridad de datos mínima (un total en $0 o negativo no es un documento
      * válido para nadie).
      *
@@ -850,8 +850,7 @@ final class QuoteController extends Controller
     }
 
     /**
-     * SCRUM-1120 — el módulo CotizaYA arma su detalle con el mismo formato exacto que Cotizaciones (así reutiliza
-     * `QuotePartCard`, el PDF y los totales sin duplicar nada).
+     * Detalle de una cotización con el formato exacto que reutilizan `QuotePartCard`, el PDF y los totales.
      *
      * @return array<string, mixed>
      */
@@ -870,12 +869,7 @@ final class QuoteController extends Controller
 
         return [
             'id'               => $quote->id,
-            // SCRUM-1120 — 'comercial' | 'cotizaya'; `cotizaya` solo trae datos en las de venta chica.
             'origin'           => $quote->origin,
-            'cotizaya'         => $quote->isCotizaYa() ? [
-                'customer_name'  => $quote->cotizaya_customer_name,
-                'customer_phone' => $quote->cotizaya_customer_phone,
-            ] : null,
             'status'           => $quote->status,
             'folio'            => $quote->folio,
             'generated_at'     => $quote->generated_at?->toIso8601String(),
@@ -912,9 +906,7 @@ final class QuoteController extends Controller
                 'phone' => $quote->architect->phone, 'email' => $quote->architect->email,
             ] : null,
             // SCRUM-1121 — asociados (arquitectos, diseñadores, contratistas...): los del proyecto, o los del borrador si aún no hay proyecto.
-            'associates'       => $quote->isCotizaYa()
-                ? []
-                : $this->associates->forQuote($quote)->map(fn ($a): array => ProjectAssociateService::format($a))->values(),
+            'associates'       => $this->associates->forQuote($quote)->map(fn ($a): array => ProjectAssociateService::format($a))->values(),
             'delivery_type'    => $quote->delivery_type,
             'delivery_dates'   => $quote->deliveryDates->map(fn ($d) => $d->date->toDateString())->values(),
             'contacts'         => $quote->contacts->map(fn ($c) => [
@@ -926,7 +918,7 @@ final class QuoteController extends Controller
             'global_discount_percent' => $quote->global_discount_percent,
             // SCRUM-725 — advertencia de margen a nivel de Totales (no por producto,
             // ver 'below_min_margin' en cada ítem) + si el usuario actual puede
-            // guardar/confirmar igual pese a la violación (Mark/David). Decisión de
+            // guardar/confirmar igual pese a la violación (Gerencia/David). Decisión de
             // Luis 2026-08-05: el % real ahora se expone (antes nunca se revelaba).
             'global_below_min_margin' => $marginViolation['global'],
             'can_override_min_margin' => $this->hasMarginOverride($user),

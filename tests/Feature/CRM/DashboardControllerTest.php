@@ -269,7 +269,7 @@ class DashboardControllerTest extends FeatureTestCase
         $projectId = $this->createProject($token);
         $remId     = $this->addReminder($token, $projectId);
 
-        // Mark as done
+        // Gerencia as done
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/crm/projects/{$projectId}/reminders/{$remId}/toggle")
             ->assertStatus(200);

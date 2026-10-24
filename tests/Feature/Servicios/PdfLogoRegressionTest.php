@@ -117,7 +117,7 @@ class PdfLogoRegressionTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-781 (rebote de Daniela/QA 2026-08-24) — este PDF (botón "Ver/Imprimir" del detalle del
+     * SCRUM-781 (rebote de Gerencia/QA 2026-08-24) — este PDF (botón "Ver/Imprimir" del detalle del
      * ticket, REQ-228) es distinto de los 3 de arriba y quedó fuera del fix original: QA descargó
      * justo este ("Ticket-{numero}.pdf") y siguió viendo texto plano.
      */

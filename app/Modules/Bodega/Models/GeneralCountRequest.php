@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * SCRUM-460→466 (REQ-390→396, Bloque B5 "Conteos generales de inventario") — la contenedora del
  * conteo (ver `GeneralCountRequestLine` para el detalle por producto). A diferencia de
- * Ajustes/Reubicaciones, "Mark aprueba" (resuelto_por/resuelto_at) y "se aplica al Kardex"
+ * Ajustes/Reubicaciones, "Gerencia aprueba" (resuelto_por/resuelto_at) y "se aplica al Kardex"
  * (aplicado_at, SCRUM-466) son dos pasos desacoplados — ver ADR-SCRUM460-466-conteos-generales.md.
  *
  * @property int $id

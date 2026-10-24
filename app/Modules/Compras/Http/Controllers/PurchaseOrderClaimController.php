@@ -56,7 +56,7 @@ final class PurchaseOrderClaimController extends Controller
      * en PHP sobre la colección ya cargada en vez de repetir queries, mismo patrón que
      * InventoryController.
      *
-     * "Reportado" (chip nuevo pedido por Daniela) NO es un estado real distinto de "en_revision"
+     * "Reportado" (chip nuevo pedido por Gerencia) NO es un estado real distinto de "en_revision"
      * en el modelo actual — un reclamo nace directamente en en_revision, nunca hay un estado
      * intermedio. El chip filtra el mismo conjunto que "En revisión" hasta que exista una
      * decisión de Luis sobre si debe ser un estado real separado (documentado en el comentario

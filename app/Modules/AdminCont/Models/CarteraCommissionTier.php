@@ -9,7 +9,7 @@ use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Batch 22 (SCRUM-643→647, REQ-566→570) — tramo paramétrico de la comisión de Felix por gestión
+ * Batch 22 (SCRUM-643→647, REQ-566→570) — tramo paramétrico de la comisión de Contabilidad por gestión
  * de cartera vencida +90 días. Ver docblock de la migración de creación para el porqué de los
  * límites exactos y de esta tabla separada de `CommissionTier` (comisión interna, otro concepto).
  *

@@ -31,7 +31,7 @@ class OrderPickingFlowTest extends FeatureTestCase
     public function test_asignar_picker_mueve_a_picking_pendiente(): void
     {
         $order = $this->makeOrder();
-        $this->grantBodegaPermissions('liderbodega@test.com'); // Esteban, lider_bodega
+        $this->grantBodegaPermissions('liderbodega@test.com'); // Lider Bodega, lider_bodega
         $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
 

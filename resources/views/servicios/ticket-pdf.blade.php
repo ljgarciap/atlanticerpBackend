@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <style>
-    {{-- SCRUM-924 (rebote Daniela 2026-09-20) — el pie de página era un <div> normal al final del
+    {{-- SCRUM-924 (rebote Gerencia 2026-09-20) — el pie de página era un <div> normal al final del
          flujo del documento (solo aparecía una vez, pegado al último contenido, en vez de repetirse
          en la parte inferior de CADA página) — nunca adoptó el mecanismo de footer real que el
          resto de PDFs del proyecto ya estandarizó (SCRUM-893, ver `pdf.partials.footer.blade.php`).

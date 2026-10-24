@@ -82,7 +82,7 @@ class BodegaReportsControllerTest extends FeatureTestCase
             ->getJson('/api/bodega/reports/productivity?period=month')
             ->assertStatus(200);
 
-        // RN1 — "todos los Asistentes de Bodega activos", dinámico: Osvaldo aparece con 0 aunque
+        // RN1 — "todos los Asistentes de Bodega activos", dinámico: Asistente Bodega aparece con 0 aunque
         // no haya gestionado ningún pedido este período, en vez de desaparecer del ranking.
         $rows = collect($response->json('data'));
         $osvaldoRow = $rows->firstWhere('assistant_id', $osvaldoId);

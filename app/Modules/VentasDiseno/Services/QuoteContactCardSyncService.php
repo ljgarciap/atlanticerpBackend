@@ -10,7 +10,7 @@ use App\Modules\VentasDiseno\Models\SubClientContact;
 use Illuminate\Support\Str;
 
 /**
- * SCRUM-1121 (corrección de Daniela, 2026-10-08) — los contactos de una cotización (`SubClientContact`, pivote `quote_contacts`) y los de la
+ * SCRUM-1121 (corrección de Gerencia, 2026-10-08) — los contactos de una cotización (`SubClientContact`, pivote `quote_contacts`) y los de la
  * tarjeta de Pipeline (`PipelineCardContact`, el campo «Contacto» del detalle) son tablas distintas, sin identidad compartida. Hasta ahora
  * solo se copiaban en el otro sentido (tarjeta → cotización al crearla); al confirmar una cotización el contacto quedaba solo en la
  * cotización y había que reingresarlo a mano en Pipeline.

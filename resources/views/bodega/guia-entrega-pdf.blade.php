@@ -18,7 +18,7 @@
          solo aparecían una vez (el pie quedaba pegado después de la firma en vez de comportarse
          como footer real). --}}
 
-    {{-- SCRUM-783 (rebote Daniela 2026-08-20): `.meta-block` usaba position:absolute para las 2
+    {{-- SCRUM-783 (rebote Gerencia 2026-08-20): `.meta-block` usaba position:absolute para las 2
          columnas + un min-height fijo adivinado (110px) — los hijos absolutos no aportan altura al
          contenedor, así que .meta-block quedaba SIEMPRE en 110px sin importar cuántas líneas
          tuviera cada columna. La columna izquierda (6 líneas: Cliente/Proyecto/Dirección/
@@ -42,7 +42,7 @@
     /* Bloque de datos generales — izq. datos de cliente, der. datos de guía/logística. Alto
        dinámico (display:table), no min-height fijo — ver nota SCRUM-783 arriba del bloque HTML. */
     .meta-block { display: table; width: 100%; margin: 14px 0 18px; border-bottom: 3px solid #5BA5A0; padding-bottom: 12px; }
-    {{-- SCRUM-887 (rebote 2026-09-16, 3er rebote): Daniela pidió que las 2 columnas queden
+    {{-- SCRUM-887 (rebote 2026-09-16, 3er rebote): Gerencia pidió que las 2 columnas queden
          alineadas en su parte superior como una sola sección — se quita el padding-top:34px
          que las desalineaba a propósito (offset heredado de SCRUM-783, cuando el mockup pedía
          la columna izquierda a la altura del título en vez de a la altura del logo). --}}
@@ -74,7 +74,7 @@
          "Recibido por"/"Firma y fecha/hora" seguían con el margin-bottom base de 16px. Fix:
          `.title + .line` (hermano adyacente inmediato de `.title`), que sí apunta al primer
          `.line` sin depender de que sea el primer hijo del contenedor. --}}
-    {{-- SCRUM-887 (rebote 2026-09-20, 4to rebote) — Daniela confirmó que el espacio entre
+    {{-- SCRUM-887 (rebote 2026-09-20, 4to rebote) — Gerencia confirmó que el espacio entre
          "Recibido por" y "Firma y fecha/hora" (`.title + .line`, abajo) ya está bien, NO tocar.
          El pedido de +2 líneas en blanco del rebote 2026-09-14 nunca aterrizó donde debía: el
          `margin-top: 58px` de `.delivery-data` separa la TABLA del título "Datos de entrega",

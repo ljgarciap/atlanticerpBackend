@@ -138,7 +138,7 @@ final class QuotePartController extends Controller
 
             // SCRUM-849.6/849.7 — copia el archivo a una key propia, nunca comparte la del
             // original (ver docblock de QuoteItemPhotoService::copyPhotoTo()).
-            // Rebote de Daniela (2026-09-11) — un fallo de S3 acá no debe tumbar la duplicación
+            // Rebote de Gerencia (2026-09-11) — un fallo de S3 acá no debe tumbar la duplicación
             // de la partida entera (lo crítico del ticket es la copia de productos/referencias/
             // cantidades): se loguea y la partida queda duplicada sin foto en ese ítem puntual,
             // en vez de una respuesta 500 sin manejar.
@@ -261,10 +261,6 @@ final class QuotePartController extends Controller
     private function ensureEditable(Quote $quote): ?JsonResponse
     {
         if ($quote->confirmed_at !== null) {
-            // SCRUM-1120 — CotizaYA no tiene "nueva versión": una vez generada queda fija.
-            if ($quote->isCotizaYa()) {
-                return response()->json(['message' => 'Una cotización de CotizaYA ya generada no se puede editar.'], 422);
-            }
 
             return response()->json([
                 'message' => 'Una cotización generada no se puede editar directamente. Use "Usar como base para nueva versión".',

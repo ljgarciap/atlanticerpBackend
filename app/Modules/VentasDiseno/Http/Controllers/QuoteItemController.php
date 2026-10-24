@@ -97,7 +97,7 @@ final class QuoteItemController extends Controller
             return response()->json(['message' => 'Esta referencia ya existe'], 422);
         }
 
-        // SCRUM-725 — con permiso de excepción (Mark/David), un margen por debajo
+        // SCRUM-725 — con permiso de excepción (Gerencia/David), un margen por debajo
         // del mínimo (por producto o global) ya no bloquea acá — se avisa y se
         // bloquea recién al confirmar la cotización (QuoteController::confirm()).
         if (
@@ -400,7 +400,7 @@ final class QuoteItemController extends Controller
         // margen se SALTEA (mismo tratamiento que un duplicado, ver docblock arriba)
         // en vez de fallar toda la operación — coherente con el contrato ya existente
         // de "una sola llamada, nunca todo o nada por un ítem puntual". Con permiso de
-        // excepción (Mark/David), no se saltea nada por margen.
+        // excepción (Gerencia/David), no se saltea nada por margen.
         $hasMarginOverride = $this->hasMarginOverride($user);
 
         // Senior Review 2026-07-13, blocker — la spec pide "una sola operación,
@@ -660,10 +660,6 @@ final class QuoteItemController extends Controller
     private function ensureEditable(Quote $quote): ?JsonResponse
     {
         if ($quote->confirmed_at !== null) {
-            // SCRUM-1120 — CotizaYA no tiene "nueva versión": una vez generada queda fija.
-            if ($quote->isCotizaYa()) {
-                return response()->json(['message' => 'Una cotización de CotizaYA ya generada no se puede editar.'], 422);
-            }
 
             return response()->json([
                 'message' => 'Una cotización generada no se puede editar directamente. Use "Usar como base para nueva versión".',

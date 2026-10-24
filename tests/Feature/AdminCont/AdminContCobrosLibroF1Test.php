@@ -28,7 +28,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContCobrosLibroF1Test extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -43,7 +43,7 @@ class AdminContCobrosLibroF1Test extends FeatureTestCase
 
     private function headers(): array
     {
-        $token = $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        $token = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
 
         return $this->authHeaders($token);
     }
@@ -66,7 +66,7 @@ class AdminContCobrosLibroF1Test extends FeatureTestCase
         return AdminContAbono::create([
             'numero_recibo' => 'ABN-'.static::uniqueTestNumber(), 'master_client_id' => $masterId, 'monto_original' => $monto, 'monto_usado' => $usado,
             'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF-F1',
-            'estado' => AdminContAbono::ESTADO_CONFIRMADO, 'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'),
+            'estado' => AdminContAbono::ESTADO_CONFIRMADO, 'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
             'fecha_registro' => now(), 'fecha_confirmacion' => now(),
         ]);
     }
@@ -272,7 +272,7 @@ class AdminContCobrosLibroF1Test extends FeatureTestCase
             'numero' => 'NC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'cliente' => $master->name,
             'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'factura_origen_id' => $origen->id, 'monto' => 100, 'subtotal' => 100, 'itbms' => 0,
             'monto_aplicado_saldo' => 0, 'monto_usado' => 0, 'motivo' => 'Saldo de nota', 'resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR,
-            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'), 'fecha' => now(),
+            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha' => now(),
         ]);
         $h = $this->headers();
 
@@ -359,7 +359,7 @@ class AdminContCobrosLibroF1Test extends FeatureTestCase
             'numero' => 'NC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'cliente' => $master->name,
             'tipo' => AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, 'factura_origen_id' => $factura->id, 'monto' => 80, 'subtotal' => 80, 'itbms' => 0,
             'monto_aplicado_saldo' => 80, 'monto_usado' => 0, 'motivo' => 'Devolución', 'resultado' => AdminContCreditNote::RESULTADO_APLICADO_SALDO,
-            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::FELIX_EMAIL)->value('id'), 'fecha' => now(),
+            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha' => now(),
         ]);
 
         $facturas = app(PaymentLedgerVerifier::class)->verify()['facturas'];

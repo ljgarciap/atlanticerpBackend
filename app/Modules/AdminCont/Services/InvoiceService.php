@@ -1294,7 +1294,7 @@ final class InvoiceService
             // pero solo se expone acá cuando hay algo vigente que mostrar (pendiente o aprobada).
             'motivo_incobrable'     => $cobrabilidad !== 'normal' ? $invoice?->motivo_incobrable : null,
             // REQ-451 RN1/RN2 — facturada y no incobrable APROBADA. Una propuesta pendiente sigue
-            // contando (RN2: "sigue siendo técnicamente cobrable hasta que Mark decida").
+            // contando (RN2: "sigue siendo técnicamente cobrable hasta que Gerencia decida").
             // SCRUM-858 — el botón quedaba visible aun con la factura ya cobrada porque esta
             // condición nunca miraba `saldo_aplicado` (que solo se incrementa con pagos
             // `estado=confirmado`, ver ClientCollectionReportService.php). Mismo criterio de
@@ -1407,7 +1407,7 @@ final class InvoiceService
     }
 
     /**
-     * REQ-448 — Felix/Mark/Gerencia proponen, solo Mark decide (gate en el middleware de la ruta).
+     * REQ-448 — Contabilidad/Mark/Gerencia proponen, solo Gerencia decide (gate en el middleware de la ruta).
      * RN1: solo sobre facturas emitidas vigentes (ni pendientes, ni ya anuladas). RN5: no se puede
      * proponer un segundo cambio mientras el primero sigue sin resolver.
      *
@@ -1688,7 +1688,7 @@ final class InvoiceService
 
     /**
      * Batch 22 (SCRUM-645, REQ-568) — "Cobrado de cartera +90 días" del mes en curso, para la
-     * tarjeta de Reportes (y la base de la comisión de Felix, REQ-567). RN3 REQ-568/RN4 REQ-567:
+     * tarjeta de Reportes (y la base de la comisión de Contabilidad, REQ-567). RN3 REQ-568/RN4 REQ-567:
      * nunca depende del selector de período de Reportes, siempre mes calendario en curso.
      *
      * Antigüedad calculada AL MOMENTO DEL PAGO (no "hoy") — misma fórmula de vencimiento que

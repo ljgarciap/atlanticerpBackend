@@ -68,7 +68,7 @@ final class JwtClaimsBuilder
     }
 
     /**
-     * SCRUM-1157 — identidad, no permiso: ¿es esta persona el aprobador Mark (`primary_approver_user_id` de la configuración fiscal)? El middleware
+     * SCRUM-1157 — identidad, no permiso: ¿es esta persona el aprobador Gerencia (`primary_approver_user_id` de la configuración fiscal)? El middleware
      * `primary_approver_only` ya corta con 403 «Datos de la Empresa» y «Configuración Fiscal» a cualquier otra persona; el flag solo deja que el menú no
      * las ofrezca (superadmin las ve por `superadmin.all`, no por este flag). Es un dato visual: si no se puede resolver NO debe romper el
      * login, así que se reporta el error y devuelve false.

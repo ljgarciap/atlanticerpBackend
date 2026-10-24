@@ -158,17 +158,17 @@ class DirectoryControllerTest extends FeatureTestCase
     {
         $token = $this->loginAs();
 
-        $this->createProject($token, ['arquitecto' => 'Carlos Ruiz']);
+        $this->createProject($token, ['arquitecto' => 'Tecnico Servicios Ruiz']);
         $this->createProject($token, ['arquitecto' => 'Diana Lopez']);
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/crm/directory?type=arquitecto&q=carlos');
+            ->getJson('/api/crm/directory?type=arquitecto&q=tecnico');
 
         $response->assertStatus(200);
 
         $names = collect($response->json('entries'))->pluck('nombre')->all();
 
-        $this->assertContains('Carlos Ruiz', $names);
+        $this->assertContains('Tecnico Servicios Ruiz', $names);
         $this->assertNotContains('Diana Lopez', $names);
     }
 }

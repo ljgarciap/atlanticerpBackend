@@ -10,7 +10,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 
 /**
- * Batch 22 (SCRUM-643→647, REQ-567) — comisión de Felix por gestión de cartera vencida +90 días.
+ * Batch 22 (SCRUM-643→647, REQ-567) — comisión de Contabilidad por gestión de cartera vencida +90 días.
  * RN4: nunca depende del selector de período de Reportes, siempre mes en curso — por eso este
  * servicio no toma ningún parámetro de ventana, a diferencia de `CashPositionService::projected()`.
  */
@@ -64,7 +64,7 @@ final class CarteraCommissionService
 
     /**
      * Label genérico armado desde los montos de la tabla — nunca un string fijo por tramo, para
-     * que siga siendo correcto si Mark edita los límites vía CRUD.
+     * que siga siendo correcto si Gerencia edita los límites vía CRUD.
      *
      * `monto_maximo` real de un tramo es un borde inclusivo tipo 14999.99 (ver docblock de la
      * migración) — mostrarlo "tal cual" redondeado al millar más cercano da "$15.0K" en vez de

@@ -45,7 +45,7 @@ final class TicketPdfService
      */
     public function generate(Ticket $ticket, array $detail): PdfDocument
     {
-        // SCRUM-924 (rebote Daniela 2026-09-20) — isPhpEnabled requerido para el pie de página
+        // SCRUM-924 (rebote Gerencia 2026-09-20) — isPhpEnabled requerido para el pie de página
         // real (page_text(), ver `ticket-pdf.blade.php`), mismo patrón que el resto de servicios
         // de PDF del proyecto (SCRUM-893). Sin esto dompdf ignora el bloque <script type="text/php">
         // en silencio, sin error — el pie seguía siendo contenido normal del documento.

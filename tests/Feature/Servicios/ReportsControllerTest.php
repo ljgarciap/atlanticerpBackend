@@ -468,7 +468,7 @@ class ReportsControllerTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
-    /** RN2 — cualquier otro usuario (ej. Aaron/lider_servicios) recibe 403, nunca un objeto vacío. */
+    /** RN2 — cualquier otro usuario (ej. Lider Servicios/lider_servicios) recibe 403, nunca un objeto vacío. */
     public function test_comision_carlos_vergara_otro_usuario_recibe_403(): void
     {
         $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))

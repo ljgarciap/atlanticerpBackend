@@ -79,7 +79,7 @@ final class TransversalCleanupTestDataCommandTest extends FeatureTestCase
         $keepUserId = $this->userIdByEmail('designer@atlantic.test');
 
         $project = Project::create([
-            'nombre'     => 'Proyecto de Paola/keep-user #'.self::uniqueTestNumber(),
+            'nombre'     => 'Proyecto de Vendedor Disenador/keep-user #'.self::uniqueTestNumber(),
             'etapa'      => 'lead',
             'tipo'       => 'diseno',
             'created_by' => $keepUserId,

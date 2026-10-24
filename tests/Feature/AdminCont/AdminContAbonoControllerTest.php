@@ -16,7 +16,7 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-902 — Registrar Abono (4O). */
 class AdminContAbonoControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -26,7 +26,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function makeBankAccount(): AdminContBankAccount

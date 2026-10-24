@@ -7,7 +7,7 @@ namespace App\Modules\VentasDiseno\Services;
 use App\Shared\Support\AbstractQuotePdfLayoutEstimator;
 
 /**
- * SCRUM-801 (3er rebote, 2026-09-01) — Daniela pidió que Observaciones+Instrucciones de
+ * SCRUM-801 (3er rebote, 2026-09-01) — Gerencia pidió que Observaciones+Instrucciones de
  * pago+Condiciones+Totales+Firma se comporten como UN bloque indivisible, pegado al pie de la
  * página que lo contiene (con el espacio en blanco sobrante ANTES del bloque, no después).
  *

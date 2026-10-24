@@ -11,7 +11,7 @@ use RuntimeException;
 
 /**
  * SCRUM-901 — "Limpieza de datos de prueba": conserva únicamente la data del usuario indicado
- * (--keep-user, default Paola — flujos completos de principio a fin en todos los módulos) y
+ * (--keep-user, default Vendedor Disenador — flujos completos de principio a fin en todos los módulos) y
  * purga la de cualquier otro usuario, transversal a CRM, Ventas & Diseño, Compras, Bodega,
  * Servicios y Administración & Contabilidad. Ver TransversalTestDataCleanupService para el
  * diseño completo del algoritmo.

@@ -50,7 +50,7 @@ Route::prefix('calendar')->group(function (): void {
 });
 
 // Batch 10 (decisión de Luis 2026-08-11) creó esta ruta con lectura amplia y escritura exclusiva
-// de Gerencia. SCRUM-780 (Daniela, 2026-08-19) la reemplaza: los valores de Ajustes son
+// de Gerencia. SCRUM-780 (Gerencia, 2026-08-19) la reemplaza: los valores de Ajustes son
 // parámetros administrativos que ningún perfil operativo debe poder leer, no solo editar — antes
 // lider_servicios/tecnico_servicios/vendedor_disenador/garantias_servicios podían leerlos por API
 // aunque el menú ya estuviera oculto para ellos en el frontend. Mismo gate que la escritura.
@@ -62,7 +62,7 @@ Route::patch('/settings', [ServiciosSettingsController::class, 'update'])
 // Fase 4 — Servicios, pantalla "Reportes" (SCRUM-350→356, REQ-280→286). 7 endpoints GET de solo
 // lectura, sin tablas nuevas. Lectura: mismo permiso que el resto del módulo
 // (permission:servicios.read), salvo /comision-carlos-vergara — RN2 (REQ-285) restringe la
-// visibilidad al propio Carlos y a Gerencia, mismo permiso angosto que ya usa
+// visibilidad al propio Tecnico Servicios y a Gerencia, mismo permiso angosto que ya usa
 // /internal-technicians/{id}/commission (servicios.technicians.commission.view_own, Fase 2 de la
 // auditoría de permisos — el chequeo fino "es este técnico o es Gerencia" vive en el controller,
 // la ruta solo deja pasar a quien PODRÍA calificar).
@@ -84,7 +84,7 @@ Route::prefix('reportes')->group(function (): void {
 Route::get('/quotes', [ServiceQuoteController::class, 'globalIndex'])
     ->middleware('permission:servicios.read');
 
-// REQ-245 RN4 — quién puede crear un ticket: Aaron/Líder de Servicios, superadmin, Gerencia
+// REQ-245 RN4 — quién puede crear un ticket: Lider Servicios/Líder de Servicios, superadmin, Gerencia
 // (`management`) y Vendedor/Diseñador (`vendedor_disenador`) — este último tiene servicios.read
 // pero NO servicios.write (solo lectura general, ver docblock de
 // 2026_08_02_100003_grant_servicios_view_to_vendedor_disenador.php, que dejó esta excepción
@@ -125,7 +125,7 @@ Route::prefix('tickets')->group(function (): void {
     Route::get('/{id}/pdf', [TicketController::class, 'pdf'])->middleware('permission:servicios.read');
 
     // REQ-218 RN7 / REQ-221 RN6 — el cambio de estado (select inline o arrastre en el tablero) es
-    // EXCLUSIVO de Aaron/Líder de Servicios: técnico interno y Gerencia ven, no modifican, pese a
+    // EXCLUSIVO de Lider Servicios/Líder de Servicios: técnico interno y Gerencia ven, no modifican, pese a
     // que ambos tienen `servicios.edit` en general (ver migración
     // 2026_08_02_100004_grant_servicios_edit_to_technician_roles.php). Permiso angosto
     // `servicios.tickets.manage` (Fase 2, 2026-08-30) — restricción más fina que el permiso de
@@ -134,7 +134,7 @@ Route::prefix('tickets')->group(function (): void {
         ->middleware('permission:servicios.tickets.manage');
 
     // REQ-225 RN1 / REQ-226 RN1 — edición global y Agendar/Reagendar son EXCLUSIVOS de
-    // Aaron/Líder de Servicios, mismo criterio y mismo permiso angosto que el cambio de estado.
+    // Lider Servicios/Líder de Servicios, mismo criterio y mismo permiso angosto que el cambio de estado.
     Route::patch('/{id}', [TicketController::class, 'update'])
         ->middleware('permission:servicios.tickets.manage');
     Route::patch('/{id}/agendar', [TicketController::class, 'schedule'])
@@ -195,11 +195,11 @@ Route::prefix('tickets')->group(function (): void {
     // Fase 4 — Servicios, Batch 11 (REQ-229→234). Cotización de Servicio. Lectura: mismo permiso
     // que el resto del módulo (visible para todos los roles de Servicios, ownership real
     // verificado dentro de `ServiceQuoteService::assertCanEdit()` para las rutas de escritura).
-    // Escritura general (generar/guardar/enviar/ítems): Aaron/Líder de Servicios + los 2 roles de
+    // Escritura general (generar/guardar/enviar/ítems): Lider Servicios/Líder de Servicios + los 2 roles de
     // técnico interno — mismo criterio que Informe de Inspección (permission:servicios.field_work.edit
     // cubre "quién puede intentar", el ownership por ticket puntual se valida dentro del
     // servicio). Decidir
-    // (Aprobar/Rechazar): EXCLUSIVO de Aaron/Líder de Servicios (REQ-234 RN), más angosto que el
+    // (Aprobar/Rechazar): EXCLUSIVO de Lider Servicios/Líder de Servicios (REQ-234 RN), más angosto que el
     // resto — un técnico interno nunca decide su propia cotización.
     Route::prefix('/{id}/quote')->group(function (): void {
         Route::get('/', [ServiceQuoteController::class, 'show'])->middleware('permission:servicios.read');
@@ -232,12 +232,12 @@ Route::prefix('tickets')->group(function (): void {
 
 // Fase 4 — Servicios, Batch 5 (REQ-263→267). Técnicos externos.
 // Lectura: permiso angosto `servicios.external_technicians.view` (Fase 2, 2026-08-30), no el
-// genérico `servicios.read` — RN5 (REQ-263) solo otorga solo-consulta a Aaron/técnicos
+// genérico `servicios.read` — RN5 (REQ-263) solo otorga solo-consulta a Lider Servicios/técnicos
 // internos/Gerencia — vendedor_disenador tiene servicios.read por otras razones del módulo
 // (crear/ver tickets), pero el matriz de permisos del Excel marca N/A para Vendedor/Diseñador en
 // las 5 filas de Técnicos Externos (hallazgo Pre-QA 2026-08-09, ver
 // docs/pre-qa/scrum333-337-servicios-batch5-tecnicos-externos-20260809.md). Escritura (alta,
-// tarifa, activar/inactivar): permiso angosto `servicios.field_ops.admin`, Aaron/Líder de
+// tarifa, activar/inactivar): permiso angosto `servicios.field_ops.admin`, Lider Servicios/Líder de
 // Servicios y Gerencia (RN1 repetida en REQ-264/265/266).
 Route::prefix('external-technicians')->group(function (): void {
     Route::get('/', [ExternalTechnicianController::class, 'index'])->middleware('permission:servicios.external_technicians.view');
@@ -263,7 +263,7 @@ Route::prefix('internal-technicians')->group(function (): void {
     Route::get('/agenda', [InternalTechnicianController::class, 'agenda'])->middleware('permission:servicios.read');
 
     // REQ-292 RN2 — lectura visible para el módulo, edición exclusiva de Gerencia ("ajustables
-    // por Gerencia sin intervención de Tecnología" — Aaron no está en esa lista, a diferencia de
+    // por Gerencia sin intervención de Tecnología" — Lider Servicios no está en esa lista, a diferencia de
     // la captura mensual en sí).
     Route::get('/sla-settings', [InternalTechnicianController::class, 'slaSettings'])
         ->middleware('permission:servicios.read');
@@ -273,7 +273,7 @@ Route::prefix('internal-technicians')->group(function (): void {
     Route::get('/{id}/visitas-hoy', [InternalTechnicianController::class, 'visitsToday'])
         ->middleware('permission:servicios.read');
 
-    // REQ-292 RN5 — Aaron y Gerencia capturan/editan.
+    // REQ-292 RN5 — Lider Servicios y Gerencia capturan/editan.
     Route::middleware('permission:servicios.field_ops.admin')->group(function (): void {
         Route::get('/{id}/commission-capture', [InternalTechnicianController::class, 'commissionCapture']);
         Route::put('/{id}/commission-capture', [InternalTechnicianController::class, 'saveCommissionCapture']);
@@ -281,11 +281,11 @@ Route::prefix('internal-technicians')->group(function (): void {
 
     // REQ-258 RN8 — tarjeta+detalle de comisión. `permission:` acá solo deja pasar a quien PODRÍA
     // calificar (Gerencia o cualquier técnico interno) — la restricción real ("es este técnico o
-    // es Gerencia", nunca Aaron ni otro técnico) vive en el controller, ver su docblock.
+    // es Gerencia", nunca Lider Servicios ni otro técnico) vive en el controller, ver su docblock.
     Route::get('/{id}/commission', [InternalTechnicianController::class, 'commission'])
         ->middleware('permission:servicios.technicians.commission.view_own');
 
-    // REQ-259 RN5 — exclusivo de Aaron/Líder de Servicios (superadmin incluido por consistencia
+    // REQ-259 RN5 — exclusivo de Lider Servicios/Líder de Servicios (superadmin incluido por consistencia
     // con el resto del módulo).
     Route::post('/', [InternalTechnicianController::class, 'store'])
         ->middleware('permission:servicios.tickets.manage');
@@ -299,7 +299,7 @@ Route::prefix('internal-technicians')->group(function (): void {
 // Fase 4 — Servicios, Batch 13 parte 1 (REQ-268→272, Grupo D "Herramientas"). Lectura: mismo
 // permiso que el resto del módulo (visible para todos los roles, RN de REQ-268). Escritura
 // (cambio de estado, reasignación, solicitudes de compra/reposición/recepción): exclusiva de
-// Aaron/Líder de Servicios (RN5 repetida en las 5 historias) — superadmin incluido por
+// Lider Servicios/Líder de Servicios (RN5 repetida en las 5 historias) — superadmin incluido por
 // consistencia con el resto del módulo.
 Route::prefix('tools')->group(function (): void {
     Route::get('/', [ToolController::class, 'index'])->middleware('permission:servicios.read');
@@ -309,10 +309,10 @@ Route::prefix('tools')->group(function (): void {
     Route::get('/purchase-requests', [ToolController::class, 'purchaseRequests'])
         ->middleware('permission:servicios.read');
     // Grupo D parte 2 (REQ-276, SCRUM-346) — Kardex de herramientas. Senior Review 2026-08-13:
-    // el ticket restringe esto a "Aaron y Gerencia" explícitamente, NO a todo el módulo (a
+    // el ticket restringe esto a "Lider Servicios y Gerencia" explícitamente, NO a todo el módulo (a
     // diferencia de `/` y `/purchase-requests` arriba) — el frontend ya lo gateaba por rol, pero
     // el backend quedaba abierto a `servicios.read` (técnico/garantías/vendedor podían pegarle
-    // directo a la API). Mismo string de rol ya usado en el resto del módulo para "Aaron y
+    // directo a la API). Mismo string de rol ya usado en el resto del módulo para "Lider Servicios y
     // Gerencia" (ver Técnicos Internos/comisión más abajo).
     Route::get('/movements', [ToolController::class, 'movements'])
         ->middleware('permission:servicios.field_ops.admin');
@@ -328,7 +328,7 @@ Route::prefix('tools')->group(function (): void {
 // Fase 4 — Servicios, Grupo D parte 2 (REQ-273→275/291, SCRUM-343/344/345/361) — "Reserva
 // Servicios" de insumos. Ver docblock de InsumoService: reusa Kardex/PurchaseOrder de
 // Bodega/Compras, sin tabla de stock propia. Lectura: mismo permiso que el resto del módulo.
-// Escritura (agregar insumo, solicitar compra): exclusiva de Aaron/Líder de Servicios, mismo
+// Escritura (agregar insumo, solicitar compra): exclusiva de Lider Servicios/Líder de Servicios, mismo
 // criterio que Herramientas (Grupo D parte 1).
 Route::prefix('insumos')->group(function (): void {
     Route::get('/', [InsumoController::class, 'index'])->middleware('permission:servicios.read');

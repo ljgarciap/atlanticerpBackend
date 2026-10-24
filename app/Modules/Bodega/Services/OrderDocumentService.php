@@ -30,7 +30,7 @@ final class OrderDocumentService
         // teléfono/correo sueltos en el documento rediseñado (ver `guia-entrega-pdf.blade.php`),
         // mismo criterio que `OrderBoardService::detail()` para el modal "Ver detalle".
         //
-        // SCRUM-894 (rebote Daniela, 2026-09-13) — `items` se recarga con `load()` (SIEMPRE
+        // SCRUM-894 (rebote Gerencia, 2026-09-13) — `items` se recarga con `load()` (SIEMPRE
         // fresco desde BD), nunca `loadMissing()`: `DeliveryService::registerDelivery()` llama a
         // este método DESPUÉS de actualizar `qty_delivered` de cada item vía instancias de
         // Eloquent separadas (`$locked->items()->lockForUpdate()->findOrFail(...)`), que nunca

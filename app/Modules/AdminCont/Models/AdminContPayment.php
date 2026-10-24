@@ -93,7 +93,7 @@ class AdminContPayment extends Model
     ];
 
     public const ESTADO_CONFIRMADO             = 'confirmado';
-    // SCRUM-1168 F4 — cobro anulado (aprobado por Mark): queda en el historial; sus efectos se reversaron con contra-movimientos.
+    // SCRUM-1168 F4 — cobro anulado (aprobado por Gerencia): queda en el historial; sus efectos se reversaron con contra-movimientos.
     public const ESTADO_ANULADO                = 'anulado';
     public const ESTADO_ESPERANDO_CONFIRMACION = 'esperando_confirmacion';
 

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-924 (rebote reportado por Daniela, ticket real INS-2026-0003 en test.atlanticerp.ai) — "No se
+ * SCRUM-924 (rebote reportado por Gerencia, ticket real INS-2026-0003 en test.atlanticerp.ai) — "No se
  * pudo generar el PDF" al ver/imprimir el ticket. Causa raíz confirmada en vivo contra
  * test.atlanticerp.ai (GAR-2026-0003, que sí tenía un adjunto en el momento del diagnóstico):
  * `ticket-pdf.blade.php` hacía `implode(', ', $detail['adjuntos'])`, pero `$detail['adjuntos']`

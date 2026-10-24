@@ -77,7 +77,7 @@ Route::prefix('warehouses')->group(function (): void {
 });
 
 // SCRUM-457/458/459 (REQ-387/388/389, Bloque B4 "Reubicación entre bodegas") — Bodega solicita
-// reubicar un producto de una bodega a otra, Mark aprueba/rechaza. Ver
+// reubicar un producto de una bodega a otra, Gerencia aprueba/rechaza. Ver
 // ADR-SCRUM454-459-reubicacion-bodegas.md y `AdjustmentRequestController` (mismo patrón).
 Route::prefix('relocations')->group(function (): void {
     Route::get('/', [RelocationRequestController::class, 'index'])->middleware('permission:bodega.read');
@@ -215,7 +215,7 @@ Route::prefix('general-counts')->group(function (): void {
     // disponible. "Continuar" retoma la evaluación (mismo estado, el frontend navega al detalle ya
     // cargado con lo que haya). "Eliminar" borra el borrador completo — solo si NO fue enviado a
     // aprobación (pendiente_aprobacion/aprobada/rechazada quedan afuera, mismo criterio que el
-    // resto del módulo: una vez que Mark entra en el flujo, ya no es "solo un borrador").
+    // resto del módulo: una vez que Gerencia entra en el flujo, ya no es "solo un borrador").
     Route::post('/{id}/continue', [GeneralCountController::class, 'continueDraft'])->middleware('permission:bodega.write');
     Route::delete('/{id}', [GeneralCountController::class, 'destroy'])->middleware('permission:bodega.write');
 });
@@ -224,7 +224,7 @@ Route::prefix('general-counts')->group(function (): void {
 // ADR-SCRUM473-489-devoluciones.md. Ciclo completo de devolución de cliente: bandeja, buscador de
 // guía de entrega origen, creación, detalle, carga de documento firmado, formulario/guía de
 // entrega PDF, confirmar recepción física (suma inventario), rechazar (potestad exclusiva de
-// Bodega, sin aprobación de Mark) y finalizar (nota de crédito simulada). Permiso estándar en
+// Bodega, sin aprobación de Gerencia) y finalizar (nota de crédito simulada). Permiso estándar en
 // todas — sin permiso angosto nuevo, todas las tickets dicen "Visible para todos los perfiles de
 // Bodega" (a diferencia de Zona Libre, que sí necesitó uno para el aprobador de Compras).
 // Rutas de segmento fijo ANTES de "/{id}" por la misma razón que en "orders/"/"inventory/" arriba.

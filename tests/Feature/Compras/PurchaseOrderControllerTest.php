@@ -107,7 +107,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $response->assertJsonPath('lines.0.subtotal', 37.5);
         $response->assertJsonPath('total_amount', 37.5);
         // SCRUM-204 (2026-08-06, hallazgo Gerencia Test): sin shipping_type/who_pays_shipping no
-        // requiere aprobación de Mark (RN3/REQ-118) — nace directo en "Pendiente/Por liquidar".
+        // requiere aprobación de Gerencia (RN3/REQ-118) — nace directo en "Pendiente/Por liquidar".
         $response->assertJsonPath('status', PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR);
     }
 
@@ -546,10 +546,10 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     /**
      * `PrimaryApproverBackfillSeeder` (Pre-QA 2026-07-24) ya deja `primary_approver_user_id` seteado al
-     * usuario real de Mark tras el seeding normal — este test seteaba a `designer` como aprobador
+     * usuario real de Gerencia tras el seeding normal — este test seteaba a `designer` como aprobador
      * implícito confiando en que el valor global quedara NULL, lo cual enmascaraba el gate real
-     * (SCRUM-206). Se autocontiene seteando `designer` como el Mark configurado, mismo patrón que
-     * `test_aprobar_orden_siendo_el_mark_configurado_es_exitosa` de abajo.
+     * (SCRUM-206). Se autocontiene seteando `designer` como el Gerencia configurado, mismo patrón que
+     * `test_aprobar_orden_siendo_el_aprobador_configurado_es_exitosa` de abajo.
      */
     public function test_aprobar_orden_exitosa(): void
     {
@@ -730,14 +730,14 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-206 (hallazgo QA 2026-07-16): cualquier usuario con `compras.approve` podía aprobar,
-     * no solo Mark — usa `gerencia@atlantic.test` como "no-Mark" en vez de la cuenta real de
-     * Mark (CoreUserSeeder, password no fijo en testing) para no depender de esa credencial.
+     * no solo Gerencia — usa `gerencia@atlantic.test` como "no-Mark" en vez de la cuenta real de
+     * Gerencia (CoreUserSeeder, password no fijo en testing) para no depender de esa credencial.
      */
-    public function test_aprobar_orden_no_siendo_el_mark_configurado_retorna_403(): void
+    public function test_aprobar_orden_no_siendo_el_aprobador_configurado_retorna_403(): void
     {
         $this->grantCompras('management@atlantic.test', ['compras.approve']);
         // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
         $this->grantCompras('multi@atlantic.test', ['compras.approve']);
 
@@ -758,8 +758,8 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $this->assertNull(PurchaseOrder::find($order->id)?->approved_by);
     }
 
-    /** superadmin.all bypassa el gate de Mark (decisión de Luis, 2026-08-22) — a diferencia de
-     *  Gerencia genérica sin ser el Mark configurado (test de arriba, sigue en 403). */
+    /** superadmin.all bypassa el gate de Gerencia (decisión de Luis, 2026-08-22) — a diferencia de
+     *  Gerencia genérica sin ser el Gerencia configurado (test de arriba, sigue en 403). */
     public function test_aprobar_orden_superadmin_bypassa_el_gate_de_mark(): void
     {
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
@@ -776,7 +776,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
-    public function test_aprobar_orden_siendo_el_mark_configurado_es_exitosa(): void
+    public function test_aprobar_orden_siendo_el_aprobador_configurado_es_exitosa(): void
     {
         $this->grantCompras('management@atlantic.test', ['compras.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');

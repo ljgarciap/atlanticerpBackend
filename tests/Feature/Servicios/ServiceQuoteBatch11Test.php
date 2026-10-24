@@ -22,13 +22,13 @@ use Tests\Feature\FeatureTestCase;
  */
 class ServiceQuoteBatch11Test extends FeatureTestCase
 {
-    private const LIDER_SERVICIOS = 'liderservicios@test.com'; // Aaron Leis
+    private const LIDER_SERVICIOS = 'liderservicios@test.com'; // Lider Servicios Leis
 
     private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com'; // Tecnico Servicios Test
 
     private const OTRO_TECNICO = 'tecnicoservicios2@test.com'; // Tecnico Servicios Test 2
 
-    private const MANAGEMENT = 'gerencia3@test.com'; // Mark — desglose de costos
+    private const MANAGEMENT = 'gerencia3@test.com'; // Gerencia — desglose de costos
 
     protected function setUp(): void
     {
@@ -423,7 +423,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
                 'tipo' => 'subcontracted', 'external_technician_id' => $technician->id, 'quantity' => 1, 'margin_percent' => 50,
             ])->assertStatus(201);
 
-        // Aaron tiene el grant especial (SpecialPermissionSeeder) -> ve cost_reference Y margin_percent.
+        // Lider Servicios tiene el grant especial (SpecialPermissionSeeder) -> ve cost_reference Y margin_percent.
         $aaronDetail = $this->withHeaders($this->authHeaders($aaronToken))
             ->getJson("/api/servicios/tickets/{$ticket->id}/quote")
             ->assertStatus(200);
@@ -531,7 +531,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
         $this->assertEquals(25.0, $row['costo_dia']);
         $this->assertEquals(30.0, $row['margen_percent']);
 
-        // Carlos (tecnico_servicios) no tiene puede_ver_costos: precio_final sigue visible, pero
+        // Tecnico Servicios (tecnico_servicios) no tiene puede_ver_costos: precio_final sigue visible, pero
         // costo_dia/margen_percent no viajan en absoluto (ni siquiera en null) — mismo criterio
         // "ausente, no oculto" que margin_percent en ServiceQuoteController::formatItem().
         $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
@@ -546,9 +546,9 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
 
     /**
      * SCRUM-337 (rebote QA 2026-08-13, BUG medio) — la tarifa/día del técnico externo dependía
-     * SOLO de `tarifa_visible`, sin importar el rol de quien mira la ficha: Carlos (sin
+     * SOLO de `tarifa_visible`, sin importar el rol de quien mira la ficha: Tecnico Servicios (sin
      * `puede_ver_costos`) veía la tarifa real con el toggle activado, aunque RN2 la reserva a
-     * Aaron/Mark/David/Whil. Decisión de Luis (daily 2026-08-18): es un bug, se gatea por RN2.
+     * Lider Servicios/Mark/David/Whil. Decisión de Luis (daily 2026-08-18): es un bug, se gatea por RN2.
      */
     public function test_tarifa_visible_no_expone_costo_a_quien_no_puede_verlo(): void
     {

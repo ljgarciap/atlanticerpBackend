@@ -7,7 +7,6 @@ use App\Modules\Auth\Http\Controllers\MfaController;
 use App\Modules\Auth\Http\Controllers\SecurityLevelController;
 use App\Modules\CRM\Http\Controllers\ShareLinkController;
 use App\Modules\VentasDiseno\Http\Controllers\CatalogUatPlaceholderPhotoController;
-use App\Modules\VentasDiseno\Http\Middleware\EnsureCotizaYaContext;
 use App\Shared\Http\Controllers\HealthController;
 use App\Shared\Http\Middleware\ApplyGerenciaScope;
 use App\Shared\Http\Middleware\AssignRequestId;
@@ -76,12 +75,9 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')->prefix('api/admin-contab')->group(base_path('routes/admin-contab.php'));
             Route::middleware('api')->prefix('api/gerencia')->group(base_path('routes/gerencia.php'));
             Route::middleware('api')->prefix('api/legacy')->group(base_path('routes/legacy.php'));
-            Route::middleware('api')->prefix('api/lumo')->group(base_path('routes/lumo.php'));
-            Route::middleware('api')->prefix('api/soporte')->group(base_path('routes/soporte.php'));
-            Route::middleware('api')->prefix('api/biblioteca')->group(base_path('routes/biblioteca.php'));
 
             // Catálogo de permisos — acceso restringido a superadmin y management
-            Route::middleware(['api', 'role:superadmin,management'])
+            Route::middleware(['api', 'permission:platform.management'])
                 ->get('/api/permission-catalog', [SecurityLevelController::class, 'permissionCatalog']);
             Route::middleware('api')->prefix('api/admin')->group(base_path('routes/admin.php'));
 
@@ -130,7 +126,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'primary_approver_only' => EnsureIsPrimaryApprover::class,
             // SCRUM-1158 (C6) — GET que escriben: se niegan en «Ver como usuario» hasta que pasen a POST.
             'no_impersonation' => DenyWhenImpersonating::class,
-            'cotizaya.context' => EnsureCotizaYaContext::class,
             'gerencia.scope' => ApplyGerenciaScope::class,
         ]);
     })

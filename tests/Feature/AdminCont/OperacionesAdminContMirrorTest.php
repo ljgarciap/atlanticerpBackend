@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Route;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1139 — el líder de operaciones (`lider_operaciones`, Mariam Díaz) accede a Administración & Contabilidad EXACTAMENTE
- * como la asistente administrativa (`asistente_administrativa`, Yaneth): mismos grupos de ruta, mismas exclusiones deliberadas
- * (posición de caja REAL y su exportación, reporte de comisión de Félix, grupos `primary_approver_only`) y mismo recorte de
+ * SCRUM-1139 — el líder de operaciones (`lider_operaciones`, Lider Operaciones Díaz) accede a Administración & Contabilidad EXACTAMENTE
+ * como la asistente administrativa (`asistente_administrativa`, Asistente Administrativa): mismos grupos de ruta, mismas exclusiones deliberadas
+ * (posición de caja REAL y su exportación, reporte de comisión de Contabilidad, grupos `primary_approver_only`) y mismo recorte de
  * `cash-position/projected` (solo totales).
  */
 class OperacionesAdminContMirrorTest extends FeatureTestCase
@@ -51,7 +51,7 @@ class OperacionesAdminContMirrorTest extends FeatureTestCase
     /**
      * En binax esto se verificaba leyendo las listas `role:` de cada ruta. En Atlantic las rutas de Admin&Cont usan
      * permisos finos (Fase 2), así que el espejo se verifica sobre los permisos efectivos: Operaciones tiene todo lo
-     * de la asistente en records/operations y NO gana `oversight.manage` (Félix + Gerencia).
+     * de la asistente en records/operations y NO gana `oversight.manage` (Contabilidad + Gerencia).
      */
     public function test_operaciones_espeja_a_la_asistente_en_permisos_de_admin_cont(): void
     {
@@ -102,7 +102,7 @@ class OperacionesAdminContMirrorTest extends FeatureTestCase
         }
     }
 
-    public function test_operaciones_ve_el_modulo_admin_cont_como_felix_sin_cambiar_sus_otros_modulos(): void
+    public function test_operaciones_ve_el_modulo_admin_cont_como_contabilidad_sin_cambiar_sus_otros_modulos(): void
     {
         $operaciones = User::where('email', self::OPERACIONES)->firstOrFail();
         $modulos     = $operaciones->modulesPayload();

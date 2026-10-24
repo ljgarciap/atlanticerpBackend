@@ -574,7 +574,7 @@ final class InventoryController extends Controller
      * frontend (`InventarioPage.tsx`) llamaba directo a `CatalogProductFamilyController::index()`
      * de VentasDiseno (`GET /ventas-diseno/catalog-product-families`), gateado por
      * `permission:ventas_diseno.read` — un permiso que ningún rol real de Compras (`lider_compras`
-     * y similares) tiene asignado en `role_module_visibility`. Resultado: 403 real para Yirena
+     * y similares) tiene asignado en `role_module_visibility`. Resultado: 403 real para Lider Compras
      * (líder_compras) al abrir el tab en test.atlanticerp.ai, confirmado en vivo. Endpoint propio,
      * mismo `resolveAccess()`/`restricted` que `familyDetail()` (compras.read completo O
      * ventas_diseno.read en modo restringido).
@@ -995,7 +995,7 @@ final class InventoryController extends Controller
 
         $isSuperadmin = in_array('superadmin.all', $permissions, true);
 
-        // SCRUM-741 (decisión de Luis, tras hallazgo de Pre-QA: David/Mark tienen compras.read
+        // SCRUM-741 (decisión de Luis, tras hallazgo de Pre-QA: Gerencia/Mark tienen compras.read
         // REAL vía su rol Gerencia — "compras.read igual pierde acceso" no es un caso raro, es
         // exactamente el camino que el ticket reportó) — mientras Compras esté oculto por la
         // etapa de UAT actual, NADIE no-superadmin accede de verdad, ni siquiera con compras.read

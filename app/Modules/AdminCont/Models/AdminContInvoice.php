@@ -71,7 +71,7 @@ class AdminContInvoice extends Model
     public const TIPO_PARCIAL  = 'parcial';
     public const TIPO_COMPLETO = 'completo';
 
-    /** Texto del rechazo del PAC: solo se expone vía los controllers de detalle, gateado a Mark/superadmin. @var list<string> */
+    /** Texto del rechazo del PAC: solo se expone vía los controllers de detalle, gateado a Gerencia/superadmin. @var list<string> */
     protected $hidden = ['fe_detalle'];
 
     /** @var list<string> */

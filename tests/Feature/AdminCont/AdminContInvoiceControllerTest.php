@@ -32,7 +32,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     use ReadsXlsxResponse;
     use StubsReceptorGuard;
 
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     private const APPROVER_EMAIL = 'gerencia3@test.com';
 
@@ -45,7 +45,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsMark(): string
@@ -129,7 +129,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      */
     public function test_929_familia_sin_vinculo_a_la_cotizacion_solo_admite_pedido_completo(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['root' => $root, 'children' => $children] = $this->makeFacturableFamily($ownerId, 3);
         $token = $this->loginAsFelix();
 
@@ -175,7 +175,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      */
     public function test_929_lista_pedido_sin_vinculo_muestra_una_fila_anclada_a_la_raiz(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         // Raíz todavía en Packing; solo las hijas llegaron a Por Despachar → el pedido igual aparece.
         ['root' => $root] = $this->makeFacturableFamily($ownerId, 3, ['stage' => Order::STAGE_PACKING]);
         $token = $this->loginAsFelix();
@@ -200,7 +200,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** SCRUM-929 (ajustado; antes `test_876_summary_cuenta_la_familia_como_un_solo_pedido`): un pedido que solo admite completo cuenta 1. */
     public function test_929_summary_cuenta_como_un_solo_pendiente_a_la_familia_que_solo_admite_completo(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $this->makeFacturableFamily($ownerId, 4, ['stage' => Order::STAGE_PACKING]);
         $token = $this->loginAsFelix();
 
@@ -217,7 +217,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_summary_cuenta_las_4_tarjetas_sin_ver_afectadas_por_filtros(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
         // pendiente-entrega: stage anterior a por_despachar.
         Order::create(['order_number' => 'PED-A', 'order_type' => Order::ORDER_TYPE_PEDIDO, 'stage' => Order::STAGE_PACKING, 'customer_name' => 'X']);
@@ -248,7 +248,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_preview_ok_cuando_cotizacion_monto_y_cliente_estan_completos(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId, folio: 'COT-2026-0099');
         $token = $this->loginAsFelix();
 
@@ -262,7 +262,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_preview_reporta_campos_faltantes_cuando_no_hay_cotizacion(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId, folio: null);
         $token = $this->loginAsFelix();
 
@@ -276,7 +276,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_preview_rechaza_una_entrega_que_todavia_no_llega_a_por_despachar(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         // cotización+monto+cliente completos, pero la entrega sigue en Bodega antes de por_despachar.
         ['order' => $order] = $this->makeFacturableOrder($ownerId, orderOverrides: ['stage' => Order::STAGE_PACKING]);
         $token = $this->loginAsFelix();
@@ -292,7 +292,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_store_confirma_factura_asigna_folio_y_bodega_ve_la_factura(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -311,7 +311,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_store_rechaza_facturar_dos_veces_la_misma_entrega(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -342,7 +342,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      */
     public function test_preview_ya_no_incluye_ningun_campo_de_saldo_a_favor(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -365,7 +365,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      */
     public function test_store_genera_la_factura_completa_y_reasocia_abono_de_proyecto(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $masterClientId = $order->pipelineCard->master_client_id;
         $salesProjectId = $order->pipelineCard->sales_project_id;
@@ -380,7 +380,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
             'cuenta_bancaria_id' => $bankAccount->id,
             'referencia' => 'TRF-ABONO-1',
             'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => $this->userIdByEmail(self::FELIX_EMAIL),
+            'registrado_por' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL),
             'fecha_registro' => now(),
             'fecha_confirmacion' => now(),
         ]);
@@ -406,7 +406,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** REQ-445 — passthrough completo de filtros + RN4 (`total_en_tab` sin otros filtros). */
     public function test_index_filtra_por_cliente_y_calcula_total_en_tab_sin_otros_filtros(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $orderA] = $this->makeFacturableOrder($ownerId);
         $this->makeFacturableOrder($ownerId);
         $clienteA = $orderA->pipelineCard->subClient->business_name;
@@ -423,7 +423,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** REQ-446 — export respeta filtros (RN1), mismas columnas visibles (RN2). */
     public function test_export_excel_devuelve_archivo_con_filtros_aplicados(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -441,7 +441,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_939_excel_escribe_monto_como_celda_numerica_con_formato_de_moneda(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -474,7 +474,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** Batch 4 (SCRUM-524, REQ-447) Escenario 1 — sin factura, cotización completa, resto pendiente. */
     public function test_detail_muestra_trazabilidad_pendiente_cuando_no_hay_factura(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId, folio: 'COT-2026-0500');
         $token = $this->loginAsFelix();
 
@@ -491,7 +491,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** REQ-447 Escenario 2 — facturada + guía de entrega ya subida por Bodega: trazabilidad completa. */
     public function test_detail_muestra_trazabilidad_completa_con_guia_de_entrega(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4321', 'numero_cuenta_completo' => '03-01-01-074321-4', 'moneda' => 'USD', 'activa' => true]);
         $token = $this->loginAsFelix();
@@ -525,7 +525,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** SCRUM-943 — el detalle expone el estado real de Facturación Electrónica, nunca oculto. */
     public function test_detail_expone_el_estado_de_facturacion_electronica(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -556,7 +556,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      *  siempre. Un saldo parcial (no cubre el 100%) debe seguir permitiendo registrar otro cobro. */
     public function test_puede_registrar_cobro_pasa_a_falso_solo_cuando_el_saldo_queda_cubierto(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -588,7 +588,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      *  cobrada. Mismo criterio de "no pagada" que `puede_registrar_cobro` (saldo_aplicado < monto). */
     public function test_puede_marcar_incobrable_pasa_a_falso_cuando_la_factura_ya_esta_pagada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -618,7 +618,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      *  `OrderDocument` ya exista (no debería poder pasar por el gate de Bodega, se defiende igual). */
     public function test_detail_guia_de_entrega_nunca_completa_si_no_hay_factura_aunque_exista_el_documento(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $order->documents()->create(['tipo' => OrderDocument::TIPO_GUIA_ENTREGA, 'storage_key' => 'guia-fuera-de-orden.pdf']);
         $token = $this->loginAsFelix();
@@ -632,49 +632,49 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     }
 
     /** `detail()` expone `master_client_id` (para preseleccionar cliente al navegar a Cobros,
-     *  REQ-451 RN3) y `puede_decidir_incobrable` (dependiente del actor, solo true para Mark y
+     *  REQ-451 RN3) y `puede_decidir_incobrable` (dependiente del actor, solo true para Gerencia y
      *  solo mientras hay una propuesta pendiente — gap real detectado en Senior Review, Frontend
      *  Dev ya construyó contra estos 2 campos sin coordinación en vivo con Backend Dev). */
     public function test_detail_expone_master_client_id_y_puede_decidir_incobrable_solo_para_mark(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
 
-        $asFelixBeforePropuesta = $this->withHeaders($this->authHeaders($felix))
+        $asFelixBeforePropuesta = $this->withHeaders($this->authHeaders($contabilidad))
             ->getJson("/api/admin-contab/invoices/{$order->id}/detail")
             ->assertStatus(200);
         $this->assertNotNull($asFelixBeforePropuesta->json('master_client_id'));
         $this->assertFalse($asFelixBeforePropuesta->json('puede_decidir_incobrable'));
 
-        $this->withHeaders($this->authHeaders($felix))
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta']);
 
-        $asFelixPendiente = $this->withHeaders($this->authHeaders($felix))
+        $asFelixPendiente = $this->withHeaders($this->authHeaders($contabilidad))
             ->getJson("/api/admin-contab/invoices/{$order->id}/detail")
             ->assertStatus(200);
         $this->assertFalse($asFelixPendiente->json('puede_decidir_incobrable'));
 
-        $mark = $this->loginAsMark();
-        $asMarkPendiente = $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $asMarkPendiente = $this->withHeaders($this->authHeaders($approver))
             ->getJson("/api/admin-contab/invoices/{$order->id}/detail")
             ->assertStatus(200);
         $this->assertTrue($asMarkPendiente->json('puede_decidir_incobrable'));
     }
 
-    /** Batch endurecimiento FE/MSL — el motivo textual del rechazo del PAC solo lo ve Mark/superadmin. */
+    /** Batch endurecimiento FE/MSL — el motivo textual del rechazo del PAC solo lo ve Gerencia/superadmin. */
     public function test_detail_expone_fe_detalle_solo_a_mark(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         AdminContInvoice::forOrder($order)->firstOrFail()
             ->forceFill(['fe_estado' => 'rechazado', 'fe_detalle' => '9026 - Falló la validación'])->save();
 
-        $asFelix = $this->withHeaders($this->authHeaders($felix))
+        $asFelix = $this->withHeaders($this->authHeaders($contabilidad))
             ->getJson("/api/admin-contab/invoices/{$order->id}/detail")
             ->assertStatus(200);
         $this->assertNull($asFelix->json('fe_detalle'));
@@ -688,18 +688,18 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     }
 
     /** Blocker de la Senior Review: `markUncollectible()` devuelve el modelo Eloquent; `fe_detalle`
-     *  (`$hidden`) no debe filtrarse a Felix por esa vía. */
+     *  (`$hidden`) no debe filtrarse a Contabilidad por esa vía. */
     public function test_mark_uncollectible_no_filtra_fe_detalle_al_actor(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         AdminContInvoice::forOrder($order)->firstOrFail()
             ->forceFill(['fe_estado' => 'rechazado', 'fe_detalle' => '9026 - secreto'])->save();
 
-        $response = $this->withHeaders($this->authHeaders($felix))
+        $response = $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta'])
             ->assertStatus(200);
 
@@ -710,7 +710,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** REQ-448 Escenario 1 — propone, queda pendiente pero sigue en cartera cobrable. */
     public function test_mark_uncollectible_propone_y_queda_pendiente_en_cartera_cobrable(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
@@ -739,7 +739,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** RN2 — motivo obligatorio. */
     public function test_mark_uncollectible_exige_motivo(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
@@ -752,7 +752,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** RN1 — solo sobre entregas ya facturadas, nunca sobre "pendiente-facturar". */
     public function test_mark_uncollectible_rechaza_sobre_entrega_no_facturada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -764,7 +764,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** RN5 — no se puede proponer un segundo cambio mientras el primero sigue sin resolver. */
     public function test_mark_uncollectible_rechaza_propuesta_duplicada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
@@ -776,43 +776,43 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    /** REQ-448 Escenario 2 — Mark aprueba: pasa a cartera incobrable y sale de la antigüedad. */
+    /** REQ-448 Escenario 2 — Gerencia aprueba: pasa a cartera incobrable y sale de la antigüedad. */
     public function test_uncollectible_decision_aprobar_pasa_a_incobrable_y_sale_del_aging(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
-        $this->withHeaders($this->authHeaders($felix))
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta']);
 
-        $mark = $this->loginAsMark();
-        $response = $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $response = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/invoices/{$order->id}/uncollectible-decision", ['approve' => true])
             ->assertStatus(200);
 
         $this->assertTrue($response->json('es_incobrable'));
         $this->assertFalse($response->json('incobrable_pendiente'));
 
-        $aging = $this->withHeaders($this->authHeaders($mark))
+        $aging = $this->withHeaders($this->authHeaders($approver))
             ->getJson('/api/admin-contab/invoices/aging')
             ->assertStatus(200);
         $totalFacturas = array_sum(array_column($aging->json('ranges'), 'cantidad'));
         $this->assertSame(0, $totalFacturas);
     }
 
-    /** REQ-448 Escenario 3 — Mark rechaza: vuelve exactamente al estado normal. */
+    /** REQ-448 Escenario 3 — Gerencia rechaza: vuelve exactamente al estado normal. */
     public function test_uncollectible_decision_rechazar_regresa_al_estado_normal(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
-        $this->withHeaders($this->authHeaders($felix))
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta']);
 
-        $mark = $this->loginAsMark();
-        $response = $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $response = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/invoices/{$order->id}/uncollectible-decision", ['approve' => false])
             ->assertStatus(200);
 
@@ -820,30 +820,30 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->assertFalse($response->json('incobrable_pendiente'));
     }
 
-    /** `primary_approver_only` — un rol distinto de Mark no puede decidir, aunque sea Gerencia genérica. */
+    /** `primary_approver_only` — un rol distinto de Gerencia no puede decidir, aunque sea Gerencia genérica. */
     public function test_uncollectible_decision_rechaza_a_un_no_mark(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
-        $this->withHeaders($this->authHeaders($felix))
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta']);
 
-        $this->withHeaders($this->authHeaders($felix))
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->putJson("/api/admin-contab/invoices/{$order->id}/uncollectible-decision", ['approve' => true])
             ->assertStatus(403);
     }
 
-    /** superadmin.all bypassa el gate exclusivo de Mark (decisión de Luis, 2026-08-22) — tanto la
+    /** superadmin.all bypassa el gate exclusivo de Gerencia (decisión de Luis, 2026-08-22) — tanto la
      *  acción real (primary_approver_only) como el flag `puede_decidir_incobrable` que ve el frontend. */
     public function test_uncollectible_decision_permite_a_superadmin_aunque_no_sea_mark(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
-        $this->withHeaders($this->authHeaders($felix))
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta']);
 
         $superadmin = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
@@ -863,19 +863,19 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      *  SIGUE siendo cobrable cayendo en el rango correcto — este test cierra ese gap). */
     public function test_aging_ubica_una_factura_vencida_y_cobrable_en_el_rango_correcto(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
 
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
 
         // vencida hace 45 días (dentro del plazo de crédito + 45) — debe caer en el rango 31-60.
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_admin_contab.invoices")->where('order_id', $order->id)
             ->update(['created_at' => now()->subDays($diasCredito + 45)]);
 
-        $response = $this->withHeaders($this->authHeaders($felix))
+        $response = $this->withHeaders($this->authHeaders($contabilidad))
             ->getJson('/api/admin-contab/invoices/aging')
             ->assertStatus(200);
 
@@ -890,7 +890,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** REQ-450 Escenario 1/2 — 4 rangos, y una factura aprobada como incobrable sale del cálculo. */
     public function test_aging_agrupa_por_rango_y_excluye_incobrables_aprobadas(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
 
         // vigente (0-30): factura recién creada, todavía no vence.
@@ -898,22 +898,22 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         // vencida +90: retrocedemos `created_at` para simular una factura vieja.
         ['order' => $orderVieja] = $this->makeFacturableOrder($ownerId);
 
-        $felix = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$orderVigente->id]]);
-        $this->withHeaders($this->authHeaders($felix))->postJson('/api/admin-contab/invoices', ['order_ids' => [$orderVieja->id]]);
+        $contabilidad = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$orderVigente->id]]);
+        $this->withHeaders($this->authHeaders($contabilidad))->postJson('/api/admin-contab/invoices', ['order_ids' => [$orderVieja->id]]);
 
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_admin_contab.invoices")->where('order_id', $orderVieja->id)
             ->update(['created_at' => now()->subDays($diasCredito + 95)]);
 
         // aprobamos como incobrable la vieja — no debe contar en ningún rango.
-        $this->withHeaders($this->authHeaders($felix))
+        $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$orderVieja->id}/mark-uncollectible", ['motivo' => 'x']);
-        $mark = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($mark))
+        $approver = $this->loginAsMark();
+        $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/invoices/{$orderVieja->id}/uncollectible-decision", ['approve' => true]);
 
-        $response = $this->withHeaders($this->authHeaders($felix))
+        $response = $this->withHeaders($this->authHeaders($contabilidad))
             ->getJson('/api/admin-contab/invoices/aging')
             ->assertStatus(200);
 
@@ -997,7 +997,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** REQ-449 — documento fiscal real, 200 + content-type PDF tanto vigente como anulada. */
     public function test_pdf_genera_documento_fiscal_para_factura_vigente_y_anulada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
@@ -1032,7 +1032,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     public function test_952_pdf_de_factura_incluye_ruc_vendedor_y_fecha_de_vencimiento(): void
     {
         AdminContFiscalSettings::current()->update(['dias_credito_factura' => 30]);
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
 
@@ -1061,7 +1061,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** SCRUM-952 — sin RUC de cliente, la factura NO se genera (bloqueo explícito, no PDF a medias). */
     public function test_952_pdf_bloquea_generacion_si_el_cliente_no_tiene_ruc(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
@@ -1088,7 +1088,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
      */
     public function test_1003_pdf_de_consumidor_final_se_genera_sin_ruc_con_nombre_real_y_leyenda(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
         // SCRUM-1140 — el receptor se congela al facturar: el cliente ya es Consumidor Final cuando se crea la factura.
@@ -1113,7 +1113,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** SCRUM-1003 — regresión: un Contribuyente sin RUC sigue bloqueando el PDF (SCRUM-952) y el detalle trae su tipo. */
     public function test_1003_el_detalle_trae_el_tipo_y_un_contribuyente_sin_ruc_sigue_bloqueado(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $token = $this->loginAsFelix();
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]]);
@@ -1153,7 +1153,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_index_plana_pagina_20_por_defecto_sin_afectar_total_en_tab(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         for ($i = 0; $i < 25; $i++) {
             $this->makeFacturableOrder($ownerId);
         }
@@ -1174,7 +1174,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_index_agrupado_no_pagina_sin_consumidor_real_hoy(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         for ($i = 0; $i < 25; $i++) {
             $this->makeFacturableOrder($ownerId);
         }
@@ -1206,7 +1206,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1147_filtro_cobro_separa_cobradas_de_por_cobrar_y_combina_con_otros_filtros(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsFelix();
         $a = $this->facturar($token, $ownerId);   // cobrada
         $b = $this->facturar($token, $ownerId);   // cobro parcial
@@ -1244,7 +1244,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1147_filtro_cobro_tambien_funciona_en_la_vista_agrupada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsFelix();
         $a = $this->facturar($token, $ownerId);
         $b = $this->facturar($token, $ownerId);
@@ -1260,7 +1260,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1147_detalle_lista_todos_los_vendedores_responsables_del_pedido(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $otroId = $this->userIdByEmail('designer@atlantic.test');
         $token = $this->loginAsFelix();
         ['order' => $order] = $this->facturar($token, $ownerId, ['compartido_con' => [$otroId, $ownerId]]);
@@ -1274,12 +1274,12 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1175_el_listado_trae_los_vendedores_y_se_filtra_por_vendedor_combinable_con_por_cobrar(): void
     {
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $token = $this->loginAsFelix();
-        $a = $this->facturar($token, $felixId, ['compartido_con' => [$designerId]]); // Felix + diseñador, por cobrar
+        $a = $this->facturar($token, $felixId, ['compartido_con' => [$designerId]]); // Contabilidad + diseñador, por cobrar
         $b = $this->facturar($token, $designerId);                                   // solo el diseñador
-        $c = $this->facturar($token, $felixId);                                      // solo Felix, cobrada
+        $c = $this->facturar($token, $felixId);                                      // solo Contabilidad, cobrada
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $c['invoice']->update(['saldo_aplicado' => $c['invoice']->monto]);
 
@@ -1302,12 +1302,12 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $propios = [$a['order']->id, $b['order']->id, $c['order']->id];
         $soloMios = fn (array $ids): array => array_values(array_intersect($ids, $propios));
 
-        // Coincide si CUALQUIER responsable contiene el texto (Felix está en A y en C; el diseñador en A y en B).
+        // Coincide si CUALQUIER responsable contiene el texto (Contabilidad está en A y en C; el diseñador en A y en B).
         $this->assertEqualsCanonicalizing([$a['order']->id, $c['order']->id], $soloMios($ids("&vendedor_ids[]={$felixId}")));
         $this->assertEqualsCanonicalizing([$a['order']->id, $b['order']->id], $soloMios($ids("&vendedor_ids[]={$designerId}")));
         // Varios a la vez: OR entre responsables.
         $this->assertEqualsCanonicalizing($propios, $soloMios($ids("&vendedor_ids[]={$felixId}&vendedor_ids[]={$designerId}")));
-        // Combinado con «por cobrar»: la de Felix que ya está cobrada (C) sale.
+        // Combinado con «por cobrar»: la de Contabilidad que ya está cobrada (C) sale.
         $this->assertSame([$a['order']->id], $soloMios($ids("&cobro=por_cobrar&vendedor_ids[]={$felixId}")));
         // Un vendedor que no existe no devuelve nada.
         $this->assertSame([], $soloMios($ids('&vendedor_ids[]=999999')));
@@ -1321,7 +1321,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1175_el_export_incluye_cliente_y_vendedor_y_marca_sin_vendedor(): void
     {
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsFelix();
         ['order' => $order] = $this->facturar($token, $felixId);
         $fila = collect($this->withHeaders($this->authHeaders($token))
@@ -1347,7 +1347,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1147_detalle_con_un_solo_responsable_lo_lista(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsFelix();
         ['order' => $order] = $this->facturar($token, $ownerId);
 
@@ -1364,14 +1364,14 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         return AdminContAbono::create([
             'monto_usado' => 0, 'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $bank->id,
             'referencia' => 'TRF-'.uniqid(), 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => $this->userIdByEmail(self::FELIX_EMAIL), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
+            'registrado_por' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
             ...$attrs,
         ]);
     }
 
     public function test_1147_saldo_a_favor_muestra_solo_el_nivel_mas_especifico(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsFelix();
         $conFactura = $this->facturar($token, $ownerId);   // abono nivel Factura (120) + cliente (300) -> 120
         $soloCliente = $this->facturar($token, $ownerId);  // solo abono nivel Cliente (300) -> 300
@@ -1396,7 +1396,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1147_saldo_a_favor_tambien_llega_en_la_vista_agrupada(): void
     {
-        $ownerId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsFelix();
         $f = $this->facturar($token, $ownerId);
         $this->makeAbono(['master_client_id' => (int) $f['order']->pipelineCard->master_client_id, 'monto_original' => 80]);

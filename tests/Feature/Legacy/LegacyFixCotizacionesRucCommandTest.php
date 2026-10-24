@@ -178,7 +178,7 @@ final class LegacyFixCotizacionesRucCommandTest extends FeatureTestCase
     public function test_las_cotizaciones_ocultas_por_un_scope_global_tambien_se_actualizan(): void
     {
         $sub    = $this->subCorregido();
-        $oculta = $this->quote($sub, self::CIF_12, 'cotizaya');
+        $oculta = $this->quote($sub, self::CIF_12, 'icg_legacy');
         $this->assertNull(Quote::query()->find($oculta->id), 'precondición: el scope de origen la oculta');
 
         $this->aplicarCot();

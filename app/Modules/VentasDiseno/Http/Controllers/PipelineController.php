@@ -301,9 +301,9 @@ final class PipelineController extends Controller
 
     /**
      * SCRUM-1128 — "Pasar a Pedido": única vía para que un proyecto Aprobado genere su Pedido en
-     * Bodega. Gate de ruta: `permission:ventas_diseno.pass_to_order` (Gerencia por rol, Félix por
+     * Bodega. Gate de ruta: `permission:ventas_diseno.pass_to_order` (Gerencia por rol, Contabilidad por
      * grant individual; Vendedor/Diseñador reciben 403 aun llamando la ruta directo). No exige
-     * `canAccess()`: Félix no es dueño ni tiene alcance de equipo, su permiso angosto es suficiente.
+     * `canAccess()`: Contabilidad no es dueño ni tiene alcance de equipo, su permiso angosto es suficiente.
      */
     public function passToOrder(Request $request, int $id): JsonResponse
     {
@@ -477,7 +477,7 @@ final class PipelineController extends Controller
     }
 
     /**
-     * SCRUM-1128 — lectura: `canAccess()` + `ventas_diseno.pipeline.read_all` (Félix, solo lectura
+     * SCRUM-1128 — lectura: `canAccess()` + `ventas_diseno.pipeline.read_all` (Contabilidad, solo lectura
      * de todo el equipo). Las acciones de escritura siguen usando `canAccess()` y, además, sus rutas
      * exigen `ventas_diseno.edit`, que ese permiso angosto no otorga.
      */
@@ -494,7 +494,7 @@ final class PipelineController extends Controller
             return true;
         }
 
-        // SCRUM-1139 — `ventas_diseno.pipeline.edit` (Félix): alcance de equipo SOLO dentro del Pipeline.
+        // SCRUM-1139 — `ventas_diseno.pipeline.edit` (Contabilidad): alcance de equipo SOLO dentro del Pipeline.
         if (PipelineCard::userHasPipelineEdit($user)) {
             return true;
         }

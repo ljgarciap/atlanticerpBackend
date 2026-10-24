@@ -48,7 +48,6 @@ class PipelineCard extends Model
 {
     use LogsAuditTrail;
 
-    public const STAGNANT_THRESHOLD_DAYS = 15;
 
     public const NON_EDITABLE_STAGE = 'lost';
 
@@ -128,7 +127,7 @@ class PipelineCard extends Model
 
     /**
      * SCRUM-1195 — mismo criterio que `projectIdsOwnedBy()` para varias personas a la vez (filtro Vendedor/Diseñador del listado de
-     * cotizaciones de Gerencia: «los proyectos de Paola» incluye los que le asignaron, no solo lo que ella generó).
+     * cotizaciones de Gerencia: «los proyectos de Vendedor Disenador» incluye los que le asignaron, no solo lo que ella generó).
      *
      * @param list<int> $userIds
      * @return list<int>
@@ -276,7 +275,7 @@ class PipelineCard extends Model
 
     public function isStagnant(): bool
     {
-        return $this->daysInStage() > self::STAGNANT_THRESHOLD_DAYS;
+        return $this->daysInStage() > app(\App\Modules\CRM\Services\CrmSettingsService::class)->pipelineEstancadoDias();
     }
 
     public function hasArchitectContact(): bool
@@ -292,7 +291,7 @@ class PipelineCard extends Model
 
         // SCRUM-1128 — mismo permiso que exigen las rutas de escritura del Pipeline
         // (`permission:ventas_diseno.edit`, evaluado sobre los permisos del JWT = V2). Sin esto
-        // `can_edit` llegaba en true para Félix (solo lectura vía `pipeline.read_all`) y la UI le
+        // `can_edit` llegaba en true para Contabilidad (solo lectura vía `pipeline.read_all`) y la UI le
         // ofrecía acciones que el backend rechazaba con 403.
         $permissions = $user->effectivePermissionsV2();
         if (
@@ -325,7 +324,7 @@ class PipelineCard extends Model
         if ($targetStage === self::NON_EDITABLE_STAGE) {
             // REQ-603 RN2 / REQ-597 RN3 (Epic CRM Batch B) — Aprobado es una etapa terminal, sin
             // ningún botón de movimiento, ni siquiera "Marcar como Perdido". Sin este check, un
-            // usuario con RESTRICTED_EDIT_PERMISSION (ej. Mark) podía mover una tarjeta Aprobada
+            // usuario con RESTRICTED_EDIT_PERMISSION (ej. Gerencia) podía mover una tarjeta Aprobada
             // a Perdido, ya que isEditableBy() la trata como editable para ese permiso.
             if ($this->stage === self::RESTRICTED_EDIT_STAGE) {
                 return 'Una tarjeta en Aprobado no puede marcarse como Perdido — es una etapa final.';

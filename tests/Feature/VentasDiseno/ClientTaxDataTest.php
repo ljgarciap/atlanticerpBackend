@@ -27,7 +27,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-1002 — validar un RUC/Cédula contra la DGI (vía MSL) y editar razón social/RUC/DV de un SubCliente.
- * Decisiones de Luis (2026-09-29): la validación respeta "Apagado"; editan Mark, Felix y Ventas & Diseño;
+ * Decisiones de Luis (2026-09-29): la validación respeta "Apagado"; editan Gerencia, Contabilidad y Ventas & Diseño;
  * 409 solo si el cliente tiene facturas/NC `certificado` o `pendiente`.
  */
 final class ClientTaxDataTest extends FeatureTestCase
@@ -393,7 +393,7 @@ final class ClientTaxDataTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))->patchJson('/api/ventas-diseno/clients/sub-clients/99999999/tax-data', $this->payloadNuevo())->assertStatus(404);
     }
 
-    public function test_el_seeder_concede_el_permiso_angosto_a_mark_y_felix_sin_pisar_lo_que_ya_tenian(): void
+    public function test_el_seeder_concede_el_permiso_angosto_a_aprobador_y_contabilidad_sin_pisar_lo_que_ya_tenian(): void
     {
         (new SpecialPermissionSeeder())->run();
         $this->reTenant();
@@ -405,7 +405,7 @@ final class ClientTaxDataTest extends FeatureTestCase
         }
     }
 
-    // ─── Directorio para Felix/Admin&Cont y mensajes ──────────────────────────────────────────────
+    // ─── Directorio para Contabilidad/Admin&Cont y mensajes ──────────────────────────────────────────────
 
     private const URL_DIRECTORIO = '/api/ventas-diseno/clients/fiscal-directory';
 
@@ -414,7 +414,7 @@ final class ClientTaxDataTest extends FeatureTestCase
         $this->subClienteConPedido();
 
         $this->withHeaders($this->authHeaders($this->designerToken('ventas_diseno.edit')))->getJson(self::URL_DIRECTORIO)->assertStatus(200);
-        // Solo el permiso angosto, sin ventas_diseno.read de más: es el caso de Felix desde Admin&Cont.
+        // Solo el permiso angosto, sin ventas_diseno.read de más: es el caso de Contabilidad desde Admin&Cont.
         $this->grant('designer@atlantic.test', 'ventas_diseno.edit.client_tax_data');
         $this->withHeaders($this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer')))->getJson(self::URL_DIRECTORIO)->assertStatus(200);
 
@@ -461,7 +461,7 @@ final class ClientTaxDataTest extends FeatureTestCase
     public function test_validar_acepta_tambien_el_permiso_angosto_sin_ventas_diseno_write(): void
     {
         $this->fakeMsl(['ok' => true, 'valido' => true, 'nombre' => 'X', 'dv' => '32']);
-        $this->grant('supervisor@atlantic.test', 'ventas_diseno.edit.client_tax_data'); // como Felix: sin .write
+        $this->grant('supervisor@atlantic.test', 'ventas_diseno.edit.client_tax_data'); // como Contabilidad: sin .write
         $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))->postJson(self::URL_VALIDAR, ['tax_id' => '155704849-2-2021'])->assertStatus(200);

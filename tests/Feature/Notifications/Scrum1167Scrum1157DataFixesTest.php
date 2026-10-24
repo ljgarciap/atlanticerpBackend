@@ -11,7 +11,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-1167 (rebote) — los avisos de la campana ya creados sin enlace reciben el destino de su emisor.
- * SCRUM-1157 (rebote) — a Mariam se le quita la fila de visibilidad de Ventas & Diseño, sin tocar nada más.
+ * SCRUM-1157 (rebote) — a Lider Operaciones se le quita la fila de visibilidad de Ventas & Diseño, sin tocar nada más.
  */
 class Scrum1167Scrum1157DataFixesTest extends FeatureTestCase
 {

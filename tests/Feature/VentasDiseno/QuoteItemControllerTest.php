@@ -275,7 +275,7 @@ class QuoteItemControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    // ── SCRUM-725: margen global + excepción Mark/David + precio manual ────────
+    // ── SCRUM-725: margen global + excepción Gerencia/David + precio manual ────────
 
     public function test_agregar_item_ok_individualmente_pero_que_rompe_el_margen_global_con_descuento_de_totales_ya_aplicado_retorna_422(): void
     {
@@ -299,7 +299,7 @@ class QuoteItemControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_mark_puede_crear_item_por_debajo_del_margen_sin_bloqueo(): void
+    public function test_aprobador_puede_crear_item_por_debajo_del_margen_sin_bloqueo(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
@@ -1267,7 +1267,7 @@ class QuoteItemControllerTest extends FeatureTestCase
     }
 
     /**
-     * Rebote SCRUM-849 (Daniela, 2026-09-14) — funcionaba en dev.atlanticerp.ai, no en test.atlanticerp.ai.
+     * Rebote SCRUM-849 (Gerencia, 2026-09-14) — funcionaba en dev.atlanticerp.ai, no en test.atlanticerp.ai.
      * Causa raíz: `photoUrl()` devolvía la URL directa del bucket S3 (`Storage::disk()->url()`)
      * en vez de preferir `CDN_URL` como sí hace `CatalogService::publicPhotoUrl()` — en test, el
      * bucket solo permite `GetObject` a través de CloudFront (policy real verificada en AWS), la
@@ -1318,13 +1318,13 @@ class QuoteItemControllerTest extends FeatureTestCase
     }
 
     /**
-     * Pre-QA (2026-09-11, rebote SCRUM-849.6, Daniela) — antes de este fix, un archivo con
+     * Pre-QA (2026-09-11, rebote SCRUM-849.6, Gerencia) — antes de este fix, un archivo con
      * extensión válida pero bytes no decodificables por GD escapaba de
      * QuoteItemPhotoService::uploadPhoto() como RuntimeException sin capturar, devolviendo un 500
      * sin manejar (en producción, sin APP_DEBUG, eso además se degradaba al genérico "Server
      * Error" en inglés). Este gap de cobertura — ningún test ejercitaba el camino de bytes
      * corruptos, solo UploadedFile::fake()->image() que siempre genera un GD válido — es la
-     * razón por la que nadie lo detectó antes de que Daniela lo reportara en producto real.
+     * razón por la que nadie lo detectó antes de que Gerencia lo reportara en producto real.
      */
     public function test_subir_foto_con_bytes_invalidos_retorna_422_no_500(): void
     {

@@ -59,7 +59,7 @@ class AdminContCreditNote extends Model
 {
     use LogsAuditTrail;
 
-    /** Texto del rechazo del PAC: solo se expone vía los controllers de detalle, gateado a Mark/superadmin. @var list<string> */
+    /** Texto del rechazo del PAC: solo se expone vía los controllers de detalle, gateado a Gerencia/superadmin. @var list<string> */
     protected $hidden = ['fe_detalle'];
 
     public const TIPO_DESCUENTO_COMERCIAL  = 'descuento_comercial';

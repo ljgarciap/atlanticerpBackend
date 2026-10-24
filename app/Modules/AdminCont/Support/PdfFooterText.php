@@ -14,7 +14,7 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
  * la empresa como ya hacía `quote-pdf.blade.php`.
  *
  * `AdminContFiscalSettings` está vacío en dev/test/prod (nadie llenó la pantalla, exclusiva de
- * Mark) — sin fallback, `forFiscal()`/`companyName()` devolvían "" y el pie/encabezado salían en
+ * Gerencia) — sin fallback, `forFiscal()`/`companyName()` devolvían "" y el pie/encabezado salían en
  * blanco en vez de mostrar la marca real. `DEFAULT_COMPANY_NAME` cubre ese hueco de datos hasta
  * que se cargue la info fiscal real; nunca vuelve a mostrar "AtlanticERP".
  */
@@ -31,7 +31,7 @@ final class PdfFooterText
      * ("el pie de página muestra: ATLANTIC USA CORP - Calle 57 Este...") y la consistencia
      * visual pedida contra cotizaciones. No es un dato de negocio nuevo: es el mismo texto público
      * ya aprobado y usado en los otros 2 documentos, solo replicado acá como fallback hasta que
-     * Mark cargue los datos fiscales reales (que sí toman prioridad, ver abajo).
+     * Gerencia cargue los datos fiscales reales (que sí toman prioridad, ver abajo).
      */
     /** El sitio web NO tiene columna propia en fiscal_settings — es una constante de marca, igual
      *  que en quote-pdf.blade.php. Se agrega siempre al pie (con datos fiscales o con el fallback)

@@ -12,7 +12,7 @@ use Illuminate\Database\Seeder;
 /**
  * `compras_settings.primary_approver_user_id` (aprobador único configurable, reusado por
  * `AdjustmentRequestController` y `RelocationRequestController`) se backfillea desde la migración
- * `2026_07_20_100009_add_mark_approver_to_compras_settings_table.php`, pero esa migración corre
+ * `2026_07_20_100009_add_aprobador_approver_to_compras_settings_table.php`, pero esa migración corre
  * DENTRO de `tenants:artisan migrate`, que en el pipeline de deploy (`ci-backend.yml`) corre ANTES
  * de `db:seed --force` — en cualquier entorno reprovisionado desde cero, `CoreUserSeeder` (que
  * crea al aprobador por default) todavía no corrió cuando la migración busca su usuario, así que

@@ -9,7 +9,7 @@ use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * SCRUM-1168 F4 — solicitud de anular un cobro o de devolver dinero al cliente: la piden Felix o Yaneth y la aprueba Mark (al aprobar se ejecuta).
+ * SCRUM-1168 F4 — solicitud de anular un cobro o de devolver dinero al cliente: la piden Contabilidad o Asistente Administrativa y la aprueba Gerencia (al aprobar se ejecuta).
  *
  * @property int         $id
  * @property string      $tipo              anulacion | devolucion

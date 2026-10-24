@@ -132,9 +132,9 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     }
 
     /**
-     * REQ-189 Escenario 4. Usa `management@atlantic.test` como "Mark" configurado (mismo
-     * criterio que PurchaseOrderControllerTest::test_aprobar_orden_siendo_el_mark_configurado_es_exitosa
-     * — la cuenta real de Mark no tiene password fijo en testing).
+     * REQ-189 Escenario 4. Usa `management@atlantic.test` como "Gerencia" configurado (mismo
+     * criterio que PurchaseOrderControllerTest::test_aprobar_orden_siendo_el_aprobador_configurado_es_exitosa
+     * — la cuenta real de Gerencia no tiene password fijo en testing).
      */
     public function test_cambio_de_monto_antes_del_primer_pago_requiere_aprobacion_de_mark(): void
     {
@@ -151,11 +151,11 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->assertStatus(200)
             ->assertJsonPath('pending_amount_change', 1200);
 
-        // El monto real todavía no cambió — queda pendiente de Mark.
+        // El monto real todavía no cambió — queda pendiente de Gerencia.
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertEquals(1000.0, PurchaseOrder::find($order->id)?->total_amount);
 
-        // Un usuario que no es Mark no puede aprobarlo.
+        // Un usuario que no es Gerencia no puede aprobarlo.
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/approve-amount-change")
             ->assertStatus(403);
@@ -241,7 +241,7 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->patchJson("/api/compras/orders/{$order->id}/request-amount-change", ['new_amount' => 1200])
             ->assertStatus(200);
 
-        // Yirena (no es Mark) no puede rechazar su propio pedido.
+        // Lider Compras (no es Gerencia) no puede rechazar su propio pedido.
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/reject-amount-change")
             ->assertStatus(403);

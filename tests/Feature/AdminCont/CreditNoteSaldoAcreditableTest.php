@@ -30,7 +30,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class CreditNoteSaldoAcreditableTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -48,12 +48,12 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
-        return (int) DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)->value('id');
+        return (int) DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)->value('id');
     }
 
     private function token(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function factura(float $monto, float $saldoAplicado = 0.0): AdminContInvoice
@@ -262,7 +262,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         $r = $this->anular($token, $f, ['resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR])->assertStatus(201);
 
         // Monto = total 1.000 − nota previa 300. Cobros (500) + nota aplicada (300) = saldo_aplicado 800, saldo por cobrar 200:
-        // al aprobar Mark (P4), el excedente que se devuelve / queda a favor es 700 − 200 = 500 = lo cobrado.
+        // al aprobar Gerencia (P4), el excedente que se devuelve / queda a favor es 700 − 200 = 500 = lo cobrado.
         $this->assertEquals(700.0, (float) $r->json('monto'));
         $this->assertSame('saldo_favor', $r->json('resultado'));
         $this->assertSame(AdminContCreditNote::ESTADO_PENDIENTE_APROBACION, $r->json('estado'));
@@ -354,7 +354,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         ]);
     }
 
-    public function test_p4_mark_no_puede_aprobar_una_nota_que_haria_pasar_el_acumulado_de_la_factura(): void
+    public function test_p4_aprobador_no_puede_aprobar_una_nota_que_haria_pasar_el_acumulado_de_la_factura(): void
     {
         $f = $this->factura(137.77);
         $this->tenant();
@@ -374,7 +374,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         $this->assertEquals(0.0, (float) AdminContInvoice::findOrFail($f->id)->saldo_aplicado, 'no debe mover saldo');
     }
 
-    public function test_p4_mark_si_puede_rechazar_la_nota_excedida(): void
+    public function test_p4_aprobador_si_puede_rechazar_la_nota_excedida(): void
     {
         $f = $this->factura(100);
         $this->tenant();
@@ -437,7 +437,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
 
     public function test_a3_una_anulacion_desactualizada_no_se_aprueba_aunque_no_exceda_la_factura(): void
     {
-        // Factura 1.000 + descuento de 300 PENDIENTE: la anulación sale por 700. Mark rechaza el descuento → el valor restante
+        // Factura 1.000 + descuento de 300 PENDIENTE: la anulación sale por 700. Gerencia rechaza el descuento → el valor restante
         // pasa a 1.000 y la anulación (700) ya no es "completa": aprobarla dejaría 300 sin anular.
         $f     = $this->factura(1000);
         $token = $this->token();
@@ -445,10 +445,10 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         $descuentoId  = $this->notaPendienteForzada($f, 300, AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL)->id;
         $anulacionId  = (int) $this->anular($token, $f)->assertStatus(201)->assertJson(['monto' => 700])->json('id');
 
-        $mark = $this->markToken();
-        $this->decidir($mark, $descuentoId, false)->assertStatus(200);
+        $approver = $this->markToken();
+        $this->decidir($approver, $descuentoId, false)->assertStatus(200);
 
-        $mensaje = (string) $this->decidir($mark, $anulacionId, true)->assertStatus(422)->json('message');
+        $mensaje = (string) $this->decidir($approver, $anulacionId, true)->assertStatus(422)->json('message');
         $this->assertStringContainsString('ya no coincide', $mensaje);
         $this->assertStringContainsString('USD 1,000.00', $mensaje);
         $this->tenant();
@@ -463,10 +463,10 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         // Nota heredada (pre-fix) que junto con la primera excede la factura: 600 + 600 > 1.000.
         $b = $this->notaPendienteForzada($f, 600, AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA)->id;
 
-        $mark = $this->markToken();
-        $this->decidir($mark, $a, true)->assertStatus(422); // con la otra pendiente de 600 el acumulado sería 1.200
-        $this->decidir($mark, $b, false)->assertStatus(200); // rechazar una libera el valor...
-        $this->decidir($mark, $a, true)->assertStatus(200)->assertJson(['estado' => AdminContCreditNote::ESTADO_APLICADA]); // ...y la otra se aprueba
+        $approver = $this->markToken();
+        $this->decidir($approver, $a, true)->assertStatus(422); // con la otra pendiente de 600 el acumulado sería 1.200
+        $this->decidir($approver, $b, false)->assertStatus(200); // rechazar una libera el valor...
+        $this->decidir($approver, $a, true)->assertStatus(200)->assertJson(['estado' => AdminContCreditNote::ESTADO_APLICADA]); // ...y la otra se aprueba
     }
 
     public function test_b1_corregir_una_factura_con_otra_nota_pendiente_esta_bloqueado_al_registrar(): void

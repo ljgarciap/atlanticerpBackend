@@ -122,7 +122,7 @@ class ServiciosDemoSeeder extends Seeder
 
             [Ticket::TIPO_CLAIM, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_REPORTED, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
-                null, 'Farmacias Arrocha — Vía España'],
+                null, 'Farmacias Transporte — Vía España'],
             [Ticket::TIPO_CLAIM, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_SCHEDULED, Ticket::QUOTE_STATUS_DRAFT, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
                 $pedro, 'Automotriz Rey'],
@@ -135,7 +135,7 @@ class ServiciosDemoSeeder extends Seeder
                 null, 'Banco General — Sede Principal'],
             [Ticket::TIPO_RETROFIT, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_ON_SITE, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                $agustin, 'Universidad Latina — Campus David'],
+                $agustin, 'Universidad Latina — Campus Gerencia'],
             [Ticket::TIPO_RETROFIT, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_RESOLVED, Ticket::QUOTE_STATUS_APPROVED, Ticket::INSPECTION_STATUS_COMPLETED,
                 $miguel, 'Aeropuerto Marcos A. Gelabert'],

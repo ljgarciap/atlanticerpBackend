@@ -25,6 +25,8 @@ class CrmSettingsRequest extends FormRequest
     {
         return [
             'entrega_proxima_dias' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'pipeline_estancado_dias' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'cliente_contacto_obsoleto_dias' => ['sometimes', 'integer', 'min:1', 'max:3650'],
             'freshness_recent_dias' => ['sometimes', 'integer', 'min:1', 'max:365'],
             'freshness_stale_dias' => ['sometimes', 'integer', 'min:1', 'max:365'],
             // SCRUM-998 — el máximo de un PDF plano no puede pasar de 1.000 productos (medido: 2.000 = 45 s y 299 MB,

@@ -129,18 +129,9 @@
     {{-- §6 — Cliente/Subcliente/RUC/Contacto (izq) + Proyecto/Cotización/Fecha/Diseñador (der). --}}
     <div class="info-row">
         <div class="info-col">
-            @if(($quote['origin'] ?? 'comercial') === 'cotizaya')
-                {{-- SCRUM-1120 — CotizaYA: el comprador real es texto libre (el Cliente Master es siempre el fijo «CotizaYA»);
-                     sin Subcliente/RUC/Proyecto, que no existen en este flujo. --}}
-                <div><span class="info-label">Cliente:</span> {{ $quote['cotizaya']['customer_name'] ?? '—' }}</div>
-                @if(filled($quote['cotizaya']['customer_phone'] ?? null))
-                    <div><span class="info-label">Teléfono:</span> {{ $quote['cotizaya']['customer_phone'] }}</div>
-                @endif
-            @else
-                <div><span class="info-label">Cliente:</span> {{ $quote['master_client']['name'] ?? '—' }}</div>
-                <div><span class="info-label">Subcliente:</span> {{ $quote['sub_client']['business_name'] ?? '—' }}</div>
-                <div><span class="info-label">RUC:</span> {{ ($quote['sub_client']['receptor_tipo'] ?? null) === '02' ? 'Consumidor final' : (filled($quote['ruc'] ?? null) ? $quote['ruc'] : '—') }}</div>
-            @endif
+            <div><span class="info-label">Cliente:</span> {{ $quote['master_client']['name'] ?? '—' }}</div>
+            <div><span class="info-label">Subcliente:</span> {{ $quote['sub_client']['business_name'] ?? '—' }}</div>
+            <div><span class="info-label">RUC:</span> {{ ($quote['sub_client']['receptor_tipo'] ?? null) === '02' ? 'Consumidor final' : (filled($quote['ruc'] ?? null) ? $quote['ruc'] : '—') }}</div>
             @forelse($quote['contacts'] as $contact)
                 <div>
                     <span class="info-label">Contacto:</span> {{ $contact['name'] }}
@@ -152,9 +143,7 @@
             @endforelse
         </div>
         <div class="info-col right">
-            @if(($quote['origin'] ?? 'comercial') !== 'cotizaya')
-                <div>Proyecto: {{ $quote['sales_project']['name'] ?? '—' }}</div>
-            @endif
+            <div>Proyecto: {{ $quote['sales_project']['name'] ?? '—' }}</div>
             <div>Cotización n°: {{ $quote['folio'] ?? '—' }}</div>
             <div>Fecha: {{ $quote['generated_at'] ? \Illuminate\Support\Carbon::parse($quote['generated_at'])->translatedFormat('d F Y') : '—' }}</div>
             <div>

@@ -28,7 +28,7 @@ final class StockSyncSettingsControllerTest extends FeatureTestCase
 
     public function test_solo_el_superadmin_puede_ver_y_editar(): void
     {
-        $h = $this->authHeaders($this->loginAs('management@atlantic.test', 'Password123!', 'management'));
+        $h = $this->authHeaders($this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management'));
 
         $this->withHeaders($h)->getJson('/api/legacy/migracion/stock-sync')->assertStatus(403);
         $this->withHeaders($h)->putJson('/api/legacy/migracion/stock-sync', ['activo' => true])->assertStatus(403);

@@ -264,7 +264,7 @@ final class InventoryReviewService
         $channels = [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL];
         $subject = "Pedido {$order->order_number} sin stock disponible";
 
-        // SCRUM-1153 — Compras (Yirena) recibe su propio aviso: con el/los producto(s) que faltan y un enlace a Compras →
+        // SCRUM-1153 — Compras (Lider Compras) recibe su propio aviso: con el/los producto(s) que faltan y un enlace a Compras →
         // Inventario con ese producto ya buscado, desde donde genera la orden de compra. Antes la notificación no llevaba
         // enlace (clic = nada) y Compras no tiene el módulo Bodega, así que tampoco podía ir a buscar el pedido.
         if ($comprasAudience !== []) {

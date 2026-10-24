@@ -39,7 +39,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
 {
     private const APPROVER_EMAIL = 'gerencia3@test.com';
 
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -55,7 +55,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function userIdByEmail(string $email): int
@@ -88,12 +88,12 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa '.uniqid()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
-            'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'amount' => $amount,
+            'sub_client_id' => $sub->id, 'owner_id' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'amount' => $amount,
             'stage_changed_at' => $fechaPedido ?? Carbon::now(),
         ]);
 
         Quote::create([
-            'owner_id' => $this->userIdByEmail(self::FELIX_EMAIL), 'sales_project_id' => $project->id,
+            'owner_id' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'sales_project_id' => $project->id,
             'architect_id' => $architect->id, 'status' => 'approved',
         ]);
 
@@ -291,7 +291,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertJsonCount(0, 'arquitectos');
     }
 
-    public function test_felix_actualiza_datos_fiscales(): void
+    public function test_contabilidad_actualiza_datos_fiscales(): void
     {
         $architect = $this->makeArchitect();
 
@@ -322,7 +322,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_felix_sube_cuenta_de_cobro_y_reemplazo_borra_el_archivo_viejo(): void
+    public function test_contabilidad_sube_cuenta_de_cobro_y_reemplazo_borra_el_archivo_viejo(): void
     {
         $architect = $this->makeArchitect();
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_EXENTO]);
@@ -366,7 +366,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_mark_no_puede_subir_cuenta_de_cobro(): void
+    public function test_aprobador_no_puede_subir_cuenta_de_cobro(): void
     {
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
@@ -380,7 +380,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
     }
 
     /** Hallazgo de Senior Review — GET .../cuenta-cobro (ver el archivo, REQ-513) no tenía
-     *  ningún test todavía. Mark SÍ puede verla aunque no pueda subirla (gate de lectura general,
+     *  ningún test todavía. Gerencia SÍ puede verla aunque no pueda subirla (gate de lectura general,
      *  `permission:admin_contab.read`, distinto del grupo de escritura angosto de arriba). */
     public function test_ver_cuenta_de_cobro_ya_subida_devuelve_url_firmada(): void
     {
@@ -535,8 +535,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $this->assertFalse($ids->contains($inactiva->id));
     }
 
-    /** REQ-517 — Felix asigna una cuenta de pago específica al proyecto. */
-    public function test_felix_actualiza_cuenta_de_pago(): void
+    /** REQ-517 — Contabilidad asigna una cuenta de pago específica al proyecto. */
+    public function test_contabilidad_actualiza_cuenta_de_pago(): void
     {
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
@@ -562,8 +562,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    /** REQ-516 RN3 — Felix propone un % distinto del default, queda pendiente de Mark. */
-    public function test_felix_propone_porcentaje(): void
+    /** REQ-516 RN3 — Contabilidad propone un % distinto del default, queda pendiente de Gerencia. */
+    public function test_contabilidad_propone_porcentaje(): void
     {
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
@@ -592,8 +592,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    /** REQ-516 RN4 — solo Mark puede decidir. */
-    public function test_felix_no_puede_decidir_porcentaje(): void
+    /** REQ-516 RN4 — solo Gerencia puede decidir. */
+    public function test_contabilidad_no_puede_decidir_porcentaje(): void
     {
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
@@ -608,7 +608,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    public function test_mark_aprueba_porcentaje_propuesto(): void
+    public function test_aprobador_aprueba_porcentaje_propuesto(): void
     {
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
@@ -630,7 +630,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $this->assertNull($commission->porcentaje_pendiente);
     }
 
-    public function test_mark_rechaza_porcentaje_propuesto_exige_motivo(): void
+    public function test_aprobador_rechaza_porcentaje_propuesto_exige_motivo(): void
     {
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);

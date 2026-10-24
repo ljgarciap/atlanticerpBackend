@@ -30,7 +30,7 @@ final class FeTransmisionesTest extends FeatureTestCase
 {
     use BuildsPartiallyInvoicedOrders;
 
-    private const MARK_EMAIL = 'gerencia3@test.com';
+    private const APPROVER_EMAIL = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -64,7 +64,7 @@ final class FeTransmisionesTest extends FeatureTestCase
 
     private function loginAsMark(): string
     {
-        return $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_certificacion_rechazada_guarda_el_payload_exacto_y_la_respuesta(): void
@@ -334,14 +334,14 @@ final class FeTransmisionesTest extends FeatureTestCase
         $t->delete();
     }
 
-    public function test_endpoint_de_factura_solo_para_mark_y_devuelve_el_historial(): void
+    public function test_endpoint_de_factura_solo_para_aprobador_y_devuelve_el_historial(): void
     {
         Http::fake(['sandbox.msl.test/*' => Http::response(['ok' => false, 'estado' => 'RECHAZADO', 'detalles' => ['9026 - x']], 422)]);
         $factura = $this->facturaSimple();
         $this->service()->certificarFactura($factura);
         $url = "/api/admin-contab/invoices/{$factura->order_id}/fe-transmisiones?invoice_id={$factura->id}";
 
-        $this->api($this->token(), 'GET', $url)->assertStatus(403); // Felix
+        $this->api($this->token(), 'GET', $url)->assertStatus(403); // Contabilidad
 
         $r = $this->api($this->loginAsMark(), 'GET', $url)->assertStatus(200);
         $r->assertJsonCount(1, 'data');

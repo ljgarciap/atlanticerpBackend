@@ -234,7 +234,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
         $this->assertNull($response->json('responsable_incidente'));
 
-        // SCRUM-779 (2do rebote de Daniela, 2026-08-24) — restaurar desde Dañada/Perdida/Desgaste
+        // SCRUM-779 (2do rebote de Gerencia, 2026-08-24) — restaurar desde Dañada/Perdida/Desgaste
         // a Buen estado SÍ genera un Ingreso ahora, para que el saldo del Kardex revierta la baja
         // corregida (antes quedaba restada para siempre). Ver `ToolService::updateEstado()`.
         $this->reactivateTenant();

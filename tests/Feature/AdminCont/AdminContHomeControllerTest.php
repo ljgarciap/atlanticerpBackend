@@ -30,9 +30,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContHomeControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
-    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+    private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
@@ -46,7 +46,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function loginAsDesigner(): string
@@ -122,9 +122,9 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(403);
     }
 
-    public function test_yaneth_puede_ver_el_resumen(): void
+    public function test_asistente_puede_ver_el_resumen(): void
     {
-        $token = $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        $token = $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
 
         $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
     }
@@ -253,10 +253,10 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     private const APPROVALS_URL = '/api/admin-contab/home/approvals-pending';
 
-    /** Los 5 tipos de Admin&Cont son exclusivos de "Mark" (`AdminContFiscalSettings.primary_approver_user_id`). */
+    /** Los 5 tipos de Admin&Cont son exclusivos de "Gerencia" (`AdminContFiscalSettings.primary_approver_user_id`). */
     private function makeMark(): int
     {
-        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $felixId]);
 
         return $felixId;
@@ -339,13 +339,13 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'petty_cash_report'));
     }
 
-    /** Yaneth (asistente_administrativa) tiene acceso al Home, pero no es Mark. */
+    /** Asistente Administrativa (asistente_administrativa) tiene acceso al Home, pero no es Gerencia. */
     public function test_approvals_pending_vacio_para_quien_no_es_mark(): void
     {
         $this->makeMark();
         $this->makeInvoice(500, 0, now()->toDateTimeString(), false, true);
 
-        $token = $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+        $token = $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
 
         $this->assertSame([], $response->json('data'));

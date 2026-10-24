@@ -259,7 +259,7 @@ class DeliveryFlowTest extends FeatureTestCase
     {
         $order = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR]);
         $courierId = $this->userIdByEmail('transporte@test.com');
-        $this->grantBodegaPermissions('asistentebodega@test.com'); // Osvaldo, asistente_bodega
+        $this->grantBodegaPermissions('asistentebodega@test.com'); // Asistente Bodega, asistente_bodega
         $token = $this->loginAs('asistentebodega@test.com', 'asistentebodega@test.com', 'asistente_bodega');
 
         $this->withHeaders($this->authHeaders($token))

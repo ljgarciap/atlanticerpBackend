@@ -376,12 +376,12 @@ final class InvoiceReceptorGuardTest extends FeatureTestCase
         return $this->api($token, 'PATCH', self::URL_FACTURAS."/receptors/{$subClientId}", $data);
     }
 
-    /** SCRUM-1140 — Felix ya tiene `receptor_consumidor_final` por el seeder; para probar el 403 se le quita. */
+    /** SCRUM-1140 — Contabilidad ya tiene `receptor_consumidor_final` por el seeder; para probar el 403 se le quita. */
     private function sinPermisoConsumidorFinal(): string
     {
         $slug   = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->value('slug');
-        $actual = json_decode((string) DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)->value('extra_permissions'), true) ?: [];
-        DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)
+        $actual = json_decode((string) DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)->value('extra_permissions'), true) ?: [];
+        DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)
             ->update(['extra_permissions' => json_encode(array_values(array_diff($actual, [self::PERMISO_CF])))]);
 
         return $this->token();
@@ -390,8 +390,8 @@ final class InvoiceReceptorGuardTest extends FeatureTestCase
     private function sinPermiso(): string
     {
         $slug = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->value('slug');
-        $actual = json_decode((string) DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)->value('extra_permissions'), true) ?: [];
-        DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)
+        $actual = json_decode((string) DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)->value('extra_permissions'), true) ?: [];
+        DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)
             ->update(['extra_permissions' => json_encode(array_values(array_diff($actual, ['admin_contab.edit.receptor_fiscal'])))]);
 
         return $this->token();
@@ -543,12 +543,12 @@ final class InvoiceReceptorGuardTest extends FeatureTestCase
 
     private const PERMISO_CF = 'admin_contab.edit.receptor_consumidor_final';
 
-    /** Felix con el permiso de facturar a Consumidor Final (el seeder lo concede en T5; acá se asigna a mano para probar la regla). */
+    /** Contabilidad con el permiso de facturar a Consumidor Final (el seeder lo concede en T5; acá se asigna a mano para probar la regla). */
     private function conPermisoConsumidorFinal(): string
     {
         $slug   = (string) \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->value('slug');
-        $actual = json_decode((string) DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)->value('extra_permissions'), true) ?: [];
-        DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)
+        $actual = json_decode((string) DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)->value('extra_permissions'), true) ?: [];
+        DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)
             ->update(['extra_permissions' => json_encode(array_values(array_unique([...$actual, self::PERMISO_CF])))]);
 
         return $this->token();

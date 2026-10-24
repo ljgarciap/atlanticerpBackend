@@ -58,7 +58,6 @@ use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\Quote;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
-use App\Modules\VentasDiseno\Observers\CotizaYaClientExclusivityObserver;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Horizon\Events\LongWaitDetected;
@@ -67,6 +66,10 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Memo por petición de los ajustes de CRM (`PipelineCard::isStagnant()` se evalúa por tarjeta; sin esto sería una consulta por tarjeta).
+        $this->app->scoped(\App\Modules\CRM\Services\CrmSettingsService::class);
+        $this->app->scoped(\App\Modules\Compras\Services\ComprasThresholds::class);
+
         // SCRUM-750 — implementación real de producción (conexión legacy_icg, SQL Server). Los
         // Feature tests de App\Console\Commands\LegacySyncProductosCommand sobreescriben este
         // bind con `$this->app->instance(ProductoExtractorContract::class, $fake)` para no
@@ -82,10 +85,6 @@ class AppServiceProvider extends ServiceProvider
         // (conexión lafayette_lighting, MariaDB externa), sobreescrita con un fake en los Feature
         // tests de App\Console\Commands\LafayetteSyncProductosCommand.
         $this->app->bind(LafayetteProductoExtractorContract::class, LafayetteProductoExtractor::class);
-
-        // SCRUM-984 — implementación real de la biblioteca (bucket S3 compartido); los Feature
-        // tests la sobreescriben con un fake en memoria para no tocar S3 real.
-        $this->app->bind(\App\Modules\Biblioteca\Contracts\LibraryStore::class, \App\Modules\Biblioteca\Services\S3LibraryStore::class);
 
         // SCRUM-751 — mismo criterio: implementación real de producción (conexión legacy_icg,
         // SQL Server), sobreescrita con un fake en los Feature tests de
@@ -222,7 +221,7 @@ class AppServiceProvider extends ServiceProvider
                 ->by('oc-traduccion:'.($sub !== null ? 'u'.$sub : 'ip'.$request->ip()));
         });
 
-        foreach (['biblioteca-lectura' => 60, 'biblioteca-escritura' => 20, 'zona-libre-lectura' => 60] as $name => $perMinute) {
+        foreach (['zona-libre-lectura' => 60] as $name => $perMinute) {
             RateLimiter::for($name, static function (Request $request) use ($name, $perMinute): Limit {
                 $token = $request->bearerToken();
                 $sub   = $token !== null ? app(JwtService::class)->decode($token)['sub'] ?? null : null;
@@ -258,10 +257,5 @@ class AppServiceProvider extends ServiceProvider
         // SubClient vinculado, sin esperar a la próxima corrida semanal de legacy:sync-clientes.
         SubClient::observe(SubClientObserver::class);
 
-        // SCRUM-1120 — el cliente «CotizaYA» es exclusivo de CotizaYA: ningún camino del flujo comercial puede asociarlo.
-        Quote::observe(CotizaYaClientExclusivityObserver::class);
-        PipelineCard::observe(CotizaYaClientExclusivityObserver::class);
-        SalesProject::observe(CotizaYaClientExclusivityObserver::class);
-        SubClient::observe(CotizaYaClientExclusivityObserver::class);
     }
 }

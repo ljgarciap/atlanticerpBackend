@@ -133,7 +133,7 @@ final class CompensationService
     // ── detalle de un cliente ───────────────────────────────────────────────────────────────────
 
     /**
-     * Todo lo que Felix necesita para cruzar a un cliente: de dónde sale el dinero, qué facturas deben, qué se sugiere y la traza reciente.
+     * Todo lo que Contabilidad necesita para cruzar a un cliente: de dónde sale el dinero, qué facturas deben, qué se sugiere y la traza reciente.
      *
      * @return array<string, mixed>
      */

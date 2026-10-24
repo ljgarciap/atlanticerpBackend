@@ -19,13 +19,13 @@ use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1168 F5 — devolución de dinero al cliente desde su saldo a favor: la solicitan Felix/Yaneth (cuenta de salida, referencia y comprobante
- * obligatorios) y la aprueba solo Mark; al aprobar sale de la fuente elegida, queda en el libro y en la caja del día.
+ * SCRUM-1168 F5 — devolución de dinero al cliente desde su saldo a favor: la solicitan Contabilidad/Yaneth (cuenta de salida, referencia y comprobante
+ * obligatorios) y la aprueba solo Gerencia; al aprobar sale de la fuente elegida, queda en el libro y en la caja del día.
  */
 class AdminContDevolucionF5Test extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
-    private const MARK_EMAIL  = 'gerencia3@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
+    private const APPROVER_EMAIL  = 'gerencia3@test.com';
 
     protected function setUp(): void
     {
@@ -42,12 +42,12 @@ class AdminContDevolucionF5Test extends FeatureTestCase
     /** @return array{0: array<string, string>, 1: array<string, string>} */
     private function sesiones(): array
     {
-        $felix = $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
-        $mark  = $this->loginAs(self::MARK_EMAIL, self::MARK_EMAIL, 'management');
+        $contabilidad = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
+        $approver  = $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
         $this->remakeTenant();
         app(CobrosConfigService::class)->setV2Activo(true);
 
-        return [$this->authHeaders($felix), $this->authHeaders($mark)];
+        return [$this->authHeaders($contabilidad), $this->authHeaders($approver)];
     }
 
     private function cuenta(): AdminContBankAccount
@@ -77,19 +77,19 @@ class AdminContDevolucionF5Test extends FeatureTestCase
         return $r;
     }
 
-    public function test_devolver_dinero_requiere_aprobacion_de_mark_y_al_aprobar_sale_del_cobro_y_de_la_caja_de_hoy(): void
+    public function test_devolver_dinero_requiere_aprobacion_de_aprobador_y_al_aprobar_sale_del_cobro_y_de_la_caja_de_hoy(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Dev '.uniqid()]);
-        [$felix, $mark] = $this->sesiones();
-        $cobro = $this->cobroSinAplicar($felix, $master, 500);
+        [$contabilidad, $approver] = $this->sesiones();
+        $cobro = $this->cobroSinAplicar($contabilidad, $master, 500);
 
-        $sol = $this->solicitar($felix, $master, $cobro, 200)->assertStatus(201);
+        $sol = $this->solicitar($contabilidad, $master, $cobro, 200)->assertStatus(201);
         $this->assertSame('solicitada', $sol->json('estado'));
         $this->assertEqualsWithDelta(500.0, app(PaymentLedger::class)->remanenteDeCobro($cobro), 0.001, 'Solicitar no mueve nada.');
         $this->assertSame(0, AdminContBankMovement::where('source_type', AdminContBankMovement::SOURCE_CLIENT_REFUND)->count());
 
-        $this->withHeaders($felix)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(403);
-        $this->withHeaders($mark)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(200);
+        $this->withHeaders($contabilidad)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(403);
+        $this->withHeaders($approver)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(200);
         $this->remakeTenant();
 
         $this->assertEqualsWithDelta(300.0, app(PaymentLedger::class)->remanenteDeCobro($cobro), 0.001);
@@ -100,41 +100,41 @@ class AdminContDevolucionF5Test extends FeatureTestCase
         $this->assertSame([], app(PaymentLedgerVerifier::class)->verify()['clientes']);
 
         // Un cobro que ya tuvo una devolución de dinero no se puede anular después.
-        $this->withHeaders($felix)->postJson("/api/admin-contab/payments/{$cobro}/anular", ['motivo' => 'x'])->assertStatus(422);
+        $this->withHeaders($contabilidad)->postJson("/api/admin-contab/payments/{$cobro}/anular", ['motivo' => 'x'])->assertStatus(422);
     }
 
     public function test_pide_comprobante_cuenta_y_referencia_y_no_acepta_mas_de_lo_disponible(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Dev '.uniqid()]);
-        [$felix] = $this->sesiones();
-        $cobro = $this->cobroSinAplicar($felix, $master, 100);
+        [$contabilidad] = $this->sesiones();
+        $cobro = $this->cobroSinAplicar($contabilidad, $master, 100);
 
-        $this->solicitar($felix, $master, $cobro, 50, ['comprobante' => null])->assertStatus(422);
-        $this->solicitar($felix, $master, $cobro, 50, ['referencia' => ''])->assertStatus(422);
-        $this->solicitar($felix, $master, $cobro, 50, ['bank_account_id' => 99999])->assertStatus(422);
-        $this->solicitar($felix, $master, $cobro, 150)->assertStatus(422);
+        $this->solicitar($contabilidad, $master, $cobro, 50, ['comprobante' => null])->assertStatus(422);
+        $this->solicitar($contabilidad, $master, $cobro, 50, ['referencia' => ''])->assertStatus(422);
+        $this->solicitar($contabilidad, $master, $cobro, 50, ['bank_account_id' => 99999])->assertStatus(422);
+        $this->solicitar($contabilidad, $master, $cobro, 150)->assertStatus(422);
 
         // Dos solicitudes pendientes sobre la misma fuente no pueden sumar más de lo disponible.
-        $this->solicitar($felix, $master, $cobro, 70)->assertStatus(201);
-        $this->solicitar($felix, $master, $cobro, 40)->assertStatus(422);
+        $this->solicitar($contabilidad, $master, $cobro, 70)->assertStatus(201);
+        $this->solicitar($contabilidad, $master, $cobro, 40)->assertStatus(422);
     }
 
     public function test_devolver_desde_un_abono_lo_consume(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Dev '.uniqid()]);
-        [$felix, $mark] = $this->sesiones();
+        [$contabilidad, $approver] = $this->sesiones();
         $abono = AdminContAbono::create([
             'master_client_id' => $master->id, 'monto_original' => 300, 'monto_usado' => 0, 'metodo_pago' => 'efectivo', 'referencia' => 'REF-A', 'registrado_por' => User::query()->value('id'), 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
             'fecha_registro' => now(), 'fecha_confirmacion' => now(),
         ]);
 
-        $sol = $this->withHeaders($felix)->post('/api/admin-contab/clientes/'.$master->id.'/devolucion', [
+        $sol = $this->withHeaders($contabilidad)->post('/api/admin-contab/clientes/'.$master->id.'/devolucion', [
             'source_type' => 'abono', 'source_id' => $abono->id, 'monto' => 120, 'bank_account_id' => $this->cuenta()->id,
             'referencia' => 'CHK-1', 'motivo' => 'Cliente lo pidió', 'comprobante' => UploadedFile::fake()->image('c.png'),
         ], ['Accept' => 'application/json'])->assertStatus(201);
         $this->remakeTenant();
 
-        $this->withHeaders($mark)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(200);
+        $this->withHeaders($approver)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(200);
         $this->remakeTenant();
 
         $this->assertEqualsWithDelta(180.0, (float) $abono->fresh()->montoDisponible(), 0.001);
@@ -144,10 +144,10 @@ class AdminContDevolucionF5Test extends FeatureTestCase
     public function test_tras_confirmar_solo_se_corrigen_referencia_y_comprobante(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Edit '.uniqid()]);
-        [$felix] = $this->sesiones();
-        $cobro = $this->cobroSinAplicar($felix, $master, 100);
+        [$contabilidad] = $this->sesiones();
+        $cobro = $this->cobroSinAplicar($contabilidad, $master, 100);
 
-        $ok = $this->withHeaders($felix)->post("/api/admin-contab/payments/{$cobro}/datos", [
+        $ok = $this->withHeaders($contabilidad)->post("/api/admin-contab/payments/{$cobro}/datos", [
             'referencia' => 'TRF-CORREGIDA', 'comprobante' => UploadedFile::fake()->create('nuevo.pdf', 30, 'application/pdf'),
         ], ['Accept' => 'application/json'])->assertStatus(200);
         $this->remakeTenant();
@@ -155,7 +155,7 @@ class AdminContDevolucionF5Test extends FeatureTestCase
         $this->assertSame(1, \App\Modules\AdminCont\Models\AdminContPaymentAttachment::where('payment_id', $cobro)->count());
 
         // Cualquier campo contable se rechaza.
-        $this->withHeaders($felix)->postJson("/api/admin-contab/payments/{$cobro}/datos", ['monto_recibido' => 999])->assertStatus(422);
+        $this->withHeaders($contabilidad)->postJson("/api/admin-contab/payments/{$cobro}/datos", ['monto_recibido' => 999])->assertStatus(422);
         $this->remakeTenant();
         $this->assertEqualsWithDelta(100.0, (float) \App\Modules\AdminCont\Models\AdminContPayment::findOrFail($cobro)->monto_recibido, 0.001);
     }
@@ -163,11 +163,11 @@ class AdminContDevolucionF5Test extends FeatureTestCase
     public function test_rechazar_la_devolucion_no_mueve_dinero(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Dev '.uniqid()]);
-        [$felix, $mark] = $this->sesiones();
-        $cobro = $this->cobroSinAplicar($felix, $master, 100);
-        $sol = $this->solicitar($felix, $master, $cobro, 100)->assertStatus(201);
+        [$contabilidad, $approver] = $this->sesiones();
+        $cobro = $this->cobroSinAplicar($contabilidad, $master, 100);
+        $sol = $this->solicitar($contabilidad, $master, $cobro, 100)->assertStatus(201);
 
-        $this->withHeaders($mark)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => false, 'motivo_rechazo' => 'No procede'])->assertStatus(200);
+        $this->withHeaders($approver)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => false, 'motivo_rechazo' => 'No procede'])->assertStatus(200);
         $this->remakeTenant();
 
         $this->assertEqualsWithDelta(100.0, app(PaymentLedger::class)->remanenteDeCobro($cobro), 0.001);

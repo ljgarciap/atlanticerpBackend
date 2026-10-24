@@ -60,11 +60,11 @@ class ToolMovementsEndpointTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-779 (rebote Daniela 2026-08-20) — antes el PATCH ni siquiera aceptaba `detalle`, así
+     * SCRUM-779 (rebote Gerencia 2026-08-20) — antes el PATCH ni siquiera aceptaba `detalle`, así
      * que el Kardex siempre mostraba "—" para Dañada/Perdida/Desgaste. Ahora se captura y viaja
      * intacto. `cantidad` también nuevo — siempre 1 (cada fila es una unidad física puntual).
      *
-     * SCRUM-779 (2do rebote de Daniela, 2026-08-24) — el motivo de texto libre ya no es el
+     * SCRUM-779 (2do rebote de Gerencia, 2026-08-24) — el motivo de texto libre ya no es el
      * `detalle` completo: REQ-276 punto 3 pide literal "Dañada por [Nombre]" primero, ver
      * `ToolService::incidentDetalle()`. El motivo capturado por el modal se conserva agregado.
      */
@@ -193,7 +193,7 @@ class ToolMovementsEndpointTest extends FeatureTestCase
         $this->assertSame([], $response->json('data'));
     }
 
-    // Senior Review 2026-08-13 — CORREGIDO: REQ-276 restringe este kardex a "Aaron y Gerencia",
+    // Senior Review 2026-08-13 — CORREGIDO: REQ-276 restringe este kardex a "Lider Servicios y Gerencia",
     // no a todo el módulo (a diferencia de `/tools` y `/tools/purchase-requests`). El test
     // original afirmaba lo contrario (200 para técnico) — reflejaba el gate real ANTES del fix,
     // no lo que pedía el ticket.

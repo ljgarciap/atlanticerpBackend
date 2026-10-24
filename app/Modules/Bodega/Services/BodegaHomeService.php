@@ -399,7 +399,7 @@ final class BodegaHomeService
      * detectado" como disparador de Pendientes, pero no existe ningún concepto con ese nombre
      * exacto en el modelo de datos actual. Se toma como equivalente el caso real más cercano ya
      * construido: una `AdjustmentRequestLine` en `ESTADO_PENDIENTE` (SCRUM-428/446, "Solicitud de
-     * ajuste") — Bodega ya reportó una discrepancia de stock y está esperando que Mark la
+     * ajuste") — Bodega ya reportó una discrepancia de stock y está esperando que Gerencia la
      * apruebe/rechace.
      *
      * @param list<int>|null $targetIds

@@ -122,16 +122,16 @@ abstract class FeatureTestCase extends TestCase
     }
 
     /**
-     * SCRUM-1150 — devuelve a Félix al estado de SCRUM-1139 (sin el override de Ventas & Diseño ni los permisos de Mark), para los
-     * tests que lo usan como fixture de "usuario de Admin&Cont con solo permisos angostos de Pipeline". El estado real de Félix
-     * (igual a Mark) lo cubre FelixComoMarkVentasDisenoTest.
+     * SCRUM-1150 — devuelve a Contabilidad al estado de SCRUM-1139 (sin el override de Ventas & Diseño ni los permisos de Gerencia), para los
+     * tests que lo usan como fixture de "usuario de Admin&Cont con solo permisos angostos de Pipeline". El estado real de Contabilidad
+     * (igual a Gerencia) lo cubre FelixComoMarkVentasDisenoTest.
      */
     protected function felixComoEnScrum1139(): void
     {
-        $felix = \App\Models\User::where('email', 'contabilidad@test.com')->firstOrFail();
-        \App\Modules\Auth\Models\UserModuleVisibility::where('user_id', $felix->id)->where('module', 'ventas_diseno')->delete();
-        $felix->update(['extra_permissions' => array_values(array_diff(
-            $felix->extra_permissions ?? [],
+        $contabilidad = \App\Models\User::where('email', 'contabilidad@test.com')->firstOrFail();
+        \App\Modules\Auth\Models\UserModuleVisibility::where('user_id', $contabilidad->id)->where('module', 'ventas_diseno')->delete();
+        $contabilidad->update(['extra_permissions' => array_values(array_diff(
+            $contabilidad->extra_permissions ?? [],
             ['ventas_diseno.select_partner_price', 'ventas_diseno.override_min_margin', 'ventas_diseno.gerencia_scope'],
         ))]);
     }

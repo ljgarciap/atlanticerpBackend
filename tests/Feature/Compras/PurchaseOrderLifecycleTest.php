@@ -286,7 +286,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         $this->assertNull($row->en_aduana_at);
     }
 
-    // ── REQ-143: bloqueo real de Mark ───────────────────────────────────────
+    // ── REQ-143: bloqueo real de Gerencia ───────────────────────────────────────
 
     public function test_avanzar_bloqueado_sin_aprobacion_de_mark(): void
     {
@@ -319,7 +319,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         // SCRUM-204 (2026-08-06, hallazgo Gerencia Test): "Pendiente/Por liquidar" ahora es parte
         // de la secuencia automática entre "Por aprobar" y "Ordenado" — el primer avance tras la
-        // aprobación de Mark ya no salta directo a "Ordenado".
+        // aprobación de Gerencia ya no salta directo a "Ordenado".
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/advance")
             ->assertStatus(200)

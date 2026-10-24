@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * SCRUM-433→439, 442→445 (REQ-363→369, 371→375) — lado Bodega del Bloque B3 "Zona Libre de
- * Colón": crear la solicitud (3C) y la bandeja de seguimiento (3D). La decisión de Yirena
+ * Colón": crear la solicitud (3C) y la bandeja de seguimiento (3D). La decisión de Lider Compras
  * (aprobar/rechazar) vive en Compras (`ComprasZonaLibreRequestController`) — ver ADR-SCRUM433-445
  * sección "Aclaración de ubicación de módulo".
  *
@@ -296,7 +296,7 @@ final class BodegaZonaLibreRequestController extends Controller
     }
 
     /**
-     * REQ-375 — email real (+ in-app) al rol `lider_compras` (Yirena) recordando que una solicitud
+     * REQ-375 — email real (+ in-app) al rol `lider_compras` (Lider Compras) recordando que una solicitud
      * sigue pendiente de resolver. Reusa `NotificationService`/audience-por-rol, mismo mecanismo
      * que `InventoryReviewService::notifyShortage()` — nunca un email hardcodeado en el controller.
      */

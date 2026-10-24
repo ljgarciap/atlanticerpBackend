@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1013 (rebote de Daniela, 2026-10-02) y SCRUM-1021 — el vendedor/diseñador conserva lo que
+ * SCRUM-1013 (rebote de Gerencia, 2026-10-02) y SCRUM-1021 — el vendedor/diseñador conserva lo que
  * ya tenía (Inventario restringido y Comparación de Referencias, vía Ventas & Diseño) y gana
  * ÚNICAMENTE Compras → Órdenes → Logística y Envío y Bodega → Bodegas, ambos en solo consulta.
  *

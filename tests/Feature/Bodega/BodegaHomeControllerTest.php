@@ -88,8 +88,8 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-366 — fix QA 2026-07-24 (marly.rangel): el selector de personas solo debe listar
-     * Asistentes de Bodega (`BodegaRoles::TEAM_SELECTABLE`), nunca al Jefe (Esteban), al Ayudante
-     * General/Picker (Apolonio) ni a Transporte (Gary) — pese a que los 3 son miembros reales del
+     * Asistentes de Bodega (`BodegaRoles::TEAM_SELECTABLE`), nunca al Jefe (Lider Bodega), al Ayudante
+     * General/Picker (Ayudante General Bodega) ni a Transporte (Transporte) — pese a que los 3 son miembros reales del
      * equipo de Bodega para otros propósitos (`bodegaRoleIds()`, guard de `owner_id`, calendario).
      */
     public function test_team_retorna_solo_los_asistentes_de_bodega_para_el_jefe(): void
@@ -250,7 +250,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             ->getJson("/api/bodega/home/summary?scope=team&owner_id={$osvaldoId}")
             ->assertStatus(200);
 
-        // El filtro por persona sigue funcionando (RN2, solo el pedido de Osvaldo cuenta).
+        // El filtro por persona sigue funcionando (RN2, solo el pedido de Asistente Bodega cuenta).
         $this->assertSame(1, $response->json('mi_dia.asignados_hoy'));
         $this->assertStringContainsString('Tienes', $response->json('saludo.resumen'));
         $this->assertStringNotContainsString('El equipo tiene', $response->json('saludo.resumen'));
@@ -704,7 +704,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     /**
      * Senior Review SCRUM-908: `bodega.approve` es solo el gate grueso de la ruta —
-     * `RelocationRequestController::resolveMarkAccess()` decide 100% vía `AprobacionGate` (Mark, o
+     * `RelocationRequestController::resolveMarkAccess()` decide 100% vía `AprobacionGate` (Gerencia, o
      * una `ReglaAprobacion` activa para 'relocation', SCRUM-161/162). Este test ya no le da
      * `bodega.approve` a almacen@ (no alcanzaría solo) — usa el mecanismo real: una
      * `ReglaAprobacion` que lo vuelve aprobador de ese tipo específico.

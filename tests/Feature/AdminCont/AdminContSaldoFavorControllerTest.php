@@ -15,7 +15,7 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-903 — Saldo a Favor de Clientes (4N), pantalla de solo consulta. */
 class AdminContSaldoFavorControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -25,7 +25,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     private function makeBankAccount(): AdminContBankAccount
@@ -45,7 +45,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
             'cuenta_bancaria_id' => $this->makeBankAccount()->id,
             'referencia'         => 'TRF-'.uniqid(),
             'estado'             => $estado,
-            'registrado_por'     => \App\Models\User::where('email', self::FELIX_EMAIL)->value('id'),
+            'registrado_por'     => \App\Models\User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
             'fecha_registro'     => now(),
             'fecha_confirmacion' => $estado === AdminContAbono::ESTADO_CONFIRMADO ? now() : null,
         ]);
@@ -82,7 +82,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
             'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'factura_origen_id' => $invoice->id,
             'monto' => 400, 'subtotal' => 400, 'itbms' => 0, 'monto_aplicado_saldo' => 0, 'monto_usado' => 0,
             'motivo' => 'Excedente de prueba', 'resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR,
-            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => \App\Models\User::where('email', self::FELIX_EMAIL)->value('id'),
+            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => \App\Models\User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
             'fecha' => now(),
         ]);
 
@@ -110,7 +110,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
             'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'factura_origen_id' => $invoice->id,
             'monto' => 400, 'subtotal' => 400, 'itbms' => 0, 'monto_usado' => 0,
             'motivo' => 'Rechazada de prueba', 'resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR,
-            'estado' => AdminContCreditNote::ESTADO_RECHAZADA, 'registrado_por' => \App\Models\User::where('email', self::FELIX_EMAIL)->value('id'),
+            'estado' => AdminContCreditNote::ESTADO_RECHAZADA, 'registrado_por' => \App\Models\User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
             'fecha' => now(), 'motivo_rechazo' => 'No corresponde',
         ]);
 

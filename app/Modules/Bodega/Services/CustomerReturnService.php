@@ -27,7 +27,7 @@ use Illuminate\Support\Str;
  * ADR-SCRUM473-489-devoluciones.md. Único punto de escritura del ciclo de vida de una
  * devolución: crear (a partir de una Guía de Entrega real), cargar documento firmado, confirmar
  * recepción física (suma al inventario vía `KardexService` + "notifica" a Administración),
- * rechazar (potestad exclusiva de Bodega, sin aprobación de Mark) y finalizar (nota de crédito
+ * rechazar (potestad exclusiva de Bodega, sin aprobación de Gerencia) y finalizar (nota de crédito
  * simulada).
  */
 final class CustomerReturnService
@@ -304,7 +304,7 @@ final class CustomerReturnService
     }
 
     /**
-     * REQ-411 — potestad EXCLUSIVA de Bodega (sin aprobación de Mark, a diferencia de todos los
+     * REQ-411 — potestad EXCLUSIVA de Bodega (sin aprobación de Gerencia, a diferencia de todos los
      * demás flujos de rechazo del módulo), solo permitido antes de `confirmReception()`. Motivo
      * obligatorio (validado en el Controller); NO toca inventario, NO setea
      * `credit_note_notified_at`. Doble confirmación es responsabilidad del frontend (RN2 del ADR).

@@ -26,7 +26,7 @@ use Illuminate\Http\Response;
 /**
  * Batch 10 de Admin&Cont (SCRUM-553→558, REQ-476→481) — apertura de Notas Crédito y Devoluciones
  * (solo lectura). Batch 11 (SCRUM-559→564, REQ-482→487) agrega `facturas()` y `store()` — el
- * submit real. Batch 13 (SCRUM-571→574, REQ-494→497) agrega `decision()` (exclusivo Mark, ver
+ * submit real. Batch 13 (SCRUM-571→574, REQ-494→497) agrega `decision()` (exclusivo Gerencia, ver
  * middleware `primary_approver_only` en routes/admin-contab.php), `comprobante()` y `pdf()`. Ver docblock de
  * `CreditNoteService::register()`/`decide()` para el alcance exacto de cada uno.
  */
@@ -187,7 +187,7 @@ class AdminContCreditNoteController
         }
 
         // Pre-QA Batch 13 (2026-08-24) — `puede_aprobar_rechazar` (REQ-494) es dependiente del
-        // actor, no solo del estado de la nota: sin este chequeo, Felix/Yaneth/Gerencia veían los
+        // actor, no solo del estado de la nota: sin este chequeo, Contabilidad/Yaneth/Gerencia veían los
         // botones Aprobar/Rechazar en cualquier nota pendiente (el backend igual los bloqueaba con
         // un 403 claro al intentar decidir, nunca un gap de seguridad, pero sí un patrón
         // inconsistente respecto del gemelo REQ-448 en Facturación —
@@ -198,13 +198,13 @@ class AdminContCreditNoteController
         $isMark = AdminContFiscalSettings::actorEsMarkOSuperadmin($payload);
 
         $result['puede_aprobar_rechazar'] = $result['puede_aprobar_rechazar'] && $isMark;
-        // El texto del rechazo del PAC es información de Configuración Fiscal: solo Mark/superadmin.
+        // El texto del rechazo del PAC es información de Configuración Fiscal: solo Gerencia/superadmin.
         // Se agrega acá (deny-by-default) y no en `CreditNoteService::show()`, que también consumen
         // Bodega y un job de correo sin este gate.
         $result['puede_ver_fe_transmisiones'] = $isMark;
         $notaMark = $isMark ? AdminContCreditNote::query()->whereKey($creditNote)->first() : null;
         $result['fe_detalle'] = $notaMark?->fe_detalle;
-        // SCRUM-1007 — 'reintentar' | 'actualizar_estado' | null; solo Mark/superadmin y solo si el documento lo admite.
+        // SCRUM-1007 — 'reintentar' | 'actualizar_estado' | null; solo Gerencia/superadmin y solo si el documento lo admite.
         $result['accion_fe'] = $notaMark !== null ? $this->certification->accionDisponible($notaMark, 'nota_credito') : null;
         $result['puede_reconciliar_fe'] = $notaMark !== null && $this->certification->reconciliacionDisponible($notaMark, 'nota_credito'); // SCRUM-1019
 
@@ -212,7 +212,7 @@ class AdminContCreditNoteController
     }
 
     /**
-     * PUT /api/admin-contab/notas-credito/{creditNote}/decision — REQ-494, exclusivo Mark (gate
+     * PUT /api/admin-contab/notas-credito/{creditNote}/decision — REQ-494, exclusivo Gerencia (gate
      * real: middleware `primary_approver_only` sobre esta ruta, ver routes/admin-contab.php).
      */
     public function decision(int $creditNote, CreditNoteDecisionRequest $request): JsonResponse

@@ -22,11 +22,11 @@ final class ReceptorTipo
 
     /**
      * Decisión de Luis (2026-09-30): marcar un cliente como Consumidor Final (facturar a la DGI sin identificación) exige el
-     * permiso angosto de Mark y Felix. Quien solo tiene `ventas_diseno.write`/`.edit` puede dar de alta y editar clientes
+     * permiso angosto de Gerencia y Contabilidad. Quien solo tiene `ventas_diseno.write`/`.edit` puede dar de alta y editar clientes
      * como Contribuyente, pero no pasarlos a Consumidor Final.
      */
     public const PERMISO_CONSUMIDOR_FINAL = 'ventas_diseno.edit.client_tax_data';
-    public const MENSAJE_SIN_PERMISO = 'Solo Mark y Felix pueden marcar un cliente como Consumidor final.';
+    public const MENSAJE_SIN_PERMISO = 'Solo Gerencia y Contabilidad pueden marcar un cliente como Consumidor final.';
 
     /** @return list<string> */
     public static function permitidos(): array

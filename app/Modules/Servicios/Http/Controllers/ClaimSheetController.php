@@ -53,7 +53,7 @@ final class ClaimSheetController extends Controller
 
     /**
      * PUT /api/servicios/tickets/{ticketId}/claim-sheet — REQ-278, "Guardar Hoja de Reclamo".
-     * RN5: solo Aaron/Líder de Servicios o el técnico interno asignado; RN5 además bloquea
+     * RN5: solo Lider Servicios/Líder de Servicios o el técnico interno asignado; RN5 además bloquea
      * cualquier guardado si la hoja ya está Completada (`ClaimSheetLockedException`).
      */
     public function save(SaveClaimSheetRequest $request, int $ticketId): JsonResponse

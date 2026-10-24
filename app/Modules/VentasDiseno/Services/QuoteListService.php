@@ -210,7 +210,7 @@ final class QuoteListService
             // producto (Comparación de Referencias, `$catalogProductId !== null`): antes exigía
             // 'approved' (etapa Propuesta/Aprobado en adelante), excluyendo proyectos que ya
             // tienen una cotización real confirmada pero siguen en etapa Cotización
-            // ('sent'). Daniela: "cualquier proyecto que ya tenga una cotización asociada debe
+            // ('sent'). Gerencia: "cualquier proyecto que ya tenga una cotización asociada debe
             // estar disponible... desde la etapa de Cotización en adelante". "Nueva Orden"
             // (`$catalogProductId === null`) es un picker DISTINTO y deliberadamente más
             // estricto ("Pedidos Aprobados", REQ-133) — nunca se toca, sigue exigiendo
@@ -265,7 +265,7 @@ final class QuoteListService
      * `ReplacementRequestController::hasFullComprasReadAccess()`: se evalúa contra el JWT
      * (`effectivePermissionsV2()`/`RoleModuleVisibility`), NUNCA `$user->hasPermission()` (v1) —
      * ver docblock de `canDecide()` en ese controller para el detalle completo de por qué. Antes
-     * de este fix, Gerencia (David/Mark) y Compras (Yirena) tenían acceso real al módulo vía su
+     * de este fix, Gerencia (Gerencia/Mark) y Compras (Lider Compras) tenían acceso real al módulo vía su
      * rol pero nunca el permiso v1 correspondiente, así que caían siempre a la rama de "proyectos
      * propios" — y como ninguno de los dos es dueño de proyectos de venta, veían "No existe
      * ningún proyecto que contenga este producto" sin importar el producto real.
@@ -300,7 +300,7 @@ final class QuoteListService
      * REQ-080: tarjetas resumen, recalculadas sobre las cotizaciones que ya
      * pasaron el alcance y los filtros activos (etapa/búsqueda).
      *
-     * Corrección 2026-07-16 (hallazgo Marly, SCRUM-102): antes se clasificaba
+     * Corrección 2026-07-16 (hallazgo Gerencia, SCRUM-102): antes se clasificaba
      * por `stage` crudo de PipelineCard, que no siempre coincide con la
      * columna "Estado" que ve el usuario (`document_status`, ver
      * `Quote::documentStatus()`) — una cotización "Enviada" con tarjeta sin
@@ -488,7 +488,7 @@ final class QuoteListService
             'stage'           => $r['stage'],
             'price_type'      => $q->price_type,
             'owner'           => ['id' => $q->owner->id, 'name' => trim("{$q->owner->first_name} {$q->owner->last_name}")],
-            // SCRUM-1195 — Responsable del proyecto; sin tarjeta (borradores, CotizaYA) cae a quien la generó. `owner` = quién generó esa fila.
+            // SCRUM-1195 — Responsable del proyecto; sin tarjeta (borradores) cae a quien la generó. `owner` = quién generó esa fila.
             'designer'        => $q->sales_project_id !== null ? ($designerByProject[(int) $q->sales_project_id] ?? null) : null,
             'quote_date'      => ($q->generated_at ?? $q->created_at)->toIso8601String(),
             'document_status' => $r['document_status'],

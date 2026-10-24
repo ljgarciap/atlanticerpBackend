@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Models;
 
-use App\Modules\VentasDiseno\Models\Scopes\CotizaYaOriginScope;
 use App\Modules\VentasDiseno\Models\Scopes\IcgLegacyOriginScope;
 use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use App\Models\User;
@@ -23,9 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * en Cotización-B/C/D, ver memory/project_backlog_ventas_diseno_req.md.
  *
  * @property int                                    $id
- * @property string                                 $origin  SCRUM-1120 — 'comercial' | 'cotizaya'
- * @property string|null                            $cotizaya_customer_name
- * @property string|null                            $cotizaya_customer_phone
+ * @property string                                 $origin  'comercial' | 'icg_legacy'
  * @property int|null                                $master_client_id
  * @property int|null                                $sub_client_id
  * @property int|null                                $sales_project_id
@@ -61,18 +58,13 @@ class Quote extends Model
 {
     use LogsAuditTrail;
 
-    /** SCRUM-1120 — origen de la cotización: el flujo comercial de siempre o CotizaYA (venta chica). */
+    /** Origen de la cotización: el flujo comercial de siempre o la gemela de un pedido de ICG. */
     public const ORIGIN_COMERCIAL = 'comercial';
-    public const ORIGIN_COTIZAYA  = 'cotizaya';
     /** Cotización gemela de un pedido de ICG (ver `IcgLegacyOriginScope`): oculta por defecto, solo facturación la lee. */
     public const ORIGIN_ICG_LEGACY = 'icg_legacy';
 
-    /**
-     * SCRUM-1120 — fuera del módulo CotizaYA, ninguna consulta ve las cotizaciones de venta chica (ver el scope).
-     */
     protected static function booted(): void
     {
-        static::addGlobalScope(new CotizaYaOriginScope());
         static::addGlobalScope(new IcgLegacyOriginScope());
 
         // SCRUM-1166 — la cotización sigue al cliente fiscal mientras no esté confirmada: al crearla, o si cambia de cliente, copia su exención de
@@ -104,11 +96,6 @@ class Quote extends Model
         return $this->origin === self::ORIGIN_ICG_LEGACY;
     }
 
-    public function isCotizaYa(): bool
-    {
-        return $this->origin === self::ORIGIN_COTIZAYA;
-    }
-
     /**
      * REQ-046: texto fijo por defecto de Condiciones al crear una cotización —
      * editable solo por quien tenga ventas_diseno.edit.conditions.
@@ -129,7 +116,7 @@ class Quote extends Model
         'owner_id', 'architect_id', 'delivery_type', 'status', 'folio', 'generated_at', 'confirmed_at',
         'price_type', 'discount_mode', 'global_discount_percent',
         'observations', 'includes_installation', 'discount_totals_type', 'discount_totals_value',
-        'conditions_text', 'origin', 'cotizaya_customer_name', 'cotizaya_customer_phone',
+        'conditions_text', 'origin',
     ];
 
     /** @return array<string, string> */
@@ -411,7 +398,7 @@ class Quote extends Model
      * misma lista unificada en vez de vivir en un flujo de error aparte (el
      * bloqueo real de "Guardar y generar" seguía viviendo solo en confirm()/
      * QuoteController, sin aparecer nunca en el banner de "todos los faltantes a
-     * la vez"). $skipMarginCheck es la excepción nombrada de Mark/David
+     * la vez"). $skipMarginCheck es la excepción nombrada de Gerencia/David
      * (`ventas_diseno.override_min_margin`, SCRUM-725) — para ellos "generar" no
      * bloquea por margen, el bloqueo/confirmación real sigue en confirm().
      *

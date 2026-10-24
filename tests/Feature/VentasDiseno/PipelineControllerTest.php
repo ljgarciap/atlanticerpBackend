@@ -328,7 +328,7 @@ class PipelineControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-83 — Marly probó con la cuenta real del actor (vendedor/diseñador) y no podía crear
+     * SCRUM-83 — Gerencia probó con la cuenta real del actor (vendedor/diseñador) y no podía crear
      * proyectos ni cotizaciones (403), pese a que el rol solo ya debería alcanzar (ver docblock
      * de User::effectivePermissionsV2()). Sin ningún grant manual de extra_permissions -- a
      * diferencia de los demás tests de este archivo, que llaman grantVentasDisenoEdit() y por eso
@@ -567,7 +567,7 @@ class PipelineControllerTest extends FeatureTestCase
     /**
      * SCRUM-81 — worked_area_m2 es decimal(10,2) en la migración; sin un `max:` que
      * coincida, un valor que desborda la columna llegaba intacto a Postgres y producía
-     * un 500 sin manejar en vez de un 422 (reportado por Marly con 999999999).
+     * un 500 sin manejar en vez de un 422 (reportado por Gerencia con 999999999).
      */
     public function test_actualizar_superficie_fuera_de_rango_retorna_422_no_500(): void
     {
@@ -786,7 +786,7 @@ class PipelineControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['observations' => 'Mark editando'])
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['observations' => 'Gerencia editando'])
             ->assertStatus(200);
     }
 

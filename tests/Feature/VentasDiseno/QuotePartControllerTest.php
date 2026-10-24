@@ -215,7 +215,7 @@ class QuotePartControllerTest extends FeatureTestCase
         $this->assertNotNull($copyItem->photo_key);
         $this->assertNotSame($originalKey, $copyItem->photo_key);
         Storage::disk('s3-public')->assertExists($copyItem->photo_key);
-        // Rebote de Daniela (2026-09-11) — root cause real fue que copyPhotoTo() usaba
+        // Rebote de Gerencia (2026-09-11) — root cause real fue que copyPhotoTo() usaba
         // Storage::disk()->copy(), que en el S3 real (no en este fake) intenta leer el ACL del
         // archivo origen y fallaba en silencio contra la policy IAM de la app, dejando photo_key
         // en BD apuntando a una key que nunca se creó en S3 (ver docblock de copyPhotoTo()). Este

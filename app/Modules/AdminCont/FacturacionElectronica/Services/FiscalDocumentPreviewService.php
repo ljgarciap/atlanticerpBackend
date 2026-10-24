@@ -12,7 +12,7 @@ use Throwable;
 
 /**
  * SCRUM-943 (pedido de Luis, 2026-09-25) — en `pac_ambiente: apagado` (o cualquier otro momento)
- * nunca se llama al PAC de verdad, pero Mark/el equipo quiere poder validar que la ESTRUCTURA del
+ * nunca se llama al PAC de verdad, pero Gerencia/el equipo quiere poder validar que la ESTRUCTURA del
  * documento que se armaría es correcta, sin certificar nada. Reusa `FiscalDocumentBuilder`
  * (mismo ensamblado que usaría la certificación real) + `MslJsonMapper` (mismo shape exacto que
  * `MslPacAdapter` enviaría) — nunca una segunda copia de ninguna de las 2 lógicas.

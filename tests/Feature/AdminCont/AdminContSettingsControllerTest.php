@@ -14,7 +14,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContSettingsControllerTest extends FeatureTestCase
 {
-    private const FELIX_EMAIL = 'contabilidad@test.com';
+    private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -25,13 +25,13 @@ class AdminContSettingsControllerTest extends FeatureTestCase
     private function grantConfigurePermission(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', self::FELIX_EMAIL)
+        DB::table("{$slug}_auth.users")->where('email', self::CONTABILIDAD_EMAIL)
             ->update(['extra_permissions' => json_encode(['admin_contab.settings.configure'])]);
     }
 
     private function loginAsFelix(): string
     {
-        return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+        return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     public function test_show_devuelve_los_valores_por_defecto(): void

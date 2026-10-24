@@ -21,7 +21,7 @@ use Illuminate\Routing\Controller;
 /**
  * SCRUM-1168 F4 — reversos del dinero de los cobros:
  *  - desaplicar (una aplicación o un cruce completo): sin aprobación, queda en el libro con motivo y autor;
- *  - anular un cobro: lo solicitan Felix o Yaneth y lo decide Mark (la ruta de decisión es `primary_approver_only`).
+ *  - anular un cobro: lo solicitan Contabilidad o Asistente Administrativa y lo decide Gerencia (la ruta de decisión es `primary_approver_only`).
  */
 class AdminContReversalController extends Controller
 {
@@ -67,7 +67,7 @@ class AdminContReversalController extends Controller
         return response()->json($this->compensations->presentar($compensation));
     }
 
-    /** POST /api/admin-contab/payments/{id}/anular {motivo} — solicita la anulación (la decide Mark). */
+    /** POST /api/admin-contab/payments/{id}/anular {motivo} — solicita la anulación (la decide Gerencia). */
     public function solicitarAnulacion(int $id, Request $request): JsonResponse
     {
         $actor = $this->resolveUser($request);
@@ -86,7 +86,7 @@ class AdminContReversalController extends Controller
     }
 
     /**
-     * POST /api/admin-contab/clientes/{masterClientId}/devolucion (multipart) — solicita devolver dinero del saldo a favor del cliente; la decide Mark.
+     * POST /api/admin-contab/clientes/{masterClientId}/devolucion (multipart) — solicita devolver dinero del saldo a favor del cliente; la decide Gerencia.
      * Campos: source_type (cobro|abono|nota_credito), source_id, monto, bank_account_id, referencia, motivo, comprobante (archivo, obligatorio).
      */
     public function solicitarDevolucion(int $masterClientId, Request $request): JsonResponse
@@ -134,7 +134,7 @@ class AdminContReversalController extends Controller
         return response()->json(['rows' => $paginator->items(), 'total' => $rows->count(), 'meta' => Pagination::meta($paginator)]);
     }
 
-    /** PUT /api/admin-contab/reversal-requests/{id}/decision {aprobar, motivo_rechazo?} — exclusivo de Mark. */
+    /** PUT /api/admin-contab/reversal-requests/{id}/decision {aprobar, motivo_rechazo?} — exclusivo de Gerencia. */
     public function decision(int $id, Request $request): JsonResponse
     {
         $mark = $this->resolveUser($request);

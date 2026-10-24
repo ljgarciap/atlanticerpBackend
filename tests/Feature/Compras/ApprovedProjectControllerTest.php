@@ -22,7 +22,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * REQ-133 (sprint2) — buscador de Pedidos Aprobados para Compras, sin depender de
- * ventas_diseno.read (Yirena/lider_compras no tiene ese permiso).
+ * ventas_diseno.read (Lider Compras/lider_compras no tiene ese permiso).
  */
 class ApprovedProjectControllerTest extends FeatureTestCase
 {
@@ -284,12 +284,12 @@ class ApprovedProjectControllerTest extends FeatureTestCase
         $this->assertContains('Proyecto De Otro Vendedor', $names);
     }
 
-    // ── SCRUM-818 (rebote 2026-09-03) — reproduce el bug real reportado por Daniela ────────────
+    // ── SCRUM-818 (rebote 2026-09-03) — reproduce el bug real reportado por Gerencia ────────────
 
     /**
      * Hallazgo 2 — a diferencia de los tests de arriba (que simulan el caso "ya arreglado"
      * otorgando `compras.read` manualmente vía `grantCompras()`, un permiso v1), este reproduce
-     * la cuenta REAL de Yirena: acceso a Compras solo vía su ROL (`RoleModuleVisibility`, v2) —
+     * la cuenta REAL de Lider Compras: acceso a Compras solo vía su ROL (`RoleModuleVisibility`, v2) —
      * nunca tuvo `compras.read`/`compras.sustitutos.manage` cargado en `extra_permissions`. Antes
      * del fix, `QuoteListService::hasFullComprasAccess()` usaba `$user->hasPermission()` (v1) y
      * la trataba como si no tuviera ningún acceso — "No existe ningún proyecto que contenga este
@@ -316,7 +316,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
         $this->assertContains('Proyecto De Otro Vendedor', $names);
     }
 
-    /** Mismo caso que arriba, pero para Gerencia (David/Mark) — rol `management`, sin `gerencia.view` en v1. */
+    /** Mismo caso que arriba, pero para Gerencia (Gerencia/Mark) — rol `management`, sin `gerencia.view` en v1. */
     public function test_gerencia_ve_proyectos_solo_con_acceso_de_rol_sin_permiso_v1_extra(): void
     {
         $role = Role::where('key', 'management')->firstOrFail();

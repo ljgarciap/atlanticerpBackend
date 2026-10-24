@@ -172,7 +172,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     /**
      * SCRUM-800 — regresión: `findConflictingLines()` colapsaba a UNA línea por producto (keyBy)
      * al marcar `replaced_by_id`. Si existían DOS líneas huérfanas sin resolver del mismo
-     * producto (de dos conteos viejos distintos, ninguno resuelto por Mark todavía), solo una
+     * producto (de dos conteos viejos distintos, ninguno resuelto por Gerencia todavía), solo una
      * quedaba marcada y la otra seguía bloqueando ajustes/conteos nuevos para siempre.
      */
     public function test_store_con_confirm_replace_marca_todas_las_lineas_huerfanas_del_producto_no_solo_una(): void
@@ -542,7 +542,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-797 (rebote 2026-08-27) — "al enviar a aprobación de Mark": si MIENTRAS TANTO otro
+     * SCRUM-797 (rebote 2026-08-27) — "al enviar a aprobación de Gerencia": si MIENTRAS TANTO otro
      * conteo de la misma bodega ya dejó una línea evaluada con diferencia real sin resolver para
      * el MISMO producto, exige confirmación antes de reemplazar esa línea puntual.
      */
@@ -948,7 +948,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $response->assertJsonPath('estado', GeneralCountRequest::ESTADO_RECHAZADA);
     }
 
-    public function test_approve_no_siendo_mark_retorna_403(): void
+    public function test_approve_no_siendo_aprobador_retorna_403(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
@@ -960,7 +960,7 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $this->markUp('management@atlantic.test');
         // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Mark (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
         $this->grantBodega('multi@atlantic.test', ['bodega.approve']);
 
@@ -1100,10 +1100,10 @@ class GeneralCountControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-466 (rebote de Gerencia Test 2026-08-14) — RN1: "Realizar ajuste" es exclusivo del
-     * Líder de Bodega. Mark (con `bodega.approve`, el mismo permiso que ya usa para aprobar el
+     * Líder de Bodega. Gerencia (con `bodega.approve`, el mismo permiso que ya usa para aprobar el
      * conteo) NO debe poder aplicar el ajuste — su rol termina en aprobar/rechazar.
      */
-    public function test_apply_siendo_mark_retorna_403(): void
+    public function test_apply_siendo_aprobador_retorna_403(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
