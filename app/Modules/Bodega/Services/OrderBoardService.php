@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Bodega\Services;
 
 use App\Models\User;
+use App\Modules\AdminCont\Services\InvoiceService;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderDocument;
@@ -15,6 +16,7 @@ use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
+use App\Shared\Support\ParsesIdListQueryParam;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -28,9 +30,12 @@ use Illuminate\Support\Collection;
  */
 final class OrderBoardService
 {
+    use ParsesIdListQueryParam;
+
     public function __construct(
         private readonly FamilyService $family,
         private readonly BodegaSettingsService $settings,
+        private readonly InvoiceService $invoices,
     ) {}
 
     /**
@@ -74,8 +79,13 @@ final class OrderBoardService
         $orderIdsForSummary = array_values($orders->pluck('id')->map(fn ($id) => (int) $id)->all());
         $itemsSummary = $this->itemsSummaryByOrder($orderIdsForSummary);
 
+        // SCRUM-876/929 — `invoice_ready` se calcula en vivo (1 query para todo el board) con la regla
+        // central de "la factura de una entrega" (`InvoiceService::pickInvoiceForDelivery()`): la parcial
+        // vigente de la tarjeta o el `completo` vigente que la cubre. Ya no depende de `orders.invoice_ready`.
+        $invoicedDeliveryIds = $this->invoices->deliveryIdsWithActiveInvoice($orders);
+
         return [
-            'cards' => $orders->map(fn (Order $o) => $this->cardPayload($o, $etaByProduct, $itemsSummary))->values()->all(),
+            'cards' => $orders->map(fn (Order $o) => $this->cardPayload($o, $etaByProduct, $itemsSummary, $invoicedDeliveryIds))->values()->all(),
             'counts_by_stage' => $counts,
             'total' => $orders->count(),
         ];
@@ -120,6 +130,32 @@ final class OrderBoardService
     }
 
     /**
+     * SCRUM-854, rebote de Pre-QA — el selector del filtro seller_ids usaba
+     * `ventas_diseno.home.vendors()`, gateado por `ventas_diseno.read`. Los roles reales de
+     * Pedidos (lider_bodega/asistente_bodega/ayudante_general_bodega/transporte) no tienen ese
+     * permiso — 403 silencioso, selector permanentemente vacío. Este método vive en el mismo
+     * service que ya aplica el filtro (gateado por `bodega.read`, el permiso real de esta
+     * pantalla) y devuelve el mismo shape {id, name} que `HomeService::vendors()` para que el
+     * frontend reuse `UserMultiSelect` sin cambios de contrato — universo: dueños de PipelineCard
+     * con al menos un pedido en el tablero actual (misma base que assistantLoad()/board()).
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    public function sellers(): array
+    {
+        /** @var Collection<int, Order> $orders */
+        $orders = $this->baseQuery()->get();
+
+        return array_values($orders
+            ->pluck('pipelineCard.owner')
+            ->filter()
+            ->unique('id')
+            ->sortBy('first_name')
+            ->map(fn (User $owner): array => ['id' => $owner->id, 'name' => $this->fullName($owner) ?? ''])
+            ->all());
+    }
+
+    /**
      * REQ-332 — modal "Ver detalle".
      *
      * @return array<string, mixed>
@@ -160,6 +196,13 @@ final class OrderBoardService
             // imposible en datos sembrados/legacy).
             'cliente_master' => $subClient?->masterClient?->name,
             'subcliente' => $subClient?->business_name,
+            // SCRUM-1149 — "Observaciones" del proyecto en el Pipeline (instrucciones de entrega,
+            // condiciones especiales): Bodega las necesita para el despacho sin ir a la tarjeta ni a
+            // la cotización. El pedido no guarda una copia (nunca tuvo el campo, el modal mostraba
+            // "Sin observaciones." fijo): se leen de la tarjeta de origen, así que también
+            // aparecen en los pedidos ya creados y en todos los de una familia de entregas parciales
+            // (comparten tarjeta). Vacío/solo espacios => null (el modal muestra "Sin observaciones.").
+            'observaciones' => $this->nullIfBlank($order->pipelineCard?->observations),
             'items' => $order->items->map(function (OrderItem $i): array {
                 /** @var CatalogProduct|null $product */
                 $product = $i->catalogProduct;
@@ -192,11 +235,19 @@ final class OrderBoardService
         ]);
     }
 
+    private function nullIfBlank(?string $value): ?string
+    {
+        $trimmed = $value === null ? '' : trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
     /** @return Builder<Order> */
     private function baseQuery(): Builder
     {
         return Order::query()
             ->whereIn('stage', Order::STAGE_ORDER)
+            ->sinGemelosEntregados()
             ->with(['assistant', 'picker', 'courier', 'pipelineCard.owner', 'pipelineCard.salesProject']);
     }
 
@@ -217,9 +268,18 @@ final class OrderBoardService
             $query->where('assistant_id', (int) $assistantId);
         }
 
-        $sellerId = $request->query('seller_id');
-        if (is_numeric($sellerId)) {
-            $query->whereHas('pipelineCard', fn (Builder $pc) => $pc->where('owner_id', (int) $sellerId));
+        // SCRUM-854 — multi-selección (OR entre seleccionados), gana sobre seller_id singular.
+        // Vía relación (whereHas), no un keyBy/groupBy por sales_project_id — varios pedidos
+        // pueden compartir el mismo proyecto sin colapsarse entre sí (gotcha ya conocido del
+        // proyecto, ver memoria feedback_quote_stage_keyby_shared_project.md).
+        $sellerIds = $this->parseIdListParam($request, 'seller_ids');
+        if ($sellerIds !== []) {
+            $query->whereHas('pipelineCard', fn (Builder $pc) => $pc->whereIn('owner_id', $sellerIds));
+        } else {
+            $sellerId = $request->query('seller_id');
+            if (is_numeric($sellerId)) {
+                $query->whereHas('pipelineCard', fn (Builder $pc) => $pc->where('owner_id', (int) $sellerId));
+            }
         }
 
         $cliente = $request->query('cliente');
@@ -273,11 +333,18 @@ final class OrderBoardService
      * @param  array<int, array{product_count: int, unit_count: int}>|null  $itemsSummary  order_id =>
      *                                                                                     resumen de productos/unidades (SCRUM-382), siempre pasado por el caller (`board()`/
      *                                                                                     `detail()`) — nunca null en la práctica, el default solo evita romper firmas viejas.
+     * @param  list<int>|null  $invoicedDeliveryIds  ids de las tarjetas con factura activa según la regla
+     *                                               central (batch de `board()`, SCRUM-876/929); null cuando se llama para un solo pedido
+     *                                               (`detail()`) — ahí se consulta directo con la misma regla.
      * @return array<string, mixed>
      */
-    private function cardPayload(Order $order, ?array $etaByProduct = null, ?array $itemsSummary = null): array
+    private function cardPayload(Order $order, ?array $etaByProduct = null, ?array $itemsSummary = null, ?array $invoicedDeliveryIds = null): array
     {
         $today = Carbon::today();
+
+        $invoiceReady = $invoicedDeliveryIds !== null
+            ? in_array($order->id, $invoicedDeliveryIds, true)
+            : $this->invoices->invoiceForDelivery($order) !== null;
 
         /** @var PipelineCard|null $pipelineCard */
         $pipelineCard = $order->pipelineCard;
@@ -314,7 +381,7 @@ final class OrderBoardService
             // realmente "sin stock": antes esto SOLO viajaba en `detail()`, obligando a abrir el
             // modal para ver la ETA de un pedido atascado en Asignado por falta de stock.
             'eta_proveedor' => $order->isAwaitingStock() ? $this->supplierEta($order, $etaByProduct) : null,
-            'invoice_ready' => $order->invoice_ready,
+            'invoice_ready' => $invoiceReady,
             'family' => [
                 'sequence_in_family' => $order->sequence_in_family,
                 'total_in_family' => $order->total_in_family,

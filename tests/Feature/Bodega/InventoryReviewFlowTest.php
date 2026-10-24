@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bodega;
 
+use App\Models\User;
 use App\Modules\Bodega\Models\Order;
+use App\Modules\Notifications\Models\Notification;
 use App\Modules\Notifications\Models\NotificationSend;
+use App\Modules\VentasDiseno\Models\Quote;
 use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
@@ -115,7 +118,12 @@ class InventoryReviewFlowTest extends FeatureTestCase
         );
         $review->items()->create(['qty_requested' => 2, 'reference_snapshot' => 'ITEM-B', 'location_snapshot' => 'C-03']);
         $review->refresh();
-        [$itemA, $itemB] = $review->items->all();
+        // `items()` no tiene orderBy propio — Postgres no garantiza orden de fila sin él, así que
+        // destructurar `->all()` asumiendo orden de inserción es flaky bajo la suite completa
+        // (confirmado: 5/5 en aislado, falla intermitente corriendo los 3353 tests). Se busca cada
+        // ítem por su `reference_snapshot`, determinista sin importar el orden físico de fila.
+        $itemA = $review->items->firstWhere('reference_snapshot', 'ITEM-A');
+        $itemB = $review->items->firstWhere('reference_snapshot', 'ITEM-B');
 
         $this->grantBodegaPermissions('liderbodega@test.com');
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
@@ -162,16 +170,154 @@ class InventoryReviewFlowTest extends FeatureTestCase
         );
     }
 
-    /** RN3 — mixto: se generan 2 tarjetas, ambas vinculadas a la misma familia. */
-    public function test_resultado_mixto_genera_2_tarjetas_en_la_misma_familia(): void
+    // SCRUM-1153 — Compras (Yirena) recibe el aviso de sin stock con el producto que falta y un enlace a Compras → Inventario
+    // con ese producto ya buscado (antes: sin enlace, clic = nada). Ventas & Diseño conserva su aviso de siempre.
+    public function test_aviso_de_sin_stock_a_compras_lleva_el_producto_y_el_enlace_a_inventario(): void
     {
         $review = $this->makeOrder(
             ['order_type' => Order::ORDER_TYPE_REVISION_INVENTARIO, 'stage' => Order::STAGE_PICKING_PENDIENTE],
-            ['qty_requested' => 3, 'reference_snapshot' => 'ITEM-A'],
+            ['qty_requested' => 4, 'reference_snapshot' => 'ML-10097BWH-1'],
         );
-        $review->items()->create(['qty_requested' => 2, 'reference_snapshot' => 'ITEM-B']);
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
+                'decisions' => [['order_item_id' => $review->items->first()->id, 'found' => false]],
+            ])
+            ->assertStatus(200);
+
+        $this->makeCurrentTenant();
+        $yirenaId = (int) User::where('email', 'lidercompras@test.com')->value('id');
+        $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE)
+            ->where('source_ref', "order:{$review->id}")
+            ->get()->first(fn (NotificationSend $n): bool => in_array($yirenaId, $n->audience, true));
+
+        $this->assertNotNull($send, 'Yirena (lider_compras) recibe el aviso.');
+        $this->assertSame('/inventario?search=ML-10097BWH-1', $send->content['cta_url']);
+        $this->assertStringContainsString('ML-10097BWH-1 (x4)', $send->content['body']);
+        $this->assertStringContainsString($review->order_number, $send->content['subject']);
+
+        // La campana de Yirena guarda ese enlace: el clic navega a Inventario con el producto buscado.
+        $this->assertSame(
+            '/inventario?search=ML-10097BWH-1',
+            Notification::where('user_id', $yirenaId)->where('notification_send_id', $send->id)->value('link_url'),
+        );
+    }
+
+    // SCRUM-1159 — el aviso al vendedor trae el N° de cotización junto al pedido y un enlace a «Status de Pedidos» (solo lectura, solo lo propio)
+    // con el pedido ya buscado. Antes: solo el ID del pedido, sin enlace.
+    public function test_aviso_de_sin_stock_al_vendedor_lleva_el_numero_de_cotizacion_y_el_enlace_a_status_de_pedidos(): void
+    {
+        $sellerId = (int) User::where('email', 'designer@atlantic.test')->value('id');
+        $review = $this->makeOrderWithPipelineCard(
+            $sellerId,
+            ['order_type' => Order::ORDER_TYPE_REVISION_INVENTARIO, 'stage' => Order::STAGE_PICKING_PENDIENTE],
+            ['qty_requested' => 4, 'reference_snapshot' => 'ML-10097BWH-1'],
+        );
+        $card = $review->pipelineCard;
+        Quote::create([
+            'master_client_id' => $card->master_client_id, 'sub_client_id' => $card->sub_client_id,
+            'sales_project_id' => $card->sales_project_id, 'ruc' => '155-0000-1-2026',
+            'name' => 'Cotización 1159', 'description' => 'Cotización 1159', 'owner_id' => $sellerId,
+            'status' => 'approved', 'folio' => 'COT-2026-1159', 'generated_at' => now(),
+        ]);
+
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
+                'decisions' => [['order_item_id' => $review->items->first()->id, 'found' => false]],
+            ])
+            ->assertStatus(200);
+
+        $this->makeCurrentTenant();
+        $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE)->where('source_ref', "order:{$review->id}")
+            ->get()->first(fn (NotificationSend $n): bool => in_array($sellerId, $n->audience, true));
+
+        $this->assertNotNull($send, 'El dueño de la tarjeta (vendedor) recibe el aviso.');
+        $this->assertStringContainsString("{$review->order_number} (cotización COT-2026-1159)", $send->content['subject']);
+        $this->assertStringContainsString('COT-2026-1159', $send->content['body']);
+        $this->assertSame('/bodega/pedidos/status?search='.rawurlencode($review->order_number), $send->content['cta_url']);
+        $this->assertSame(
+            $send->content['cta_url'],
+            Notification::where('user_id', $sellerId)->where('notification_send_id', $send->id)->value('link_url'),
+        );
+    }
+
+    // SCRUM-1153 (Pre-QA) — un ítem personalizado (sin referencia) se nombra por su descripción y el aviso no lleva enlace a Inventario.
+    public function test_aviso_de_sin_stock_de_un_item_personalizado_o_con_referencia_en_blanco_usa_la_descripcion_y_no_lleva_enlace(): void
+    {
+        $review = $this->makeOrder(
+            ['order_type' => Order::ORDER_TYPE_REVISION_INVENTARIO, 'stage' => Order::STAGE_PICKING_PENDIENTE],
+            ['qty_requested' => 5, 'reference_snapshot' => '   ', 'description_snapshot' => 'Lámpara especial a medida'],   // referencia de solo espacios = sin referencia
+        );
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
+                'decisions' => [['order_item_id' => $review->items->first()->id, 'found' => false]],
+            ])
+            ->assertStatus(200);
+
+        $this->makeCurrentTenant();
+        $yirenaId = (int) User::where('email', 'lidercompras@test.com')->value('id');
+        $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE)->where('source_ref', "order:{$review->id}")
+            ->get()->first(fn (NotificationSend $n): bool => in_array($yirenaId, $n->audience, true));
+
+        $this->assertNotNull($send);
+        $this->assertStringContainsString('Lámpara especial a medida (x5)', $send->content['body']);
+        $this->assertStringNotContainsString('Faltan: —', $send->content['body'], 'Antes decía «Faltan: — (x5)».');
+        $this->assertArrayNotHasKey('cta_url', $send->content, 'Un producto personalizado no existe en Inventario: no hay a dónde enlazar.');
+    }
+
+    // SCRUM-1153 — resultado mixto: el aviso lista SOLO lo que falta (lo encontrado ya salió a otra tarjeta).
+    public function test_aviso_de_sin_stock_mixto_lista_solo_lo_que_falta(): void
+    {
+        $review = $this->makeOrder(
+            ['order_type' => Order::ORDER_TYPE_REVISION_INVENTARIO, 'stage' => Order::STAGE_PICKING_PENDIENTE],
+            ['qty_requested' => 3, 'reference_snapshot' => 'ITEM-ENCONTRADO'],
+        );
+        $review->items()->create(['qty_requested' => 2, 'reference_snapshot' => 'ITEM-FALTA']);
         $review->refresh();
-        [$itemA, $itemB] = $review->items->all();
+        [$found, $missing] = $review->items()->orderBy('id')->get()->all();
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [
+                'decisions' => [
+                    ['order_item_id' => $found->id, 'found' => true, 'location' => 'D-04'],
+                    ['order_item_id' => $missing->id, 'found' => false],
+                ],
+            ])
+            ->assertStatus(200);
+
+        $this->makeCurrentTenant();
+        $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE)->where('source_ref', "order:{$review->id}")->firstOrFail();
+        $this->assertSame('/inventario?search=ITEM-FALTA', $send->content['cta_url']);
+        $this->assertStringContainsString('ITEM-FALTA (x2)', $send->content['body']);
+        $this->assertStringNotContainsString('ITEM-ENCONTRADO', $send->content['body']);
+    }
+
+    /** RN3 — mixto: se generan 2 tarjetas, ambas vinculadas a la misma familia. */
+    public function test_resultado_mixto_genera_2_tarjetas_en_la_misma_familia(): void
+    {
+        // SCRUM-929 — el ítem "encontrado" se BORRA de la tarjeta original y se recrea en la nueva:
+        // el vínculo a la cotización y el precio tienen que sobrevivir a ese split.
+        $quoteItemA = self::uniqueTestNumber();
+        $quoteItemB = self::uniqueTestNumber();
+        $review = $this->makeOrder(
+            ['order_type' => Order::ORDER_TYPE_REVISION_INVENTARIO, 'stage' => Order::STAGE_PICKING_PENDIENTE],
+            ['qty_requested' => 3, 'reference_snapshot' => 'ITEM-A', 'quote_item_id' => $quoteItemA, 'unit_price' => 120.00],
+        );
+        $review->items()->create(['qty_requested' => 2, 'reference_snapshot' => 'ITEM-B', 'quote_item_id' => $quoteItemB, 'unit_price' => 45.10]);
+        $review->refresh();
+        // Sin ORDER BY, Postgres no garantiza el orden de la relación: en la suite completa a veces
+        // devolvía B primero y el test confundía qué ítem se movió.
+        [$itemA, $itemB] = $review->items()->orderBy('id')->get()->all();
 
         $this->grantBodegaPermissions('liderbodega@test.com');
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
@@ -197,6 +343,13 @@ class InventoryReviewFlowTest extends FeatureTestCase
         $this->assertSame($review->familyRootId(), $newOrder->familyRootId());
         $this->assertSame(1, $newOrder->items()->count(), 'Solo el ítem encontrado se movió a la nueva tarjeta.');
         $this->assertSame(1, $review->fresh()->items()->count(), 'Solo el ítem no encontrado se queda en la original.');
+
+        $moved = $newOrder->items()->first();
+        $this->assertSame($quoteItemA, $moved->quote_item_id, 'SCRUM-929: el vínculo sobrevive al split.');
+        $this->assertSame(120.0, $moved->unit_price, 'SCRUM-929: el precio sobrevive al split.');
+        $stayed = $review->fresh()->items()->first();
+        $this->assertSame($quoteItemB, $stayed->quote_item_id);
+        $this->assertSame(45.1, $stayed->unit_price);
     }
 
     /** Pre-QA 2026-07-22 — REQ-318 "PERMISOS: Asistentes y Jefe de Bodega", no Picker ni Repartidor. */

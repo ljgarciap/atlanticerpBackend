@@ -175,6 +175,37 @@ class OrderBoardControllerTest extends FeatureTestCase
     }
 
     /**
+     * SCRUM-854, rebote de Pre-QA — el selector del filtro seller_ids debe funcionar para el
+     * permiso real de esta pantalla (bodega.read), no depender de ventas_diseno.read como el
+     * endpoint viejo que reusaba el frontend. Login real con rol lider_bodega (vía
+     * authHeadersForBodegaReader(), mismo helper que el resto de este archivo).
+     */
+    public function test_sellers_devuelve_duenos_de_pedidos_para_un_usuario_solo_con_bodega_read(): void
+    {
+        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->makeOrderWithPipelineCard($ownerId);
+
+        $response = $this->withHeaders($this->authHeadersForBodegaReader())
+            ->getJson('/api/bodega/orders/sellers')
+            ->assertStatus(200);
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertContains($ownerId, $ids);
+    }
+
+    /** SCRUM-854, rebote de Pre-QA — sin pedidos con pipeline_card, la lista viene vacía, no error. */
+    public function test_sellers_sin_pedidos_con_pipeline_card_devuelve_lista_vacia(): void
+    {
+        $this->makeOrder();
+
+        $response = $this->withHeaders($this->authHeadersForBodegaReader())
+            ->getJson('/api/bodega/orders/sellers')
+            ->assertStatus(200);
+
+        $this->assertSame([], $response->json('data'));
+    }
+
+    /**
      * REQ-312 (corrección 2026-08-11, Gerencia Test, SCRUM-382) — "resumen de productos y
      * cantidades" en cada tarjeta del tablero.
      */
@@ -207,6 +238,46 @@ class OrderBoardControllerTest extends FeatureTestCase
         $this->assertNotNull($response->json('cliente_master'));
         $this->assertNotNull($response->json('subcliente'));
         $this->assertSame($response->json('cliente'), $response->json('subcliente'), 'subcliente debe coincidir con el snapshot cliente ya existente.');
+    }
+
+    // SCRUM-1149 — las Observaciones del proyecto en el Pipeline llegan al detalle del pedido en Bodega.
+    public function test_ver_detalle_expone_las_observaciones_del_proyecto_del_pipeline(): void
+    {
+        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $order->pipelineCard->update(['observations' => "COMENTARIOS 1 ENTREGA EN BODEGA\nLlamar antes de despachar"]);
+
+        $this->withHeaders($this->authHeadersForBodegaReader())
+            ->getJson("/api/bodega/orders/{$order->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('observaciones', "COMENTARIOS 1 ENTREGA EN BODEGA\nLlamar antes de despachar");
+    }
+
+    public function test_ver_detalle_sin_observaciones_o_en_blanco_devuelve_null(): void
+    {
+        $vacio = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $blanco = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $blanco->pipelineCard->update(['observations' => "  \n "]);
+        $sinTarjeta = $this->makeOrder();
+
+        $headers = $this->authHeadersForBodegaReader();
+        foreach ([$vacio, $blanco, $sinTarjeta] as $order) {
+            $this->withHeaders($headers)->getJson("/api/bodega/orders/{$order->id}")
+                ->assertStatus(200)->assertJsonPath('observaciones', null);
+        }
+    }
+
+    // SCRUM-1149 — entrega Parcial: todas las tarjetas de la familia comparten tarjeta de Pipeline, todas muestran la observación.
+    public function test_ver_detalle_de_entregas_parciales_muestra_la_misma_observacion(): void
+    {
+        $root = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $root->pipelineCard->update(['observations' => 'Entregar en dos viajes']);
+        $child = $this->makeOrder(['pipeline_card_id' => $root->pipeline_card_id, 'order_number' => $root->order_number, 'family_id' => $root->id]);
+
+        $headers = $this->authHeadersForBodegaReader();
+        foreach ([$root, $child] as $order) {
+            $this->withHeaders($headers)->getJson("/api/bodega/orders/{$order->id}")
+                ->assertStatus(200)->assertJsonPath('observaciones', 'Entregar en dos viajes');
+        }
     }
 
     /**
@@ -259,6 +330,52 @@ class OrderBoardControllerTest extends FeatureTestCase
         $this->assertSame('Juan Pérez (6000-1234)', $response->json('contacto_cliente'));
         $this->assertSame('Av. Balboa, Ciudad de Panamá', $response->json('direccion_entrega'));
         $this->assertSame('FAB-9001', $response->json('items.0.factory_reference'));
+    }
+
+    /**
+     * SCRUM-930 (Pre-QA, CRÍTICO) — `GuiaEntregaModal` reusado desde Estado de Cuenta llamaba a
+     * este endpoint sin que Admin&Contab tuviera `bodega.read`, quedando colgado en "Cargando..."
+     * (403 indistinguible de "todavía cargando" en el frontend). Mismos roles ya establecidos y
+     * revisados en `OrderStatusController::resolveAccess()` para el mismo problema.
+     */
+    public function test_930_lider_admin_contab_ve_el_detalle_sin_tener_bodega_read(): void
+    {
+        $order = $this->makeOrder([], ['qty_requested' => 3, 'qty_delivered' => 3]);
+        $token = $this->loginAs('contabilidad@test.com', 'contabilidad@test.com', 'lider_admin_contab');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/bodega/orders/{$order->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('id', $order->id);
+    }
+
+    /** SCRUM-1139 — `lider_operaciones` espeja a la asistente en el visor de pedidos desde Admin&Contab; ninguno de los dos tiene `bodega.read`. */
+    public function test_1139_asistente_y_operaciones_ven_el_detalle_del_pedido_como_admin_contab(): void
+    {
+        $order = $this->makeOrder([], ['qty_requested' => 3, 'qty_delivered' => 3]);
+
+        foreach ([
+            ['asistenteadministrativa@test.com', 'asistente_administrativa'],
+            ['lideroperaciones@test.com', 'lider_operaciones'],
+        ] as [$email, $role]) {
+            $token = $this->loginAs($email, $email, $role);
+
+            $this->withHeaders($this->authHeaders($token))
+                ->getJson("/api/bodega/orders/{$order->id}")
+                ->assertStatus(200)
+                ->assertJsonPath('id', $order->id);
+        }
+    }
+
+    /** SCRUM-930 — un rol sin `bodega.read` NI uno de los roles de Admin&Contab sigue bloqueado. */
+    public function test_930_un_rol_sin_bodega_read_ni_rol_de_admin_contab_sigue_bloqueado(): void
+    {
+        $order = $this->makeOrder();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/bodega/orders/{$order->id}")
+            ->assertStatus(403);
     }
 
     public function test_ver_detalle_de_pedido_inexistente_retorna_404(): void

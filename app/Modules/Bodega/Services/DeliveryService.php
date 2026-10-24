@@ -11,6 +11,7 @@ use App\Modules\Bodega\Events\DeliveryRegistered;
 use App\Modules\Bodega\Events\OrderDelivered;
 use App\Modules\Bodega\Events\OrderDispatched;
 use App\Modules\Bodega\Events\OrderSplit;
+use App\Modules\Bodega\Exceptions\InsufficientStockException;
 use App\Modules\Bodega\Exceptions\OrderTransitionException;
 use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\Order;
@@ -55,6 +56,9 @@ final class DeliveryService
 {
     use ChangesOrderStage;
 
+    /** @var list<int> Productos cuyo re-reparto de reservas corre tras el commit de `dispatch()` (ver ahí). */
+    private array $reallocateAfterCommit = [];
+
     public function __construct(
         private readonly StockReservationService $reservations,
         private readonly FamilyService $family,
@@ -88,7 +92,10 @@ final class DeliveryService
 
         $submittedIds = collect($items)->pluck('order_item_id')->map(fn ($id) => (int) $id)->all();
 
-        return DB::transaction(function () use ($order, $items, $submittedIds, $observacionGeneral, $actor): Order {
+        /** @var list<int> $reallocate */
+        $reallocate = [];
+
+        $result = DB::transaction(function () use ($order, $items, $submittedIds, $observacionGeneral, $actor, &$reallocate): Order {
             $locked = $this->lockOrder($order->id);
             if ($locked->stage !== Order::STAGE_PACKING) {
                 throw new OrderTransitionException('El pedido no está en la etapa Packing.');
@@ -155,9 +162,14 @@ final class DeliveryService
                 ]);
             }
 
+            // SCRUM-914 (Pre-QA, 2026-09-13) — la guía se generaba ANTES de esta transición, así
+            // que `$order->stage` en el momento de renderizar el PDF/preview siempre era el
+            // valor previo ("packing"), sin importar a qué etapa avanzara el pedido después.
+            // `transitionStage()` no depende de nada que generateGuiaEntrega()/
+            // notifyAdminToInvoice() necesiten, así que el reorden es seguro.
+            $this->transitionStage($locked, Order::STAGE_POR_DESPACHAR, $actor->id);
             $this->documents->generateGuiaEntrega($locked, $actor);
             $this->notifyAdminToInvoice($locked, $actor);
-            $this->transitionStage($locked, Order::STAGE_POR_DESPACHAR, $actor->id);
 
             if ($shortfalls !== []) {
                 $this->createFaltanteCard($locked, $shortfalls, $actor);
@@ -165,10 +177,17 @@ final class DeliveryService
 
             /** @var list<int> $productIds */
             $productIds = $locked->items()->whereNotNull('catalog_product_id')->pluck('catalog_product_id')->unique()->values()->map(fn ($id) => (int) $id)->all();
-            $this->reservations->reallocateForProducts($productIds);
+            $reallocate = $productIds;
 
             return $locked->fresh() ?? $locked;
         }, 3);
+
+        // SCRUM-1196 (Pre-QA ronda 4, N3) — el re-reparto de reservas corre DESPUÉS del commit, no dentro de la transacción de la entrega: dentro, dos entregas
+        // simultáneas de pedidos del mismo producto retenían su pedido y se bloqueaban mutuamente al tomar las líneas del otro (deadlock 500, el reintento
+        // volvía a chocar). Es idempotente: si fallara, la siguiente operación del producto lo recalcula.
+        $this->reservations->reallocateForProducts($reallocate);
+
+        return $result;
     }
 
     /** @param list<array{item: OrderItem, remaining: int}> $shortfalls */
@@ -192,6 +211,9 @@ final class DeliveryService
             $item = $s['item'];
             $faltante->items()->create([
                 'catalog_product_id'   => $item->catalog_product_id,
+                // SCRUM-929 — hereda vínculo a la cotización y precio del ítem padre.
+                'quote_item_id'        => $item->quote_item_id,
+                'unit_price'           => $item->unit_price,
                 'reference_snapshot'   => $item->reference_snapshot,
                 'description_snapshot' => $item->description_snapshot,
                 'qty_requested'        => $s['remaining'],
@@ -290,7 +312,9 @@ final class DeliveryService
      */
     public function dispatch(Order $order, User $actor): array
     {
-        return DB::transaction(function () use ($order, $actor): array {
+        $this->reallocateAfterCommit = [];
+
+        $result = DB::transaction(function () use ($order, $actor): array {
             $locked = $this->lockOrder($order->id);
             if ($locked->stage !== Order::STAGE_POR_DESPACHAR) {
                 throw new OrderTransitionException('El pedido no está en la etapa Por despachar.');
@@ -324,17 +348,27 @@ final class DeliveryService
 
             return ['order' => $locked->fresh() ?? $locked, 'dispatchedSiblings' => $dispatchedSiblings];
         }, 3);
+
+        // SCRUM-1196 (N3) — mismo criterio que registerDelivery(): el re-reparto va fuera de la transacción de despacho (que ya retiene filas de stock por el Kardex).
+        $productIds = $this->reallocateAfterCommit;
+        $this->reallocateAfterCommit = [];
+        $this->reservations->reallocateForProducts($productIds);
+
+        return $result;
     }
 
-    /** @return list<string> */
+    /**
+     * SCRUM-860 — el requisito de factura lista (REQ-328) se elimina a propósito: Admin recibe la
+     * notificación de facturación desde `registerDelivery()` (Packing→Por Despachar) sin importar
+     * este gate, así que ya no hace falta bloquear el despacho para garantizar que se facture.
+     *
+     * @return list<string>
+     */
     public function blockingReasonsForDispatch(Order $order): array
     {
         $reasons = [];
         if ($order->courier_id === null) {
             $reasons[] = 'Falta asignar el repartidor.';
-        }
-        if (! $order->invoice_ready) {
-            $reasons[] = 'Falta la factura de Administración.';
         }
 
         return $reasons;
@@ -349,7 +383,7 @@ final class DeliveryService
 
         /** @var list<int> $productIds */
         $productIds = $order->items()->whereNotNull('catalog_product_id')->pluck('catalog_product_id')->unique()->values()->map(fn ($id) => (int) $id)->all();
-        $this->reservations->reallocateForProducts($productIds);
+        $this->reallocateAfterCommit = array_values(array_unique(array_merge($this->reallocateAfterCommit, $productIds)));
     }
 
     /**
@@ -366,14 +400,18 @@ final class DeliveryService
      */
     private function registerKardexExits(Order $order, User $actor): void
     {
-        $order->loadMissing('items');
+        $order->loadMissing('items.allocations');
 
         foreach ($order->items as $item) {
             if ($item->catalog_product_id === null || $item->qty_delivered <= 0) {
                 continue; // ítem personalizado (sin producto de Catálogo) o nada entregado — nada que mover.
             }
 
-            if ($item->warehouse_id === null) {
+            // SCRUM-1196 — una salida de Kardex por CADA bodega de la línea (10 de Bodega Central + 1 de Showroom Obarrio = −10 y −1). Un pedido
+            // anterior al reparto (sin asignaciones) sale de `warehouse_id`, como siempre.
+            $byWarehouse = $item->distributeAcrossAllocations($item->qty_delivered);
+
+            if ($byWarehouse === []) {
                 Log::error('bodega.order.dispatch-missing-warehouse-for-kardex', [
                     'order_id'      => $order->id,
                     'order_number'  => $order->order_number,
@@ -382,16 +420,27 @@ final class DeliveryService
                 continue;
             }
 
-            $this->kardex->registrar(
-                catalogProductId: $item->catalog_product_id,
-                warehouseId: $item->warehouse_id,
-                tipo: InventoryMovement::TIPO_SALIDA,
-                cantidad: -$item->qty_delivered,
-                referenciaTexto: "Pedido {$order->order_number} despachado",
-                referenciaEntidadTipo: 'PEDIDO',
-                referenciaEntidadId: $order->id,
-                realizadoPor: $actor->id,
-            );
+            foreach ($byWarehouse as $warehouseId => $qty) {
+                try {
+                    $this->kardex->registrar(
+                        catalogProductId: $item->catalog_product_id,
+                        warehouseId: $warehouseId,
+                        tipo: InventoryMovement::TIPO_SALIDA,
+                        cantidad: -$qty,
+                        referenciaTexto: "Pedido {$order->order_number} despachado",
+                        referenciaEntidadTipo: 'PEDIDO',
+                        referenciaEntidadId: $order->id,
+                        realizadoPor: $actor->id,
+                    );
+                } catch (InsufficientStockException $e) {
+                    // SCRUM-1196 — nunca una bodega en negativo por un despacho: el saldo cambió después del picking. Se bloquea con un mensaje claro
+                    // (el stock se ajusta con el conteo de Bodega) en vez de descontar de más.
+                    throw new OrderTransitionException(
+                        "No se puede despachar: la bodega no tiene saldo suficiente para «{$item->reference_snapshot}» (se intentó sacar {$qty}). Ajusta el inventario de esa bodega y vuelve a intentarlo.",
+                        ['items' => ["order_item_id {$item->id}: saldo insuficiente en la bodega {$warehouseId}."]],
+                    );
+                }
+            }
         }
     }
 
@@ -447,6 +496,8 @@ final class DeliveryService
                 'subject' => "Pedido {$order->order_number} listo para facturar",
                 'body'    => "El pedido {$order->order_number} guardó su entrega en Bodega y está listo para "
                     .'que Administración & Contabilidad genere la factura.',
+                // SCRUM-1167 — el clic de la campana lleva a Facturación.
+                'cta_url' => '/admin-contab/facturacion',
             ],
             channels: [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL],
             source: NotificationSend::SOURCE_BODEGA_ORDER_READY_TO_INVOICE,

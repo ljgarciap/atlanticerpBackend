@@ -18,6 +18,7 @@ use App\Modules\Bodega\Support\BodegaRoles;
 use App\Modules\Notifications\Models\NotificationSend;
 use App\Modules\Notifications\Services\NotificationService;
 use App\Modules\VentasDiseno\Models\PipelineCard;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -200,6 +201,10 @@ final class InventoryReviewService
         foreach ($review->items()->whereIn('id', $foundIds)->get() as $foundItem) {
             $newOrder->items()->create([
                 'catalog_product_id' => $foundItem->catalog_product_id,
+                // SCRUM-929 — el ítem original se borra justo abajo y se recrea en la tarjeta
+                // nueva: el vínculo a la cotización y el precio tienen que sobrevivir al split.
+                'quote_item_id' => $foundItem->quote_item_id,
+                'unit_price' => $foundItem->unit_price,
                 'reference_snapshot' => $foundItem->reference_snapshot,
                 'description_snapshot' => $foundItem->description_snapshot,
                 'qty_requested' => $foundItem->qty_requested,
@@ -244,33 +249,80 @@ final class InventoryReviewService
     private function notifyShortage(Order $order, User $actor): void
     {
         $comprasRoleId = Role::where('key', self::COMPRAS_LEAD_ROLE_KEY)->value('id');
-        /** @var list<int> $audience */
-        $audience = $comprasRoleId !== null
+        /** @var list<int> $comprasAudience */
+        $comprasAudience = $comprasRoleId !== null
             ? User::where('role_id', $comprasRoleId)->where('is_active', true)->pluck('id')->map(fn ($id) => (int) $id)->values()->all()
             : [];
 
         /** @var PipelineCard|null $pipelineCard */
         $pipelineCard = $order->pipeline_card_id !== null ? PipelineCard::find($order->pipeline_card_id) : null;
-        if ($pipelineCard !== null) {
-            $audience[] = $pipelineCard->owner_id;
+        // El dueño de la tarjeta puede ser también del rol de Compras; no se le manda dos veces.
+        $sellerAudience = $pipelineCard !== null && ! in_array($pipelineCard->owner_id, $comprasAudience, true)
+            ? [$pipelineCard->owner_id]
+            : [];
+
+        $channels = [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL];
+        $subject = "Pedido {$order->order_number} sin stock disponible";
+
+        // SCRUM-1153 — Compras (Yirena) recibe su propio aviso: con el/los producto(s) que faltan y un enlace a Compras →
+        // Inventario con ese producto ya buscado, desde donde genera la orden de compra. Antes la notificación no llevaba
+        // enlace (clic = nada) y Compras no tiene el módulo Bodega, así que tampoco podía ir a buscar el pedido.
+        if ($comprasAudience !== []) {
+            /** @var Collection<int, OrderItem> $shortItems */
+            $shortItems = $order->items()->orderBy('id')->get();
+            $refs = $shortItems->map(fn (OrderItem $i): string => trim((string) ($i->reference_snapshot ?? $i->catalogProduct->reference ?? '')))
+                ->filter(fn (string $r): bool => $r !== '')->values();
+            // Pre-QA: un ítem personalizado (sin producto de catálogo ni referencia) se nombra por su descripción, no «—».
+            $detail = $shortItems->map(function (OrderItem $i): string {
+                $name = trim((string) ($i->reference_snapshot ?? $i->catalogProduct->reference ?? ''));
+                if ($name === '') {
+                    $name = trim((string) $i->description_snapshot) !== '' ? trim((string) $i->description_snapshot) : 'Producto personalizado';
+                }
+
+                return "{$name} (x{$i->qty_requested})";
+            })->implode(', ');
+
+            $content = [
+                'subject' => $subject,
+                'body' => "El pedido {$order->order_number} quedó sin stock tras la revisión de inventario en Bodega — "
+                    ."requiere reordenar el producto. Faltan: {$detail}."
+                    .($refs->count() > 1 ? ' El enlace abre el primero; busque los demás por referencia.' : ''),
+            ];
+            if ($refs->isNotEmpty()) {
+                $content['cta_url'] = '/inventario?search='.rawurlencode($refs->first());
+            }
+
+            $this->notifications->send(
+                audience: $comprasAudience,
+                content: $content,
+                channels: $channels,
+                source: NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE,
+                sourceRef: "order:{$order->id}",
+                createdBy: $actor->id,
+            );
         }
 
-        if ($audience === []) {
-            return;
-        }
+        // Ventas & Diseño (dueño de la tarjeta) — mismo aviso de siempre, sin cambios: informar al cliente del retraso.
+        if ($sellerAudience !== []) {
+            // SCRUM-1159 — el vendedor no reconoce un ID de pedido: se agrega el N° (folio) de la cotización de origen y un enlace a
+            // «Status de Pedidos» (solo lectura, ve únicamente lo propio) con el pedido ya buscado.
+            $quoteFolio = trim((string) $order->linkedQuote()?->folio);
+            $quoteLabel = $quoteFolio !== '' ? " (cotización {$quoteFolio})" : '';
 
-        $this->notifications->send(
-            audience: array_values($audience),
-            content: [
-                'subject' => "Pedido {$order->order_number} sin stock disponible",
-                'body' => "El pedido {$order->order_number} quedó sin stock tras la revisión de inventario "
-                    .'en Bodega — requiere reordenar el producto (Compras) e informar al cliente del retraso '
-                    .'(Ventas & Diseño).',
-            ],
-            channels: [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL],
-            source: NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE,
-            sourceRef: "order:{$order->id}",
-            createdBy: $actor->id,
-        );
+            $this->notifications->send(
+                audience: $sellerAudience,
+                content: [
+                    'subject' => "Pedido {$order->order_number}{$quoteLabel} sin stock disponible",
+                    'body' => "El pedido {$order->order_number}{$quoteLabel} quedó sin stock tras la revisión de inventario "
+                        .'en Bodega — requiere reordenar el producto (Compras) e informar al cliente del retraso '
+                        .'(Ventas & Diseño).',
+                    'cta_url' => '/bodega/pedidos/status?search='.rawurlencode((string) $order->order_number),
+                ],
+                channels: $channels,
+                source: NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE,
+                sourceRef: "order:{$order->id}",
+                createdBy: $actor->id,
+            );
+        }
     }
 }

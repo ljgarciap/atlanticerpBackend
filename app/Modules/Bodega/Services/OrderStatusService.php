@@ -81,17 +81,21 @@ final class OrderStatusService
             return;
         }
 
-        $query->where(function (Builder $q) use ($search): void {
-            $q->where('order_number', 'ilike', "%{$search}%")
-                ->orWhere('customer_name', 'ilike', "%{$search}%")
+        // SCRUM-1171 — `%` y `_` del texto buscado se escapan: antes funcionaban como comodín de LIKE (`search=%` listaba todo). El filtro por
+        // dueño del vendedor siempre aplicaba, así que solo afectaba a lo propio, pero la búsqueda debe ser literal.
+        $like = '%'.addcslashes($search, '%_\\').'%';
+
+        $query->where(function (Builder $q) use ($like): void {
+            $q->where('order_number', 'ilike', $like)
+                ->orWhere('customer_name', 'ilike', $like)
                 ->orWhereHas(
                     'pipelineCard.owner',
-                    fn (Builder $u) => $u->where('first_name', 'ilike', "%{$search}%")
-                        ->orWhere('last_name', 'ilike', "%{$search}%"),
+                    fn (Builder $u) => $u->where('first_name', 'ilike', $like)
+                        ->orWhere('last_name', 'ilike', $like),
                 )
                 ->orWhereHas(
                     'pipelineCard.salesProject.quotes',
-                    fn (Builder $qq) => $qq->where('folio', 'ilike', "%{$search}%"),
+                    fn (Builder $qq) => $qq->where('folio', 'ilike', $like),
                 );
         });
     }
@@ -172,22 +176,54 @@ final class OrderStatusService
             // propia fecha de cliente al abrir el modal en vez de depender de este campo
             // (decisión explícita del batch, ver reporte).
             'fecha_estatus' => now()->toDateString(),
-            'items'        => $this->consolidatedItems($members),
+            'items'        => $this->consolidatedItems($root, $members),
         ];
     }
 
     /**
-     * REQ-340 — por cada producto distinto DE TODA LA FAMILIA (no solo esta tarjeta), suma
-     * `qty_requested`/`qty_delivered` a través de todos los miembros y calcula
-     * `pendiente = max(0, solicitada - entregado)`. Ítems personalizados (sin `catalog_product_id`,
-     * ver docblock de `OrderItem`) se agrupan por su snapshot de referencia+descripción en vez de
-     * por id de catálogo, para no mezclar 2 ítems personalizados distintos en una sola línea.
+     * REQ-340, corregido SCRUM-895 (2 vueltas) — por cada producto distinto de la familia:
+     * `solicitada` se toma exclusivamente de los ítems de la tarjeta RAÍZ (1ra vuelta, ver más
+     * abajo); `entregado` suma `qty_delivered` SOLO de las tarjetas miembro cuyo `stage` actual es
+     * `Order::STAGE_ENTREGADO` (2da vuelta, rebote de Daniela 2026-09-11).
+     *
+     * 2da vuelta — root cause real: `DeliveryService::registerDelivery()` setea `qty_delivered` en
+     * la transición Packing → Por despachar (ver su docblock), NO al llegar a Entregado — el
+     * nombre de la columna es la cantidad QUE SE VA A entregar, declarada al despachar, no una
+     * confirmación de entrega física. Sumar `qty_delivered` de TODAS las tarjetas miembro sin
+     * mirar su stage (comportamiento antes de este fix) contaba como "entregado" lo que todavía
+     * estaba en Por despachar o Despachado — Pendiente quedaba en 0 antes de que la mercancía
+     * físicamente llegara al cliente. Ahora solo las tarjetas que ya llegaron a Entregado
+     * contribuyen a `entregado`; el resto (incluida la propia raíz si sigue en una etapa anterior)
+     * queda reflejado en `pendiente` vía `solicitada - entregado`, tal como pide el ticket
+     * ("Pendiente: tarjetas todavía en estados anteriores a Entregado").
+     *
+     * 1ra vuelta (bug real, pedido #PED-2026-0065/GE-SOCKET1): cuando Picking encuentra un
+     * faltante parcial, `PickingService::createInventoryReviewCard()` crea una tarjeta hija con
+     * `qty_requested` = REMANENTE (`short->qty_requested - short->qty_picked`) — pero la tarjeta
+     * madre NUNCA reduce su propio `qty_requested` (sigue reflejando el pedido completo original,
+     * ver RN1 de `PickingService::completePicking()`: solo `qty_picked` se ajusta). Mismo patrón
+     * en `DeliveryService::createFaltanteCard()` para entregas parciales en Packing. Sumar
+     * `qty_requested` de TODA la familia duplicaba ese remanente (ej. 20 solicitados con
+     * picking parcial 10+10 → root conserva 20, hija pide 10 → suma ingenua = 30, dejando
+     * `pendiente` en 10 aunque ya se entregó todo).
+     *
+     * La tarjeta RAÍZ es la única fuente correcta de "solicitada" porque es la única cuyo
+     * `qty_requested` nunca se muta después de creada (ver docblock de `OrderItem` — ningún
+     * service hace `update(['qty_requested' => ...])` sobre un ítem existente) y es "el pedido tal
+     * como entró a Asignado en Bodega", exactamente la definición de "Solicitada" del ticket.
+     *
+     * Ítems personalizados (sin `catalog_product_id`, ver docblock de `OrderItem`) se agrupan por
+     * su snapshot de referencia+descripción en vez de por id de catálogo, para no mezclar 2 ítems
+     * personalizados distintos en una sola línea.
      *
      * @param Collection<int, Order> $members
      * @return array<int, array<string, mixed>>
      */
-    private function consolidatedItems(Collection $members): array
+    private function consolidatedItems(Order $root, Collection $members): array
     {
+        /** @var array<int, string> $stageByOrderId */
+        $stageByOrderId = $members->pluck('stage', 'id')->all();
+
         /** @var Collection<int, OrderItem> $allItems */
         $allItems = $members->flatMap(fn (Order $o) => $o->items);
 
@@ -197,14 +233,21 @@ final class OrderStatusService
                 : "custom:{$item->reference_snapshot}|{$item->description_snapshot}";
         });
 
-        return $groups->map(function (Collection $items): array {
+        return $groups->map(function (Collection $items) use ($root, $stageByOrderId): array {
             /** @var OrderItem $first */
             $first = $items->first();
             /** @var CatalogProduct|null $product */
             $product = $first->catalogProduct;
 
-            $solicitada = (int) $items->sum('qty_requested');
-            $entregado  = (int) $items->sum('qty_delivered');
+            /** @var Collection<int, OrderItem> $rootItems */
+            $rootItems = $items->where('order_id', $root->id);
+            // Defensivo: el flujo real siempre origina cada producto en la raíz (ver docblock
+            // arriba), pero si alguna vez no la tuviera, no dividimos "solicitada" en 0 sin
+            // motivo — mejor la suma completa (comportamiento viejo) que un Pendiente absurdo.
+            $solicitada = (int) ($rootItems->isNotEmpty() ? $rootItems->sum('qty_requested') : $items->sum('qty_requested'));
+            $entregado  = (int) $items
+                ->filter(fn (OrderItem $item): bool => ($stageByOrderId[$item->order_id] ?? null) === Order::STAGE_ENTREGADO)
+                ->sum('qty_delivered');
 
             return [
                 'catalog_product_id' => $first->catalog_product_id,

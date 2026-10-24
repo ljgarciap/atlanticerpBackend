@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bodega;
 
+use App\Modules\Bodega\Exceptions\InsufficientStockException;
 use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
@@ -128,5 +129,56 @@ class KardexServiceTest extends FeatureTestCase
         );
 
         $this->assertNull($movement->realizado_por);
+    }
+
+    // ── SCRUM-837 — guard: una Reubicación nunca debe dejar el origen en negativo ───────────────
+
+    public function test_reubicacion_que_dejaria_el_origen_en_negativo_lanza_excepcion_sin_escribir_nada(): void
+    {
+        $product = $this->makeProduct();
+        $warehouse = Warehouse::where('name', 'Bodega Central')->first();
+        $service = new KardexService;
+
+        // Bodega Central arranca en 0 para este producto — reubicar 5 desde ahí la dejaría en -5.
+        $this->expectException(InsufficientStockException::class);
+
+        try {
+            $service->registrar($product->id, $warehouse->id, InventoryMovement::TIPO_REUBICACION, -5, 'Reubicación de prueba');
+        } finally {
+            // Nada debe haberse escrito — ni el stock ni el movimiento.
+            $this->assertSame(
+                0,
+                (int) (ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $warehouse->id)->value('quantity') ?? 0),
+            );
+            $this->assertSame(0, InventoryMovement::where('catalog_product_id', $product->id)->count());
+        }
+    }
+
+    public function test_reubicacion_con_stock_suficiente_no_lanza_excepcion(): void
+    {
+        $product = $this->makeProduct();
+        $warehouse = Warehouse::where('name', 'Bodega Central')->first();
+        $service = new KardexService;
+
+        $service->registrar($product->id, $warehouse->id, InventoryMovement::TIPO_ENTRADA, 10, 'Entrada previa');
+        $movement = $service->registrar($product->id, $warehouse->id, InventoryMovement::TIPO_REUBICACION, -10, 'Reubicación de prueba');
+
+        $this->assertSame(0, $movement->saldo_resultante);
+    }
+
+    /**
+     * El guard es específico de Reubicación — otros tipos (Salida, Ajuste, Consumo) siguen sin
+     * validación acá (cada uno valida "stock suficiente" en su propio Controller/Service antes de
+     * llamar a `registrar()`, ver docblock del método) y no deben romperse por este fix.
+     */
+    public function test_guard_de_saldo_negativo_no_aplica_a_otros_tipos_de_movimiento(): void
+    {
+        $product = $this->makeProduct();
+        $warehouse = Warehouse::where('name', 'Bodega Central')->first();
+        $service = new KardexService;
+
+        $movement = $service->registrar($product->id, $warehouse->id, InventoryMovement::TIPO_SALIDA, -5, 'Salida sin stock previo');
+
+        $this->assertSame(-5, $movement->saldo_resultante);
     }
 }

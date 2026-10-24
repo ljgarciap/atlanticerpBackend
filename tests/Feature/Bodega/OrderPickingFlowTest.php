@@ -431,7 +431,15 @@ class OrderPickingFlowTest extends FeatureTestCase
         Event::fake([PickingCompleted::class, OrderStageChanged::class, OrderSplit::class]);
 
         $product = $this->makeCatalogProduct();
-        $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING], ['catalog_product_id' => $product->id, 'qty_requested' => 10]);
+        // SCRUM-1196 — un producto de catálogo solo se puede alistar de lo que hay en Bodega Central (la de despacho por defecto).
+        $this->setStock($product, 10, 'Bodega Central');
+        // SCRUM-929 — el ítem padre trae vínculo a la cotización y precio; la tarjeta de revisión
+        // debe heredarlos (antes nacía con unit_price NULL y sin ningún vínculo).
+        $quoteItemId = self::uniqueTestNumber();
+        $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING], [
+            'catalog_product_id' => $product->id, 'qty_requested' => 10,
+            'quote_item_id' => $quoteItemId, 'unit_price' => 199.50,
+        ]);
         $item = $order->items->first();
         $this->grantBodegaPermissions('liderbodega@test.com');
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
@@ -456,6 +464,9 @@ class OrderPickingFlowTest extends FeatureTestCase
 
         $reviewItem = $review->items->first();
         $this->assertSame(4, $reviewItem->qty_requested, 'REQ-317: 10 pedidos - 6 alistados = 4 en revisión.');
+        $this->assertSame($quoteItemId, $reviewItem->quote_item_id, 'SCRUM-929: la revisión hereda el vínculo al QuoteItem.');
+        $this->assertSame(199.5, $reviewItem->unit_price, 'SCRUM-929: la revisión hereda el precio (antes quedaba NULL).');
+        $this->assertSame($quoteItemId, $item->fresh()->quote_item_id, 'El ítem original conserva su vínculo.');
 
         Event::assertDispatched(OrderSplit::class);
         Event::assertDispatched(PickingCompleted::class);

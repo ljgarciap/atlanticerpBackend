@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Bodega\Services;
 
+use App\Modules\Bodega\Exceptions\InsufficientStockException;
 use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
@@ -64,6 +65,40 @@ final class KardexService
 
             $saldoInicial = $stock->quantity;
             $saldoResultante = $saldoInicial + $cantidad;
+
+            // SCRUM-837 — una Reubicación nunca debe dejar la bodega de ORIGEN en negativo: es la
+            // señal de que se está moviendo stock que en realidad nunca estuvo ahí (bug real:
+            // `SyncInsumoReservationOnPurchaseOrderReceived` reubicaba a ciegas desde Bodega
+            // Central sin verificar dónde había caído la Entrada real). El resto de tipos NO
+            // comparten este piso a propósito, pero por razones distintas entre sí — no asumir
+            // que todos "ya validan en su caller":
+            //   - Entrada: siempre positiva, nunca puede dejar saldo negativo.
+            //   - Salida/Ajuste: cada caller valida "stock suficiente" antes de llegar acá con su
+            //     propia regla de negocio (ver `RelocationRequestController`, que topa la cantidad
+            //     al stock disponible antes de crear la solicitud de reubicación).
+            //   - Consumo: NO valida nada hoy (`InspectionReportService::
+            //     consumeMaterialsFromReserve()` resta lo reportado por el técnico sin chequear
+            //     disponible) — a diferencia de los otros, este es a propósito: decisión de Luis
+            //     (daily 2026-08-18, SCRUM-361) de permitir que el consumo de insumos deje el
+            //     disponible negativo sin bloquear el guardado del Informe de Inspección, avisando
+            //     solo visualmente (ícono + tooltip en `InsumoTable.tsx`, frontend). Sin test de
+            //     regresión que fije este comportamiento — ver
+            //     `InspectionReportInsumoConsumptionTest::test_consumir_mas_de_lo_disponible_deja_saldo_negativo_sin_bloquear`.
+            if ($tipo === InventoryMovement::TIPO_REUBICACION && $saldoResultante < 0) {
+                throw new InsufficientStockException(
+                    "No hay stock suficiente para reubicar: producto {$catalogProductId}, bodega "
+                    ."{$warehouseId}, saldo actual {$saldoInicial}, se intentó aplicar {$cantidad}."
+                );
+            }
+
+            // SCRUM-1196 — un despacho de pedido (Salida con referencia PEDIDO) tampoco puede dejar la bodega en negativo: el tope real está en el
+            // picking (nunca se alista más de lo que tiene una bodega), y esto es la defensa si el saldo cambió entre el picking y el despacho.
+            if ($tipo === InventoryMovement::TIPO_SALIDA && $referenciaEntidadTipo === 'PEDIDO' && $saldoResultante < 0) {
+                throw new InsufficientStockException(
+                    "No hay stock suficiente para despachar: producto {$catalogProductId}, bodega "
+                    ."{$warehouseId}, saldo actual {$saldoInicial}, se intentó aplicar {$cantidad}."
+                );
+            }
 
             $stock->update(['quantity' => $saldoResultante]);
 

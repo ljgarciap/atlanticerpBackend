@@ -10,6 +10,7 @@ use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * SCRUM-329 Oleada A / Batch A1 (REQ-308 RN1, REQ-312, REQ-340) — ítem de un pedido, copiado
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int         $id
  * @property int         $order_id
  * @property int|null    $catalog_product_id
+ * @property int|null    $quote_item_id
  * @property int|null    $warehouse_id
  * @property string|null $reference_snapshot
  * @property string|null $description_snapshot
@@ -81,7 +83,7 @@ class OrderItem extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'order_id', 'catalog_product_id', 'warehouse_id', 'reference_snapshot', 'description_snapshot', 'unit_price',
+        'order_id', 'catalog_product_id', 'quote_item_id', 'warehouse_id', 'reference_snapshot', 'description_snapshot', 'unit_price',
         'qty_requested', 'qty_reserved', 'qty_picked', 'qty_delivered',
         'location_snapshot', 'found_at_location', 'found_location', 'found_confirmed_by_id', 'found_confirmed_at',
         'shortage_reason', 'picking_notes',
@@ -92,6 +94,7 @@ class OrderItem extends Model
     {
         return [
             'unit_price'         => 'float',
+            'quote_item_id'      => 'integer',
             'qty_requested'      => 'integer',
             'qty_reserved'       => 'integer',
             'qty_picked'         => 'integer',
@@ -133,6 +136,47 @@ class OrderItem extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    /**
+     * SCRUM-1196 — reparto de la línea entre bodegas. Vacío en los pedidos anteriores a esa migración y en los que aún no pasaron por la reserva:
+     * ahí manda `warehouse_id`, como siempre (ver `effectiveAllocations()`).
+     *
+     * @return HasMany<OrderItemAllocation, $this>
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(OrderItemAllocation::class);
+    }
+
+    /**
+     * SCRUM-1196 — de qué bodegas sale esta línea y cuánto, como `[warehouse_id => cantidad]`, con la cantidad que se pide (`$qty`) repartida
+     * en el orden de las asignaciones. Sin asignaciones (históricos) toda la cantidad sale de `warehouse_id`.
+     *
+     * @return array<int, int>
+     */
+    public function distributeAcrossAllocations(int $qty, string $field = 'qty_picked'): array
+    {
+        $qty = max(0, $qty);
+        $out = [];
+        $allocations = $this->allocations->sortBy([['manual', 'asc'], ['id', 'asc']]);
+
+        if ($allocations->isEmpty()) {
+            return ($this->warehouse_id !== null && $qty > 0) ? [(int) $this->warehouse_id => $qty] : [];
+        }
+
+        foreach ($allocations as $allocation) {
+            if ($qty <= 0) {
+                break;
+            }
+            $take = min($qty, max(0, (int) $allocation->{$field}));
+            if ($take > 0) {
+                $out[$allocation->warehouse_id] = ($out[$allocation->warehouse_id] ?? 0) + $take;
+                $qty -= $take;
+            }
+        }
+
+        return $out;
     }
 
     /**

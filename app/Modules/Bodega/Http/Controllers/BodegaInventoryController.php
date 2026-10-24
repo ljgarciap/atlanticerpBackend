@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Bodega\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Services\PreferencesService;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Services\ArrivalConfirmationService;
 use App\Modules\Bodega\Services\BodegaInventoryKpiService;
@@ -13,8 +14,9 @@ use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
-use App\Modules\VentasDiseno\Services\FuzzySearchService;
 use App\Shared\Http\Pagination;
+use App\Shared\Http\QueryParams;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -58,156 +60,176 @@ final class BodegaInventoryController extends Controller
     private const ALLOWED_SORTS = ['reference', 'name', 'stock_quantity', 'created_at'];
 
     public function __construct(
-        private readonly FuzzySearchService $fuzzySearch,
         private readonly InventoryKpiService $inventoryKpis,
         private readonly OrderCommitmentService $commitments,
         private readonly BodegaInventoryKpiService $bodegaKpis,
         private readonly ArrivalConfirmationService $arrivalConfirmation,
+        private readonly PreferencesService $preferences,
     ) {}
 
     /** REQ-344/346/349/350/351/362 — listado principal, KPIs, filtros combinables, chips y deep-link. */
     public function index(Request $request): JsonResponse
     {
-        $chip = (string) $request->query('chip', 'todos');
+        $chip = QueryParams::string($request, 'chip', 'todos');
+        // docs/specs/demo-mode.md — sin usuario autenticado (no debería pasar, ruta ya exige JWT),
+        // el filtro no se activa.
+        $requester = $this->resolveUser($request);
+        $demoModeActive = $requester !== null && $this->preferences->isDemoModeActive($requester);
 
-        /** @var list<CatalogProduct> $products */
-        $products = CatalogProduct::query()
-            ->with(['families', 'provider'])
-            ->when($chip !== 'inactivos', fn ($q) => $q->where('is_active', true))
-            ->when($chip === 'inactivos', fn ($q) => $q->where('is_active', false))
-            ->get()->all();
+        // SCRUM-994 (docs/specs/bodega-inventory-kpis-and-computed-filters-sql.md) — TODO en SQL. El fix urgente
+        // del 2026-09-28 (`8c73828`) solo cubría el caso común: los chips `por_ingresar`/`en_atencion`/
+        // `criticos` y el filtro `estado` seguían cargando el conjunto candidato completo (hasta ~26K modelos),
+        // calculando los mapas por ID, filtrando con `array_filter` y ordenando con `usort` en PHP, y encima
+        // `kpis()` hidrataba el catálogo otra vez: los picos se sumaban por encima de los 256 MB de PHP-FPM y
+        // `chip=criticos`/`estado=sin_stock` respondían 500 (agotamiento de memoria, sin traza en `laravel.log`).
+        // Ahora los chips/estado son `WHERE` sobre las mismas expresiones SQL de la regla de stock
+        // (`BodegaInventoryKpiService`/`InventoryKpiService`), el orden y la paginación son de SQL para TODOS los
+        // filtros, y `families`/`provider` se hidratan solo para la página. Los agregados por producto
+        // (compromiso, en bodega excluida, por ingresar) se unen SOLO cuando el filtro los necesita.
+        $baseQuery = $this->bodegaKpis->baseQuery()
+            ->when($chip !== 'inactivos', fn ($q) => $q->where('cp.is_active', true))
+            ->when($chip === 'inactivos', fn ($q) => $q->where('cp.is_active', false))
+            ->visibleForDemoMode($demoModeActive);
 
-        $search = trim((string) $request->query('search', ''));
-        $fuzzy = false;
-        if ($search !== '') {
-            [$products, $fuzzy] = $this->fuzzySearch->search(
-                $products,
-                $search,
-                fn (CatalogProduct $p): string => "{$p->reference} {$p->name} {$p->provider?->name}",
-            );
+        // REQ-362 RN1 (SCRUM-432) — deep-link desde "Mayor rotación" de Home, mismo campo
+        // `rotation` que esta pantalla ya expone/filtra.
+        if ($chip === 'rotacion') {
+            $baseQuery->where('cp.rotation', CatalogProduct::ROTATION_ALTA);
         }
 
-        $productIds = array_map(fn (CatalogProduct $p): int => $p->id, $products);
-        $committedMap = $this->commitments->committedMap($productIds);
-        $porIngresarMap = $this->inventoryKpis->porIngresarMap($productIds);
-        $enCaminoMap = $this->inventoryKpis->enCaminoMap($productIds);
-        $arrivalMap = $this->arrivalConfirmation->bulkPendingSummary($productIds);
-        $warehouseCounts = $this->warehouseCounts($productIds);
-
-        // REQ-350 — chips rápidos, combinables con el resto de filtros (RN1).
-        if ($chip === 'por_ingresar') {
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => ($porIngresarMap[$p->id] ?? 0) > 0,
-            ));
-        } elseif ($chip === 'en_atencion') {
-            // REQ-350/SCRUM-420 — mismo criterio ALLOWLIST del KPI "En atención" (REQ-346 RN1,
-            // ver docblock de `BodegaInventoryKpiService::isInAttentionBodega()`), NO el
-            // blocklist de `InventoryKpiService::isInAttention()` (Compras/REQ-169).
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => $this->bodegaKpis->isInAttentionBodega($p, $committedMap[$p->id] ?? 0),
-            ));
-        } elseif ($chip === 'rotacion') {
-            // REQ-362 RN1 (SCRUM-432) — deep-link desde "Mayor rotación" de Home. Decisión de Luis
-            // 2026-07-23 (Pre-QA bloqueante): reusa el campo `rotation` que ESTA pantalla ya
-            // expone/filtra (`rotation=alta`), no el top-N por `InventoryMovement` de
-            // `BodegaHomeService::mayorRotacion()` — son 2 conceptos parecidos pero no forzados a
-            // coincidir 1:1; ese cálculo queda exclusivo del panel de Home.
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => $p->rotation === CatalogProduct::ROTATION_ALTA,
-            ));
-        } elseif ($chip === 'criticos') {
-            // REQ-362 RN1 (SCRUM-432) — deep-link desde "Artículos críticos" de Home. Misma
-            // decisión: reusa `OrderCommitmentService::committedMap()` (el "por servir" que ESTA
-            // pantalla ya usa para su propia columna, ver docblock de la clase), NO
-            // `InventoryKpiService::porServirMap()` que usa `BodegaHomeService::articulosCriticos()`
-            // — evita que el mismo chip mezcle 2 definiciones de compromiso dentro de una sola
-            // pantalla.
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => in_array(
-                    $this->inventoryKpis->stockState($p, $committedMap[$p->id] ?? 0),
-                    [InventoryKpiService::STOCK_BAJO_STOCK, InventoryKpiService::STOCK_SIN_STOCK],
-                    true,
-                ),
-            ));
-        }
-
-        // REQ-349 — filtros combinables: estado, rotación, proveedor, marca, categoría (familia).
-        $estado = $request->query('estado');
-        if (is_string($estado) && $estado !== '' && $estado !== 'todos') {
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => $this->inventoryKpis->stockState($p, $committedMap[$p->id] ?? 0) === $estado,
-            ));
-        }
-
+        // REQ-349 — filtros combinables: rotación, proveedor, marca, categoría (familia).
         $rotation = $request->query('rotation');
         if (is_string($rotation) && $rotation !== '') {
-            $products = array_values(array_filter($products, fn (CatalogProduct $p): bool => $p->rotation === $rotation));
+            $baseQuery->where('cp.rotation', $rotation);
         }
 
         $providerId = $request->query('provider_id');
         if (is_string($providerId) && $providerId !== '') {
-            $products = array_values(array_filter($products, fn (CatalogProduct $p): bool => (int) $p->provider_id === (int) $providerId));
+            $baseQuery->where('cp.provider_id', (int) $providerId);
         }
 
         $brand = $request->query('brand');
         if (is_string($brand) && $brand !== '') {
-            $products = array_values(array_filter($products, fn (CatalogProduct $p): bool => strcasecmp((string) $p->brand, $brand) === 0));
+            $baseQuery->whereRaw('LOWER(cp.brand) = LOWER(?)', [$brand]);
         }
 
         // "Categoría" (REQ-349/351) = `CatalogProductFamily` — mismo concepto que `family_id`/
-        // `family_name` ya usado por Compras (InventoryController::format()), la etiqueta de
-        // negocio del Excel/Jira es "Categoría" pero el dato es la misma tabla.
+        // `family_name` ya usado por Compras (InventoryController::format()). Subconsulta sobre la tabla
+        // pivote (no `whereHas`): la consulta base usa el alias `cp`, y el `EXISTS` de `whereHas` referencia
+        // la tabla por su nombre completo.
         $familyId = $request->query('family_id');
         if (is_string($familyId) && $familyId !== '') {
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => $p->families->pluck('id')->contains((int) $familyId),
-            ));
+            $families = (new CatalogProduct)->families();
+            $baseQuery->whereIn('cp.id', fn ($sub) => $sub
+                ->select($families->getForeignPivotKeyName())
+                ->from($families->getTable())
+                ->where($families->getRelatedPivotKeyName(), (int) $familyId));
         }
 
-        // REQ-349 RN2 — filtrar por bodega muestra SOLO productos con stock registrado en ESA bodega.
-        //
-        // SCRUM-361 (rebote QA 2026-08-20/21) — este filtro solo decidía QUÉ FILAS aparecían; la
-        // columna "Disponible" seguía viniendo de `format()` como `stock_quantity` (total del
-        // producto en TODAS las bodegas) menos comprometido GLOBAL, nunca de la cantidad real en
-        // la bodega filtrada. Con eso, filtrar por "Reserva Servicios" y comparar contra Servicios
-        // → Insumos (que sí lee `product_warehouse_stock` para esa bodega puntual, ver
-        // `InsumoService::list()`) daba dos números distintos para el mismo producto+ubicación
-        // (8 vs 10 en el caso real reportado) — violación directa de RN5 ("misma ubicación, mismo
-        // número"), no una corrupción de datos: los datos siempre fueron correctos, el cálculo
-        // mostrado no correspondía a la ubicación que el filtro decía estar mostrando.
-        // Fix: cuando hay `warehouse_id`, `$warehouseScopedQtyMap` lleva la cantidad real de ESA
-        // bodega (mismo query que ya usa `InsumoService::list()` para Reserva Servicios, sin
-        // ajuste de comprometido) y `format()` la usa para `disponible` en vez del total global.
+        // REQ-349 RN2 — filtrar por bodega muestra SOLO productos con stock registrado en ESA
+        // bodega. La subconsulta reemplaza al `pluck()` + `whereIn('id', [miles de IDs])` de antes; la cantidad
+        // en ESA bodega (que alimenta "Disponible" en `format()`, SCRUM-361) se lee abajo solo para la página.
         $warehouseId = $request->query('warehouse_id');
-        $warehouseScopedQtyMap = [];
-        if (is_string($warehouseId) && $warehouseId !== '') {
-            $stockInWarehouse = ProductWarehouseStock::where('warehouse_id', (int) $warehouseId)
-                ->where('quantity', '>', 0)
-                ->pluck('quantity', 'catalog_product_id');
-            $warehouseScopedQtyMap = $stockInWarehouse->map(fn ($q) => (int) $q)->all();
-            $withStock = array_keys($warehouseScopedQtyMap);
-            $products = array_values(array_filter($products, fn (CatalogProduct $p): bool => in_array($p->id, $withStock, true)));
+        $scopedWarehouseId = is_string($warehouseId) && $warehouseId !== '' ? (int) $warehouseId : null;
+        if ($scopedWarehouseId !== null) {
+            $baseQuery->whereIn('cp.id', fn ($sub) => $sub
+                ->select('catalog_product_id')
+                ->from((new ProductWarehouseStock)->getTable())
+                ->where('warehouse_id', $scopedWarehouseId)
+                ->where('quantity', '>', 0));
         }
+
+        $search = trim(QueryParams::string($request, 'search'));
+        $estadoParam = $request->query('estado');
+        $estado = is_string($estadoParam) && $estadoParam !== '' && $estadoParam !== 'todos' ? $estadoParam : null;
 
         $pagination = Pagination::params($request, self::ALLOWED_SORTS, 'reference');
-        usort($products, function (CatalogProduct $a, CatalogProduct $b) use ($pagination): int {
-            /** @var string $field */
-            $field = $pagination['sort_by'];
-            $cmp = match ($field) {
-                'created_at' => $a->created_at <=> $b->created_at,
-                'stock_quantity' => $a->{$field} <=> $b->{$field},
-                default => strcasecmp((string) $a->{$field}, (string) $b->{$field}),
-            };
+        $fuzzy = false;
 
-            return $pagination['sort_dir'] === 'desc' ? -$cmp : $cmp;
-        });
-        $paginator = Pagination::ofArray($products, $pagination['per_page'], $pagination['page']);
+        if ($search !== '') {
+            // SCRUM-992 — búsqueda en SQL sobre `search_text` (referencia, referencia de fábrica, nombre,
+            // marca; índice trigram, sin acentos) + nombre del proveedor (tabla chica), como ya hacía
+            // el texto que se le pasaba al fuzzy en PHP. Respaldo tolerante a typos SOLO si lo anterior
+            // da 0 resultados. Se aplica ANTES de unir los agregados: la consulta de candidatos del respaldo
+            // no necesita esos joins.
+            // Cada palabra del término debe aparecer en el texto del producto O en el nombre de su proveedor.
+            $words = CatalogProduct::searchWords($search);
+            $providerIdsByWord = [];
+            foreach ($words as $word) {
+                $providerIdsByWord[$word] = Provider::query()
+                    ->whereRaw("public.f_unaccent(lower(name)) LIKE '%' || public.f_unaccent(lower(?)) || '%'", [addcslashes($word, '%_\\')])
+                    ->pluck('id')->all();
+            }
+            $partial = function (Builder $q) use ($providerIdsByWord): void {
+                foreach ($providerIdsByWord as $word => $providerIds) {
+                    $q->where(function (Builder $w) use ($word, $providerIds): void {
+                        $w->where(function (Builder $x) use ($word): void {
+                            CatalogProduct::applySearch($x, (string) $word, false, 'cp.');
+                        });
+                        if ($providerIds !== []) {
+                            $w->orWhereIn('cp.provider_id', $providerIds);
+                        }
+                    });
+                }
+            };
+            $probe = clone $baseQuery;
+            $partial($probe);
+            if ($probe->exists()) {
+                $partial($baseQuery);
+            } else {
+                $fuzzy = CatalogProduct::applySearch($baseQuery, $search, fuzzyFallback: true, prefix: 'cp.');
+            }
+        }
+
+        // Chips/estado calculados (REQ-350): agregados unidos solo si el filtro los necesita.
+        if ($this->bodegaKpis->needsStockAggregates($chip, $estado)) {
+            $this->bodegaKpis->withStockAggregates($baseQuery);
+        }
+        if ($chip === 'por_ingresar') {
+            $this->bodegaKpis->withPorIngresar($baseQuery);
+        }
+        if ($chip === 'bajo_stock_sin_ordenar') {
+            $this->bodegaKpis->withEnCamino($baseQuery);
+        }
+        $this->bodegaKpis->applyChip($baseQuery, $chip);
+        if ($estado !== null) {
+            $this->bodegaKpis->applyEstado($baseQuery, $estado);
+        }
+
+        // Mismo criterio de orden que ya tenía el camino común (decisión de Luis, SCRUM-994): texto con
+        // `LOWER()`, números/fechas con el orden por defecto de Postgres. Desempate estable por `id`.
+        $sortBy = $pagination['sort_by'];
+        if (in_array($sortBy, ['reference', 'name'], true)) {
+            $baseQuery->orderByRaw("LOWER(cp.{$sortBy}) {$pagination['sort_dir']}");
+        } else {
+            $baseQuery->orderBy("cp.{$sortBy}", $pagination['sort_dir']);
+        }
+
+        $paginator = $baseQuery
+            ->orderBy('cp.id') // desempate estable — stock_quantity/created_at tienen muchos empates reales
+            ->with(['families', 'provider'])
+            ->paginate($pagination['per_page'], ['*'], 'page', $pagination['page']);
+
+        /** @var list<CatalogProduct> $pageProducts */
+        $pageProducts = array_values($paginator->items());
+
+        // Los mapas de compromiso/KPIs para construir la respuesta: solo sobre los IDs de la PÁGINA —
+        // nunca sobre el universo.
+        $pageProductIds = array_map(fn (CatalogProduct $p): int => $p->id, $pageProducts);
+        $committedMap = $this->commitments->committedMap($pageProductIds);
+        $porIngresarMap = $this->inventoryKpis->porIngresarMap($pageProductIds);
+        $enCaminoMap = $this->inventoryKpis->enCaminoMap($pageProductIds);
+        $enExcluidaMap = $this->inventoryKpis->enBodegaExcluidaMap($pageProductIds);
+        $arrivalMap = $this->arrivalConfirmation->bulkPendingSummary($pageProductIds);
+        $warehouseCounts = $this->warehouseCounts($pageProductIds);
+        $warehouseScopedQtyMap = $scopedWarehouseId === null || $pageProductIds === []
+            ? []
+            : ProductWarehouseStock::where('warehouse_id', $scopedWarehouseId)
+                ->where('quantity', '>', 0)
+                ->whereIn('catalog_product_id', $pageProductIds)
+                ->pluck('quantity', 'catalog_product_id')
+                ->map(fn ($q) => (int) $q)
+                ->all();
 
         return response()->json([
             'fuzzy' => $fuzzy,
@@ -229,8 +251,9 @@ final class BodegaInventoryController extends Controller
                     $arrivalMap[$p->id] ?? ['pending_bodega_action' => false, 'awaiting_compras' => false, 'confirmed_quantity' => 0, 'confirmed_by_name' => null],
                     $warehouseCounts[$p->id] ?? 0,
                     $warehouseScopedQtyMap[$p->id] ?? null,
+                    $enExcluidaMap[$p->id] ?? 0,
                 ),
-                $paginator->items(),
+                $pageProducts,
             ),
             'meta' => Pagination::meta($paginator),
         ]);
@@ -249,11 +272,12 @@ final class BodegaInventoryController extends Controller
         $enCamino = $this->inventoryKpis->enCaminoMap([$id])[$id] ?? 0;
         $arrival = $this->arrivalConfirmation->pendingSummary($id);
         $warehouseCount = $this->warehouseCounts([$id])[$id] ?? 0;
+        $enExcluida = $this->inventoryKpis->enBodegaExcluidaMap([$id])[$id] ?? 0;
 
-        return response()->json($this->format($product, $committed, $porIngresar, $enCamino, $arrival, $warehouseCount));
+        return response()->json($this->format($product, $committed, $porIngresar, $enCamino, $arrival, $warehouseCount, enExcluida: $enExcluida));
     }
 
-    /** REQ-352/422 — desglose de stock por bodega física; solo bodegas con stock > 0. */
+    /** REQ-352/422 — desglose de stock por bodega física; todas las bodegas con saldo distinto de 0 (SCRUM-1196: también las negativas). */
     public function warehouseBreakdown(Request $request, int $id): JsonResponse
     {
         if (CatalogProduct::find($id) === null) {
@@ -342,6 +366,7 @@ final class BodegaInventoryController extends Controller
         $enCaminoMap = $this->inventoryKpis->enCaminoMap($productIds);
         $arrivalMap = $this->arrivalConfirmation->bulkPendingSummary($productIds);
         $warehouseCounts = $this->warehouseCounts($productIds);
+        $enExcluidaMap = $this->inventoryKpis->enBodegaExcluidaMap($productIds);
 
         return response()->json([
             'id' => $family->id,
@@ -355,6 +380,7 @@ final class BodegaInventoryController extends Controller
                 $enCaminoMap[$p->id] ?? 0,
                 $arrivalMap[$p->id] ?? ['pending_bodega_action' => false, 'awaiting_compras' => false, 'confirmed_quantity' => 0, 'confirmed_by_name' => null],
                 $warehouseCounts[$p->id] ?? 0,
+                enExcluida: $enExcluidaMap[$p->id] ?? 0,
             ))->values(),
         ]);
     }
@@ -445,8 +471,9 @@ final class BodegaInventoryController extends Controller
     private function warehouseRows(int $productId): array
     {
         $rows = ProductWarehouseStock::with('warehouse')
+            ->enBodegaOperativa()
             ->where('catalog_product_id', $productId)
-            ->where('quantity', '>', 0)
+            ->where('quantity', '<>', 0) // SCRUM-1196: también los saldos negativos
             ->get();
 
         return array_values($rows->map(fn (ProductWarehouseStock $r) => [
@@ -458,7 +485,7 @@ final class BodegaInventoryController extends Controller
 
     /**
      * @param  list<int>  $productIds
-     * @return array<int, int> catalog_product_id => cantidad de bodegas distintas con stock > 0
+     * @return array<int, int> catalog_product_id => cantidad de bodegas distintas con saldo distinto de 0 (SCRUM-1196: incluye negativas)
      */
     private function warehouseCounts(array $productIds): array
     {
@@ -466,8 +493,9 @@ final class BodegaInventoryController extends Controller
             return [];
         }
 
-        return ProductWarehouseStock::whereIn('catalog_product_id', $productIds)
-            ->where('quantity', '>', 0)
+        return ProductWarehouseStock::enBodegaOperativa()
+            ->whereIn('catalog_product_id', $productIds)
+            ->where('quantity', '<>', 0) // SCRUM-1196: cuenta también las bodegas en negativo
             ->get()
             ->groupBy('catalog_product_id')
             ->map(fn ($rows) => $rows->count())
@@ -486,6 +514,7 @@ final class BodegaInventoryController extends Controller
         array $arrival,
         int $warehouseCount,
         ?int $warehouseScopedQty = null,
+        int $enExcluida = 0,
     ): array {
         // REQ-351 RN1/RN2, Escenario 1 — "Disponible"/"Stock Total"/"Estado" de esta pantalla usan
         // el compromiso a PEDIDOS de Bodega (`$committed`), no el de Ventas & Diseño.
@@ -497,8 +526,8 @@ final class BodegaInventoryController extends Controller
         // siempre el mismo número en la misma ubicación (RN5 de REQ-291). Sin filtro de bodega,
         // sigue siendo el total del producto en todas las ubicaciones menos comprometido, como
         // siempre fue.
-        $disponible = $warehouseScopedQty ?? (($product->stock_quantity ?? 0) - $committed);
-        $estado = $this->inventoryKpis->stockState($product, $committed);
+        $disponible = $warehouseScopedQty ?? $this->inventoryKpis->disponibleParaVenta($product, $committed, $enExcluida);
+        $estado = $this->inventoryKpis->stockState($product, $committed, $enExcluida);
         $family = $product->relationLoaded('families') ? $product->families->first() : null;
 
         return [
@@ -515,7 +544,11 @@ final class BodegaInventoryController extends Controller
             'brand' => $product->brand,
             'photo_url' => $product->photo_url,
             'stock_quantity' => $product->stock_quantity,
-            'stock_total' => $disponible + $committed,
+            // SCRUM-851 — antes derivado como `$disponible + $committed`, que solo coincidía con
+            // el total real cuando nada se excluía de "Disponible"; con `enExcluida` restando,
+            // esa suma quedaba corta exactamente en esa cantidad. `stock_quantity` ya es la
+            // fuente real (columna cacheada, Inventario Total) — se usa directo, sin derivar.
+            'stock_total' => $product->stock_quantity,
             'por_servir' => $committed,
             'disponible' => $disponible,
             'por_ingresar' => $porIngresar,

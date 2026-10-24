@@ -8,9 +8,12 @@ use App\Models\User;
 use App\Modules\Bodega\Exceptions\OrderTransitionException;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderItem;
+use App\Modules\Bodega\Models\ProductWarehouseStock;
+use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Bodega\Services\InventoryReviewService;
 use App\Modules\Bodega\Services\PickingConsolidationService;
 use App\Modules\Bodega\Services\PickingService;
+use App\Modules\Bodega\Services\StockReservationService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +28,7 @@ final class OrderPickingController extends Controller
         private readonly PickingService $picking,
         private readonly InventoryReviewService $inventoryReview,
         private readonly PickingConsolidationService $consolidation,
+        private readonly StockReservationService $reservations,
     ) {}
 
     /**
@@ -86,15 +90,25 @@ final class OrderPickingController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        $order->loadMissing('items.catalogProduct', 'items.foundConfirmedBy');
+        $order->loadMissing('items.catalogProduct', 'items.foundConfirmedBy', 'items.allocations');
         $items = $order->items->sortBy(fn (OrderItem $i) => $i->location_snapshot ?? '')->values();
+
+        // SCRUM-1196 — bodegas de venta que ofrece el selector de la hoja (Central y Showroom Obarrio; nunca Reclamos, Merma, etc.), con su saldo.
+        /** @var \Illuminate\Support\Collection<int, Warehouse> $saleWarehouses */
+        $saleWarehouses = Warehouse::paraVenta()->orderByDesc('despacho_por_defecto')->orderBy('id')->get();
+        $productIds = $items->pluck('catalog_product_id')->filter()->unique()->values()->all();
+        $stockByProduct = $productIds === [] ? collect() : ProductWarehouseStock::whereIn('catalog_product_id', $productIds)
+            ->whereIn('warehouse_id', $saleWarehouses->pluck('id'))->get()->groupBy('catalog_product_id');
 
         return response()->json([
             'order_id'  => $order->id,
             'editable'  => $order->stage === Order::STAGE_EN_PICKING,
-            'items'     => $items->map(function (OrderItem $i): array {
+            'sale_warehouses' => $saleWarehouses->map(fn (Warehouse $w): array => ['id' => $w->id, 'name' => $w->name, 'is_default' => $w->despacho_por_defecto])->values()->all(),
+            'items'     => $items->map(function (OrderItem $i) use ($saleWarehouses, $stockByProduct): array {
                 /** @var CatalogProduct|null $product */
                 $product = $i->catalogProduct;
+                /** @var \Illuminate\Support\Collection<int, ProductWarehouseStock> $stockRows */
+                $stockRows = $i->catalog_product_id !== null ? $stockByProduct->get($i->catalog_product_id, collect()) : collect();
 
                 return [
                     'id'                => $i->id,
@@ -113,7 +127,27 @@ final class OrderPickingController extends Controller
                     'found_note'        => $i->foundNote(),
                     'qty_requested'     => $i->qty_requested,
                     'qty_picked'        => $i->qty_picked,
+                    'qty_reserved'      => $i->qty_reserved,
                     'picking_notes'     => $i->picking_notes,
+                    // SCRUM-1196 — de qué bodega(s) sale la línea y cuánto, y el saldo de cada bodega de venta (`available`: lo que Bodega puede alistar
+                    // desde allí; en la de por defecto, lo reservado para este pedido).
+                    'allocations'       => $i->allocations->map(fn ($al): array => [
+                        'warehouse_id' => $al->warehouse_id, 'qty_reserved' => $al->qty_reserved, 'qty_picked' => $al->qty_picked, 'manual' => $al->manual,
+                    ])->values()->all(),
+                    'warehouse_options' => $saleWarehouses->map(function (Warehouse $w) use ($i, $stockRows): array {
+                        $stockRow = $stockRows->firstWhere('warehouse_id', $w->id);
+                        $stock = $stockRow !== null ? (int) $stockRow->quantity : 0;
+                        if ($w->despacho_por_defecto) {
+                            $auto = $i->allocations->first(fn ($al): bool => ! $al->manual && $al->warehouse_id === $w->id);
+                            $available = $auto !== null ? (int) $auto->qty_reserved : 0;
+                        } else {
+                            $available = ($i->catalog_product_id !== null && $stock > 0)
+                                ? $this->reservations->availableAtWarehouse((int) $i->catalog_product_id, $w->id, $i->id)
+                                : 0;
+                        }
+
+                        return ['warehouse_id' => $w->id, 'name' => $w->name, 'is_default' => $w->despacho_por_defecto, 'stock' => $stock, 'available' => $available];
+                    })->values()->all(),
                 ];
             })->values()->all(),
         ]);
@@ -133,6 +167,10 @@ final class OrderPickingController extends Controller
             'items.*.order_item_id'    => ['required', 'integer'],
             'items.*.qty_picked'       => ['required', 'integer', 'min:0'],
             'items.*.picking_notes'    => ['nullable', 'string', 'max:500'],
+            // SCRUM-1196 — de qué bodega(s) de venta se alista la línea; sin esto, todo sale de la bodega de despacho por defecto.
+            'items.*.allocations'                => ['nullable', 'array'],
+            'items.*.allocations.*.warehouse_id' => ['required_with:items.*.allocations', 'integer'],
+            'items.*.allocations.*.qty_picked'   => ['required_with:items.*.allocations', 'integer', 'min:0'],
         ]);
 
         try {
@@ -157,6 +195,9 @@ final class OrderPickingController extends Controller
             'items'                    => ['required', 'array', 'min:1'],
             'items.*.order_item_id'    => ['required', 'integer'],
             'items.*.qty_picked'       => ['required', 'integer', 'min:0'],
+            'items.*.allocations'                => ['nullable', 'array'],
+            'items.*.allocations.*.warehouse_id' => ['required_with:items.*.allocations', 'integer'],
+            'items.*.allocations.*.qty_picked'   => ['required_with:items.*.allocations', 'integer', 'min:0'],
         ]);
 
         try {

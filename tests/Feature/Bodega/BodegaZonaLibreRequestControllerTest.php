@@ -7,9 +7,11 @@ namespace Tests\Feature\Bodega;
 use App\Modules\Compras\Models\BodegaZonaLibreRequest;
 use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\Provider;
+use App\Modules\Notifications\Models\Notification;
 use App\Modules\Notifications\Models\NotificationSend;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
+use Database\Seeders\ZonaLibreProviderSeeder;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
@@ -59,7 +61,23 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
     {
         $providerId = ComprasSettings::current()->zona_libre_provider_id;
         $this->assertNotNull($providerId);
-        $this->assertSame('Zona Libre de Colón', Provider::find($providerId)?->name);
+        $this->assertSame('BK INTERPRISES S.A.', Provider::find($providerId)?->name);
+    }
+
+    public function test_zona_libre_provider_seeder_completa_categoria_vacia_sin_pisar_una_definida(): void
+    {
+        $provider = Provider::find(ComprasSettings::current()->zona_libre_provider_id);
+        $this->assertSame(Provider::CATEGORY_ZONA_LIBRE, $provider?->category);
+
+        $provider->update(['category' => null]);
+        $this->seed(ZonaLibreProviderSeeder::class);
+        $this->reMakeCurrent(); // el seeder cierra con Tenant::forgetCurrent()
+        $this->assertSame(Provider::CATEGORY_ZONA_LIBRE, $provider->fresh()->category);
+
+        $provider->update(['category' => Provider::CATEGORY_CHINA]);
+        $this->seed(ZonaLibreProviderSeeder::class);
+        $this->reMakeCurrent(); // el seeder cierra con Tenant::forgetCurrent()
+        $this->assertSame(Provider::CATEGORY_CHINA, $provider->fresh()->category);
     }
 
     public function test_provider_devuelve_id_y_nombre_del_proveedor_configurado(): void
@@ -72,7 +90,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
 
         $response->assertStatus(200);
         $response->assertJsonPath('id', $providerId);
-        $response->assertJsonPath('name', 'Zona Libre de Colón');
+        $response->assertJsonPath('name', 'BK INTERPRISES S.A.');
     }
 
     public function test_provider_sin_permiso_bodega_read_retorna_403(): void
@@ -140,7 +158,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
             ->postJson('/api/bodega/zona-libre/requests', [
                 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 1]],
             ])
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Uno o más productos no pertenecen al proveedor BK INTERPRISES S.A.');
     }
 
     public function test_folio_es_consecutivo_entre_dos_solicitudes(): void
@@ -215,6 +234,15 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $this->assertNotNull($send);
         $yirenaId = (int) DB::table('atlantic_auth.users')->where('email', 'lidercompras@test.com')->value('id');
         $this->assertContains($yirenaId, $send->audience);
+
+        // SCRUM-1167/1170 — el aviso lleva a la pantalla donde Compras aprueba/rechaza Y a esa solicitud concreta (`?request={id}`), tanto en el contenido
+        // como en la notificación in-app de Yirena.
+        $esperado = "/bodega/ordenes-zona-libre?request={$zonaLibreRequest->id}";
+        $this->assertSame($esperado, $send->content['cta_url']);
+        $this->assertSame(
+            $esperado,
+            Notification::where('user_id', $yirenaId)->where('notification_send_id', $send->id)->value('link_url'),
+        );
     }
 
     public function test_remind_sobre_solicitud_no_pendiente_retorna_422(): void
@@ -387,6 +415,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
             ->putJson("/api/bodega/zona-libre/requests/{$zonaLibreRequest->id}", [
                 'lines' => [['catalog_product_id' => $otherProduct->id, 'quantity' => 1]],
             ])
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Uno o más productos no pertenecen al proveedor BK INTERPRISES S.A.');
     }
 }

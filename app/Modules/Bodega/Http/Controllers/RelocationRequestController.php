@@ -65,8 +65,8 @@ final class RelocationRequestController extends Controller
 
         $validated = $request->validate([
             'catalog_product_id' => ['required', 'integer', 'exists:catalog_products,id'],
-            'origin_warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
-            'destination_warehouse_id' => ['required', 'integer', 'exists:warehouses,id', 'different:origin_warehouse_id'],
+            'origin_warehouse_id' => ['required', 'integer', Warehouse::operativaRule()],
+            'destination_warehouse_id' => ['required', 'integer', Warehouse::operativaRule(), 'different:origin_warehouse_id'],
             'cantidad' => ['required', 'integer', 'min:1'],
             'motivo' => ['required', 'string'],
         ], [

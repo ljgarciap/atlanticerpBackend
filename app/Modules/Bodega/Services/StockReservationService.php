@@ -6,7 +6,9 @@ namespace App\Modules\Bodega\Services;
 
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderItem;
+use App\Modules\Bodega\Models\OrderItemAllocation;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
+use App\Modules\Bodega\Models\Warehouse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -46,6 +48,13 @@ use Illuminate\Support\Facades\DB;
  * negocio para ese caso — partir una línea entre bodegas de forma explícita requeriría una tabla
  * de reparto nueva (`order_items` no la tiene hoy), cambio de esquema fuera de alcance de esta
  * extensión.
+ *
+ * SCRUM-1196 (reglas de Esteban Cárdenas, Líder de Bodega, 22-10-2026) — el «bin por bin» ya NO usa todas las bodegas operativas ni la de más remanente
+ * (`bestFitAllocation()`, eliminado: tomaba Reclamos, Merma o un Showroom y los dejaba en negativo). Solo cuentan las bodegas `permite_venta`; la reserva
+ * AUTOMÁTICA sale únicamente de la bodega `despacho_por_defecto` (Bodega Central), nunca más que su saldo (jamás negativo); lo que no alcance queda sin reservar
+ * y al completar el picking cae en el flujo de faltante (REQ-316/317, «pendiente de compra»). Una bodega de venta distinta (1 pieza de Showroom Obarrio) solo
+ * entra si Bodega la ESCOGE en el picking: esa asignación `manual` se conserva y se respeta como parte del saldo. El reparto por bodega vive en
+ * `order_item_allocations`; `order_items.warehouse_id/qty_reserved` quedan como bodega principal y total.
  */
 final class StockReservationService
 {
@@ -60,9 +69,42 @@ final class StockReservationService
      */
     private const FROZEN_STAGES = [Order::STAGE_PACKING, Order::STAGE_POR_DESPACHAR];
 
+    /** @var array{saleIds: list<int>, defaultId: int|null, names: array<int, string>}|null */
+    private ?array $warehouseCtx = null;
+
+    /**
+     * SCRUM-1196 — bodegas de venta, bodega por defecto y nombres, cargados UNA vez por operación (antes cada línea y cada producto repetía estas consultas:
+     * 60 líneas ≈ 500 ms). Se descarta al empezar cada punto de entrada para no arrastrar reglas viejas entre operaciones (procesos largos como Horizon).
+     *
+     * @return array{saleIds: list<int>, defaultId: int|null, names: array<int, string>}
+     */
+    public function warehouseContext(): array
+    {
+        if ($this->warehouseCtx === null) {
+            $names = [];
+            foreach (Warehouse::query()->get(['id', 'name']) as $w) {
+                $names[(int) $w->id] = (string) $w->name;
+            }
+
+            $this->warehouseCtx = [
+                'saleIds'   => array_values(array_map('intval', Warehouse::paraVenta()->pluck('id')->all())),
+                'defaultId' => Warehouse::despachoPorDefecto()?->id,
+                'names'     => $names,
+            ];
+        }
+
+        return $this->warehouseCtx;
+    }
+
+    public function forgetWarehouseContext(): void
+    {
+        $this->warehouseCtx = null;
+    }
+
     /** Punto de entrada al iniciar picking (REQ-314) o al reingresar a en_picking desde una revisión resuelta (REQ-318). */
     public function reserveForOrder(Order $order): void
     {
+        $this->forgetWarehouseContext();
         $order->loadMissing('items');
 
         /** @var list<int> $productIds */
@@ -74,6 +116,7 @@ final class StockReservationService
     /** @param list<int> $productIds */
     public function reallocateForProducts(array $productIds): void
     {
+        $this->forgetWarehouseContext();
         foreach (array_unique($productIds) as $productId) {
             $this->reallocateProduct((int) $productId);
         }
@@ -84,22 +127,32 @@ final class StockReservationService
         DB::transaction(function () use ($productId): void {
             // Postgres no permite FOR UPDATE combinado con una función de agregación (sum()) en
             // el mismo SELECT — se bloquean las filas primero y se arma el mapa de remanente en PHP.
+            // SCRUM-990: solo bodegas OPERATIVAS. Una fila residual de Zona Libre (solo consulta) no puede recibir reservas: el kardex del
+            // picking/despacho posterior fallaría y el pedido quedaría bloqueado.
             $stockRows = ProductWarehouseStock::where('catalog_product_id', $productId)
+                ->enBodegaOperativa()
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
 
-            /** @var array<int, int> $remainingByWarehouse bodega_id => remanente disponible para repartir. */
+            // SCRUM-1196 — solo las bodegas que pueden surtir ventas; el remanente nunca es negativo (un saldo ya negativo no se puede reservar).
+            $ctx = $this->warehouseContext();
+            $saleWarehouseIds   = $ctx['saleIds'];
+            $defaultWarehouseId = $ctx['defaultId'];
+
+            /** @var array<int, int> $remainingByWarehouse bodega_id => remanente disponible para repartir (solo bodegas de venta, ≥ 0). */
             $remainingByWarehouse = [];
             foreach ($stockRows as $row) {
-                $remainingByWarehouse[$row->warehouse_id] = $row->quantity;
+                if (in_array((int) $row->warehouse_id, $saleWarehouseIds, true)) {
+                    $remainingByWarehouse[(int) $row->warehouse_id] = max(0, (int) $row->quantity);
+                }
             }
 
             /** @var \Illuminate\Support\Collection<int, OrderItem> $items */
             $items = OrderItem::query()
                 ->where('catalog_product_id', $productId)
                 ->whereHas('order', fn (Builder $q) => $q->whereIn('stage', self::COMPETING_STAGES))
-                ->with('order')
+                ->with(['order', 'allocations'])
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
@@ -138,72 +191,196 @@ final class StockReservationService
                     continue;
                 }
 
-                $frozenWarehouseId = $item->warehouse_id;
-                $committed         = max(0, $item->qty_picked);
+                // Por bodega: con asignaciones (SCRUM-1196) lo alistado de cada una; sin ellas (pedidos previos) la bodega única de la línea.
+                $committedByWarehouse = $item->allocations->isNotEmpty()
+                    ? $item->allocations->mapWithKeys(fn (OrderItemAllocation $al) => [(int) $al->warehouse_id => max(0, (int) $al->qty_picked)])->all()
+                    : ($item->warehouse_id !== null ? [(int) $item->warehouse_id => max(0, $item->qty_picked)] : []);
 
-                if ($frozenWarehouseId !== null && $committed > 0) {
-                    $remainingByWarehouse[$frozenWarehouseId] = ($remainingByWarehouse[$frozenWarehouseId] ?? 0) - $committed;
+                $committed = 0;
+                foreach ($committedByWarehouse as $warehouseId => $qty) {
+                    $committed += $qty;
+                    if ($qty > 0 && isset($remainingByWarehouse[$warehouseId])) {
+                        $remainingByWarehouse[$warehouseId] = max(0, $remainingByWarehouse[$warehouseId] - $qty);
+                    }
                 }
 
-                $frozenQtyReserved = $frozenWarehouseId !== null ? $committed : 0;
+                foreach ($item->allocations as $allocation) {
+                    if ($allocation->qty_reserved !== $allocation->qty_picked) {
+                        $allocation->update(['qty_reserved' => $allocation->qty_picked]);
+                    }
+                }
+
+                $frozenQtyReserved = $item->warehouse_id !== null || $item->allocations->isNotEmpty() ? $committed : 0;
                 if ($frozenQtyReserved !== $item->qty_reserved) {
                     $item->update(['qty_reserved' => $frozenQtyReserved]);
                 }
             }
 
-            // Fase 2 — REPARTIR: ítems todavía en plan (En picking, sin picking físico
-            // consumado), en orden de prioridad, contra el remanente que dejó la fase 1.
-            $remaining = $remainingByWarehouse;
+            // Fase 1b (SCRUM-1196, Pre-QA ronda 4 N4) — lo que un pedido EN PICKING ya alistó es un hecho físico aunque el pedido todavía no esté congelado:
+            // se aparta del saldo antes de repartir, para que un pedido de mayor prioridad no se lleve unidades ya alistadas por otro (la reserva total
+            // superaba el stock tras cambiar la bodega por defecto bajo contención). Cada ítem recupera lo SUYO justo antes de que le toque repartir.
+            /** @var array<int, array<int, int>> $held item_id => [bodega_id => unidades apartadas] */
+            $held = [];
             foreach ($mutableItems as $item) {
-                $need = $item->pendingQty();
-
-                [$warehouseId, $grant] = $this->bestFitAllocation($remaining, $need);
-
-                if ($grant > 0 && $warehouseId !== null) {
-                    $remaining[$warehouseId] -= $grant;
+                foreach ($item->allocations as $allocation) {
+                    $warehouseId = (int) $allocation->warehouse_id;
+                    $picked = max(0, (int) $allocation->qty_picked);
+                    if ($picked > 0 && isset($remainingByWarehouse[$warehouseId])) {
+                        $hold = min($remainingByWarehouse[$warehouseId], $picked);
+                        $remainingByWarehouse[$warehouseId] -= $hold;
+                        $held[$item->id][$warehouseId] = ($held[$item->id][$warehouseId] ?? 0) + $hold;
+                    }
                 }
+            }
 
-                $resolvedWarehouseId = $grant > 0 ? $warehouseId : null;
-
-                $updates = [];
-                if ($grant !== $item->qty_reserved) {
-                    $updates['qty_reserved'] = $grant;
+            // Fase 2 — REPARTIR: ítems todavía en plan (En picking, sin picking físico consumado), en orden de prioridad, contra el remanente que dejó la fase 1.
+            foreach ($mutableItems as $item) {
+                foreach ($held[$item->id] ?? [] as $warehouseId => $qty) {
+                    $remainingByWarehouse[$warehouseId] += $qty;
                 }
-                if ($resolvedWarehouseId !== $item->warehouse_id) {
-                    $updates['warehouse_id'] = $resolvedWarehouseId;
-                }
-                if ($updates !== []) {
-                    $item->update($updates);
-                }
+                $this->allocateMutableItem($item, $remainingByWarehouse, $defaultWarehouseId);
             }
         });
     }
 
     /**
-     * Best-fit: la bodega con MÁS remanente que pueda cubrir (total o parcialmente) la necesidad.
+     * SCRUM-1196 — reparte UN ítem todavía en plan: primero respeta lo que Bodega escogió a mano en el picking (acotado al saldo que queda), y el resto
+     * lo cubre con la bodega de despacho por defecto, sin pasar de su saldo. Lo que no se cubre queda sin reservar (faltante).
      *
-     * @param array<int, int> $remainingByWarehouse
-     * @return array{0: int|null, 1: int}
+     * @param array<int, int> $remaining remanente por bodega de venta; se descuenta lo reservado acá.
      */
-    private function bestFitAllocation(array $remainingByWarehouse, int $need): array
+    private function allocateMutableItem(OrderItem $item, array &$remaining, ?int $defaultWarehouseId): void
     {
-        if ($need <= 0) {
-            return [null, 0];
-        }
+        $need = $item->pendingQty();
 
-        $bestWarehouseId = null;
-        $bestRemaining   = 0;
-        foreach ($remainingByWarehouse as $warehouseId => $remaining) {
-            if ($remaining > $bestRemaining) {
-                $bestRemaining   = $remaining;
-                $bestWarehouseId = $warehouseId;
+        // Una fila MANUAL en la bodega que acaba de pasar a ser la de por defecto (el picker la había escogido a mano) se fusiona con la automática de esa
+        // bodega: la tabla permite UNA fila por (línea, bodega), así que crear otra daba un 500 y dejaba a todos los pedidos del producto sin poder alistar.
+        if ($defaultWarehouseId !== null) {
+            $manualInDefault = $item->allocations->first(fn (OrderItemAllocation $al): bool => $al->manual && (int) $al->warehouse_id === $defaultWarehouseId);
+            if ($manualInDefault !== null) {
+                $manualInDefault->update(['manual' => false]);
             }
         }
 
-        if ($bestWarehouseId === null) {
-            return [null, 0];
+        $manualGranted = 0;
+        $firstManualWarehouse = null;
+        foreach ($item->allocations->where('manual', true) as $allocation) {
+            $warehouseId = (int) $allocation->warehouse_id;
+            // Lo que la fila manual quiere es al menos lo ya alistado: si su bodega dejó de ser de venta (reserva 0) y vuelve a serlo, recupera su reserva en vez de
+            // quedarse en 0 con piezas alistadas (Pre-QA ronda 5, N5).
+            $wanted = max(0, (int) $allocation->qty_reserved, (int) $allocation->qty_picked);
+            $grant  = min($wanted, max(0, $remaining[$warehouseId] ?? 0), max(0, $need - $manualGranted));
+            if (isset($remaining[$warehouseId])) {
+                $remaining[$warehouseId] -= $grant;
+            }
+            $manualGranted += $grant;
+            if ($grant > 0) {
+                $firstManualWarehouse ??= $warehouseId;
+            }
+
+            if ($grant <= 0 && $allocation->qty_picked <= 0) {
+                $allocation->delete();
+            } elseif ($grant !== $allocation->qty_reserved) {
+                $allocation->update(['qty_reserved' => $grant]);
+            }
         }
 
-        return [$bestWarehouseId, min($need, $bestRemaining)];
+        // Filas AUTOMÁTICAS de una bodega que ya no es la de por defecto (un superadmin cambió la regla con el pedido en picking): se liberan. Lo que ya se
+        // alistó allí se respeta (es un hecho físico) y cuenta contra su saldo y contra lo que falta; el resto de esa reserva desaparece. Sin esto la
+        // reserva quedaba duplicada (bodega vieja + bodega nueva) y los demás pedidos veían ese saldo como comprometido.
+        $staleKept = 0;
+        foreach ($item->allocations->where('manual', false) as $stale) {
+            if ($defaultWarehouseId !== null && (int) $stale->warehouse_id === $defaultWarehouseId) {
+                continue;
+            }
+            $keep = max(0, (int) $stale->qty_picked);
+            if (isset($remaining[(int) $stale->warehouse_id])) {
+                $remaining[(int) $stale->warehouse_id] = max(0, $remaining[(int) $stale->warehouse_id] - $keep);
+            }
+            $staleKept += $keep;
+            if ($keep === 0) {
+                $stale->delete();
+            } elseif ($stale->qty_reserved !== $keep) {
+                $stale->update(['qty_reserved' => $keep]);
+            }
+        }
+
+        $autoGrant = 0;
+        if ($defaultWarehouseId !== null) {
+            $autoNeed  = max(0, $need - $manualGranted - $staleKept);
+            $auto = $item->allocations->first(fn (OrderItemAllocation $al): bool => ! $al->manual && (int) $al->warehouse_id === $defaultWarehouseId);
+            $autoGrant = min($autoNeed, max(0, $remaining[$defaultWarehouseId] ?? 0));
+            // Lo ya alistado en esa bodega no puede quedar por encima de lo reservado (un alistado manual que pasó a ser automático): se reserva al menos eso.
+            if ($auto !== null) {
+                $autoGrant = max($autoGrant, min(max(0, (int) $auto->qty_picked), $autoNeed));
+            }
+            if (isset($remaining[$defaultWarehouseId])) {
+                $remaining[$defaultWarehouseId] = max(0, $remaining[$defaultWarehouseId] - $autoGrant);
+            }
+
+            if ($auto !== null) {
+                if ($autoGrant <= 0 && $auto->qty_picked <= 0) {
+                    $auto->delete();
+                } elseif ($autoGrant !== $auto->qty_reserved) {
+                    $auto->update(['qty_reserved' => $autoGrant]);
+                }
+            } elseif ($autoGrant > 0) {
+                OrderItemAllocation::create([
+                    'order_item_id' => $item->id, 'warehouse_id' => $defaultWarehouseId, 'qty_reserved' => $autoGrant, 'qty_picked' => 0, 'manual' => false,
+                ]);
+            }
+        }
+
+        $total = $autoGrant + $manualGranted + $staleKept;
+        $mainWarehouseId = $autoGrant > 0 ? $defaultWarehouseId : $firstManualWarehouse;
+
+        $updates = [];
+        if ($total !== $item->qty_reserved) {
+            $updates['qty_reserved'] = $total;
+        }
+        if ($mainWarehouseId !== $item->warehouse_id) {
+            $updates['warehouse_id'] = $mainWarehouseId;
+        }
+        if ($updates !== []) {
+            $item->update($updates);
+        }
+
+        $item->unsetRelation('allocations');
+    }
+
+    /**
+     * SCRUM-1196 — saldo de UNA bodega de venta que sigue libre para un pedido: el stock actual menos lo que otros pedidos en vuelo ya tienen reservado
+     * allí (o alistado, si ya están en Packing/Por despachar). Es el tope que valida el picking cuando Bodega escoge una bodega distinta a la de por defecto.
+     */
+    public function availableAtWarehouse(int $productId, int $warehouseId, int $excludeOrderItemId, bool $lock = false): int
+    {
+        // `$lock` (solo dentro de una transacción, al validar un picking): bloquea la fila de stock para que dos pickers que validan a la vez
+        // la última pieza de una bodega se serialicen — el segundo ve el saldo ya reservado por el primero.
+        $stockQuery = ProductWarehouseStock::where('catalog_product_id', $productId)->where('warehouse_id', $warehouseId);
+        if ($lock) {
+            $stockQuery->lockForUpdate();
+        }
+        $stock = (int) ($stockQuery->value('quantity') ?? 0);
+
+        $items = OrderItem::query()
+            ->where('catalog_product_id', $productId)
+            ->where('id', '!=', $excludeOrderItemId)
+            ->whereHas('order', fn (Builder $q) => $q->whereIn('stage', self::COMPETING_STAGES))
+            ->with(['order', 'allocations'])
+            ->get();
+
+        $taken = 0;
+        foreach ($items as $other) {
+            $frozen = in_array($other->order->stage, self::FROZEN_STAGES, true);
+            if ($other->allocations->isNotEmpty()) {
+                foreach ($other->allocations->where('warehouse_id', $warehouseId) as $allocation) {
+                    $taken += $frozen ? $allocation->qty_picked : $allocation->qty_reserved;
+                }
+            } elseif ($other->warehouse_id === $warehouseId) {
+                $taken += $frozen ? $other->qty_picked : $other->qty_reserved;
+            }
+        }
+
+        return max(0, $stock - $taken);
     }
 }

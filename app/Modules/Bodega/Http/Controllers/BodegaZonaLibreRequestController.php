@@ -148,7 +148,7 @@ final class BodegaZonaLibreRequestController extends Controller
             $product = $products->get($line['catalog_product_id']);
             if ($product === null || $product->provider_id !== $providerId) {
                 return response()->json([
-                    'message' => 'Uno o más productos no pertenecen al proveedor Zona Libre de Colón.',
+                    'message' => 'Uno o más productos no pertenecen al proveedor '.rtrim($this->providerName() ?? 'de Zona Libre', '.').'.',
                 ], 422);
             }
         }
@@ -228,7 +228,7 @@ final class BodegaZonaLibreRequestController extends Controller
             $product = $products->get($line['catalog_product_id']);
             if ($product === null || $product->provider_id !== $providerId) {
                 return response()->json([
-                    'message' => 'Uno o más productos no pertenecen al proveedor Zona Libre de Colón.',
+                    'message' => 'Uno o más productos no pertenecen al proveedor '.rtrim($this->providerName() ?? 'de Zona Libre', '.').'.',
                 ], 422);
             }
         }
@@ -331,6 +331,10 @@ final class BodegaZonaLibreRequestController extends Controller
                 'subject' => "Recordatorio: solicitud Zona Libre #{$zonaLibreRequest->order_number} pendiente de aprobar",
                 'body' => "La solicitud de Zona Libre de Colón #{$zonaLibreRequest->order_number} "
                     .'sigue pendiente de aprobación o rechazo en Compras.',
+                // SCRUM-1167 — antes el aviso no llevaba enlace (clic = nada): la bandeja donde el Líder de Compras aprueba o rechaza.
+                // SCRUM-1170 — ahora con `?request={id}`: la bandeja resalta esa solicitud y abre su detalle (antes quedaba en la bandeja general).
+                'cta_url' => "/bodega/ordenes-zona-libre?request={$zonaLibreRequest->id}",
+
             ],
             channels: [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL],
             source: NotificationSend::SOURCE_BODEGA_ZONA_LIBRE_REMINDER,

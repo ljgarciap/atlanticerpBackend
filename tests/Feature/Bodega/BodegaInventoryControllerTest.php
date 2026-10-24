@@ -17,12 +17,14 @@ use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use Illuminate\Support\Facades\Event;
 use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
+use Tests\Feature\Concerns\DemoModeTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
 /** SCRUM-329 Bloque B2 (REQ-344→362, SCRUM-414→432) — "Ver Inventario" de Bodega. */
 class BodegaInventoryControllerTest extends FeatureTestCase
 {
     use BodegaOrderTestHelpers;
+    use DemoModeTestHelpers;
 
     protected function setUp(): void
     {
@@ -395,6 +397,13 @@ class BodegaInventoryControllerTest extends FeatureTestCase
      * Servicios" y 2 en "Bodega Central" (10 en total) mostraba "10" acá al filtrar por Reserva
      * Servicios — el mismo número que Servicios → Insumos leía como "8" (ProductWarehouseStock
      * real de esa bodega, ver InsumoService::list()). Ambos módulos deben coincidir siempre.
+     *
+     * Assert sin filtro actualizado por SCRUM-851: "Reserva Servicios" ahora es
+     * `excluye_disponible=true` (mismo problema que describe ese ticket: unidades reservadas para
+     * Servicios se contaban como vendibles) — el global "disponible" ya resta esas 8 unidades
+     * (10 - 8 = 2), sigue contando en `stock_quantity`/Inventario Total (ver
+     * InventoryKpiService::disponibleParaVenta()). El filtro POR bodega (RN5 de este test) no
+     * cambia: dentro de esa bodega puntual el número sigue siendo la cantidad real ahí.
      */
     public function test_disponible_filtrado_por_bodega_refleja_esa_bodega_no_el_total_global(): void
     {
@@ -412,9 +421,10 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.disponible', 8);
 
-        // Sin filtro de bodega, sigue siendo el comportamiento de siempre (total global - comprometido).
+        // Sin filtro de bodega: stock_quantity(10) - excluida en Reserva Servicios(8) = 2 (SCRUM-851).
         $unfiltered = $this->withHeaders($this->readerHeaders())->getJson('/api/bodega/inventory');
-        $unfiltered->assertJsonPath('data.0.disponible', 10);
+        $unfiltered->assertJsonPath('data.0.disponible', 2);
+        $unfiltered->assertJsonPath('data.0.stock_total', 10);
     }
 
     public function test_filtro_por_estado_sin_stock(): void
@@ -692,5 +702,94 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
         $response->assertStatus(200);
         $response->assertJsonPath('data.0.warehouse_count', 2);
+    }
+
+    // ── Modo Demo (docs/specs/demo-mode.md) ─────────────────────────────────
+
+    public function test_gate_global_apagado_muestra_inventario_completo_aunque_preferencia_personal_este_activa(): void
+    {
+        $this->setUserDemoModePreference('liderbodega@test.com', true);
+        $this->makeCatalogProduct(['reference' => 'SIN-FOTO', 'photo_url' => null]);
+
+        $response = $this->withHeaders($this->readerHeaders())->getJson('/api/bodega/inventory');
+
+        $response->assertStatus(200);
+        $this->assertContains('SIN-FOTO', collect($response->json('data'))->pluck('reference'));
+    }
+
+    public function test_ambos_gates_activos_excluye_producto_sin_imagen_en_inventario(): void
+    {
+        $this->enableDemoModeGlobally();
+        $this->setUserDemoModePreference('liderbodega@test.com', true);
+        $this->makeCatalogProduct(['reference' => 'SIN-FOTO', 'photo_url' => null, 'photo_key' => null]);
+        $this->makeCatalogProduct(['reference' => 'CON-FOTO', 'photo_url' => 'https://cdn.test/foto.jpg']);
+
+        $response = $this->withHeaders($this->readerHeaders())->getJson('/api/bodega/inventory');
+
+        $response->assertStatus(200);
+        $refs = collect($response->json('data'))->pluck('reference');
+        $this->assertNotContains('SIN-FOTO', $refs);
+        $this->assertContains('CON-FOTO', $refs);
+    }
+
+    public function test_ambos_gates_activos_excluye_producto_con_precio_cero_en_inventario(): void
+    {
+        $this->enableDemoModeGlobally();
+        $this->setUserDemoModePreference('liderbodega@test.com', true);
+        $this->makeCatalogProduct(['reference' => 'SIN-PRECIO', 'photo_url' => 'https://cdn.test/foto.jpg', 'price_full' => 0]);
+        $this->makeCatalogProduct(['reference' => 'CON-PRECIO', 'photo_url' => 'https://cdn.test/foto.jpg', 'price_full' => 150]);
+
+        $response = $this->withHeaders($this->readerHeaders())->getJson('/api/bodega/inventory');
+
+        $response->assertStatus(200);
+        $refs = collect($response->json('data'))->pluck('reference');
+        $this->assertNotContains('SIN-PRECIO', $refs);
+        $this->assertContains('CON-PRECIO', $refs);
+    }
+
+    /** SCRUM-992 — búsqueda en SQL: sin acentos/mayúsculas y también por nombre de proveedor. */
+    public function test_busqueda_sin_acentos_y_por_nombre_de_proveedor(): void
+    {
+        $prov = Provider::create(['name' => 'Ilumínica Panamá', 'currency' => 'USD']);
+        CatalogProduct::create([
+            'reference' => 'BSQ-1', 'name' => 'Reflector', 'description' => 'Reflector', 'price_full' => 10,
+            'provider_id' => $prov->id, 'is_active' => true,
+        ]);
+        CatalogProduct::create([
+            'reference' => 'BSQ-2', 'name' => 'Lámpara colgante', 'description' => 'Lámpara colgante', 'price_full' => 10, 'is_active' => true,
+        ]);
+        $headers = $this->readerHeaders();
+
+        $byName = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=LAMPARA')->assertStatus(200);
+        $this->assertSame(['BSQ-2'], collect($byName->json('data'))->pluck('reference')->all());
+        $this->assertFalse($byName->json('fuzzy'));
+
+        $byProvider = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=ilumin panama')->assertStatus(200);
+        $this->assertSame(['BSQ-1'], collect($byProvider->json('data'))->pluck('reference')->all());
+    }
+
+    public function test_busqueda_con_typo_usa_el_respaldo_y_marca_fuzzy(): void
+    {
+        CatalogProduct::create([
+            'reference' => 'BSQ-3', 'name' => 'Iluminación exterior', 'description' => 'x', 'price_full' => 10, 'is_active' => true,
+        ]);
+        $headers = $this->readerHeaders();
+
+        $response = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=iluminacon')->assertStatus(200);
+        $this->assertSame(['BSQ-3'], collect($response->json('data'))->pluck('reference')->all());
+        $this->assertTrue($response->json('fuzzy'));
+    }
+
+    public function test_busqueda_combinada_con_chip_calculado_sigue_filtrando(): void
+    {
+        CatalogProduct::create([
+            'reference' => 'BSQ-4', 'name' => 'Panel solo', 'description' => 'x', 'price_full' => 10, 'is_active' => true,
+        ]);
+        $headers = $this->readerHeaders();
+
+        // chip "criticos" fuerza la rama con candidate set en PHP: la búsqueda ya lo redujo en SQL.
+        $response = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=panel&chip=criticos')->assertStatus(200);
+        $this->assertLessThanOrEqual(1, count($response->json('data')));
+        $this->assertNotContains('BSQ-9', collect($response->json('data'))->pluck('reference')->all());
     }
 }
