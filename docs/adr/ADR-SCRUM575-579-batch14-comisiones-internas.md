@@ -1,8 +1,14 @@
 # ADR-SCRUM575-579 — Batch 14: Comisiones Internas (encabezado, indicadores, filtros, estado desde Cobros, % escalonado)
 
-**Status:** Approved by Luis (2026-08-25)
+**Status:** Approved by Luis (2026-08-25) — §1 revisitada y superada 2026-09-23 (ver nota abajo)
 **Épica:** SCRUM-331 (Admin&Cont), área funcional Comisiones Internas (10 tickets, Batch 14+15)
 **Tickets de este batch:** SCRUM-575→579 / REQ-498→502
+
+> **Actualización 2026-09-23 (SCRUM-944/945):** la auditoría de valores de negocio hardcodeados
+> volvió a encontrar la tabla de `SalesTotalsService::percentFor()` (§1 abajo) y, esta vez, Luis
+> pidió migrarla. Ya NO es deuda conocida-y-aceptada — se migró a `ventas_diseno.sales_commission_tiers`,
+> mismo patrón que `commission_tiers` de este batch (ver `docs/architecture/auditoria-valores-parametricos-scrum944.md`).
+> §1 abajo queda como registro histórico de la decisión de 2026-08-25, ya no vigente.
 
 ## 1. Hallazgo previo — duplicación con REQ-073 (Ventas&Diseño)
 

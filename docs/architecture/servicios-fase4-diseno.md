@@ -129,7 +129,8 @@ tickets(
   tipo_instalacion,              -- internal | subcontracted
   descripcion,
   sales_project_id,              -- FK cross-schema → ventas_diseno.sales_projects (búsqueda
-                                  -- Cliente Master→Subcliente→Proyecto, REQ-246; mismo patrón
+                                  -- Cliente Master→Subcliente→Proyecto, REQ-246; OPCIONAL desde 2026-10-07 —
+                                  -- decisión de negocio que revierte REQ-246 RN6 (antes obligatorio); mismo patrón
                                   -- cross-schema que ya usa Bodega contra CatalogProduct)
   cliente, contacto, telefono, email, direccion,   -- snapshot al crear (no editable desde acá)
   requerimientos_especiales,
@@ -237,7 +238,7 @@ internal_technicians(
 -- Estado (Disponible/En ruta/Ocupado/Fuera) NUNCA se persiste — se calcula en cada request
 -- desde tickets.scheduled_at/scheduled_ends_at + hora actual en America/Panama (working_hours es
 -- hora local de negocio) vía TechnicianStatusService (REQ-256 RN5). Los 4 técnicos reales
--- existentes (Carlos Vergara, Pedro Santos, Agustín Rodríguez, Miguel Castillo) están linkeados
+-- existentes (Tecnico Servicios Test, Tecnico Servicios Test, Agustín Rodríguez, Garantias Servicios Test) están linkeados
 -- vía user_id por InternalTechnicianSeeder.
 
 external_technicians(
@@ -318,9 +319,9 @@ no hace falta tocar el catálogo de permisos en sí, solo sembrar filas de
 2026-07-30) ya tiene estas personas/roles:
 - **Aaron / Líder de Servicios** = Aaron Leis (`servicio@atlantic.com.pa`), rol
   `lider_servicios`, Nivel 4 — coincide exacto.
-- **Técnico interno (general)** = Carlos Vergara, Pedro Santos, Agustín Rodríguez, rol
+- **Técnico interno (general)** = Tecnico Servicios Test, Tecnico Servicios Test, Agustín Rodríguez, rol
   `tecnico_servicios`, hoy Nivel 1 (Solo lectura).
-- **Técnico interno (Garantías)** = Miguel Castillo (`garantias@atlantic.com.pa`), rol
+- **Técnico interno (Garantías)** = Garantias Servicios Test (`garantias@atlantic.com.pa`), rol
   `garantias_servicios` — coincide con la distinción "General vs Garantías" de REQ-256 RN2; Miguel
   Castillo es literalmente el técnico usado como ejemplo en varios criterios de aceptación (REQ-238).
 - **Gerencia** = rol `management` ya existente (Daniela, David, Mark).
