@@ -78,7 +78,7 @@ class Tool extends Model
     /** @return BelongsTo<InternalTechnician, $this> */
     public function assignedTechnician(): BelongsTo
     {
-        return $this->belongsTo(InternalTechnician::class, 'assigned_to_technician_id');
+        return $this->belongsTo(InternalTechnician::class, 'assigned_to_technician_id')->withTrashed();
     }
 
     /** @return HasMany<ToolMovement, $this> */

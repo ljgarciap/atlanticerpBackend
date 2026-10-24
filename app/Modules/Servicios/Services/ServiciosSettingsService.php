@@ -6,6 +6,7 @@ namespace App\Modules\Servicios\Services;
 
 use App\Modules\Servicios\Models\ServiciosSetting;
 use App\Modules\Servicios\Models\Ticket;
+use App\Shared\Auth\JwtActor;
 
 /**
  * Batch 2 (REQ-222 RN4) — umbral configurable de "días sin agendar" para la tarjeta de
@@ -444,7 +445,11 @@ final class ServiciosSettingsService
     {
         $row = ServiciosSetting::where('key', $key)->first();
         if ($row === null) {
-            $row = ServiciosSetting::create(['key' => $key, 'value' => (string) $default]);
+            // SCRUM-1158 (Pre-QA) — «Ver como usuario» es de solo lectura: la fila de valor por defecto se crea de forma perezosa en la primera lectura; con `act` se
+            // devuelve el mismo valor por defecto SIN persistirlo (lo creará la primera lectura real). Sin `act` queda idéntico.
+            $row = JwtActor::currentRequestIsImpersonating()
+                ? new ServiciosSetting(['key' => $key, 'value' => (string) $default])
+                : ServiciosSetting::create(['key' => $key, 'value' => (string) $default]);
         }
 
         $value = (int) $row->value;
@@ -456,7 +461,9 @@ final class ServiciosSettingsService
     {
         $row = ServiciosSetting::where('key', $key)->first();
         if ($row === null) {
-            $row = ServiciosSetting::create(['key' => $key, 'value' => (string) $default]);
+            $row = JwtActor::currentRequestIsImpersonating()
+                ? new ServiciosSetting(['key' => $key, 'value' => (string) $default])
+                : ServiciosSetting::create(['key' => $key, 'value' => (string) $default]);
         }
 
         $value = (float) $row->value;
@@ -475,7 +482,9 @@ final class ServiciosSettingsService
     {
         $row = ServiciosSetting::where('key', $key)->first();
         if ($row === null) {
-            $row = ServiciosSetting::create(['key' => $key, 'value' => $default]);
+            $row = JwtActor::currentRequestIsImpersonating()
+                ? new ServiciosSetting(['key' => $key, 'value' => $default])
+                : ServiciosSetting::create(['key' => $key, 'value' => $default]);
         }
 
         return (string) $row->value;

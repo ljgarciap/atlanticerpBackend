@@ -45,16 +45,22 @@ final class TicketPdfService
      */
     public function generate(Ticket $ticket, array $detail): PdfDocument
     {
-        return Pdf::loadView('servicios.ticket-pdf', [
-            'ticket'        => $ticket,
-            'tipoLabel'     => self::TIPO_LABELS[$ticket->tipo] ?? $ticket->tipo,
-            'subtipoLabel'  => $ticket->subtipo === null ? null : (self::SUBTIPO_LABELS[$ticket->subtipo] ?? $ticket->subtipo),
-            'detail'        => $detail,
-            'horario'       => $this->formatHorario($ticket),
-            'fechaServicio' => $ticket->scheduled_at?->format('d/m/Y') ?? 'Sin agendar',
-            'generatedAt'   => now(),
-            'logoDataUri'   => PdfLogo::dataUri(),
-        ])->setPaper('letter');
+        // SCRUM-924 (rebote Daniela 2026-09-20) — isPhpEnabled requerido para el pie de página
+        // real (page_text(), ver `ticket-pdf.blade.php`), mismo patrón que el resto de servicios
+        // de PDF del proyecto (SCRUM-893). Sin esto dompdf ignora el bloque <script type="text/php">
+        // en silencio, sin error — el pie seguía siendo contenido normal del documento.
+        return Pdf::setOption('isPhpEnabled', true)
+            ->loadView('servicios.ticket-pdf', [
+                'ticket'        => $ticket,
+                'tipoLabel'     => self::TIPO_LABELS[$ticket->tipo] ?? $ticket->tipo,
+                'subtipoLabel'  => $ticket->subtipo === null ? null : (self::SUBTIPO_LABELS[$ticket->subtipo] ?? $ticket->subtipo),
+                'detail'        => $detail,
+                'horario'       => $this->formatHorario($ticket),
+                'fechaServicio' => $ticket->scheduled_at?->format('d/m/Y') ?? 'Sin agendar',
+                'generatedAt'   => now(),
+                'logoDataUri'   => PdfLogo::dataUri(),
+            ])
+            ->setPaper('letter');
     }
 
     private function formatHorario(Ticket $ticket): string

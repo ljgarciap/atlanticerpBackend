@@ -9,6 +9,7 @@ use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Fase 4 — Servicios, Batch 6 (REQ-255→260) — perfil de técnico interno. Ver docblock de la
@@ -26,11 +27,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array{start: string, end: string} $working_hours
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
+ * @property \Carbon\Carbon|null $deleted_at
  * @property-read User|null $user
  */
 class InternalTechnician extends Model
 {
     use LogsAuditTrail;
+    // SCRUM-1015 — "Eliminar" es soft delete: el historial que referencia al técnico no se rompe.
+    use SoftDeletes;
 
     public const ESPECIALIDAD_GENERAL = 'general';
 

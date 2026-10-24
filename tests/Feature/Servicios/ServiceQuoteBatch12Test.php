@@ -397,6 +397,11 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
      * faltaba la sección "Información de pago" (RN1), el pie de página tenía "Designe" mal
      * escrito, y la fila de Descuento mostraba siempre "—" sin importar el % real. Se renderiza
      * el HTML real (mismo que recibe dompdf) en vez de parsear bytes de un PDF ya comprimido.
+     *
+     * SCRUM-824 (2026-09-01) — unificación visual con Ventas&Diseño: el pie de página viejo
+     * ("Atlantic · Panamá · Documento generado...") se reemplazó por un pie real
+     * (`<script type="text/php">`, page_text(), mismo texto/mecanismo que V&D) — el texto sigue
+     * apareciendo en el HTML (es el contenido literal del script), pero el texto VIEJO ya no.
      */
     public function test_documento_incluye_informacion_de_pago_footer_correcto_y_monto_de_descuento(): void
     {
@@ -418,8 +423,91 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
         $this->assertStringContainsString('Información de pago', $html);
         $this->assertStringContainsString('Cheque a nombre de', $html);
         $this->assertStringNotContainsString('Designe', $html);
-        $this->assertStringContainsString('Atlantic · Panamá', $html);
+        $this->assertStringNotContainsString('Atlantic · Panamá', $html);
+        $this->assertStringContainsString('ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza', $html);
         $this->assertStringContainsString('-$100.00', $html);
+    }
+
+    /**
+     * SCRUM-824 §6 — mismo fix ya aplicado en Ventas&Diseño (SCRUM-801): nombre de empresa
+     * correcto en Instrucciones de pago y cuenta ACH real en vez del mensaje "consultar con
+     * Servicios".
+     */
+    public function test_instrucciones_de_pago_muestra_nombre_legal_y_cuenta_ach(): void
+    {
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
+            ->assertStatus(201);
+
+        $this->makeCurrentTenant();
+        $quote = ServiceQuote::where('ticket_id', $ticket->id)->firstOrFail();
+
+        $ticketService = app(TicketService::class);
+        $pdfService = app(ServiceQuotePdfService::class);
+        $html = view('servicios.service-quote-pdf', $pdfService->viewData($quote, $ticket, $ticketService->detail($ticket)))->render();
+
+        $this->assertStringContainsString('Cheque a nombre de: ATLANTIC USA CORP', $html);
+        $this->assertStringContainsString('03-01-01-074455-4', $html);
+        $this->assertStringNotContainsString('consultar con Servicios', $html);
+    }
+
+    /**
+     * SCRUM-824 §4 — bloque final (Observaciones/Info. de pago/Condiciones/Totales/Firma)
+     * envuelto en .final-block (page-break-inside:avoid, garantía dura) con espaciador calculado
+     * por ServiceQuotePdfLayoutEstimator, mismo mecanismo que SCRUM-801 en Ventas&Diseño.
+     */
+    public function test_bloque_final_es_indivisible_y_tiene_espaciador(): void
+    {
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
+            ->assertStatus(201);
+
+        $this->makeCurrentTenant();
+        $quote = ServiceQuote::where('ticket_id', $ticket->id)->firstOrFail();
+
+        $ticketService = app(TicketService::class);
+        $pdfService = app(ServiceQuotePdfService::class);
+        $viewData = $pdfService->viewData($quote, $ticket, $ticketService->detail($ticket));
+        $html = view('servicios.service-quote-pdf', $viewData)->render();
+
+        $this->assertStringContainsString('class="final-block"', $html);
+        $this->assertMatchesRegularExpression('/class="bottom-block-spacer[^"]*"\s+style="height:\s*[\d.]+pt;"/', $html);
+        $this->assertFalse($viewData['bottomBlockForceNewPage']);
+        $this->assertGreaterThan(0.0, $viewData['bottomBlockSpacerPt']);
+        $this->assertStringNotContainsString('class="bottom-block-spacer force-new-page"', $html);
+    }
+
+    /**
+     * SCRUM-824 §2 — Cliente/Contacto/Dirección/Proyecto asociado en formato "Etiqueta: Valor",
+     * una sola línea, mismo estilo que Ventas&Diseño (antes: etiqueta en una línea, valor en la
+     * siguiente).
+     */
+    public function test_info_cliente_usa_formato_etiqueta_valor_en_una_linea(): void
+    {
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
+            ->assertStatus(201);
+
+        $this->makeCurrentTenant();
+        $quote = ServiceQuote::where('ticket_id', $ticket->id)->firstOrFail();
+
+        $ticketService = app(TicketService::class);
+        $pdfService = app(ServiceQuotePdfService::class);
+        $html = view('servicios.service-quote-pdf', $pdfService->viewData($quote, $ticket, $ticketService->detail($ticket)))->render();
+
+        $this->assertMatchesRegularExpression('/<span class="info-label">Cliente:<\/span>/', $html);
+        $this->assertMatchesRegularExpression('/<span class="info-label">Contacto:<\/span>/', $html);
+        $this->assertMatchesRegularExpression('/<span class="info-label">Dirección:<\/span>/', $html);
+        $this->assertMatchesRegularExpression('/<span class="info-label">Proyecto asociado:<\/span>/', $html);
     }
 
     /**

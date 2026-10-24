@@ -151,8 +151,8 @@ class TicketFlowTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    /** REQ-246 RN6 — sales_project_id es obligatorio para crear un ticket. */
-    public function test_crear_ticket_sin_sales_project_id_retorna_422(): void
+    /** sales_project_id es opcional — se puede crear un ticket sin proyecto asociado. */
+    public function test_crear_ticket_sin_sales_project_id_retorna_201(): void
     {
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
@@ -162,7 +162,24 @@ class TicketFlowTest extends FeatureTestCase
                 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
                 'descripcion' => 'Sin proyecto asociado',
             ])
-            ->assertStatus(422);
+            ->assertStatus(201)
+            ->assertJsonPath('sales_project_id', null);
+    }
+
+    /** Con `required` fuera, `exists` es la única barrera: un proyecto inexistente sigue siendo 422 (Senior Review PR #8). */
+    public function test_crear_ticket_con_sales_project_id_inexistente_retorna_422(): void
+    {
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/servicios/tickets', [
+                'tipo' => Ticket::TIPO_CLAIM,
+                'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
+                'descripcion' => 'Proyecto que no existe',
+                'sales_project_id' => 99999999,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['sales_project_id']);
     }
 
     public function test_numeracion_es_consecutiva_por_prefijo_y_anio(): void

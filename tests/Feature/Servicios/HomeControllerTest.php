@@ -581,4 +581,32 @@ class HomeControllerTest extends FeatureTestCase
             'total' => $total,
         ]);
     }
+
+    // ------------------------------------------------------- SCRUM-908 "Aprobaciones Pendientes" ----
+
+    public function test_approvals_pending_incluye_cotizacion_para_lider_servicios(): void
+    {
+        $ticket = $this->makeTicket();
+        $this->makeQuote($ticket, ServiceQuote::ESTADO_SENT, 500.00);
+
+        $response = $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
+            ->getJson('/api/servicios/home/approvals-pending')
+            ->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'service_quote'));
+    }
+
+    public function test_approvals_pending_vacio_para_quien_no_es_lider_servicios(): void
+    {
+        $ticket = $this->makeTicket();
+        $this->makeQuote($ticket, ServiceQuote::ESTADO_SENT, 500.00);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/servicios/home/approvals-pending')
+            ->assertStatus(200);
+
+        $this->assertSame([], $response->json('data'));
+    }
 }

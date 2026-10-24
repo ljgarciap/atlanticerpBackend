@@ -50,7 +50,9 @@ final class InspectionReportPdfService
 
     public function generate(InspectionReport $report, Ticket $ticket): PdfDocument
     {
-        return Pdf::loadView('servicios.inspection-report-pdf', [
+        // SCRUM-891/893 — isPhpEnabled requerido para el pie de página real (page_text(), ver
+        // `pdf.partials.footer`), mismo mecanismo que ServiceQuotePdfService/QuotePdfService.
+        return Pdf::setOption('isPhpEnabled', true)->loadView('servicios.inspection-report-pdf', [
             'ticket'                   => $ticket,
             'report'                   => $report,
             'tipoLabel'                => self::TIPO_LABELS[$ticket->tipo] ?? $ticket->tipo,
@@ -96,7 +98,7 @@ final class InspectionReportPdfService
     /** Plantilla en blanco — solo etiquetas del catálogo, sin valores, para llenar a mano en campo. */
     public function generateBlank(Ticket $ticket): PdfDocument
     {
-        return Pdf::loadView('servicios.inspection-report-pdf-blank', [
+        return Pdf::setOption('isPhpEnabled', true)->loadView('servicios.inspection-report-pdf-blank', [
             'ticket'       => $ticket,
             'fields'       => $this->reports->fieldsForTicket($ticket),
             'tipoLabel'    => self::TIPO_LABELS[$ticket->tipo] ?? $ticket->tipo,

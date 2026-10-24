@@ -123,7 +123,7 @@ final class ToolController extends Controller
         // Rule::unique en un modelo de tenant, ver memoria del proyecto).
         /** @var array{assigned_to_technician_id: int|null} $validated */
         $validated = $request->validate([
-            'assigned_to_technician_id' => ['nullable', 'integer', Rule::exists('internal_technicians', 'id')],
+            'assigned_to_technician_id' => ['nullable', 'integer', Rule::exists('internal_technicians', 'id')->whereNull('deleted_at')],
         ]);
 
         $tool = $this->tools->updateAsignacion($tool, $validated['assigned_to_technician_id'] ?? null);

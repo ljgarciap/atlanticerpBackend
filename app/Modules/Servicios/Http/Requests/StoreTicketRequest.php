@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * REQ-245/246/247/249 — formulario completo de "Nuevo ticket". RN4 (REQ-246) — Cliente Master/
- * Subcliente/Proyecto son obligatorios, capturados acá como `sales_project_id` (el único FK real
+ * Subcliente/Proyecto son opcionales, capturados acá como `sales_project_id` (el único FK real
  * del esquema, ver docs/architecture/servicios-fase4-diseno.md sección 4); Servicios nunca valida
  * la cadena Master→Subcliente→Proyecto server-side porque el buscador en cascada del frontend ya
  * garantiza consistencia (no se puede llegar a un `sales_project_id` sin haber elegido antes un
@@ -33,9 +33,9 @@ class StoreTicketRequest extends FormRequest
             'subtipo'                    => ['nullable', 'string'],
             'tipo_instalacion'           => ['required', 'string', Rule::in(Ticket::TIPOS_INSTALACION)],
             'descripcion'                => ['required', 'string'],
-            // RN6 — obligatorio, existe en el catálogo real de Ventas & Diseño (tabla sin
+            // Opcional — si se proporciona, debe existir en Ventas & Diseño (tabla sin
             // calificar: el search_path del tenant ya resuelve el schema ventas_diseno).
-            'sales_project_id'           => ['required', 'integer', Rule::exists('sales_projects', 'id')],
+            'sales_project_id'           => ['nullable', 'integer', Rule::exists('sales_projects', 'id')],
             'contacto'                   => ['nullable', 'string', 'max:255'],
             'telefono'                   => ['nullable', 'string', 'max:50'],
             'email'                      => ['nullable', 'email'],

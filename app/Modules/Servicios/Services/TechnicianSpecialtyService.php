@@ -6,6 +6,7 @@ namespace App\Modules\Servicios\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Servicios\Models\InternalTechnician;
 use App\Modules\Servicios\Models\Ticket;
 use Illuminate\Support\Collection;
 
@@ -32,6 +33,8 @@ final class TechnicianSpecialtyService
 
         return User::where('role_id', $roleId)
             ->where('is_active', true)
+            // SCRUM-1015 — un técnico eliminado (soft delete) deja de ser asignable.
+            ->whereNotIn('id', InternalTechnician::onlyTrashed()->whereNotNull('user_id')->select('user_id'))
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name']);
     }

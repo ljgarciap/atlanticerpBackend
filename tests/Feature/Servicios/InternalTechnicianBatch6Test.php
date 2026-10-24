@@ -39,9 +39,16 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         parent::tearDown();
     }
 
+    /**
+     * SCRUM-883 — antes forzaba ->utc() porque Postgres interpretaba las columnas timestamptz
+     * bajo su timezone de sesión (server default, UTC) sin importar el timezone de PHP. Ahora que
+     * config/database.php sincroniza la sesión de Postgres a America/Panama (mismo default que
+     * config('app.timezone')), Postgres interpreta el string naive resultante como hora de
+     * Panamá directamente — convertir a UTC acá duplicaría el offset y correría el valor 5h.
+     */
     private function panama(string $time): Carbon
     {
-        return Carbon::parse('2026-08-10 '.$time, 'America/Panama')->utc();
+        return Carbon::parse('2026-08-10 '.$time, 'America/Panama');
     }
 
     /** @param array<string, mixed> $overrides */
@@ -440,8 +447,8 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at' => Carbon::parse('2026-08-13 14:00', 'America/Panama')->utc(),
-            'scheduled_ends_at' => Carbon::parse('2026-08-13 15:00', 'America/Panama')->utc(),
+            'scheduled_at' => Carbon::parse('2026-08-13 14:00', 'America/Panama'),
+            'scheduled_ends_at' => Carbon::parse('2026-08-13 15:00', 'America/Panama'),
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -458,8 +465,8 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at' => Carbon::parse('2026-08-13 14:00', 'America/Panama')->utc(),
-            'scheduled_ends_at' => Carbon::parse('2026-08-13 15:00', 'America/Panama')->utc(),
+            'scheduled_at' => Carbon::parse('2026-08-13 14:00', 'America/Panama'),
+            'scheduled_ends_at' => Carbon::parse('2026-08-13 15:00', 'America/Panama'),
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -477,8 +484,8 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at' => Carbon::parse('2026-08-20 14:00', 'America/Panama')->utc(),
-            'scheduled_ends_at' => Carbon::parse('2026-08-20 15:00', 'America/Panama')->utc(),
+            'scheduled_at' => Carbon::parse('2026-08-20 14:00', 'America/Panama'),
+            'scheduled_ends_at' => Carbon::parse('2026-08-20 15:00', 'America/Panama'),
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -495,8 +502,8 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at' => Carbon::parse('2026-08-28 09:00', 'America/Panama')->utc(),
-            'scheduled_ends_at' => Carbon::parse('2026-08-28 10:00', 'America/Panama')->utc(),
+            'scheduled_at' => Carbon::parse('2026-08-28 09:00', 'America/Panama'),
+            'scheduled_ends_at' => Carbon::parse('2026-08-28 10:00', 'America/Panama'),
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -513,8 +520,8 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at' => Carbon::parse('2026-09-01 09:00', 'America/Panama')->utc(),
-            'scheduled_ends_at' => Carbon::parse('2026-09-01 10:00', 'America/Panama')->utc(),
+            'scheduled_at' => Carbon::parse('2026-09-01 09:00', 'America/Panama'),
+            'scheduled_ends_at' => Carbon::parse('2026-09-01 10:00', 'America/Panama'),
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -531,8 +538,8 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
         $userId = $this->carlosUserId();
         $this->makeTicket([
             'internal_technician_id' => $userId,
-            'scheduled_at' => Carbon::parse('2026-09-15 09:00', 'America/Panama')->utc(),
-            'scheduled_ends_at' => Carbon::parse('2026-09-15 10:00', 'America/Panama')->utc(),
+            'scheduled_at' => Carbon::parse('2026-09-15 09:00', 'America/Panama'),
+            'scheduled_ends_at' => Carbon::parse('2026-09-15 10:00', 'America/Panama'),
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');

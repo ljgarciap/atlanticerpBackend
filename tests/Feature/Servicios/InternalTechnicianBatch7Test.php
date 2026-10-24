@@ -39,9 +39,16 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
         parent::tearDown();
     }
 
+    /**
+     * SCRUM-883 — antes forzaba ->utc() porque Postgres interpretaba las columnas timestamptz
+     * bajo su timezone de sesión (server default, UTC) sin importar el timezone de PHP. Ahora que
+     * config/database.php sincroniza la sesión de Postgres a America/Panama (mismo default que
+     * config('app.timezone')), Postgres interpreta el string naive resultante como hora de
+     * Panamá directamente — convertir a UTC acá duplicaría el offset y correría el valor 5h.
+     */
     private function panama(string $time): Carbon
     {
-        return Carbon::parse('2026-08-10 '.$time, 'America/Panama')->utc();
+        return Carbon::parse('2026-08-10 '.$time, 'America/Panama');
     }
 
     private function carlosId(): int
