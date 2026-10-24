@@ -1,6 +1,6 @@
 # Spec — Fase 1b: el frontend deja de decidir por NOMBRE de rol (bloque D, lado frontend)
 
-**Fecha**: 2026-10-24 · **Estado**: BORRADOR — pendiente de aprobación de Luis y del Arquitecto (no se implementa sin ella)
+**Fecha**: 2026-10-24 · **Estado**: APROBADA por Luis e IMPLEMENTADA 2026-10-24 (ver «Resultado de la implementación» al final). Las 3 decisiones de §6 se aprobaron tal como se recomendaron.
 **Contexto**: continúa `fase1-limpieza-nucleo.md` (bloque D). El backend ya no tiene ningún `role:` en rutas; el frontend sí.
 
 ## 1. Problema
@@ -69,3 +69,29 @@ Renombrar roles (Fase 3), Fase E del ADR-006 (Fase 2), tocar permisos del backen
 - Un permiso que el frontend usa pero el JWT no emite deja a alguien fuera sin error visible → mitigado por el criterio 3.
 - `Sidebar.test.tsx` y otros tests mockean `user.role`; hay que migrarlos a `permissions`, no solo ajustar asserts.
 - Orden con la Fase 3: hacer 1b **antes** de renombrar roles, para que el renombre no toque el frontend.
+
+## 8. Resultado de la implementación (2026-10-24)
+
+Rama backend `fase1b/frontend-bloque-d`; frontend 2 PR apilados: `fase1b/guards-app` (A) y `fase1b/frontend-bloque-d` (B, sobre A).
+
+**Lo que difirió del borrador**
+1. **El alcance real fue mayor que el medido en §2.** La búsqueda original no veía los helpers `canX(role)` que reciben el rol como parámetro. Además de las 30 guardas y las ~12 comparaciones listadas, había ~20 más (Servicios: `TicketsPage`, `HomePage`, `InternalTechniciansPage`, `ExternalTechniciansPage`, `TicketDetailModal`, `ToolsPanel`, `InsumosPanel`, `HomeMonthlyIndicators`, `InternalTechnicianCommissionModal`, `ServiciosSettingsPanel`; Admin & Contab: `ArqueoCajaPage`, `ComisionesExternasPage`, `ReportesPage`, `SolicitudesReversoPanel`; `ReplenishmentPage`, `CatalogPage`). Todas migradas.
+2. **`orGerenciaScope` no se eliminó sin más** (corrige §3): `ApplyGerenciaScope` solo añade `platform.management` / `ventas_diseno.orders.access` a la petición EN EL SERVIDOR, no al `user.permissions` que ve el frontend. Se reemplazó por «`platform.management` **o** `ventas_diseno.gerencia_scope`» (`GUARD.GERENCIA_O_ALCANCE`, `GUARD.PEDIDOS`).
+3. **Mapeo de los helpers sueltos**: `tickets.manage` (agendar, herramientas, insumos, alta de técnico), `tickets.create`, `field_ops.admin` (técnicos externos, captura de comisión), `settings.configure` (ajustes, meta del mes, SLA), `claim_sheets.manage` (plantilla en blanco), `field_work.edit` (informe asignado), `admin_contab.operations/records/oversight.manage`, `ventas_diseno.orders.access`.
+4. **§6.1** → migración `2026_10_24_400000` (permiso `servicios.tools.kardex.view` a `lider_servicios` y `management`, con chequeo de fuga). **§6.2** → `/comision-carlos-vergara` ahora es `/comision-tecnico` (backend y frontend). **§6.3** → dos PR por repo.
+
+**Excepciones que SIGUEN decidiendo por rol a propósito** (el backend las decide por rol; igualarlas en la UI evita mostrar botones que terminan en 403):
+- `UsersPage`: reset de contraseñas y «Ver como usuario». La ruta pide `permission:superadmin.all`, pero `AdminPasswordResetService::operatorIsStillSuperadmin` revalida en BD el ROL BASE `superadmin` (H3 del threat model).
+- `BodegaOrdenesZonaLibrePage.canEdit`: el controlador (`BodegaZonaLibreRequestController::update`) decide por `role_key === 'lider_bodega'`.
+Convertirlas requiere cambiar primero el backend (ver §9).
+
+**Verificación**
+- Test de equivalencia `src/lib/accessGuards.equivalence.test.ts`: 14 identidades reales del seed + 1 con alcance por persona, 6 guardas de ruta y 10 capacidades. Coinciden todas salvo usuarios cuyo ROL no concuerda con sus PERMISOS efectivos (la Gerencia 5 de nivel restringido y usuarios demo `*@atlantic.test`); en todas la regla nueva coincide con lo que ya aplica el backend. Están enumeradas y el test falla ante cualquier otra, o si una desaparece.
+- Frontend: `tsc` limpio, 247 archivos / 3110 tests (cada PR verifica por separado). Backend: 110 tests de Servicios (matriz de permisos + reportes) y PHPStan 0 errores.
+- Playwright CLI contra el stack local (5 identidades: Gerencia, Asistente Administrativa, Vendedor/Diseñador, Técnico y Líder de Servicios), build de `master` vs build nuevo: menús idénticos (15/21/13/17/17 ítems) y acceso por URL directa idéntico en 5 rutas protegidas.
+
+## 9. Pendientes que salieron de la 1b
+- Backend: `BodegaZonaLibreRequestController` y `AdminPasswordResetService` aún deciden por `role_key` (ver excepciones). Si se quiere cerrar del todo, hay que darles permiso propio antes de tocar el frontend.
+- Nombres de personas que siguen en el código: endpoint `/reports/felix-commission` y `FelixCommissionCard` (Admin & Contab), y el texto i18n «Esta pantalla es exclusiva de Mark» (`CompanyProfilePage`/Fiscal). Entran en la Fase 4 (demo genérica) o antes si Luis lo pide.
+- `usersApi.isMaxPrivilegeUser` inspecciona los roles del usuario OBJETIVO (elegibilidad de impersonación), no un gate de acceso: se dejó.
+- Lección de proceso: el nginx de desarrollo monta `atlanticerp-frontend/dist` por inodo; reemplazar el directorio (`mv`/`rm`) deja al contenedor sirviendo el build viejo. Copiar el contenido EN el mismo directorio (`rsync -a --delete origen/ dist/`) o reiniciar el contenedor.
