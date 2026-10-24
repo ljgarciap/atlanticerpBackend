@@ -6,6 +6,7 @@ namespace App\Modules\VentasDiseno\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\VentasDiseno\Services\ReportsService;
+use App\Shared\Support\ParsesIdListQueryParam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -16,6 +17,8 @@ use Illuminate\Routing\Controller;
  */
 final class ReportsController extends Controller
 {
+    use ParsesIdListQueryParam;
+
     public function __construct(private readonly ReportsService $service) {}
 
     public function summary(Request $request): JsonResponse
@@ -27,9 +30,11 @@ final class ReportsController extends Controller
 
         $raw = $request->only(['scope', 'period', 'owner_id']);
         $filters = array_filter([
-            'scope'    => isset($raw['scope'])  ? (string) $raw['scope']  : null,
-            'period'   => isset($raw['period']) ? (string) $raw['period'] : null,
-            'owner_id' => isset($raw['owner_id']) && is_numeric($raw['owner_id']) ? (int) $raw['owner_id'] : null,
+            'scope'     => isset($raw['scope'])  ? (string) $raw['scope']  : null,
+            'period'    => isset($raw['period']) ? (string) $raw['period'] : null,
+            'owner_id'  => isset($raw['owner_id']) && is_numeric($raw['owner_id']) ? (int) $raw['owner_id'] : null,
+            // SCRUM-854 — multi-selección Vendedor/Diseñador (OR entre seleccionados).
+            'owner_ids' => $this->parseIdListParam($request, 'owner_ids'),
         ], fn (mixed $v): bool => $v !== null);
 
         return response()->json($this->service->summary($user, $filters));

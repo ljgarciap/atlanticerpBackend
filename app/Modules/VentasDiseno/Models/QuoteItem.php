@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int         $id
  * @property int          $quote_part_id
+ * @property int          $position
  * @property int|null      $catalog_product_id
  * @property bool           $is_custom
  * @property string        $reference
@@ -31,6 +32,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null     $cost
  * @property string|null $price_type_override
  * @property float|null   $discount_percent
+ * @property string|null  $photo_key
+ * @property string|null  $photo_filename
+ * @property \Carbon\Carbon|null $photo_uploaded_at
  * @property QuotePart    $quotePart
  * @property CatalogProduct|null $catalogProduct
  */
@@ -40,16 +44,33 @@ class QuoteItem extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'quote_part_id', 'catalog_product_id', 'is_custom', 'reference', 'description', 'quantity', 'unit_price', 'cost',
+        'quote_part_id', 'position', 'catalog_product_id', 'is_custom', 'reference', 'description', 'quantity', 'unit_price', 'cost',
         'price_type_override', 'discount_percent',
+        // SCRUM-849.6 — foto ad-hoc, solo poblada por QuoteItemPhotoService::uploadPhoto().
+        'photo_key', 'photo_filename', 'photo_uploaded_at',
     ];
+
+    /**
+     * SCRUM-1161 — un ítem nuevo entra al final de su partida (orden de ingreso intacto); el
+     * drag and drop solo reescribe `position` después. Cubre alta suelta, en lote, duplicar partida
+     * y nueva versión sin tocar esos flujos: todos crean los ítems en orden.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (QuoteItem $item): void {
+            if ($item->position === null) {
+                $max = static::query()->where('quote_part_id', $item->quote_part_id)->max('position');
+                $item->position = $max === null ? 0 : ((int) $max) + 1;
+            }
+        });
+    }
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
             'quantity' => 'float', 'unit_price' => 'float', 'cost' => 'float', 'discount_percent' => 'float',
-            'is_custom' => 'boolean',
+            'is_custom' => 'boolean', 'photo_uploaded_at' => 'datetime',
         ];
     }
 

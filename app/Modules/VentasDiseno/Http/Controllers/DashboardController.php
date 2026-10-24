@@ -6,6 +6,7 @@ namespace App\Modules\VentasDiseno\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\VentasDiseno\Services\DashboardService;
+use App\Shared\Support\ParsesIdListQueryParam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -16,6 +17,8 @@ use Illuminate\Routing\Controller;
  */
 final class DashboardController extends Controller
 {
+    use ParsesIdListQueryParam;
+
     public function __construct(private readonly DashboardService $service) {}
 
     public function summary(Request $request): JsonResponse
@@ -25,7 +28,11 @@ final class DashboardController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        return response()->json($this->service->summary());
+        // SCRUM-854 — filtro multi-selección Vendedor/Diseñador, mismo patrón que
+        // Pipeline/Reportes VentasDiseno (owner_ids, OR semántico, whereIn en la query).
+        $ownerIds = $this->parseIdListParam($request, 'owner_ids');
+
+        return response()->json($this->service->summary($ownerIds));
     }
 
     public function remind(Request $request): JsonResponse

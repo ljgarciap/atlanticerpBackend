@@ -8,6 +8,7 @@ use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\PipelineCardFile;
 use App\Shared\Support\CircuitBreaker;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -47,6 +48,29 @@ final class PipelineFileService
             'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
             'uploaded_by' => $uploadedBy,
         ]);
+    }
+
+    /**
+     * Quita un archivo del pipeline: primero la fila (así nunca queda una fila apuntando a un objeto ya borrado) y luego
+     * el objeto de S3, que es de mejor esfuerzo: si el storage falla (o su circuit breaker está abierto) el error se
+     * registra y la fila ya no existe; el objeto huérfano queda para una limpieza posterior. Las reglas de negocio
+     * (etapa del proyecto, tipos protegidos) las aplica el controlador, no este servicio.
+     */
+    public function delete(PipelineCardFile $file): void
+    {
+        $storageKey = $file->storage_key;
+
+        $file->delete();
+
+        try {
+            (new CircuitBreaker(self::DISK))->call(fn () => Storage::disk(self::DISK)->delete($storageKey));
+        } catch (\Throwable $e) {
+            Log::error('pipeline_file_service.storage_delete_failed', [
+                'storage_key' => $storageKey,
+                'file_id' => $file->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Modules\VentasDiseno\Services;
 use App\Models\User;
 use App\Modules\VentasDiseno\Models\CommissionCohort;
 use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Shared\Auth\JwtActor;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -65,7 +66,8 @@ final class CommissionService
         // stub en $0 solo ensuciaría la tabla (y la UI de "marcar como pagada")
         // sin ningún propósito, ya que summary() de todos modos lo descarta.
         $isClosedMonth = $amount > 0 && $monthStart->lt(CarbonImmutable::now()->startOfMonth());
-        if ($isClosedMonth) {
+        // SCRUM-1158 (Pre-QA MEDIO-2, mismo patrón que el snapshot de Admin&Cont) — con «Ver como usuario» se devuelve la cohorte calculada sin persistirla.
+        if ($isClosedMonth && ! JwtActor::currentRequestIsImpersonating()) {
             return CommissionCohort::create($attributes);
         }
 
@@ -162,9 +164,16 @@ final class CommissionService
         $now = CarbonImmutable::now()->startOfMonth();
         $currentTotal = $this->monthlyApprovedTotal($vendor, $now);
 
-        $proposalTotal = (float) PipelineCard::where('owner_id', $vendor->id)
-            ->where('stage', 'proposal')
-            ->sum('amount');
+        // SCRUM-849.4 — mismo criterio de reparto N-way que monthlyApprovedTotal(); si no se
+        // hiciera acá, "Final Stage" sobrecontaría el monto completo de una tarjeta compartida
+        // en cada uno de sus N asignados.
+        $proposalTotal = (float) PipelineCard::where('stage', 'proposal')
+            ->where(function ($q) use ($vendor): void {
+                $q->where('owner_id', $vendor->id)
+                    ->orWhereJsonContains('compartido_con', $vendor->id);
+            })
+            ->get(['amount', 'compartido_con'])
+            ->sum(fn (PipelineCard $card): float => ((float) ($card->amount ?? 0)) / (1 + count($card->compartido_con ?? [])));
 
         if ($proposalTotal <= 0) {
             return 0.0;

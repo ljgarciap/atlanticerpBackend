@@ -6,8 +6,11 @@ namespace Tests\Feature\VentasDiseno;
 
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Modules\VentasDiseno\Models\SalesProject;
+use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Feature\FeatureTestCase;
 
 /**
@@ -30,13 +33,14 @@ class ClientsControllerTest extends FeatureTestCase
             ->update(['extra_permissions' => json_encode(array_merge(['ventas_diseno.read'], $permissions))]);
     }
 
-    /** @return array{name: string, business_name: string, tax_id: string, contacts: list<array<string, string>>} */
+    /** @return array{name: string, business_name: string, tax_id: string, tax_id_dv: string, contacts: list<array<string, string>>} */
     private function validClientPayload(string $suffix): array
     {
         return [
             'name'          => "Cliente Test {$suffix}",
             'business_name' => "Subcliente Test {$suffix}",
             'tax_id'        => '155-0000-1-2026',
+            'tax_id_dv'     => '81',
             'contacts'      => [
                 ['name' => 'Ana Pérez', 'role' => 'client', 'phone' => '6000-0000'],
             ],
@@ -45,14 +49,28 @@ class ClientsControllerTest extends FeatureTestCase
 
     // ── GET /clients (REQ-063) ──────────────────────────────────────────────
 
+    /** SCRUM-1187 — crear un cliente ya no crea tarjeta: estos tests siembran la suya a mano (como hace un vendedor al crear su Lead). */
+    private function seedLeadCard(int $masterId, int $subClientId, string $projectName): PipelineCard
+    {
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $ownerId = (int) \App\Models\User::where('email', 'designer@atlantic.test')->value('id');
+        $project = SalesProject::create(['sub_client_id' => $subClientId, 'name' => $projectName]);
+
+        return PipelineCard::create([
+            'sales_project_id' => $project->id, 'stage' => 'lead', 'master_client_id' => $masterId, 'sub_client_id' => $subClientId,
+            'owner_id' => $ownerId, 'created_by' => $ownerId, 'stage_changed_at' => now(),
+        ]);
+    }
+
     public function test_listar_clientes_retorna_metricas_agregadas_desde_pipeline(): void
     {
         $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
-        $this->withHeaders($this->authHeaders($token))
+        $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('Metricas'))
             ->assertStatus(201);
+        $this->seedLeadCard((int) $created->json('id'), (int) $created->json('sub_clients.0.id'), 'Proyecto Metricas');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/clients?search=Cliente Test Metricas')
@@ -172,7 +190,8 @@ class ClientsControllerTest extends FeatureTestCase
 
     // ── POST /clients — REQ-067 (modo "crear cliente") + REQ-068 ───────────
 
-    public function test_crear_cliente_crea_master_subcliente_contactos_y_lead_automatico(): void
+    /** SCRUM-1187 — reemplaza REQ-068: crear un cliente solo crea el cliente, su subcliente y sus contactos; ni proyecto ni Lead. */
+    public function test_crear_cliente_crea_master_subcliente_y_contactos_sin_proyecto_ni_lead(): void
     {
         $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -187,12 +206,8 @@ class ClientsControllerTest extends FeatureTestCase
         $response->assertJsonPath('sub_clients.0.contacts.0.name', 'Ana Pérez');
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $card = PipelineCard::where('master_client_id', $response->json('id'))->first();
-        $this->assertNotNull($card);
-        $this->assertSame('lead', $card->stage);
-        $this->assertSame($subClientId, $card->sub_client_id);
-        $this->assertCount(1, $card->contacts);
-        $this->assertSame('Ana Pérez', $card->contacts->first()->name);
+        $this->assertNull(PipelineCard::where('master_client_id', $response->json('id'))->first(), 'no debe nacer ninguna tarjeta en el Pipeline');
+        $this->assertSame(0, SalesProject::where('sub_client_id', $subClientId)->count(), 'no debe nacer ningún proyecto');
     }
 
     public function test_crear_cliente_sin_contactos_retorna_422(): void
@@ -237,7 +252,7 @@ class ClientsControllerTest extends FeatureTestCase
 
     // ── POST /clients/{id}/sub-clients — REQ-067 (modo "crear subcliente") ─
 
-    public function test_crear_subcliente_adicional_tambien_crea_lead_automatico(): void
+    public function test_crear_subcliente_adicional_no_crea_proyecto_ni_lead(): void
     {
         $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -250,6 +265,7 @@ class ClientsControllerTest extends FeatureTestCase
         $second = [
             'business_name' => 'Subcliente Adicional',
             'tax_id'        => '155-1111-1-2026',
+            'tax_id_dv'     => '81',
             'contacts'      => [['name' => 'Beto Ruiz', 'role' => 'architect', 'email' => 'beto@example.com']],
         ];
 
@@ -259,10 +275,58 @@ class ClientsControllerTest extends FeatureTestCase
 
         $subClientId = $response->json('id');
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $card = PipelineCard::where('sub_client_id', $subClientId)->first();
-        $this->assertNotNull($card);
-        $this->assertSame('lead', $card->stage);
-        $this->assertSame($masterId, $card->master_client_id);
+        $this->assertNull(PipelineCard::where('sub_client_id', $subClientId)->first());
+        $this->assertSame(0, SalesProject::where('sub_client_id', $subClientId)->count());
+        $this->assertNull(PipelineCard::where('master_client_id', $masterId)->first(), 'tampoco para el cliente');
+    }
+
+    /**
+     * SCRUM-873 — CreateClientModal se reutiliza desde el flujo de Cotización; ahí
+     * el frontend manda `from_quote_context: true` para que NO nazca un Lead
+     * duplicado (la cotización ya es el registro comercial real).
+     */
+    public function test_crear_cliente_desde_contexto_cotizacion_no_crea_lead_automatico(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $payload = $this->validClientPayload('DesdeCotizacion');
+        $payload['from_quote_context'] = true;
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/clients', $payload)
+            ->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $card = PipelineCard::where('master_client_id', $response->json('id'))->first();
+        $this->assertNull($card);
+    }
+
+    public function test_crear_subcliente_desde_contexto_cotizacion_no_crea_lead_automatico(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $create = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('MasterParaSubCot'))
+            ->assertStatus(201);
+        $masterId = $create->json('id');
+
+        $second = [
+            'business_name'       => 'Subcliente Desde Cotizacion',
+            'tax_id'              => '155-3333-1-2026',
+            'tax_id_dv'           => '81',
+            'contacts'            => [['name' => 'Beto Ruiz', 'role' => 'architect', 'email' => 'beto@example.com']],
+            'from_quote_context'  => true,
+        ];
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/clients/{$masterId}/sub-clients", $second)
+            ->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $card = PipelineCard::where('sub_client_id', $response->json('id'))->first();
+        $this->assertNull($card);
     }
 
     // ── GET /clients/{id} — REQ-064 ──────────────────────────────────────────
@@ -315,13 +379,16 @@ class ClientsControllerTest extends FeatureTestCase
             ->assertStatus(201);
         $masterId = $create->json('id');
 
-        $this->withHeaders($this->authHeaders($token))
+        $second = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/clients/{$masterId}/sub-clients", [
                 'business_name' => 'Subcliente Proyectos 2',
                 'tax_id'        => '155-2222-1-2026',
+                'tax_id_dv'     => '81',
                 'contacts'      => [['name' => 'Caro Diaz', 'role' => 'client', 'phone' => '6111-1111']],
             ])
             ->assertStatus(201);
+        $this->seedLeadCard((int) $masterId, (int) $create->json('sub_clients.0.id'), 'Proyecto A');
+        $this->seedLeadCard((int) $masterId, (int) $second->json('id'), 'Proyecto B');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/clients/{$masterId}/projects")
@@ -484,5 +551,88 @@ class ClientsControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/ventas-diseno/sub-clients/{$subClientId}/contacts/{$contactId}")
             ->assertStatus(403);
+    }
+
+    // ── SCRUM-928 — DV (dígito verificador) del RUC; opcional desde SCRUM-1140 (si viene, debe ser de 1 o 2 dígitos) ───────────────
+
+    /** @return list<array{0: string, 1: array<string, mixed>}> */
+    public static function dvInvalidoProvider(): array
+    {
+        return [
+            'letras'            => ['letras', ['tax_id_dv' => 'ab']],
+            'tres dígitos'      => ['tres', ['tax_id_dv' => '123']],
+            'con guion'         => ['guion', ['tax_id_dv' => '-8']],
+        ];
+    }
+
+    #[DataProvider('dvInvalidoProvider')]
+    public function test_928_crear_cliente_rechaza_dv_invalido(string $caso, array $override): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $payload = $this->validClientPayload("Dv{$caso}");
+        unset($payload['tax_id_dv']);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/clients', $override + $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['tax_id_dv']);
+    }
+
+    public function test_1140_crear_cliente_sin_dv_lo_acepta_y_queda_nulo(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $payload = $this->validClientPayload('SinDv');
+        unset($payload['tax_id_dv']);
+
+        foreach ([[], ['tax_id_dv' => '']] as $i => $override) {
+            $create = $this->withHeaders($this->authHeaders($token))
+                ->postJson('/api/ventas-diseno/clients', $override + ['business_name' => "Sin DV {$i}", 'tax_id' => "8-123-45{$i}"] + $payload)
+                ->assertStatus(201);
+            $this->assertNull($create->json('sub_clients.0.tax_id_dv'));
+        }
+    }
+
+    public function test_928_crear_cliente_con_dv_lo_persiste_y_lo_devuelve_en_el_detalle(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $create = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/clients', ['tax_id_dv' => '7'] + $this->validClientPayload('DvOk'))
+            ->assertStatus(201);
+        $this->assertSame('7', $create->json('sub_clients.0.tax_id_dv'));
+
+        $show = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/clients/'.$create->json('id'))
+            ->assertStatus(200);
+        $this->assertSame('7', $show->json('sub_clients.0.tax_id_dv'), 'el DV aparece en el detalle del cliente');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame('7', SubClient::findOrFail($create->json('sub_clients.0.id'))->tax_id_dv, 'queda asociado al subcliente correcto');
+    }
+
+    public function test_928_agregar_subcliente_a_master_existente_con_dv_opcional(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $masterId = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/clients', $this->validClientPayload('DvSub'))
+            ->assertStatus(201)->json('id');
+
+        $body = [
+            'business_name' => 'Sub sin DV', 'tax_id' => '155-4444-1-2026',
+            'contacts' => [['name' => 'Beto Ruiz', 'role' => 'architect', 'email' => 'beto@example.com']],
+        ];
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/clients/{$masterId}/sub-clients", $body)
+            ->assertStatus(201)->assertJsonPath('tax_id_dv', null);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/clients/{$masterId}/sub-clients", ['tax_id' => '155-4444-2-2026', 'tax_id_dv' => '81'] + $body)
+            ->assertStatus(201)->assertJsonPath('tax_id_dv', '81');
     }
 }

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Http\Controllers;
 
+use App\Modules\VentasDiseno\Services\CotizaYaClientGuard;
 use App\Models\User;
 use App\Modules\VentasDiseno\Http\Requests\StoreMasterClientRequest;
 use App\Modules\VentasDiseno\Http\Requests\StoreSubClientRequest;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\SubClient;
-use App\Modules\VentasDiseno\Services\ClientsService;
+use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
 
 /**
  * REQ-010: buscar o crear Cliente Master / Subcliente al vincularlos a una tarjeta
@@ -23,10 +23,6 @@ use Illuminate\Support\Facades\DB;
  */
 final class ClientController extends Controller
 {
-    public function __construct(private readonly ClientsService $clientsService)
-    {
-    }
-
     public function masterClients(Request $request): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -35,6 +31,12 @@ final class ClientController extends Controller
         }
 
         $query = MasterClient::query()->orderBy('name');
+
+        // SCRUM-1120 — el cliente «CotizaYA» es exclusivo de CotizaYA: no se ofrece en los selectores del flujo normal.
+        $cotizaYaMasterId = app(CotizaYaClientGuard::class)->masterClientId();
+        if ($cotizaYaMasterId !== null) {
+            $query->whereKeyNot($cotizaYaMasterId);
+        }
 
         $search = $request->query('search');
         if (is_string($search) && $search !== '') {
@@ -88,6 +90,12 @@ final class ClientController extends Controller
 
         $query = SubClient::query()->withCount('contacts')->where('master_client_id', (int) $masterClientId)->orderBy('business_name');
 
+        // SCRUM-1120 — ni el Cliente Master ni el Subcliente «CotizaYA» se ofrecen en el flujo normal.
+        $guard = app(CotizaYaClientGuard::class);
+        if ($guard->isMasterClient($masterClientId)) {
+            $query->whereRaw('1 = 0');
+        }
+
         $search = $request->query('search');
         if (is_string($search) && $search !== '') {
             $query->where('business_name', 'ilike', "%{$search}%");
@@ -99,7 +107,7 @@ final class ClientController extends Controller
             // REQ-020: contacts_count permite advertir en el frontend antes de crear
             // un proyecto en Diseño vinculado a un Subcliente sin contactos.
             'data' => $subClients->map(fn (SubClient $c) => [
-                'id' => $c->id, 'business_name' => $c->business_name, 'tax_id' => $c->tax_id,
+                'id' => $c->id, 'business_name' => $c->business_name, 'receptor_tipo' => $c->receptor_tipo ?? ReceptorTipo::CONTRIBUYENTE, 'tax_id' => $c->tax_id, 'tax_id_dv' => $c->tax_id_dv,
                 'category' => $c->category, 'contacts_count' => $c->contacts_count,
             ])->values(),
         ]);
@@ -114,29 +122,29 @@ final class ClientController extends Controller
 
         /**
          * @var array{
-         *   master_client_id: int, business_name: string, tax_id: string,
-         *   delivery_address?: string|null, category?: string|null,
+         *   master_client_id: int, business_name: string, receptor_tipo?: string|null, tax_id?: string|null, tax_id_dv?: string|null,
+         *   delivery_address?: string|null, category?: string|null, from_design_context?: bool,
          * } $validated
          */
         $validated = $request->validated();
 
-        // REQ-068 en sentido inverso (SCRUM-79): un Subcliente nuevo creado desde el
-        // flujo de vinculación de Pipeline también dispara su tarjeta Lead automática,
-        // igual que si hubiera nacido desde la pantalla de Clientes.
-        $subClient = DB::transaction(function () use ($validated, $user): SubClient {
-            /** @var SubClient $sub */
-            $sub = SubClient::create($validated);
+        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Mark/Felix).
+        if (($validated['receptor_tipo'] ?? null) === ReceptorTipo::CONSUMIDOR_FINAL && ! $user->hasPermission(ReceptorTipo::PERMISO_CONSUMIDOR_FINAL)) {
+            return response()->json(['message' => ReceptorTipo::MENSAJE_SIN_PERMISO], 403);
+        }
 
-            /** @var MasterClient $master */
-            $master = MasterClient::findOrFail($validated['master_client_id']);
-            $this->clientsService->createLeadCard($master, $sub, $user->id);
+        // SCRUM-1011 — bandera de contexto, no es una columna de sub_clients; se descarta antes de crear.
+        unset($validated['from_design_context']);
 
-            return $sub;
-        });
+        // SCRUM-1187 (reemplaza REQ-068 «en sentido inverso», SCRUM-79): un Subcliente nuevo, venga del flujo de vinculación de un
+        // Lead en Pipeline o del modal de Diseño, ya no crea proyecto ni tarjeta Lead extra. `from_design_context` (SCRUM-1011) se
+        // sigue aceptando por compatibilidad con el frontend, pero ya no cambia nada.
+        /** @var SubClient $subClient */
+        $subClient = SubClient::create(ReceptorTipo::normalizar($validated));
 
         return response()->json([
             'id' => $subClient->id, 'business_name' => $subClient->business_name,
-            'tax_id' => $subClient->tax_id, 'category' => $subClient->category,
+            'receptor_tipo' => $subClient->receptor_tipo ?? ReceptorTipo::CONTRIBUYENTE, 'tax_id' => $subClient->tax_id, 'tax_id_dv' => $subClient->tax_id_dv, 'category' => $subClient->category,
         ], 201);
     }
 

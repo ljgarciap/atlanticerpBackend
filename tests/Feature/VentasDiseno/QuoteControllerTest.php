@@ -17,10 +17,14 @@ use App\Modules\VentasDiseno\Models\QuoteItem;
 use App\Modules\VentasDiseno\Models\QuotePart;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
+use App\Modules\VentasDiseno\Services\QuoteItemPhotoService;
 use App\Modules\VentasDiseno\Services\QuotePdfService;
+use App\Modules\VentasDiseno\Services\QuoteService;
 use App\Shared\Multitenancy\Tenant;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
@@ -89,26 +93,58 @@ class QuoteControllerTest extends FeatureTestCase
     /**
      * SCRUM-83 — ver docblock equivalente en PipelineControllerTest. Sin grant manual: designer@
      * debe poder crear una cotización solo con su rol seedeado (vendedor_disenador, nivel 4).
+     *
+     * SCRUM-912 — un payload vacío ya no persiste (ver test_crear_cotizacion_vacia_no_persiste
+     * más abajo), así que este test manda un dato mínimo real para seguir probando lo que le
+     * corresponde: que el permiso del rol alcanza sin grant manual.
      */
     public function test_disenador_crea_cotizacion_solo_con_su_rol_seedeado_sin_grant_manual(): void
     {
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])
+            ->postJson('/api/ventas-diseno/quotes', ['description' => 'Cotizacion de prueba'])
             ->assertStatus(201);
     }
 
-    public function test_crear_cotizacion_vacia_nace_como_borrador(): void
+    /**
+     * SCRUM-912 — bug real: "+ Nueva cotización" persistía una fila en `quotes` apenas se
+     * abría el formulario, incluso sin llenar nada (el frontend llamaba a este mismo endpoint
+     * al montar la pantalla). Ahora un payload sin ningún dato real no debe crear nada — el
+     * frontend no depende de un id de BD hasta el primer dato real (ver
+     * QuoteController::hasMeaningfulContent()).
+     */
+    public function test_crear_cotizacion_vacia_no_persiste(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        // loginAs() hace su propio request HTTP y resetea el tenant "current" al finalizar —
+        // volver a fijarlo antes de usar el modelo Eloquent directo.
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $before = Quote::count();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/quotes', [])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('persisted', false);
+        $this->assertArrayNotHasKey('id', $response->json());
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame($before, Quote::count());
+    }
+
+    public function test_crear_cotizacion_con_un_dato_real_nace_como_borrador(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])
+            ->postJson('/api/ventas-diseno/quotes', ['description' => 'Cotizacion de prueba'])
             ->assertStatus(201);
 
+        $response->assertJsonPath('persisted', true);
         $response->assertJsonPath('status', 'draft');
         $response->assertJsonPath('master_client', null);
         $response->assertJsonPath('sub_client', null);
@@ -178,9 +214,10 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $managerId = $this->userIdByEmail('management@atlantic.test');
-        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        // SCRUM-912 — bootstrap por Eloquent directo (mismo patrón que QuotePartControllerTest/
+        // QuoteContactControllerTest): store() ya no persiste con payload vacío, y acá no hace
+        // falta pasar por el endpoint/servicio de creación (no se está probando su lógica).
+        $quoteId = Quote::create(['owner_id' => $managerId])->id;
 
         $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($designerToken))
@@ -191,9 +228,8 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_gerencia_puede_ver_cotizacion_ajena(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $managerToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($managerToken))
@@ -201,15 +237,92 @@ class QuoteControllerTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
+    /**
+     * SCRUM-930/931/932 (rebote Daniela 2026-09-20) — `lider_admin_contab`/`asistente_administrativa`
+     * no tienen (ni deben tener) `ventas_diseno.read` real: sin esto, `QuoteViewerModal` (abierto
+     * desde Cobros/Estado de Cuenta/Notas de Crédito) quedaba en "Cargando" para siempre. El acceso
+     * es de solo lectura, sin depender de `canAccess()` (no son dueños ni tienen visibilidad de
+     * equipo de Ventas y Diseño) — ver `QuoteController::canViewFromAdminContab()`.
+     */
+    public function test_lider_admin_contab_puede_ver_y_descargar_pdf_de_cotizacion_ajena(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
+
+        // Mismo usuario real seedeado (CoreUserSeeder) que ya usa OrderBoardControllerTest para
+        // el hallazgo análogo de `bodega.read` (SCRUM-930, ver ese archivo).
+        $adminContabToken = $this->loginAs('contabilidad@test.com', 'contabilidad@test.com', 'lider_admin_contab');
+        $headers = $this->authHeaders($adminContabToken);
+
+        $this->withHeaders($headers)
+            ->getJson("/api/ventas-diseno/quotes/{$quoteId}")
+            ->assertStatus(200);
+
+        $this->withHeaders($headers)
+            ->get("/api/ventas-diseno/quotes/{$quoteId}/pdf")
+            ->assertStatus(200)
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    /**
+     * El acceso de arriba es de SOLO LECTURA — no debe abrir la puerta a editar/generar/confirmar
+     * cotizaciones ajenas desde Admin&Contab, solo show()/pdf(). `canAccess()` sigue siendo el gate
+     * real de todo lo demás, sin cambios.
+     */
+    public function test_lider_admin_contab_no_puede_editar_cotizacion_ajena(): void
+    {
+        $this->felixComoEnScrum1139();
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
+
+        $adminContabToken = $this->loginAs('contabilidad@test.com', 'contabilidad@test.com', 'lider_admin_contab');
+        $this->withHeaders($this->authHeaders($adminContabToken))
+            ->putJson("/api/ventas-diseno/quotes/{$quoteId}", ['description' => 'Intento de edición'])
+            ->assertStatus(403);
+    }
+
+    /**
+     * SCRUM-1139 — `lider_operaciones` espeja a la asistente en el visor de cotización desde Admin&Cont (solo lectura:
+     * show + pdf). Un rol que no es de Admin&Cont sigue en 403 y ninguno de los dos puede editar.
+     */
+    public function test_1139_asistente_y_operaciones_ven_y_descargan_cotizacion_ajena_pero_no_la_editan(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $quoteId = Quote::create(['owner_id' => $this->userIdByEmail('designer@atlantic.test')])->id;
+
+        foreach ([
+            ['asistenteadministrativa@test.com', 'asistente_administrativa'],
+            ['lideroperaciones@test.com', 'lider_operaciones'],
+        ] as [$email, $role]) {
+            $headers = $this->authHeaders($this->loginAs($email, $email, $role));
+
+            $this->withHeaders($headers)->getJson("/api/ventas-diseno/quotes/{$quoteId}")->assertStatus(200);
+            $this->withHeaders($headers)->get("/api/ventas-diseno/quotes/{$quoteId}/pdf")
+                ->assertStatus(200)->assertHeader('content-type', 'application/pdf');
+            $this->withHeaders($headers)->putJson("/api/ventas-diseno/quotes/{$quoteId}", ['description' => 'X'])->assertStatus(403);
+        }
+    }
+
+    public function test_1139_un_rol_fuera_de_admin_contab_sigue_sin_ver_la_cotizacion_ajena(): void
+    {
+        $quoteId = Quote::create(['owner_id' => $this->userIdByEmail('designer@atlantic.test')])->id;
+        $headers = $this->authHeaders($this->loginAs('liderservicios@test.com', 'liderservicios@test.com', 'lider_servicios'));
+
+        $this->withHeaders($headers)->getJson("/api/ventas-diseno/quotes/{$quoteId}")->assertStatus(403);
+    }
+
     // ── update ────────────────────────────────────────────────────────────────
 
     public function test_actualizar_campos_de_cotizacion(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $hierarchy = $this->makeClientHierarchy();
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quoteId}", [
@@ -231,9 +344,8 @@ class QuoteControllerTest extends FeatureTestCase
         // vendedor_disenador desde el fix) el bridge rol+nivel seguiría otorgando edit pese al
         // extra_permissions de solo lectura, invalidando el test.
         $this->grantVentasDisenoEdit('supervisor@atlantic.test');
-        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
+        $quoteId = Quote::create(['owner_id' => $supervisorId])->id;
 
         $this->grantVentasDisenoRead('supervisor@atlantic.test');
         $readOnlyToken = $this->loginAs('supervisor@atlantic.test', 'Password123!');
@@ -251,7 +363,7 @@ class QuoteControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])
+            ->postJson('/api/ventas-diseno/quotes', ['description' => 'Cotizacion de prueba'])
             ->assertStatus(201);
 
         $response->assertJsonPath('price_type', 'public');
@@ -261,9 +373,10 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_usuario_sin_permiso_no_puede_usar_precio_socio(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quoteId}", ['price_type' => 'partner'])
@@ -276,9 +389,10 @@ class QuoteControllerTest extends FeatureTestCase
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.select_partner_price'])]);
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quoteId}", ['price_type' => 'partner'])
@@ -337,7 +451,7 @@ class QuoteControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])
+            ->postJson('/api/ventas-diseno/quotes', ['description' => 'Cotizacion de prueba'])
             ->assertStatus(201);
 
         $response->assertJsonPath('conditions_text', Quote::DEFAULT_CONDITIONS_TEXT);
@@ -352,8 +466,11 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEditConditions('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        // SCRUM-912 — pasa por el endpoint real (no Quote::create() directo): conditions_text
+        // se congela vía QuoteService::create() a partir de QuoteConditionsSettings::current(),
+        // no tiene default a nivel de columna (ver migración de creación de la columna).
         $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+            ->postJson('/api/ventas-diseno/quotes', ['description' => 'Cotizacion de prueba'])->json('id');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quoteId}", ['conditions_text' => 'Otro texto'])
@@ -366,9 +483,10 @@ class QuoteControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
-        // Cotización creada ANTES del cambio de default — congela su texto propio.
+        // Cotización creada ANTES del cambio de default — congela su texto propio. Vía el
+        // endpoint real (no Quote::create() directo, ver comentario de arriba).
         $oldQuoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+            ->postJson('/api/ventas-diseno/quotes', ['description' => 'Cotizacion vieja'])->json('id');
 
         $this->grantVentasDisenoEditConditions('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -378,7 +496,7 @@ class QuoteControllerTest extends FeatureTestCase
             ->assertJsonPath('text', 'Condiciones globales nuevas');
 
         $newQuoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+            ->postJson('/api/ventas-diseno/quotes', ['description' => 'Cotizacion nueva'])->json('id');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/quotes/{$oldQuoteId}")
@@ -453,9 +571,10 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_descuento_de_totales_en_cotizacion_vacia_no_bloquea(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quoteId}", ['discount_totals_type' => 'percent', 'discount_totals_value' => 0])
@@ -494,9 +613,13 @@ class QuoteControllerTest extends FeatureTestCase
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
-        $this->withHeaders($this->authHeaders($token))
+        $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quote->id}", ['global_discount_percent' => 40])
             ->assertStatus(422);
+
+        // SCRUM-1152 — el mensaje del margen global tampoco muestra el porcentaje mínimo (decisión de Luis, 2026-10-15).
+        $this->assertSame('Este cambio dejaría el margen por debajo del mínimo permitido', $response->json('message'));
+        $this->assertStringNotContainsString('%', $response->json('message'));
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertEquals(0, $quote->refresh()->global_discount_percent);
@@ -590,9 +713,10 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_validar_cotizacion_incompleta_lista_lo_que_falta(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/quotes/{$quoteId}/validate")
@@ -746,12 +870,46 @@ class QuoteControllerTest extends FeatureTestCase
         $this->assertNotContains('RUC', $response->json('missing'));
     }
 
+    /**
+     * SCRUM-1003 (Senior Review B1) — un Consumidor Final no tiene RUC: debe poder cotizarse y generarse, porque sin
+     * cotización no hay pedido ni factura. Un Contribuyente sin RUC sigue bloqueado.
+     */
+    public function test_1003_generar_la_cotizacion_de_un_consumidor_final_no_exige_ruc_pero_un_contribuyente_si(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        foreach (['02' => 200, '01' => 422] as $tipo => $esperado) {
+            Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+            $hierarchy = $this->makeClientHierarchy();
+            $hierarchy['sub']->update(['receptor_tipo' => $tipo, 'tax_id' => '', 'tax_id_dv' => null]);
+            $architect = Architect::create(['name' => "Arq. {$tipo}", 'phone' => '6000-0003']);
+            $contact = $hierarchy['sub']->contacts()->create(['name' => "Contacto {$tipo}", 'role' => 'client', 'phone' => '6111-1114']);
+            $quote = Quote::create([
+                'owner_id' => $designerId, 'master_client_id' => $hierarchy['master']->id, 'sub_client_id' => $hierarchy['sub']->id,
+                'sales_project_id' => $hierarchy['project']->id, 'ruc' => '', 'description' => "Cotización {$tipo} sin RUC",
+                'architect_id' => $architect->id, 'delivery_type' => 'tbd',
+            ]);
+            $quote->contacts()->attach($contact->id);
+            $part = $quote->parts()->create(['name' => 'Partida 1']);
+            $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100]);
+
+            $respuesta = $this->withHeaders($this->authHeaders($token))->postJson("/api/ventas-diseno/quotes/{$quote->id}/generate")->assertStatus($esperado);
+
+            if ($esperado === 422) {
+                $this->assertContains('RUC / Cédula', $respuesta->json('missing'));
+            }
+        }
+    }
+
     public function test_guardar_borrador_bloquea_si_falta_un_campo_general(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quoteId}/save-draft", ['description' => 'Solo descripción'])
@@ -769,15 +927,15 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_guardar_borrador_exitoso_sin_items(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $hierarchy = $this->makeClientHierarchy();
         $architect = Architect::create(['name' => 'Arq. Test', 'phone' => '6000-0000']);
         $contact = $hierarchy['sub']->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
-
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
+
         Quote::find($quoteId)?->contacts()->attach($contact->id);
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -809,12 +967,13 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_guardar_borrador_exitoso_sin_contacto(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $hierarchy = $this->makeClientHierarchy();
         $architect = Architect::create(['name' => 'Arq. Test', 'phone' => '6000-0000']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quoteId}/save-draft", [
@@ -915,13 +1074,14 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_guardar_borrador_no_reparenta_proyecto_elegido_a_mano_de_otro_subcliente(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
         $hierarchy = $this->makeClientHierarchy();
         $otherSub = SubClient::create(['master_client_id' => $hierarchy['master']->id, 'business_name' => 'Otro Sub', 'tax_id' => '155-9999-1-2026']);
         $otherProject = SalesProject::create(['sub_client_id' => $otherSub->id, 'name' => 'Proyecto ajeno']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])->json('id');
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quoteId}/save-draft", [
@@ -969,6 +1129,55 @@ class QuoteControllerTest extends FeatureTestCase
         $folio = $response->json('folio');
         $this->assertMatchesRegularExpression('/^COT-\d{4}-\d{4}$/', $folio);
         $this->assertNotNull($response->json('generated_at'));
+    }
+
+    /**
+     * SCRUM-873 — "Arquitecto" ya NO es un campo obligatorio para guardar borrador
+     * ni para generar: está asociado a una comisión que no siempre existe.
+     */
+    public function test_generar_exitoso_sin_arquitecto(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $data = $this->makeQuoteWithGeneralFieldsComplete($designerId);
+        $data['quote']->update(['architect_id' => null]);
+        $part = $data['quote']->parts()->create(['name' => 'Partida 1']);
+        $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$data['quote']->id}/generate")
+            ->assertStatus(200);
+
+        $this->assertNotNull($response->json('folio'));
+    }
+
+    public function test_guardar_borrador_exitoso_sin_arquitecto(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $hierarchy = $this->makeClientHierarchy();
+        $contact = $hierarchy['sub']->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+
+        $quoteId = Quote::create(['owner_id' => $designerId])->id;
+        Quote::find($quoteId)?->contacts()->attach($contact->id);
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$quoteId}/save-draft", [
+                'master_client_id' => $hierarchy['master']->id,
+                'sub_client_id' => $hierarchy['sub']->id,
+                'sales_project_id' => $hierarchy['project']->id,
+                'ruc' => '155-0000-1-2026',
+                'description' => 'Sin arquitecto',
+                'delivery_dates' => ['2026-09-01'],
+            ])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('status', 'draft');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertNull(Quote::find($quoteId)?->architect_id);
     }
 
     public function test_generar_dos_veces_no_reasigna_folio(): void
@@ -1245,9 +1454,12 @@ class QuoteControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $item->update(['unit_price' => 60, 'cost' => 50]);
 
-        $this->withHeaders($this->authHeaders($token))
+        $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$data['quote']->id}/confirm")
             ->assertStatus(422);
+
+        // SCRUM-1152 — sin el porcentaje mínimo en el mensaje.
+        $this->assertSame('Este cambio dejaría el margen por debajo del mínimo permitido', $response->json('message'));
     }
 
     public function test_confirmar_cotizacion_con_margen_violado_avisa_a_mark_sin_confirmar_todavia(): void
@@ -1324,8 +1536,9 @@ class QuoteControllerTest extends FeatureTestCase
 
     /**
      * RN0.4 — mismo caso pero asignando el proyecto vía PUT (flujo real de "+ Nueva
-     * cotización": la cotización nace vacía y el Proyecto se elige/crea después,
-     * ver QuotePage.tsx). Tampoco crea tarjeta.
+     * cotización": la cotización nace con el primer dato real (SCRUM-912 — ya no con
+     * un POST vacío al simplemente abrir el formulario) y el Proyecto se elige/crea
+     * después, ver QuotePage.tsx). Tampoco crea tarjeta.
      */
     public function test_asignar_proyecto_via_update_sobre_cotizacion_vacia_no_crea_tarjeta_todavia(): void
     {
@@ -1335,7 +1548,7 @@ class QuoteControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $quoteId = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/quotes', [])
+            ->postJson('/api/ventas-diseno/quotes', ['description' => 'Cotizacion de prueba'])
             ->assertStatus(201)
             ->json('id');
 
@@ -1400,6 +1613,9 @@ class QuoteControllerTest extends FeatureTestCase
         $card = PipelineCard::where('sales_project_id', $data['project']->id)->first();
         $this->assertNotNull($card);
         $this->assertSame('quote', $card->stage);
+        // SCRUM-884 — QuoteService::resolveLinkedCardForConfirm() también debe poblar
+        // created_by cuando crea la tarjeta desde cero (sin Lead/Diseño previo).
+        $this->assertSame($designerId, $card->created_by);
     }
 
     /**
@@ -1910,6 +2126,101 @@ class QuoteControllerTest extends FeatureTestCase
         $this->assertSame('https://example.test/foto.png', $detail['parts'][0]['items'][0]['photo_url']);
     }
 
+    /**
+     * SCRUM-849.6 rebote (Daniela, 2026-09-10) — "cuando guardo la cotización esta no muestra la
+     * foto": el test de arriba (`test_pdf_incluye_foto_del_producto_cuando_existe`) solo cubría
+     * un producto de CATÁLOGO (`is_custom: false`, `catalogProduct->photo_url`) — nunca el camino
+     * real de la foto ad-hoc (`is_custom: true`, subida vía `QuoteItemPhotoService`, ver
+     * `QuoteController::formatDetail()` línea ~797). Este gap de cobertura es la razón por la que
+     * nadie detectó en tests que el camino ad-hoc pudiera romperse sin que este otro test fallara.
+     */
+    public function test_pdf_incluye_foto_ad_hoc_de_item_personalizado(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        $hierarchy = $this->makeClientHierarchy();
+        Storage::fake('s3-public');
+        $quote = Quote::create([
+            'owner_id' => $ownerId, 'master_client_id' => $hierarchy['master']->id,
+            'sub_client_id' => $hierarchy['sub']->id, 'sales_project_id' => $hierarchy['project']->id,
+            'description' => 'Con foto ad-hoc', 'price_type' => 'project', 'discount_mode' => 'line', 'status' => 'draft',
+            'folio' => 'TEST-PDF-003', 'generated_at' => now(),
+        ]);
+        $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'P1', 'position' => 1]);
+        $item = QuoteItem::create([
+            'quote_part_id' => $part->id, 'is_custom' => true,
+            'reference' => 'REF-ADHOC', 'description' => 'Lámpara personalizada', 'quantity' => 1, 'unit_price' => 80,
+        ]);
+        app(QuoteItemPhotoService::class)
+            ->uploadPhoto($item, UploadedFile::fake()->image('foto.jpg', 400, 400));
+
+        $controller = app(QuoteController::class);
+        $reflection = new \ReflectionMethod($controller, 'formatDetail');
+        $reflection->setAccessible(true);
+        $user = User::find($ownerId);
+        $detail = $reflection->invoke($controller, $quote->fresh(['parts.items']), $user);
+
+        $this->assertNotNull($detail['parts'][0]['items'][0]['photo_url']);
+
+        // Mismo payload que consume el PDF (QuotePdfService::viewData() no transforma $detail) —
+        // confirma que el documento descargado/"cotización ya guardada" no diverge de la API.
+        $pdfService = app(QuotePdfService::class);
+        $viewData = $pdfService->viewData($detail, external: false);
+        $this->assertNotNull($viewData['quote']['parts'][0]['items'][0]['photo_url']);
+    }
+
+    public function test_pdf_instrucciones_de_pago_muestra_nombre_legal_y_cuenta_ach(): void
+    {
+        // SCRUM-801 (3er rebote, 2026-09-01) — Daniela reportó nombre de empresa incorrecto
+        // ("Atlantic" en vez de "ATLANTIC USA CORP") y el mensaje "consultar con su
+        // diseñador" en vez de la cuenta ACH real en Instrucciones de pago.
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        $data = $this->makeQuoteWithPdfableData($ownerId);
+
+        $controller = app(QuoteController::class);
+        $reflection = new \ReflectionMethod($controller, 'formatDetail');
+        $reflection->setAccessible(true);
+        $user = User::find($ownerId);
+        $detail = $reflection->invoke($controller, $data['quote']->fresh(['parts.items']), $user);
+
+        $pdfService = app(QuotePdfService::class);
+        $html = view('ventas-diseno.quote-pdf', $pdfService->viewData($detail, external: false))->render();
+
+        $this->assertStringContainsString('Cheque a nombre de: ATLANTIC USA CORP', $html);
+        $this->assertStringContainsString('03-01-01-074455-4', $html);
+        $this->assertStringNotContainsString('consultar con su diseñador', $html);
+    }
+
+    public function test_pdf_bloque_final_es_indivisible_y_tiene_espaciador(): void
+    {
+        // SCRUM-801 (3er rebote) — Observaciones→Firma envuelto en .final-block
+        // (page-break-inside: avoid, garantía dura contra el bug de paginación del 31-ago) con un
+        // espaciador previo calculado por QuotePdfLayoutEstimator. Cotización corta del fixture:
+        // entra en la página actual, sin forzar salto.
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        $data = $this->makeQuoteWithPdfableData($ownerId);
+
+        $controller = app(QuoteController::class);
+        $reflection = new \ReflectionMethod($controller, 'formatDetail');
+        $reflection->setAccessible(true);
+        $user = User::find($ownerId);
+        $detail = $reflection->invoke($controller, $data['quote']->fresh(['parts.items']), $user);
+
+        $pdfService = app(QuotePdfService::class);
+        $viewData = $pdfService->viewData($detail, external: false);
+        $html = view('ventas-diseno.quote-pdf', $viewData)->render();
+
+        $this->assertStringContainsString('class="final-block"', $html);
+        $this->assertMatchesRegularExpression('/class="bottom-block-spacer[^"]*"\s+style="height:\s*[\d.]+pt;"/', $html);
+        $this->assertFalse($viewData['bottomBlockForceNewPage']);
+        $this->assertGreaterThan(0.0, $viewData['bottomBlockSpacerPt']);
+        // La regla CSS `.force-new-page` vive siempre en el <style> — lo que no debe aparecer es
+        // la clase aplicada al div del espaciador.
+        $this->assertStringNotContainsString('class="bottom-block-spacer force-new-page"', $html);
+    }
+
     public function test_pdf_de_cotizacion_ajena_retorna_403(): void
     {
         $this->grantVentasDisenoEdit('management@atlantic.test');
@@ -1932,5 +2243,111 @@ class QuoteControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->get('/api/ventas-diseno/quotes/999999/pdf')
             ->assertStatus(404);
+    }
+
+    // ── SCRUM-1195 — «Diseñador» del PDF = Responsable del proyecto, no quien generó la versión ─────────────────────────
+
+    private function personName(int $userId): string
+    {
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $u = DB::table("{$slug}_auth.users")->where('id', $userId)->first(['first_name', 'last_name']);
+
+        return trim("{$u->first_name} {$u->last_name}");
+    }
+
+    /** Tarjeta del Pipeline del proyecto con `$responsibleId` como Responsable, y una versión generada por `$generatorId`. */
+    private function versionGeneratedBy(int $responsibleId, int $generatorId): Quote
+    {
+        $data = $this->makeQuoteWithGeneralFieldsComplete($responsibleId);
+        PipelineCard::create([
+            'sales_project_id' => $data['project']->id, 'stage' => 'quote', 'master_client_id' => $data['master']->id, 'sub_client_id' => $data['sub']->id,
+            'owner_id' => $responsibleId, 'created_by' => $responsibleId, 'stage_changed_at' => now(),
+        ]);
+
+        return Quote::create([
+            'owner_id' => $generatorId, 'master_client_id' => $data['master']->id, 'sub_client_id' => $data['sub']->id,
+            'sales_project_id' => $data['project']->id, 'ruc' => '155-0000-1-2026', 'description' => 'Versión de Gerencia', 'architect_id' => $data['architect']->id,
+        ]);
+    }
+
+    public function test_1195_el_pdf_muestra_como_disenador_al_responsable_del_proyecto_y_no_a_quien_genero_la_version(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $version = $this->versionGeneratedBy($designerId, $managerId);
+
+        $designer = app(QuoteService::class)->pdfDesigner($version->load('owner'));
+
+        $this->assertSame($designerId, $designer['id']);
+        $this->assertSame($this->personName($designerId), $designer['name']);
+        $this->assertNotSame($this->personName($managerId), $designer['name'], 'Gerencia generó la versión pero no es el Diseñador');
+    }
+
+    public function test_1195_si_gerencia_cambia_el_responsable_de_la_tarjeta_las_versiones_salen_con_el_nuevo(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $otherId = $this->userIdByEmail('supervisor@atlantic.test');
+        $version = $this->versionGeneratedBy($designerId, $managerId);
+
+        PipelineCard::where('sales_project_id', $version->sales_project_id)->update(['owner_id' => $otherId]);
+
+        $designer = app(QuoteService::class)->pdfDesigner($version->fresh()->load('owner'));
+        $this->assertSame($otherId, $designer['id']);
+    }
+
+    public function test_1195_sin_tarjeta_o_si_gerencia_armo_la_cotizacion_desde_cero_sale_quien_la_genero(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $service = app(QuoteService::class);
+
+        // sin tarjeta (borrador sin confirmar): el dueño de la fila
+        $draft = $this->makeQuoteWithGeneralFieldsComplete($designerId)['quote'];
+        $this->assertSame($designerId, $service->pdfDesigner($draft->load('owner'))['id']);
+
+        // Gerencia desde cero: su tarjeta nace a su nombre al confirmar, y sale su nombre
+        $own = $this->versionGeneratedBy($managerId, $managerId);
+        $this->assertSame($managerId, $service->pdfDesigner($own->load('owner'))['id']);
+    }
+
+    public function test_1195_el_endpoint_del_pdf_sigue_entregando_el_documento_con_el_responsable(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $version = $this->versionGeneratedBy($designerId, $managerId);
+        $this->grantVentasDisenoEdit('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        $this->withHeaders($this->authHeaders($token))->get("/api/ventas-diseno/quotes/{$version->id}/pdf")
+            ->assertStatus(200)->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_1195_el_blade_del_pdf_imprime_el_disenador_responsable_y_cae_a_owner_si_no_viene(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $version = $this->versionGeneratedBy($designerId, $managerId);
+        $this->grantVentasDisenoEdit('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        $detail = $this->withHeaders($this->authHeaders($token))->getJson("/api/ventas-diseno/quotes/{$version->id}")->assertStatus(200)->json();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $service = app(QuotePdfService::class);
+        $managerName = $this->personName($managerId);
+        $designerName = $this->personName($designerId);
+
+        $this->assertSame($managerName, $detail['owner']['name'], 'el detalle sigue exponiendo a quien generó la versión («Generado por»)');
+        $this->assertSame($designerId, $detail['designer']['id'], 'y trae al Responsable del proyecto para «Diseñador a cargo» del formulario');
+        $this->assertSame($designerName, $detail['designer']['name']);
+
+        $withDesigner = $detail + ['designer' => ['id' => $designerId, 'name' => $designerName, 'phone' => null]];
+        $html = view('ventas-diseno.quote-pdf', $service->viewData($withDesigner, false))->render();
+        $this->assertStringContainsString("Diseñador: {$designerName}", preg_replace('/\s+/', ' ', strip_tags($html)));
+        $this->assertStringNotContainsString("Diseñador: {$managerName}", preg_replace('/\s+/', ' ', strip_tags($html)));
+
+        unset($detail['designer']); // sin `designer` (otro llamador del blade) cae a `owner`, el comportamiento de siempre
+        $html2 = view('ventas-diseno.quote-pdf', $service->viewData($detail, false))->render();
+        $this->assertStringContainsString("Diseñador: {$managerName}", preg_replace('/\s+/', ' ', strip_tags($html2)));
     }
 }

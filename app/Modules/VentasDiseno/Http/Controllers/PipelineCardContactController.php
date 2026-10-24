@@ -111,6 +111,11 @@ final class PipelineCardContactController extends Controller
             return true;
         }
 
+        // SCRUM-1139 — alcance de equipo SOLO dentro del Pipeline para `ventas_diseno.pipeline.edit`.
+        if (PipelineCard::userHasPipelineEdit($user)) {
+            return true;
+        }
+
         return $card->owner_id === $user->id;
     }
 

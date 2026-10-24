@@ -48,7 +48,7 @@ final class QuoteListService
      * versión vieja (no la más reciente) de un proyecto ya no la trae en `data` — sigue
      * disponible desde el detalle/historial de versiones (CA3).
      *
-     * @param array{scope?: string, owner_id?: int, stage?: string, search?: string} $filters
+     * @param array{scope?: string, owner_id?: int, owner_ids?: list<int>, stage?: string, search?: string, view?: string} $filters
      * @param array{per_page: int, page: int} $pagination SCRUM-754 — summary se calcula sobre
      *   TODO el dataset filtrado (antes de paginar); data trae solo la página pedida.
      * @return array{
@@ -63,17 +63,36 @@ final class QuoteListService
         $scope = $this->resolveScope($user, $filters);
 
         $query = Quote::with(self::DETAIL_RELATIONS);
-        if ($scope !== 'team') {
-            $query->where('owner_id', $filters['owner_id'] ?? $user->id);
-        } elseif (isset($filters['owner_id'])) {
-            $query->where('owner_id', $filters['owner_id']);
+
+        // SCRUM-1195 — «de quién es» una cotización para este listado: la generó esa persona (`quotes.owner_id`) O es Responsable de su proyecto
+        // (dueño de la tarjeta del Pipeline o en `compartido_con`) y la versión está CONFIRMADA. Gerencia suele crear la cotización y el vendedor/
+        // diseñador es quien la trabaja: si se le asigna el proyecto, la ve aquí. Los borradores ajenos siguen privados (mismo criterio que
+        // `QuoteController::canView`, SCRUM-1143).
+        // Fuera del alcance de equipo los filtros por persona NO aplican: quien no ve al equipo solo ve lo suyo (antes un `owner_id`/`owner_ids`
+        // ajeno por URL dejaba leer las cotizaciones y borradores de otra persona — Pre-QA SCRUM-1195, ALTO-1).
+        $ownerIds = $scope !== 'team'
+            ? [$user->id]
+            : (! empty($filters['owner_ids']) ? $filters['owner_ids'] : (isset($filters['owner_id']) ? [$filters['owner_id']] : []));
+        if ($ownerIds !== []) {
+            $assignedProjectIds = PipelineCard::projectIdsOwnedByUserIds($ownerIds);
+            $query->where(function ($q) use ($ownerIds, $assignedProjectIds): void {
+                $q->whereIn('owner_id', $ownerIds);
+                if ($assignedProjectIds !== []) {
+                    $q->orWhere(fn ($w) => $w->whereNotNull('confirmed_at')->whereIn('sales_project_id', $assignedProjectIds));
+                }
+            });
         }
 
         /** @var Collection<int, Quote> $quotes */
         $quotes = $query->get();
 
         $projectIds = $quotes->pluck('sales_project_id')->filter()->unique()->values();
-        $cardsByProject = PipelineCard::whereIn('sales_project_id', $projectIds)->get()->keyBy('sales_project_id');
+        $cardsByProject = PipelineCard::with('owner')->whereIn('sales_project_id', $projectIds)->get()->keyBy('sales_project_id');
+        // SCRUM-1195 — Responsable de cada proyecto (dueño de la tarjeta): es lo que muestra la columna «Responsable», no quien generó la versión.
+        $designerByProject = [];
+        foreach ($cardsByProject as $projectId => $card) {
+            $designerByProject[(int) $projectId] = ['id' => $card->owner->id, 'name' => trim("{$card->owner->first_name} {$card->owner->last_name}")];
+        }
 
         /** @var list<array{quote: Quote, stage: string|null, document_status: string}> $rows */
         $rows = [];
@@ -85,6 +104,13 @@ final class QuoteListService
         // SCRUM-796 (RN1.3) — 1 fila por proyecto en la tabla principal, antes de filtrar por
         // etapa o buscar (ver docblock de arriba y de dedupeForMainList()).
         $rows = $this->dedupeForMainList($rows);
+
+        // SCRUM-912 (criterios 6/7) — vista "Solo Borradores": únicamente cotizaciones
+        // NUEVAS sin guardar (creadas desde "+ Nueva cotización"), nunca los borradores de
+        // "nueva versión" de un proyecto ya confirmado (ver filterToNewQuoteDrafts()).
+        if (($filters['view'] ?? null) === 'drafts') {
+            $rows = $this->filterToNewQuoteDrafts($rows);
+        }
 
         if (! empty($filters['stage'])) {
             $stageFilter = $filters['stage'];
@@ -107,7 +133,7 @@ final class QuoteListService
         return [
             'summary' => $summary,
             'fuzzy'   => $fuzzy,
-            'data'    => array_values(array_map(fn (array $r) => $this->formatRow($r), $paginator->items())),
+            'data'    => array_values(array_map(fn (array $r) => $this->formatRow($r, $designerByProject), $paginator->items())),
             'meta'    => Pagination::meta($paginator),
         ];
     }
@@ -131,15 +157,38 @@ final class QuoteListService
      * que `OrderService::resolveApprovedQuote()` (Bodega) ya usa para resolver
      * "la" cotización de un proyecto Aprobado.
      *
+     * SCRUM-818 — `$catalogProductId`/`$user` opcionales, usados por el picker de "Proyecto de
+     * venta" de Comparación de Referencias (vía `ApprovedProjectController`). Cuando
+     * `$catalogProductId` viene: (a) filtra a proyectos con una cotización aprobada que incluya
+     * ese producto en alguna línea, y (b) si `$user` no tiene acceso completo a Compras
+     * (superadmin.all/compras.read/compras.sustitutos.manage), scopea además a los proyectos de
+     * los que `$user` es responsable (PipelineCard::projectIdsOwnedBy() — mismo criterio que
+     * ReplacementRequestController). "Nueva Orden" nunca manda `$catalogProductId`, así que su
+     * comportamiento queda 100% intacto (ninguna de las 2 ramas nuevas se activa).
+     *
+     * @param list<string> $jwtPermissions
      * @return list<array{sales_project_id: int, folio: string|null, project_name: string, client_name: string|null}>
      */
-    public function searchApprovedProjects(string $search = ''): array
+    public function searchApprovedProjects(string $search = '', ?int $catalogProductId = null, ?User $user = null, array $jwtPermissions = []): array
     {
         /** @var Collection<int, Quote> $quotes */
-        $quotes = Quote::with(['salesProject', 'subClient'])
+        $quotes = Quote::with(array_merge(['salesProject', 'subClient'], $catalogProductId !== null ? ['parts.items'] : []))
             ->whereNotNull('sales_project_id')
             ->whereNotNull('folio')
             ->get();
+
+        if ($catalogProductId !== null) {
+            $quotes = $quotes->filter(
+                fn (Quote $q) => $q->parts->contains(
+                    fn ($part) => $part->items->contains(fn ($item) => (int) $item->catalog_product_id === $catalogProductId),
+                ),
+            );
+        }
+
+        $ownedProjectIds = null;
+        if ($catalogProductId !== null && $user !== null && ! $this->hasFullComprasAccess($jwtPermissions)) {
+            $ownedProjectIds = PipelineCard::projectIdsOwnedBy($user);
+        }
 
         $projectIds = $quotes->pluck('sales_project_id')->filter()->unique()->values();
         $cardsByProject = PipelineCard::whereIn('sales_project_id', $projectIds)->get()->keyBy('sales_project_id');
@@ -152,13 +201,29 @@ final class QuoteListService
             if ($salesProject === null || $salesProjectId === null) {
                 continue;
             }
-            $card = $cardsByProject->get($salesProjectId);
-            if ($q->documentStatus($card) !== 'approved') {
+            if ($ownedProjectIds !== null && ! in_array($salesProjectId, $ownedProjectIds, true)) {
                 continue;
             }
-            // documentStatus() === 'approved' ya garantiza confirmed_at no nulo en la práctica
-            // (su primer check es `if ($this->confirmed_at === null) return 'draft';`), pero
-            // PHPStan no infiere eso a través de la llamada — narrowing explícito.
+            $card = $cardsByProject->get($salesProjectId);
+            $documentStatus = $q->documentStatus($card);
+            // SCRUM-818 (rebote 2026-09-03, Hallazgo 4) — SOLO para el picker filtrado por
+            // producto (Comparación de Referencias, `$catalogProductId !== null`): antes exigía
+            // 'approved' (etapa Propuesta/Aprobado en adelante), excluyendo proyectos que ya
+            // tienen una cotización real confirmada pero siguen en etapa Cotización
+            // ('sent'). Daniela: "cualquier proyecto que ya tenga una cotización asociada debe
+            // estar disponible... desde la etapa de Cotización en adelante". "Nueva Orden"
+            // (`$catalogProductId === null`) es un picker DISTINTO y deliberadamente más
+            // estricto ("Pedidos Aprobados", REQ-133) — nunca se toca, sigue exigiendo
+            // 'approved' — ver test_solo_incluye_pedidos_aprobados.
+            $isEligible = $catalogProductId !== null
+                ? $documentStatus !== 'draft'
+                : $documentStatus === 'approved';
+            if (! $isEligible) {
+                continue;
+            }
+            // confirmed_at no nulo está garantizado acá ('draft' es el único status con
+            // confirmed_at null, y ambas ramas de arriba lo descartan), pero PHPStan no infiere
+            // eso a través de la llamada — narrowing explícito.
             $confirmedAtTs = $q->confirmed_at !== null ? $q->confirmed_at->timestamp : 0;
 
             $current = $latestApprovedByProject[$salesProjectId] ?? null;
@@ -193,6 +258,26 @@ final class QuoteListService
         }
 
         return $rows;
+    }
+
+    /**
+     * SCRUM-818 (rebote 2026-09-03, Hallazgo 2) — mismo criterio que
+     * `ReplacementRequestController::hasFullComprasReadAccess()`: se evalúa contra el JWT
+     * (`effectivePermissionsV2()`/`RoleModuleVisibility`), NUNCA `$user->hasPermission()` (v1) —
+     * ver docblock de `canDecide()` en ese controller para el detalle completo de por qué. Antes
+     * de este fix, Gerencia (David/Mark) y Compras (Yirena) tenían acceso real al módulo vía su
+     * rol pero nunca el permiso v1 correspondiente, así que caían siempre a la rama de "proyectos
+     * propios" — y como ninguno de los dos es dueño de proyectos de venta, veían "No existe
+     * ningún proyecto que contenga este producto" sin importar el producto real.
+     *
+     * @param list<string> $jwtPermissions
+     */
+    private function hasFullComprasAccess(array $jwtPermissions): bool
+    {
+        return in_array('superadmin.all', $jwtPermissions, true)
+            || in_array('compras.read', $jwtPermissions, true)
+            || in_array('compras.sustitutos.manage', $jwtPermissions, true)
+            || in_array('gerencia.view', $jwtPermissions, true);
     }
 
     /** @param array{scope?: string} $filters */
@@ -335,6 +420,46 @@ final class QuoteListService
         ));
     }
 
+    /**
+     * SCRUM-912 (criterios 6/7) — "Solo Borradores" debe incluir ÚNICAMENTE cotizaciones
+     * nuevas sin guardar (creadas desde "+ Nueva cotización"), nunca los borradores de
+     * "nueva versión" de un proyecto ya confirmado (QuoteService::duplicate()). Se
+     * distinguen sin ninguna columna nueva: `duplicate()` exige `$source->confirmed_at
+     * !== null` para crear la versión, así que un borrador de nueva versión SIEMPRE
+     * comparte `sales_project_id` con una cotización YA CONFIRMADA de ese mismo proyecto
+     * — un borrador genuinamente nuevo nunca tiene ese hermano confirmado (incluido el
+     * caso más común: `sales_project_id` todavía null, sin ningún proyecto elegido).
+     *
+     * La existencia del hermano confirmado se resuelve con una query directa a `Quote`
+     * (no acotada por el scope/owner_id de $rows) porque puede pertenecer a otro dueño
+     * (ej. Gerencia mirando "Equipo" vs el vendedor dueño del borrador).
+     *
+     * @param list<array{quote: Quote, stage: string|null, document_status: string}> $rows
+     * @return list<array{quote: Quote, stage: string|null, document_status: string}>
+     */
+    private function filterToNewQuoteDrafts(array $rows): array
+    {
+        $draftRows = array_values(array_filter($rows, fn (array $r): bool => $r['document_status'] === 'draft'));
+
+        $projectIds = array_values(array_unique(array_filter(
+            array_map(fn (array $r): ?int => $r['quote']->sales_project_id, $draftRows),
+        )));
+
+        $projectsWithConfirmedSibling = $projectIds === []
+            ? []
+            : Quote::whereIn('sales_project_id', $projectIds)
+                ->whereNotNull('confirmed_at')
+                ->distinct()
+                ->pluck('sales_project_id')
+                ->all();
+
+        return array_values(array_filter(
+            $draftRows,
+            fn (array $r): bool => $r['quote']->sales_project_id === null
+                || ! in_array($r['quote']->sales_project_id, $projectsWithConfirmedSibling, true),
+        ));
+    }
+
     /** Precondición: ambas cotizaciones ya pasaron el filtro de Borrador (confirmed_at no nulo en la práctica). */
     private function confirmedMoreRecently(Quote $candidate, Quote $current): bool
     {
@@ -346,9 +471,10 @@ final class QuoteListService
 
     /**
      * @param array{quote: Quote, stage: string|null, document_status: string} $r
+     * @param array<int, array{id: int, name: string}> $designerByProject Responsable (dueño de la tarjeta) por proyecto — SCRUM-1195.
      * @return array<string, mixed>
      */
-    private function formatRow(array $r): array
+    private function formatRow(array $r, array $designerByProject = []): array
     {
         $q = $r['quote'];
 
@@ -362,6 +488,8 @@ final class QuoteListService
             'stage'           => $r['stage'],
             'price_type'      => $q->price_type,
             'owner'           => ['id' => $q->owner->id, 'name' => trim("{$q->owner->first_name} {$q->owner->last_name}")],
+            // SCRUM-1195 — Responsable del proyecto; sin tarjeta (borradores, CotizaYA) cae a quien la generó. `owner` = quién generó esa fila.
+            'designer'        => $q->sales_project_id !== null ? ($designerByProject[(int) $q->sales_project_id] ?? null) : null,
             'quote_date'      => ($q->generated_at ?? $q->created_at)->toIso8601String(),
             'document_status' => $r['document_status'],
         ];

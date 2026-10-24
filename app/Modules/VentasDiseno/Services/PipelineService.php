@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Services;
 
 use App\Models\User;
-use App\Modules\VentasDiseno\Events\QuoteApproved;
+use App\Modules\Bodega\Services\OrderService;
+use App\Modules\VentasDiseno\Exceptions\AlreadyPassedToOrderException;
 use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Modules\VentasDiseno\Models\PipelineCardDeliveryDate;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
-use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 final class PipelineService
@@ -18,8 +20,10 @@ final class PipelineService
     private const MAX_RESULTS = 500;
 
     private const DETAIL_RELATIONS = [
-        'salesProject', 'masterClient', 'subClient', 'owner', 'contacts', 'deliveryDates', 'files',
+        'salesProject', 'masterClient', 'subClient', 'owner', 'creator', 'orderApprover', 'contacts', 'deliveryDates', 'files',
     ];
+
+    public function __construct(private readonly OrderService $orderService) {}
 
     public function findDetailed(int $id): ?PipelineCard
     {
@@ -27,23 +31,27 @@ final class PipelineService
     }
 
     /**
-     * Grupo 1d — creación manual desde Pipeline (REQ-019/020), única vía además de la
-     * regla de Lead automático (REQ-068 en ClientsService) para que nazca una tarjeta.
+     * Grupo 1d — creación manual desde Pipeline (REQ-019/020); la otra vía es confirmar una cotización sin tarjeta
+     * previa (QuoteService). Crear un cliente ya no crea tarjeta (SCRUM-1187 reemplazó REQ-068).
      *
      * Tipo "lead": sin sub_client_id — la tarjeta nace en Lead con cliente "—"
      * (REQ-011 exige vincular Cliente Master/Subcliente y agregar contacto recién al
      * intentar salir de Lead, no al crearla).
      *
      * Tipo "design": requiere sub_client_id de un Subcliente ya existente o recién
-     * creado vía ClientPicker (POST /master-clients + /sub-clients, que a propósito no
-     * disparan el Lead automático de REQ-068 — así se cumple "una única tarjeta final
-     * en Diseño, sin duplicados en Lead"). Nace directo en etapa "design".
+     * creado vía ClientPicker (POST /master-clients + /sub-clients con
+     * `from_design_context: true`, ya sin efecto desde SCRUM-1187: ningún alta de cliente/subcliente crea Lead — SCRUM-1011:
+     * "una única tarjeta final en Diseño, sin duplicados en Lead").
+     * Nace directo en etapa "design".
      *
      * @param array{type: string, name: string, tag?: string|null, observations?: string|null, sub_client_id?: int|null} $data
+     * @param list<int>|null $assigneeIds SCRUM-849.4 — Gerencia-only (gate en el controller); el
+     *   primer id queda como owner_id (mismo criterio que update(), ver ahí), el resto en
+     *   compartido_con. Null/vacío = comportamiento de siempre, $ownerId es quien crea.
      */
-    public function create(array $data, int $ownerId): PipelineCard
+    public function create(array $data, int $ownerId, ?array $assigneeIds = null): PipelineCard
     {
-        return DB::transaction(function () use ($data, $ownerId): PipelineCard {
+        return DB::transaction(function () use ($data, $ownerId, $assigneeIds): PipelineCard {
             $subClientId = $data['sub_client_id'] ?? null;
 
             $project = SalesProject::create([
@@ -56,12 +64,23 @@ final class PipelineService
                 ? SubClient::find($subClientId)?->master_client_id
                 : null;
 
+            // array_unique — mismo criterio que update(), ver ahí.
+            $uniqueAssigneeIds = $assigneeIds !== null ? array_values(array_unique($assigneeIds)) : null;
+            $resolvedOwnerId   = $uniqueAssigneeIds !== null && $uniqueAssigneeIds !== [] ? $uniqueAssigneeIds[0] : $ownerId;
+            $compartidoCon     = $uniqueAssigneeIds !== null && count($uniqueAssigneeIds) > 1 ? array_slice($uniqueAssigneeIds, 1) : [];
+
             $card = PipelineCard::create([
                 'sales_project_id' => $project->id,
                 'stage'            => $data['type'] === 'design' ? 'design' : 'lead',
                 'master_client_id' => $masterClientId,
                 'sub_client_id'    => $subClientId,
-                'owner_id'         => $ownerId,
+                'owner_id'         => $resolvedOwnerId,
+                // SCRUM-884 — $ownerId acá es siempre quien hizo el request (ver
+                // PipelineController::store()), distinto de $resolvedOwnerId cuando Gerencia
+                // asigna la tarjeta a otra persona al crearla. "Creador" es inmutable: nunca se
+                // vuelve a tocar fuera de este create().
+                'created_by'       => $ownerId,
+                'compartido_con'   => $compartidoCon,
                 'observations'     => $data['observations'] ?? null,
                 'stage_changed_at' => now(),
             ]);
@@ -82,6 +101,7 @@ final class PipelineService
      *   delivery_type?: string|null,
      *   delivery_dates?: list<string>,
      *   observations?: string|null,
+     *   assignee_ids?: list<int>,
      * } $data
      */
     public function update(PipelineCard $card, array $data): PipelineCard
@@ -104,14 +124,59 @@ final class PipelineService
                     $cardUpdates[$field] = $data[$field];
                 }
             }
+            // SCRUM-849.4 — "asignar a 1 persona" reasigna owner_id (reemplaza, no agrega, ver
+            // RN del ticket: "el proyecto debe quedar reasignado"); "asignar a varias" deja al
+            // primero como owner_id y al resto en compartido_con (split de comisión N-way, ver
+            // SalesTotalsService::monthlyApprovedTotal()). Reemplaza la asignación completa —
+            // un asignado que ya no está en la lista pierde el acceso, sin caso "grandfather".
+            if (array_key_exists('assignee_ids', $data)) {
+                // array_unique — un id repetido en la lista (UI no lo permite, pero la API no lo
+                // rechaza) no debe inflar el conteo de asignados y diluir de más el split de
+                // comisión N-way (SalesTotalsService::monthlyApprovedTotal() cuenta 1 + count(
+                // compartido_con); un duplicado ahí resta un asignado real de la cuenta).
+                $uniqueIds = array_values(array_unique($data['assignee_ids']));
+                $cardUpdates['owner_id']       = $uniqueIds[0];
+                $cardUpdates['compartido_con'] = array_slice($uniqueIds, 1);
+            }
             if ($cardUpdates !== []) {
                 $card->update($cardUpdates);
             }
 
             if (array_key_exists('delivery_dates', $data)) {
-                $card->deliveryDates()->delete();
-                foreach ($data['delivery_dates'] as $date) {
+                // Pre-QA (SCRUM-817, 2026-08-31) — la corrección de SCRUM-817 es solo de UI: el
+                // frontend ya nunca ARMA un payload inconsistente, pero la API en sí no rechazaba
+                // ni normalizaba uno mandado directo (delivery_type=single con 2+ fechas volvía
+                // 200 y lo guardaba tal cual). Mismo criterio que el frontend ya aplica —
+                // "single" nunca conserva más de 1 fecha — pero acá, servidor, para que el
+                // invariante valga siempre, sin importar quién arme el request.
+                $resultingType = array_key_exists('delivery_type', $data) ? $data['delivery_type'] : $card->delivery_type;
+                $dates = $resultingType === 'single'
+                    ? array_slice($data['delivery_dates'], 0, 1)
+                    : $data['delivery_dates'];
+
+                // SCRUM-1027 — sincronizar por diferencia, no borrar-y-recrear: la FK de
+                // `pipeline_card_product_deliveries` es cascadeOnDelete, así que recrear TODAS
+                // las fechas en cada guardado borraba las asignaciones de producto aunque las
+                // fechas no hubieran cambiado. Una fecha que se conserva mantiene su id (y sus
+                // asignaciones); solo las quitadas se borran, y las nuevas se crean.
+                /** @var array<int, PipelineCardDeliveryDate> $pool */
+                $pool = $card->deliveryDates()->get()->all();
+                foreach ($dates as $date) {
+                    $keep = null;
+                    foreach ($pool as $i => $existing) {
+                        if ($existing->date->toDateString() === Carbon::parse($date)->toDateString()) {
+                            $keep = $i;
+                            break;
+                        }
+                    }
+                    if ($keep !== null) {
+                        unset($pool[$keep]);
+                        continue;
+                    }
                     $card->deliveryDates()->create(['date' => $date]);
+                }
+                foreach ($pool as $removed) {
+                    $removed->delete();
                 }
             }
 
@@ -124,46 +189,62 @@ final class PipelineService
     /**
      * REQ-011/014/016/017/018: mueve la tarjeta de etapa, reiniciando stage_changed_at
      * (REQ-004: "días en etapa" se reinicia a 0 en cada cambio de etapa). La validación
-     * del gate (PipelineCard::validationErrorForTransitionTo) corre antes en el controller
-     * (sobre la fila posiblemente stale — ver nota de concurrencia abajo, no invalida el gate:
-     * en el peor caso una transición ya en curso vuelve a evaluarse una vez el lock se libera).
+     * del gate (PipelineCard::validationErrorForTransitionTo) corre antes en el controller.
      *
-     * REQ-308 (SCRUM-329 Batch A1): dispara `QuoteApproved` cuando la tarjeta ENTRA a "approved"
-     * (old stage != 'approved' -> new stage == 'approved') — nunca en un no-op (llamar
-     * changeStage() con el mismo stage actual es una transición válida según
-     * `validationErrorForTransitionTo()`, pero no debe volver a crear un pedido en Bodega).
-     * `Order` en Bodega es el único consumidor hoy (ver
-     * `App\Modules\Bodega\Listeners\CreateOrderFromApprovedQuote`).
-     *
-     * Blocker 2 de Senior Review (2026-07-22): sin lock, dos aprobaciones concurrentes de la
-     * misma tarjeta podían ambas leer `oldStage != 'approved'` antes de que cualquiera
-     * escribiera, ambas disparar `QuoteApproved`, y crear dos `Order` para el mismo
-     * `pipeline_card_id` (mismo patrón de bug que ya tuvo el proyecto en `AdjustmentRequest`
-     * approve/reject). Fix: `DB::transaction()` + `SELECT ... FOR UPDATE` sobre la fila real de
-     * `PipelineCard` (releída acá, no se confía en `$card->stage` que el caller pudo haber
-     * cargado antes de que otro request ganara la carrera) — mismo patrón de lock que
-     * `OrderFolioService::next()`. La segunda request de una carrera espera a que la primera
-     * comitee, relee `oldStage == 'approved'` y NO vuelve a disparar el evento — el pedido de
-     * Bodega nunca se duplica, aunque la segunda request igual actualiza `stage_changed_at` (un
-     * no-op válido según el gate, no un error).
+     * SCRUM-1128 — entrar a "approved" YA NO genera el Pedido en Bodega (antes lo hacía el evento
+     * `QuoteApproved`, REQ-308): el proyecto queda "por aprobar" hasta que Gerencia o Félix
+     * ejecutan `passToOrder()`. El lock sigue siendo necesario para que dos cambios de etapa
+     * concurrentes no se pisen.
      */
     public function changeStage(PipelineCard $card, string $targetStage): PipelineCard
     {
         return DB::transaction(function () use ($card, $targetStage): PipelineCard {
             /** @var PipelineCard $locked */
             $locked = PipelineCard::whereKey($card->id)->lockForUpdate()->firstOrFail();
-            $oldStage = $locked->stage;
 
             $locked->update(['stage' => $targetStage, 'stage_changed_at' => now()]);
 
-            if ($targetStage === 'approved' && $oldStage !== 'approved') {
-                event(new QuoteApproved(
-                    pipelineCardId: $locked->id,
-                    salesProjectId: $locked->sales_project_id,
-                    ownerId: $locked->owner_id,
-                    tenant: $this->requiredTenantSlug(),
-                ));
+            /** @var PipelineCard $fresh */
+            $fresh = $locked->fresh(self::DETAIL_RELATIONS);
+            return $fresh;
+        });
+    }
+
+    /**
+     * SCRUM-1128 — aprobación explícita "Pasar a Pedido": genera el Pedido en Bodega (estado
+     * "Asignado a Bodega", mismo `OrderService::createFromApprovedQuote()` de siempre) y registra
+     * quién y cuándo. Una sola vez por tarjeta: `SELECT ... FOR UPDATE` sobre la fila + chequeo de
+     * pedido existente, así que doble clic o dos pestañas no duplican el pedido (la segunda
+     * llamada recibe `AlreadyPassedToOrderException`). Cualquier fallo de Bodega propaga y revierte
+     * la transacción — a diferencia del listener automático anterior, acá el usuario SÍ debe
+     * enterarse si el pedido no se pudo crear.
+     *
+     * @throws \DomainException si la tarjeta no está en "approved"
+     * @throws AlreadyPassedToOrderException si ya pasó a pedido
+     */
+    public function passToOrder(PipelineCard $card, User $actor): PipelineCard
+    {
+        return DB::transaction(function () use ($card, $actor): PipelineCard {
+            /** @var PipelineCard $locked */
+            $locked = PipelineCard::whereKey($card->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->stage !== PipelineCard::RESTRICTED_EDIT_STAGE) {
+                throw new \DomainException('Solo un proyecto en estado Aprobado puede pasar a Pedido.');
             }
+
+            if ($locked->order_approved_at !== null || $locked->orders()->exists()) {
+                throw new AlreadyPassedToOrderException();
+            }
+
+            $order = $this->orderService->createFromApprovedQuote($locked->id, $locked->owner_id);
+
+            // `createFromApprovedQuote()` devuelve null solo si la tarjeta no existe (imposible acá,
+            // está bloqueada); si no hay pedido no se marca como aprobado y el usuario puede reintentar.
+            if ($order === null) {
+                throw new \RuntimeException('No se pudo generar el pedido en Bodega.');
+            }
+
+            $locked->update(['order_approved_by' => $actor->id, 'order_approved_at' => now()]);
 
             /** @var PipelineCard $fresh */
             $fresh = $locked->fresh(self::DETAIL_RELATIONS);
@@ -178,23 +259,39 @@ final class PipelineService
      *   search?: string,
      *   order?: string,
      *   owner_id?: int,
+     *   owner_ids?: list<int>,
      *   tag?: string,
      *   stage?: string,
+     *   orders?: string,
      * } $filters
      * @return Collection<int, PipelineCard>
      */
     public function list(User $user, array $filters = []): Collection
     {
-        $query = PipelineCard::with(['salesProject', 'masterClient', 'subClient', 'owner']);
+        $query = PipelineCard::with(['salesProject', 'masterClient', 'subClient', 'owner', 'orderApprover'])->withExists('orders as has_order');
 
         // Alcance (REQ-002): Diseñador ve solo lo propio; Gerencia ve "Equipo".
         // ADR-006, Fase C Task 4 — canViewTeamV2('ventas_diseno') reemplaza el supuesto viejo
         // (hasRole(MANAGEMENT)), ya resuelto por SCRUM-144/145 (rol vendedor_disenador vs gerencia).
-        $canSeeTeam = $user->canViewTeamV2('ventas_diseno');
+        // SCRUM-1128 — `ventas_diseno.pipeline.read_all` (Félix) da el alcance de equipo SOLO para
+        // leer; ninguna ruta de escritura lo consulta.
+        // SCRUM-1139 — `ventas_diseno.pipeline.edit` (Félix) también da el alcance de equipo: quien edita el Pipeline lo ve completo.
+        $canSeeTeam = $user->canViewTeamV2('ventas_diseno')
+            || in_array('ventas_diseno.pipeline.read_all', $user->effectivePermissionsV2(), true)
+            || PipelineCard::userHasPipelineEdit($user);
         $scope      = $filters['scope'] ?? 'own';
 
         if ($scope !== 'team' || ! $canSeeTeam) {
-            $query->where('owner_id', $user->id);
+            // SCRUM-849.4 — un asignado secundario (`compartido_con`) también debe ver la
+            // tarjeta en su propio alcance "Mío", igual que canAccess() en el controller.
+            $query->where(function ($q) use ($user): void {
+                $q->where('owner_id', $user->id)
+                    ->orWhereJsonContains('compartido_con', $user->id);
+            });
+        } elseif (! empty($filters['owner_ids'])) {
+            // SCRUM-854 — multi-selección (OR entre seleccionados), reemplaza a owner_id singular
+            // cuando ambos vienen; owner_ids gana porque es el filtro más específico del cliente.
+            $query->whereIn('owner_id', $filters['owner_ids']);
         } elseif (isset($filters['owner_id'])) {
             // REQ-056 (Grupo 3, Inicio): dentro del alcance "Equipo", Líder/Gerencia puede
             // acotar a un vendedor específico — mismo mecanismo que ya usa Inicio para
@@ -220,6 +317,14 @@ final class PipelineService
         // `chip` (ver docblock de PipelineController::index()).
         if (! empty($filters['stage'])) {
             $query->where('stage', $filters['stage']);
+        }
+
+        // SCRUM-1128 — filtro "Pedidos": clasifica por el estado REAL de la generación del pedido
+        // (existe un Order de Bodega para la tarjeta), no solo por el stage del Pipeline.
+        if (($filters['orders'] ?? null) === 'approved') {
+            $query->whereHas('orders');
+        } elseif (($filters['orders'] ?? null) === 'pending') {
+            $query->where('stage', PipelineCard::RESTRICTED_EDIT_STAGE)->whereDoesntHave('orders');
         }
 
         $chip = $filters['chip'] ?? 'all';
@@ -251,16 +356,5 @@ final class PipelineService
         }
 
         return $cards;
-    }
-
-    private function requiredTenantSlug(): string
-    {
-        $tenant = Tenant::current();
-
-        if ($tenant === null) {
-            throw new \RuntimeException('Cannot dispatch domain event without an active tenant.');
-        }
-
-        return $tenant->slug;
     }
 }

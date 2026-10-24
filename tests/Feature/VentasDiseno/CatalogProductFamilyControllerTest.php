@@ -126,4 +126,26 @@ class CatalogProductFamilyControllerTest extends FeatureTestCase
             ->getJson("/api/ventas-diseno/catalog-product-families/{$family->id}")
             ->assertStatus(404);
     }
+
+    // SCRUM-1138 — la ficha de cada producto de la familia resuelve la foto subida, no solo el photo_url legacy.
+    public function test_1138_detalle_de_familia_resuelve_la_foto_subida(): void
+    {
+        config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn.test']);
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $subida = $this->makeProduct(['reference' => 'F-SUB', 'photo_url' => null, 'photo_key' => 'catalog/7/photo/x.jpg', 'photo_thumbnail_key' => 'catalog/7/photo/x-thumb.jpg']);
+        $legacy = $this->makeProduct(['reference' => 'F-LEG', 'photo_url' => 'https://legacy.test/l.jpg']);
+        $sin = $this->makeProduct(['reference' => 'F-SIN', 'photo_url' => null]);
+        $family = CatalogProductFamily::create(['name' => 'Familia Fotos 1138', 'is_active' => true]);
+        $family->products()->attach([$subida->id, $legacy->id, $sin->id]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $products = collect($this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/catalog-product-families/{$family->id}")
+            ->assertStatus(200)->json('products'))->keyBy('reference');
+
+        $this->assertSame('https://cdn.test/public/catalog/7/photo/x-thumb.jpg', $products['F-SUB']['photo_url']);
+        $this->assertSame('https://legacy.test/l.jpg', $products['F-LEG']['photo_url']);
+        $this->assertNull($products['F-SIN']['photo_url']);
+    }
 }
+

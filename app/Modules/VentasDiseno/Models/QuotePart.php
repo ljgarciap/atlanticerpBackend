@@ -44,10 +44,15 @@ class QuotePart extends Model
         return $this->belongsTo(Quote::class);
     }
 
-    /** @return HasMany<QuoteItem, $this> */
+    /**
+     * SCRUM-1026 — orden de ingreso explícito (`position`, desempate por `id`; SCRUM-1161 lo hizo editable por drag and drop). Sin `orderBy`, Postgres mueve
+     * al final del heap toda fila que recibe un UPDATE (ej. editar la cantidad) y el ítem saltaba
+     * de posición; mismo defecto que SCRUM-953 corrigió para `Quote::parts()`.
+     * @return HasMany<QuoteItem, $this>
+     */
     public function items(): HasMany
     {
-        return $this->hasMany(QuoteItem::class);
+        return $this->hasMany(QuoteItem::class)->orderBy('position')->orderBy('id');
     }
 
     /**

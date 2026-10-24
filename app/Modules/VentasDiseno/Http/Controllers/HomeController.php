@@ -6,13 +6,44 @@ namespace App\Modules\VentasDiseno\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\VentasDiseno\Services\HomeService;
+use App\Shared\Support\ApprovalsPendingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 final class HomeController extends Controller
 {
-    public function __construct(private readonly HomeService $service) {}
+    public function __construct(
+        private readonly HomeService $service,
+        private readonly ApprovalsPendingService $approvalsPendingService,
+    ) {}
+
+    /**
+     * SCRUM-908 — GET /api/ventas-diseno/home/approvals-pending. Ver docblock análogo en
+     * AdminContHomeController — hoy siempre devuelve lista vacía (ningún tipo de aprobación
+     * pertenece a Ventas & Diseño en el inventario de SCRUM-908), el endpoint existe solo para
+     * que los 6 módulos sean consistentes.
+     */
+    public function approvalsPending(Request $request): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        return response()->json(['data' => $this->approvalsPendingService->forModule($user, $this->jwtPermissions($request), 'ventas_diseno')]);
+    }
+
+    /** @return list<string> */
+    private function jwtPermissions(Request $request): array
+    {
+        /** @var array{permissions?: mixed}|null $payload */
+        $payload = $request->attributes->get('jwt');
+
+        return is_array($payload['permissions'] ?? null)
+            ? array_values(array_filter($payload['permissions'], 'is_string'))
+            : [];
+    }
 
     /**
      * REQ-056: lista de vendedores para el selector — vacía para quien no puede ver

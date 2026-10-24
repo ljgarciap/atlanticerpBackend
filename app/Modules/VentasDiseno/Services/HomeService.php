@@ -39,6 +39,7 @@ final class HomeService
         private readonly PipelineService $pipeline,
         private readonly SalesTotalsService $totals,
         private readonly OutlookCalendarService $outlook,
+        private readonly \App\Modules\AdminCont\Services\CommissionOrderService $internalCommissions,
     ) {}
 
     /**
@@ -90,10 +91,15 @@ final class HomeService
      * resto de la pantalla — si Gerencia elige un vendedor específico en el
      * selector, la meta/comisión mostrada es la de ese vendedor, no la propia
      * (mismo mecanismo de resolución de owner_id que ya usan pipeline->list() y
-     * eventsTodayCount(), reutilizado acá en vez de duplicarlo). Mes en curso,
-     * misma tabla escalonada y mismo total Aprobado que ya usa Reportes
-     * (SalesTotalsService, compartido con CommissionService para no duplicar la
-     * regla de negocio ni la consulta).
+     * eventsTodayCount(), reutilizado acá en vez de duplicarlo). "current_amount"
+     * sigue siendo el total Aprobado del mes en curso (SalesTotalsService, para la
+     * barra de progreso contra la meta) — pero "commission_amount" ("Comisión
+     * generada") ya NO se recalcula acá: antes aplicaba la tabla escalonada solo
+     * sobre el mes en curso (ignorando arrastre de meses previos sin cobrar y
+     * notas de crédito), quedando desalineado de Comisiones Internas (SCRUM-910,
+     * casos reales de UAT). Ahora reusa la misma fuente de verdad que Comisiones
+     * Internas: Ya pagada + Por pagar + Pendiente de cobro
+     * (CommissionOrderService::summaryForVendor(), App\Modules\AdminCont).
      *
      * @param array{scope?: string, owner_id?: int} $filters
      * @return array{goal_amount: float|null, current_amount: float, progress_percent: float|null, commission_amount: float}
@@ -104,7 +110,12 @@ final class HomeService
 
         $monthStart = CarbonImmutable::now()->startOfMonth();
         $currentAmount = $this->totals->monthlyApprovedTotal($target, $monthStart);
-        $commissionAmount = round($currentAmount * $this->totals->percentFor($currentAmount) / 100, 2);
+
+        $commissionSummary = $this->internalCommissions->summaryForVendor($target, $monthStart);
+        $commissionAmount  = round(
+            $commissionSummary['pagada'] + $commissionSummary['por_pagar'] + $commissionSummary['pendiente_cobro'],
+            2
+        );
 
         $goal = SalesGoal::where('user_id', $target->id)->first();
         $goalAmount = $goal?->goal_amount;

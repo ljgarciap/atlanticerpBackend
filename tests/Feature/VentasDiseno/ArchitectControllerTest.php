@@ -6,12 +6,17 @@ namespace Tests\Feature\VentasDiseno;
 
 use App\Modules\VentasDiseno\Models\Architect;
 use App\Modules\VentasDiseno\Models\MasterClient;
+use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Modules\VentasDiseno\Models\Quote;
+use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
-// REQ-030 / SCRUM-122: buscar/crear Arquitecto acotado a un Subcliente, desde Cotización.
+// REQ-030 / SCRUM-122: buscar/crear Arquitecto acotado a un Subcliente, desde Cotización. SCRUM-1121: la base es ahora global
+// (ver AssociatesBaseTest); estos tests cubren el modo acotado heredado.
 class ArchitectControllerTest extends FeatureTestCase
 {
     protected function setUp(): void
@@ -38,19 +43,65 @@ class ArchitectControllerTest extends FeatureTestCase
         return [$sub, $other];
     }
 
+    private function userIdByEmail(string $email): int
+    {
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+
+        return (int) DB::table("{$slug}_auth.users")->where('email', $email)->value('id');
+    }
+
+    private function makeCardForSubClient(SubClient $sub, int $ownerId): PipelineCard
+    {
+        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.uniqid()]);
+
+        return PipelineCard::create([
+            'sales_project_id' => $project->id, 'stage' => 'quote', 'master_client_id' => $sub->master_client_id,
+            'sub_client_id' => $sub->id, 'owner_id' => $ownerId, 'stage_changed_at' => Carbon::now(),
+        ]);
+    }
+
     public function test_buscar_arquitectos_sin_autenticar_retorna_401(): void
     {
         $this->getJson('/api/ventas-diseno/architects')->assertStatus(401);
     }
 
-    public function test_buscar_arquitectos_requiere_sub_client_id(): void
+    public function test_listar_arquitectos_sin_sub_client_id_retorna_el_directorio_global(): void
     {
+        // SCRUM-907 — la pantalla "Arquitectos" del menú CRM necesita un listado global, sin
+        // acotar a un Subcliente (a diferencia del picker de Cotización, que sí lo exige vía
+        // sub_client_id). Mismo endpoint sirve ambos casos.
         $this->grantVentasDiseno('designer@atlantic.test');
+        [$sub, $other] = $this->makeTwoSubClients();
+        Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
+        Architect::create(['sub_client_id' => $other->id, 'name' => 'Arq. De Otro Sub', 'email' => 'otro@example.com']);
+
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
-        $this->withHeaders($this->authHeaders($token))
+        $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/architects')
-            ->assertStatus(422);
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('name');
+        $this->assertTrue($names->contains('Arq. Fernando Solís'));
+        $this->assertTrue($names->contains('Arq. De Otro Sub'));
+    }
+
+    public function test_listar_arquitectos_sin_sub_client_id_filtra_por_nombre(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test');
+        [$sub] = $this->makeTwoSubClients();
+        Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
+        Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Otro', 'email' => 'otro@example.com']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/architects?search=Fernando')
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('name');
+        $this->assertTrue($names->contains('Arq. Fernando Solís'));
+        $this->assertFalse($names->contains('Arq. Otro'));
     }
 
     public function test_buscar_arquitectos_acotado_al_subcliente(): void
@@ -106,14 +157,16 @@ class ArchitectControllerTest extends FeatureTestCase
         $this->assertFalse($names->contains('Arq. Legacy Global'));
     }
 
-    public function test_crear_arquitecto_sin_sub_client_id_retorna_422(): void
+    public function test_crear_arquitecto_sin_sub_client_id_ahora_es_valido_la_base_es_global(): void
     {
+        // SCRUM-1121: la base de asociados ya no está atada a un subcliente.
         $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/architects', ['name' => 'Arq. Sin Sub', 'phone' => '6000-0000'])
-            ->assertStatus(422);
+            ->assertStatus(201)
+            ->assertJsonPath('type', 'architect');
     }
 
     public function test_crear_arquitecto_sin_telefono_ni_correo_retorna_422(): void
@@ -214,5 +267,64 @@ class ArchitectControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/architects/{$architect->id}", ['name' => 'Arq. Fernando Solís'])
             ->assertStatus(422);
+    }
+
+    // ── show (SCRUM-907) ──────────────────────────────────────────────────────────
+
+    public function test_ver_detalle_de_arquitecto_sin_autenticar_retorna_401(): void
+    {
+        $this->getJson('/api/ventas-diseno/architects/1')->assertStatus(401);
+    }
+
+    public function test_ver_detalle_de_arquitecto_inexistente_retorna_404(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/architects/999999')
+            ->assertStatus(404);
+    }
+
+    public function test_ver_detalle_de_arquitecto_incluye_los_proyectos_asociados(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test');
+        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        [$sub, $otherSub] = $this->makeTwoSubClients();
+        $architect = Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
+
+        $card = $this->makeCardForSubClient($sub, $ownerId);
+        Quote::create(['owner_id' => $ownerId, 'architect_id' => $architect->id, 'sales_project_id' => $card->sales_project_id]);
+
+        // Proyecto de otro arquitecto — no debe aparecer en la lista de éste.
+        $otherArchitect = Architect::create(['sub_client_id' => $otherSub->id, 'name' => 'Arq. Otro', 'phone' => '6000-1111']);
+        $otherCard = $this->makeCardForSubClient($otherSub, $ownerId);
+        Quote::create(['owner_id' => $ownerId, 'architect_id' => $otherArchitect->id, 'sales_project_id' => $otherCard->sales_project_id]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/architects/{$architect->id}")
+            ->assertStatus(200);
+
+        $response->assertJsonPath('name', 'Arq. Fernando Solís');
+        $projects = $response->json('projects');
+        $this->assertCount(1, $projects);
+        $this->assertSame($card->id, $projects[0]['id']);
+        $this->assertSame('quote', $projects[0]['stage']);
+    }
+
+    public function test_ver_detalle_de_arquitecto_sin_proyectos_devuelve_lista_vacia(): void
+    {
+        $this->grantVentasDiseno('designer@atlantic.test');
+        [$sub] = $this->makeTwoSubClients();
+        $architect = Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Sin Proyectos', 'phone' => '6000-0000']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/architects/{$architect->id}")
+            ->assertStatus(200);
+
+        $this->assertSame([], $response->json('projects'));
     }
 }

@@ -28,7 +28,12 @@ final class QuoteService
         'parts.items.catalogProduct',
     ];
 
-    public function __construct(private readonly QuoteFolioService $folioService, private readonly PipelineService $pipelineService) {}
+    public function __construct(
+        private readonly QuoteFolioService $folioService,
+        private readonly PipelineService $pipelineService,
+        private readonly ProjectAssociateService $associates,
+        private readonly QuoteContactCardSyncService $cardContactSync,
+    ) {}
 
     public function findDetailed(int $id): ?Quote
     {
@@ -87,6 +92,10 @@ final class QuoteService
                 ['owner_id' => $ownerId],
             ));
 
+            // SCRUM-1121 — el arquitecto elegido y los asociados de un borrador sin proyecto viajan al proyecto cuando lo hay.
+            $this->associates->mergeDraftIntoProject($quote);
+            $this->associates->syncQuoteArchitect($quote);
+
             // SCRUM-734 — Borradores nunca tocan Pipeline (RN0.4): a diferencia del
             // mecanismo anterior (SCRUM-722, ver docblock de resolveLinkedCardForConfirm()
             // más abajo para el porqué se retiró), sales_project_id acá es un dato de
@@ -118,6 +127,28 @@ final class QuoteService
     }
 
     /**
+     * SCRUM-1195 — «Diseñador» que imprime el PDF de la cotización: el Responsable del proyecto (dueño de la tarjeta del Pipeline), no
+     * quien generó esa versión. Cuando Gerencia (Mark/Whil/Felix) crea una versión nueva sobre la cotización de un vendedor,
+     * `quotes.owner_id` de esa fila es Gerencia (queda como «Generado por» en el historial de versiones, trazabilidad interna) pero el
+     * documento que llega al cliente debe seguir diciendo el nombre del vendedor. Si Gerencia reasigna la tarjeta, el PDF sale con el
+     * nuevo Responsable. Sin tarjeta (borrador sin confirmar, CotizaYA) o una cotización que Gerencia armó desde cero, el nombre es el
+     * de quien la generó, como siempre.
+     *
+     * @return array{id: int, name: string, phone: string|null}
+     */
+    public function pdfDesigner(Quote $quote): array
+    {
+        $card   = $quote->linkedPipelineCard();
+        $person = $card !== null ? $card->owner : $quote->owner;
+
+        return [
+            'id'    => $person->id,
+            'name'  => trim("{$person->first_name} {$person->last_name}"),
+            'phone' => $person->phone,
+        ];
+    }
+
+    /**
      * SCRUM-734 (reemplaza el mecanismo de clonado de SCRUM-722/105): decisión
      * confirmada con Luis (2026-08-06) — un Borrador nunca toca Pipeline sin
      * importar cuántos compartan `sales_project_id` (RN0.4); un proyecto es
@@ -130,7 +161,8 @@ final class QuoteService
      * - Si ya tiene tarjeta en lead/design/quote, se resuelve tal cual (se avanza
      *   después en advanceCardToQuoteStage()) — esto es lo que RN2.3 llama
      *   "crear una versión nueva": una segunda cotización confirmándose sobre la
-     *   MISMA tarjeta mientras sigue en etapa Cotización.
+     *   MISMA tarjeta mientras sigue en Lead, Diseño o Cotización (SCRUM-1115: un
+     *   proyecto restaurado desde Perdido parte de su historial en Lead/Diseño).
      * - Si ya avanzó a "proposal"/"approved" (RN2.4/RN2.6) o está "lost"
      *   (RN2.5 — hay que reactivarla primero), confirmar se bloquea con
      *   QuoteActionBlockedException. Nunca hay excepción para Mark/David acá —
@@ -162,6 +194,10 @@ final class QuoteService
                 'master_client_id' => $project?->subClient?->master_client_id,
                 'sub_client_id'    => $project?->sub_client_id,
                 'owner_id'         => $quote->owner_id,
+                // SCRUM-884 — cotización confirmada sin tarjeta previa: el dueño de la
+                // cotización es quien de hecho origina el proyecto (SCRUM-1187: crear un cliente
+                // ya no crea tarjeta, así que esta es la vía normal de nacimiento).
+                'created_by'       => $quote->owner_id,
                 'stage_changed_at' => now(),
             ]);
         }
@@ -209,8 +245,25 @@ final class QuoteService
             $previousDiscountMode = $quote->discount_mode;
 
             $updates = $this->fieldUpdates($data);
+
+            // SCRUM-1164 — «Aplicar a todos»: el tipo de precio general rige sobre TODAS las partidas (antes una partida con tipo propio lo ignoraba).
+            if (filter_var($data['clear_item_price_overrides'] ?? false, FILTER_VALIDATE_BOOLEAN) && array_key_exists('price_type', $data)) {   // acepta true/1/"1" igual que la validación `boolean`
+                QuoteItem::whereIn('quote_part_id', $quote->parts()->pluck('id'))
+                    ->whereNotNull('price_type_override')
+                    ->get()
+                    ->each(fn (QuoteItem $i) => $i->update(['price_type_override' => null]));   // por modelo: queda en la bitácora de auditoría
+            }
+
             if ($updates !== []) {
                 $quote->update($updates);
+                // SCRUM-1121 — al asignarle proyecto, los asociados del borrador pasan al proyecto; el arquitecto elegido también es del proyecto.
+                $this->associates->mergeDraftIntoProject($quote);
+                // Solo si el arquitecto o el proyecto CAMBIARON de verdad: el formulario manda siempre todos los campos (con el mismo
+                // architect_id de antes), y re-agregarlo en cada «Guardar borrador» hacía «resucitar» a un arquitecto que el usuario
+                // había quitado de Asociados (Pre-QA SCRUM-1121).
+                if ($quote->wasChanged('architect_id') || $quote->wasChanged('sales_project_id')) {
+                    $this->associates->syncQuoteArchitect($quote);
+                }
             }
 
             // SCRUM-734 — sales_project_id es un dato de formulario más acá también
@@ -364,6 +417,9 @@ final class QuoteService
             if ($quote->confirmed_at === null) {
                 $card = $this->resolveLinkedCardForConfirm($quote);
 
+                // SCRUM-1121 — los contactos de la cotización pasan al campo «Contacto» de la tarjeta (solo agrega, sin duplicar).
+                $this->cardContactSync->sync($quote, $card);
+
                 // SCRUM-734 — antes de marcar ESTA como confirmada, para poder distinguir
                 // "primera confirmación del proyecto" de "nueva versión" en el evento.
                 $isNewVersion = Quote::where('sales_project_id', $quote->sales_project_id)
@@ -396,13 +452,17 @@ final class QuoteService
      * datos maestros/partidas/ítems/contactos/fechas de una cotización YA
      * confirmada a una cotización nueva, en Borrador, sobre el MISMO proyecto
      * (mismo `sales_project_id` — no hay clonado de proyecto, RN0/RN1). Solo
-     * disponible mientras la tarjeta vinculada sigue en etapa Cotización; una vez
-     * en Propuesta/Aprobado queda congelada (RN2.4/RN2.6), y en Perdido hay que
-     * reactivar primero (RN2.5) — el gate es el mismo `resolveLinkedCardForConfirm`
-     * usa, pero de solo lectura acá (no crea tarjeta: duplicar no confirma nada).
+     * disponible mientras la tarjeta vinculada está en Lead, Diseño o Cotización
+     * (SCRUM-1115: un proyecto restaurado desde Perdido vuelve a Lead/Diseño con su
+     * historial de cotizaciones y la única salida era una cotización en blanco; la
+     * entrada a Cotización sigue siendo confirmar una cotización real, RN5, así que
+     * la versión nueva mueve la tarjeta igual que cualquier otra al confirmarse).
+     * Una vez en Propuesta/Aprobado queda congelada (RN2.4/RN2.6), y en Perdido hay
+     * que reactivar primero (RN2.5) — mismo criterio que `resolveLinkedCardForConfirm`,
+     * pero de solo lectura acá (no crea tarjeta: duplicar no confirma nada).
      *
      * @throws QuoteActionBlockedException si la cotización origen no está
-     *   confirmada, o si la tarjeta vinculada no está en etapa Cotización
+     *   confirmada, o si la tarjeta vinculada está en Perdido, Propuesta o Aprobado
      */
     public function duplicate(Quote $source, int $ownerId): Quote
     {
@@ -413,9 +473,20 @@ final class QuoteService
         }
 
         $card = $source->linkedPipelineCard();
-        if ($card === null || $card->stage !== 'quote') {
+        if ($card === null) {
             throw new QuoteActionBlockedException(
-                'Solo se puede crear una versión nueva mientras el proyecto está en etapa Cotización.',
+                'Solo se puede crear una versión nueva de una cotización con un proyecto en el Pipeline.',
+            );
+        }
+        if ($card->stage === 'lost') {
+            throw new QuoteActionBlockedException(
+                'Este proyecto está marcado como Perdido — reactívelo a Lead antes de crear una versión nueva.',
+            );
+        }
+        if (! in_array($card->stage, ['lead', 'design', 'quote'], true)) {
+            throw new QuoteActionBlockedException(
+                'Este proyecto ya avanzó más allá de Cotización — la última cotización confirmada quedó congelada '
+                . 'y no admite versiones nuevas.',
             );
         }
 
@@ -515,6 +586,7 @@ final class QuoteService
     private function advanceCardToQuoteStage(PipelineCard $card, Quote $quote): PipelineCard
     {
         $card->update(['amount' => $quote->grandTotal()]);
+        $this->transferDeliveryToCard($card, $quote);
 
         $stageOrder   = PipelineCard::stageOrder();
         $currentIndex = array_search($card->stage, $stageOrder, true);
@@ -527,6 +599,34 @@ final class QuoteService
         /** @var PipelineCard $fresh */
         $fresh = $card->fresh();
         return $fresh;
+    }
+
+    /**
+     * SCRUM-1122 — la Fecha estimada de entrega de la tarjeta sale de la cotización que se confirma (antes había que volver
+     * a teclearla en el detalle del proyecto):
+     * - Única + fecha → la tarjeta queda `single` con esa fecha.
+     * - Parcial + fechas → `partial` con TODAS las fechas, en el orden en que se registraron en la cotización.
+     * - «Por definir» (o sin fechas) → no se toca la tarjeta: ni se traslada ni se borra nada, y nunca se inventa una fecha.
+     * La cotización manda: si la tarjeta ya tenía otras fechas, quedan las de la cotización (también en una versión nueva).
+     * Se reutiliza `PipelineService::update()`, que sincroniza por diferencia: una fecha que se conserva mantiene su id y sus
+     * asignaciones de producto (SCRUM-1027). Debe llamarse dentro de la transacción de `confirm()`.
+     */
+    private function transferDeliveryToCard(PipelineCard $card, Quote $quote): void
+    {
+        if (! in_array($quote->delivery_type, ['single', 'partial'], true)) {
+            return;
+        }
+
+        // array_unique: dos fechas iguales en la cotización no deben crear dos filas iguales en la tarjeta.
+        $dates = array_values(array_unique($quote->deliveryDates()->orderBy('id')->get()
+            ->map(fn ($d): string => $d->date->toDateString())
+            ->all()));
+
+        if ($dates === []) {
+            return;
+        }
+
+        $this->pipelineService->update($card, ['delivery_type' => $quote->delivery_type, 'delivery_dates' => $dates]);
     }
 
     /**
