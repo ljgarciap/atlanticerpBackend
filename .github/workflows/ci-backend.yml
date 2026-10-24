@@ -124,9 +124,10 @@ jobs:
           php-version: '8.3'
           extensions: pdo_pgsql, pgsql, pcntl, zip, sodium, redis
           coverage: pcov
-          # 1G (2026-10-01): con ~4.5K tests, pcov agotaba los 512M dentro de php-code-coverage y el
-          # job moría con exit 255 tras pasar los tests (8 runs seguidos en dev), saltándose el CD.
-          ini-values: memory_limit=1G
+          # 2G (2026-10-24): con ~6.4K tests pcov agota también 1G dentro de php-code-coverage al escribir
+          # coverage.xml (los tests pasan y el job muere con exit 255). 1G (2026-10-01, ~4.5K tests) y 512M antes.
+          # El runner de GitHub tiene 7 GB.
+          ini-values: memory_limit=2G
 
       - name: Cache dependencias Composer
         uses: actions/cache@v4
