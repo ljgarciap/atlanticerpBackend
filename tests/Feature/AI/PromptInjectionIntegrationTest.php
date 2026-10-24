@@ -119,6 +119,35 @@ class PromptInjectionIntegrationTest extends FeatureTestCase
         $this->assertSuspiciousPatternAudited((string) $response->json('job_id'));
     }
 
+    /**
+     * SCRUM-814 (Epic SCRUM-788) — todo uso de IA vía BaseAiJob deja un
+     * AuditService::AI_USAGE_REQUESTED con el nombre del Job y un preview truncado de la
+     * instrucción de tarea (nunca el contenido no confiable del proyecto/actividad).
+     */
+    public function test_summarize_deja_registro_de_uso_de_ia_con_preview_de_la_instruccion(): void
+    {
+        $token     = $this->loginAs();
+        $projectId = $this->createProject($token, 'Proyecto sin notas sospechosas.');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ai/summarize', ['project_id' => $projectId]);
+
+        $response->assertStatus(202);
+
+        $analysisId = (string) $response->json('job_id');
+
+        $log = DB::table('atlantic_auth.audit_logs')
+            ->where('action', AuditService::AI_USAGE_REQUESTED)
+            ->where('entity_id', $analysisId)
+            ->first();
+
+        $this->assertNotNull($log, 'Se esperaba un AI_USAGE_REQUESTED para el uso de IA.');
+        $metadata = json_decode((string) $log->metadata, true);
+        $this->assertSame('App\Modules\AI\Jobs\SummarizeProjectJob', $metadata['job']);
+        $this->assertStringContainsString('Resume el siguiente proyecto', $metadata['prompt_preview']);
+        $this->assertStringNotContainsString('Proyecto sin notas sospechosas', $metadata['prompt_preview']);
+    }
+
     // ── SuggestActionsJob ────────────────────────────────────────────────────────
 
     public function test_suggest_actions_con_nota_de_inyeccion_llega_envuelta_y_queda_auditada(): void

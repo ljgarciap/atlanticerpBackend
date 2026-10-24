@@ -10,6 +10,7 @@ use App\Modules\AI\Models\AiModelPricing;
 use App\Modules\AI\Support\PromptSanitizer;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Services\AuditService;
+use App\Shared\Support\AiUsageAuditor;
 use App\Shared\Support\AnthropicApiException;
 use App\Shared\Support\AnthropicClient;
 use App\Shared\Support\CircuitBreaker;
@@ -19,6 +20,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 abstract class BaseAiJob implements ShouldQueue
 {
@@ -67,6 +69,10 @@ abstract class BaseAiJob implements ShouldQueue
 
         $analysis->update(['status' => AiAnalysis::STATUS_RUNNING]);
 
+        if ($this->attempts() === 1) {
+            AiUsageAuditor::log(static::class, 'ai_analysis', $analysisId, $taskInstruction);
+        }
+
         // Solo en el primer intento — reintentos (tries=3) no deben duplicar la
         // detección ni el audit log para el mismo evento lógico.
         if ($this->attempts() === 1 && PromptSanitizer::looksLikeInjection($untrustedContext)) {
@@ -110,7 +116,7 @@ abstract class BaseAiJob implements ShouldQueue
             if ($isLastAttempt) {
                 $analysis->update([
                     'status' => AiAnalysis::STATUS_FAILED,
-                    'error'  => $e->getMessage(),
+                    'error'  => $this->userFacingError($e, $analysis->id),
                 ]);
                 event(new AnalysisCompleted($analysisId, false));
             } else {
@@ -157,6 +163,10 @@ abstract class BaseAiJob implements ShouldQueue
 
         $analysis->update(['status' => AiAnalysis::STATUS_RUNNING]);
 
+        if ($this->attempts() === 1) {
+            AiUsageAuditor::log(static::class, 'ai_analysis', $analysisId, $taskInstruction);
+        }
+
         try {
             $cb     = new CircuitBreaker('anthropic', threshold: 5, windowSeconds: 60, openTimeout: 30);
             $client = new AnthropicClient();
@@ -194,7 +204,7 @@ abstract class BaseAiJob implements ShouldQueue
             if ($isLastAttempt) {
                 $analysis->update([
                     'status' => AiAnalysis::STATUS_FAILED,
-                    'error'  => $e->getMessage(),
+                    'error'  => $this->userFacingError($e, $analysis->id),
                 ]);
                 event(new AnalysisCompleted($analysisId, false));
 
@@ -244,6 +254,10 @@ abstract class BaseAiJob implements ShouldQueue
 
         $analysis->update(['status' => AiAnalysis::STATUS_RUNNING]);
 
+        if ($this->attempts() === 1) {
+            AiUsageAuditor::log(static::class, 'ai_analysis', $analysisId, $taskInstruction);
+        }
+
         try {
             $cb     = new CircuitBreaker('anthropic', threshold: 5, windowSeconds: 60, openTimeout: 30);
             $client = new AnthropicClient();
@@ -279,7 +293,7 @@ abstract class BaseAiJob implements ShouldQueue
             if ($isLastAttempt) {
                 $analysis->update([
                     'status' => AiAnalysis::STATUS_FAILED,
-                    'error'  => $e->getMessage(),
+                    'error'  => $this->userFacingError($e, $analysis->id),
                 ]);
                 event(new AnalysisCompleted($analysisId, false));
 
@@ -330,6 +344,10 @@ abstract class BaseAiJob implements ShouldQueue
 
         $analysis->update(['status' => AiAnalysis::STATUS_RUNNING]);
 
+        if ($this->attempts() === 1) {
+            AiUsageAuditor::log(static::class, 'ai_analysis', $analysisId, $taskInstruction);
+        }
+
         try {
             $cb     = new CircuitBreaker('anthropic', threshold: 5, windowSeconds: 60, openTimeout: 30);
             $client = new AnthropicClient();
@@ -366,7 +384,7 @@ abstract class BaseAiJob implements ShouldQueue
             if ($isLastAttempt) {
                 $analysis->update([
                     'status' => AiAnalysis::STATUS_FAILED,
-                    'error'  => $e->getMessage(),
+                    'error'  => $this->userFacingError($e, $analysis->id),
                 ]);
                 event(new AnalysisCompleted($analysisId, false));
 
@@ -376,6 +394,29 @@ abstract class BaseAiJob implements ShouldQueue
             $analysis->update(['status' => AiAnalysis::STATUS_PENDING]);
             throw $e;
         }
+    }
+
+    /**
+     * SCRUM-1030 (R-10): lo que se guarda en `AiAnalysis.error` lo ve el usuario. El mensaje de la excepción (host, conexión, rutas)
+     * va SOLO al log; el usuario recibe un texto genérico.
+     */
+    private function userFacingError(\Throwable $e, string|int $analysisId): string
+    {
+        Log::error('Job de IA falló en el último intento', [
+            'job'         => static::class,
+            'analysis_id' => $analysisId,
+            'exception'   => $e::class,
+            'message'     => $e->getMessage(),
+        ]);
+
+        // Un error de la propia API de Anthropic (p. ej. 400 "credit balance is too low") SÍ se muestra: es información que el usuario necesita
+        // (hallazgo QA 2026-07-20, SCRUM-211/224) y no contiene detalle de nuestra infraestructura. Cualquier otra excepción (Redis, base de
+        // datos, red interna) queda con el texto genérico.
+        if ($e instanceof AnthropicApiException) {
+            return $e->getMessage();
+        }
+
+        return 'No se pudo completar el análisis. Intenta de nuevo en unos minutos.';
     }
 
     /**

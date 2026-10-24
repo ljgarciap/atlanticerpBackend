@@ -34,6 +34,7 @@ final class AiUsageController
         'replacement_search'          => 'Búsqueda de sustituto',
         'goods_receipt_invoice_match' => 'Detección de factura',
         'provider_confirmation'       => 'Confirmación de proveedor',
+        'order_translation'           => 'Traducción de orden de compra', // SCRUM-1127
     ];
 
     public function index(Request $request): JsonResponse
