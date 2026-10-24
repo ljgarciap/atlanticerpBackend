@@ -15,6 +15,8 @@ final class DashboardService
 
     private const CLOSED_STAGES = ['cerrado'];
 
+    public function __construct(private readonly CrmSettingsService $settings) {}
+
     /** @return array<string, mixed> */
     public function kpis(User $user): array
     {
@@ -64,10 +66,10 @@ final class DashboardService
         $proximosQuery = (clone $openBase)
             ->whereNotNull('fecha_entrega')
             ->whereDate('fecha_entrega', '>=', now())
-            ->whereDate('fecha_entrega', '<=', now()->addDays(3));
+            ->whereDate('fecha_entrega', '<=', now()->addDays($this->settings->proximoDias()));
 
         $friosQuery = (clone $openBase)
-            ->whereDoesntHave('activities', fn (Builder $q) => $q->where('fecha', '>=', now()->subDays(21)));
+            ->whereDoesntHave('activities', fn (Builder $q) => $q->where('fecha', '>=', now()->subDays($this->settings->freshnessStaleDias())));
 
         $vencidosProjects = (clone $vencidosQuery)->with('assignees:id,first_name,last_name,email')
             ->get(['id', 'nombre', 'contacto', 'etapa', 'fecha_entrega']);

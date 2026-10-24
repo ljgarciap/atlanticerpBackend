@@ -24,7 +24,7 @@ final class DocumentController extends Controller
 
     private const CACHE_TTL_SECONDS = 300;
 
-    private const ALLOWED_MIMES = [
+    public const ALLOWED_MIMES = [
         'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx',
         'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp',
         'zip', 'rar', '7z',
@@ -84,7 +84,7 @@ final class DocumentController extends Controller
         /** @var User $user */
         /** @var Project $project */
         $maxKb = $this->resolveMaxSizeKb();
-        $allowedExt = implode(',', self::ALLOWED_MIMES);
+        $allowedExt = implode(',', DocumentController::ALLOWED_MIMES);
 
         $validated = $request->validate([
             // extensions (client filename), not mimes (content-sniffed): mimes: fails

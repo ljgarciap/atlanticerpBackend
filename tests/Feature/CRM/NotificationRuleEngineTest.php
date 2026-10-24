@@ -91,6 +91,27 @@ class NotificationRuleEngineTest extends FeatureTestCase
         $this->assertSame(1, Notification::where('user_id', $designerId)->count());
     }
 
+    // SCRUM-1170 — la notificación de una regla de CRM llevaba una URL ABSOLUTA a /crm/proyectos/{id}, ruta que no existe en el frontend. Ahora es una
+    // ruta interna y válida (relativa: la campana la abre con navigate() y el correo la completa con la URL del frontend).
+    public function test_el_enlace_de_la_notificacion_es_una_ruta_interna_valida(): void
+    {
+        $mgmtToken = $this->loginAs();
+        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerId    = $this->currentUserId($designerToken);
+
+        $this->createRule(['recipient_value' => [$designerId]]);
+
+        $projectId = $this->createProject($mgmtToken);
+        $this->changeStage($mgmtToken, $projectId, 'cerrado');
+
+        $this->activateTenant();
+        $link = (string) Notification::where('user_id', $designerId)->value('link_url');
+
+        $this->assertSame('/crm/projects', $link);
+        $this->assertStringStartsWith('/', $link, 'Ruta interna, no una URL absoluta.');
+        $this->assertStringNotContainsString('proyectos', $link, 'La ruta /crm/proyectos/{id} no existe.');
+    }
+
     public function test_changed_to_no_dispara_si_cambia_a_otro_valor(): void
     {
         $mgmtToken = $this->loginAs();
