@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\ProveedorExtractorContract;
 use App\Modules\Legacy\Data\ExtractedProveedores;
 use App\Modules\Legacy\Models\SyncRun;
@@ -59,7 +60,7 @@ final class LegacySyncProveedoresCommand extends Command
         // 6) — con solo 114 filas (§2 del diseño) el volumen real de Proveedores nunca se va a
         // acercar al memory_limit default de PHP CLI (128M), pero se replica igual por
         // consistencia con el resto del módulo.
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');

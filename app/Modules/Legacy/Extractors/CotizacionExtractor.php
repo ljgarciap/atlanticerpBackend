@@ -80,12 +80,21 @@ final class CotizacionExtractor implements CotizacionExtractorContract
         ));
     }
 
+    /**
+     * SCRUM-842 — LEFT JOIN a PRESUPUESTOSCAMPOSLIBRES (PROYECTO/PROMOCION), misma llave natural de
+     * 4 columnas que la cabecera. LEFT, nunca INNER: una cotización sin fila satélite igual se
+     * extrae completa, `proyecto`/`promocion` quedan `null`.
+     */
     public static function cotizacionesQuery(): string
     {
         return <<<'SQL'
             SELECT p.NUMSERIE, p.NUMPRESUPUESTO, p.N, p.VERSION, p.CODCLIENTE, p.CODVENDEDOR,
-                   p.FECHA, p.TOTNETO, p.TOTBRUTO, p.IDESTADO, p.SUPRESUPUESTO
+                   p.FECHA, p.TOTNETO, p.TOTBRUTO, p.IDESTADO, p.SUPRESUPUESTO,
+                   cl.PROYECTO, cl.PROMOCION
             FROM PRESUPUESTOSCAB p
+            LEFT JOIN PRESUPUESTOSCAMPOSLIBRES cl
+                ON cl.NUMSERIE = p.NUMSERIE AND cl.NUMPRESUPUESTO = p.NUMPRESUPUESTO
+                AND cl.N = p.N AND cl.VERSION = p.VERSION
             SQL;
     }
 
@@ -128,6 +137,8 @@ final class CotizacionExtractor implements CotizacionExtractorContract
             icgCodvendedor: self::nullableInt($row['CODVENDEDOR'] ?? null),
             idestado: self::nullableString($row['IDESTADO'] ?? null),
             supresupuesto: self::nullableString($row['SUPRESUPUESTO'] ?? null),
+            proyecto: self::nullableString($row['PROYECTO'] ?? null),
+            promocion: self::nullableString($row['PROMOCION'] ?? null),
         );
     }
 

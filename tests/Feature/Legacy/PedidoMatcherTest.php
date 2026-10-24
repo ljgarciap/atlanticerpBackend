@@ -30,7 +30,10 @@ final class PedidoMatcherTest extends FeatureTestCase
 
         $result = (new PedidoMatcher())->match([$pedido->id]);
 
-        $this->assertSame(['matched' => 1, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(1, $result['matched']);
+        $this->assertSame(0, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertSame([], $result['details']);
         $pedido->refresh();
         $this->assertSame($cliente->id, $pedido->legacy_cliente_id);
         $this->assertFalse($pedido->orphan);
@@ -42,7 +45,11 @@ final class PedidoMatcherTest extends FeatureTestCase
 
         $result = (new PedidoMatcher())->match([$pedido->id]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 1, 'errores' => 0], $result);
+        $this->assertSame(0, $result['matched']);
+        $this->assertSame(1, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertCount(1, $result['details']);
+        $this->assertSame('orphan', $result['details'][0]['status']);
         $pedido->refresh();
         $this->assertNull($pedido->legacy_cliente_id);
         $this->assertTrue($pedido->orphan);
@@ -54,7 +61,11 @@ final class PedidoMatcherTest extends FeatureTestCase
 
         $result = (new PedidoMatcher())->match([$pedido->id]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 1, 'errores' => 0], $result);
+        $this->assertSame(0, $result['matched']);
+        $this->assertSame(1, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertCount(1, $result['details']);
+        $this->assertSame('orphan', $result['details'][0]['status']);
         $pedido->refresh();
         $this->assertTrue($pedido->orphan);
     }
@@ -63,7 +74,7 @@ final class PedidoMatcherTest extends FeatureTestCase
     {
         $result = (new PedidoMatcher())->match([]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(['matched' => 0, 'orphan' => 0, 'errores' => 0, 'details' => []], $result);
     }
 
     public function test_matchea_multiples_pedidos_del_mismo_cliente(): void
@@ -74,7 +85,9 @@ final class PedidoMatcherTest extends FeatureTestCase
 
         $result = (new PedidoMatcher())->match([$p1->id, $p2->id]);
 
-        $this->assertSame(['matched' => 2, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(2, $result['matched']);
+        $this->assertSame(0, $result['orphan']);
+        $this->assertSame([], $result['details']);
     }
 
     private static function makePedido(

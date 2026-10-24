@@ -9,6 +9,7 @@ use App\Modules\Legacy\Data\ContactoClienteRow;
 use App\Modules\Legacy\Data\ExtractedClientes;
 use App\Modules\Legacy\Models\Cliente;
 use App\Modules\Legacy\Models\ContactoCliente;
+use App\Modules\Legacy\Support\TaxIdNormalizer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -65,32 +66,42 @@ final class ClienteStagingLoader
             return 0;
         }
 
-        $values = array_map(static fn (ClienteRow $row): array => [
-            'icg_codcliente'    => $row->icgCodcliente,
-            'nombre_comercial'  => $row->nombreComercial,
-            'razon_social'      => $row->razonSocial,
-            'cif'               => $row->cif,
-            'direccion'         => $row->direccion,
-            'poblacion'         => $row->poblacion,
-            'provincia'         => $row->provincia,
-            'pais'              => $row->pais,
-            'telefono1'         => $row->telefono1,
-            'telefono2'         => $row->telefono2,
-            'mobil'             => $row->mobil,
-            'email'             => $row->email,
-            'icg_codvendedor'   => $row->icgCodvendedor,
-            'bloqueado'         => $row->bloqueado,
-            'fecha_modificado_icg' => $row->fechaModificadoIcg?->format('Y-m-d H:i:s'),
-            'created_at'        => $now,
-            'updated_at'        => $now,
-        ], $rows);
+        $values = array_map(static function (ClienteRow $row) use ($now): array {
+            $tax = TaxIdNormalizer::normalize($row->nif20, $row->cif);
+
+            return [
+                'icg_codcliente'    => $row->icgCodcliente,
+                'nombre_comercial'  => $row->nombreComercial,
+                'razon_social'      => $row->razonSocial,
+                'cif'               => $row->cif,
+                'nif20'             => $row->nif20,
+                'ruc'               => $tax->ruc,
+                'ruc_dv'            => $tax->dv,
+                'ruc_origen'        => $tax->origen,
+                'ruc_estado'        => $tax->estado,
+                'direccion'         => $row->direccion,
+                'poblacion'         => $row->poblacion,
+                'provincia'         => $row->provincia,
+                'pais'              => $row->pais,
+                'telefono1'         => $row->telefono1,
+                'telefono2'         => $row->telefono2,
+                'mobil'             => $row->mobil,
+                'email'             => $row->email,
+                'icg_codvendedor'   => $row->icgCodvendedor,
+                'bloqueado'         => $row->bloqueado,
+                'fecha_modificado_icg' => $row->fechaModificadoIcg?->format('Y-m-d H:i:s'),
+                'created_at'        => $now,
+                'updated_at'        => $now,
+            ];
+        }, $rows);
 
         foreach (array_chunk($values, self::CHUNK_SIZE) as $chunk) {
             Cliente::query()->upsert(
                 $chunk,
                 ['icg_codcliente'],
                 [
-                    'nombre_comercial', 'razon_social', 'cif', 'direccion', 'poblacion', 'provincia',
+                    'nombre_comercial', 'razon_social', 'cif', 'nif20', 'ruc', 'ruc_dv', 'ruc_origen',
+                    'ruc_estado', 'direccion', 'poblacion', 'provincia',
                     'pais', 'telefono1', 'telefono2', 'mobil', 'email', 'icg_codvendedor', 'bloqueado',
                     'fecha_modificado_icg', 'updated_at',
                 ],

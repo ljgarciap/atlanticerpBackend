@@ -137,11 +137,63 @@ final class PedidoExtractorTest extends TestCase
         $this->assertNull($item->total);
     }
 
+    public function test_map_item_row_mapea_unidades_pendientes_y_recibidas(): void
+    {
+        $item = PedidoExtractor::mapItemRow(self::itemRow(['UNIDADESPEN' => 2, 'UNIDADESREC' => 1]));
+
+        $this->assertSame(2.0, $item->unidadesPendientes);
+        $this->assertSame(1.0, $item->unidadesRecibidas);
+    }
+
+    public function test_map_item_row_sin_columnas_de_unidades_las_deja_nulas(): void
+    {
+        $item = PedidoExtractor::mapItemRow(self::itemRow());
+
+        $this->assertNull($item->unidadesPendientes);
+        $this->assertNull($item->unidadesRecibidas);
+    }
+
+    public function test_la_consulta_de_items_pide_las_unidades_pendientes_y_recibidas(): void
+    {
+        $sql = PedidoExtractor::itemsPageQuery();
+
+        $this->assertStringContainsString('l.UNIDADESPEN', $sql);
+        $this->assertStringContainsString('l.UNIDADESREC', $sql);
+    }
+
     // ── query builders (smoke — confirman que apuntan a las tablas correctas) ─────────────────
 
     public function test_pedidos_query_apunta_a_pedventacab(): void
     {
         $this->assertStringContainsString('PEDVENTACAB', PedidoExtractor::pedidosQuery());
+    }
+
+    // ── SCRUM-842 — campo libre (COMISION) ──────────────────────────────────────────────────
+
+    public function test_pedidos_query_hace_left_join_a_camposlibres(): void
+    {
+        $query = PedidoExtractor::pedidosQuery();
+
+        $this->assertStringContainsString('PEDVENTACAMPOSLIBRES', $query);
+        $this->assertStringContainsString('LEFT JOIN', $query);
+    }
+
+    public function test_map_pedido_row_mapea_comision(): void
+    {
+        $row = self::pedidoRow(['COMISION' => 125.50]);
+
+        $pedido = PedidoExtractor::mapPedidoRow($row);
+
+        $this->assertSame(125.50, $pedido->comision);
+    }
+
+    public function test_map_pedido_row_sin_camposlibres_no_revienta(): void
+    {
+        $row = self::pedidoRow();
+
+        $pedido = PedidoExtractor::mapPedidoRow($row);
+
+        $this->assertNull($pedido->comision);
     }
 
     public function test_items_page_query_apunta_a_pedventalin_paginada(): void

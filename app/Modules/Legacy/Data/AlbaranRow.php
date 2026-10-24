@@ -30,6 +30,8 @@ final readonly class AlbaranRow
         public ?int $icgCodvendedor,
         public ?string $icgNumseriefac,
         public ?int $icgNumfac,
+        // SCRUM-842 — de ALBVENTACAMPOSLIBRES (LEFT JOIN, ver AlbaranExtractor::albaranesQuery()).
+        public ?string $observaciones = null,
     ) {
     }
 }

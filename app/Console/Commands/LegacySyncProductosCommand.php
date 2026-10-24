@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\ProductoExtractorContract;
 use App\Modules\Legacy\Data\ExtractedProductos;
 use App\Modules\Legacy\Data\MappedProducto;
 use App\Modules\Legacy\Models\SyncRun;
+use App\Modules\Legacy\Models\SyncRunDetail;
 use App\Modules\Legacy\Services\CatalogProductLoader;
 use App\Modules\Legacy\Services\ProductoMapper;
 use App\Modules\Legacy\Services\ProductoStagingLoader;
+use App\Modules\Legacy\Services\SyncRunDetailRecorder;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -52,6 +55,7 @@ final class LegacySyncProductosCommand extends Command
         private readonly ProductoStagingLoader $stagingLoader,
         private readonly ProductoMapper $mapper,
         private readonly CatalogProductLoader $catalogLoader,
+        private readonly SyncRunDetailRecorder $detailRecorder,
     ) {
         parent::__construct();
     }
@@ -65,7 +69,7 @@ final class LegacySyncProductosCommand extends Command
         // docblock) — acá SÍ alcanza con `ini_set()` porque este comando corre en el proceso PHP
         // que ya arrancó (no spawnea un hijo separado como `artisan test`), así que el override
         // aplica directo sin necesitar el flag `-d` en la invocación.
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');
@@ -155,7 +159,7 @@ final class LegacySyncProductosCommand extends Command
 
         $status = $loadResult['errors'] > 0 ? SyncRun::STATUS_PARTIAL : SyncRun::STATUS_SUCCESS;
 
-        $this->recordRun(
+        $syncRun = $this->recordRun(
             $startedAt, $start,
             extraidos: count($extracted->productos),
             staged: $stagingCounts['productos'],
@@ -166,7 +170,41 @@ final class LegacySyncProductosCommand extends Command
             status: $status,
         );
 
+        $this->persistDetails($syncRun, $mapped, $loadResult['details']);
+
         return self::SUCCESS;
+    }
+
+    /**
+     * @param list<MappedProducto> $mapped
+     * @param list<array{icg_codarticulo: int, reference: string, action: string, reason: string|null}> $loadDetails
+     */
+    private function persistDetails(SyncRun $syncRun, array $mapped, array $loadDetails): void
+    {
+        $excludedByMapper = array_values(array_filter($mapped, static fn (MappedProducto $m): bool => $m->isExcluded()));
+
+        $rows = array_map(
+            static fn (MappedProducto $m): array => [
+                'referencia' => $m->reference,
+                'status'     => SyncRunDetail::STATUS_EXCLUDED,
+                'motivo'     => $m->excludedReason,
+            ],
+            $excludedByMapper,
+        );
+
+        foreach ($loadDetails as $d) {
+            if ($d['action'] !== 'excluded' && $d['action'] !== 'error') {
+                continue;
+            }
+
+            $rows[] = [
+                'referencia' => $d['reference'],
+                'status'     => $d['action'] === 'error' ? SyncRunDetail::STATUS_ERROR : SyncRunDetail::STATUS_EXCLUDED,
+                'motivo'     => $d['reason'],
+            ];
+        }
+
+        $this->detailRecorder->record($syncRun, $rows);
     }
 
     /**
@@ -235,8 +273,8 @@ final class LegacySyncProductosCommand extends Command
         int $excluidos,
         int $errores,
         string $status,
-    ): void {
-        SyncRun::query()->create([
+    ): SyncRun {
+        return SyncRun::query()->create([
             'entidad'     => 'productos',
             'extraidos'   => $extraidos,
             'staged'      => $staged,

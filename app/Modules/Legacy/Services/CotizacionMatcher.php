@@ -37,18 +37,19 @@ final class CotizacionMatcher
 
     /**
      * @param  list<int> $cotizacionIds ids internos de `legacy.cotizaciones` (esta corrida)
-     * @return array{matched: int, orphan: int, errores: int}
+     * @return array{matched: int, orphan: int, errores: int, details: list<array{referencia: string, status: string, motivo: string}>}
      */
     public function match(array $cotizacionIds): array
     {
         if ($cotizacionIds === []) {
-            return ['matched' => 0, 'orphan' => 0, 'errores' => 0];
+            return ['matched' => 0, 'orphan' => 0, 'errores' => 0, 'details' => []];
         }
 
         return DB::transaction(function () use ($cotizacionIds): array {
             $matched = 0;
             $orphan  = 0;
             $errores = 0;
+            $details = [];
 
             foreach (array_chunk($cotizacionIds, self::CHUNK_SIZE) as $idChunk) {
                 $cotizaciones = Cotizacion::query()->whereIn('id', $idChunk)->get();
@@ -68,26 +69,32 @@ final class CotizacionMatcher
                     $legacyClienteId = $cotizacion->icg_codcliente !== null
                         ? ($clienteIdsByCodigo[$cotizacion->icg_codcliente] ?? null)
                         : null;
+                    $referencia = $cotizacion->supresupuesto ?? "{$cotizacion->icg_numserie}-{$cotizacion->icg_numpresupuesto}";
 
                     try {
                         $cotizacion->legacy_cliente_id = $legacyClienteId;
                         $cotizacion->orphan            = $legacyClienteId === null;
                         $cotizacion->save();
-                    } catch (Throwable) {
+                    } catch (Throwable $e) {
                         $errores++;
+                        $details[] = ['referencia' => $referencia, 'status' => 'error', 'motivo' => $e->getMessage()];
 
                         continue;
                     }
 
                     if ($legacyClienteId === null) {
                         $orphan++;
+                        $motivo = $cotizacion->icg_codcliente === null
+                            ? 'sin icg_codcliente en ICG'
+                            : "icg_codcliente {$cotizacion->icg_codcliente} sin match en legacy.clientes";
+                        $details[] = ['referencia' => $referencia, 'status' => 'orphan', 'motivo' => $motivo];
                     } else {
                         $matched++;
                     }
                 }
             }
 
-            return ['matched' => $matched, 'orphan' => $orphan, 'errores' => $errores];
+            return ['matched' => $matched, 'orphan' => $orphan, 'errores' => $errores, 'details' => $details];
         });
     }
 

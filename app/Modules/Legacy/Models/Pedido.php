@@ -38,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null    $icg_numeroalbaran
  * @property bool        $orphan
  * @property \Carbon\Carbon|null $created_at
+ * @property string|null $comision
  * @property-read Cliente|null $cliente
  * @property-read \Illuminate\Database\Eloquent\Collection<int, PedidoItem> $items
  */
@@ -50,6 +51,8 @@ class Pedido extends Model
         'icg_numserie', 'icg_numpedido', 'icg_n', 'legacy_cliente_id', 'icg_codcliente',
         'fechapedido', 'fechaentrega', 'totneto', 'icg_codvendedor', 'idestado',
         'icg_seriealbaran', 'icg_numeroalbaran', 'orphan', 'created_at',
+        // SCRUM-842
+        'comision',
     ];
 
     /** @return array<string, string> */
@@ -61,6 +64,7 @@ class Pedido extends Model
             'totneto'      => 'decimal:2',
             'orphan'       => 'boolean',
             'created_at'   => 'datetime',
+            'comision'     => 'decimal:2',
         ];
     }
 

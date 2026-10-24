@@ -33,18 +33,19 @@ final class FacturaMatcher
 
     /**
      * @param  list<int> $facturaIds ids internos de `legacy.facturas` (esta corrida)
-     * @return array{matched: int, orphan: int, errores: int}
+     * @return array{matched: int, orphan: int, errores: int, details: list<array{referencia: string, status: string, motivo: string}>}
      */
     public function match(array $facturaIds): array
     {
         if ($facturaIds === []) {
-            return ['matched' => 0, 'orphan' => 0, 'errores' => 0];
+            return ['matched' => 0, 'orphan' => 0, 'errores' => 0, 'details' => []];
         }
 
         return DB::transaction(function () use ($facturaIds): array {
             $matched = 0;
             $orphan  = 0;
             $errores = 0;
+            $details = [];
 
             foreach (array_chunk($facturaIds, self::CHUNK_SIZE) as $idChunk) {
                 $facturas = Factura::query()->whereIn('id', $idChunk)->get();
@@ -64,26 +65,32 @@ final class FacturaMatcher
                     $legacyClienteId = $factura->icg_codcliente !== null
                         ? ($clienteIdsByCodigo[$factura->icg_codcliente] ?? null)
                         : null;
+                    $referencia = $factura->sufactura ?? "{$factura->icg_numserie}-{$factura->icg_numfactura}";
 
                     try {
                         $factura->legacy_cliente_id = $legacyClienteId;
                         $factura->orphan            = $legacyClienteId === null;
                         $factura->save();
-                    } catch (Throwable) {
+                    } catch (Throwable $e) {
                         $errores++;
+                        $details[] = ['referencia' => $referencia, 'status' => 'error', 'motivo' => $e->getMessage()];
 
                         continue;
                     }
 
                     if ($legacyClienteId === null) {
                         $orphan++;
+                        $motivo = $factura->icg_codcliente === null
+                            ? 'sin icg_codcliente en ICG'
+                            : "icg_codcliente {$factura->icg_codcliente} sin match en legacy.clientes";
+                        $details[] = ['referencia' => $referencia, 'status' => 'orphan', 'motivo' => $motivo];
                     } else {
                         $matched++;
                     }
                 }
             }
 
-            return ['matched' => $matched, 'orphan' => $orphan, 'errores' => $errores];
+            return ['matched' => $matched, 'orphan' => $orphan, 'errores' => $errores, 'details' => $details];
         });
     }
 

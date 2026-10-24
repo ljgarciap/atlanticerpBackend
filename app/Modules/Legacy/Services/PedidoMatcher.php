@@ -36,18 +36,19 @@ final class PedidoMatcher
 
     /**
      * @param  list<int> $pedidoIds ids internos de `legacy.pedidos` (esta corrida)
-     * @return array{matched: int, orphan: int, errores: int}
+     * @return array{matched: int, orphan: int, errores: int, details: list<array{referencia: string, status: string, motivo: string}>}
      */
     public function match(array $pedidoIds): array
     {
         if ($pedidoIds === []) {
-            return ['matched' => 0, 'orphan' => 0, 'errores' => 0];
+            return ['matched' => 0, 'orphan' => 0, 'errores' => 0, 'details' => []];
         }
 
         return DB::transaction(function () use ($pedidoIds): array {
             $matched = 0;
             $orphan  = 0;
             $errores = 0;
+            $details = [];
 
             foreach (array_chunk($pedidoIds, self::CHUNK_SIZE) as $idChunk) {
                 $pedidos = Pedido::query()->whereIn('id', $idChunk)->get();
@@ -67,26 +68,32 @@ final class PedidoMatcher
                     $legacyClienteId = $pedido->icg_codcliente !== null
                         ? ($clienteIdsByCodigo[$pedido->icg_codcliente] ?? null)
                         : null;
+                    $referencia = "{$pedido->icg_numserie}-{$pedido->icg_numpedido}";
 
                     try {
                         $pedido->legacy_cliente_id = $legacyClienteId;
                         $pedido->orphan            = $legacyClienteId === null;
                         $pedido->save();
-                    } catch (Throwable) {
+                    } catch (Throwable $e) {
                         $errores++;
+                        $details[] = ['referencia' => $referencia, 'status' => 'error', 'motivo' => $e->getMessage()];
 
                         continue;
                     }
 
                     if ($legacyClienteId === null) {
                         $orphan++;
+                        $motivo = $pedido->icg_codcliente === null
+                            ? 'sin icg_codcliente en ICG'
+                            : "icg_codcliente {$pedido->icg_codcliente} sin match en legacy.clientes";
+                        $details[] = ['referencia' => $referencia, 'status' => 'orphan', 'motivo' => $motivo];
                     } else {
                         $matched++;
                     }
                 }
             }
 
-            return ['matched' => $matched, 'orphan' => $orphan, 'errores' => $errores];
+            return ['matched' => $matched, 'orphan' => $orphan, 'errores' => $errores, 'details' => $details];
         });
     }
 

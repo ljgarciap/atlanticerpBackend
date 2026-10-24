@@ -168,6 +168,11 @@ final class CotizacionStagingLoader
             'icg_codvendedor'    => $row->icgCodvendedor,
             'idestado'           => $row->idestado,
             'supresupuesto'      => $row->supresupuesto,
+            // SCRUM-842 — a diferencia de legacy_cliente_id/orphan (solo el Matcher los toca),
+            // proyecto/promocion vienen del Extractor en cada corrida — sí van en el $update para
+            // que una segunda corrida los refresque si cambiaron en ICG.
+            'proyecto'           => $row->proyecto,
+            'promocion'          => $row->promocion,
             'created_at'         => $now,
         ], $rows);
 
@@ -177,7 +182,7 @@ final class CotizacionStagingLoader
                 ['icg_numserie', 'icg_numpresupuesto', 'icg_n', 'icg_version'],
                 [
                     'icg_codcliente', 'fecha', 'total_neto', 'total_bruto', 'icg_codvendedor',
-                    'idestado', 'supresupuesto',
+                    'idestado', 'supresupuesto', 'proyecto', 'promocion',
                 ],
             );
         }

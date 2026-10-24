@@ -22,6 +22,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $nombre_comercial
  * @property string      $razon_social
  * @property string|null $cif
+ * @property string|null $nif20       SCRUM-1137 — texto crudo de CLIENTES.NIF20
+ * @property string|null $ruc         SCRUM-1137 — RUC normalizado (TaxIdNormalizer)
+ * @property string|null $ruc_dv
+ * @property string|null $ruc_origen  nif20 | cif | ninguno
+ * @property string|null $ruc_estado  ok | truncado_posible | revisar
  * @property string|null $direccion
  * @property string|null $poblacion
  * @property string|null $provincia
@@ -54,6 +59,7 @@ class Cliente extends Model
         'icg_codcliente', 'nombre_comercial', 'razon_social', 'cif', 'direccion', 'poblacion',
         'provincia', 'pais', 'telefono1', 'telefono2', 'mobil', 'email', 'icg_codvendedor',
         'sub_client_id', 'match_status', 'bloqueado', 'fecha_modificado_icg',
+        'nif20', 'ruc', 'ruc_dv', 'ruc_origen', 'ruc_estado',
     ];
 
     /** @return array<string, string> */

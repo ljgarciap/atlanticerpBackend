@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\CotizacionExtractorContract;
 use App\Modules\Legacy\Data\CotizacionRow;
 use App\Modules\Legacy\Models\SyncRun;
 use App\Modules\Legacy\Services\CotizacionMatcher;
 use App\Modules\Legacy\Services\CotizacionStagingLoader;
+use App\Modules\Legacy\Services\SyncRunDetailRecorder;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -55,6 +57,7 @@ final class LegacySyncCotizacionesCommand extends Command
         private readonly CotizacionExtractorContract $extractor,
         private readonly CotizacionStagingLoader $stagingLoader,
         private readonly CotizacionMatcher $matcher,
+        private readonly SyncRunDetailRecorder $detailRecorder,
     ) {
         parent::__construct();
     }
@@ -68,7 +71,7 @@ final class LegacySyncCotizacionesCommand extends Command
         // docblock de la clase, "ITEMS PAGINADOS" — 512M sigue siendo margen de sobra para
         // cabeceras + una página de items a la vez, muy lejos del límite real del host que causó
         // el OOM real cuando SÍ se traían todos los items juntos.
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');
@@ -161,7 +164,7 @@ final class LegacySyncCotizacionesCommand extends Command
 
         $status = $matchResult['errores'] > 0 ? SyncRun::STATUS_PARTIAL : SyncRun::STATUS_SUCCESS;
 
-        $this->recordRun(
+        $syncRun = $this->recordRun(
             $startedAt, $start,
             extraidos: count($cotizaciones),
             staged: $stagingCounts['cotizaciones'],
@@ -172,12 +175,14 @@ final class LegacySyncCotizacionesCommand extends Command
             status: $status,
         );
 
+        $this->detailRecorder->record($syncRun, $matchResult['details']);
+
         return self::SUCCESS;
     }
 
     /**
      * @param array{cotizaciones: int, items: int, cotizacion_ids: list<int>} $stagingCounts
-     * @param array{matched: int, orphan: int, errores: int}                 $matchResult
+     * @param array{matched: int, orphan: int, errores: int, details: list<array{referencia: string, status: string, motivo: string}>} $matchResult
      */
     private function renderReport(int $cotizacionesExtraidas, int $itemsExtraidos, array $stagingCounts, array $matchResult): void
     {
@@ -203,8 +208,8 @@ final class LegacySyncCotizacionesCommand extends Command
         int $excluidos,
         int $errores,
         string $status,
-    ): void {
-        SyncRun::query()->create([
+    ): SyncRun {
+        return SyncRun::query()->create([
             'entidad'     => 'cotizaciones',
             'extraidos'   => $extraidos,
             'staged'      => $staged,

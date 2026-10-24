@@ -10,6 +10,7 @@ use App\Modules\Legacy\Data\FacturaRow;
 use App\Modules\Legacy\Models\Cliente;
 use App\Modules\Legacy\Models\Factura;
 use App\Modules\Legacy\Models\SyncRun;
+use App\Modules\Legacy\Models\SyncRunDetail;
 use App\Shared\Multitenancy\Tenant;
 use RuntimeException;
 use Tests\Feature\FeatureTestCase;
@@ -107,6 +108,12 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
 
         $orphanFactura = Factura::query()->where('icg_numfactura', 9001)->firstOrFail();
         $this->assertTrue($orphanFactura->orphan);
+
+        // SCRUM-816 — el motivo de la exclusión queda persistido para el dashboard, no solo
+        // impreso en consola.
+        $detail = SyncRunDetail::query()->where('sync_run_id', $run->id)->firstOrFail();
+        $this->assertSame('orphan', $detail->status);
+        $this->assertStringContainsString('555', (string) $detail->motivo);
     }
 
     public function test_falla_de_extraccion_registra_sync_run_failed_y_no_rompe_la_suite(): void
@@ -153,6 +160,32 @@ final class LegacySyncFacturasCommandTest extends FeatureTestCase
         $run = SyncRun::query()->firstOrFail();
         $this->assertSame(SyncRun::STATUS_FAILED, $run->status);
         $this->assertSame(1, $run->errores);
+    }
+
+    /** SCRUM-841 — los campos de Facturación Electrónica llegan hasta legacy.facturas. */
+    public function test_campos_de_facturacion_electronica_se_persisten(): void
+    {
+        Cliente::query()->create(['icg_codcliente' => 555, 'razon_social' => 'Cliente Legal SA']);
+        $row = self::facturaRow();
+        $extraction = new ExtractedFacturas(facturas: [new FacturaRow(
+            icgNumserie: $row->icgNumserie, icgNumfactura: $row->icgNumfactura, icgN: $row->icgN,
+            icgCodcliente: $row->icgCodcliente, icgCodvendedor: $row->icgCodvendedor,
+            fecha: null, totalNeto: $row->totalNeto, totalImpuestos: $row->totalImpuestos,
+            totalBruto: $row->totalBruto, sufactura: $row->sufactura,
+            feQr: 'https://dgi.gob.pa/qr/abc123', feAuthNumber: 'AUTH-0001',
+            feSerie: '0001', feNumero: '000123',
+            feFechaEmision: '2026-01-15T10:30:00', feFechaRecepcion: '2026-01-15T10:31:00',
+            feError: null, feEstado: 'aceptado',
+        )]);
+        $this->app->instance(FacturaExtractorContract::class, new FakeFacturaExtractor($extraction));
+
+        $this->artisan('legacy:sync-facturas', ['--tenant' => 'atlantic'])->assertExitCode(0);
+        $this->reactivateTenant();
+
+        $factura = Factura::query()->where('icg_numfactura', 9001)->firstOrFail();
+        $this->assertSame('https://dgi.gob.pa/qr/abc123', $factura->fe_qr);
+        $this->assertSame('AUTH-0001', $factura->fe_auth_number);
+        $this->assertSame('aceptado', $factura->fe_estado);
     }
 
     public function test_tenant_inexistente_falla_sin_tocar_nada(): void

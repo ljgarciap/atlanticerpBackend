@@ -34,6 +34,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $supresupuesto
  * @property bool        $orphan
  * @property \Carbon\Carbon|null $created_at
+ * @property string|null $proyecto
+ * @property string|null $promocion
  * @property-read Cliente|null $cliente
  * @property-read \Illuminate\Database\Eloquent\Collection<int, CotizacionItem> $items
  */
@@ -46,6 +48,8 @@ class Cotizacion extends Model
         'icg_numserie', 'icg_numpresupuesto', 'icg_n', 'icg_version', 'legacy_cliente_id',
         'icg_codcliente', 'fecha', 'total_neto', 'total_bruto', 'icg_codvendedor', 'idestado',
         'supresupuesto', 'orphan', 'created_at',
+        // SCRUM-842
+        'proyecto', 'promocion',
     ];
 
     /** @return array<string, string> */

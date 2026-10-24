@@ -26,6 +26,9 @@ final readonly class PedidoItemRow
         public ?float $cantidad,
         public ?float $precio,
         public ?float $total,
+        // L1 (pedidos gemelos): unidades que ICG aún tiene pendientes / ya servidas de esta línea (UNIDADESPEN/UNIDADESREC).
+        public ?float $unidadesPendientes = null,
+        public ?float $unidadesRecibidas = null,
     ) {
     }
 }

@@ -30,6 +30,26 @@ final class ClienteExtractorTest extends TestCase
         $this->assertSame(55, $cliente->icgCodvendedor);
     }
 
+    public function test_map_cliente_row_mapea_nif20(): void
+    {
+        $this->assertSame('155783782-2-2026DV35', ClienteExtractor::mapClienteRow(self::clienteRow(['NIF20' => ' 155783782-2-2026DV35 ']))->nif20);
+    }
+
+    public function test_map_cliente_row_nif20_vacio_o_ausente_es_null(): void
+    {
+        $this->assertNull(ClienteExtractor::mapClienteRow(self::clienteRow(['NIF20' => '   ']))->nif20);
+        $this->assertNull(ClienteExtractor::mapClienteRow(self::clienteRow(['NIF20' => null]))->nif20);
+
+        $row = self::clienteRow();
+        unset($row['NIF20']);
+        $this->assertNull(ClienteExtractor::mapClienteRow($row)->nif20);
+    }
+
+    public function test_clientes_query_selecciona_nif20(): void
+    {
+        $this->assertStringContainsString('c.NIF20', ClienteExtractor::clientesQuery());
+    }
+
     public function test_map_cliente_row_interpreta_bloqueado_t_como_true(): void
     {
         // 'T' confirmado contra ICG real 2026-08-17 (dev.atlanticerp.ai vía gateway VPN) — nunca 'V'.
@@ -177,6 +197,7 @@ final class ClienteExtractorTest extends TestCase
             'NOMBRECLIENTE'   => 'Cliente Legal SA',
             'NOMBRECOMERCIAL' => 'Cliente Comercial SA',
             'CIF'             => '8-123-456',
+            'NIF20'           => '8-123-456',
             'DIRECCION1'      => 'Calle 50',
             'POBLACION'       => 'Panamá',
             'PROVINCIA'       => 'Panamá',

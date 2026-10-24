@@ -168,6 +168,34 @@ final class AlbaranExtractorTest extends TestCase
         $this->assertStringContainsString('ALBVENTACAB', AlbaranExtractor::albaranesQuery());
     }
 
+    // ── SCRUM-842 — campo libre (OBSERVACIONES) ─────────────────────────────────────────────
+
+    public function test_albaranes_query_hace_left_join_a_camposlibres(): void
+    {
+        $query = AlbaranExtractor::albaranesQuery();
+
+        $this->assertStringContainsString('ALBVENTACAMPOSLIBRES', $query);
+        $this->assertStringContainsString('LEFT JOIN', $query);
+    }
+
+    public function test_map_albaran_row_mapea_observaciones(): void
+    {
+        $row = self::albaranRow(['OBSERVACIONES' => 'Entregar en horario matutino']);
+
+        $albaran = AlbaranExtractor::mapAlbaranRow($row);
+
+        $this->assertSame('Entregar en horario matutino', $albaran->observaciones);
+    }
+
+    public function test_map_albaran_row_sin_camposlibres_no_revienta(): void
+    {
+        $row = self::albaranRow();
+
+        $albaran = AlbaranExtractor::mapAlbaranRow($row);
+
+        $this->assertNull($albaran->observaciones);
+    }
+
     public function test_items_page_query_apunta_a_albventalin_paginada(): void
     {
         $query = AlbaranExtractor::itemsPageQuery();

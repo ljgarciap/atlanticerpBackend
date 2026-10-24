@@ -139,6 +139,51 @@ final class ClienteStagingLoaderTest extends FeatureTestCase
         $this->assertDatabaseHas('atlantic_legacy.clientes', ['icg_codcliente' => 600]);
     }
 
+    public function test_persiste_nif20_y_las_columnas_de_ruc_normalizado(): void
+    {
+        $loader = new ClienteStagingLoader();
+
+        $loader->load(new ExtractedClientes(clientes: [
+            self::rucRow(1, '155783782-2-', '155783782-2-2026DV35'),
+            self::rucRow(2, '6-712-881', null),
+            self::rucRow(3, 'RUC 1671600-', null),
+            self::rucRow(4, '155783782-2-', null),
+            self::rucRow(5, null, null),
+        ], contactos: []));
+
+        $this->assertDatabaseHas('atlantic_legacy.clientes', [
+            'icg_codcliente' => 1, 'nif20' => '155783782-2-2026DV35', 'ruc' => '155783782-2-2026',
+            'ruc_dv' => '35', 'ruc_origen' => 'nif20', 'ruc_estado' => 'ok',
+        ]);
+        $this->assertDatabaseHas('atlantic_legacy.clientes', [
+            'icg_codcliente' => 2, 'nif20' => null, 'ruc' => '6-712-881', 'ruc_dv' => null,
+            'ruc_origen' => 'cif', 'ruc_estado' => 'ok',
+        ]);
+        $this->assertDatabaseHas('atlantic_legacy.clientes', ['icg_codcliente' => 3, 'ruc_estado' => 'revisar', 'ruc_dv' => null]);
+        $this->assertDatabaseHas('atlantic_legacy.clientes', ['icg_codcliente' => 4, 'ruc_estado' => 'truncado_posible']);
+        $this->assertDatabaseHas('atlantic_legacy.clientes', ['icg_codcliente' => 5, 'ruc' => null, 'ruc_origen' => 'ninguno']);
+    }
+
+    public function test_re_correr_actualiza_las_columnas_de_ruc_cuando_cambia_nif20(): void
+    {
+        $loader = new ClienteStagingLoader();
+        $loader->load(new ExtractedClientes(clientes: [self::rucRow(1, '155783782-2-', null)], contactos: []));
+        $loader->load(new ExtractedClientes(clientes: [self::rucRow(1, '155783782-2-', '155783782-2-2026DV35')], contactos: []));
+
+        $this->assertSame(1, Cliente::query()->count());
+        $this->assertDatabaseHas('atlantic_legacy.clientes', [
+            'icg_codcliente' => 1, 'ruc' => '155783782-2-2026', 'ruc_dv' => '35', 'ruc_origen' => 'nif20', 'ruc_estado' => 'ok',
+        ]);
+    }
+
+    private static function rucRow(int $icgCodcliente, ?string $cif, ?string $nif20): ClienteRow
+    {
+        return new ClienteRow(
+            $icgCodcliente, null, "Cliente {$icgCodcliente} SA", $cif, null, null, null, null,
+            null, null, null, null, null, false, null, $nif20,
+        );
+    }
+
     private static function clienteRow(int $icgCodcliente): ClienteRow
     {
         return new ClienteRow(

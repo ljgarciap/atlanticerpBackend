@@ -28,6 +28,8 @@ final readonly class ClienteRow
         public ?int $icgCodvendedor,
         public bool $bloqueado,
         public ?DateTimeImmutable $fechaModificadoIcg,
+        /** SCRUM-1137: `CLIENTES.NIF20`, RUC completo (el CIF queda truncado a 12). Al final y con default para no romper llamadores posicionales. */
+        public ?string $nif20 = null,
     ) {
     }
 }

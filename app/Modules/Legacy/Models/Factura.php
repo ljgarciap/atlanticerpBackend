@@ -36,6 +36,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $sufactura
  * @property bool        $orphan
  * @property \Carbon\Carbon|null $created_at
+ * @property string|null $fe_qr
+ * @property string|null $fe_auth_number
+ * @property string|null $fe_serie
+ * @property string|null $fe_numero
+ * @property string|null $fe_fecha_emision
+ * @property string|null $fe_fecha_recepcion
+ * @property string|null $fe_error
+ * @property string|null $fe_estado
  * @property-read Cliente|null $cliente
  */
 class Factura extends Model
@@ -47,6 +55,9 @@ class Factura extends Model
         'icg_numserie', 'icg_numfactura', 'icg_n', 'legacy_cliente_id', 'icg_codcliente',
         'icg_codvendedor', 'fecha', 'total_neto', 'total_impuestos', 'total_bruto', 'sufactura',
         'orphan', 'created_at',
+        // SCRUM-841 — Facturación Electrónica
+        'fe_qr', 'fe_auth_number', 'fe_serie', 'fe_numero',
+        'fe_fecha_emision', 'fe_fecha_recepcion', 'fe_error', 'fe_estado',
     ];
 
     /** @return array<string, string> */

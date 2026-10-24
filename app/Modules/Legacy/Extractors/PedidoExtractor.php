@@ -73,13 +73,20 @@ final class PedidoExtractor implements PedidoExtractorContract
         ));
     }
 
+    /**
+     * SCRUM-842 — LEFT JOIN a PEDVENTACAMPOSLIBRES (COMISION), misma llave natural de 3 columnas
+     * que la cabecera. LEFT, nunca INNER: un pedido sin fila satélite igual se extrae completo,
+     * `comision` queda `null`.
+     */
     public static function pedidosQuery(): string
     {
         return <<<'SQL'
             SELECT p.NUMSERIE, p.NUMPEDIDO, p.N, p.CODCLIENTE, p.CODVENDEDOR,
                    p.FECHAPEDIDO, p.FECHAENTREGA, p.TOTNETO, p.IDESTADO,
-                   p.SERIEALBARAN, p.NUMEROALBARAN
+                   p.SERIEALBARAN, p.NUMEROALBARAN, cl.COMISION
             FROM PEDVENTACAB p
+            LEFT JOIN PEDVENTACAMPOSLIBRES cl
+                ON cl.NUMSERIE = p.NUMSERIE AND cl.NUMPEDIDO = p.NUMPEDIDO AND cl.N = p.N
             SQL;
     }
 
@@ -92,7 +99,7 @@ final class PedidoExtractor implements PedidoExtractorContract
     {
         return <<<'SQL'
             SELECT l.NUMSERIE, l.NUMPEDIDO, l.N, l.CODARTICULO, l.REFERENCIA,
-                   l.DESCRIPCION, l.UNIDADESTOTAL, l.PRECIO, l.TOTAL
+                   l.DESCRIPCION, l.UNIDADESTOTAL, l.PRECIO, l.TOTAL, l.UNIDADESPEN, l.UNIDADESREC
             FROM PEDVENTALIN l
             ORDER BY l.NUMSERIE, l.NUMPEDIDO, l.N
             OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
@@ -121,6 +128,7 @@ final class PedidoExtractor implements PedidoExtractorContract
             idestado: self::nullableString($row['IDESTADO'] ?? null),
             icgSeriealbaran: self::nullableString($row['SERIEALBARAN'] ?? null),
             icgNumeroalbaran: self::nullableInt($row['NUMEROALBARAN'] ?? null),
+            comision: self::nullableFloat($row['COMISION'] ?? null),
         );
     }
 
@@ -142,6 +150,8 @@ final class PedidoExtractor implements PedidoExtractorContract
             cantidad: self::nullableFloat($row['UNIDADESTOTAL'] ?? null),
             precio: self::nullableFloat($row['PRECIO'] ?? null),
             total: self::nullableFloat($row['TOTAL'] ?? null),
+            unidadesPendientes: self::nullableFloat($row['UNIDADESPEN'] ?? null),
+            unidadesRecibidas: self::nullableFloat($row['UNIDADESREC'] ?? null),
         );
     }
 

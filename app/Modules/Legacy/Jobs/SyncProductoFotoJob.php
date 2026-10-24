@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Legacy\Jobs;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\ArticuloFotoExtractorContract;
 use App\Modules\Legacy\Models\Producto;
 use App\Modules\Legacy\Services\CatalogPhotoLoader;
@@ -86,7 +87,7 @@ final class SyncProductoFotoJob implements ShouldQueue
         // el crash escapa esa protección por completo. Tras 3 reintentos, Horizon lo marca
         // MaxAttemptsExceededException, un mensaje que NO delata la causa real (memoria) — si esto
         // vuelve a pasar, revisar memoria antes que asumir un bug de datos.
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenant = Tenant::where('slug', $this->tenantSlug)->first();
 

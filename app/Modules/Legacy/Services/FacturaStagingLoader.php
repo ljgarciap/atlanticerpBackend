@@ -74,6 +74,19 @@ final class FacturaStagingLoader
             'total_impuestos'  => $row->totalImpuestos,
             'total_bruto'      => $row->totalBruto,
             'sufactura'        => $row->sufactura,
+            // SCRUM-841 — Facturación Electrónica. SÍ se incluyen en el $update (a diferencia de
+            // legacy_cliente_id/orphan): estos campos no dependen de ningún Matcher, vienen
+            // directo del Extractor en cada corrida, así que una segunda corrida debe poder
+            // refrescarlos (ej. una factura que se autoriza ante la DGI después de la primera
+            // corrida de import).
+            'fe_qr'               => $row->feQr,
+            'fe_auth_number'      => $row->feAuthNumber,
+            'fe_serie'            => $row->feSerie,
+            'fe_numero'           => $row->feNumero,
+            'fe_fecha_emision'    => $row->feFechaEmision,
+            'fe_fecha_recepcion'  => $row->feFechaRecepcion,
+            'fe_error'            => $row->feError,
+            'fe_estado'           => $row->feEstado,
             'created_at'       => $now,
         ], $rows);
 
@@ -84,6 +97,8 @@ final class FacturaStagingLoader
                 [
                     'icg_codcliente', 'icg_codvendedor', 'fecha', 'total_neto', 'total_impuestos',
                     'total_bruto', 'sufactura',
+                    'fe_qr', 'fe_auth_number', 'fe_serie', 'fe_numero',
+                    'fe_fecha_emision', 'fe_fecha_recepcion', 'fe_error', 'fe_estado',
                 ],
             );
         }

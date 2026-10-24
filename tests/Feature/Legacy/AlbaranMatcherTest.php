@@ -30,7 +30,10 @@ final class AlbaranMatcherTest extends FeatureTestCase
 
         $result = (new AlbaranMatcher())->match([$albaran->id]);
 
-        $this->assertSame(['matched' => 1, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(1, $result['matched']);
+        $this->assertSame(0, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertSame([], $result['details']);
         $albaran->refresh();
         $this->assertSame($cliente->id, $albaran->legacy_cliente_id);
         $this->assertFalse($albaran->orphan);
@@ -42,7 +45,11 @@ final class AlbaranMatcherTest extends FeatureTestCase
 
         $result = (new AlbaranMatcher())->match([$albaran->id]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 1, 'errores' => 0], $result);
+        $this->assertSame(0, $result['matched']);
+        $this->assertSame(1, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertCount(1, $result['details']);
+        $this->assertSame('orphan', $result['details'][0]['status']);
         $albaran->refresh();
         $this->assertNull($albaran->legacy_cliente_id);
         $this->assertTrue($albaran->orphan);
@@ -54,7 +61,11 @@ final class AlbaranMatcherTest extends FeatureTestCase
 
         $result = (new AlbaranMatcher())->match([$albaran->id]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 1, 'errores' => 0], $result);
+        $this->assertSame(0, $result['matched']);
+        $this->assertSame(1, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertCount(1, $result['details']);
+        $this->assertSame('orphan', $result['details'][0]['status']);
         $albaran->refresh();
         $this->assertTrue($albaran->orphan);
     }
@@ -63,7 +74,7 @@ final class AlbaranMatcherTest extends FeatureTestCase
     {
         $result = (new AlbaranMatcher())->match([]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(['matched' => 0, 'orphan' => 0, 'errores' => 0, 'details' => []], $result);
     }
 
     public function test_matchea_multiples_albaranes_del_mismo_cliente(): void
@@ -74,7 +85,9 @@ final class AlbaranMatcherTest extends FeatureTestCase
 
         $result = (new AlbaranMatcher())->match([$a1->id, $a2->id]);
 
-        $this->assertSame(['matched' => 2, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(2, $result['matched']);
+        $this->assertSame(0, $result['orphan']);
+        $this->assertSame([], $result['details']);
     }
 
     private static function makeAlbaran(

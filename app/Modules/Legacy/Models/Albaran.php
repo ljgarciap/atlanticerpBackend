@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null    $icg_numfac
  * @property bool        $orphan
  * @property \Carbon\Carbon|null $created_at
+ * @property string|null $observaciones
  * @property-read Cliente|null $cliente
  * @property-read \Illuminate\Database\Eloquent\Collection<int, AlbaranItem> $items
  */
@@ -49,6 +50,8 @@ class Albaran extends Model
         'icg_numserie', 'icg_numalbaran', 'icg_n', 'legacy_cliente_id', 'icg_codcliente',
         'fecha', 'totalneto', 'facturado', 'icg_codvendedor', 'icg_numseriefac', 'icg_numfac',
         'orphan', 'created_at',
+        // SCRUM-842
+        'observaciones',
     ];
 
     /** @return array<string, string> */

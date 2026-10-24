@@ -103,6 +103,59 @@ final class FacturaExtractorTest extends TestCase
         $this->assertStringContainsString('FACTURASVENTA', FacturaExtractor::facturasQuery());
     }
 
+    // ── SCRUM-841 — Facturación Electrónica ────────────────────────────────────────────────
+
+    public function test_facturas_query_hace_left_join_a_camposlibres(): void
+    {
+        $query = FacturaExtractor::facturasQuery();
+
+        $this->assertStringContainsString('FACTURASVENTACAMPOSLIBRES', $query);
+        $this->assertStringContainsString('LEFT JOIN', $query);
+    }
+
+    public function test_map_factura_row_mapea_campos_de_facturacion_electronica(): void
+    {
+        $row = self::facturaRow([
+            'FEQR' => 'https://dgi.gob.pa/qr/abc123',
+            'FEAUTHNUMBER' => 'AUTH-0001',
+            'FESERIE' => '0001',
+            'FENUMERO' => '000123',
+            'FEFECHAEMISON' => '2026-01-15T10:30:00',
+            'FEFECHARECEPCION' => '2026-01-15T10:31:00',
+            'FEERROR' => null,
+            'FEESTADO' => 'aceptado',
+        ]);
+
+        $factura = FacturaExtractor::mapFacturaRow($row);
+
+        $this->assertSame('https://dgi.gob.pa/qr/abc123', $factura->feQr);
+        $this->assertSame('AUTH-0001', $factura->feAuthNumber);
+        $this->assertSame('0001', $factura->feSerie);
+        $this->assertSame('000123', $factura->feNumero);
+        $this->assertSame('2026-01-15T10:30:00', $factura->feFechaEmision);
+        $this->assertSame('2026-01-15T10:31:00', $factura->feFechaRecepcion);
+        $this->assertNull($factura->feError);
+        $this->assertSame('aceptado', $factura->feEstado);
+    }
+
+    /**
+     * Factura sin fila en FACTURASVENTACAMPOSLIBRES (LEFT JOIN sin match) — todos los campos `fe_*`
+     * quedan null, el resto de la fila se mapea normalmente. No se envía ninguna clave `FE*` en el
+     * array (así llega un LEFT JOIN sin match desde el driver real), no solo valores null.
+     */
+    public function test_map_factura_row_sin_camposlibres_no_revienta(): void
+    {
+        $row = self::facturaRow();
+        unset($row['FEQR'], $row['FEAUTHNUMBER'], $row['FESERIE'], $row['FENUMERO'],
+            $row['FEFECHAEMISON'], $row['FEFECHARECEPCION'], $row['FEERROR'], $row['FEESTADO']);
+
+        $factura = FacturaExtractor::mapFacturaRow($row);
+
+        $this->assertNull($factura->feQr);
+        $this->assertNull($factura->feEstado);
+        $this->assertSame(555, $factura->icgCodcliente); // el resto de la fila no se ve afectado
+    }
+
     /** @param array<string, mixed> $overrides @return array<string, mixed> */
     private static function facturaRow(array $overrides = []): array
     {
