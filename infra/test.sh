@@ -39,6 +39,7 @@ while IFS='=' read -r key value; do
     case "$key" in
         DB_USERNAME) TEST_DB_USERNAME="$value" ;;
         DB_DATABASE) TEST_DB_DATABASE="$value" ;;
+        DB_HOST) TEST_DB_HOST="$value" ;;
     esac
 done < "$ENV_TESTING"
 
@@ -53,7 +54,7 @@ done < "$ENV_TESTING"
 # atlantic_crm, etc.) los crea `TenantSeeder` → `tenant:create` →
 # `CREATE SCHEMA IF NOT EXISTS` + migrate del path `database/migrations/tenant`,
 # y ESO nunca se dropea entre corridas: el Postgres de este compose es el mismo
-# que usa el desarrollo local real, persistente entre corridas de test.
+# que usa el desarrollo local real, persistente entre corridas de test (la BASE de pruebas es otra: ver más abajo).
 #
 # Resultado real (2026-07-16): filas huérfanas de sesiones anteriores, tablas
 # de una rama no mergeada quedando registradas en el Postgres compartido, y una
@@ -72,6 +73,30 @@ done < "$ENV_TESTING"
 # el estado previo sea consistente, solo de que el schema exista.
 : "${TEST_DB_USERNAME:?DB_USERNAME no encontrado en $ENV_TESTING}"
 : "${TEST_DB_DATABASE:?DB_DATABASE no encontrado en $ENV_TESTING}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Base de datos APARTE para las pruebas (2026-10-24). Antes las pruebas corrían contra `atlanticerp`, la MISMA base del
+# desarrollo local, y el DROP de schemas de abajo la dejaba vacía en cada corrida (hubo que volver a sembrar `tenant:create` +
+# `db:seed` cada vez). Ahora el script solo opera sobre una base cuyo nombre termina en `_test` y que vive en el Postgres del
+# compose local; si no, se niega a borrar nada. Así no se puede apuntar por error a una base con datos que importan
+# (la de desarrollo, la de un entorno remoto o la de producción).
+if [[ "$TEST_DB_DATABASE" != *_test ]]; then
+    echo "ERROR: DB_DATABASE='$TEST_DB_DATABASE' en $ENV_TESTING no termina en _test. Este script borra TODOS los schemas de esa" >&2
+    echo "       base antes de correr; solo se permite sobre una base de pruebas dedicada (p. ej. atlanticerp_test)." >&2
+    exit 1
+fi
+if [ "${TEST_DB_HOST:-}" != "postgres" ]; then
+    echo "ERROR: DB_HOST='${TEST_DB_HOST:-}' en $ENV_TESTING no es el servicio local 'postgres' del compose; se aborta sin borrar nada." >&2
+    exit 1
+fi
+
+# La crea si falta (el rol del compose local es superusuario; se conecta a la base `postgres` para poder crearla).
+if [ "$(docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T postgres \
+        psql -U "$TEST_DB_USERNAME" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$TEST_DB_DATABASE'" </dev/null)" != "1" ]; then
+    echo "infra/test.sh: creando la base de pruebas '$TEST_DB_DATABASE'..."
+    docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T postgres \
+        psql -v ON_ERROR_STOP=1 -U "$TEST_DB_USERNAME" -d postgres -c "CREATE DATABASE \"$TEST_DB_DATABASE\"" </dev/null
+fi
 
 read -r -d '' DROP_TENANT_SCHEMAS_SQL <<'SQL' || true
 DO $$
@@ -92,7 +117,7 @@ SQL
 
 echo "infra/test.sh: dropeando schemas de tenant para arrancar de un estado limpio..."
 docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T postgres \
-    psql -v ON_ERROR_STOP=1 -U "$TEST_DB_USERNAME" -d "$TEST_DB_DATABASE" -c "$DROP_TENANT_SCHEMAS_SQL"
+    psql -v ON_ERROR_STOP=1 -U "$TEST_DB_USERNAME" -d "$TEST_DB_DATABASE" -c "$DROP_TENANT_SCHEMAS_SQL" </dev/null
 
 # memory_limit=512M (2026-07-22, Batch A2 de SCRUM-329) — la suite COMPLETA corrida en un solo
 # proceso PHP acumula uso de memoria de dompdf entre tests (Cpdf.php cachea fuentes/métricas sin
