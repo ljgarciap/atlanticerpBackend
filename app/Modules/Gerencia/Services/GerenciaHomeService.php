@@ -479,7 +479,7 @@ final class GerenciaHomeService
         $vd = [
             'en_final_stage' => PipelineCard::where('stage', 'proposal')->count(),
             'estancados' => PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
-                ->where('stage_changed_at', '<', Carbon::now()->subDays(PipelineCard::STAGNANT_THRESHOLD_DAYS))
+                ->where('stage_changed_at', '<', Carbon::now()->subDays(app(\App\Modules\CRM\Services\CrmSettingsService::class)->pipelineEstancadoDias()))
                 ->count(),
             'monto_cotizado_mes' => (float) PipelineCard::whereBetween('created_at', [$inicioMes, $finMes])
                 ->sum('amount'),

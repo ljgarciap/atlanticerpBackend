@@ -66,6 +66,10 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Memo por petición de los ajustes de CRM (`PipelineCard::isStagnant()` se evalúa por tarjeta; sin esto sería una consulta por tarjeta).
+        $this->app->scoped(\App\Modules\CRM\Services\CrmSettingsService::class);
+        $this->app->scoped(\App\Modules\Compras\Services\ComprasThresholds::class);
+
         // SCRUM-750 — implementación real de producción (conexión legacy_icg, SQL Server). Los
         // Feature tests de App\Console\Commands\LegacySyncProductosCommand sobreescriben este
         // bind con `$this->app->instance(ProductoExtractorContract::class, $fake)` para no

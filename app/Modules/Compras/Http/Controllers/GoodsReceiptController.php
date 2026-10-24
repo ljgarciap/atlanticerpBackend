@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Compras\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\AdminCont\Services\ItbmsRateResolver;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
@@ -35,8 +36,6 @@ use App\Modules\Bodega\Models\Warehouse;
  */
 final class GoodsReceiptController extends Controller
 {
-    private const ITBMS_RATE_LOCAL = 0.07;
-
     public function __construct(
         private readonly GoodsReceiptConfirmationService $confirmation,
     ) {}
@@ -306,6 +305,8 @@ final class GoodsReceiptController extends Controller
         $existingWasConfirmed = $existing !== null && $existing->lines->contains(fn ($l) => ! $l->isPending());
         $shouldConfirmNow = $order->status === PurchaseOrder::STATUS_RECIBIDO || $existingWasConfirmed;
         $providerIsLocal = $order->provider?->origin === Provider::ORIGIN_LOCAL;
+        // Tasa de ITBMS de un proveedor local: la general del catálogo fiscal (Configuración Fiscal), no un 7% fijo en código.
+        $localItbmsRate = $providerIsLocal ? ItbmsRateResolver::defaultRate()->porcentaje / 100 : 0.0;
         /** @var array<int, array{catalog_product_id: int, quantity: int, unit_cost: float, warehouse_id: int}> $lines */
         $totalLineValue = collect($lines)->sum(fn (array $l) => $l['quantity'] * $l['unit_cost']);
         $importCostTotal = $providerIsLocal ? 0.0 : (float) ($validated['import_cost_total'] ?? 0);
@@ -315,7 +316,7 @@ final class GoodsReceiptController extends Controller
         $shippingTotal   = $importCostTotal + $freightTotal + $handlingTotal + $otherCostsTotal;
 
         $receipt = DB::transaction(function () use (
-            $order, $existing, $validated, $lines, $providerIsLocal, $totalLineValue, $shippingTotal,
+            $order, $existing, $validated, $lines, $providerIsLocal, $localItbmsRate, $totalLineValue, $shippingTotal,
             $importCostTotal, $freightTotal, $handlingTotal, $otherCostsTotal,
             $shouldConfirmNow, $user
         ): PurchaseOrderReceipt {
@@ -366,7 +367,7 @@ final class GoodsReceiptController extends Controller
                 $handlingSharePerUnit = 0.0;
                 $otherCostSharePerUnit = 0.0;
                 if ($providerIsLocal) {
-                    $itbmsAmount = round($lineValue * self::ITBMS_RATE_LOCAL, 2);
+                    $itbmsAmount = round($lineValue * $localItbmsRate, 2);
                     $effectiveUnitCost = $unitCost + ($itbmsAmount / $quantity);
                 } elseif ($shippingTotal > 0 && $totalLineValue > 0) {
                     $ratio = $lineValue / $totalLineValue;

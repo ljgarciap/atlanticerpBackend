@@ -48,7 +48,6 @@ class PipelineCard extends Model
 {
     use LogsAuditTrail;
 
-    public const STAGNANT_THRESHOLD_DAYS = 15;
 
     public const NON_EDITABLE_STAGE = 'lost';
 
@@ -276,7 +275,7 @@ class PipelineCard extends Model
 
     public function isStagnant(): bool
     {
-        return $this->daysInStage() > self::STAGNANT_THRESHOLD_DAYS;
+        return $this->daysInStage() > app(\App\Modules\CRM\Services\CrmSettingsService::class)->pipelineEstancadoDias();
     }
 
     public function hasArchitectContact(): bool

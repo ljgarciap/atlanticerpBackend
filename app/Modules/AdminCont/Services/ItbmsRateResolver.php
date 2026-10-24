@@ -14,9 +14,8 @@ use Illuminate\Database\Eloquent\Collection;
  * conectarse nunca a `admin_contab.itbms_rates` (Configuración Fiscal, SCRUM-635/636) — cerrado acá,
  * ver uso en `Quote::itbms()` y `InvoiceService::confirm()`.
  *
- * Nota: `GoodsReceiptController::ITBMS_RATE_LOCAL` (Compras) tiene el mismo hardcode al 7% y NO se
- * toca en este batch — está fuera del alcance de Notas Crédito y Devoluciones, queda como deuda
- * técnica aparte a resolver cuando se retome el backlog de Compras.
+ * Compras (ingreso de mercancía de un proveedor local) también la usa: `GoodsReceiptController` lee `defaultRate()` en vez de un 7% fijo
+ * (Fase 1 del aislamiento del núcleo, bloque C).
  */
 class ItbmsRateResolver
 {

@@ -101,9 +101,6 @@ class PurchaseOrder extends Model
      */
     public const ORIGIN_SERVICIOS = 'servicios';
 
-    /** REQ-139: umbral de días "Por aprobar" para considerar la orden crítica. */
-    private const CRITICAL_DAYS_POR_APROBAR = 3;
-
     public const PAYMENT_STATUS_PENDIENTE = 'pendiente';
 
     public const PAYMENT_STATUS_PARCIAL = 'parcial';
@@ -507,7 +504,7 @@ class PurchaseOrder extends Model
     public function isCritical(): bool
     {
         if ($this->status === self::STATUS_POR_APROBAR) {
-            return $this->status_changed_at->diffInDays(now()) >= self::CRITICAL_DAYS_POR_APROBAR;
+            return $this->status_changed_at->diffInDays(now()) >= app(\App\Modules\Compras\Services\ComprasThresholds::class)->criticalDaysPorAprobar();
         }
 
         if ($this->status !== self::STATUS_RECIBIDO && $this->estimated_arrival_date !== null) {

@@ -24,6 +24,7 @@ class AdminContSettingsRequest extends FormRequest
         return [
             'fraude_monto_desviaciones'             => ['sometimes', 'integer', 'min:1', 'max:10'],
             'fraude_monto_ventana_dias'              => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'comision_pendiente_dias'                => ['sometimes', 'integer', 'min:1', 'max:365'],
             'fraude_aprobaciones_repetidas_n'        => ['sometimes', 'integer', 'min:1', 'max:1000'],
             'fraude_aprobaciones_repetidas_minutos'  => ['sometimes', 'integer', 'min:1', 'max:1440'],
         ];

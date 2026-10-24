@@ -53,6 +53,7 @@ final class ComprasSettingsController extends Controller
             'low_rating_threshold' => $settings->low_rating_threshold,
             'primary_approver_user_id' => $settings->primary_approver_user_id,
             'claim_attention_days' => $settings->claim_attention_days,
+            'critical_days_por_aprobar' => $settings->critical_days_por_aprobar,
             'replacement_margin_threshold' => $settings->replacement_margin_threshold,
             'similarity_weight_text' => $settings->similarity_weight_text,
             'similarity_weight_price' => $settings->similarity_weight_price,

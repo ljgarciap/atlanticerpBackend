@@ -16,6 +16,19 @@ use App\Shared\Auth\JwtActor;
  */
 final class CrmSettingsService
 {
+    /** Fase 1 (aislamiento del núcleo): antes `PipelineCard::STAGNANT_THRESHOLD_DAYS = 15` fijo en código. */
+    private const KEY_PIPELINE_ESTANCADO_DIAS = 'pipeline_estancado_dias';
+
+    private const DEFAULT_PIPELINE_ESTANCADO_DIAS = 15;
+
+    /** Antes `ClientsService::STALE_CONTACT_DAYS = 60` fijo en código. */
+    private const KEY_CLIENTE_CONTACTO_OBSOLETO_DIAS = 'cliente_contacto_obsoleto_dias';
+
+    private const DEFAULT_CLIENTE_CONTACTO_OBSOLETO_DIAS = 60;
+
+    /** Memo por petición (el servicio es `scoped`): `PipelineCard::isStagnant()` se evalúa por tarjeta y sin esto sería una consulta por tarjeta. */
+    private ?int $estancadoDiasMemo = null;
+
     private const KEY_PROXIMO_DIAS = 'entrega_proxima_dias';
 
     /** REQ original (SCRUM-14/CRM Home): "próxima a vencer" = entrega dentro de 3 días. */
@@ -53,6 +66,18 @@ final class CrmSettingsService
     private const DEFAULT_CATALOG_PDF_RETENTION_DIAS = 7;
 
     /** Días hacia adelante desde hoy que cuentan como "próximo a vencer" (Dashboard + filtro urgency=proximo). */
+    /** Días en una misma etapa a partir de los cuales una tarjeta del Pipeline se considera estancada (estrictamente mayor). */
+    public function pipelineEstancadoDias(): int
+    {
+        return $this->estancadoDiasMemo ??= $this->intSetting(self::KEY_PIPELINE_ESTANCADO_DIAS, self::DEFAULT_PIPELINE_ESTANCADO_DIAS);
+    }
+
+    /** Días sin contacto a partir de los cuales un cliente se marca como «contacto obsoleto» (estrictamente mayor). */
+    public function clienteContactoObsoletoDias(): int
+    {
+        return $this->intSetting(self::KEY_CLIENTE_CONTACTO_OBSOLETO_DIAS, self::DEFAULT_CLIENTE_CONTACTO_OBSOLETO_DIAS);
+    }
+
     public function proximoDias(): int
     {
         return $this->intSetting(self::KEY_PROXIMO_DIAS, self::DEFAULT_PROXIMO_DIAS);
@@ -103,6 +128,8 @@ final class CrmSettingsService
     {
         return [
             'entrega_proxima_dias' => $this->proximoDias(),
+            'pipeline_estancado_dias' => $this->pipelineEstancadoDias(),
+            'cliente_contacto_obsoleto_dias' => $this->clienteContactoObsoletoDias(),
             'freshness_recent_dias' => $this->freshnessRecentDias(),
             'freshness_stale_dias' => $this->freshnessStaleDias(),
             'catalog_pdf_max_single_products' => $this->catalogPdfMaxSingleProducts(),
@@ -117,6 +144,8 @@ final class CrmSettingsService
     {
         $map = [
             'entrega_proxima_dias' => self::KEY_PROXIMO_DIAS,
+            'pipeline_estancado_dias' => self::KEY_PIPELINE_ESTANCADO_DIAS,
+            'cliente_contacto_obsoleto_dias' => self::KEY_CLIENTE_CONTACTO_OBSOLETO_DIAS,
             'freshness_recent_dias' => self::KEY_FRESHNESS_RECENT_DIAS,
             'freshness_stale_dias' => self::KEY_FRESHNESS_STALE_DIAS,
             'catalog_pdf_max_single_products' => self::KEY_CATALOG_PDF_MAX_SINGLE,
@@ -135,6 +164,8 @@ final class CrmSettingsService
                 ['value' => (string) $validated[$apiField]],
             );
         }
+
+        $this->estancadoDiasMemo = null;
     }
 
     private function intSetting(string $key, int $default): int

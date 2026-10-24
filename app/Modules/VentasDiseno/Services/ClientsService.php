@@ -21,7 +21,6 @@ use Illuminate\Support\Facades\DB;
  */
 final class ClientsService
 {
-    private const STALE_CONTACT_DAYS = 60;
 
     private const ACTIVE_STAGES = ['lead', 'design', 'quote', 'proposal'];
 
@@ -70,7 +69,7 @@ final class ClientsService
         if (! empty($filters['stale'])) {
             /** @var Collection<int, array<string, mixed>> $rows */
             $rows = $rows->filter(
-                fn (array $r): bool => $r['last_contact_days'] === null || $r['last_contact_days'] > self::STALE_CONTACT_DAYS
+                fn (array $r): bool => $r['last_contact_days'] === null || $r['last_contact_days'] > app(\App\Modules\CRM\Services\CrmSettingsService::class)->clienteContactoObsoletoDias()
             )->values();
         }
 
