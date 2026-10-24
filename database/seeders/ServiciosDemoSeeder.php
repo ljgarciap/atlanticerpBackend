@@ -29,6 +29,16 @@ class ServiciosDemoSeeder extends Seeder
 {
     private const DEMO_MARKER = '[DEMO]';
 
+    /**
+     * Para tests: siembra los tickets demo SIN la guarda de `testing` de run() y con el tenant ya activo (el llamador
+     * lo activa). Corre dentro de la transacción del test, así que se revierte sola. Los tests que necesitan tickets
+     * de ejemplo lo piden explícitamente en vez de depender de un seed global que `testing` se salta a propósito.
+     */
+    public function seedParaTests(): void
+    {
+        $this->seed();
+    }
+
     public function run(): void
     {
         if (app()->environment('testing')) {
@@ -54,7 +64,7 @@ class ServiciosDemoSeeder extends Seeder
     private function seed(): void
     {
         if (Ticket::where('descripcion', 'like', self::DEMO_MARKER . '%')->exists()) {
-            $this->command->info('Servicios demo tickets already seeded — skipped.');
+            $this->command?->info('Servicios demo tickets already seeded — skipped.');
             return;
         }
 
@@ -154,6 +164,6 @@ class ServiciosDemoSeeder extends Seeder
             ]);
         }
 
-        $this->command->info('Servicios demo tickets seeded: ' . count($rows) . ' tickets.');
+        $this->command?->info('Servicios demo tickets seeded: ' . count($rows) . ' tickets.');
     }
 }

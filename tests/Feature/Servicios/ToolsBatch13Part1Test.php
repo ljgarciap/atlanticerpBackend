@@ -116,7 +116,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $porPersona = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/servicios/tools?search=Vergara')
+            ->getJson('/api/servicios/tools?search=Tecnico+Servicios')
             ->assertStatus(200);
         $this->assertContains('COD-HER-200', collect($porPersona->json('data'))->pluck('codigo_unico')->all());
 

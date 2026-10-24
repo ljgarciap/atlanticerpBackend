@@ -36,6 +36,7 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
     {
         parent::setUp();
         $this->activateTenant();
+        (new \Database\Seeders\ServiciosDemoSeeder)->seedParaTests();
     }
 
     private function activateTenant(): void

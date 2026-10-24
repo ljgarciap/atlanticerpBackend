@@ -30,6 +30,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
     {
         parent::setUp();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        (new \Database\Seeders\ServiciosDemoSeeder)->seedParaTests();
         Carbon::setTestNow(Carbon::parse(self::FROZEN_NOW, 'UTC'));
     }
 
@@ -177,7 +178,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
                 'satisfaccion_promedio' => 5.0, 'incidencias_puntualidad' => 0, 'calificacion_actitud' => 5.0,
             ])
             ->assertStatus(200)
-            ->assertJsonPath('data.updated_by', 'Daniela');
+            ->assertJsonPath('data.updated_by', 'Gerencia');
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(1, CommissionCapture::where('internal_technician_id', $id)->count());
