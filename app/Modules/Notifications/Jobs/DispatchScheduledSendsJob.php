@@ -25,6 +25,16 @@ final class DispatchScheduledSendsJob implements ShouldQueue
 
     public int $tries = 3;
 
+    /**
+     * SCRUM-1036 (R-08): espera creciente entre reintentos (estándar del proyecto, igual que BaseAiJob), en vez del reintento inmediato.
+     *
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [5, 30, 120];
+    }
+
     public function __construct(private readonly string $tenantSlug)
     {
     }

@@ -67,6 +67,18 @@ class NotificationSend extends Model
      */
     public const SOURCE_CRM_DASHBOARD_PROPOSAL_REMINDER = 'crm_dashboard_proposal_due';
 
+    /**
+     * SCRUM-998 — el ZIP de volúmenes del Catálogo (PDF grande generado en segundo plano) terminó o falló:
+     * un send al solicitante, canal `in_app`, con el enlace a la descarga en `cta_url`.
+     */
+    public const SOURCE_CATALOG_PDF_EXPORT = 'catalog_pdf_export';
+
+    /**
+     * SCRUM-1186 — la DGI rechazó una factura o nota de crédito en producción: un send por transmisión rechazada, solo canal `email`,
+     * a los usuarios de `fiscal_settings.fe_rechazo_notificar_user_ids`. `source_ref` = «{factura|nota_credito}:{id}:tx:{id de la transmisión}».
+     */
+    public const SOURCE_FE_DOCUMENTO_RECHAZADO = 'fe_documento_rechazado';
+
     public const CHANNEL_IN_APP = 'in_app';
     public const CHANNEL_EMAIL  = 'email';
 
