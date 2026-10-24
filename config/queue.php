@@ -73,6 +73,18 @@ return [
             'after_commit' => false,
         ],
 
+        // SCRUM-998 — jobs de minutos (ZIP de volúmenes del Catálogo, `GenerateCatalogPdfVolumesJob`). La conexión `redis` normal
+        // tiene `retry_after` = 90 s: un job más largo se liberaría a OTRO worker mientras sigue corriendo (duplicado). Esta
+        // conexión usa la misma Redis con un `retry_after` de 130 min, mayor que el `$timeout` de 120 min del job.
+        'redis-long' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'pdf',
+            'retry_after' => (int) env('REDIS_LONG_QUEUE_RETRY_AFTER', 7800),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],

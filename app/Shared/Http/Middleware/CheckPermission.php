@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Http\Middleware;
 
+use App\Shared\Services\AuditService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -46,6 +47,15 @@ class CheckPermission
                 return $next($request);
             }
         }
+
+        // SCRUM-806 (REQ-631, Epic SCRUM-788) — sin esto, un intento repetido de acceder a rutas
+        // sin permiso (reconocimiento previo a un fraude) no dejaba ningún rastro en audit_logs.
+        app(AuditService::class)->log(
+            action:     AuditService::SECURITY_ACCESS_DENIED,
+            entityType: 'route',
+            entityId:   $request->path(),
+            metadata:   ['required_permissions' => $required],
+        );
 
         return response()->json(['message' => trans('auth.unauthorized')], 403);
     }

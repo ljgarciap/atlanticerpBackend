@@ -28,28 +28,25 @@
          crece solo con la columna más alta, sin adivinar un número fijo. El offset visual original
          (columna izquierda arranca más abajo que la derecha, alineada bajo el título) se preserva
          con padding-top en vez de top absoluto. --}}
-    @page { margin: 70px 40px 45px 40px; }
+    {{-- SCRUM-887/SCRUM-893 — unificado con el modelo `servicios/service-quote-pdf.blade.php`:
+         logo real vía imagen en vez del ícono de círculos CSS + "Powered by AtlanticERP", encabezado/pie
+         reales con el MISMO alto/mecanismo que el modelo (antes tenía uno propio, más angosto, con
+         texto de marca distinto). `.doc-header`/`.brand-row`/`.brand-cell`/`.brand-name`/
+         `.brand-line` vienen de `pdf.partials.styles` — ver ese archivo. --}}
+    @page { margin: 95px 40px 60px 40px; }
     body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #2a2520; margin: 0; }
+    @include('pdf.partials.styles')
 
-    .doc-header { position: fixed; top: -55px; left: 0; right: 0; height: 34px; }
-
-    /* Marca (ícono + ATLANTIC + Powered by AtlanticERP) — igual a estatus-pedido-pdf.blade.php */
-    .brand-row { position: relative; height: 30px; margin-bottom: 4px; }
-    .brand-icon { position: absolute; left: 0; top: 2px; width: 22px; height: 22px; }
-    .brand-icon span { position: absolute; width: 14px; height: 14px; border-radius: 50%; opacity: 0.85; }
-    .brand-icon .c1 { background: #5BA5A0; left: 0; top: 4px; }
-    .brand-icon .c2 { background: #9fc54d; left: 8px; top: 0; }
-    .brand-icon .c3 { background: #3D7E7A; left: 8px; top: 8px; }
-    .brand-text { margin-left: 28px; }
-    .brand-name { font-size: 18px; font-weight: bold; color: #5BA5A0; line-height: 1.1; }
-    .brand-sub { color: #6b7280; font-size: 9px; }
-
-    .doc-title { font-size: 20px; font-weight: bold; color: #5BA5A0; margin-top: 14px; }
+    .doc-title { font-size: 20px; font-weight: bold; color: #5BA5A0; margin-top: 4px; }
 
     /* Bloque de datos generales — izq. datos de cliente, der. datos de guía/logística. Alto
        dinámico (display:table), no min-height fijo — ver nota SCRUM-783 arriba del bloque HTML. */
     .meta-block { display: table; width: 100%; margin: 14px 0 18px; border-bottom: 3px solid #5BA5A0; padding-bottom: 12px; }
-    .meta-left { display: table-cell; width: 52%; vertical-align: top; padding-top: 34px; }
+    {{-- SCRUM-887 (rebote 2026-09-16, 3er rebote): Daniela pidió que las 2 columnas queden
+         alineadas en su parte superior como una sola sección — se quita el padding-top:34px
+         que las desalineaba a propósito (offset heredado de SCRUM-783, cuando el mockup pedía
+         la columna izquierda a la altura del título en vez de a la altura del logo). --}}
+    .meta-left { display: table-cell; width: 52%; vertical-align: top; }
     .meta-right { display: table-cell; width: 48%; vertical-align: top; text-align: left; }
     .meta-line { margin-bottom: 6px; font-size: 10.5px; }
     .meta-line .value { font-weight: bold; }
@@ -58,17 +55,36 @@
     table.lines { width: 100%; border-collapse: collapse; margin-top: 8px; }
     table.lines th { background: #E3F0EE; color: #3D7E7A; text-align: left; padding: 6px 8px; font-size: 9px; text-transform: uppercase; }
     table.lines td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
-    .no-prices { color: #9ca3af; font-size: 9px; font-style: italic; margin-top: 6px; }
-
-    .status-line { margin-top: 16px; font-size: 10.5px; }
 
     /* "Datos de entrega" — bloque de firma física para imprimir, líneas en blanco.
        page-break-inside:avoid (SCRUM-395, rebote 2026-08-17) — el bloque completo (título +
        las 2 líneas de firma) pasa entero a la página siguiente si no entra completo en la
        actual, nunca deja la línea de firma sola separada del resto. */
-    .delivery-data { margin-top: 30px; border-top: 3px solid #5BA5A0; padding-top: 10px; page-break-inside: avoid; }
-    .delivery-data .title { color: #3D7E7A; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 14px; }
+    {{-- SCRUM-887 — convención de label de sección: gris discreto (.block-title), no teal/bold
+         llamativo (era el mismo tratamiento visual que un header de tabla, no el de un título de
+         sección — ver `pdf.partials.styles`). --}}
+    {{-- SCRUM-887 (rebote 2026-09-14) — +2 líneas en blanco (~28px) antes del bloque de firma
+         (antes 30px, quedaba junto a la tabla tras quitar los avisos de "sin precios"/estado) y
+         +2 líneas en blanco entre "Recibido por" y "Firma y fecha/hora" (antes 16px, mismo
+         espaciado que el resto de líneas del bloque). --}}
+    {{-- SCRUM-887 (rebote 2026-09-16, 3er rebote) — la regla de abajo nunca se aplicaba:
+         `.line:first-child` exige que el elemento sea SIMULTÁNEAMENTE el primer hijo de
+         `.delivery-data` y tener la clase `.line`, pero el primer hijo real es `.title`
+         ("Datos de entrega"), no el primer `.line` — el selector jamás matcheaba nada, así que
+         "Recibido por"/"Firma y fecha/hora" seguían con el margin-bottom base de 16px. Fix:
+         `.title + .line` (hermano adyacente inmediato de `.title`), que sí apunta al primer
+         `.line` sin depender de que sea el primer hijo del contenedor. --}}
+    {{-- SCRUM-887 (rebote 2026-09-20, 4to rebote) — Daniela confirmó que el espacio entre
+         "Recibido por" y "Firma y fecha/hora" (`.title + .line`, abajo) ya está bien, NO tocar.
+         El pedido de +2 líneas en blanco del rebote 2026-09-14 nunca aterrizó donde debía: el
+         `margin-top: 58px` de `.delivery-data` separa la TABLA del título "Datos de entrega",
+         pero entre el título y "Recibido por" solo quedaban 14px — ahí es donde el bloque seguía
+         viéndose pegado. Fix: `.title { margin-bottom }` a 28px (2 líneas, misma convención ya
+         usada en este archivo), sin tocar `margin-top` de `.delivery-data` ni `.title + .line`. --}}
+    .delivery-data { margin-top: 58px; border-top: 3px solid #5BA5A0; padding-top: 10px; page-break-inside: avoid; }
+    .delivery-data .title { margin-bottom: 28px; }
     .delivery-data .line { width: 260px; margin-left: auto; text-align: right; margin-bottom: 16px; }
+    .delivery-data .title + .line { margin-bottom: 44px; }
     .delivery-data .line .fill { border-bottom: 1px solid #2a2520; height: 18px; }
     .delivery-data .line .caption { color: #9ca3af; font-size: 8.5px; margin-top: 2px; }
 
@@ -78,21 +94,20 @@
     @php
         $primaryContact = $order->pipelineCard?->contacts?->first();
         $guideNumber = $order->order_number.'-G';
+        // SCRUM-894 — la Guía de Entrega es de ESTA tarjeta específica, no del pedido original
+        // completo: `qty_delivered` ya viene resuelto por `DeliveryService::registerDelivery()`
+        // (Packing -> Por despachar, TODOS los ítems de la tarjeta quedan con su `qty_delivered`
+        // real seteado, incluido 0 — RN1 de esa transición exige que ningún ítem quede sin
+        // registrar) antes de llamar a `generateGuiaEntrega()`, así que nunca hay que adivinar acá
+        // con un fallback a `qty_requested` (el bug real: caso #PED-2026-0049, un ítem sin stock
+        // quedaba en `qty_delivered=0` en esta tarjeta y la guía igual imprimía la cantidad total
+        // pedida). Un ítem con 0 unidades a entregar en ESTA tarjeta no tiene nada que hacer en su
+        // guía de entrega — se excluye, mismo criterio que ya usa
+        // `CustomerReturnService::orderDetail()` (`qty_delivered > 0` = universo real entregado).
+        $deliveredItems = $order->items->filter(fn ($item) => $item->qty_delivered > 0);
     @endphp
 
-    {{-- Encabezado principal: primer hijo de <body>, position:fixed — dompdf lo repite en
-         todas las páginas (ver @page/.doc-header arriba). --}}
-    <div class="doc-header">
-        <div class="brand-row">
-            <div class="brand-icon">
-                <span class="c1"></span><span class="c2"></span><span class="c3"></span>
-            </div>
-            <div class="brand-text">
-                <div class="brand-name">ATLANTIC</div>
-                <div class="brand-sub">Powered by AtlanticERP</div>
-            </div>
-        </div>
-    </div>
+    @include('pdf.partials.header')
 
     <div class="doc-title">GUÍA DE ENTREGA</div>
 
@@ -127,22 +142,18 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($order->items as $item)
+            @foreach($deliveredItems as $item)
                 <tr>
                     <td>{{ $item->catalogProduct?->reference ?? $item->reference_snapshot ?? '—' }}</td>
                     <td>{{ $item->description_snapshot ?? $item->catalogProduct?->name ?? '—' }}</td>
-                    <td>{{ $item->qty_delivered > 0 ? $item->qty_delivered : $item->qty_requested }}</td>
+                    <td>{{ $item->qty_delivered }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
-    {{-- RN1 — este documento nunca incluye precios. --}}
-    <p class="no-prices">Este documento no incluye precios.</p>
-
-    <p class="status-line"><strong>Estado de la entrega:</strong> {{ $order->stage }}</p>
 
     <div class="delivery-data">
-        <div class="title">Datos de entrega</div>
+        <div class="title block-title">Datos de entrega</div>
         <div class="line">
             <div class="fill"></div>
             <div class="caption">Recibido por — Nombre y cédula/identificación</div>
@@ -153,17 +164,9 @@
         </div>
     </div>
 
-    {{-- SCRUM-395 (rebote 2026-08-18) — pie de página vía page_text(), NO position:fixed+bottom:
-         ese mecanismo es un bug conocido de dompdf que agrega páginas en blanco. page_text() dibuja
-         directamente sobre el canvas de cada página ya renderizada, sin afectar el cálculo de
-         layout/paginación — mismo mecanismo que `ventas-diseno/quote-pdf.blade.php` (SCRUM-766). --}}
-    <script type="text/php">
-        if (isset($pdf)) {
-            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $footerText = "Atlantic · Panamá · Powered by AtlanticERP";
-            $w = $fontMetrics->getTextWidth($footerText, $font, 8.5);
-            $pdf->page_text((612 - $w) / 2, 770, $footerText, $font, 8.5, array(0.61, 0.64, 0.69));
-        }
-    </script>
+    {{-- SCRUM-887/SCRUM-893 — pie de página real completo (dirección + URL + Página X de Y),
+         antes solo "Atlantic · Panamá · Powered by AtlanticERP" sin paginación. Mismo mecanismo
+         que `ventas-diseno/quote-pdf.blade.php` (SCRUM-766), ver `pdf.partials.footer`. --}}
+    @include('pdf.partials.footer')
 </body>
 </html>

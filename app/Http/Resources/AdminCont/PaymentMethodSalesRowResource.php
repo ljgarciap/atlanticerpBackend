@@ -13,11 +13,16 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * (`deposito`, `ajuste_cuenta`, no `deposito_bancario`/`ajustes_cuenta`) — exactamente el mismatch
  * que Pre-QA encontró y corrigió en este mismo batch antes de que existiera este Resource.
  *
- * @property array{fecha: string, cliente: string, documento: string, base_imponible: float, itbms: float, total: float, transferencia: float, cheque: float, efectivo: float, tarjeta: float, deposito: float, yappy: float, link_pago: float, retencion_impuestos: float, ajuste_cuenta: float} $resource
+ * SCRUM-880 — el orden de las claves de método aquí sigue `PaymentMethodSalesReportService::
+ * COLUMNAS_METODO_ORDEN` (Yappy y Link de pago antes de Tarjeta y Depósito bancario), para que el
+ * JSON de la API sea consistente con la pantalla y el Excel. Las CLAVES no cambian (vocabulario de
+ * `AdminContPayment::METODOS`), solo el orden.
+ *
+ * @property array{fecha: string, cliente: string, documento: string, base_imponible: float, itbms: float, total: float, transferencia: float, cheque: float, efectivo: float, yappy: float, link_pago: float, tarjeta: float, deposito: float, retencion_impuestos: float, ajuste_cuenta: float} $resource
  */
 final class PaymentMethodSalesRowResource extends JsonResource
 {
-    /** @return array{fecha: string, cliente: string, documento: string, base_imponible: float, itbms: float, total: float, transferencia: float, cheque: float, efectivo: float, tarjeta: float, deposito: float, yappy: float, link_pago: float, retencion_impuestos: float, ajuste_cuenta: float} */
+    /** @return array{fecha: string, cliente: string, documento: string, base_imponible: float, itbms: float, total: float, transferencia: float, cheque: float, efectivo: float, yappy: float, link_pago: float, tarjeta: float, deposito: float, retencion_impuestos: float, ajuste_cuenta: float} */
     public function toArray(Request $request): array
     {
         return [
@@ -30,10 +35,10 @@ final class PaymentMethodSalesRowResource extends JsonResource
             'transferencia'       => $this->resource['transferencia'],
             'cheque'              => $this->resource['cheque'],
             'efectivo'            => $this->resource['efectivo'],
-            'tarjeta'             => $this->resource['tarjeta'],
-            'deposito'            => $this->resource['deposito'],
             'yappy'               => $this->resource['yappy'],
             'link_pago'           => $this->resource['link_pago'],
+            'tarjeta'             => $this->resource['tarjeta'],
+            'deposito'            => $this->resource['deposito'],
             'retencion_impuestos' => $this->resource['retencion_impuestos'],
             'ajuste_cuenta'       => $this->resource['ajuste_cuenta'],
         ];

@@ -28,12 +28,10 @@ use Illuminate\Database\Eloquent\Collection;
  * round-robin entre los vendedores REALES del roster (`BusinessRoleUserSeeder`,
  * `role_key=vendedor_disenador` — nunca cuentas demo `*@atlantic.test`, regla dura del
  * proyecto), y los transiciona a "approved" a través del mecanismo REAL
- * (`PipelineService::changeStage()`, el mismo que dispara `PATCH .../pipeline/{id}/stage`) — NO
- * se crea el `PipelineCard` directo en `approved` (eso no dispara `QuoteApproved`, ver
- * `PipelineService::changeStage()` — el evento solo dispara en una transición real hacia
- * "approved", nunca en creación directa). El listener ya existente
- * (`Bodega\Listeners\CreateOrderFromApprovedQuote`) crea el `Order` correspondiente en Bodega —
- * este comando nunca inserta un `Order` a mano.
+ * (`PipelineService::changeStage()`, el mismo que dispara `PATCH .../pipeline/{id}/stage`) y luego
+ * ejecuta la aprobación explícita `PipelineService::passToOrder()` (SCRUM-1128: entrar a "approved"
+ * ya no genera el pedido por sí solo), que crea el `Order` correspondiente en Bodega — este
+ * comando nunca inserta un `Order` a mano.
  *
  * Idempotencia: marcador `[UAT-BODEGA]` como prefijo de `SalesProject.name` (mismo criterio que
  * `[DEMO]`/`[QA-VD]` en otros seeders de este proyecto). Si ya hay N' < --count proyectos
@@ -42,10 +40,8 @@ use Illuminate\Database\Eloquent\Collection;
  *
  * Verificación post-corrida (RN de integridad del ticket — "sin duplicados, sin huérfanos:
  * aprobado en Ventas sin reflejo en Bodega"): por cada `PipelineCard` marcado y aprobado, confirma
- * que existe su `Order` en Bodega. El listener existente atrapa cualquier excepción y solo
- * loggea (`bodega.order.creation-failed`, ver `CreateOrderFromApprovedQuote::handle()`) — así que
- * un huérfano nunca hace fallar el comando con una excepción, se reporta explícitamente en el
- * output en vez de asumir éxito solo porque no hubo un error visible.
+ * que existe su `Order` en Bodega. Un huérfano se reporta explícitamente en el output en vez de
+ * asumir éxito solo porque no hubo un error visible.
  */
 final class BodegaSeedUatProjectsCommand extends Command
 {
@@ -186,9 +182,11 @@ final class BodegaSeedUatProjectsCommand extends Command
             'uploaded_by' => $vendedor->id,
         ]);
 
-        // Trigger real (mismo mecanismo que PATCH .../pipeline/{id}/stage) — dispara
-        // QuoteApproved -> CreateOrderFromApprovedQuote -> OrderService::createFromApprovedQuote().
-        return $this->pipelineService->changeStage($card, 'approved');
+        // Trigger real: cambio de etapa (PATCH .../pipeline/{id}/stage) + aprobación explícita
+        // "Pasar a Pedido" (POST .../pipeline/{id}/pass-to-order, SCRUM-1128), que genera el pedido.
+        $card = $this->pipelineService->changeStage($card, 'approved');
+
+        return $this->pipelineService->passToOrder($card, $vendedor);
     }
 
     /** @return Collection<int, PipelineCard> */

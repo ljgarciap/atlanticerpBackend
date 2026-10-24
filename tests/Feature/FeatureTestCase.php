@@ -6,6 +6,7 @@ use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Tests\Support\TestDatabaseSeeder;
 use Tests\TestCase;
 
 /**
@@ -48,7 +49,11 @@ abstract class FeatureTestCase extends TestCase
      */
     protected bool $seed = true;
 
-    protected string $seeder = DatabaseSeeder::class;
+    /**
+     * DatabaseSeeder + concesiones por persona de binax (solo tests): ver TestDatabaseSeeder. `SpecialPermissionSeeder::GRANTS`
+     * queda vacío en Atlantic.
+     */
+    protected string $seeder = TestDatabaseSeeder::class;
 
     protected function setUp(): void
     {
@@ -72,19 +77,8 @@ abstract class FeatureTestCase extends TestCase
         $response = $this->postJson('/api/auth/login', ['email' => $email, 'password' => $password]);
         $response->assertStatus(200);
 
-        // Single-role flow: JWT returned directly
-        if ($response->json('token') !== null) {
-            return (string) $response->json('token');
-        }
-
-        // Multi-role flow: select the requested role using selection_token in body
-        $selectionToken = (string) $response->json('selection_token');
-        $select         = $this->postJson('/api/auth/select-role', [
-            'selection_token' => $selectionToken,
-            'role'            => $role,
-        ]);
-        $select->assertStatus(200);
-        return (string) $select->json('token');
+        // login() devuelve siempre el JWT en un solo paso (ADR-006 Fase C; select-role se eliminó en SCRUM-1035).
+        return (string) $response->json('token');
     }
 
     /** @return array<string, string> */
@@ -125,5 +119,37 @@ abstract class FeatureTestCase extends TestCase
             'login.microsoftonline.com/*' => Http::response(['access_token' => 'fake-graph-token', 'expires_in' => 3600], 200),
             'graph.microsoft.com/*'       => Http::response(['value' => $events], 200),
         ]);
+    }
+
+    /**
+     * SCRUM-1150 — devuelve a Félix al estado de SCRUM-1139 (sin el override de Ventas & Diseño ni los permisos de Mark), para los
+     * tests que lo usan como fixture de "usuario de Admin&Cont con solo permisos angostos de Pipeline". El estado real de Félix
+     * (igual a Mark) lo cubre FelixComoMarkVentasDisenoTest.
+     */
+    protected function felixComoEnScrum1139(): void
+    {
+        $felix = \App\Models\User::where('email', 'contabilidad@test.com')->firstOrFail();
+        \App\Modules\Auth\Models\UserModuleVisibility::where('user_id', $felix->id)->where('module', 'ventas_diseno')->delete();
+        $felix->update(['extra_permissions' => array_values(array_diff(
+            $felix->extra_permissions ?? [],
+            ['ventas_diseno.select_partner_price', 'ventas_diseno.override_min_margin', 'ventas_diseno.gerencia_scope'],
+        ))]);
+    }
+
+    /**
+     * SCRUM-1177 — el registro público ya no existe; una cuenta pendiente de aprobación se crea por el mismo servicio que usaba.
+     */
+    protected function crearCuentaPendiente(string $first, string $last, string $email): void
+    {
+        $tenant = \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->firstOrFail();
+        $tenant->makeCurrent();
+        try {
+            app(\App\Modules\Auth\Services\UserService::class)->register([
+                'first_name' => $first, 'last_name' => $last, 'email' => $email,
+                'department_id' => (int) \Illuminate\Support\Facades\DB::table('atlantic_auth.departments')->value('id'),
+            ]);
+        } finally {
+            \App\Shared\Multitenancy\Tenant::forgetCurrent();
+        }
     }
 }

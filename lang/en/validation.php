@@ -185,6 +185,10 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'attributes' => [],
+    'photo_url_not_allowed' => 'The photo URL must be https and from an authorized host (AtlanticERP CDN or storage).',
+
+    'attributes' => [
+        'tax_id_dv' => 'DV',
+    ],
 
 ];

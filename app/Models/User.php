@@ -14,6 +14,7 @@ use App\Modules\Auth\Models\UserRole;
 use App\Modules\Auth\Services\UatVisibilityService;
 use App\Modules\Auth\Support\ModuleCatalog;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Carbon\Carbon;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,7 +31,13 @@ use RuntimeException;
  * @property string $last_name
  * @property string $email
  * @property string $password_hash
+ * @property bool $must_change_password
+ * @property \Illuminate\Support\Carbon|null $password_reset_at Último reset administrativo (AuthenticateJwt invalida tokens anteriores).
+ * @property \Illuminate\Support\Carbon|null $password_changed_at Último cambio de contraseña propio (AuthenticateJwt invalida tokens anteriores, SCRUM-1033).
  * @property string|null $phone
+ * @property string|null $job_title
+ * @property Carbon|null $hire_date
+ * @property int|null $manager_id
  * @property int|null $department_id
  * @property int $security_level_id
  * @property int|null $role_id
@@ -42,14 +49,16 @@ use RuntimeException;
  * @property bool $is_active
  * @property bool $mfa_enabled
  * @property Carbon|null $security_blocked_at
+ * @property Carbon $created_at
  * @property Department|null $department
  * @property SecurityLevel|null $securityLevel
  * @property Role|null $role
+ * @property User|null $manager
  */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, LogsAuditTrail, Notifiable;
 
     public const ROLE_SUPERADMIN = 'superadmin';
 
@@ -69,7 +78,11 @@ class User extends Authenticatable
         'last_name',
         'email',
         'password_hash',
+        'must_change_password',
         'phone',
+        'job_title',
+        'hire_date',
+        'manager_id',
         'department_id',
         'security_level_id',
         'role_id',
@@ -93,8 +106,12 @@ class User extends Authenticatable
     {
         return [
             'is_active' => 'boolean',
+            'hire_date' => 'date',
             'mfa_enabled' => 'boolean',
             'password_hash' => 'hashed',
+            'must_change_password' => 'boolean',
+            'password_reset_at' => 'datetime',
+            'password_changed_at' => 'datetime',
             'preferences' => 'array',
             'extra_permissions' => 'array',
             'security_blocked_at' => 'datetime',
@@ -121,6 +138,38 @@ class User extends Authenticatable
         return $this->password_hash;
     }
 
+    /**
+     * SCRUM-915 — App\Models\User no vive bajo App\Modules\{Módulo}\Models\..., así que
+     * LogsAuditTrail::auditModule() (que deriva el prefijo del namespace, segmento 2) resolvería
+     * mal ('models' en vez de 'auth'). Override explícito, no se toca el trait compartido.
+     */
+    protected static function auditModule(): string
+    {
+        return 'auth';
+    }
+
+    /**
+     * SCRUM-915 — nunca persistir password_hash/remember_token en audit_logs.old_values/
+     * new_values: son secretos, no datos de negocio auditables. No se puede llamar a
+     * `parent::auditableAttributes()` acá — LogsAuditTrail es un trait, no una clase base, así que
+     * `parent::` no lo resuelve; se replica la lógica del trait (excluir created_at/updated_at)
+     * más los 2 campos sensibles.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    protected static function auditableAttributes(array $attributes): array
+    {
+        unset(
+            $attributes['created_at'],
+            $attributes['updated_at'],
+            $attributes['password_hash'],
+            $attributes['remember_token'],
+        );
+
+        return $attributes;
+    }
+
     /** @return HasMany<UserRole, $this> */
     public function userRoles(): HasMany
     {
@@ -142,6 +191,16 @@ class User extends Authenticatable
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * SCRUM-822 (REQ-548 RN2) — null = "Ninguno — Socio Director", el nivel más alto sin jefe asignado.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'manager_id');
     }
 
     /** @return BelongsTo<SecurityLevel, $this> */
@@ -315,6 +374,11 @@ class User extends Authenticatable
             $perms[] = "{$module}.read"; // puente de compatibilidad — ver docblock del método
             if ($viewTeam) {
                 $perms[] = "{$module}.view_team";
+                // SCRUM-1128 — Gerencia (alcance de equipo en Ventas & Diseño) puede pasar un
+                // proyecto aprobado a Pedido; Félix lo recibe por grant individual.
+                if ($module === 'ventas_diseno') {
+                    $perms[] = 'ventas_diseno.pass_to_order';
+                }
             }
         }
 
@@ -339,6 +403,24 @@ class User extends Authenticatable
             }
             if ($capability->can_approve) {
                 $perms[] = "{$capability->module}.approve";
+            }
+        }
+
+        // SCRUM-1150 — override por usuario de edit/approve (null = hereda del nivel); solo en módulos visibles.
+        foreach ($moduleOverrides as $override) {
+            if (! in_array($override->module, $viewableModules, true)) {
+                continue;
+            }
+            if ($override->can_edit === true) {
+                $perms[] = "{$override->module}.edit";
+                $perms[] = "{$override->module}.write";
+            } elseif ($override->can_edit === false) {
+                $perms = array_values(array_diff($perms, ["{$override->module}.edit", "{$override->module}.write"]));
+            }
+            if ($override->can_approve === true) {
+                $perms[] = "{$override->module}.approve";
+            } elseif ($override->can_approve === false) {
+                $perms = array_values(array_diff($perms, ["{$override->module}.approve"]));
             }
         }
 
@@ -492,6 +574,19 @@ class User extends Authenticatable
             }
             $payload[$capability->module]['edit'] = $capability->can_edit;
             $payload[$capability->module]['approve'] = $capability->can_approve;
+        }
+
+        // SCRUM-1150 — override por usuario de edit/approve (null = hereda del nivel); solo en módulos visibles y no readonly.
+        foreach (UserModuleVisibility::where('user_id', $this->id)->get() as $override) {
+            if (! ($payload[$override->module]['view'] ?? false) || in_array($override->module, $readonlyModules, true)) {
+                continue;
+            }
+            if ($override->can_edit !== null) {
+                $payload[$override->module]['edit'] = $override->can_edit;
+            }
+            if ($override->can_approve !== null) {
+                $payload[$override->module]['approve'] = $override->can_approve;
+            }
         }
 
         return $payload;

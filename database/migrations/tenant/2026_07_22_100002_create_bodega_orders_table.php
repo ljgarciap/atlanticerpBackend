@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * SCRUM-329 Oleada A / Batch A1 (REQ-305 a 341, entidad PEDIDO) — pedido de Bodega, unidad
- * central del tablero Kanban "Pedidos". Nace automáticamente al aprobar una cotización en
- * Ventas & Diseño (REQ-308) — ver `App\Modules\Bodega\Listeners\CreateOrderFromApprovedQuote`.
+ * central del tablero Kanban "Pedidos". Nace al aprobar una cotización en Ventas & Diseño (REQ-308); desde
+ * SCRUM-1128 lo crea la aprobación explícita "Pasar a Pedido" — ver `PipelineService::passToOrder()`.
  *
  * `stage` — una de las 7 etapas fijas del flujo (REQ-302/311, confirmadas contra Jira, NO el
  * placeholder "terminado" de la spec original): asignado, picking_pendiente, en_picking,

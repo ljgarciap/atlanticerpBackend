@@ -27,6 +27,7 @@ use App\Modules\VentasDiseno\Models\SalesGoal;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Modules\VentasDiseno\Services\PipelineService;
+use App\Modules\VentasDiseno\Support\SandboxFiscalFixtures;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -108,14 +109,13 @@ final class QaTicketsBatch20260725Seeder extends Seeder
 
         $subA = SubClient::create([
             'master_client_id' => $masterA->id,
-            'business_name' => self::VD_MARKER.' Andina Residencial S.A.',
-            'tax_id' => '155-9001-1-2026',
+            // SCRUM-1117 — RUC/DV/razón social del sandbox de MSL: la guarda de RUC al facturar bloquea cualquier otro en dev/test.
+            ...SandboxFiscalFixtures::ATLANTIC,
             'category' => 'b_architect_designer',
         ]);
         $subB = SubClient::create([
             'master_client_id' => $masterB->id,
-            'business_name' => self::VD_MARKER.' Punta Pacífica Torres S.A.',
-            'tax_id' => '155-9002-1-2026',
+            ...SandboxFiscalFixtures::DIGIFACT,
             'category' => 'c_bidding',
         ]);
 
@@ -589,10 +589,11 @@ final class QaTicketsBatch20260725Seeder extends Seeder
     // 2026-07-26: los 12 pedidos de seedScrum501() tienen pipeline_card_id null.
     //
     // A propósito NO se crea la PipelineCard directo en stage="approved" (ese es el patrón de
-    // VentasDisenoDemoSeeder, que sirve para el tablero de Pipeline pero NUNCA dispara el evento
-    // de dominio) — acá se crea en "proposal" y se avanza con PipelineService::changeStage(),
-    // igual que en producción, para que el listener real CreateOrderFromApprovedQuote cree el
-    // Order y lo deje vinculado vía pipeline_card_id.
+    // VentasDisenoDemoSeeder, que sirve para el tablero de Pipeline pero NUNCA pasa por el flujo
+    // real) — acá se crea en "proposal", se avanza con PipelineService::changeStage() y luego se
+    // ejecuta PipelineService::passToOrder() (SCRUM-1128), igual que en producción: aprobar en
+    // Pipeline ya NO crea el Order, lo crea la aprobación explícita "Pasar a Pedido", que lo deja
+    // vinculado vía pipeline_card_id.
     // ------------------------------------------------------------------
     private function seedScrum409(): void
     {
@@ -624,8 +625,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         ]);
         $sub = SubClient::create([
             'master_client_id' => $master->id,
-            'business_name' => self::SCRUM409_MARKER.' Torre Bahía Residencial S.A.',
-            'tax_id' => '155-4090-1-2026',
+            ...SandboxFiscalFixtures::ATLANTIC,
             'category' => 'b_architect_designer',
             'delivery_address' => 'Costa del Este, Ciudad de Panamá',
         ]);
@@ -681,12 +681,14 @@ final class QaTicketsBatch20260725Seeder extends Seeder
             'cost' => 82.0,
         ]);
 
-        // Dispara el flujo real: PipelineService::changeStage() -> evento QuoteApproved ->
-        // CreateOrderFromApprovedQuote -> OrderService::createFromApprovedQuote(). NO
-        // PipelineCard::create(['stage' => 'approved']) directo, que no dispara nada.
-        app(PipelineService::class)->changeStage($card, 'approved');
+        // Flujo real (SCRUM-1128): changeStage() -> 'approved' ya NO crea el pedido; lo crea
+        // PipelineService::passToOrder() -> OrderService::createFromApprovedQuote(). NO
+        // PipelineCard::create(['stage' => 'approved']) directo, que se saltea ambos pasos.
+        $pipeline = app(PipelineService::class);
+        $card = $pipeline->changeStage($card, 'approved');
+        $pipeline->passToOrder($card, $owner);
 
-        $this->command?->info('SCRUM-409: cotización aprobada sembrada — Order de Bodega creado vía evento real QuoteApproved, con pipeline_card_id vinculado.');
+        $this->command?->info('SCRUM-409: cotización aprobada sembrada — Order de Bodega creado vía PipelineService::passToOrder(), con pipeline_card_id vinculado.');
     }
 
     /** @param list<string> $roles */

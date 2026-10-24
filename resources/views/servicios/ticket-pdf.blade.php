@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8">
 <style>
+    {{-- SCRUM-924 (rebote Daniela 2026-09-20) — el pie de página era un <div> normal al final del
+         flujo del documento (solo aparecía una vez, pegado al último contenido, en vez de repetirse
+         en la parte inferior de CADA página) — nunca adoptó el mecanismo de footer real que el
+         resto de PDFs del proyecto ya estandarizó (SCRUM-893, ver `pdf.partials.footer.blade.php`).
+         `margin-bottom` reserva el espacio para que el contenido normal nunca choque con el texto
+         que `page_text()` dibuja más abajo en el body — sin tocar el resto del margen/layout
+         (`.header` de este documento no es fijo/repetido como en esos otros PDFs, así que no hace
+         falta reservar espacio arriba). --}}
+    @page { margin-bottom: 60px; }
     body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #2a2520; }
     .header { border-bottom: 3px solid #5BA5A0; padding-bottom: 10px; margin-bottom: 16px; }
     /* REQ-228 (SCRUM-781) — mismo isólogo embebido que claim-sheet-pdf/inspection-report-pdf/
@@ -21,8 +30,6 @@
     table.print-table td { padding: 4px 6px; border-bottom: 1px solid #f0f0f0; font-size: 10px; }
 
     .empty-note { color: #9ca3af; font-style: italic; }
-
-    .footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #E3F0EE; font-size: 8px; color: #9ca3af; text-align: center; }
 </style>
 </head>
 <body>
@@ -113,11 +120,31 @@
 
     <div class="section">
         <div class="label">Adjuntos</div>
-        <div class="value">{{ !empty($detail['adjuntos']) ? implode(', ', $detail['adjuntos']) : 'Sin adjuntos' }}</div>
+        {{-- SCRUM-924 — `$detail['adjuntos']` es un array de objetos (id/nombre_archivo/size_bytes/
+             mime_type/created_at, ver `TicketService::detail()`), nunca una lista plana de
+             strings: `implode()` directo sobre el array producía "Array to string conversion"
+             (excepción real, no solo warning, vía el manejador de errores de Laravel) para
+             CUALQUIER ticket con al menos un adjunto — reproducido con GAR-2026-0003. Mismo
+             patrón que ya se usa arriba para "Requerimientos especiales"
+             (`array_column(..., 'label')`). --}}
+        <div class="value">{{ !empty($detail['adjuntos']) ? implode(', ', array_column($detail['adjuntos'], 'nombre_archivo')) : 'Sin adjuntos' }}</div>
     </div>
 
-    <div class="footer">
-        Atlantic · Panamá · Nota: el diagnóstico y la firma del responsable se registran en el documento de Informe de Inspección, no en este ticket.
-    </div>
+    {{-- SCRUM-924 — pie de página REAL vía `page_text()` (mismo mecanismo/estilo que
+         `pdf.partials.footer.blade.php`, ver docblock de @page arriba), repetido en cada página.
+         Texto propio de este documento (no el genérico de dirección de la empresa del partial
+         compartido) — se mantiene igual, solo cambia CÓMO se dibuja, partido en 2 líneas para que
+         entre dentro del ancho imprimible de Carta (612pt) a este tamaño de letra. --}}
+    <script type="text/php">
+        if (isset($pdf)) {
+            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
+            $line1 = "Atlantic · Panamá";
+            $line2 = "Nota: el diagnóstico y la firma del responsable se registran en el documento de Informe de Inspección, no en este ticket.";
+            $w1 = $fontMetrics->getTextWidth($line1, $font, 7);
+            $w2 = $fontMetrics->getTextWidth($line2, $font, 7);
+            $pdf->page_text((612 - $w1) / 2, 758, $line1, $font, 7, array(0.55, 0.55, 0.55));
+            $pdf->page_text((612 - $w2) / 2, 770, $line2, $font, 7, array(0.55, 0.55, 0.55));
+        }
+    </script>
 </body>
 </html>

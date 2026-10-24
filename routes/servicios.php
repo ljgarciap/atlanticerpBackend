@@ -36,6 +36,8 @@ Route::prefix('home')->group(function (): void {
     // Grupo C — Home (REQ-215, SCRUM-278) — distribución de tickets por estado, con filtro
     // opcional `tipo`. Visible para todo el módulo, mismo criterio que /summary.
     Route::get('/estado-tickets', [HomeController::class, 'estadoTickets'])->middleware('permission:servicios.read');
+    // SCRUM-908 — tarjeta "Aprobaciones Pendientes".
+    Route::get('/approvals-pending', [HomeController::class, 'approvalsPending'])->middleware('permission:servicios.read');
 });
 
 // REQ-209 (Mi calendario, SCRUM-272) — mismo endpoint compartido con Ventas & Diseño/Compras/
@@ -286,6 +288,11 @@ Route::prefix('internal-technicians')->group(function (): void {
     // REQ-259 RN5 — exclusivo de Aaron/Líder de Servicios (superadmin incluido por consistencia
     // con el resto del módulo).
     Route::post('/', [InternalTechnicianController::class, 'store'])
+        ->middleware('permission:servicios.tickets.manage');
+    // SCRUM-1015 — editar/eliminar: mismo gate que el alta.
+    Route::put('/{id}', [InternalTechnicianController::class, 'update'])
+        ->middleware('permission:servicios.tickets.manage');
+    Route::delete('/{id}', [InternalTechnicianController::class, 'destroy'])
         ->middleware('permission:servicios.tickets.manage');
 });
 

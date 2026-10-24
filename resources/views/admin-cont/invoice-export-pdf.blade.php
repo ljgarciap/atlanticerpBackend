@@ -25,6 +25,8 @@
             <thead>
                 <tr>
                     <th>Entrega / Hito</th>
+                    <th>Cliente</th>
+                    <th>Vendedor</th>
                     <th>N° Factura</th>
                     <th>N° Cotización</th>
                     <th class="numeric">Monto</th>
@@ -37,8 +39,10 @@
                         <td>{{ $row[0] }}</td>
                         <td>{{ $row[1] }}</td>
                         <td>{{ $row[2] }}</td>
-                        <td class="numeric">${{ $row[3] }}</td>
+                        <td>{{ $row[3] }}</td>
                         <td>{{ $row[4] }}</td>
+                        <td class="numeric">${{ $row[5] }}</td>
+                        <td>{{ $row[6] }}</td>
                     </tr>
                 @endforeach
             </tbody>

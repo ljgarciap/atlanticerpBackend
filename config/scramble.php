@@ -19,7 +19,7 @@ return [
      * Override with `servers`, or use Scramble::registerApi() for separate bases.
      */
     'api_path' => [
-        'include' => 'api/admin-contab/reports',
+        'include' => 'api',
     ],
 
     /*
@@ -112,7 +112,10 @@ return [
      * ],
      * ```
      */
-    'servers' => null,
+    'servers' => [
+        'dev' => 'https://dev.atlanticerp.ai/api',
+        'test' => 'https://test.atlanticerp.ai/api',
+    ],
 
     /**
      * Determines how Scramble stores the descriptions of enum cases.

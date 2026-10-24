@@ -74,6 +74,7 @@ final class AnthropicClient
         string $systemPrompt,
         string $userMessage,
         int    $maxTokens = self::MAX_TOKENS,
+        int    $timeout = self::DEFAULT_TIMEOUT,
     ): string {
         $apiKey = $this->resolveApiKey();
 
@@ -81,7 +82,7 @@ final class AnthropicClient
             throw new \RuntimeException('ANTHROPIC_API_KEY is not configured.');
         }
 
-        $response = Http::timeout(self::DEFAULT_TIMEOUT)
+        $response = Http::timeout($timeout)
             ->withHeaders([
                 'x-api-key'         => $apiKey,
                 'anthropic-version' => self::API_VERSION,

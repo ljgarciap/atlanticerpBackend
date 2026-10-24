@@ -14,11 +14,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * (nunca se omiten condicionalmente) — la UI ya decide qué columnas mostrar por la prop
  * `agrupacion`, no por presencia/ausencia de clave.
  *
- * @property array{fecha: string|null, anio: int|null, mes: string|null, num: int, importe: float, media: float, transferencia: float, cheque: float, efectivo: float, yappy: float, otros: float, total_caja: float} $resource
+ * @property array{fecha: string|null, anio: int|null, mes: string|null, num: int, importe: float, transferencia: float, cheque: float, efectivo: float, yappy: float, otros: float, total_caja: float} $resource
  */
 final class ClientCollectionRowResource extends JsonResource
 {
-    /** @return array{fecha: string|null, anio: int|null, mes: string|null, num: int, importe: float, media: float, transferencia: float, cheque: float, efectivo: float, yappy: float, otros: float, total_caja: float} */
+    /** @return array{fecha: string|null, anio: int|null, mes: string|null, num: int, importe: float, transferencia: float, cheque: float, efectivo: float, yappy: float, otros: float, total_caja: float} */
     public function toArray(Request $request): array
     {
         return [
@@ -27,7 +27,6 @@ final class ClientCollectionRowResource extends JsonResource
             'mes'           => $this->resource['mes'] ?? null,
             'num'           => $this->resource['num'],
             'importe'       => $this->resource['importe'],
-            'media'         => $this->resource['media'],
             'transferencia' => $this->resource['transferencia'],
             'cheque'        => $this->resource['cheque'],
             'efectivo'      => $this->resource['efectivo'],
