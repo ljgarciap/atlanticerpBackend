@@ -297,7 +297,7 @@ Prefijo `/api`. Permisos en OR. Tabla generada con `scripts/manual-routes-table.
 | Método | Ruta | Controlador@método | Permiso (OR) |
 |---|---|---|---|
 | GET | `/servicios/reportes/biblioteca` | `ReportsController@biblioteca` | `servicios.read` |
-| GET | `/servicios/reportes/comision-carlos-vergara` | `ReportsController@comisionCarlosVergara` | `role:superadmin,management,tecnico_servicios,garantias_servicios` |
+| GET | `/servicios/reportes/comision-tecnico` | `ReportsController@comisionTecnico` | `role:superadmin,management,tecnico_servicios,garantias_servicios` |
 | GET | `/servicios/reportes/completados-anio` | `ReportsController@completadosAnio` | `servicios.read` |
 | GET | `/servicios/reportes/distribucion-tecnico` | `ReportsController@distribucionTecnico` | `servicios.read` |
 | GET | `/servicios/reportes/distribucion-tipo` | `ReportsController@distribucionTipo` | `servicios.read` |

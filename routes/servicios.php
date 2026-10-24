@@ -61,7 +61,7 @@ Route::patch('/settings', [ServiciosSettingsController::class, 'update'])
 
 // Fase 4 — Servicios, pantalla "Reportes" (SCRUM-350→356, REQ-280→286). 7 endpoints GET de solo
 // lectura, sin tablas nuevas. Lectura: mismo permiso que el resto del módulo
-// (permission:servicios.read), salvo /comision-carlos-vergara — RN2 (REQ-285) restringe la
+// (permission:servicios.read), salvo /comision-tecnico — RN2 (REQ-285) restringe la
 // visibilidad al propio Tecnico Servicios y a Gerencia, mismo permiso angosto que ya usa
 // /internal-technicians/{id}/commission (servicios.technicians.commission.view_own, Fase 2 de la
 // auditoría de permisos — el chequeo fino "es este técnico o es Gerencia" vive en el controller,
@@ -73,7 +73,7 @@ Route::prefix('reportes')->group(function (): void {
     Route::get('/distribucion-tipo', [ReportsController::class, 'distribucionTipo'])->middleware('permission:servicios.read');
     Route::get('/distribucion-tecnico', [ReportsController::class, 'distribucionTecnico'])->middleware('permission:servicios.read');
     Route::get('/completados-anio', [ReportsController::class, 'completadosAnio'])->middleware('permission:servicios.read');
-    Route::get('/comision-carlos-vergara', [ReportsController::class, 'comisionCarlosVergara'])
+    Route::get('/comision-tecnico', [ReportsController::class, 'comisionTecnico'])
         ->middleware('permission:servicios.technicians.commission.view_own');
     Route::get('/biblioteca', [ReportsController::class, 'biblioteca'])->middleware('permission:servicios.read');
 });

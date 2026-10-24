@@ -25,7 +25,7 @@ class ReportsControllerTest extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const CARLOS = 'tecnicoservicios@test.com';
+    private const TECNICO = 'tecnicoservicios@test.com';
 
     private const MANAGEMENT = 'gerencia@test.com';
 
@@ -351,10 +351,10 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_distribucion_tecnico_cuenta_tickets_agendados_este_mes_por_tecnico(): void
     {
-        $carlosId = $this->userIdByEmail(self::CARLOS);
+        $tecnicoId = $this->userIdByEmail(self::TECNICO);
 
         $this->makeTicket([
-            'internal_technician_id' => $carlosId,
+            'internal_technician_id' => $tecnicoId,
             'scheduled_at' => now()->addDays(2),
         ]);
 
@@ -363,11 +363,11 @@ class ReportsControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->makeCurrentTenant();
-        $carlos = InternalTechnician::where('email', self::CARLOS)->firstOrFail();
+        $tecnico = InternalTechnician::where('email', self::TECNICO)->firstOrFail();
         $byId = collect($response->json('data'))->keyBy('id');
 
-        $this->assertSame(1, $byId[$carlos->id]['count']);
-        $this->assertSame($carlos->color, $byId[$carlos->id]['color']);
+        $this->assertSame(1, $byId[$tecnico->id]['count']);
+        $this->assertSame($tecnico->color, $byId[$tecnico->id]['color']);
         // Los 4 técnicos internos activos siempre aparecen, incluso sin tickets.
         $this->assertCount(4, $byId);
     }
@@ -433,13 +433,13 @@ class ReportsControllerTest extends FeatureTestCase
 
     // ── REQ-285 — Comisión Tecnico Servicios Test ─────────────────────────────────────────────────────
 
-    public function test_comision_carlos_vergara_gerencia_puede_verla_y_coincide_con_el_endpoint_de_tecnicos(): void
+    public function test_comision_tecnico_gerencia_puede_verla_y_coincide_con_el_endpoint_de_tecnicos(): void
     {
-        $carlos = InternalTechnician::where('email', self::CARLOS)->firstOrFail();
+        $tecnico = InternalTechnician::where('email', self::TECNICO)->firstOrFail();
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $this->withHeaders($this->authHeaders($token))
-            ->putJson("/api/servicios/internal-technicians/{$carlos->id}/commission-capture", [
+            ->putJson("/api/servicios/internal-technicians/{$tecnico->id}/commission-capture", [
                 'year' => 2026, 'month' => 8,
                 'satisfaccion_promedio' => 5.0, 'incidencias_puntualidad' => 0,
                 'calificacion_actitud' => 4.0, 'calidad_pct' => 100,
@@ -449,30 +449,30 @@ class ReportsControllerTest extends FeatureTestCase
         $mgmtHeaders = $this->authHeadersFor(self::MANAGEMENT, 'management');
 
         $direct = $this->withHeaders($mgmtHeaders)
-            ->getJson("/api/servicios/internal-technicians/{$carlos->id}/commission?year=2026&month=8")
+            ->getJson("/api/servicios/internal-technicians/{$tecnico->id}/commission?year=2026&month=8")
             ->assertStatus(200);
 
         $this->makeCurrentTenant();
         $reportes = $this->withHeaders($mgmtHeaders)
-            ->getJson('/api/servicios/reportes/comision-carlos-vergara?year=2026&month=8')
+            ->getJson('/api/servicios/reportes/comision-tecnico?year=2026&month=8')
             ->assertStatus(200);
 
         $this->assertEquals($direct->json('data.total'), $reportes->json('data.total'));
         $this->assertNotNull($reportes->json('data.total'));
     }
 
-    public function test_comision_carlos_vergara_el_propio_carlos_puede_verla(): void
+    public function test_comision_tecnico_el_propio_tecnico_puede_verla(): void
     {
-        $this->withHeaders($this->authHeadersFor(self::CARLOS, 'tecnico_servicios'))
-            ->getJson('/api/servicios/reportes/comision-carlos-vergara')
+        $this->withHeaders($this->authHeadersFor(self::TECNICO, 'tecnico_servicios'))
+            ->getJson('/api/servicios/reportes/comision-tecnico')
             ->assertStatus(200);
     }
 
     /** RN2 — cualquier otro usuario (ej. Lider Servicios/lider_servicios) recibe 403, nunca un objeto vacío. */
-    public function test_comision_carlos_vergara_otro_usuario_recibe_403(): void
+    public function test_comision_tecnico_otro_usuario_recibe_403(): void
     {
         $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
-            ->getJson('/api/servicios/reportes/comision-carlos-vergara')
+            ->getJson('/api/servicios/reportes/comision-tecnico')
             ->assertStatus(403);
     }
 
