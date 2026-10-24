@@ -1,0 +1,20 @@
+# artillery-login.yml — SCRUM-966: capacidad de INICIO DE SESIÓN (bcrypt, el paso más costoso de la API). Solo contra una instancia desechable.
+# Variables: TARGET, LOAD_EMAIL, LOAD_PASSWORD. Mide cuántos logins por segundo aguanta una instancia de 2 vCPU.
+config:
+  target: "{{ $processEnvironment.TARGET }}"
+  http: { timeout: 30 }
+  defaults: { headers: { Accept: application/json } }
+  phases:
+    - { name: "1 login/s", duration: 60, arrivalRate: 1 }
+    - { name: "2 login/s", duration: 60, arrivalRate: 2 }
+    - { name: "4 login/s", duration: 60, arrivalRate: 4 }
+    - { name: "6 login/s", duration: 60, arrivalRate: 6 }
+    - { name: "8 login/s", duration: 60, arrivalRate: 8 }
+  plugins: { metrics-by-endpoint: {} }
+scenarios:
+  - name: "Solo login"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json: { email: "{{ $processEnvironment.LOAD_EMAIL }}", password: "{{ $processEnvironment.LOAD_PASSWORD }}" }
+          name: "login"

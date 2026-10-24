@@ -127,6 +127,51 @@ final class InternalTechnicianService
         ]);
     }
 
+    /**
+     * SCRUM-1015 — edición de los datos del perfil. Color y vínculo con el usuario no se tocan.
+     *
+     * @param  array{nombre: string, telefono?: ?string, email?: ?string, especialidad: string}  $data
+     */
+    public function update(InternalTechnician $technician, array $data): InternalTechnician
+    {
+        $technician->update([
+            'nombre' => $data['nombre'],
+            'telefono' => $data['telefono'] ?? null,
+            'email' => $data['email'] ?? null,
+            'especialidad' => $data['especialidad'],
+        ]);
+
+        return $technician;
+    }
+
+    /**
+     * SCRUM-1015 — motivos por los que NO se puede eliminar todavía: servicios sin cerrar (reportado,
+     * agendado o en sitio) o herramientas asignadas. Vacío = se puede eliminar.
+     *
+     * @return list<string>
+     */
+    public function deletionBlockers(InternalTechnician $technician): array
+    {
+        $blockers = [];
+
+        if ($technician->user_id !== null) {
+            $open = Ticket::query()
+                ->where('internal_technician_id', $technician->user_id)
+                ->whereIn('estado', [Ticket::ESTADO_REPORTED, Ticket::ESTADO_SCHEDULED, Ticket::ESTADO_ON_SITE])
+                ->count();
+            if ($open > 0) {
+                $blockers[] = "tiene {$open} servicio(s) pendiente(s) asignado(s)";
+            }
+        }
+
+        $tools = Tool::query()->where('assigned_to_technician_id', $technician->id)->count();
+        if ($tools > 0) {
+            $blockers[] = "tiene {$tools} herramienta(s) asignada(s)";
+        }
+
+        return $blockers;
+    }
+
     /** REQ-259 RN3 — primer color de la paleta sin usar; si todos están tomados, el menos repetido. */
     private function nextColor(): string
     {

@@ -16,8 +16,9 @@ use App\Modules\Bodega\Services\AdjustmentEvidenceService;
 use App\Modules\Bodega\Services\KardexService;
 use App\Modules\Bodega\Services\WarehouseStockService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
-use App\Modules\VentasDiseno\Services\FuzzySearchService;
 use App\Shared\Http\Pagination;
+use App\Shared\Http\QueryParams;
+use App\Shared\Services\AuditService;
 use App\Shared\Support\AprobacionGate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,10 +39,12 @@ use Illuminate\Validation\Rule;
  */
 final class AdjustmentRequestController extends Controller
 {
+    /** SCRUM-996 — tope de resultados del buscador de producto del modal "Nueva solicitud" (el mismo 10 de antes). */
+    private const SEARCH_PRODUCTS_LIMIT = 10;
+
     public function __construct(
         private readonly AdjustmentEvidenceService $evidence,
         private readonly KardexService $kardex,
-        private readonly FuzzySearchService $fuzzySearch,
         private readonly WarehouseStockService $warehouseStock,
     ) {}
 
@@ -61,26 +64,38 @@ final class AdjustmentRequestController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // SCRUM-807 (REQ-632) — es la lectura que alguien consulta antes de decidir el tamaño de
+        // un ajuste; sin esto, ver el stock repetidamente sin nunca ajustar no dejaba rastro.
+        app(AuditService::class)->log(
+            action: AuditService::BODEGA_ADJUSTMENT_WAREHOUSE_STOCK_VIEWED,
+            entityType: 'catalog_product',
+            entityId: $productId,
+        );
+
         return response()->json($this->warehouseStock->breakdownForProduct($productId));
     }
 
     /** SCRUM-428/446 (REQ-358/376) — buscador de producto para el selector de "Nueva solicitud". */
     public function searchProducts(Request $request): JsonResponse
     {
-        $search = trim((string) $request->query('search', ''));
+        $search = trim(QueryParams::string($request, 'search'));
         if ($search === '') {
             return response()->json(['data' => []]);
         }
 
-        $products = array_values(CatalogProduct::where('is_active', true)->get()->all());
-        [$matches] = $this->fuzzySearch->search(
-            $products,
-            $search,
-            fn (CatalogProduct $p): string => "{$p->reference} {$p->name}",
-        );
+        // SCRUM-996 (auditoría SCRUM-995, sitio A) — búsqueda en SQL sobre `search_text` (índice trigram) con
+        // el respaldo tolerante a typos solo si la coincidencia parcial da 0 resultados, y tope de 10 en la
+        // consulta. Antes: `->get()->all()` de los ~30K productos activos + Levenshtein en PHP (1,0-2,2 s y
+        // 156 MB de pico por petición, con `memory_limit` de 256 MB). Mismo shape de respuesta.
+        $query = CatalogProduct::where('is_active', true);
+        $fuzzy = CatalogProduct::applySearch($query, $search, fuzzyFallback: true);
+        CatalogProduct::orderByRelevance($query, $search, $fuzzy);
+
+        /** @var list<CatalogProduct> $matches */
+        $matches = $query->orderBy('name')->orderBy('id')->limit(self::SEARCH_PRODUCTS_LIMIT)->get()->all();
 
         return response()->json([
-            'data' => collect($matches)->take(10)->map(fn (CatalogProduct $p) => [
+            'data' => collect($matches)->map(fn (CatalogProduct $p) => [
                 'id' => $p->id, 'reference' => $p->reference, 'description' => $p->name,
             ])->values(),
         ]);
@@ -154,7 +169,7 @@ final class AdjustmentRequestController extends Controller
             // Hallazgo de Pre-QA 2026-07-21: el backend lo aceptaba vía API directa (la UI ya
             // lo impedía sacando la bodega del selector, pero el server-side no lo exigía).
             'lines' => ['required', 'array', 'min:1'],
-            'lines.*.warehouse_id' => ['required', 'integer', 'exists:warehouses,id', 'distinct'],
+            'lines.*.warehouse_id' => ['required', 'integer', Warehouse::operativaRule(), 'distinct'],
             'lines.*.tipo' => ['required', 'string', 'in:Sumar,Restar'],
             'lines.*.cantidad' => ['required', 'integer', 'min:1'],
             // SCRUM-428 (rebote de Gerencia Test 2026-08-13) — Motivo pasa de texto libre a un

@@ -28,7 +28,7 @@ use Carbon\CarbonImmutable;
  *   cubre 2 facturas del mismo cliente cuenta como 1 cobro, no 2 (más preciso que el mockup, cuyo
  *   dataset de ejemplo nunca tiene ese caso).
  *
- * @phpstan-type ClientCollectionRow array{fecha?: string, anio?: int, mes?: string, num: int, importe: float, media: float, transferencia: float, cheque: float, efectivo: float, yappy: float, otros: float, total_caja: float}
+ * @phpstan-type ClientCollectionRow array{fecha?: string, anio?: int, mes?: string, num: int, importe: float, transferencia: float, cheque: float, efectivo: float, yappy: float, otros: float, total_caja: float}
  * @phpstan-type ClientCollectionResumen array{registros: int, total_facturado: float, total_cobrado: float, total_pendiente: float}
  * @phpstan-type ClientCollectionPendiente array{fecha: string, factura: string, proyecto: string|null, monto: float}
  */
@@ -95,7 +95,6 @@ final class ClientCollectionReportService
             $totales['otros']         += $fila['otros'];
             $totales['total_caja']    += $fila['total_caja'];
         }
-        $totales['media'] = $totales['num'] > 0 ? round($totales['importe'] / $totales['num'], 2) : 0.0;
 
         $projectIds = $pendientes->pluck('sales_project_id')->filter()->unique()->values();
         $projects   = SalesProject::whereIn('id', $projectIds)->pluck('name', 'id');
@@ -178,7 +177,6 @@ final class ClientCollectionReportService
             $g              = $bucket['grupo'];
             $g['num']       = count($bucket['payment_ids']);
             $g['importe']   = round($g['importe'], 2);
-            $g['media']     = $g['num'] > 0 ? round($g['importe'] / $g['num'], 2) : 0.0;
             $g['total_caja'] = round($g['transferencia'] + $g['cheque'] + $g['efectivo'] + $g['yappy'] + $g['otros'], 2);
             foreach (['transferencia', 'cheque', 'efectivo', 'yappy', 'otros'] as $col) {
                 $g[$col] = round($g[$col], 2);
@@ -198,6 +196,6 @@ final class ClientCollectionReportService
     /** @return ClientCollectionRow */
     private function emptyGrupo(): array
     {
-        return ['num' => 0, 'importe' => 0.0, 'media' => 0.0, 'transferencia' => 0.0, 'cheque' => 0.0, 'efectivo' => 0.0, 'yappy' => 0.0, 'otros' => 0.0, 'total_caja' => 0.0];
+        return ['num' => 0, 'importe' => 0.0, 'transferencia' => 0.0, 'cheque' => 0.0, 'efectivo' => 0.0, 'yappy' => 0.0, 'otros' => 0.0, 'total_caja' => 0.0];
     }
 }

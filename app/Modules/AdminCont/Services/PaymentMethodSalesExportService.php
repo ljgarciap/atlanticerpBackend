@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Services;
 
 use App\Modules\AdminCont\Models\AdminContPayment;
+use App\Modules\AdminCont\Support\ExcelMoney;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -25,7 +26,9 @@ final class PaymentMethodSalesExportService
         $sheet       = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Ventas por medio de pago');
 
-        $metodoHeaders = array_map(fn (string $m) => AdminContPayment::METODO_LABELS[$m], AdminContPayment::METODOS);
+        // SCRUM-880 — orden propio del reporte (Yappy/Link antes de Tarjeta/Depósito), no el de
+        // AdminContPayment::METODOS.
+        $metodoHeaders = array_map(fn (string $m) => AdminContPayment::METODO_LABELS[$m], PaymentMethodSalesReportService::COLUMNAS_METODO_ORDEN);
         $headers       = ['Fecha', 'Cliente', 'N° Documento', 'Base Imponible', 'ITBMS', 'Total', ...$metodoHeaders];
         $sheet->fromArray($headers, null, 'A1');
         $sheet->getStyle('A1:'.Coordinate::stringFromColumnIndex(count($headers)).'1')->getFont()->setBold(true);
@@ -33,22 +36,28 @@ final class PaymentMethodSalesExportService
         $rows = array_map(function (array $f): array {
             $row = [
                 $f['fecha'], $f['cliente'], $f['documento'],
-                number_format((float) $f['base_imponible'], 2), number_format((float) $f['itbms'], 2), number_format((float) $f['total'], 2),
+                ExcelMoney::value($f['base_imponible']), ExcelMoney::value($f['itbms']), ExcelMoney::value($f['total']),
             ];
-            foreach (AdminContPayment::METODOS as $m) {
-                $row[] = number_format((float) $f[$m], 2);
+            foreach (PaymentMethodSalesReportService::COLUMNAS_METODO_ORDEN as $m) {
+                $row[] = ExcelMoney::value($f[$m]);
             }
 
             return $row;
         }, $report['filas']);
 
-        $totalRow = ['Total del período', '', '', number_format((float) $report['resumen']['base_imponible'], 2), number_format((float) $report['resumen']['itbms'], 2), number_format((float) $report['resumen']['total'], 2)];
-        foreach (AdminContPayment::METODOS as $m) {
-            $totalRow[] = number_format((float) array_sum(array_column($report['filas'], $m)), 2);
+        $totalRow = ['Total del período', null, null, ExcelMoney::value($report['resumen']['base_imponible']), ExcelMoney::value($report['resumen']['itbms']), ExcelMoney::value($report['resumen']['total'])];
+        foreach (PaymentMethodSalesReportService::COLUMNAS_METODO_ORDEN as $m) {
+            $totalRow[] = ExcelMoney::value(array_sum(array_column($report['filas'], $m)));
         }
         $rows[] = $totalRow;
 
-        $sheet->fromArray($rows, null, 'A2');
+        // strictNullComparison: con la comparación laxa por defecto `0.0 == null` y PhpSpreadsheet omitiría
+        // las celdas en cero (saldrían vacías en vez de $0.00) — solo `null` cuenta como celda vacía.
+        $sheet->fromArray($rows, null, 'A2', strictNullComparison: true);
+
+        // SCRUM-935 — Base Imponible, ITBMS, Total y todas las columnas de medio de pago son moneda
+        // (todo desde la columna D en adelante).
+        ExcelMoney::apply($sheet, 'D2:'.Coordinate::stringFromColumnIndex(count($headers)).(count($rows) + 1));
         foreach (range(1, count($headers)) as $col) {
             $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
         }
@@ -59,8 +68,9 @@ final class PaymentMethodSalesExportService
             $pendientesSheet->fromArray(['Fecha', 'N° Documento', 'Cliente', 'Monto'], null, 'A1');
             $pendientesSheet->getStyle('A1:D1')->getFont()->setBold(true);
             $pendientesSheet->fromArray(array_map(fn (array $p): array => [
-                $p['fecha'], $p['documento'], $p['cliente'], number_format((float) $p['monto'], 2),
-            ], $report['pendientes']), null, 'A2');
+                $p['fecha'], $p['documento'], $p['cliente'], ExcelMoney::value($p['monto']),
+            ], $report['pendientes']), null, 'A2', strictNullComparison: true);
+            ExcelMoney::apply($pendientesSheet, 'D2:D'.(count($report['pendientes']) + 1));
             foreach (range(1, 4) as $col) {
                 $pendientesSheet->getColumnDimensionByColumn($col)->setAutoSize(true);
             }

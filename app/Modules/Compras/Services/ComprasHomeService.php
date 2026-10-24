@@ -244,10 +244,11 @@ final class ComprasHomeService
 
         /** @var list<int> $productIds */
         $productIds = array_values($candidates->pluck('id')->all());
-        $porServirMap = $this->inventoryKpis->porServirMap($productIds);
+        $porServirMap  = $this->inventoryKpis->porServirMap($productIds);
+        $enExcluidaMap = $this->inventoryKpis->enBodegaExcluidaMap($productIds);
 
-        $belowReorder = $candidates->filter(function (CatalogProduct $p) use ($porServirMap): bool {
-            $disponible = ($p->stock_quantity ?? 0) - ($porServirMap[$p->id] ?? 0);
+        $belowReorder = $candidates->filter(function (CatalogProduct $p) use ($porServirMap, $enExcluidaMap): bool {
+            $disponible = $this->inventoryKpis->disponibleParaVenta($p, $porServirMap[$p->id] ?? 0, $enExcluidaMap[$p->id] ?? 0);
 
             return $disponible <= ($p->reorder_point ?? 0);
         });
@@ -267,8 +268,8 @@ final class ComprasHomeService
 
         return array_values($belowReorder
             ->reject(fn (CatalogProduct $p): bool => in_array($p->id, $coveredProductIds, true))
-            ->map(function (CatalogProduct $p) use ($porServirMap) {
-                $disponible = ($p->stock_quantity ?? 0) - ($porServirMap[$p->id] ?? 0);
+            ->map(function (CatalogProduct $p) use ($porServirMap, $enExcluidaMap) {
+                $disponible = $this->inventoryKpis->disponibleParaVenta($p, $porServirMap[$p->id] ?? 0, $enExcluidaMap[$p->id] ?? 0);
                 // Mismo cálculo ya usado en InventoryController::orderPrefill() -- no una fórmula paralela.
                 $suggestedQuantity = max(1, ($p->reorder_point ?? 0) - ($p->stock_quantity ?? 0));
 

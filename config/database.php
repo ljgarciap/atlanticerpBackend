@@ -97,6 +97,16 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // SCRUM-883 — sin esto, las columnas timestamptz (stage_changed_at, etc.) se
+            // interpretan con el timezone de SESIÓN de Postgres (default del servidor, nunca
+            // tocado), independiente del default de PHP de arriba (config('app.timezone')). Un
+            // valor Carbon en hora de Panamá insertado en una columna timestamptz sin esto se
+            // reinterpreta como si fuera UTC al guardar — corrompe el instante real, no solo la
+            // presentación (5h de corrimiento). Encontrado corriendo el gate completo tras el fix
+            // de config('app.timezone'): 18 tests reales rotos en AdminCont/Comisiones Internas,
+            // SecurityAnalysisJob y tiempos de resolución de Servicios — todos ligados a columnas
+            // timestamptz comparadas contra `now()`.
+            'timezone' => env('APP_TIMEZONE', 'America/Panama'),
         ],
 
         'landlord' => [
@@ -112,6 +122,8 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // SCRUM-883 — mismo motivo que la conexión 'pgsql' de arriba, por consistencia.
+            'timezone' => env('APP_TIMEZONE', 'America/Panama'),
         ],
 
         'sqlsrv' => [
@@ -153,6 +165,44 @@ return [
             // gateway (Illumination/migracion-icg-diseno.md §8.1), no por una red pública.
             'encrypt' => env('LEGACY_ICG_DB_ENCRYPT', 'yes'),
             'trust_server_certificate' => env('LEGACY_ICG_DB_TRUST_SERVER_CERTIFICATE', 'true'),
+        ],
+
+        // SCRUM-970 (épica SCRUM-969 — integración Lafayette Lighting, Bodega Zona Libre) —
+        // conexión de solo lectura a la MariaDB externa del proveedor
+        // (app_lafayette.vista_productos_lighting). A diferencia de `legacy_icg` (túnel VPN
+        // privado, nunca sale a Internet), esta conexión SÍ viaja por Internet público — no se
+        // puede usar `trust_server_certificate`, hace falta validar identidad real.
+        //
+        // El proveedor mencionó un `ca.pem` en el correo original pero nunca lo adjuntó, y
+        // Lafayette confirmó informalmente que "no haría falta" — resultó ser incorrecto: mysqlnd
+        // (a diferencia del cliente CLI mysql/mariadb) SÍ exige una CA real con `CA:TRUE` para
+        // verificar la cadena — un certificado de hoja pinneado como CA (lo que se probó primero)
+        // falla en mysqlnd con "Cannot connect to MySQL using SSL" aunque conecte bien por CLI.
+        // Solución real: el servidor SÍ envía la cadena completa en el handshake TLS
+        // (`openssl s_client -starttls mysql -showcerts`, 2 certificados) — el segundo es la CA
+        // raíz real (`Grupo Lafayette MariaDB Root CA`, CA:TRUE, autofirmada). Su huella SHA256
+        // (`4B:6C:9E:B1:32:54:26:69:7F:90:41:99:67:BF:1C:5F:F4:5A:EB:AD:3D:BF:AE:A6:84:73:A9:A1:A4:84:85:D5`)
+        // coincide EXACTO con la que Lafayette compartió en el correo original — confirma que es
+        // la CA legítima, no solo "confío en lo que veo la primera vez".
+        // `storage/certs/lafayette-ca.pem` (versionado en git — es un certificado, información
+        // pública, no un secreto) es esa CA real. Vigente hasta 2036-09-22 — si Lafayette la rota,
+        // re-extraerla con el mismo comando (documentado en SCRUM-969/970) y reemplazar el archivo.
+        'lafayette_lighting' => [
+            'driver' => 'mysql',
+            'host' => env('LAFAYETTE_DB_HOST', 'app.grupolafayette.com'),
+            'port' => env('LAFAYETTE_DB_PORT', '3306'),
+            'database' => env('LAFAYETTE_DB_DATABASE', 'app_lafayette'),
+            'username' => env('LAFAYETTE_DB_USERNAME'),
+            'password' => env('LAFAYETTE_DB_PASSWORD'),
+            'charset' => 'utf8mb4',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'options' => extension_loaded('pdo_mysql') ? [
+                (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => storage_path('certs/lafayette-ca.pem'),
+                // Pdo\Mysql (PHP 8.5+) no expone ATTR_SSL_VERIFY_SERVER_CERT como constante propia
+                // todavía — a diferencia de ATTR_SSL_CA, esta sigue siendo solo la clásica de PDO.
+                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true,
+            ] : [],
         ],
 
     ],
@@ -201,6 +251,9 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
+            // SCRUM-1031: timeout de CONEXIÓN (no de lectura: las colas usan BLPOP). Si Redis no responde, falla rápido y se aplica la política
+            // fail-open/fail-closed en vez de esperar el timeout por defecto del socket.
+            'timeout' => (float) env('REDIS_CONNECT_TIMEOUT', 2),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
             'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
@@ -214,6 +267,7 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
+            'timeout' => (float) env('REDIS_CONNECT_TIMEOUT', 2),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
             'backoff_base' => env('REDIS_BACKOFF_BASE', 100),

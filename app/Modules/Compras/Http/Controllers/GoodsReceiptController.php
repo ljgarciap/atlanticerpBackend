@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use App\Modules\Bodega\Models\Warehouse;
 
 /**
  * SCRUM-220→230 (REQ-157/159/161→167) — Ingreso de Mercancía. Ver
@@ -240,7 +241,7 @@ final class GoodsReceiptController extends Controller
             'lines.*.catalog_product_id' => ['required', 'integer'],
             'lines.*.quantity'       => ['required', 'integer', 'min:1'],
             'lines.*.unit_cost'      => ['required', 'numeric', 'min:0'],
-            'lines.*.warehouse_id'   => ['required', 'integer'],
+            'lines.*.warehouse_id'   => ['required', 'integer', Warehouse::operativaRule()],
             'import_cost_total'      => ['nullable', 'numeric', 'min:0'],
             'freight_total'          => ['nullable', 'numeric', 'min:0'],
             'handling_total'         => ['nullable', 'numeric', 'min:0'],

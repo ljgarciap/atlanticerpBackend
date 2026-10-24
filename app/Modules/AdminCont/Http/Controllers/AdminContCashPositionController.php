@@ -14,6 +14,7 @@ use App\Modules\AdminCont\Services\CashPositionExportService;
 use App\Modules\AdminCont\Services\CashPositionService;
 use App\Modules\AdminCont\Services\DailyCashCountService;
 use App\Modules\AdminCont\Services\DailyCashCountSummaryPdfService;
+use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -56,7 +57,8 @@ class AdminContCashPositionController
         }
 
         $data = $this->cashPosition->projected($windowDays);
-        if ($this->roleFromRequest($request) === 'asistente_administrativa') {
+        // SCRUM-1139 — `lider_operaciones` espeja a la asistente en Admin&Cont: mismo recorte (solo totales/neto).
+        if (in_array($this->roleFromRequest($request), ['asistente_administrativa', 'lider_operaciones'], true)) {
             $data['entradas'] = [];
             $data['salidas'] = [];
         }
@@ -135,9 +137,12 @@ class AdminContCashPositionController
     }
 
     /** GET /api/admin-contab/cash-position/history?page= — REQ-528. */
+    /** SCRUM-947 — `per_page` real (antes fijo en 20, sin selector). */
     public function history(Request $request): JsonResponse
     {
-        return response()->json($this->dailyCashCount->history($request->integer('page', 1)));
+        $pagination = Pagination::params($request, [], 'fecha', 'desc');
+
+        return response()->json($this->dailyCashCount->history($pagination['page'], $pagination['per_page']));
     }
 
     /**

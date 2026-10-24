@@ -10,7 +10,9 @@ use App\Modules\VentasDiseno\Models\Quote;
 use App\Modules\VentasDiseno\Models\QuoteItem;
 use App\Modules\VentasDiseno\Models\QuotePart;
 use App\Shared\Multitenancy\Tenant;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 // Cotización-B (REQ-035/038/041/042) — ítems personalizados.
@@ -20,6 +22,7 @@ class QuoteItemControllerTest extends FeatureTestCase
     {
         parent::setUp();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        Storage::fake('s3-public');
     }
 
     private function grantVentasDisenoEdit(string $email): void
@@ -82,6 +85,42 @@ class QuoteItemControllerTest extends FeatureTestCase
         $this->assertEquals(200.0, $detail->json('subtotal'));
     }
 
+    /**
+     * SCRUM-1026 — los ítems de una partida se listan en orden de ingreso, nunca por cantidad,
+     * ni al agregarlos ni tras cambiar la cantidad de uno ya existente.
+     */
+    public function test_items_de_una_partida_se_listan_en_orden_de_ingreso_sin_importar_la_cantidad(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $base = "/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items";
+
+        $ids = [];
+        foreach ([['REF-A', 50], ['REF-B', 5], ['REF-C', 20], ['REF-D', 1], ['REF-E', 100]] as [$ref, $qty]) {
+            $ids[$ref] = $this->withHeaders($this->authHeaders($token))
+                ->postJson($base, [...$this->validItemPayload($ref), 'quantity' => $qty])
+                ->assertStatus(201)->json('id');
+        }
+
+        $listed = fn (): array => $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}")
+            ->assertStatus(200)->json('parts.0.items.*.reference');
+
+        $this->assertSame(['REF-A', 'REF-B', 'REF-C', 'REF-D', 'REF-E'], $listed());
+
+        // Cambiar la cantidad de un ítem ya agregado no lo mueve de lugar.
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("{$base}/{$ids['REF-B']}", [...$this->validItemPayload('REF-B'), 'quantity' => 9999])
+            ->assertStatus(200);
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("{$base}/{$ids['REF-A']}", [...$this->validItemPayload('REF-A'), 'quantity' => 1])
+            ->assertStatus(200);
+
+        $this->assertSame(['REF-A', 'REF-B', 'REF-C', 'REF-D', 'REF-E'], $listed());
+    }
+
     public function test_descuento_por_linea_afecta_el_total(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
@@ -103,7 +142,24 @@ class QuoteItemControllerTest extends FeatureTestCase
         $this->assertEquals(180.0, $detail->json('parts.0.items.0.line_total'));
     }
 
-    public function test_referencia_personalizada_duplicada_en_otra_partida_retorna_422(): void
+    public function test_referencia_personalizada_duplicada_en_la_misma_partida_retorna_422(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $url = "/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items";
+
+        $this->withHeaders($this->authHeaders($token))->postJson($url, $this->validItemPayload('ref-abc'))->assertStatus(201);
+
+        // Sin distinguir mayúsculas/minúsculas.
+        $this->withHeaders($this->authHeaders($token))->postJson($url, $this->validItemPayload('REF-ABC'))
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Esta referencia ya existe');
+    }
+
+    // SCRUM-1146 — la misma referencia nueva (no inventario) sí se puede repetir en otra partida.
+    public function test_referencia_personalizada_repetida_en_otra_partida_se_permite(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
@@ -115,10 +171,35 @@ class QuoteItemControllerTest extends FeatureTestCase
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", $this->validItemPayload('ref-abc'))
             ->assertStatus(201);
 
-        // REQ-038: se valida en TODA la cotización, no solo la misma partida —
-        // y sin distinguir mayúsculas/minúsculas.
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$otherPart->id}/items", $this->validItemPayload('REF-ABC'))
+            ->assertStatus(201);
+    }
+
+    // SCRUM-1146 — en edición, mover/renombrar a una referencia ya presente en OTRA partida no choca,
+    // pero sí si ya está en la propia partida.
+    public function test_actualizar_referencia_personalizada_valida_solo_dentro_de_la_partida(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $otherPart = $fixture['quote']->parts()->create(['name' => 'Partida 2']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $base = "/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts";
+
+        $this->withHeaders($this->authHeaders($token))->postJson("{$base}/{$fixture['part']->id}/items", $this->validItemPayload('REF-A'))->assertStatus(201);
+        $itemBId = $this->withHeaders($this->authHeaders($token))
+            ->postJson("{$base}/{$otherPart->id}/items", $this->validItemPayload('REF-B'))
+            ->assertStatus(201)->json('id');
+
+        // REF-B -> REF-A (REF-A vive en la otra partida): permitido.
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("{$base}/{$otherPart->id}/items/{$itemBId}", $this->validItemPayload('REF-A'))
+            ->assertStatus(200);
+
+        // Segundo ítem en la misma partida con la misma referencia: bloqueado.
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("{$base}/{$otherPart->id}/items", $this->validItemPayload('ref-a'))
             ->assertStatus(422);
     }
 
@@ -530,6 +611,101 @@ class QuoteItemControllerTest extends FeatureTestCase
         $this->assertEquals(85.0, $detail->json('parts.0.items.0.effective_unit_price'));
     }
 
+    // SCRUM-1164 — «Aplicar a todos»: junto con el price_type, clear_item_price_overrides quita el tipo propio de cada partida.
+    public function test_aplicar_a_todos_quita_el_tipo_de_precio_propio_de_las_partidas(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        foreach (['REF-A' => 'project', 'REF-B' => null] as $ref => $override) {
+            $this->withHeaders($this->authHeaders($token))
+                ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
+                    ...$this->validItemPayload($ref), 'quantity' => 1, 'unit_price' => 100, 'price_type_override' => $override,
+                ])->assertStatus(201);
+        }
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}", ['price_type' => 'special', 'clear_item_price_overrides' => true])
+            ->assertStatus(200);
+
+        $items = collect($this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}")->json('parts.0.items'))->keyBy('reference');
+
+        $this->assertNull($items['REF-A']['price_type_override']);
+        // Las dos partidas quedan con el mismo precio efectivo: el del tipo general (Especial).
+        $this->assertEquals($items['REF-B']['effective_unit_price'], $items['REF-A']['effective_unit_price']);
+        $this->assertLessThan(100.0, $items['REF-A']['effective_unit_price']);
+    }
+
+    // SCRUM-1164 (Pre-QA) — la validación `boolean` acepta 1 y "1"; el servicio debía tratarlos igual que true (antes: no-op silencioso).
+    public function test_aplicar_a_todos_acepta_1_y_cadena_1_como_verdadero(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        foreach ([1, '1'] as $valor) {
+            $this->withHeaders($this->authHeaders($token))
+                ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
+                    ...$this->validItemPayload('REF-'.json_encode($valor)), 'quantity' => 1, 'unit_price' => 100, 'price_type_override' => 'project',
+                ])->assertStatus(201);
+
+            $this->withHeaders($this->authHeaders($token))
+                ->putJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}", ['price_type' => 'special', 'clear_item_price_overrides' => $valor])
+                ->assertStatus(200);
+
+            $items = $this->withHeaders($this->authHeaders($token))
+                ->getJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}")->json('parts.0.items');
+            $this->assertSame([], array_filter($items, fn ($i) => $i['price_type_override'] !== null));
+        }
+    }
+
+    public function test_sin_la_bandera_el_cambio_de_tipo_general_conserva_los_propios(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
+                ...$this->validItemPayload(), 'quantity' => 1, 'unit_price' => 100, 'price_type_override' => 'project',
+            ])->assertStatus(201);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}", ['price_type' => 'special', 'clear_item_price_overrides' => false])
+            ->assertStatus(200);
+
+        $this->assertSame('project', $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}")->json('parts.0.items.0.price_type_override'));
+    }
+
+    public function test_aplicar_a_todos_valida_el_margen_con_los_tipos_ya_quitados(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        // Costo 65 sobre 100: Público 35% de margen (ok); «special» lo baja de 30% => el cambio global ya lo rechaza por margen
+        // y con «Aplicar a todos» la partida (que tenía su propio tipo) NO puede esquivar esa validación.
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
+                ...$this->validItemPayload(), 'quantity' => 1, 'unit_price' => 100, 'cost' => 65, 'price_type_override' => 'public',
+            ])->assertStatus(201);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}", ['price_type' => 'special', 'clear_item_price_overrides' => true])
+            ->assertStatus(422);
+
+        // Nada se persistió: la partida conserva su tipo propio.
+        $this->assertSame('public', $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}")->json('parts.0.items.0.price_type_override'));
+    }
+
     // ── REQ-035/036: producto de catálogo ────────────────────────────────────
 
     public function test_seleccionar_producto_de_catalogo_copia_datos_y_bloquea_descripcion(): void
@@ -656,9 +832,9 @@ class QuoteItemControllerTest extends FeatureTestCase
 
     public function test_mismo_producto_de_catalogo_en_otra_partida_no_choca(): void
     {
-        // REQ-038: a diferencia de la referencia personalizada (toda la
-        // cotización), el producto de catálogo se valida por PARTIDA — la
-        // misma lámpara en "Sala" y en "Cocina" es un caso real, no un error.
+        // REQ-038: el producto de catálogo se valida por PARTIDA (desde SCRUM-1146 la
+        // referencia personalizada también) — la misma lámpara en "Sala" y en "Cocina"
+        // es un caso real, no un error.
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
@@ -1061,5 +1237,308 @@ class QuoteItemControllerTest extends FeatureTestCase
                 'unit_price' => 100,
             ])
             ->assertStatus(200);
+    }
+
+    // ── SCRUM-849.6 — foto ad-hoc de un ítem personalizado ──────────────────────
+
+    public function test_subir_foto_a_item_personalizado(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $item = $fixture['part']->items()->create([
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'quantity' => 1, 'unit_price' => 100,
+        ]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}/photo", [
+                'file' => UploadedFile::fake()->image('foto.jpg', 400, 400),
+            ])
+            ->assertStatus(201);
+
+        $this->assertNotNull($response->json('photo_url'));
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $item->refresh();
+        $this->assertNotNull($item->photo_key);
+        Storage::disk('s3-public')->assertExists($item->photo_key);
+    }
+
+    /**
+     * Rebote SCRUM-849 (Daniela, 2026-09-14) — funcionaba en dev.atlanticerp.ai, no en test.atlanticerp.ai.
+     * Causa raíz: `photoUrl()` devolvía la URL directa del bucket S3 (`Storage::disk()->url()`)
+     * en vez de preferir `CDN_URL` como sí hace `CatalogService::publicPhotoUrl()` — en test, el
+     * bucket solo permite `GetObject` a través de CloudFront (policy real verificada en AWS), la
+     * URL directa da 403. La foto SÍ se sube bien en los dos entornos (ver test de arriba); esto
+     * cubre específicamente que la URL devuelta al frontend prefiera `cdn_url` cuando existe.
+     */
+    public function test_url_de_foto_de_item_personalizado_prefiere_cdn_url_sobre_la_url_directa_del_bucket(): void
+    {
+        config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn-test.atlanticerp.ai']);
+        config(['filesystems.disks.s3-public.url' => 'https://atlanticerp-test.s3.us-east-1.amazonaws.com']);
+
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $item = $fixture['part']->items()->create([
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'quantity' => 1, 'unit_price' => 100,
+        ]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}/photo", [
+                'file' => UploadedFile::fake()->image('foto.jpg', 400, 400),
+            ])
+            ->assertStatus(201);
+
+        $this->assertStringStartsWith('https://cdn-test.atlanticerp.ai/public/', $response->json('photo_url'));
+    }
+
+    public function test_subir_foto_a_item_de_catalogo_retorna_422(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $product = $this->makeCatalogProduct();
+        $item = $fixture['part']->items()->create([
+            'catalog_product_id' => $product->id, 'is_custom' => false,
+            'reference' => $product->reference, 'description' => $product->name,
+            'quantity' => 1, 'unit_price' => 100,
+        ]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}/photo", [
+                'file' => UploadedFile::fake()->image('foto.jpg', 400, 400),
+            ])
+            ->assertStatus(422);
+    }
+
+    /**
+     * Pre-QA (2026-09-11, rebote SCRUM-849.6, Daniela) — antes de este fix, un archivo con
+     * extensión válida pero bytes no decodificables por GD escapaba de
+     * QuoteItemPhotoService::uploadPhoto() como RuntimeException sin capturar, devolviendo un 500
+     * sin manejar (en producción, sin APP_DEBUG, eso además se degradaba al genérico "Server
+     * Error" en inglés). Este gap de cobertura — ningún test ejercitaba el camino de bytes
+     * corruptos, solo UploadedFile::fake()->image() que siempre genera un GD válido — es la
+     * razón por la que nadie lo detectó antes de que Daniela lo reportara en producto real.
+     */
+    public function test_subir_foto_con_bytes_invalidos_retorna_422_no_500(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $item = $fixture['part']->items()->create([
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'quantity' => 1, 'unit_price' => 100,
+        ]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        // Extensión válida (pasa el gate `extensions:` del request) pero contenido que NO es una
+        // imagen real — UploadedFile::fake()->create() escribe bytes arbitrarios, no un GD válido.
+        $corrupt = UploadedFile::fake()->create('foto.png', 5, 'image/png');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}/photo", [
+                'file' => $corrupt,
+            ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('imagen válida', (string) $response->json('message'));
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertNull($item->refresh()->photo_key);
+    }
+
+    public function test_subir_foto_reemplaza_la_anterior_y_borra_la_vieja(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $item = $fixture['part']->items()->create([
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'quantity' => 1, 'unit_price' => 100,
+        ]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}/photo", [
+                'file' => UploadedFile::fake()->image('primera.jpg', 400, 400),
+            ])
+            ->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $oldKey = $item->refresh()->photo_key;
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}/photo", [
+                'file' => UploadedFile::fake()->image('segunda.png', 400, 400),
+            ])
+            ->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $item->refresh();
+        $this->assertNotSame($oldKey, $item->photo_key);
+        Storage::disk('s3-public')->assertExists($item->photo_key);
+        Storage::disk('s3-public')->assertMissing($oldKey);
+    }
+
+    public function test_subir_foto_en_cotizacion_confirmada_retorna_422(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($designerId);
+        $item = $fixture['part']->items()->create([
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'quantity' => 1, 'unit_price' => 100,
+        ]);
+        $fixture['quote']->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$item->id}/photo", [
+                'file' => UploadedFile::fake()->image('foto.jpg', 400, 400),
+            ])
+            ->assertStatus(422);
+    }
+
+    // ── SCRUM-1138: la foto del producto de Catálogo llega a la cotización ──────────────────────
+
+    /** Agrega un producto de catálogo a una partida nueva y devuelve [token, fixture, respuesta del POST]. */
+    private function addCatalogProductToQuote(array $productOverrides): array
+    {
+        config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn.test']);
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($this->userIdByEmail('designer@atlantic.test'));
+        $product = $this->makeCatalogProduct($productOverrides);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $post = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
+                'catalog_product_id' => $product->id, 'quantity' => 1,
+            ])
+            ->assertStatus(201);
+
+        return [$token, $fixture, $post];
+    }
+
+    public function test_1138_producto_con_foto_subida_muestra_su_miniatura_en_la_cotizacion(): void
+    {
+        [$token, $fixture, $post] = $this->addCatalogProductToQuote([
+            'photo_url' => null, 'photo_key' => 'catalog/9/photo/aaa.jpg', 'photo_thumbnail_key' => 'catalog/9/photo/aaa-thumb.jpg',
+        ]);
+
+        $this->assertSame('https://cdn.test/public/catalog/9/photo/aaa-thumb.jpg', $post->json('photo_url'));
+        $this->withHeaders($this->authHeaders($token))->getJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('parts.0.items.0.photo_url', 'https://cdn.test/public/catalog/9/photo/aaa-thumb.jpg');
+    }
+
+    public function test_1138_foto_subida_sin_miniatura_cae_a_la_foto_completa(): void
+    {
+        [, , $post] = $this->addCatalogProductToQuote(['photo_url' => null, 'photo_key' => 'catalog/9/photo/bbb.jpg']);
+
+        $this->assertSame('https://cdn.test/public/catalog/9/photo/bbb.jpg', $post->json('photo_url'));
+    }
+
+    public function test_1138_la_foto_subida_gana_sobre_el_photo_url_legacy(): void
+    {
+        [, , $post] = $this->addCatalogProductToQuote([
+            'photo_url' => 'https://legacy.test/vieja.jpg', 'photo_key' => 'catalog/9/photo/ccc.jpg', 'photo_thumbnail_key' => 'catalog/9/photo/ccc-thumb.jpg',
+        ]);
+
+        $this->assertSame('https://cdn.test/public/catalog/9/photo/ccc-thumb.jpg', $post->json('photo_url'));
+    }
+
+    public function test_1138_producto_solo_con_photo_url_legacy_sigue_mostrando_su_foto(): void
+    {
+        [$token, $fixture, $post] = $this->addCatalogProductToQuote(['photo_url' => 'https://legacy.test/ok.jpg']);
+
+        $this->assertSame('https://legacy.test/ok.jpg', $post->json('photo_url'));
+        $this->withHeaders($this->authHeaders($token))->getJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}")
+            ->assertJsonPath('parts.0.items.0.photo_url', 'https://legacy.test/ok.jpg');
+    }
+
+    public function test_1138_producto_sin_foto_queda_con_photo_url_null(): void
+    {
+        [$token, $fixture, $post] = $this->addCatalogProductToQuote(['photo_url' => null, 'photo_key' => null]);
+
+        $this->assertNull($post->json('photo_url'));
+        $this->withHeaders($this->authHeaders($token))->getJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}")
+            ->assertJsonPath('parts.0.items.0.photo_url', null);
+    }
+
+    public function test_1138_el_item_personalizado_no_usa_la_foto_del_catalogo(): void
+    {
+        config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn.test']);
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($this->userIdByEmail('designer@atlantic.test'));
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", $this->validItemPayload('REF-CUSTOM'))
+            ->assertStatus(201)
+            ->assertJsonPath('photo_url', null);
+    }
+
+    // ── SCRUM-1152: el mensaje de margen del producto no muestra el porcentaje ─────────────────
+
+    private const MARGIN_MESSAGE_1152 = 'Este cambio dejaría el margen del producto por debajo del mínimo permitido';
+
+    public function test_1152_agregar_un_producto_bajo_margen_responde_sin_el_porcentaje(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($this->userIdByEmail('designer@atlantic.test'));
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        // costo 50, precio 60 -> margen 16.7%, por debajo del mínimo: la validación sigue bloqueando (422).
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items", [
+                ...$this->validItemPayload(), 'unit_price' => 60, 'cost' => 50,
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(self::MARGIN_MESSAGE_1152, $response->json('message'));
+        $this->assertStringNotContainsString('%', $response->json('message'));
+    }
+
+    public function test_1152_editar_el_precio_de_un_producto_bajo_margen_responde_sin_el_porcentaje(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($this->userIdByEmail('designer@atlantic.test'));
+        $itemId = $fixture['part']->items()->create([
+            'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 50,
+        ])->id;
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $base = "/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$itemId}";
+
+        $update = $this->withHeaders($this->authHeaders($token))
+            ->putJson($base, [...$this->validItemPayload('REF-1'), 'unit_price' => 60, 'cost' => 50])
+            ->assertStatus(422);
+        $this->assertSame(self::MARGIN_MESSAGE_1152, $update->json('message'));
+
+        // La vista previa del precio (advertencia en vivo) usa el mismo mensaje; la validación sigue marcando la violación.
+        $preview = $this->withHeaders($this->authHeaders($token))->postJson("{$base}/preview-price", ['unit_price' => 60])->assertStatus(200);
+        $preview->assertJsonPath('violates_margin', true);
+        $this->assertSame(self::MARGIN_MESSAGE_1152, $preview->json('message'));
+    }
+
+    public function test_1152_sin_violacion_de_margen_no_hay_mensaje_y_se_guarda(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $fixture = $this->makeQuoteWithPart($this->userIdByEmail('designer@atlantic.test'));
+        $itemId = $fixture['part']->items()->create([
+            'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 50,
+        ])->id;
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $preview = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/ventas-diseno/quotes/{$fixture['quote']->id}/parts/{$fixture['part']->id}/items/{$itemId}/preview-price", ['unit_price' => 100])
+            ->assertStatus(200);
+        $preview->assertJsonPath('violates_margin', false);
+        $this->assertNull($preview->json('message'));
     }
 }

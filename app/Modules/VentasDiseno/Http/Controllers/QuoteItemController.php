@@ -10,6 +10,9 @@ use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\PricingSettings;
 use App\Modules\VentasDiseno\Models\Quote;
 use App\Modules\VentasDiseno\Models\QuoteItem;
+use App\Modules\VentasDiseno\Services\CatalogService;
+use App\Modules\VentasDiseno\Services\QuoteItemPhotoService;
+use App\Shared\Support\CircuitOpenException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -27,24 +30,22 @@ use Illuminate\Validation\Rule;
  */
 final class QuoteItemController extends Controller
 {
+    public const PHOTO_EXTENSIONS = 'png,jpg,jpeg,webp';
+
+    public function __construct(
+        private readonly QuoteItemPhotoService $photos,
+        private readonly CatalogService $catalog,
+    ) {}
+
     /**
-     * SCRUM-725 (decisión de Luis, 2026-08-05) — revierte la regla de REQ-040 de
-     * "nunca revelar el porcentaje mínimo real": el criterio de este ticket pide el
-     * número explícito en el mensaje, y de acá en más aplica a todo el sistema de
-     * margen (no solo a este ticket) para no dejar dos mensajes iguales con
-     * comportamiento distinto. Siempre se interpola desde
-     * `PricingSettings::min_margin_percent` (configurable), nunca un número fijo.
+     * SCRUM-1152 — el mensaje de margen de un PRODUCTO ya no muestra el porcentaje mínimo (pedido del ticket). Revierte, solo para este mensaje, la decisión de SCRUM-725 (Luis, 2026-08-05) de
+     * mostrar el número; la validación y el valor configurable (`PricingSettings::min_margin_percent`) no cambian, solo el
+     * texto. El mensaje equivalente del margen global (`QuoteController::marginErrorMessage()`) queda como estaba hasta
+     * que Luis decida si también pierde el porcentaje.
      */
     private function marginErrorMessage(): string
     {
-        return 'Este cambio dejaría el margen del producto por debajo del mínimo permitido ('
-            . $this->formatPercent(PricingSettings::current()->min_margin_percent) . '%)';
-    }
-
-    /** `30.0` -> "30", `28.5` -> "28.5" — sin ceros decimales de relleno. */
-    private function formatPercent(float $value): string
-    {
-        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
+        return 'Este cambio dejaría el margen del producto por debajo del mínimo permitido';
     }
 
     /**
@@ -92,7 +93,7 @@ final class QuoteItemController extends Controller
             return response()->json(['message' => $resolved], 422);
         }
 
-        if ($resolved['is_custom'] && $this->referenceExistsInQuote($quote, $resolved['reference'])) {
+        if ($resolved['is_custom'] && $this->referenceExistsInPart($part->id, $resolved['reference'])) {
             return response()->json(['message' => 'Esta referencia ya existe'], 422);
         }
 
@@ -109,6 +110,62 @@ final class QuoteItemController extends Controller
         $item = $part->items()->create($resolved);
 
         return response()->json($this->format($item, $quote), 201);
+    }
+
+    /**
+     * SCRUM-1161 — reordenar los productos de UNA partida por drag and drop. Recibe todos los ítems de
+     * esa partida en el nuevo orden; un id de otra partida o una lista distinta da 422 (nunca mueve un
+     * producto a otra partida). El orden de ingreso al agregar (siguiente posición) no cambia.
+     */
+    public function reorder(Request $request, int $quoteId, int $partId): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $quote = Quote::find($quoteId);
+        if ($quote === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        if (! $this->canAccess($quote, $user)) {
+            return response()->json(['message' => trans('auth.unauthorized')], 403);
+        }
+
+        $part = $quote->parts()->find($partId);
+        if ($part === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $blocked = $this->ensureEditable($quote);
+        if ($blocked !== null) {
+            return $blocked;
+        }
+
+        $validated = $request->validate([
+            'item_ids'   => ['required', 'array', 'list', 'min:1', 'max:500'],
+            'item_ids.*' => ['integer', 'distinct'],
+        ]);
+
+        /** @var list<int> $ids */
+        $ids = array_map('intval', $validated['item_ids']);
+        $current = $part->items()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $a = $ids;
+        $b = $current;
+        sort($a);
+        sort($b);
+        if ($a !== $b) {
+            return response()->json(['message' => 'La lista de productos de la partida cambió; recarga la cotización.'], 422);
+        }
+
+        DB::transaction(function () use ($part, $ids): void {
+            foreach ($ids as $position => $id) {
+                $part->items()->whereKey($id)->where('position', '!=', $position)->update(['position' => $position]);
+            }
+        });
+
+        return response()->json(['item_ids' => $ids]);
     }
 
     public function update(QuoteItemRequest $request, int $quoteId, int $partId, int $itemId): JsonResponse
@@ -150,7 +207,7 @@ final class QuoteItemController extends Controller
             return response()->json(['message' => $resolved], 422);
         }
 
-        if ($resolved['is_custom'] && $this->referenceExistsInQuote($quote, $resolved['reference'], excludeItemId: $item->id)) {
+        if ($resolved['is_custom'] && $this->referenceExistsInPart($part->id, $resolved['reference'], excludeItemId: $item->id)) {
             return response()->json(['message' => 'Esta referencia ya existe'], 422);
         }
 
@@ -419,6 +476,79 @@ final class QuoteItemController extends Controller
     }
 
     /**
+     * SCRUM-849.6 — foto ad-hoc de un ítem personalizado (RN del ticket: solo para productos
+     * que "no existen" y se escriben directo en la cotización, `is_custom=true`; un ítem de
+     * Catálogo real ya trae su propia foto vía `catalogProduct` y no puede reemplazarse desde
+     * acá — la única vía para eso es Compras → Inventario).
+     */
+    public function uploadPhoto(Request $request, int $quoteId, int $partId, int $itemId): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $quote = Quote::find($quoteId);
+        if ($quote === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        if (! $this->canAccess($quote, $user)) {
+            return response()->json(['message' => trans('auth.unauthorized')], 403);
+        }
+
+        $part = $quote->parts()->find($partId);
+        if ($part === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $item = $part->items()->find($itemId);
+        if ($item === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        if (! $item->is_custom) {
+            return response()->json([
+                'message' => 'Un producto de Catálogo no puede recibir una foto ad-hoc — la imagen se administra desde Compras → Inventario.',
+            ], 422);
+        }
+
+        $blocked = $this->ensureEditable($quote);
+        if ($blocked !== null) {
+            return $blocked;
+        }
+
+        /** @var array{file: \Illuminate\Http\UploadedFile} $validated */
+        $validated = $request->validate([
+            'file' => 'required|file|extensions:' . QuoteItemController::PHOTO_EXTENSIONS,
+        ]);
+
+        try {
+            $item = $this->photos->uploadPhoto($item, $validated['file']);
+        } catch (CircuitOpenException) {
+            return response()->json([
+                'message' => 'Storage service temporarily unavailable. Please try again in a few minutes.',
+            ], 503);
+        } catch (\RuntimeException) {
+            // Pre-QA (2026-09-11, rebote SCRUM-849.6) — CRÍTICO: un archivo con extensión válida
+            // pero bytes no decodificables por GD (o un fallo de lectura del archivo temporal)
+            // escapaba de QuoteItemPhotoService::uploadPhoto() sin capturar, resultando en un 500
+            // sin manejar. Localmente (APP_DEBUG=true) eso filtraba el mensaje técnico crudo de la
+            // excepción ("GD no pudo decodificar la imagen subida") tal cual al usuario; en
+            // producción (APP_DEBUG=false) el handler default de Laravel lo reemplaza por el
+            // genérico "Server Error" en inglés — peor que el fallback ya traducido que el
+            // frontend ya tenía preparado (uploadPhotoError). Un archivo corrupto es un error de
+            // input del usuario, no un error de servidor: 422 con mensaje claro, mismo patrón que
+            // el resto de este controller.
+            return response()->json([
+                'message' => 'No se pudo procesar la imagen. Verificá que el archivo sea una imagen válida (JPG, PNG o WEBP) y volvé a intentarlo.',
+            ], 422);
+        }
+
+        return response()->json($this->format($item, $quote), 201);
+    }
+
+    /**
      * REQ-040 (Pre-QA SCRUM-132): valida el margen resultante ANTES de crear/
      * actualizar el ítem — arma una instancia de QuoteItem sin persistir (los
      * atributos ya resueltos por resolveItemData()) para reusar exactamente la
@@ -476,12 +606,14 @@ final class QuoteItemController extends Controller
     }
 
     /**
-     * REQ-038: una referencia personalizada duplicada (sin distinguir mayúsculas/
-     * minúsculas) se valida en TODA la cotización, no solo en la partida actual.
+     * REQ-038 (ajustado SCRUM-1146): una referencia personalizada duplicada (sin distinguir
+     * mayúsculas/minúsculas) se valida por PARTIDA, igual que el producto de catálogo — la misma
+     * referencia nueva en "Sala" y en "Cocina" es un caso real, no un error. Antes se validaba en
+     * toda la cotización, lo que bloqueaba repetirla entre partidas.
      */
-    private function referenceExistsInQuote(Quote $quote, string $reference, ?int $excludeItemId = null): bool
+    private function referenceExistsInPart(int $partId, string $reference, ?int $excludeItemId = null): bool
     {
-        $query = QuoteItem::whereHas('quotePart', fn ($q) => $q->where('quote_id', $quote->id))
+        $query = QuoteItem::where('quote_part_id', $partId)
             ->whereRaw('lower(reference) = ?', [mb_strtolower($reference)]);
 
         if ($excludeItemId !== null) {
@@ -528,6 +660,11 @@ final class QuoteItemController extends Controller
     private function ensureEditable(Quote $quote): ?JsonResponse
     {
         if ($quote->confirmed_at !== null) {
+            // SCRUM-1120 — CotizaYA no tiene "nueva versión": una vez generada queda fija.
+            if ($quote->isCotizaYa()) {
+                return response()->json(['message' => 'Una cotización de CotizaYA ya generada no se puede editar.'], 422);
+            }
+
             return response()->json([
                 'message' => 'Una cotización generada no se puede editar directamente. Use "Usar como base para nueva versión".',
             ], 422);
@@ -545,7 +682,13 @@ final class QuoteItemController extends Controller
             'quantity' => $item->quantity, 'unit_price' => $item->unit_price, 'cost' => $item->cost,
             'price_type_override' => $item->price_type_override, 'discount_percent' => $item->discount_percent,
             // REQ-039 — mismo campo que formatDetail() en QuoteController, ver docblock ahí.
-            'stock_quantity' => $item->catalogProduct?->stock_quantity,
+            // SCRUM-1196 — el DISPONIBLE de venta (solo Bodega Central), no el stock total; null = sin control de stock (línea personalizada).
+            'stock_quantity' => $item->catalogProduct?->stock_quantity === null ? null : ($this->catalog->availableForSaleMap([(int) $item->catalog_product_id])[(int) $item->catalog_product_id] ?? 0),
+            // SCRUM-849.6 — miniatura ad-hoc (solo is_custom); null si nunca se subió ninguna.
+            // SCRUM-1138 — ítem de Catálogo: foto del producto (misma precedencia que el detalle de la cotización).
+            'photo_url' => $item->is_custom
+                ? $this->photos->photoUrl($item)
+                : ($item->catalogProduct !== null ? $this->catalog->photoThumbnailUrl($item->catalogProduct) : null),
             // SCRUM-725 — mismo campo que formatDetail() de QuoteController, para que la
             // fila recién creada/editada ya llegue resaltada sin esperar el refetch de la
             // cotización completa.

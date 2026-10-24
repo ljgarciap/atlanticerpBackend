@@ -26,18 +26,38 @@ final class ClientLookupService
     /**
      * RN2 — modal de búsqueda con resultados filtrados en vivo.
      *
+     * Rebote SCRUM-917 (Daniela, 2026-09-14) — el buscador no encontraba clientes que SÍ
+     * existían en CRM → Clientes. Causa raíz confirmada contra dev.atlanticerp.ai (7568 Clientes
+     * Master reales): la versión anterior pre-cargaba solo los primeros 200 registros
+     * ordenados por nombre y recién ahí filtraba en PHP por el término buscado — cualquier
+     * cliente cuyo nombre cayera fuera de ese prefijo alfabético de 200 jamás entraba al pool
+     * de búsqueda, sin importar qué tan exacto fuera el término (no es un problema de
+     * "recientes", es cualquier nombre alfabéticamente después del top 200). Ahora la
+     * coincidencia exacta corre en SQL contra toda la tabla; el fallback aproximado (typo)
+     * sigue en PHP pero sobre el universo completo, no un prefijo arbitrario.
+     *
      * @return list<array{id: int, name: string}>
      */
     public function searchMasterClients(string $search): array
     {
-        /** @var list<MasterClient> $clients */
-        $clients = MasterClient::orderBy('name')->limit(200)->get()->all();
+        $term = trim($search);
 
-        if (trim($search) !== '') {
-            [$clients] = $this->fuzzySearch->search($clients, $search, fn (MasterClient $c): string => $c->name);
+        if ($term === '') {
+            /** @var list<MasterClient> $clients */
+            $clients = MasterClient::orderBy('name')->limit(self::MAX_RESULTS)->get()->all();
+
+            return array_map(fn (MasterClient $c): array => ['id' => $c->id, 'name' => $c->name], $clients);
         }
 
-        $clients = array_slice($clients, 0, self::MAX_RESULTS);
+        /** @var list<MasterClient> $exact */
+        $exact = MasterClient::where('name', 'ilike', "%{$term}%")->orderBy('name')->limit(self::MAX_RESULTS)->get()->all();
+        if ($exact !== []) {
+            return array_map(fn (MasterClient $c): array => ['id' => $c->id, 'name' => $c->name], $exact);
+        }
+
+        /** @var list<MasterClient> $all */
+        $all = MasterClient::orderBy('name')->get()->all();
+        [$clients] = $this->fuzzySearch->search($all, $term, fn (MasterClient $c): string => $c->name);
 
         return array_map(fn (MasterClient $c): array => ['id' => $c->id, 'name' => $c->name], $clients);
     }

@@ -23,5 +23,12 @@ class GlobalSettingsSeeder extends Seeder
             ['key' => 'notifications.archive_read_after_days'],
             ['value' => '30', 'updated_by' => null, 'updated_at' => now()],
         );
+
+        // SCRUM-812 (REQ-636, Epic SCRUM-788) — retención en caliente antes de archivar a S3 y
+        // purgar de Postgres. 12 meses, decisión del CTO 2026-08-30 (ver ArchiveAuditLogsJob).
+        GlobalSetting::firstOrCreate(
+            ['key' => 'audit_logs.retention_months'],
+            ['value' => '12', 'updated_by' => null, 'updated_at' => now()],
+        );
     }
 }

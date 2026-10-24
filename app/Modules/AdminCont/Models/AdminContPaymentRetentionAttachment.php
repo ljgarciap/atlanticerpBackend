@@ -6,6 +6,7 @@ namespace App\Modules\AdminCont\Models;
 
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AdminContPaymentRetentionAttachment extends Model
 {
+    use LogsAuditTrail;
+
     /** @var list<string> */
     protected $fillable = [
         'payment_id', 'nombre_archivo', 'storage_key', 'size_bytes', 'mime_type', 'uploaded_by',

@@ -6,6 +6,7 @@ namespace App\Modules\VentasDiseno\Services;
 
 use App\Models\User;
 use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Modules\VentasDiseno\Models\SalesCommissionTier;
 use Carbon\CarbonImmutable;
 
 /**
@@ -16,24 +17,53 @@ use Carbon\CarbonImmutable;
  */
 final class SalesTotalsService
 {
-    /** Tabla escalonada REQ-073 — corte único en cada umbral. */
+    /**
+     * Tabla escalonada REQ-073 — paramétrica desde SCRUM-944/945 (antes `match(true)`
+     * hardcodeado, ver docblock de la migración `..._sales_commission_tiers_table.php` —
+     * `monto_maximo` de cada tramo termina en ".99" a propósito para preservar el corte
+     * estrictamente-menor original con el modelo de rango inclusivo).
+     */
     public function percentFor(float $total): float
     {
-        return match (true) {
-            $total < 20000  => 1.5,
-            $total < 35000  => 2.0,
-            $total < 60000  => 3.0,
-            $total < 80000  => 4.0,
-            $total < 120000 => 4.5,
-            default         => 5.0,
-        };
+        // Sin guarda de $total <= 0 a propósito — el match(true) original devolvía 1.5% (tramo
+        // más bajo) para $0, comportamiento preservado acá porque monto_minimo del tramo 1 es 0.
+        $tier = SalesCommissionTier::query()
+            ->where('monto_minimo', '<=', $total)
+            ->where(function ($q) use ($total): void {
+                $q->whereNull('monto_maximo')->orWhere('monto_maximo', '>=', $total);
+            })
+            ->orderBy('orden')
+            ->first();
+
+        return $tier->porcentaje ?? 0.0;
     }
 
+    /**
+     * SCRUM-849.4 — una tarjeta asignada a Gerencia a N personas (`owner_id` + `compartido_con`,
+     * ver PipelineCard::projectIdsOwnedBy()) reparte su monto en partes iguales entre las N: cada
+     * asignado (el owner incluido) aporta amount/N a SU propio total mensual, antes de aplicarle
+     * la tabla escalonada — así "si son 2 se divide en 2, si son 3 en 3" (RN del ticket) sin
+     * romper el criterio ya existente de que el % se calcula sobre el total agregado de cada
+     * persona, no por tarjeta individual.
+     */
     public function monthlyApprovedTotal(User $vendor, CarbonImmutable $monthStart): float
     {
-        return (float) PipelineCard::where('owner_id', $vendor->id)
-            ->where('stage', 'approved')
+        $cards = PipelineCard::where('stage', 'approved')
             ->whereBetween('stage_changed_at', [$monthStart, $monthStart->endOfMonth()])
-            ->sum('amount');
+            ->where(function ($q) use ($vendor): void {
+                $q->where('owner_id', $vendor->id)
+                    ->orWhereJsonContains('compartido_con', $vendor->id);
+            })
+            ->get(['amount', 'compartido_con']);
+
+        return (float) $cards->sum(fn (PipelineCard $card): float => $this->shareFor($card));
+    }
+
+    /** Monto que le corresponde a UN asignado de una tarjeta con N asignados (owner + compartido_con). */
+    private function shareFor(PipelineCard $card): float
+    {
+        $assigneeCount = 1 + count($card->compartido_con ?? []);
+
+        return ((float) ($card->amount ?? 0)) / $assigneeCount;
     }
 }

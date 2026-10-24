@@ -423,6 +423,64 @@ class PipelineControllerTest extends FeatureTestCase
         $this->assertSame(1, PipelineCard::where('sub_client_id', $sub->id)->count());
     }
 
+    public function test_crear_pipeline_setea_creator_al_usuario_que_crea(): void
+    {
+        // SCRUM-884 — "Creador" es siempre quien hizo el alta, distinto de "Responsable"
+        // (owner), aunque en el caso simple (sin asignación de Gerencia) ambos coincidan.
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/pipeline', ['type' => 'lead', 'name' => 'Lead Creador'])
+            ->assertStatus(201);
+
+        $response->assertJsonPath('owner.id', $designerId);
+        $response->assertJsonPath('creator.id', $designerId);
+    }
+
+    public function test_gerencia_asigna_proyecto_al_crear_deja_creator_en_quien_crea_no_en_el_asignado(): void
+    {
+        // SCRUM-884, RN — cuando Gerencia crea una tarjeta y la asigna directo a otra persona
+        // (assignee_ids), "Responsable" queda en el asignado pero "Creador" es Gerencia, que
+        // fue quien de hecho hizo el alta.
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managementId = $this->userIdByEmail('management@atlantic.test');
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/pipeline', [
+                'type' => 'lead', 'name' => 'Lead asignado al crear', 'assignee_ids' => [$designerId],
+            ])
+            ->assertStatus(201);
+
+        $response->assertJsonPath('owner.id', $designerId);
+        $response->assertJsonPath('creator.id', $managementId);
+    }
+
+    public function test_reasignar_responsable_no_modifica_creator(): void
+    {
+        // SCRUM-884, RN — el Creador es inmutable: reasignar el Responsable (Gerencia) nunca
+        // debe tocarlo, sin importar cuántas veces se reasigne.
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $created = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/ventas-diseno/pipeline', ['type' => 'lead', 'name' => 'Lead reasignable'])
+            ->assertStatus(201);
+        $cardId = $created->json('id');
+
+        $managementToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $response = $this->withHeaders($this->authHeaders($managementToken))
+            ->putJson("/api/ventas-diseno/pipeline/{$cardId}", ['assignee_ids' => [$supervisorId]])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('owner.id', $supervisorId);
+        $response->assertJsonPath('creator.id', $designerId);
+    }
+
     public function test_crear_con_tipo_invalido_retorna_422(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
@@ -527,7 +585,9 @@ class PipelineControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
-        $card = $this->makeCard($designerId);
+        // SCRUM-821 — delivery_type/delivery_dates ahora exige etapa Propuesta/Aprobado (antes la
+        // API lo aceptaba en cualquier etapa, SCRUM-78 solo lo ocultaba en el frontend).
+        $card = $this->makeCard($designerId, 'proposal');
         $card->deliveryDates()->create(['date' => '2026-01-01']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -541,6 +601,134 @@ class PipelineControllerTest extends FeatureTestCase
 
         $response->assertJsonCount(2, 'delivery_dates');
         $this->assertSame(['2026-09-01', '2026-09-15'], $response->json('delivery_dates'));
+    }
+
+    /**
+     * Pre-QA (SCRUM-817, 2026-08-31) — el fix de SCRUM-817 es solo de UI: el frontend ya nunca
+     * arma un payload inconsistente, pero antes de este fix la API en sí aceptaba
+     * delivery_type=single con 2+ fechas sin normalizar ni rechazar (confirmado en vivo contra
+     * dev.atlanticerp.ai antes de corregir). El invariante "single ⟹ ≤1 fecha" tiene que valer siempre,
+     * sin importar quién arme el request — no solo cuando el cliente es el frontend actual.
+     */
+    public function test_delivery_type_unica_trunca_fechas_adicionales_aunque_el_payload_las_incluya(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $card = $this->makeCard($designerId, 'proposal');
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
+                'delivery_type'  => 'single',
+                'delivery_dates' => ['2026-09-01', '2026-09-15'],
+            ])
+            ->assertStatus(200);
+
+        $response->assertJsonCount(1, 'delivery_dates');
+        $this->assertSame(['2026-09-01'], $response->json('delivery_dates'));
+    }
+
+    /** SCRUM-821 — "Parcial" exige mínimo 2 fechas (REQ original), la API antes lo aceptaba con 0 o 1 sin avisar. */
+    public function test_delivery_type_parcial_con_menos_de_2_fechas_retorna_422(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $card = $this->makeCard($designerId, 'proposal');
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
+                'delivery_type'  => 'partial',
+                'delivery_dates' => ['2026-09-01'],
+            ])
+            ->assertStatus(422);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
+                'delivery_type'  => 'partial',
+                'delivery_dates' => [],
+            ])
+            ->assertStatus(422);
+    }
+
+    /**
+     * SCRUM-821 — delivery_type/delivery_dates fuera de Cotización/Propuesta/Aprobado (SCRUM-78
+     * solo lo ocultaba en el frontend). SCRUM-909 amplió las etapas permitidas de
+     * Propuesta/Aprobado a Cotización/Propuesta/Aprobado — Lead y Diseño siguen bloqueadas.
+     */
+    public function test_delivery_type_fuera_de_cotizacion_propuesta_o_aprobado_retorna_422(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $card = $this->makeCard($designerId, 'lead');
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
+                'delivery_type'  => 'single',
+                'delivery_dates' => ['2026-09-01'],
+            ])
+            ->assertStatus(422);
+    }
+
+    /**
+     * SCRUM-909 (rebote 2026-09-14) — Cotización pasa a ser una etapa válida para definir la
+     * fecha de entrega: antes de este fix, el campo se veía disponible en Cotización en el
+     * frontend pero el guardado siempre rechazaba con 422, un callejón sin salida real.
+     */
+    public function test_delivery_type_en_cotizacion_permite_guardar_fecha_de_entrega(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $card = $this->makeCard($designerId, 'quote');
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
+                'delivery_type'  => 'partial',
+                'delivery_dates' => ['2026-09-01', '2026-09-15'],
+            ])
+            ->assertStatus(200);
+
+        $this->assertSame('partial', $response->json('delivery_type'));
+        $this->assertSame(['2026-09-01', '2026-09-15'], $response->json('delivery_dates'));
+    }
+
+    /** SCRUM-821 — la restricción de etapa no debe bloquear una edición que NO toca delivery_type/delivery_dates. */
+    public function test_actualizar_otro_campo_en_lead_no_se_bloquea_por_la_restriccion_de_fechas(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $card = $this->makeCard($designerId, 'lead');
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['observations' => 'sin tocar fechas'])
+            ->assertStatus(200);
+    }
+
+    /**
+     * SCRUM-828 — regresión de SCRUM-821: el guard chequeaba array_key_exists(), no el valor. El
+     * frontend (guardado de formulario completo) siempre manda delivery_type/delivery_dates junto
+     * con el resto de campos, como null/[] cuando el usuario no los tocó (ocultos en Cotización
+     * desde SCRUM-78) — no deben bloquear el guardado si vienen vacíos.
+     */
+    public function test_delivery_type_y_delivery_dates_vacios_en_cotizacion_no_bloquean_el_guardado(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $card = $this->makeCard($designerId, 'quote');
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
+                'worked_area_m2'  => 45,
+                'delivery_type'   => null,
+                'delivery_dates'  => [],
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('worked_area_m2', 45)
+            ->assertJsonPath('delivery_type', null);
     }
 
     public function test_vincular_subcliente_de_otro_master_client_retorna_422(): void
@@ -615,6 +803,95 @@ class PipelineControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['observations' => 'x'])
             ->assertStatus(403);
+    }
+
+    // ── SCRUM-849.4 — asignación de Gerencia a uno o varios asignados ───────────
+
+    public function test_gerencia_asigna_a_una_sola_persona_reasigna_el_owner(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
+        $card = $this->makeCard($designerId);
+
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['assignee_ids' => [$supervisorId]])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('owner.id', $supervisorId);
+        $assignees = $response->json('assignees');
+        $this->assertCount(1, $assignees);
+        $this->assertSame($supervisorId, $assignees[0]['id']);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame([], $card->fresh()->compartido_con);
+    }
+
+    public function test_gerencia_asigna_a_varias_personas_deja_al_resto_en_compartido_con(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
+        $card = $this->makeCard($designerId);
+
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['assignee_ids' => [$designerId, $supervisorId]])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('owner.id', $designerId);
+        $this->assertCount(2, $response->json('assignees'));
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame([$supervisorId], $card->fresh()->compartido_con);
+    }
+
+    public function test_asignar_sin_ser_gerencia_se_ignora_en_silencio(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
+        $card = $this->makeCard($designerId);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['assignee_ids' => [$supervisorId], 'observations' => 'x'])
+            ->assertStatus(200)
+            ->assertJsonPath('owner.id', $designerId);
+    }
+
+    public function test_asignado_secundario_compartido_con_puede_ver_el_detalle(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
+        $this->grantVentasDisenoRead('supervisor@atlantic.test');
+        $card = $this->makeCard($designerId);
+        $card->update(['compartido_con' => [$supervisorId]]);
+
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/pipeline/{$card->id}")
+            ->assertStatus(200);
+    }
+
+    public function test_asignado_secundario_ve_la_tarjeta_en_alcance_propio(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
+        $this->grantVentasDisenoRead('supervisor@atlantic.test');
+        $card = $this->makeCard($designerId);
+        $card->update(['compartido_con' => [$supervisorId]]);
+
+        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/pipeline?scope=own')
+            ->assertStatus(200);
+
+        $this->assertContains($card->id, collect($response->json('data'))->pluck('id')->all());
     }
 
     // ── uploadFile (REQ-013) ─────────────────────────────────────────────────

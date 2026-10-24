@@ -1,0 +1,67 @@
+# Reglas propias de AtlanticERP para Semgrep (SCRUM-963) — familia `sqli-flow`. Prueba al lado (sqli-flow.php):
+#   docker run --rm -v "$PWD":/src semgrep/semgrep:1.178.0 semgrep --test /src/infra/semgrep/rules
+# Un par YAML/prueba por familia A PROPÓSITO: Semgrep evalúa cada regla de un YAML contra TODO su archivo de prueba, así que
+# mezclar reglas que se solapan (flujo vs inventario) produce falsos errores de prueba.
+# Niveles: ERROR = flujo (entrada del usuario → sumidero, precisas, 0 hoy); INFO = inventario con contador en baseline-counts.json.
+# Limitación: el flujo de Semgrep OSS es por archivo; una entrada que cruza controlador → servicio no se ve.
+rules:
+  - id: atlanticerp-sqli-user-input
+    mode: taint
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Entrada del usuario llega a SQL crudo sin parámetros enlazados (inyección SQL). Usar `?` y el arreglo de bindings, o
+      validar contra una lista blanca (columna/orden) antes de interpolar.
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      owner: cybersecurity
+    pattern-sources:
+      - patterns:
+          - pattern: $REQ->input(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - patterns:
+          - pattern: $REQ->query(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - patterns:
+          - pattern: $REQ->get(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - patterns:
+          - pattern: $REQ->all()
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - patterns:
+          - pattern: $REQ->string(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - pattern: request(...)
+      - pattern: $_GET[...]
+      - pattern: $_POST[...]
+      - pattern: $_REQUEST[...]
+    pattern-sanitizers:
+      - pattern: in_array(...)
+      - pattern: (int) $X
+      - pattern: intval(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $Q->whereRaw($SQL, ...)
+              - pattern: $Q->orWhereRaw($SQL, ...)
+              - pattern: $Q->selectRaw($SQL, ...)
+              - pattern: $Q->orderByRaw($SQL, ...)
+              - pattern: $Q->groupByRaw($SQL, ...)
+              - pattern: $Q->havingRaw($SQL, ...)
+              - pattern: DB::raw($SQL)
+              - pattern: DB::select($SQL, ...)
+              - pattern: DB::statement($SQL, ...)
+              - pattern: DB::unprepared($SQL)
+          - focus-metavariable: $SQL
+

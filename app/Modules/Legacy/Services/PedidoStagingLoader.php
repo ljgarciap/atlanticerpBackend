@@ -162,6 +162,9 @@ final class PedidoStagingLoader
             'idestado'           => $row->idestado,
             'icg_seriealbaran'   => $row->icgSeriealbaran,
             'icg_numeroalbaran'  => $row->icgNumeroalbaran,
+            // SCRUM-842 — viene del Extractor en cada corrida (no del Matcher), sí va en el
+            // $update para que una segunda corrida la refresque si cambió en ICG.
+            'comision'           => $row->comision,
             'created_at'         => $now,
         ], $rows);
 
@@ -171,7 +174,7 @@ final class PedidoStagingLoader
                 ['icg_numserie', 'icg_numpedido', 'icg_n'],
                 [
                     'icg_codcliente', 'fechapedido', 'fechaentrega', 'totneto', 'icg_codvendedor',
-                    'idestado', 'icg_seriealbaran', 'icg_numeroalbaran',
+                    'idestado', 'icg_seriealbaran', 'icg_numeroalbaran', 'comision',
                 ],
             );
         }
@@ -273,6 +276,8 @@ final class PedidoStagingLoader
                 'cantidad'         => $row->cantidad,
                 'precio'           => $row->precio,
                 'total'            => $row->total,
+                'unidades_pendientes' => $row->unidadesPendientes,
+                'unidades_recibidas'  => $row->unidadesRecibidas,
             ];
         }
 

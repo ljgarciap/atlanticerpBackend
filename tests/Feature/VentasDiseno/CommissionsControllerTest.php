@@ -93,6 +93,29 @@ class CommissionsControllerTest extends FeatureTestCase
         $this->assertNull($row['paid_at']);
     }
 
+    // SCRUM-849.4 — una tarjeta asignada a N personas (owner_id + compartido_con) reparte su
+    // monto en partes iguales, ANTES de aplicar la tabla escalonada a cada una.
+    public function test_tarjeta_con_compartido_con_divide_el_monto_entre_los_asignados(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $targetMonth = now()->subMonths(6);
+        $card = $this->makeApprovedCard($designerId, 25000, $targetMonth);
+        $card->update(['compartido_con' => [$managerId]]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/reports/commissions?scope=own&period=year')
+            ->assertStatus(200);
+
+        $row = collect($response->json('cohorts'))->firstWhere('month', $targetMonth->format('Y-m'));
+        $this->assertNotNull($row);
+        $this->assertEquals(12500, $row['total_amount']); // 25000 / 2 asignados
+        $this->assertEquals(1.5, $row['commission_percent']); // 12500 < 20000
+        $this->assertEquals(187.5, $row['commission_amount']);
+    }
+
     public function test_alcance_equipo_incluye_vendedores_reales_de_business_role_user_seeder(): void
     {
         // Pre-QA 2026-07-30 (SCRUM-712) — vendorsInScope() filtraba 'team' por el enum legado

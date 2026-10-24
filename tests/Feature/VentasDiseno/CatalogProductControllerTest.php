@@ -8,6 +8,7 @@ use App\Modules\Bodega\Models\Order;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Concerns\DemoModeTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
 /**
@@ -16,6 +17,8 @@ use Tests\Feature\FeatureTestCase;
  */
 class CatalogProductControllerTest extends FeatureTestCase
 {
+    use DemoModeTestHelpers;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -226,4 +229,110 @@ class CatalogProductControllerTest extends FeatureTestCase
             ->getJson("/api/ventas-diseno/catalog-products/{$product->id}")
             ->assertStatus(404);
     }
+
+    // ── Modo Demo (docs/specs/demo-mode.md) ─────────────────────────────────
+
+    public function test_gate_global_apagado_muestra_catalogo_completo_aunque_preferencia_personal_este_activa(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->setUserDemoModePreference('designer@atlantic.test', true);
+        // Gate global queda en default (apagado) -- no se llama enableDemoModeGlobally().
+        $this->makeProduct(['reference' => 'SIN-FOTO', 'photo_url' => null]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog-products')
+            ->assertStatus(200);
+
+        $this->assertContains('SIN-FOTO', collect($response->json('data'))->pluck('reference'));
+    }
+
+    public function test_gate_global_activo_pero_preferencia_personal_apagada_muestra_catalogo_completo(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->enableDemoModeGlobally();
+        $this->setUserDemoModePreference('designer@atlantic.test', false);
+        $this->makeProduct(['reference' => 'SIN-FOTO', 'photo_url' => null]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog-products')
+            ->assertStatus(200);
+
+        $this->assertContains('SIN-FOTO', collect($response->json('data'))->pluck('reference'));
+    }
+
+    public function test_ambos_gates_activos_excluye_producto_sin_imagen(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->enableDemoModeGlobally();
+        $this->setUserDemoModePreference('designer@atlantic.test', true);
+        $this->makeProduct(['reference' => 'SIN-FOTO', 'photo_url' => null, 'photo_key' => null]);
+        $this->makeProduct(['reference' => 'CON-FOTO', 'photo_url' => 'https://cdn.test/foto.jpg']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog-products')
+            ->assertStatus(200);
+
+        $refs = collect($response->json('data'))->pluck('reference');
+        $this->assertNotContains('SIN-FOTO', $refs);
+        $this->assertContains('CON-FOTO', $refs);
+    }
+
+    public function test_ambos_gates_activos_excluye_producto_con_precio_cero(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->enableDemoModeGlobally();
+        $this->setUserDemoModePreference('designer@atlantic.test', true);
+        $this->makeProduct(['reference' => 'SIN-PRECIO', 'photo_url' => 'https://cdn.test/foto.jpg', 'price_full' => 0]);
+        $this->makeProduct(['reference' => 'CON-PRECIO', 'photo_url' => 'https://cdn.test/foto.jpg', 'price_full' => 150]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog-products')
+            ->assertStatus(200);
+
+        $refs = collect($response->json('data'))->pluck('reference');
+        $this->assertNotContains('SIN-PRECIO', $refs);
+        $this->assertContains('CON-PRECIO', $refs);
+    }
+
+    public function test_ambos_gates_activos_incluye_producto_con_photo_key_pero_photo_url_vacio(): void
+    {
+        // Precedencia de CatalogService::photoUrl(): photo_key gana si existe. Un producto con
+        // photo_key pero SIN photo_url (foto subida por el mecanismo nuevo, SCRUM-830) debe
+        // seguir contando como "tiene imagen" en Modo Demo.
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->enableDemoModeGlobally();
+        $this->setUserDemoModePreference('designer@atlantic.test', true);
+        $this->makeProduct(['reference' => 'FOTO-NUEVA', 'photo_url' => null, 'photo_key' => 'ventas_diseno/foo.jpg']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog-products')
+            ->assertStatus(200);
+
+        $this->assertContains('FOTO-NUEVA', collect($response->json('data'))->pluck('reference'));
+    }
+
+    // SCRUM-1138 — el buscador de productos (vista previa antes de agregar a la cotización) resuelve la foto subida.
+    public function test_1138_buscador_resuelve_la_foto_subida_y_conserva_la_legacy(): void
+    {
+        config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn.test']);
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->makeProduct(['reference' => 'FOTO-SUB', 'photo_url' => null, 'photo_key' => 'catalog/5/photo/a.jpg', 'photo_thumbnail_key' => 'catalog/5/photo/a-thumb.jpg']);
+        $this->makeProduct(['reference' => 'FOTO-LEG', 'photo_url' => 'https://legacy.test/l.jpg']);
+        $this->makeProduct(['reference' => 'FOTO-SIN', 'photo_url' => null]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $rows = collect($this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog-products?per_page=all')
+            ->assertStatus(200)->json('data'))->keyBy('reference');
+
+        $this->assertSame('https://cdn.test/public/catalog/5/photo/a-thumb.jpg', $rows['FOTO-SUB']['photo_url']);
+        $this->assertSame('https://legacy.test/l.jpg', $rows['FOTO-LEG']['photo_url']);
+        $this->assertNull($rows['FOTO-SIN']['photo_url']);
+    }
 }
+

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Http\Requests;
 
+use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,7 +13,7 @@ use Illuminate\Validation\Rule;
  * existente (el master_client_id viene del segmento de ruta, no del body). A
  * diferencia de StoreSubClientRequest (usado por el flujo mínimo de vinculación
  * desde Pipeline, ver ClientController), acá los contactos son obligatorios — es la
- * pantalla completa de Clientes. Dispara REQ-068 igual que StoreClientRequest.
+ * pantalla completa de Clientes. Tampoco crea proyecto ni Lead (SCRUM-1187, ver docblock de StoreClientRequest).
  */
 class StoreClientSubClientRequest extends FormRequest
 {
@@ -26,7 +27,7 @@ class StoreClientSubClientRequest extends FormRequest
     {
         return [
             'business_name'         => ['required', 'string', 'max:255'],
-            'tax_id'                => ['required', 'string', 'max:100'],
+            ...ReceptorTipo::reglas(), // SCRUM-1003 — tipo de cliente ante la DGI; RUC/DV obligatorios salvo Consumidor Final
             'delivery_address'      => ['nullable', 'string', 'max:255'],
             'category'              => [
                 'nullable', 'string',
@@ -37,6 +38,17 @@ class StoreClientSubClientRequest extends FormRequest
             'contacts.*.role'       => ['required', 'string', Rule::in(['client', 'architect', 'other'])],
             'contacts.*.phone'      => ['nullable', 'required_without:contacts.*.email', 'string', 'max:50'],
             'contacts.*.email'      => ['nullable', 'required_without:contacts.*.phone', 'email', 'max:255'],
+            'from_quote_context'    => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        // SCRUM-1003 — el tipo de cliente ante la DGI y el RUC/DV condicionados, en español claro.
+        return [
+            ...ReceptorTipo::mensajes(),
+            'tax_id_dv.regex' => 'El DV debe tener 1 o 2 dígitos.',
         ];
     }
 }

@@ -5,16 +5,22 @@ declare(strict_types=1);
 namespace App\Modules\Compras\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\AI\Models\AiAnalysis;
+use App\Modules\Compras\Http\Requests\StoreProviderBankImageRequest;
 use App\Modules\Compras\Http\Requests\StoreProviderRequest;
 use App\Modules\Compras\Http\Requests\UpdateProviderRequest;
+use App\Modules\Compras\Jobs\ExtractProviderBankInfoJob;
 use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\Provider;
+use App\Modules\Compras\Services\ProviderBankImageService;
 use App\Modules\VentasDiseno\Services\FuzzySearchService;
 use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * REQ-120→127 — Proveedores. Búsqueda reutiliza FuzzySearchService (mismo mecanismo que
@@ -30,7 +36,17 @@ final class ProviderController extends Controller
     /** @var list<string> */
     private const ALLOWED_SORTS = ['name', 'category', 'currency', 'created_at'];
 
-    public function __construct(private readonly FuzzySearchService $fuzzySearch) {}
+    private const BANK_EXTRACTION_ANALYSIS_TYPE = 'provider_bank_info';
+
+    /** ADR-SCRUM819, condición de Cybersecurity #8 — límite de re-intentos por proveedor. */
+    private const BANK_EXTRACTION_MAX_ATTEMPTS_PER_PROVIDER = 5;
+
+    private const BANK_EXTRACTION_DECAY_SECONDS = 3600;
+
+    public function __construct(
+        private readonly FuzzySearchService $fuzzySearch,
+        private readonly ProviderBankImageService $bankImages,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -171,6 +187,126 @@ final class ProviderController extends Controller
         return response()->json($this->format($provider, detailed: true));
     }
 
+    /** SCRUM-819 (RN2/RN5/RN8) — subir reemplaza cualquier imagen previa, nunca la conserva. */
+    /**
+     * ADR-SCRUM819 — tras un upload exitoso, dispara automáticamente la extracción de datos
+     * bancarios con IA (sin botón manual, pedido explícito de Luis). El rate limit se chequea
+     * ANTES de disparar pero nunca bloquea el upload en sí — si se alcanzó el límite, la imagen
+     * queda guardada igual, simplemente sin `extraction_job_id` en la respuesta.
+     */
+    public function uploadBankImage(StoreProviderBankImageRequest $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $provider = Provider::find($id);
+        if ($provider === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        /** @var array{file: UploadedFile} $validated */
+        $validated = $request->validated();
+        $provider = $this->bankImages->upload($validated['file'], $provider);
+
+        $extractionJobId = null;
+        $tenantSlug = $this->resolveTenantSlug($request);
+        if ($tenantSlug !== null && ! RateLimiter::tooManyAttempts($this->bankExtractionLimiterKey($provider->id), self::BANK_EXTRACTION_MAX_ATTEMPTS_PER_PROVIDER)) {
+            RateLimiter::hit($this->bankExtractionLimiterKey($provider->id), self::BANK_EXTRACTION_DECAY_SECONDS);
+            $extractionJobId = $this->dispatchBankExtraction($provider->id, $user->id, $tenantSlug);
+        }
+
+        return response()->json([...$this->format($provider, detailed: true), 'extraction_job_id' => $extractionJobId]);
+    }
+
+    /**
+     * ADR-SCRUM819 — poll del resultado de extracción. Mismo shape que
+     * `PurchaseOrderDocumentController::validation()`: `status: null` explícito (no un JSON
+     * vacío) si todavía no se disparó ninguna extracción para este proveedor.
+     */
+    public function bankImageExtraction(Request $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $provider = Provider::find($id);
+        if ($provider === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        /** @var AiAnalysis|null $analysis */
+        $analysis = AiAnalysis::where('entity_type', 'provider')
+            ->where('entity_id', $id)
+            ->where('analysis_type', self::BANK_EXTRACTION_ANALYSIS_TYPE)
+            ->latest()
+            ->first();
+
+        if ($analysis === null) {
+            return response()->json(['id' => null, 'status' => null, 'result' => null, 'error' => null]);
+        }
+
+        return response()->json([
+            'id' => $analysis->id,
+            'status' => $analysis->status,
+            'result' => $analysis->result !== null ? json_decode($analysis->result, true) : null,
+            'error' => $analysis->error,
+        ]);
+    }
+
+    /** SCRUM-819 (RN7) — eliminar sin reemplazar. */
+    public function deleteBankImage(Request $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $provider = Provider::find($id);
+        if ($provider === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $provider = $this->bankImages->delete($provider);
+
+        return response()->json($this->format($provider, detailed: true));
+    }
+
+    private function bankExtractionLimiterKey(int $providerId): string
+    {
+        return "compras.provider_bank_info.extract:{$providerId}";
+    }
+
+    private function dispatchBankExtraction(int $providerId, int $userId, string $tenantSlug): string
+    {
+        /** @var AiAnalysis $analysis */
+        $analysis = AiAnalysis::create([
+            'entity_type' => 'provider',
+            'entity_id' => $providerId,
+            'analysis_type' => self::BANK_EXTRACTION_ANALYSIS_TYPE,
+            'status' => AiAnalysis::STATUS_PENDING,
+            'requested_by' => $userId,
+        ]);
+
+        ExtractProviderBankInfoJob::dispatch($analysis->id, $providerId, $tenantSlug);
+
+        return $analysis->id;
+    }
+
+    private function resolveTenantSlug(Request $request): ?string
+    {
+        /** @var array{tenant?: string}|null $payload */
+        $payload = $request->attributes->get('jwt');
+
+        if ($payload === null || ! isset($payload['tenant']) || $payload['tenant'] === '') {
+            return null;
+        }
+
+        return (string) $payload['tenant'];
+    }
+
     /** @return array<string, mixed> */
     private function kpis(): array
     {
@@ -221,6 +357,10 @@ final class ProviderController extends Controller
         }
 
         return array_merge($base, [
+            // SCRUM-1014 — `tax_id` se guardaba pero nunca viajaba en el detalle: el formulario lo
+            // recargaba vacío y el RUC parecía no persistir.
+            'tax_id' => $provider->tax_id,
+            'tax_id_dv' => $provider->tax_id_dv,
             'whatsapp' => $provider->whatsapp,
             'phone' => $provider->phone,
             'email' => $provider->email,
@@ -230,6 +370,13 @@ final class ProviderController extends Controller
             'bank_account_number' => $provider->bank_account_number,
             'bank_swift' => $provider->bank_swift,
             'bank_beneficiary' => $provider->bank_beneficiary,
+            // SCRUM-819 — respaldo visual, independiente de los campos bank_* de arriba (RN9).
+            // null cuando no hay imagen cargada, nunca un objeto vacío (RN de "sin dato" ya
+            // establecido en el resto del proyecto, ej. Provider::completePercent()).
+            'bank_image' => $provider->bank_image_storage_key === null ? null : [
+                'url' => $this->bankImages->presignUrl($provider),
+                'filename' => $provider->bank_image_original_filename,
+            ],
         ]);
     }
 

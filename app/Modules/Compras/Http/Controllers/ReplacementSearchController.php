@@ -171,6 +171,11 @@ final class ReplacementSearchController extends Controller
                 'photo_url' => $product->photo_url,
                 'price_full' => $product->price_full,
                 'cost' => $product->cost,
+                // SCRUM-818 (rebote 2026-09-03, Hallazgo 5) — mismo criterio que
+                // CatalogProductSearchController::format(): margen calculado server-side con la
+                // fórmula canónica (CatalogProduct::marginPercent()), no la simplificada que el
+                // frontend calculaba antes a partir de cost/price_full.
+                'margin_percent' => $product->marginPercent(),
                 'stock_quantity' => $product->stock_quantity,
                 'similarity_percent' => $entry['similarity_percent'],
                 'reasoning' => $entry['reasoning'],

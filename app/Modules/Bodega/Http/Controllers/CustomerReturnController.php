@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Bodega\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\AdminCont\Services\CreditNotePdfService;
+use App\Modules\AdminCont\Services\CreditNoteService;
 use App\Modules\Bodega\Exceptions\CustomerReturnException;
 use App\Modules\Bodega\Models\CustomerReturn;
 use App\Modules\Bodega\Models\CustomerReturnLine;
@@ -17,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
+use App\Modules\Bodega\Models\Warehouse;
 
 /**
  * SCRUM-473→489 (REQ-403→419, Bloque B6 "Devoluciones") — ver
@@ -31,6 +34,8 @@ final class CustomerReturnController extends Controller
         private readonly CustomerReturnService $returns,
         private readonly CustomerReturnDocumentService $documents,
         private readonly OrderDocumentService $orderDocuments,
+        private readonly CreditNoteService $creditNotes,
+        private readonly CreditNotePdfService $creditNotePdf,
     ) {}
 
     /** GET /api/bodega/returns — bandeja, 5 chips de filtro por status. */
@@ -143,7 +148,30 @@ final class CustomerReturnController extends Controller
         return response()->json(['url' => $this->documents->presignUrl($customerReturn->signed_document_path)]);
     }
 
-    /** GET /api/bodega/returns/{id}/form — REQ-406 (PDF nuevo). */
+    /**
+     * GET /api/bodega/returns/{id}/credit-note-pdf — SCRUM-865 punto 2, dirección inversa del
+     * mismo problema que `signedDocumentUrl()` de AdminCont resuelve para el sentido contrario:
+     * una vez Finalizada, la fila de Devoluciones necesita "Ver nota de crédito", pero un usuario
+     * de Bodega no tiene (ni debería necesitar) `admin_contab.*` para verla. Gateado por
+     * `permission:bodega.read` (mismo permiso que el resto de este controller), no por el permiso
+     * de Notas de Crédito.
+     */
+    public function creditNotePdf(int $id): \Illuminate\Http\Response|JsonResponse
+    {
+        $customerReturn = CustomerReturn::find($id);
+        if ($customerReturn === null || $customerReturn->credit_note_id === null) {
+            return response()->json(['message' => 'Esta devolución no tiene nota de crédito generada.'], 404);
+        }
+
+        $detail = $this->creditNotes->show($customerReturn->credit_note_id);
+        if ($detail === null) {
+            return response()->json(['message' => 'Nota de crédito no encontrada.'], 404);
+        }
+
+        return $this->creditNotePdf->generate($detail)->stream("nota-credito-{$detail['numero']}.pdf");
+    }
+
+    /** POST /api/bodega/returns/{id}/form — REQ-406 (PDF nuevo). Genera y sube el PDF a S3 en cada llamada (objeto nuevo cada vez); sin cuerpo. SCRUM-1180: era GET. */
     public function form(Request $request, int $id): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -161,7 +189,7 @@ final class CustomerReturnController extends Controller
         return response()->json(['url' => $this->documents->presignUrl($key)]);
     }
 
-    /** GET /api/bodega/returns/{id}/delivery-guide — REQ-407: reusa `OrderDocumentService` tal cual. */
+    /** POST /api/bodega/returns/{id}/delivery-guide — REQ-407: reusa `OrderDocumentService` tal cual (cada llamada crea un documento y un objeto S3 nuevos); sin cuerpo. SCRUM-1180: era GET. */
     public function deliveryGuide(Request $request, int $id): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -193,7 +221,7 @@ final class CustomerReturnController extends Controller
         }
 
         $validated = $request->validate([
-            'destination_warehouse_id'          => ['required', 'integer', 'exists:warehouses,id'],
+            'destination_warehouse_id'          => ['required', 'integer', Warehouse::operativaRule()],
             'lines'                              => ['required', 'array', 'min:1'],
             'lines.*.customer_return_line_id'   => ['required', 'integer'],
             'lines.*.qty_received'               => ['required', 'integer', 'min:0'],
@@ -252,6 +280,8 @@ final class CustomerReturnController extends Controller
             'created_at'             => $customerReturn->created_at->toIso8601String(),
             'received_at'            => $customerReturn->received_at?->toIso8601String(),
             'finalized_at'           => $customerReturn->finalized_at?->toIso8601String(),
+            // SCRUM-865 punto 2 — habilita el enlace "Ver nota de crédito" una vez Finalizada.
+            'credit_note_id'         => $customerReturn->credit_note_id,
             'rejected_at'            => $customerReturn->rejected_at?->toIso8601String(),
             'products'               => $customerReturn->lines->map(fn (CustomerReturnLine $l) => $this->formatLine($l))->values(),
         ];

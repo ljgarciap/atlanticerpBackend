@@ -36,6 +36,9 @@
 # --albaranes agregado SCRUM-759 — mismo criterio que --fotos, invoca `legacy:sync-albaranes` en
 # vez de `legacy:sync-productos`. Sin `--limit` (el comando de Albaranes no lo soporta).
 #
+# --albaranes-compra agregado SCRUM-840 — equivalente de compras a --albaranes, invoca
+# `legacy:sync-albaranes-compra` (vincula por proveedor, no por cliente). Sin `--limit`.
+#
 # --facturas agregado SCRUM-760 — mismo criterio que --fotos, invoca `legacy:sync-facturas` en vez
 # de `legacy:sync-productos`. Sin `--limit` (el comando de Facturas no lo soporta).
 #
@@ -104,6 +107,9 @@
 #   infra/legacy-sync.sh dev  --albaranes --dry-run
 #   infra/legacy-sync.sh test --albaranes
 #   infra/legacy-sync.sh prod --albaranes --force
+#   infra/legacy-sync.sh dev  --albaranes-compra --dry-run
+#   infra/legacy-sync.sh test --albaranes-compra
+#   infra/legacy-sync.sh prod --albaranes-compra --force
 #   infra/legacy-sync.sh dev  --facturas --dry-run
 #   infra/legacy-sync.sh test --facturas
 #   infra/legacy-sync.sh prod --facturas --force
@@ -176,7 +182,7 @@ case "$ENV" in
         COMPOSE_FILE="infra/docker-compose.prod.yml"
         ;;
     *)
-        echo "Uso: $0 <dev|test|prod> [--fotos|--clientes|--proveedores|--cotizaciones|--pedidos|--albaranes|--facturas|--pagos|--fuse-clientes|--fuse-proveedores|--fix-productos-referencia] [--dry-run] [--limit=N] [--force]" >&2
+        echo "Uso: $0 <dev|test|prod> [--fotos|--clientes|--proveedores|--cotizaciones|--pedidos|--albaranes|--albaranes-compra|--facturas|--pagos|--fuse-clientes|--fuse-proveedores|--fix-productos-referencia] [--dry-run] [--limit=N] [--force]" >&2
         exit 1
         ;;
 esac
@@ -189,6 +195,7 @@ PROVEEDORES=false
 COTIZACIONES=false
 PEDIDOS=false
 ALBARANES=false
+ALBARANES_COMPRA=false
 FACTURAS=false
 PAGOS=false
 FUSE_CLIENTES=false
@@ -204,6 +211,7 @@ for arg in "$@"; do
         --cotizaciones) COTIZACIONES=true ;;
         --pedidos) PEDIDOS=true ;;
         --albaranes) ALBARANES=true ;;
+        --albaranes-compra) ALBARANES_COMPRA=true ;;
         --facturas) FACTURAS=true ;;
         --pagos) PAGOS=true ;;
         --fuse-clientes) FUSE_CLIENTES=true ;;
@@ -228,13 +236,14 @@ ENTITY_FLAGS_ACTIVE=0
 [[ "$COTIZACIONES" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
 [[ "$PEDIDOS" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
 [[ "$ALBARANES" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
+[[ "$ALBARANES_COMPRA" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
 [[ "$FACTURAS" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
 [[ "$PAGOS" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
 [[ "$FUSE_CLIENTES" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
 [[ "$FUSE_PROVEEDORES" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
 [[ "$FIX_PRODUCTOS_REFERENCIA" == true ]] && ENTITY_FLAGS_ACTIVE=$((ENTITY_FLAGS_ACTIVE + 1))
 if [[ "$ENTITY_FLAGS_ACTIVE" -gt 1 ]]; then
-    echo "ERROR: --fotos, --clientes, --proveedores, --cotizaciones, --pedidos, --albaranes, --facturas, --pagos, --fuse-clientes, --fuse-proveedores y --fix-productos-referencia son mutuamente excluyentes (una corrida es de una sola entidad)." >&2
+    echo "ERROR: --fotos, --clientes, --proveedores, --cotizaciones, --pedidos, --albaranes, --albaranes-compra, --facturas, --pagos, --fuse-clientes, --fuse-proveedores y --fix-productos-referencia son mutuamente excluyentes (una corrida es de una sola entidad)." >&2
     exit 1
 fi
 
@@ -251,6 +260,8 @@ elif [[ "$PEDIDOS" == true ]]; then
     ARTISAN_COMMAND="legacy:sync-pedidos"
 elif [[ "$ALBARANES" == true ]]; then
     ARTISAN_COMMAND="legacy:sync-albaranes"
+elif [[ "$ALBARANES_COMPRA" == true ]]; then
+    ARTISAN_COMMAND="legacy:sync-albaranes-compra"
 elif [[ "$FACTURAS" == true ]]; then
     ARTISAN_COMMAND="legacy:sync-facturas"
 elif [[ "$PAGOS" == true ]]; then
@@ -265,8 +276,8 @@ fi
 
 # --limit solo tiene sentido para el comando de fotos (no existe en legacy:sync-productos,
 # legacy:sync-clientes, legacy:sync-proveedores, legacy:sync-cotizaciones, legacy:sync-pedidos,
-# legacy:sync-albaranes, legacy:sync-facturas, legacy:sync-pagos, legacy:fuse-clientes,
-# legacy:fuse-proveedores ni legacy:fix-productos-referencia).
+# legacy:sync-albaranes, legacy:sync-albaranes-compra, legacy:sync-facturas, legacy:sync-pagos,
+# legacy:fuse-clientes, legacy:fuse-proveedores ni legacy:fix-productos-referencia).
 if [[ -n "$LIMIT_FLAG" && "$FOTOS" != true ]]; then
     echo "ERROR: --limit solo aplica junto con --fotos." >&2
     exit 1

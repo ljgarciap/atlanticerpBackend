@@ -65,7 +65,7 @@ final class ClienteExtractor implements ClienteExtractorContract
     public static function clientesQuery(): string
     {
         return <<<'SQL'
-            SELECT c.CODCLIENTE, c.NOMBRECLIENTE, c.NOMBRECOMERCIAL, c.CIF, c.DIRECCION1,
+            SELECT c.CODCLIENTE, c.NOMBRECLIENTE, c.NOMBRECOMERCIAL, c.CIF, c.NIF20, c.DIRECCION1,
                    c.POBLACION, c.PROVINCIA, c.PAIS, c.TELEFONO1, c.TELEFONO2, c.MOBIL, c.E_MAIL,
                    c.CODVENDEDOR, c.BLOQUEADO, c.FECHAMODIFICADO
             FROM CLIENTES c
@@ -94,6 +94,8 @@ final class ClienteExtractor implements ClienteExtractorContract
             // NOMBRECLIENTE es obligatorio en ICG (razón social/nombre legal) — nunca nulo.
             razonSocial: (string) $row['NOMBRECLIENTE'],
             cif: self::nullableString($row['CIF'] ?? null),
+            // SCRUM-1137: NIF20 (nvarchar(20)) trae el RUC completo; CIF (nvarchar(12)) lo trunca.
+            nif20: self::nullableString($row['NIF20'] ?? null),
             direccion: self::nullableString($row['DIRECCION1'] ?? null),
             poblacion: self::nullableString($row['POBLACION'] ?? null),
             provincia: self::nullableString($row['PROVINCIA'] ?? null),

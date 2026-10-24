@@ -23,6 +23,8 @@ class UpdateDailyCashCountEntryRequest extends FormRequest
             'movement_type' => ['required', Rule::in([
                 AdminContDailyCashCountEntry::TYPE_PAYMENT,
                 AdminContDailyCashCountEntry::TYPE_CREDIT_NOTE,
+                AdminContDailyCashCountEntry::TYPE_COMMISSION,
+                AdminContDailyCashCountEntry::TYPE_REVERSAL,
             ])],
             'movement_id'  => ['required', 'integer'],
             'observacion'  => ['nullable', 'string', 'max:1000'],

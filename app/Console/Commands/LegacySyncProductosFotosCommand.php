@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\ArticuloFotoExtractorContract;
 use App\Modules\Legacy\Jobs\SyncProductoFotoJob;
 use App\Modules\Legacy\Models\Producto;
@@ -60,7 +61,7 @@ final class LegacySyncProductosFotosCommand extends Command
     {
         // Mismo criterio que LegacySyncProductosCommand (SCRUM-750, §13.3): el comando ES el
         // proceso PHP top-level, así que ini_set() aplica directo sin necesitar el flag -d.
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');

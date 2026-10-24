@@ -29,6 +29,16 @@ final readonly class FacturaRow
         public ?float $totalImpuestos,
         public ?float $totalBruto,
         public ?string $sufactura,
+        // SCRUM-841 — Facturación Electrónica, de FACTURASVENTACAMPOSLIBRES (LEFT JOIN, ver
+        // FacturaExtractor::facturasQuery()). Todo nullable — no toda factura tiene esta fila.
+        public ?string $feQr = null,
+        public ?string $feAuthNumber = null,
+        public ?string $feSerie = null,
+        public ?string $feNumero = null,
+        public ?string $feFechaEmision = null,
+        public ?string $feFechaRecepcion = null,
+        public ?string $feError = null,
+        public ?string $feEstado = null,
     ) {
     }
 }

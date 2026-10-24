@@ -16,6 +16,8 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\ArchitectCommission;
 use App\Modules\AdminCont\Services\ArchitectCommissionService;
 use App\Modules\VentasDiseno\Models\Architect;
+use App\Shared\Http\Pagination;
+use App\Shared\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -35,7 +37,12 @@ class AdminContArchitectCommissionController
 {
     public function __construct(private readonly ArchitectCommissionService $commissions) {}
 
-    /** GET /api/admin-contab/commissions/external?search=&mes=&architect_id=&estado= — REQ-508/509. */
+    /**
+     * GET /api/admin-contab/commissions/external?search=&mes=&architect_id=&estado=&page=&per_page=
+     * — REQ-508/509. SCRUM-947 — paginación estándar A NIVEL DE ARQUITECTO (nunca parte los
+     * proyectos de un mismo arquitecto entre 2 páginas): las tarjetas globales (`...$cards`) y
+     * `meses_disponibles` no se tocan, solo `arquitectos`.
+     */
     public function summary(Request $request): JsonResponse
     {
         /** @var array{search?: string, mes?: string, architect_id?: int, estado?: string} $filters */
@@ -60,6 +67,11 @@ class AdminContArchitectCommissionController
         // calcula acá (este endpoint es de acceso general, no gateado por `primary_approver_only`) para que el
         // frontend sepa cuándo mostrar Aprobar/Rechazar en el modal de detalle (REQ-519).
         $summary['puede_decidir_porcentaje'] = $this->isPrimaryApprover($request);
+
+        $pagination = Pagination::params($request, [], 'nombre');
+        $paginator = Pagination::ofArray(array_values($summary['arquitectos']), $pagination['per_page'], $pagination['page']);
+        $summary['arquitectos'] = $paginator->items();
+        $summary['meta'] = Pagination::meta($paginator);
 
         return response()->json($summary);
     }
@@ -136,6 +148,14 @@ class AdminContArchitectCommissionController
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // SCRUM-808 (REQ-632) — documento financiero sensible, señal de reconocimiento si se
+        // consulta repetidamente sin nunca avanzar el flujo de pago.
+        app(AuditService::class)->log(
+            action: AuditService::ADMIN_CONT_CUENTA_COBRO_VIEWED,
+            entityType: 'architect_commission',
+            entityId: $commission->id,
+        );
+
         return response()->json(['url' => $this->commissions->cuentaCobroPresignedUrl($commission)]);
     }
 
@@ -178,6 +198,13 @@ class AdminContArchitectCommissionController
         if ($commission === null || $commission->comprobante_retencion_storage_key === null) {
             return response()->json(['message' => 'Not found'], 404);
         }
+
+        // SCRUM-808 (REQ-632) — mismo criterio que showCuentaCobro() arriba.
+        app(AuditService::class)->log(
+            action: AuditService::ADMIN_CONT_COMPROBANTE_RETENCION_VIEWED,
+            entityType: 'architect_commission',
+            entityId: $commission->id,
+        );
 
         return response()->json(['url' => $this->commissions->comprobanteRetencionPresignedUrl($commission)]);
     }

@@ -39,6 +39,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null          $destination_warehouse_id
  * @property \Carbon\Carbon|null $credit_note_notified_at
  * @property \Carbon\Carbon|null $finalized_at
+ * @property int|null          $credit_note_id
  * @property int|null          $rejected_by
  * @property \Carbon\Carbon|null $rejected_at
  * @property string|null       $rejection_reason
@@ -77,7 +78,7 @@ class CustomerReturn extends Model
         'return_number', 'order_id', 'status', 'contact_name', 'contact_phone',
         'signed_document_path', 'signed_document_uploaded_at',
         'received_by', 'received_at', 'destination_warehouse_id',
-        'credit_note_notified_at', 'finalized_at',
+        'credit_note_notified_at', 'finalized_at', 'credit_note_id',
         'rejected_by', 'rejected_at', 'rejection_reason',
         'created_by',
     ];

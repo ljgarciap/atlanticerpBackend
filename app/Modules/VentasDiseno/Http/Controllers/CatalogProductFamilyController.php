@@ -6,6 +6,7 @@ namespace App\Modules\VentasDiseno\Http\Controllers;
 
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
+use App\Modules\VentasDiseno\Services\CatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 
@@ -18,6 +19,8 @@ use Illuminate\Routing\Controller;
  */
 final class CatalogProductFamilyController extends Controller
 {
+    public function __construct(private readonly CatalogService $catalog) {}
+
     public function index(): JsonResponse
     {
         $families = CatalogProductFamily::where('is_active', true)
@@ -54,7 +57,7 @@ final class CatalogProductFamilyController extends Controller
                 'reference'      => $p->reference,
                 'description'    => $p->description,
                 'brand'          => $p->brand,
-                'photo_url'      => $p->photo_url,
+                'photo_url'      => $this->catalog->photoThumbnailUrl($p),
                 'price_full'     => $p->price_full,
                 'stock_quantity' => $p->stock_quantity,
             ])->values(),

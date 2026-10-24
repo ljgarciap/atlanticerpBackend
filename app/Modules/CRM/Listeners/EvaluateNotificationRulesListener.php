@@ -143,9 +143,11 @@ final class EvaluateNotificationRulesListener
     private function buildContent(NotificationRule $rule, Model $model): array
     {
         $project = $this->resolveProject($model);
-        $ctaUrl  = $project !== null
-            ? rtrim((string) config('app.frontend_url'), '/') . "/crm/proyectos/{$project->id}"
-            : null;
+        // SCRUM-1170 — antes: URL ABSOLUTA a `/crm/proyectos/{id}`, una ruta que no existe en el frontend (la real es `/crm/projects`, una lista sin
+        // detalle por id; el proyecto de la regla es el modelo legacy de CRM, no la tarjeta del Pipeline que muestra esa lista). Ahora una ruta INTERNA
+        // y válida, como el resto de las notificaciones: la campana la abre con navigate() y el correo la completa con la URL del frontend
+        // (`NotificationMail::absoluteCtaUrl`). Sin reglas en prod hoy; si se retoma la función, el detalle por id es un trabajo propio.
+        $ctaUrl = $project !== null ? '/crm/projects' : null;
 
         $body = $project !== null ? "{$rule->name} — {$project->nombre}" : $rule->name;
 

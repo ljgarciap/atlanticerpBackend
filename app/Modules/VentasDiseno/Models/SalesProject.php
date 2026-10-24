@@ -7,6 +7,7 @@ namespace App\Modules\VentasDiseno\Models;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -29,6 +30,20 @@ class SalesProject extends Model
         }
 
         return "{$tenant->slug}_ventas_diseno.sales_projects";
+    }
+
+    /**
+     * SCRUM-1121 — asociados del proyecto (arquitectos, diseñadores, contratistas...): compartidos por la tarjeta de Pipeline y todas las
+     * cotizaciones del proyecto.
+     *
+     * @return BelongsToMany<Architect, $this>
+     */
+    public function associates(): BelongsToMany
+    {
+        $tenant = Tenant::current();
+        $pivot  = $tenant !== null ? "{$tenant->slug}_ventas_diseno.sales_project_associates" : 'sales_project_associates';
+
+        return $this->belongsToMany(Architect::class, $pivot, 'sales_project_id', 'architect_id')->withTimestamps()->orderBy('name');
     }
 
     /** @return BelongsTo<SubClient, $this> */

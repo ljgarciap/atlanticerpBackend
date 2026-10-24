@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class AdminContClientBillingProfile extends Model
 {
+    use LogsAuditTrail;
+
     public const REGIMEN_CON_ITBMS = 'con_itbms';
     public const REGIMEN_SIN_ITBMS = 'sin_itbms';
 

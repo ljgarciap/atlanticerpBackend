@@ -7,11 +7,22 @@ namespace Tests\Feature\Compras;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Shared\Multitenancy\Tenant;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-183→190 (REQ-120→127) — Proveedores, sprint2 (rama sprint2, sin push a dev).
+ *
+ * ADR-SCRUM819 (2026-09-01): subir una imagen bancaria ahora dispara ExtractProviderBankInfoJob
+ * automáticamente — con QUEUE_CONNECTION=sync en testing corre dentro del mismo request. Mismo
+ * gotcha ya documentado en PurchaseOrderDocumentControllerTest: sin `services.anthropic.api_key`
+ * configurada + un `Http::fake()` con forma de tool_use válida, AnthropicClient::captureUsage()
+ * revienta con TypeError. Los tests de extracción real (parcial, rate limit, validación de
+ * schema, etc.) viven en ProviderBankInfoExtractionTest.php — acá solo lo mínimo para que los
+ * tests de upload preexistentes (que no les interesa el resultado de la IA) sigan pasando.
  */
 class ProviderControllerTest extends FeatureTestCase
 {
@@ -19,6 +30,18 @@ class ProviderControllerTest extends FeatureTestCase
     {
         parent::setUp();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        Storage::fake('s3-private');
+        config(['services.anthropic.api_key' => 'sk-ant-test-fake-key-for-tests']);
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'id' => 'toolu_test',
+                    'name' => 'extract_bank_data',
+                    'input' => ['fields_found' => [], 'confidence' => 'baja'],
+                ]],
+            ], 200),
+        ]);
     }
 
     private function grantCompras(string $email, array $perms): void
@@ -156,6 +179,63 @@ class ProviderControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$provider->id}", ['name' => ''])
             ->assertStatus(422);
+    }
+
+    // SCRUM-1014 — RUC y DV se guardan al crear/editar y vuelven en el detalle.
+    public function test_crear_proveedor_guarda_ruc_y_dv_y_los_devuelve_en_el_detalle(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $id = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/providers', [
+                'name' => 'Con RUC SA', 'category' => 'locales', 'country' => 'Panamá',
+                'phone' => '6000-0000', 'tax_id' => '8-123-4567', 'tax_id_dv' => '12',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('tax_id', '8-123-4567')
+            ->assertJsonPath('tax_id_dv', '12')
+            ->json('id');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/providers/{$id}")
+            ->assertStatus(200)
+            ->assertJsonPath('tax_id', '8-123-4567')
+            ->assertJsonPath('tax_id_dv', '12');
+    }
+
+    public function test_editar_proveedor_actualiza_ruc_y_dv(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $provider = $this->makeProvider(['name' => 'LightCorp', 'tax_id' => 'VIEJO-1', 'tax_id_dv' => '1']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/compras/providers/{$provider->id}", [
+                'name' => 'LightCorp', 'tax_id' => 'NUEVO-2', 'tax_id_dv' => '07',
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('tax_id', 'NUEVO-2')
+            ->assertJsonPath('tax_id_dv', '07');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/providers/{$provider->id}")
+            ->assertJsonPath('tax_id', 'NUEVO-2')
+            ->assertJsonPath('tax_id_dv', '07');
+    }
+
+    public function test_dv_invalido_retorna_422(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/providers', [
+                'name' => 'DV Malo SA', 'category' => 'locales', 'country' => 'Panamá',
+                'phone' => '6000-0000', 'tax_id' => '1-1-1', 'tax_id_dv' => 'abc',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['tax_id_dv']);
     }
 
     public function test_editar_telefono_se_refleja_en_la_tabla_principal(): void
@@ -338,11 +418,10 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_sort_by_name_desc(): void
     {
-        // "Zona Libre de Colón" (sembrado en todos los entornos, ver Bloque B3) ordena primero en
-        // DESC ("Z" > "B" > "A").
+        // "BK INTERPRISES S.A." (sembrado en todos los entornos, ver Bloque B3 / SCRUM-1135).
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'Alfa']);
-        $this->makeProvider(['name' => 'Beta']);
+        $this->makeProvider(['name' => 'Coral']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -350,7 +429,7 @@ class ProviderControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name')->values()->all();
-        $this->assertSame(['Zona Libre de Colón', 'Beta', 'Alfa'], $names);
+        $this->assertSame(['Coral', 'BK INTERPRISES S.A.', 'Alfa'], $names);
     }
 
     /**
@@ -490,5 +569,161 @@ class ProviderControllerTest extends FeatureTestCase
 
         $this->assertCount(2, $response->json('data'));
         $response->assertJsonPath('meta.current_page', 2);
+    }
+
+    // ── SCRUM-819 — imagen de respaldo de datos bancarios ───────────────────────────────────────
+
+    public function test_sube_imagen_bancaria_y_aparece_en_el_detalle(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $provider = $this->makeProvider();
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/providers/{$provider->id}/bank-image", [
+                'file' => UploadedFile::fake()->image('datos-bancarios.jpg'),
+            ])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('bank_image.filename', 'datos-bancarios.jpg');
+        $this->assertNotNull($response->json('bank_image.url'));
+    }
+
+    /** RN9 — la imagen es independiente de los campos bank_* existentes, no los reemplaza. */
+    public function test_subir_imagen_bancaria_no_modifica_los_campos_bank_existentes(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $provider = $this->makeProvider(['bank_name' => 'Banco General', 'bank_account_number' => '123456']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/providers/{$provider->id}/bank-image", [
+                'file' => UploadedFile::fake()->image('datos.png'),
+            ])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('bank_name', 'Banco General');
+        $response->assertJsonPath('bank_account_number', '123456');
+    }
+
+    /** RN8 — subir una imagen nueva reemplaza la anterior, no la acumula. */
+    public function test_subir_una_segunda_imagen_reemplaza_la_primera(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $provider = $this->makeProvider();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/providers/{$provider->id}/bank-image", ['file' => UploadedFile::fake()->image('primera.jpg')])
+            ->assertStatus(200);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $firstKey = $provider->fresh()->bank_image_storage_key;
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/providers/{$provider->id}/bank-image", ['file' => UploadedFile::fake()->image('segunda.png')])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('bank_image.filename', 'segunda.png');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $secondKey = $provider->fresh()->bank_image_storage_key;
+        $this->assertNotEquals($firstKey, $secondKey);
+        Storage::disk('s3-private')->assertMissing($firstKey);
+        Storage::disk('s3-private')->assertExists($secondKey);
+    }
+
+    /** RN7 — eliminar sin reemplazar deja bank_image en null. */
+    public function test_elimina_la_imagen_bancaria(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $provider = $this->makeProvider();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/providers/{$provider->id}/bank-image", ['file' => UploadedFile::fake()->image('foto.jpg')])
+            ->assertStatus(200);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $key = $provider->fresh()->bank_image_storage_key;
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->deleteJson("/api/compras/providers/{$provider->id}/bank-image")
+            ->assertStatus(200);
+
+        $response->assertJsonPath('bank_image', null);
+        Storage::disk('s3-private')->assertMissing($key);
+    }
+
+    /** RN3 — solo formatos de imagen, un PDF no puede colarse como "respaldo bancario". */
+    public function test_subir_un_pdf_como_imagen_bancaria_retorna_422(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $provider = $this->makeProvider();
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/providers/{$provider->id}/bank-image", [
+                'file' => UploadedFile::fake()->create('documento.pdf', 100, 'application/pdf'),
+            ])
+            ->assertStatus(422);
+    }
+
+    /** RN10 — mismo permiso que editar el proveedor (compras.edit), no compras.write ni compras.read solo. */
+    public function test_subir_imagen_bancaria_sin_permiso_edit_retorna_403(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $provider = $this->makeProvider();
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/providers/{$provider->id}/bank-image", [
+                'file' => UploadedFile::fake()->image('foto.jpg'),
+            ])
+            ->assertStatus(403);
+    }
+
+    /** Escenario 7 del ticket — sin imagen, el detalle sigue devolviendo bank_image: null. */
+    public function test_detalle_sin_imagen_bancaria_devuelve_null(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $provider = $this->makeProvider();
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/providers/{$provider->id}")
+            ->assertStatus(200);
+
+        $response->assertJsonPath('bank_image', null);
+    }
+
+    // ── SCRUM-820 — categoría "Latinoamérica" ───────────────────────────────────────────────────
+
+    public function test_crear_proveedor_con_categoria_latinoamerica_es_valido(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/providers', [
+                'name' => 'Proveedor LatAm', 'category' => 'latinoamerica', 'country' => 'Colombia',
+                'phone' => '6000-0000',
+            ])
+            ->assertStatus(201);
+
+        $response->assertJsonPath('category', 'latinoamerica');
+        // REQ-141 (Provider::deriveOrigin) — solo "locales" es origen local, el resto internacional.
+        $response->assertJsonPath('origin', 'internacional');
+    }
+
+    public function test_editar_categoria_a_latinoamerica_es_valido(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $provider = $this->makeProvider(['category' => 'china']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'LightCorp', 'category' => 'latinoamerica'])
+            ->assertStatus(200)
+            ->assertJsonPath('category', 'latinoamerica');
     }
 }

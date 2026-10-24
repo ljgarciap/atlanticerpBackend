@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\Quote;
+use App\Modules\VentasDiseno\Services\QuoteContactCardSyncService;
 use App\Modules\VentasDiseno\Models\SubClientContact;
 use App\Shared\Services\AuditService;
 use Illuminate\Http\JsonResponse;
@@ -23,8 +25,10 @@ use Illuminate\Validation\Rule;
  */
 final class QuoteContactController extends Controller
 {
-    public function __construct(private readonly AuditService $audit)
-    {
+    public function __construct(
+        private readonly AuditService $audit,
+        private readonly QuoteContactCardSyncService $cardContactSync,
+    ) {
     }
 
     public function store(Request $request, int $quoteId): JsonResponse
@@ -43,6 +47,12 @@ final class QuoteContactController extends Controller
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
+        // SCRUM-1120 — una CotizaYA generada queda fija: sus contactos también (cambiarlos cambia el PDF). Solo CotizaYA:
+        // el flujo comercial conserva su comportamiento de siempre.
+        if ($quote->isCotizaYa() && $quote->confirmed_at !== null) {
+            return response()->json(['message' => 'Una cotización de CotizaYA ya generada no se puede editar.'], 422);
+        }
+
         /** @var array{sub_client_contact_id: int} $validated */
         $validated = $request->validate([
             'sub_client_contact_id' => ['required', 'integer', Rule::exists('sub_client_contacts', 'id')],
@@ -55,6 +65,15 @@ final class QuoteContactController extends Controller
 
         $quote->contacts()->syncWithoutDetaching([$contact->id]);
         $this->audit->log('ventas_diseno.quote.contact_added', 'quote', $quote->id, null, ['sub_client_contact_id' => $contact->id]);
+
+        // SCRUM-1121 — una cotización ya confirmada ya vive en Pipeline: el contacto agregado después también pasa a la tarjeta (solo agrega).
+        // Un borrador nunca toca Pipeline (SCRUM-734): ahí la copia ocurre al confirmar.
+        if ($quote->confirmed_at !== null && $quote->sales_project_id !== null && ! $quote->isCotizaYa()) {
+            $card = PipelineCard::where('sales_project_id', $quote->sales_project_id)->first();
+            if ($card !== null) {
+                $this->cardContactSync->sync($quote, $card);
+            }
+        }
 
         return response()->json($this->format($contact), 201);
     }
@@ -73,6 +92,12 @@ final class QuoteContactController extends Controller
 
         if (! $this->canAccess($quote, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
+        }
+
+        // SCRUM-1120 — una CotizaYA generada queda fija: sus contactos también (cambiarlos cambia el PDF). Solo CotizaYA:
+        // el flujo comercial conserva su comportamiento de siempre.
+        if ($quote->isCotizaYa() && $quote->confirmed_at !== null) {
+            return response()->json(['message' => 'Una cotización de CotizaYA ya generada no se puede editar.'], 422);
         }
 
         $quote->contacts()->detach($contactId);

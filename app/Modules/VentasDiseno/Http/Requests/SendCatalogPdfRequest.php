@@ -27,7 +27,9 @@ class SendCatalogPdfRequest extends FormRequest
     {
         return [
             'mode' => ['required', 'string', Rule::in(['completo', 'seleccionados'])],
-            'product_ids' => ['required_if:mode,seleccionados', 'array', 'min:1'],
+            // SCRUM-998 — tope técnico: `product_ids.*` valida cada id con su propia consulta (`exists`); sin tope, un arreglo de
+            // decenas de miles de ids serían decenas de miles de consultas. Para todo el catálogo existe `mode=completo`.
+            'product_ids' => ['required_if:mode,seleccionados', 'array', 'min:1', 'max:5000'],
             'product_ids.*' => [
                 'integer',
                 Rule::exists('catalog_products', 'id')->where(fn ($q) => $q->where('is_active', true)),

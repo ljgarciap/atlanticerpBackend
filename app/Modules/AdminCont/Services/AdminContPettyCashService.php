@@ -493,12 +493,21 @@ final class AdminContPettyCashService
         return ['grupos' => $grupos, 'total_general' => $totalGeneral];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * SCRUM-868 punto 2 — `solicitante_id`/`solicitante_nombre` viajan también a nivel de línea, no
+     * solo en el encabezado de grupo de `groupBySolicitante()`: la pestaña "Rechazados"
+     * (`rejected()`) devuelve una lista PLANA de `expensePayload()` sin agrupar, así que sin estos
+     * campos el frontend no tenía forma de mostrar el Solicitante y la columna quedaba vacía.
+     *
+     * @return array<string, mixed>
+     */
     private function expensePayload(AdminContPettyCashExpense $e): array
     {
         return [
             'id' => $e->id,
             'fecha' => $e->fecha->toDateString(),
+            'solicitante_id' => $e->solicitante_id,
+            'solicitante_nombre' => $this->userName($e->solicitante),
             'proveedor' => $e->proveedor,
             'descripcion' => $e->descripcion,
             'monto_bruto' => $e->monto_bruto,

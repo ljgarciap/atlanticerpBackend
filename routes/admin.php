@@ -2,8 +2,10 @@
 
 use App\Modules\AI\Http\Controllers\AiModelPricingController;
 use App\Modules\AI\Http\Controllers\AiUsageController;
+use App\Modules\Auth\Http\Controllers\AuditActivityController;
 use App\Modules\Auth\Http\Controllers\AuditLogController;
-use App\Modules\Auth\Http\Controllers\DemoCleanupController;
+use App\Modules\Auth\Http\Controllers\GlobalSettingsController;
+use App\Modules\Auth\Http\Controllers\ImpersonationAdminController;
 use App\Modules\Auth\Http\Controllers\ModuleController;
 use App\Modules\Auth\Http\Controllers\RoleController;
 use App\Modules\Auth\Http\Controllers\SecurityAnomalyController;
@@ -15,12 +17,16 @@ use Illuminate\Support\Facades\Route;
 
 // Superadmin-only operations
 Route::middleware('permission:superadmin.all')->group(function (): void {
-    Route::post('/demo/cleanup',   DemoCleanupController::class);
     Route::get('/export/crm',      CrmExportController::class);
 
     // SCRUM-745 — borra la data de prueba UAT del Catálogo (reference UAT-%) una vez
     // terminado el UAT. Ver CatalogUatTestDataCleanupController.
     Route::post('/catalog/uat-test-data/cleanup', CatalogUatTestDataCleanupController::class);
+
+    // SCRUM-944/945 (Pre-QA hallazgo E) — claves de GlobalSetting en lista blanca, ver
+    // GlobalSettingsRegistry (nunca anthropic_api_key ni claves fuera de la lista).
+    Route::get('/global-settings',         [GlobalSettingsController::class, 'index']);
+    Route::put('/global-settings/{key}',   [GlobalSettingsController::class, 'update']);
 
     // Auditoría de consumo de IA (pedido de Luis 2026-07-20, ver AiUsageController).
     Route::get('/ai/usage', [AiUsageController::class, 'index']);
@@ -30,6 +36,10 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     // SCRUM-792 (Epic SCRUM-788 — Logs y Telemetría) — visor generalizado de audit_logs, todos
     // los módulos. Mismo permiso/sección que /ai/usage arriba, ver docblock de AuditLogController.
     Route::get('/audit/logs', [AuditLogController::class, 'index']);
+    // SCRUM-813 — catálogo de entity_type para el <select> del filtro (ver docblock del método).
+    Route::get('/audit/logs/entity-types', [AuditLogController::class, 'entityTypes']);
+    // SCRUM-1020 — dashboard de actividad (distribución de interacciones por usuario/tipo/módulo/día).
+    Route::get('/audit/activity-summary', [AuditActivityController::class, 'summary']);
 
     // Epic 11 — Seguridad Agéntica. El job solo sugiere; /confirm es la única vía de bloqueo real.
     Route::get('/security/anomalies',                 [SecurityAnomalyController::class, 'index']);
@@ -37,6 +47,10 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     Route::post('/security/anomalies/{id}/dismiss',   [SecurityAnomalyController::class, 'dismiss']);
     Route::post('/security/users/{userId}/unblock',   [SecurityAnomalyController::class, 'unblock']);
     Route::post('/security/users/{userId}/mfa/reset', [SecurityAnomalyController::class, 'resetMfa']);
+
+    // SCRUM-1158 — sesiones de «Ver como usuario»: listado para la pantalla «Sesiones de soporte» y terminación forzada de una sesión activa.
+    Route::get('/security/impersonations',                  [ImpersonationAdminController::class, 'index']);
+    Route::post('/security/impersonations/{id}/revoke',     [ImpersonationAdminController::class, 'revoke']);
 
     // SCRUM-49 Fase 2 — motor de reglas de notificaciones (whitelist de modelos, ver
     // App\Modules\CRM\Notifications\NotifiableModel).
@@ -75,6 +89,7 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
 
 // ADR-006, Decisión 10 — flags transversales por persona, mismo permiso que el resto de
 // administración de usuarios (security.users), no superadmin.all.
-Route::middleware('permission:security.users')->group(function (): void {
+// SCRUM-1012 — también exige rol management/superadmin.
+Route::middleware(['role:superadmin,management', 'permission:security.users'])->group(function (): void {
     Route::patch('/users/{id}/flags', [UserController::class, 'updateFlags'])->whereNumber('id');
 });

@@ -149,6 +149,68 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $this->assertEquals(70.0, $data[0]['similarity_percent']);
     }
 
+    // ── SCRUM-818 — vendedor/diseñador puede buscar (Comparación de Referencias), pero sin costo ──
+
+    /** Antes 403 total (no tenía ninguno de los 3 permisos que ya aceptaba este endpoint). */
+    public function test_vendedor_puede_buscar_via_ventas_diseno_edit(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['ventas_diseno.edit']);
+        $provider = $this->makeProvider();
+        CatalogProduct::create([
+            'reference' => 'VD-01', 'name' => 'Bombillo para vendedor', 'description' => 'Bombillo para vendedor',
+            'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/products')
+            ->assertStatus(200);
+    }
+
+    /**
+     * Este endpoint SÍ expone costo a propósito para Compras (ver docblock del controller) — pero
+     * el vendedor que entra solo con ventas_diseno.edit (sin ningún permiso real de Compras) nunca
+     * debe ver el costo interno del producto, mismo criterio que el buscador de Ventas & Diseño.
+     */
+    public function test_vendedor_via_ventas_diseno_edit_no_ve_costo(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['ventas_diseno.edit']);
+        $provider = $this->makeProvider();
+        CatalogProduct::create([
+            'reference' => 'VD-02', 'name' => 'Bombillo sin costo para vendedor', 'description' => 'Bombillo sin costo para vendedor',
+            'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/products')
+            ->assertStatus(200);
+
+        $this->assertNull($response->json('data.0.cost'));
+        // SCRUM-818 (rebote 2026-09-03, Hallazgo 5) — el % de margen SÍ viaja para Vendedor,
+        // aunque el costo/precio de compra crudos sigan sin corresponderle (decisión de Luis).
+        $this->assertEquals(40, $response->json('data.0.margin_percent')); // (50-30)/50 × 100
+    }
+
+    /** Con compras.read real (Compras/Gerencia), el costo sigue viajando igual que siempre. */
+    public function test_usuario_de_compras_sigue_viendo_costo(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read', 'ventas_diseno.edit']);
+        $provider = $this->makeProvider();
+        CatalogProduct::create([
+            'reference' => 'VD-03', 'name' => 'Bombillo con costo', 'description' => 'Bombillo con costo',
+            'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/products')
+            ->assertStatus(200);
+
+        $this->assertEquals(30, $response->json('data.0.cost'));
+        $this->assertEquals(40, $response->json('data.0.margin_percent'));
+    }
+
     public function test_candidato_bajo_el_umbral_minimo_se_descarta_silenciosamente(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
@@ -171,5 +233,124 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->assertSame([], $response->json('data'));
+    }
+
+    /** SCRUM-992 — búsqueda en SQL, respaldo tolerante a typos y tope de resultados. */
+    public function test_busqueda_sin_acentos_y_typo_con_respaldo(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $provider = $this->makeProvider();
+        CatalogProduct::create([
+            'reference' => 'NEW-1', 'name' => 'Lámpara colgante Nordic', 'description' => 'x', 'price_full' => 10,
+            'provider_id' => $provider->id, 'is_active' => true,
+        ]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $ok = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products?search=LAMPARA nordic')->assertStatus(200);
+        $this->assertSame(['NEW-1'], collect($ok->json('data'))->pluck('reference')->all());
+        $this->assertFalse($ok->json('fuzzy'));
+
+        $typo = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products?search=lampra colgnte')->assertStatus(200);
+        $this->assertSame(['NEW-1'], collect($typo->json('data'))->pluck('reference')->all());
+        $this->assertTrue($typo->json('fuzzy'));
+    }
+
+    public function test_resultados_acotados_y_exacta_primero(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $provider = $this->makeProvider();
+        foreach (range(1, 105) as $i) {
+            CatalogProduct::create([
+                'reference' => sprintf('BULK-%03d', $i), 'name' => 'Bulk '.$i, 'description' => 'x', 'price_full' => 10,
+                'provider_id' => $provider->id, 'is_active' => true,
+            ]);
+        }
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $all = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products')->assertStatus(200);
+        $this->assertCount(100, $all->json('data'));
+
+        $exact = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products?search=BULK-042')->assertStatus(200);
+        $this->assertSame('BULK-042', $exact->json('data.0.reference'));
+    }
+
+    // SCRUM-1163 — paginación real en servidor: el total es el del catálogo del proveedor, no el tope de 100.
+    public function test_paginacion_real_devuelve_total_y_recorre_todo_el_catalogo_del_proveedor(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $provider = $this->makeProvider();
+        foreach (range(1, 130) as $i) {
+            CatalogProduct::create([
+                'reference' => sprintf('PAG-%03d', $i), 'name' => 'Pag '.$i, 'description' => 'x', 'price_full' => 10,
+                'provider_id' => $provider->id, 'is_active' => true,
+            ]);
+        }
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $get = fn (string $qs) => $this->withHeaders($this->authHeaders($token))->getJson("/api/compras/products?provider_id={$provider->id}&{$qs}")->assertStatus(200);
+
+        $p1 = $get('page=1&per_page=50');
+        $this->assertCount(50, $p1->json('data'));
+        $this->assertSame(130, $p1->json('meta.total'));
+        $this->assertSame(3, $p1->json('meta.last_page'));
+
+        $p3 = $get('page=3&per_page=50');
+        $this->assertCount(30, $p3->json('data'));   // los productos 101-130 que antes eran inalcanzables
+
+        $todos = collect([1, 2, 3])->flatMap(fn ($n) => $get("page={$n}&per_page=50")->json('data'))->pluck('id');
+        $this->assertCount(130, $todos->unique(), 'Ninguna página repite ni omite productos.');
+    }
+
+    public function test_paginacion_real_respeta_busqueda_y_excluye_los_ya_agregados(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $provider = $this->makeProvider();
+        $ids = [];
+        foreach (range(1, 12) as $i) {
+            $ids[] = CatalogProduct::create([
+                'reference' => sprintf('EXC-%02d', $i), 'name' => 'Exc '.$i, 'description' => 'x', 'price_full' => 10,
+                'provider_id' => $provider->id, 'is_active' => true,
+            ])->id;
+        }
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $r = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/products?provider_id={$provider->id}&page=1&per_page=10&exclude_ids[]={$ids[0]}&exclude_ids[]={$ids[1]}")
+            ->assertStatus(200);
+
+        $this->assertSame(10, $r->json('meta.total'));   // 12 menos 2 excluidos
+        $this->assertNotContains($ids[0], collect($r->json('data'))->pluck('id')->all());
+        $this->assertNotContains($ids[1], collect($r->json('data'))->pluck('id')->all());
+
+        $busca = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/products?provider_id={$provider->id}&page=1&per_page=10&search=EXC-05")->assertStatus(200);
+        $this->assertSame('EXC-05', $busca->json('data.0.reference'));
+    }
+
+    public function test_paginacion_real_con_proveedor_sin_productos_o_busqueda_sin_resultados_devuelve_total_cero(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $vacio = $this->makeProvider();
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $r = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/products?provider_id={$vacio->id}&page=1&per_page=20")->assertStatus(200);
+        $this->assertSame(0, $r->json('meta.total'));
+        $this->assertSame([], $r->json('data'));
+    }
+
+    public function test_per_page_se_acota_y_una_pagina_fuera_de_rango_no_rompe(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $provider = $this->makeProvider();
+        CatalogProduct::create(['reference' => 'ONE-1', 'name' => 'One', 'description' => 'x', 'price_full' => 10, 'provider_id' => $provider->id, 'is_active' => true]);
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $get = fn (string $qs) => $this->withHeaders($this->authHeaders($token))->getJson("/api/compras/products?provider_id={$provider->id}&{$qs}");
+
+        $this->assertSame(100, $get('page=1&per_page=100000')->assertStatus(200)->json('meta.per_page'));
+        $this->assertSame(1, $get('page=1&per_page=0')->assertStatus(200)->json('meta.per_page'));
+        $fuera = $get('page=99&per_page=20')->assertStatus(200);
+        $this->assertSame([], $fuera->json('data'));
+        $this->assertSame(1, $fuera->json('meta.total'));
+        $get('page=abc&per_page=20')->assertStatus(200);   // no numérico: cae al modo sin paginar, sin error
     }
 }

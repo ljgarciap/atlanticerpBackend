@@ -26,6 +26,8 @@ final readonly class PedidoRow
         public ?string $idestado,
         public ?string $icgSeriealbaran,
         public ?int $icgNumeroalbaran,
+        // SCRUM-842 — de PEDVENTACAMPOSLIBRES (LEFT JOIN, ver PedidoExtractor::pedidosQuery()).
+        public ?float $comision = null,
     ) {
     }
 }

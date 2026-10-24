@@ -10,6 +10,7 @@ use App\Modules\Bodega\Events\PickingCompleted;
 use App\Modules\Bodega\Exceptions\OrderTransitionException;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderItem;
+use App\Modules\Bodega\Models\OrderItemAllocation;
 use App\Modules\Bodega\Models\OrderStageHistory;
 use App\Modules\Bodega\Services\Concerns\ChangesOrderStage;
 use App\Modules\Bodega\Support\BodegaRoles;
@@ -117,7 +118,10 @@ final class PickingService
      * migración `..._100000_add_picking_notes_...`) es opcional por línea y respeta el mismo
      * gate de "solo editable en En picking" que `qty_picked` — no se crea un gate nuevo.
      *
-     * @param list<array{order_item_id: int, qty_picked: int, picking_notes?: string|null}> $items
+     * SCRUM-1196 — cada línea acepta `allocations` (`[{warehouse_id, qty_picked}]`): de qué bodega(s) de venta se alista y cuánto. Sin `allocations`,
+     * `qty_picked` sale de la bodega de despacho por defecto (Bodega Central), como propone el sistema.
+     *
+     * @param list<array{order_item_id: int, qty_picked: int, picking_notes?: string|null, allocations?: list<array{warehouse_id: int, qty_picked: int}>|null}> $items
      */
     public function updatePickingSheet(Order $order, array $items, User $actor): Order
     {
@@ -134,6 +138,12 @@ final class PickingService
                 throw new OrderTransitionException('La Hoja de Picking solo es editable mientras el pedido está En picking.');
             }
 
+            // SCRUM-1196 — la reserva por bodega debe estar fresca antes de validar contra ella (mismo orden de locks que completePicking()).
+            $locked->loadMissing('items');
+            /** @var list<int> $preProductIds */
+            $preProductIds = $locked->items->pluck('catalog_product_id')->filter()->unique()->values()->map(fn ($id) => (int) $id)->all();
+            $this->reservations->reallocateForProducts($preProductIds);
+
             foreach ($items as $row) {
                 /** @var OrderItem $item */
                 $item = $locked->items()->lockForUpdate()->findOrFail($row['order_item_id']);
@@ -144,12 +154,17 @@ final class PickingService
                     );
                 }
 
-                $update = ['qty_picked' => $row['qty_picked']];
+                $total  = $this->applyPicked($item, (int) $row['qty_picked'], $row['allocations'] ?? null);
+                $update = ['qty_picked' => $total];
                 if (array_key_exists('picking_notes', $row)) {
                     $update['picking_notes'] = $row['picking_notes'];
                 }
                 $item->update($update);
             }
+
+            /** @var list<int> $sheetProductIds */
+            $sheetProductIds = $locked->items->pluck('catalog_product_id')->filter()->unique()->values()->map(fn ($id) => (int) $id)->all();
+            $this->reservations->reallocateForProducts($sheetProductIds);
 
             return $locked->fresh('items') ?? $locked;
         }, 3);
@@ -175,7 +190,9 @@ final class PickingService
      * Asistentes y el propio Picker (`BodegaRoles::CAN_PICK`), deliberadamente sin Courier
      * (Pre-QA 2026-07-26, ver docblock de `BodegaRoles::CAN_PICK`).
      *
-     * @param list<array{order_item_id: int, qty_picked: int}> $items
+     * SCRUM-1196 — cada línea acepta `allocations` igual que la hoja (ver `updatePickingSheet()`).
+     *
+     * @param list<array{order_item_id: int, qty_picked: int, allocations?: list<array{warehouse_id: int, qty_picked: int}>|null}> $items
      * @return array{order: Order, review: Order|null}
      */
     public function completePicking(Order $order, array $items, User $actor): array
@@ -220,8 +237,8 @@ final class PickingService
                         ['items' => ["order_item_id {$item->id}: cantidad alistada inválida."]],
                     );
                 }
-                // warehouse_id NO se toca acá — ya lo dejó resuelto reallocateForProducts() arriba.
-                $item->update(['qty_picked' => $row['qty_picked']]);
+                // warehouse_id/qty_reserved los dejó resueltos reallocateForProducts() arriba; acá solo se reparte lo alistado entre las bodegas de venta.
+                $item->update(['qty_picked' => $this->applyPicked($item, (int) $row['qty_picked'], $row['allocations'] ?? null)]);
             }
 
             $locked->refresh();
@@ -263,6 +280,124 @@ final class PickingService
         }, 3);
     }
 
+    /**
+     * SCRUM-1196 — fija DE QUÉ BODEGA(S) se alistó una línea y cuánto, y devuelve el total alistado. Reglas del ticket:
+     *  - solo bodegas `permite_venta` (Reclamos, Merma, Reserva Servicios y los demás showrooms nunca se ofrecen);
+     *  - nunca más de lo que tiene una bodega: en la de por defecto, lo que el sistema le reservó a ESTE pedido; en otra bodega de venta (1 pieza de
+     *    Showroom Obarrio que Bodega escoge), el saldo que no tienen reservado otros pedidos;
+     *  - sin `$allocations`, todo `$qtyPicked` sale de la bodega por defecto (más lo que ya se había escogido a mano, que se conserva).
+     * Lo que no se pueda alistar se deja en la línea como faltante (REQ-317); un exceso se rechaza con 422 antes de tocar nada.
+     *
+     * @param list<array{warehouse_id: int, qty_picked: int}>|null $allocations
+     */
+    private function applyPicked(OrderItem $item, int $qtyPicked, ?array $allocations): int
+    {
+        // Una línea personalizada (sin producto de Catálogo) no mueve stock ni usa bodega: solo se valida contra lo pedido.
+        if ($item->catalog_product_id === null) {
+            return $allocations !== null ? (int) collect($allocations)->sum(fn (array $a): int => max(0, (int) $a['qty_picked'])) : $qtyPicked;
+        }
+
+        $item->load('allocations');
+        $ctx       = $this->reservations->warehouseContext();
+        $defaultId = $ctx['defaultId'];
+        $saleIds   = $ctx['saleIds'];
+
+        /** @var array<int, int> $target bodega_id => cantidad alistada */
+        $target = [];
+        if ($allocations !== null) {
+            foreach ($allocations as $row) {
+                $warehouseId = (int) $row['warehouse_id'];
+                $qty = (int) $row['qty_picked'];
+                if ($qty < 0) {
+                    throw new OrderTransitionException('La cantidad alistada no puede ser negativa ni superar lo pedido.', ['items' => ["order_item_id {$item->id}: cantidad alistada inválida."]]);
+                }
+                if ($qty > 0) {
+                    $target[$warehouseId] = ($target[$warehouseId] ?? 0) + $qty;
+                }
+            }
+        } else {
+            $manualPicked = 0;
+            foreach ($item->allocations->where('manual', true) as $allocation) {
+                $target[(int) $allocation->warehouse_id] = max(0, (int) $allocation->qty_picked);
+                $manualPicked += max(0, (int) $allocation->qty_picked);
+            }
+            $defaultPick = max(0, $qtyPicked - $manualPicked);
+            if ($defaultPick > 0 && $defaultId !== null) {
+                $target[$defaultId] = $defaultPick;
+            } elseif ($defaultPick > 0) {
+                $target[-1] = $defaultPick; // sin bodega por defecto definida: se rechaza abajo con un mensaje claro
+            }
+        }
+
+        $total = array_sum($target);
+        if ($allocations !== null && $total !== $qtyPicked) {
+            throw new OrderTransitionException(
+                'La cantidad alistada no coincide con la suma del reparto por bodega.',
+                ['items' => ["order_item_id {$item->id}: qty_picked ({$qtyPicked}) distinto de la suma de allocations ({$total})."]],
+            );
+        }
+        if ($total > $item->qty_requested) {
+            throw new OrderTransitionException('La cantidad alistada no puede ser negativa ni superar lo pedido.', ['items' => ["order_item_id {$item->id}: cantidad alistada inválida."]]);
+        }
+
+        $names = $ctx['names'];
+        foreach ($target as $warehouseId => $qty) {
+            if ($warehouseId === -1 || ! isset($names[$warehouseId])) {
+                throw new OrderTransitionException(
+                    $warehouseId === -1 ? 'No hay una bodega de despacho por defecto definida en Configuración de Bodega.' : 'La bodega indicada no existe.',
+                    ['items' => ["order_item_id {$item->id}: bodega inválida."]],
+                );
+            }
+            if (! in_array($warehouseId, $saleIds, true)) {
+                $label = $names[$warehouseId];
+                throw new OrderTransitionException(
+                    "La bodega «{$label}» no está habilitada para ventas: solo se puede alistar desde las bodegas de venta.",
+                    ['items' => ["order_item_id {$item->id}: bodega no permitida para ventas."]],
+                );
+            }
+
+            // Mismo tope en TODAS las bodegas de venta: el saldo que no tienen reservado OTROS pedidos (el propio pedido no se descuenta a sí mismo, así que
+            // volver de «10 Central + 1 Obarrio» a «11 Central» no queda atrapado por la reserva ya recortada).
+            $cap = $item->catalog_product_id !== null
+                ? $this->reservations->availableAtWarehouse((int) $item->catalog_product_id, $warehouseId, $item->id, lock: true)
+                : 0;
+
+            if ($qty > $cap) {
+                $label = $names[$warehouseId] ?? (string) $warehouseId;
+                throw new OrderTransitionException(
+                    "No hay saldo suficiente en «{$label}»: se puede alistar hasta {$cap} y se intentó {$qty}. Deja el resto como faltante o ajusta el inventario de esa bodega.",
+                    ['items' => ["order_item_id {$item->id}: supera el saldo de «{$label}» ({$cap})."]],
+                );
+            }
+        }
+
+        // Persistir: la bodega por defecto es la asignación automática; las demás son escogidas por Bodega (`manual`).
+        foreach ($item->allocations as $allocation) {
+            $warehouseId = (int) $allocation->warehouse_id;
+            if (! array_key_exists($warehouseId, $target)) {
+                if ($allocation->manual) {
+                    $allocation->delete();
+                } elseif ($allocation->qty_picked !== 0) {
+                    $allocation->update(['qty_picked' => 0]);
+                }
+            }
+        }
+        foreach ($target as $warehouseId => $qty) {
+            $existing = $item->allocations->first(fn (OrderItemAllocation $al): bool => (int) $al->warehouse_id === $warehouseId);
+            $isDefault = $warehouseId === $defaultId;
+            if ($existing !== null) {
+                $existing->update(['qty_picked' => $qty] + ($isDefault ? [] : ['qty_reserved' => $qty, 'manual' => true]));
+            } else {
+                OrderItemAllocation::create([
+                    'order_item_id' => $item->id, 'warehouse_id' => $warehouseId, 'qty_reserved' => $qty, 'qty_picked' => $qty, 'manual' => ! $isDefault,
+                ]);
+            }
+        }
+        $item->unsetRelation('allocations');
+
+        return $total;
+    }
+
     /** @param \Illuminate\Support\Collection<int, OrderItem> $shortfallItems */
     private function createInventoryReviewCard(Order $order, $shortfallItems, User $actor): Order
     {
@@ -284,6 +419,10 @@ final class PickingService
         foreach ($shortfallItems as $short) {
             $review->items()->create([
                 'catalog_product_id'   => $short->catalog_product_id,
+                // SCRUM-929 — el ítem derivado hereda vínculo a la cotización y precio del padre;
+                // antes nacía con unit_price NULL.
+                'quote_item_id'        => $short->quote_item_id,
+                'unit_price'           => $short->unit_price,
                 'reference_snapshot'   => $short->reference_snapshot,
                 'description_snapshot' => $short->description_snapshot,
                 'qty_requested'        => $short->qty_requested - $short->qty_picked,

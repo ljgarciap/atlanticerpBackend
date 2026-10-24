@@ -11,8 +11,10 @@ use App\Modules\AdminCont\Services\InvoiceService;
 use App\Modules\AdminCont\Services\PaymentService;
 use App\Modules\AdminCont\Services\PendingAlertsService;
 use App\Modules\Auth\Models\Role;
+use App\Shared\Support\ApprovalsPendingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Batch final de Admin&Cont — "Inicio" (SCRUM-503→512, REQ-426→435). Grupo 1 (SCRUM-504→508,
@@ -27,6 +29,7 @@ final class AdminContHomeController
         private readonly CommissionOrderService $internalCommissions,
         private readonly ArchitectCommissionService $externalCommissions,
         private readonly PendingAlertsService $pendingAlerts,
+        private readonly ApprovalsPendingService $approvalsPendingService,
     ) {}
 
     /** GET /api/admin-contab/home/resumen-mes — REQ-427→431. */
@@ -84,6 +87,45 @@ final class AdminContHomeController
     public function vencidosPorVencer(): JsonResponse
     {
         return response()->json($this->invoices->vencidosYPorVencer());
+    }
+
+    /**
+     * SCRUM-908 — GET /api/admin-contab/home/approvals-pending. Lista completa (sin truncar, el
+     * frontend corta a 5 + "Ver más") de las aprobaciones pendientes de Admin&Cont para el usuario
+     * logueado, ordenadas por antigüedad. Lista vacía (nunca 403) si no tiene ningún permiso de
+     * aprobación de este módulo.
+     */
+    public function approvalsPending(Request $request): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        return response()->json(['data' => $this->approvalsPendingService->forModule($user, $this->jwtPermissions($request), 'admin_contab')]);
+    }
+
+    private function resolveUser(Request $request): ?User
+    {
+        /** @var array{sub?: int}|null $payload */
+        $payload = $request->attributes->get('jwt');
+
+        if ($payload === null || ! isset($payload['sub'])) {
+            return null;
+        }
+
+        return User::find((int) $payload['sub']);
+    }
+
+    /** @return list<string> */
+    private function jwtPermissions(Request $request): array
+    {
+        /** @var array{permissions?: mixed}|null $payload */
+        $payload = $request->attributes->get('jwt');
+
+        return is_array($payload['permissions'] ?? null)
+            ? array_values(array_filter($payload['permissions'], 'is_string'))
+            : [];
     }
 
     private function mesLabelActual(): string

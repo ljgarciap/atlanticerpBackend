@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Services\PreferencesService;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderItem;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
-use App\Modules\VentasDiseno\Services\FuzzySearchService;
+use App\Shared\Http\QueryParams;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -41,7 +42,12 @@ use Illuminate\Routing\Controller;
  */
 final class ProductLookupController extends Controller
 {
-    public function __construct(private readonly FuzzySearchService $fuzzySearch) {}
+    /** SCRUM-996 — tope de resultados del picker (con y sin texto de búsqueda). */
+    private const MAX_RESULTS = 100;
+
+    public function __construct(
+        private readonly PreferencesService $preferences,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -50,7 +56,9 @@ final class ProductLookupController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $query = CatalogProduct::where('is_active', true);
+        // docs/specs/demo-mode.md
+        $query = CatalogProduct::where('is_active', true)
+            ->visibleForDemoMode($this->preferences->isDemoModeActive($user));
 
         $exclude = array_filter(array_map('intval', explode(',', (string) $request->query('exclude', ''))));
         if ($exclude !== []) {
@@ -69,17 +77,20 @@ final class ProductLookupController extends Controller
             $query->whereIn('id', $deliveredProductIds);
         }
 
-        /** @var list<CatalogProduct> $products */
-        $products = $query->orderBy('name')->get()->all();
-
-        $search = trim((string) $request->query('search', ''));
+        // SCRUM-996 (auditoría SCRUM-995, sitio B) — búsqueda en SQL sobre `search_text` (índice trigram) con el
+        // respaldo tolerante a typos solo si la coincidencia parcial da 0 resultados, y tope de resultados en la
+        // consulta. Antes: `->get()->all()` de los ~30K productos activos + Levenshtein en PHP, devolviendo TODO el
+        // catálogo al navegador cuando no había `search` (1,3-2,0 s, 156-171 MB de pico y 4 MB de respuesta).
+        // Decisión de Luis 2026-09-29: sin texto ya no se devuelve todo, sino los primeros MAX_RESULTS por nombre
+        // (mismo patrón que `CatalogProductController`); el picker busca en el servidor al escribir.
+        $search = trim(QueryParams::string($request, 'search'));
         if ($search !== '') {
-            [$products] = $this->fuzzySearch->search(
-                $products,
-                $search,
-                fn (CatalogProduct $p): string => trim("{$p->reference} {$p->name} {$p->brand}"),
-            );
+            $fuzzy = CatalogProduct::applySearch($query, $search, fuzzyFallback: true);
+            CatalogProduct::orderByRelevance($query, $search, $fuzzy);
         }
+
+        /** @var list<CatalogProduct> $products */
+        $products = $query->orderBy('name')->orderBy('id')->limit(self::MAX_RESULTS)->get()->all();
 
         return response()->json(['data' => array_map(fn (CatalogProduct $p) => $this->format($p), $products)]);
     }

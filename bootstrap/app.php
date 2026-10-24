@@ -2,14 +2,20 @@
 
 use App\Modules\AdminCont\Http\Middleware\EnsureIsPrimaryApprover;
 use App\Modules\Auth\Http\Controllers\AuthController;
+use App\Modules\Auth\Http\Controllers\ImpersonationController;
 use App\Modules\Auth\Http\Controllers\MfaController;
 use App\Modules\Auth\Http\Controllers\SecurityLevelController;
 use App\Modules\CRM\Http\Controllers\ShareLinkController;
 use App\Modules\VentasDiseno\Http\Controllers\CatalogUatPlaceholderPhotoController;
+use App\Modules\VentasDiseno\Http\Middleware\EnsureCotizaYaContext;
 use App\Shared\Http\Controllers\HealthController;
+use App\Shared\Http\Middleware\ApplyGerenciaScope;
 use App\Shared\Http\Middleware\AssignRequestId;
+use App\Shared\Http\Middleware\AttributeDbChangesToUser;
 use App\Shared\Http\Middleware\AuthenticateJwt;
+use App\Shared\Http\Middleware\BlockWritesWhenImpersonating;
 use App\Shared\Http\Middleware\CheckPermission;
+use App\Shared\Http\Middleware\DenyWhenImpersonating;
 use App\Shared\Http\Middleware\EnforceRole;
 use App\Shared\Http\Middleware\SetLocaleFromHeader;
 use Illuminate\Foundation\Application;
@@ -34,6 +40,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->withoutMiddleware(AuthenticateJwt::class)
                 ->get('/api/health', HealthController::class);
 
+            // SCRUM-1031 (R-05): chequeo PROFUNDO de dependencias críticas (base y Redis). /up y /api/health no cambian (los usan
+            // Docker, nginx y el deploy): este endpoint es el que detecta una caída que el proceso no ve.
+            Route::middleware('api')
+                ->withoutMiddleware(AuthenticateJwt::class)
+                ->get('/api/health/deep', [HealthController::class, 'deep']);
+
             // Share links (SCRUM — compartir documentos con clientes externos):
             // público, sin autenticación, con throttle para evitar brute-force del token.
             Route::middleware(['api', 'throttle:30,1'])
@@ -48,8 +60,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // Rutas protegidas: AuthenticateJwt se aplica a través del grupo 'api'
             // (appendToGroup en withMiddleware). EnforceRole se aplica por endpoint.
-            Route::middleware('api')->prefix('api/crm')->group(base_path('routes/crm.php'));
-            Route::middleware('api')->prefix('api/ventas-diseno')->group(base_path('routes/ventas-diseno.php'));
+            Route::middleware(['api', 'gerencia.scope'])->prefix('api/crm')->group(base_path('routes/crm.php'));
+            Route::middleware(['api', 'gerencia.scope'])->prefix('api/ventas-diseno')->group(base_path('routes/ventas-diseno.php'));
             Route::middleware('api')->prefix('api/compras')->group(base_path('routes/compras.php'));
             Route::middleware('api')->prefix('api/bodega')->group(base_path('routes/bodega.php'));
             Route::middleware('api')->prefix('api/servicios')->group(base_path('routes/servicios.php'));
@@ -63,6 +75,10 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')->prefix('api/notifications')->group(base_path('routes/notifications.php'));
             Route::middleware('api')->prefix('api/admin-contab')->group(base_path('routes/admin-contab.php'));
             Route::middleware('api')->prefix('api/gerencia')->group(base_path('routes/gerencia.php'));
+            Route::middleware('api')->prefix('api/legacy')->group(base_path('routes/legacy.php'));
+            Route::middleware('api')->prefix('api/lumo')->group(base_path('routes/lumo.php'));
+            Route::middleware('api')->prefix('api/soporte')->group(base_path('routes/soporte.php'));
+            Route::middleware('api')->prefix('api/biblioteca')->group(base_path('routes/biblioteca.php'));
 
             // Catálogo de permisos — acceso restringido a superadmin y management
             Route::middleware(['api', 'role:superadmin,management'])
@@ -72,7 +88,6 @@ return Application::configure(basePath: dirname(__DIR__))
             // Protected auth routes — JWT required via 'api' middleware group
             Route::middleware('api')->prefix('api/auth')->group(function (): void {
                 Route::get('/me', [AuthController::class, 'me']);
-                Route::post('/switch-role', [AuthController::class, 'switchRole']);
                 Route::put('/password', [AuthController::class, 'changePassword']);
                 Route::patch('/profile', [AuthController::class, 'updateProfile']);
 
@@ -80,6 +95,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 Route::post('/mfa/enable', [MfaController::class, 'enable']);
                 Route::post('/mfa/enable/confirm', [MfaController::class, 'confirmEnable']);
                 Route::post('/mfa/disable', [MfaController::class, 'disable']);
+
+                // SCRUM-1158 — cualquier token de impersonación puede terminar su propia sesión (única escritura que el modo solo lectura permite).
+                Route::post('/impersonation/stop', [ImpersonationController::class, 'stop']);
             });
         },
     )
@@ -97,6 +115,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // fallido (sin sesión) respondan en el idioma correcto.
         $middleware->appendToGroup('api', SetLocaleFromHeader::class);
         $middleware->appendToGroup('api', AuthenticateJwt::class);
+        // SCRUM-1158 — «Ver como usuario» es de SOLO LECTURA: con el claim `act` toda escritura responde 403. Va justo tras AuthenticateJwt
+        // (necesita el JWT ya validado) y antes de cualquier controlador o de la atribución de BD.
+        $middleware->appendToGroup('api', BlockWritesWhenImpersonating::class);
+        // SCRUM-916 — corre después de AuthenticateJwt (necesita el JWT ya validado en
+        // $request->attributes) para atribuir cambios de auditoría a nivel de DB al usuario real.
+        $middleware->appendToGroup('api', AttributeDbChangesToUser::class);
 
         // Alias disponibles para uso puntual en rutas de módulos.
         $middleware->alias([
@@ -104,6 +128,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnforceRole::class,
             'permission' => CheckPermission::class,
             'primary_approver_only' => EnsureIsPrimaryApprover::class,
+            // SCRUM-1158 (C6) — GET que escriben: se niegan en «Ver como usuario» hasta que pasen a POST.
+            'no_impersonation' => DenyWhenImpersonating::class,
+            'cotizaya.context' => EnsureCotizaYaContext::class,
+            'gerencia.scope' => ApplyGerenciaScope::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -1,0 +1,54 @@
+# artillery-api.yml — SCRUM-966: capacidad de la API con SESIÓN YA INICIADA (un solo login previo; sin bcrypt por usuario) de UNA instancia (t3.small, como prod) con carga creciente.
+#
+# SOLO contra una instancia desechable restaurada para la prueba (nunca dev, test ni prod). Solo lecturas (GET) más el login.
+# Variables de entorno: TARGET (p. ej. http://10.0.0.12), LOAD_EMAIL y LOAD_PASSWORD (cuenta de prueba del respaldo restaurado).
+# Uso (en la instancia de carga):
+#   docker run --rm -v "$PWD/infra/loadtest:/s" -e TARGET -e LOAD_EMAIL -e LOAD_PASSWORD artilleryio/artillery:2 \
+#       run --output /s/out/resultado.json /s/artillery.yml
+config:
+  target: "{{ $processEnvironment.TARGET }}"
+  http: { timeout: 30 }
+  defaults: { headers: { Accept: application/json } }
+  phases:
+    - { name: "calentamiento 2/s", duration: 60,  arrivalRate: 2 }
+    - { name: "carga 5/s",         duration: 90,  arrivalRate: 5 }
+    - { name: "carga 10/s",        duration: 90,  arrivalRate: 10 }
+    - { name: "carga 20/s",        duration: 90,  arrivalRate: 20 }
+    - { name: "carga 40/s",        duration: 90,  arrivalRate: 40 }
+  plugins: { metrics-by-endpoint: {} }
+
+before:
+  flow:
+    - post:
+        url: "/api/auth/login"
+        json: { email: "{{ $processEnvironment.LOAD_EMAIL }}", password: "{{ $processEnvironment.LOAD_PASSWORD }}" }
+        capture: { json: "$.token", as: "token" }
+        name: "login (una vez)"
+
+scenarios:
+  - name: "Navegación de inicio (40 %)"
+    weight: 40
+    flow:
+      - get: { url: "/api/auth/me",                    headers: { Authorization: "Bearer {{ token }}" }, name: "me" }
+      - get: { url: "/api/ventas-diseno/home/summary", headers: { Authorization: "Bearer {{ token }}" }, name: "home ventas" }
+      - get: { url: "/api/notifications",              headers: { Authorization: "Bearer {{ token }}" }, name: "notificaciones" }
+  - name: "Catálogo de ~30.000 productos (30 %)"
+    weight: 30
+    flow:
+      - get: { url: "/api/ventas-diseno/catalog?search=lampara&per_page=30&page=1", headers: { Authorization: "Bearer {{ token }}" }, name: "catálogo búsqueda" }
+      - get: { url: "/api/ventas-diseno/catalog?search=led&per_page=30&page=2",     headers: { Authorization: "Bearer {{ token }}" }, name: "catálogo búsqueda 2" }
+      - get: { url: "/api/ventas-diseno/catalog?per_page=30&page=1",                headers: { Authorization: "Bearer {{ token }}" }, name: "catálogo sin filtro" }
+  - name: "Listados de módulos (20 %)"
+    weight: 20
+    flow:
+      - get: { url: "/api/ventas-diseno/pipeline", headers: { Authorization: "Bearer {{ token }}" }, name: "pipeline" }
+      - get: { url: "/api/ventas-diseno/projects", headers: { Authorization: "Bearer {{ token }}" }, name: "proyectos" }
+      - get: { url: "/api/ventas-diseno/quotes",   headers: { Authorization: "Bearer {{ token }}" }, name: "cotizaciones" }
+      - get: { url: "/api/servicios/tickets",      headers: { Authorization: "Bearer {{ token }}" }, name: "tickets" }
+      - get: { url: "/api/bodega/orders",          headers: { Authorization: "Bearer {{ token }}" }, name: "pedidos bodega" }
+  - name: "Paneles de resumen, los más pesados (10 %)"
+    weight: 10
+    flow:
+      - get: { url: "/api/ventas-diseno/dashboard/summary", headers: { Authorization: "Bearer {{ token }}" }, name: "dashboard ventas" }
+      - get: { url: "/api/bodega/home/summary",             headers: { Authorization: "Bearer {{ token }}" }, name: "home bodega" }
+      - get: { url: "/api/compras/home/summary",            headers: { Authorization: "Bearer {{ token }}" }, name: "home compras" }

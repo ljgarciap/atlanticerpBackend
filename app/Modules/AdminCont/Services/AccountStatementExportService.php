@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
+use App\Modules\AdminCont\Support\ExcelMoney;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -14,11 +15,10 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  * (`EstadoCuentaPage.tsx`), sin distinguir agrupado/plano acá (RN2 pide "las mismas columnas", no
  * replicar los 2 modos de vista — la columna "Proyecto" sola ya da ese contexto en cada fila).
  *
- * PDF/impresión (REQ-456 Escenario 1, "se abre el diálogo de impresión del navegador con el
- * documento formateado igual que en pantalla") es intencionalmente `window.print()` del lado del
- * frontend (clases `print:hidden` de Tailwind) — no un PDF generado acá, a diferencia del recibo
- * de Cobros (Batch 7). El propio criterio de aceptación del ticket describe el diálogo nativo del
- * navegador, no una descarga.
+ * SCRUM-857 (REQ-456) — el PDF pasó de ser `window.print()` del lado del frontend (decisión
+ * original de este batch, ya no vigente) a un documento real generado en servidor, igual que
+ * Cotizaciones — ver `AccountStatementPdfService`. Este export a Excel no cambió de mecanismo,
+ * solo se le agregaron las filas "Tipo de cuenta"/"Banco" del mismo REQ-458.
  */
 final class AccountStatementExportService
 {
@@ -28,18 +28,25 @@ final class AccountStatementExportService
     ];
 
     private const TARIFA_LABELS = [
-        'public'  => 'Precio Público',
+        'public' => 'Precio Público',
         'project' => 'Precio Proyecto',
         'special' => 'Precio Especial',
         'partner' => 'Precio Socio',
         'premium' => 'Tarifa Premium',
     ];
 
+    /** Mismo catálogo que `AdminContBankAccount::TIPO_*` — sin acceso a i18n del frontend acá. */
+    private const TIPO_CUENTA_LABELS = [
+        'corriente' => 'Cuenta corriente',
+        'ahorro' => 'Cuenta de ahorro',
+        'tarjeta_credito' => 'Tarjeta de crédito',
+    ];
+
     /** @param array<string, mixed> $detail Salida de `AccountStatementService::detail()`. */
     public function toExcel(array $detail): string
     {
-        $spreadsheet = new Spreadsheet();
-        $sheet       = $spreadsheet->getActiveSheet();
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Estado de cuenta');
 
         $headerRows = [
@@ -49,36 +56,51 @@ final class AccountStatementExportService
             ['Régimen fiscal', self::REGIMEN_LABELS[$detail['regimen_fiscal']] ?? (string) $detail['regimen_fiscal']],
             ['Términos de pago', (string) $detail['terminos_pago']],
         ];
+        $saldoRow = null;
         if (array_key_exists('saldo', $detail)) {
-            $headerRows[] = [$detail['saldo_a_favor'] ? 'Saldo a favor del cliente' : 'Saldo actual', number_format(abs((float) $detail['saldo']), 2)];
+            $saldoRow = count($headerRows) + 1;
+            $headerRows[] = [$detail['saldo_a_favor'] ? 'Saldo a favor del cliente' : 'Saldo actual', ExcelMoney::value(abs((float) $detail['saldo']))];
             $headerRows[] = ['Pago a', (string) ($detail['pago_a'] ?? '—')];
-            $headerRows[] = ['Cuenta número', (string) ($detail['cuenta_pago'] ?? '—')];
+            $headerRows[] = ['Cuenta número', (string) ($detail['numero_cuenta'] ?? '—')];
+            $headerRows[] = ['Tipo de cuenta', self::TIPO_CUENTA_LABELS[$detail['tipo_cuenta'] ?? ''] ?? '—'];
+            $headerRows[] = ['Banco', (string) ($detail['banco'] ?? '—')];
             $headerRows[] = ['Responsable', (string) ($detail['responsable'] ?? '—')];
         }
 
-        $sheet->fromArray($headerRows, null, 'A1');
+        // strictNullComparison: con la comparación laxa por defecto `0.0 == null` PhpSpreadsheet omitiría
+        // el saldo en cero (saldría vacío en vez de $0.00) — solo `null` cuenta como celda vacía.
+        $sheet->fromArray($headerRows, null, 'A1', strictNullComparison: true);
         $sheet->getStyle('A1:A'.count($headerRows))->getFont()->setBold(true);
+        if ($saldoRow !== null) {
+            ExcelMoney::apply($sheet, "B{$saldoRow}");
+        }
 
         /** @var list<array<string, mixed>> $movements */
         $movements = is_array($detail['movimientos'] ?? null) ? $detail['movimientos'] : [];
         if ($movements !== []) {
             $tableStart = count($headerRows) + 2;
-            $columns    = ['Fecha', 'Proyecto', 'N° Factura', 'Concepto', 'N° Cotización', 'Guía de Entrega', 'Débito', 'Crédito', 'Saldo'];
+            $columns = ['Fecha', 'Proyecto', 'N° Factura', 'Concepto', 'N° Cotización', 'Guía de Entrega', 'Débito', 'Crédito', 'Saldo'];
             $sheet->fromArray($columns, null, 'A'.$tableStart);
             $sheet->getStyle('A'.$tableStart.':I'.$tableStart)->getFont()->setBold(true);
 
             $data = array_map(fn (array $m): array => [
                 (string) $m['fecha'],
                 (string) ($m['proyecto'] ?? '—'),
-                (string) $m['numero_factura'],
-                $m['tipo'] === 'factura' ? 'Factura' : 'Cobro',
+                (string) ($m['numero_factura'] ?? '—'),
+                [
+                    'factura' => 'Factura', 'descuento' => 'Descuento', 'devolucion' => 'Devolución', 'anulacion' => 'Anulación',
+                    'compensacion' => 'Compensación', 'devolucion_saldo' => 'Devolución de saldo',
+                ][$m['tipo']] ?? 'Cobro',
                 (string) ($m['cotizacion_folio'] ?? '—'),
-                $m['guia_entrega'] ? 'Sí' : '—',
-                number_format((float) $m['debito'], 2),
-                number_format((float) $m['credito'], 2),
-                number_format((float) $m['saldo'], 2),
+                (string) ($m['guia_entrega_numero'] ?? '—'),
+                ExcelMoney::value($m['debito']),
+                ExcelMoney::value($m['credito']),
+                ExcelMoney::value($m['saldo']),
             ], $movements);
-            $sheet->fromArray($data, null, 'A'.($tableStart + 1));
+            $dataStart = $tableStart + 1;
+            $sheet->fromArray($data, null, 'A'.$dataStart, strictNullComparison: true);
+            $lastRow = $dataStart + count($data) - 1;
+            ExcelMoney::apply($sheet, "G{$dataStart}:I{$lastRow}");
         }
 
         foreach (range(1, 9) as $col) {

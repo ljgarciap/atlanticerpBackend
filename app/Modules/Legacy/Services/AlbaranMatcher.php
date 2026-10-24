@@ -40,18 +40,19 @@ final class AlbaranMatcher
 
     /**
      * @param  list<int> $albaranIds ids internos de `legacy.albaranes` (esta corrida)
-     * @return array{matched: int, orphan: int, errores: int}
+     * @return array{matched: int, orphan: int, errores: int, details: list<array{referencia: string, status: string, motivo: string}>}
      */
     public function match(array $albaranIds): array
     {
         if ($albaranIds === []) {
-            return ['matched' => 0, 'orphan' => 0, 'errores' => 0];
+            return ['matched' => 0, 'orphan' => 0, 'errores' => 0, 'details' => []];
         }
 
         return DB::transaction(function () use ($albaranIds): array {
             $matched = 0;
             $orphan  = 0;
             $errores = 0;
+            $details = [];
 
             foreach (array_chunk($albaranIds, self::CHUNK_SIZE) as $idChunk) {
                 $albaranes = Albaran::query()->whereIn('id', $idChunk)->get();
@@ -71,26 +72,32 @@ final class AlbaranMatcher
                     $legacyClienteId = $albaran->icg_codcliente !== null
                         ? ($clienteIdsByCodigo[$albaran->icg_codcliente] ?? null)
                         : null;
+                    $referencia = "{$albaran->icg_numserie}-{$albaran->icg_numalbaran}";
 
                     try {
                         $albaran->legacy_cliente_id = $legacyClienteId;
                         $albaran->orphan            = $legacyClienteId === null;
                         $albaran->save();
-                    } catch (Throwable) {
+                    } catch (Throwable $e) {
                         $errores++;
+                        $details[] = ['referencia' => $referencia, 'status' => 'error', 'motivo' => $e->getMessage()];
 
                         continue;
                     }
 
                     if ($legacyClienteId === null) {
                         $orphan++;
+                        $motivo = $albaran->icg_codcliente === null
+                            ? 'sin icg_codcliente en ICG'
+                            : "icg_codcliente {$albaran->icg_codcliente} sin match en legacy.clientes";
+                        $details[] = ['referencia' => $referencia, 'status' => 'orphan', 'motivo' => $motivo];
                     } else {
                         $matched++;
                     }
                 }
             }
 
-            return ['matched' => $matched, 'orphan' => $orphan, 'errores' => $errores];
+            return ['matched' => $matched, 'orphan' => $orphan, 'errores' => $errores, 'details' => $details];
         });
     }
 

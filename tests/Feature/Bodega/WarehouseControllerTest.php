@@ -130,14 +130,16 @@ class WarehouseControllerTest extends FeatureTestCase
 
     public function test_modo_pendiente_no_expone_ubicacion_inventada(): void
     {
-        $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
+        // SCRUM-990: "Bodega Zona Libre" (modo pendiente) ahora es de SOLO CONSULTA y no admite filas de stock, así que este
+        // caso (una bodega OPERATIVA sin ubicación física confirmada) se prueba con una bodega pendiente propia.
+        $pendiente = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         $product = $this->makeProduct();
-        ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $zonaLibre->id, 'ubicacion' => null, 'quantity' => 5]);
+        ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $pendiente->id, 'ubicacion' => null, 'quantity' => 5]);
 
         $this->grantBodega('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
-        $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$zonaLibre->id}");
+        $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$pendiente->id}");
 
         $response->assertStatus(200);
         $response->assertJsonPath('data.0.ubicacion', null);

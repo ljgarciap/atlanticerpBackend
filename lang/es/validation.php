@@ -197,6 +197,8 @@ return [
     |
     */
 
+    'photo_url_not_allowed' => 'La URL de la foto debe ser https y de un servidor autorizado (CDN o almacenamiento de AtlanticERP).',
+
     'attributes' => [
         'email'               => 'correo electrónico',
         'password'            => 'contraseña',
@@ -208,6 +210,7 @@ return [
         'department_id'       => 'departamento',
         'security_level_id'   => 'nivel de seguridad',
         'assignee_ids.*'      => 'usuario asignado',
+        'tax_id_dv'           => 'DV',
     ],
 
 ];

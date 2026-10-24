@@ -78,7 +78,9 @@ class CatalogUatTestDataSeeder extends Seeder
 
     public function run(): void
     {
-        if (app()->environment('testing')) {
+        // SCRUM-1111: en producción deja de sembrarse. La data UAT de SCRUM-745 ya cumplió su propósito y, con el seeder
+        // corriendo en cada deploy, recrearía los 30 productos y 3 familias `[PRUEBA UAT]` tras la limpieza previa al lanzamiento.
+        if (app()->environment(['testing', 'production'])) {
             return;
         }
 

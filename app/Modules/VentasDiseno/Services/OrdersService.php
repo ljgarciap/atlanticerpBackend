@@ -41,7 +41,7 @@ final class OrdersService
     public function __construct(private readonly FuzzySearchService $fuzzySearch) {}
 
     /**
-     * @param array{scope?: string, search?: string, estado?: string} $filters
+     * @param array{scope?: string, search?: string, estado?: string, owner_ids?: list<int>} $filters
      * @param array{per_page: int, page: int} $pagination SCRUM-754 — summary sigue calculándose
      *   sobre el alcance (Mías/Equipo) sin filtros de búsqueda/Estado (REQ-626, sin cambios); data
      *   trae solo la página pedida DESPUÉS de aplicar esos filtros.
@@ -52,7 +52,7 @@ final class OrdersService
      *     meta: array{total: int, per_page: int, current_page: int, last_page: int},
      * }
      */
-    public function list(User $user, array $filters = [], array $pagination = ['per_page' => 20, 'page' => 1]): array
+    public function list(User $user, array $filters = [], array $pagination = ['per_page' => 20, 'page' => 1], bool $verEquipo = false): array
     {
         // REQ-629 RN4: Pedidos no tiene selector explícito Mías/Equipo — el frontend nunca manda
         // `scope`. Hallazgo CRÍTICO de Pre-QA (2026-07-31): defaultear a 'own' cuando no viene el
@@ -60,7 +60,13 @@ final class OrdersService
         // les manda 'team' explícito. Sin selector, el default correcto es pedir SIEMPRE 'team' —
         // `buildOrders()` ya baja a 'own' internamente para quien no tenga `canViewTeamV2`
         // (RN1/RN3), así que esto no abre alcance a nadie que no debiera tenerlo.
-        $orders = $this->buildOrders($user, $filters['scope'] ?? 'team');
+        //
+        // SCRUM-854 (rebote de QA, 2026-09-09) — filtro multi-selección Vendedor/Diseñador, la
+        // única de las 6 ubicaciones del ticket que faltaba. Mismo criterio que
+        // `QuoteListService::list()`: whereIn contra `PipelineCard.owner_id` (nunca sales_project_id
+        // — evita a propósito el patrón de bug de keyBy/groupBy sobre proyectos compartidos ya
+        // documentado en el proyecto), y solo tiene efecto para quien ya ve el equipo completo.
+        $orders = $this->buildOrders($user, $filters['scope'] ?? 'team', $filters['owner_ids'] ?? [], $verEquipo);
 
         // REQ-626: los KPI se calculan sobre el alcance (Mías/Equipo) pero NO sobre los filtros de
         // búsqueda/Estado activos — el mockup real (1F__Ventas_Disen_o_Pedidos.html) confirma que
@@ -95,15 +101,15 @@ final class OrdersService
     }
 
     /** @return array<string, mixed>|null null si el usuario no tiene alcance sobre este pedido (REQ-629). */
-    public function detail(User $user, int $quoteId): ?array
+    public function detail(User $user, int $quoteId, bool $verEquipo = false): ?array
     {
-        $orders = $this->buildOrders($user, 'team');
+        $orders = $this->buildOrders($user, 'team', [], $verEquipo);
         $order  = $orders->firstWhere('quote_id', $quoteId);
         if ($order === null) {
             return null;
         }
 
-        if (! $user->canViewTeamV2('ventas_diseno') && $order['card']->owner_id !== $user->id) {
+        if (! $verEquipo && ! $user->canViewTeamV2('ventas_diseno') && $order['card']->owner_id !== $user->id) {
             return null;
         }
 
@@ -115,17 +121,22 @@ final class OrdersService
      * cotización generada, folio no nulo) ya con el alcance Mías/Equipo aplicado — cada elemento
      * trae el cálculo completo de margen para reusar en list()/detail() sin volver a consultar.
      *
+     * @param list<int> $ownerIds
      * @return Collection<int, array<string, mixed>>
      */
-    private function buildOrders(User $user, string $scope): Collection
+    private function buildOrders(User $user, string $scope, array $ownerIds = [], bool $verEquipo = false): Collection
     {
         $cardsQuery = PipelineCard::query()
             ->where('stage', PipelineCard::RESTRICTED_EDIT_STAGE)
             ->with(['salesProject', 'masterClient', 'owner']);
 
-        $canSeeTeam = $user->canViewTeamV2('ventas_diseno');
+        // SCRUM-1119: `$verEquipo` lo manda el controlador para Compras, que no tiene vista de equipo en
+        // Ventas y Diseño pero necesita todos los pedidos para comprar.
+        $canSeeTeam = $verEquipo || $user->canViewTeamV2('ventas_diseno');
         if ($scope !== 'team' || ! $canSeeTeam) {
             $cardsQuery->where('owner_id', $user->id);
+        } elseif ($ownerIds !== []) {
+            $cardsQuery->whereIn('owner_id', $ownerIds);
         }
 
         $cards = $cardsQuery->get();

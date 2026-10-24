@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Compras;
 
+use App\Modules\Compras\Models\ComprasSettings;
+use App\Modules\Compras\Models\Provider;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
@@ -122,6 +124,16 @@ class ComprasSettingsControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['low_rating_threshold' => 70])
             ->assertStatus(403);
+    }
+
+    public function test_zona_libre_provider_apunta_a_bk_interprises(): void
+    {
+        $settings = ComprasSettings::current();
+        $this->assertNotNull($settings->zona_libre_provider_id);
+
+        $provider = Provider::find($settings->zona_libre_provider_id);
+        $this->assertNotNull($provider);
+        $this->assertSame('BK INTERPRISES S.A.', $provider->name);
     }
 
     public function test_update_cambia_el_umbral_usado_por_el_filtro_de_proveedores(): void

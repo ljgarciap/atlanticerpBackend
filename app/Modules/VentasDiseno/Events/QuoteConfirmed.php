@@ -11,7 +11,7 @@ use App\Shared\Contracts\DomainEvent;
  * cuando una cotización queda registrada oficialmente (confirmed_at), justo
  * antes/junto con mover la tarjeta de Pipeline vinculada a etapa Cotización.
  * Higiene arquitectónica (consistencia con el resto del sistema de eventos,
- * ej. QuoteApproved) — ningún AC del ticket exige un consumidor real hoy; no
+ * ej. QuoteGenerated) — ningún AC del ticket exige un consumidor real hoy; no
  * hay listener todavía. `isNewVersion` distingue la primera confirmación de un
  * proyecto de una "nueva versión" (RN2.3) sobre una tarjeta que ya tenía una
  * cotización confirmada antes — útil para un futuro consumidor que solo le

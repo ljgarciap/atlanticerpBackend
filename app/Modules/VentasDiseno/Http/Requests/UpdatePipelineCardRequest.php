@@ -30,6 +30,18 @@ class UpdatePipelineCardRequest extends FormRequest
             'delivery_dates'    => ['sometimes', 'array'],
             'delivery_dates.*'  => ['date'],
             'observations'      => ['sometimes', 'nullable', 'string'],
+            // SCRUM-1027 — borrador de "Asignar productos a entrega" hecho dentro de la edición:
+            // viaja en el mismo PUT que las fechas (que todavía no existen en BD), para guardarse
+            // juntos. Pertenencia real (ítem de la cotización, fecha del borrador) se valida en
+            // ProductDeliveryService::saveAssignments(), igual que el endpoint propio.
+            'product_deliveries'                 => ['sometimes', 'array'],
+            'product_deliveries.*.quote_item_id' => ['required', 'integer'],
+            'product_deliveries.*.delivery_date' => ['nullable', 'date_format:Y-m-d'],
+            // SCRUM-849.4 — asignación de Gerencia a uno o varios vendedores/diseñadores. La
+            // validación de "solo Gerencia puede mandar esto" vive en el controller (mismo
+            // criterio que otros campos gateados por rol en este mismo request), no acá.
+            'assignee_ids'      => ['sometimes', 'array', 'min:1'],
+            'assignee_ids.*'    => ['integer', Rule::exists('users', 'id')],
         ];
     }
 }

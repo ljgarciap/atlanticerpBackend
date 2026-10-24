@@ -17,10 +17,21 @@ use Illuminate\Support\Facades\Route;
 Route::get('/home', [GerenciaHomeController::class, 'home'])
     ->middleware('permission:gerencia.view');
 
+// SCRUM-862 — "Exportar reporte" (antes un botón placeholder, nunca implementado).
+Route::get('/home/export', [GerenciaHomeController::class, 'export'])
+    ->middleware('permission:gerencia.view');
+
 Route::get('/vendors', [GerenciaHomeController::class, 'vendors'])
     ->middleware('permission:gerencia.view');
 
 Route::get('/clients', [GerenciaHomeController::class, 'clients'])
+    ->middleware('permission:gerencia.view');
+
+// SCRUM-908 — tarjeta "Aprobaciones Pendientes" estándar (siempre vacía, Gerencia no tiene tipo
+// propio) + vista consolidada real de todos los módulos.
+Route::get('/home/approvals-pending', [GerenciaHomeController::class, 'approvalsPending'])
+    ->middleware('permission:gerencia.view');
+Route::get('/home/approvals-pending-all', [GerenciaHomeController::class, 'approvalsPendingAll'])
     ->middleware('permission:gerencia.view');
 
 // REQ-102 (SCRUM-164) — mismo endpoint compartido con Ventas & Diseño/Compras/Bodega/Servicios

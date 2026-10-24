@@ -33,7 +33,7 @@ final class TicketController extends Controller
 {
     // REQ-248 — "fotos, videos o archivos de referencia". Extensiones propias de este endpoint
     // (no reutiliza CRM\DocumentController::ALLOWED_MIMES porque ese set no incluye video).
-    private const ALLOWED_ATTACHMENT_EXTENSIONS = [
+    public const ALLOWED_ATTACHMENT_EXTENSIONS = [
         'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic',
         'mp4', 'mov', 'avi', 'webm',
         'pdf', 'doc', 'docx',
@@ -228,7 +228,7 @@ final class TicketController extends Controller
 
         /** @var array{
          *   tipo: string, subtipo?: string|null, tipo_instalacion: string, descripcion: string,
-         *   sales_project_id: int, contacto?: string|null,
+         *   sales_project_id: int|null, contacto?: string|null,
          *   telefono?: string|null, email?: string|null, direccion?: string|null,
          *   requerimientos_especiales?: array{catalog?: list<string>, otros?: list<string>}|null,
          *   productos?: list<array{catalog_product_id: int, cantidad_reclamo: int}>,
@@ -261,7 +261,7 @@ final class TicketController extends Controller
         }
 
         $maxKb      = $this->settings->adjuntosMaxSizeMb() * 1024;
-        $allowedExt = implode(',', self::ALLOWED_ATTACHMENT_EXTENSIONS);
+        $allowedExt = implode(',', TicketController::ALLOWED_ATTACHMENT_EXTENSIONS);
 
         $validated = $request->validate([
             // extensions (client filename), no mimes: — mismo motivo que

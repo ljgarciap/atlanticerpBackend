@@ -6,8 +6,12 @@ use App\Models\User;
 use App\Modules\Auth\Exceptions\MfaDeliveryException;
 use App\Modules\Auth\Http\Requests\UpdateProfileRequest;
 use App\Modules\Auth\Models\RefreshToken;
+use App\Modules\Auth\Services\ImpersonationService;
 use App\Modules\Auth\Services\MfaService;
+use App\Modules\Auth\Services\PasswordNotifier;
+use App\Modules\Auth\Services\PasswordResetPolicy;
 use App\Modules\Auth\Services\PreferencesService;
+use App\Modules\Auth\Support\AuthThrottle;
 use App\Shared\Auth\JwtClaimsBuilder;
 use App\Shared\Auth\JwtService;
 use App\Shared\Auth\TenantResolver;
@@ -34,6 +38,8 @@ class AuthController
         private readonly PreferencesService  $preferences,
         private readonly AuditService        $audit,
         private readonly JwtClaimsBuilder    $claims,
+        private readonly PasswordResetPolicy $resetPolicy,
+        private readonly PasswordNotifier    $passwordNotifier,
     ) {}
 
     /**
@@ -92,6 +98,20 @@ class AuthController
             'password' => ['required', 'string'],
         ]);
 
+        // H4: tope de intentos FALLIDOS por IP y por correo normalizado (config/throttle.php). El cupo se RESERVA antes de evaluar las
+        // credenciales (incremento atómico: una ráfaga paralela no multiplica los intentos) y un login correcto lo devuelve, así que
+        // solo cuentan los fallos. El límite por correo se aplica igual exista o no la cuenta (no revela si el correo existe). Sin
+        // bloqueo permanente.
+        $ipKey    = 'login:ip:' . $request->ip();
+        $emailKey = 'login:email:' . AuthThrottle::emailKey($data['email']);
+        $cfg      = (array) config('throttle.login');
+        if (($retry = AuthThrottle::reservar([
+            $ipKey    => [(int) $cfg['ip_max'], (int) $cfg['ip_decay']],
+            $emailKey => [(int) $cfg['email_max'], (int) $cfg['email_decay']],
+        ], AuthThrottle::ABRIR)) !== null) {
+            return AuthThrottle::respuesta($retry);
+        }
+
         $tenant = $this->tenantResolver->resolve($request);
 
         if ($tenant === null) {
@@ -103,12 +123,16 @@ class AuthController
         try {
             $user = User::query()->where('email', $data['email'])->first();
 
+            // SCRUM-1034 (A-04): el bcrypt corre SIEMPRE (contra un hash ficticio del mismo coste si no hay cuenta), para que el
+            // tiempo de respuesta no revele si el correo existe, está inactivo, bloqueado o es invitado.
+            $passwordOk = Hash::check($data['password'], $user !== null ? $user->password_hash : self::dummyPasswordHash());
+
             if (
                 ! $user
                 || ! $user->is_active
                 || $user->isSecurityBlocked()
                 || $user->hasRole(User::ROLE_GUEST)
-                || ! Hash::check($data['password'], $user->password_hash)
+                || ! $passwordOk
             ) {
                 // $user puede ser null (email no existe) — igual se loggea el intento para que
                 // SecurityAnalysisJob pueda ver enumeración de emails desde una misma IP.
@@ -123,6 +147,27 @@ class AuthController
                 return response()->json(['message' => trans('auth.failed')], 401);
             }
 
+            // Credenciales correctas: se libera el cupo de ESE correo y se devuelve el intento reservado de la IP (solo cuentan fallos).
+            AuthThrottle::limpiar($emailKey);
+            AuthThrottle::devolver($ipKey, (int) $cfg['ip_decay']);
+
+            // H2: contraseña temporal de un reset administrativo CADUCADA. Se responde solo con credenciales correctas (con la
+            // contraseña = correo, que es justo la temporal) y sin emitir ningún token.
+            if ($this->resetPolicy->isExpired($user)) {
+                $this->audit->log(
+                    action:       AuditService::AUTH_FAILED,
+                    entityType:   'user',
+                    entityId:     $user->id,
+                    metadata:     ['reason' => 'password_reset_expired'],
+                    actingUserId: $user->id,
+                );
+
+                return response()->json([
+                    'message' => trans('auth.password_reset_expired'),
+                    'code'    => 'password_reset_expired',
+                ], 401);
+            }
+
             $this->audit->log(
                 action:       AuditService::AUTH_LOGIN,
                 entityType:   'user',
@@ -132,6 +177,14 @@ class AuthController
 
             // MFA check — happens before role selection
             if ($this->mfaService->isRequired($user)) {
+                // R3-4: cada login correcto con MFA envía un código por correo; sin tope, 15 logins = 15 correos. Tope por usuario.
+                $sendCfg = (array) config('throttle.mfa_send');
+                if (($retry = AuthThrottle::reservar([
+                    'mfa:send:user:' . $user->id => [(int) $sendCfg['max'], (int) $sendCfg['decay']],
+                ], AuthThrottle::ABRIR)) !== null) {
+                    return AuthThrottle::respuesta($retry);
+                }
+
                 try {
                     $challengeId = $this->mfaService->generateChallenge($user);
                 } catch (MfaDeliveryException) {
@@ -147,8 +200,7 @@ class AuthController
             // ADR-006, Fase C, Decisión 1 revisada — el algoritmo v2 ya une automáticamente
             // role_id + user_additional_roles (ver User::modulesPayload()/effectivePermissionsV2()),
             // así que login() emite el JWT directo en un solo paso, sin pantalla de selección.
-            // select-role/switch-role quedan en el código (no se borran) pero sin llamador real:
-            // login() ya no genera selection tokens.
+            // SCRUM-1035: select-role/switch-role y los tokens de selección se eliminaron (código muerto, A-06).
             $expirationMs = $this->preferences->getEffectiveSessionTimeoutMs($user);
             $claims       = $this->claims->claims($user, $tenant->slug);
             $accessToken  = $this->jwt->encode($claims, $expirationMs);
@@ -196,6 +248,13 @@ class AuthController
     {
         $data = $request->validate(['refresh_token' => ['required', 'string']]);
 
+        // H4: tope de refresh tokens inválidos por IP (solo se cuentan los fallos).
+        $refreshKey = 'refresh:ip:' . $request->ip();
+        $refreshCfg = (array) config('throttle.refresh');
+        if (($retry = AuthThrottle::reservar([$refreshKey => [(int) $refreshCfg['ip_max'], (int) $refreshCfg['ip_decay']]], AuthThrottle::ABRIR)) !== null) {
+            return AuthThrottle::respuesta($retry);
+        }
+
         $tenant = $this->tenantResolver->resolve($request);
 
         if ($tenant === null) {
@@ -242,8 +301,25 @@ class AuthController
             );
 
             if ($touched === null) {
+                // SCRUM-1033 (A-03): un refresh token ya REVOCADO que se vuelve a presentar es la señal de reuso/robo (la
+                // víctima o el atacante usaron primero el token rotado). Se audita para SecurityAnalysisJob; el cliente
+                // recibe el mismo 401 que con un token inexistente o vencido (no se distingue hacia afuera).
+                $reused = RefreshToken::where('token_hash', $tokenHash)->where('revoked', true)->first(['user_id']);
+                if ($reused !== null) {
+                    $this->audit->log(
+                        action:       AuditService::AUTH_REFRESH_TOKEN_REUSE,
+                        entityType:   'user',
+                        entityId:     $reused->user_id,
+                        metadata:     ['reason' => 'revoked_refresh_token_presented'],
+                        actingUserId: $reused->user_id,
+                    );
+                }
+
                 return response()->json(['message' => trans('auth.token_invalid')], 401);
             }
+
+            // Token válido: se devuelve el intento reservado (solo cuentan los refresh inválidos).
+            AuthThrottle::devolver($refreshKey, (int) $refreshCfg['ip_decay']);
 
             /** @var User|null $user */
             $user = User::find($touched->user_id);
@@ -365,6 +441,9 @@ class AuthController
         /** @var array<string, mixed> $payload */
         $payload = $request->attributes->get('jwt');
 
+        // Una query por PK: el frontend la usa al recargar para saber si debe forzar el cambio de contraseña.
+        $mustChangePassword = User::where('id', (int) $payload['sub'])->value('must_change_password') === true;
+
         return response()->json([
             'id'          => $payload['sub'],
             'email'       => $payload['email'],
@@ -374,13 +453,16 @@ class AuthController
             'modules'     => $payload['modules'] ?? null,
             'flags'       => $payload['flags'] ?? null,
             'tenant'      => $payload['tenant'],
+            'must_change_password' => $mustChangePassword,
+            // SCRUM-1158 — con una sesión «Ver como usuario» viva, el frontend (tras recargar) recupera de acá el banner. Null si el token es normal.
+            'impersonation' => isset($payload['act']) ? app(ImpersonationService::class)->describe($payload) : null,
         ]);
     }
 
     /**
      * Emite un refresh token nuevo.
      *
-     * `$loginAt` distingue una emisión de LOGIN nuevo (login(), selectRole(), MFA verify — el
+     * `$loginAt` distingue una emisión de LOGIN nuevo (login(), MFA verify — el
      * default `null` cae a `now()`, es una sesión que arranca en este momento) de una ROTACIÓN
      * dentro de `refresh()` (donde se pasa el `login_at` de la fila vieja para que el techo
      * absoluto de 30 días — SCRUM-746 — sobreviva la rotación en vez de resetearse en cada uso).
@@ -401,128 +483,6 @@ class AuthController
         ]);
 
         return $plain;
-    }
-
-    /**
-     * POST /api/auth/select-role
-     *
-     * Finalizes a multi-role login. Validates the short-lived selection token,
-     * confirms the requested role is in its payload, and issues a full JWT.
-     */
-    public function selectRole(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'selection_token' => ['required', 'string'],
-            'role'            => ['required', 'string'],
-        ]);
-
-        $decoded = $this->jwt->decodeSelectionToken($data['selection_token']);
-
-        if ($decoded === null) {
-            return response()->json(['message' => trans('auth.token_invalid')], 401);
-        }
-
-        if (! in_array($data['role'], $decoded['roles'], true)) {
-            return response()->json(['message' => trans('auth.unauthorized')], 403);
-        }
-
-        /** @var \App\Shared\Multitenancy\Tenant|null $tenant */
-        $tenant = \App\Shared\Multitenancy\Tenant::where('slug', $decoded['tenant'])->first();
-
-        if ($tenant === null) {
-            return response()->json(['message' => trans('auth.failed')], 401);
-        }
-
-        $tenant->makeCurrent();
-
-        try {
-            /** @var User|null $user */
-            $user = User::find($decoded['sub']);
-
-            if ($user === null || ! $user->is_active || $user->isSecurityBlocked()) {
-                return response()->json(['message' => trans('auth.failed')], 401);
-            }
-
-            $activeRole   = $data['role'];
-            $roles        = $decoded['roles'];
-            $permissions  = $this->resolvePermissions($user);
-            $expirationMs = $this->preferences->getEffectiveSessionTimeoutMs($user);
-
-            $accessToken  = $this->jwt->encode([
-                'sub'            => $user->id,
-                'tenant'         => $tenant->slug,
-                'email'          => $user->email,
-                'role'           => $activeRole,
-                'roles'          => $roles,
-                'permissions'    => $permissions,
-                'security_level' => $user->securityLevel?->level,
-            ], $expirationMs);
-            $refreshToken = $this->issueRefreshToken($user);
-
-            return response()->json([
-                'token'         => $accessToken,
-                'token_type'    => 'Bearer',
-                'expires_in_ms' => $expirationMs,
-                'refresh_token' => $refreshToken,
-                'user'          => $this->userPayload($user, $activeRole, $roles, $permissions),
-            ]);
-        } finally {
-            \App\Shared\Multitenancy\Tenant::forgetCurrent();
-        }
-    }
-
-    /**
-     * POST /api/auth/switch-role
-     *
-     * Switches the active role within the current session.
-     * Validates the requested role is among the JWT's `roles[]` claim.
-     * Issues a new access token — the refresh token is unchanged.
-     */
-    public function switchRole(Request $request): JsonResponse
-    {
-        $data = $request->validate(['role' => ['required', 'string']]);
-
-        /** @var array{sub: int, tenant: string, email: string, role?: string, roles?: list<string>, permissions: list<string>} $payload */
-        $payload = $request->attributes->get('jwt');
-        // ADR-006, Fase C — tokens emitidos por login()/refresh()/mfaVerify() ya no tienen 'roles'
-        // (plural): el algoritmo v2 une role_id + user_additional_roles automáticamente, sin
-        // selección. select-role/switch-role solo tienen sentido para un token nacido de
-        // selectRole() (que sí sigue emitiendo 'roles'), que hoy no tiene llamador real. Sin este
-        // fallback, un usuario normal pegándole a este endpoint con un JWT nuevo (sin 'roles')
-        // crasheaba con 500 (in_array() con null) en vez del 403 correcto.
-        $currentRoles = is_array($payload['roles'] ?? null) ? $payload['roles'] : [];
-
-        if (! in_array($data['role'], $currentRoles, true)) {
-            return response()->json(['message' => trans('auth.unauthorized')], 403);
-        }
-
-        /** @var User|null $user */
-        $user = User::find($payload['sub']);
-
-        if ($user === null || ! $user->is_active || $user->isSecurityBlocked()) {
-            return response()->json(['message' => trans('auth.failed')], 401);
-        }
-
-        $activeRole   = $data['role'];
-        $permissions  = $payload['permissions'];
-        $expirationMs = $this->preferences->getEffectiveSessionTimeoutMs($user);
-
-        $accessToken = $this->jwt->encode([
-            'sub'            => $payload['sub'],
-            'tenant'         => $payload['tenant'],
-            'email'          => $payload['email'],
-            'role'           => $activeRole,
-            'roles'          => $currentRoles,
-            'permissions'    => $permissions,
-            'security_level' => $payload['security_level'] ?? null,
-        ], $expirationMs);
-
-        return response()->json([
-            'token'         => $accessToken,
-            'token_type'    => 'Bearer',
-            'expires_in_ms' => $expirationMs,
-            'user'          => $this->userPayload($user, $activeRole, $currentRoles, $permissions),
-        ]);
     }
 
     /**
@@ -553,44 +513,41 @@ class AuthController
             return response()->json(['message' => trans('auth.password_incorrect'), 'errors' => ['current_password' => [trans('auth.password_incorrect')]]], 422);
         }
 
+        // Reset administrativo (contraseña = correo): la nueva no puede volver a ser el correo ni repetir la actual.
+        if (mb_strtolower($data['new_password']) === mb_strtolower($user->email)) {
+            return response()->json(['message' => trans('auth.password_same_as_email'), 'errors' => ['new_password' => [trans('auth.password_same_as_email')]]], 422);
+        }
+
+        if ($data['new_password'] === $data['current_password']) {
+            return response()->json(['message' => trans('auth.password_same_as_current'), 'errors' => ['new_password' => [trans('auth.password_same_as_current')]]], 422);
+        }
+
         $user->password_hash = $data['new_password'];
+        $user->must_change_password = false;
+        // SCRUM-1033 (A-02): los access tokens emitidos antes de este instante dejan de valer (AuthenticateJwt). Truncado al
+        // segundo a propósito (el `iat` del JWT es de segundos): un login inmediato tras el cambio (ForcePasswordChangePage)
+        // emite un token con `iat` igual a ese segundo y debe valer; solo un token del MISMO segundo previo al cambio se cuela.
+        $user->password_changed_at = Carbon::now()->startOfSecond();
         $user->save();
 
         // Revoke all refresh tokens so other sessions must re-authenticate
         RefreshToken::where('user_id', $user->id)->update(['revoked' => true]);
 
+        // S2: aviso al dueño de la cuenta (un fallo de envío no rompe el cambio).
+        $this->passwordNotifier->notifyChanged($user);
+
         return response()->json(null, 204);
     }
 
-    /** @return list<string> */
-    private function resolvePermissions(User $user): array
-    {
-        return $user->effectivePermissions();
-    }
+    private static ?string $dummyPasswordHash = null;
 
     /**
-     * @param list<string> $roles
-     * @param list<string> $permissions
-     * @return array<string, mixed>
+     * SCRUM-1034 (A-04): hash ficticio con el MISMO coste que los reales (se genera con el hasher configurado, una vez por proceso)
+     * contra el que login() hace el `Hash::check` cuando no hay cuenta válida, para igualar los tiempos de respuesta.
      */
-    private function userPayload(User $user, string $activeRole, array $roles, array $permissions): array
+    private static function dummyPasswordHash(): string
     {
-        $prefs = is_array($user->preferences) ? $user->preferences : [];
-
-        return [
-            'id'            => $user->id,
-            'first_name'    => $user->first_name,
-            'last_name'     => $user->last_name,
-            'email'         => $user->email,
-            'phone'         => $user->phone,
-            'notes'         => $user->notes,
-            'department_id' => $user->department_id,
-            'language'      => $prefs['language'] ?? $this->preferences->getSystemSettings()['default_language'],
-            'security_level' => $user->securityLevel?->level,
-            'role'          => $activeRole,
-            'roles'         => $roles,
-            'permissions'   => $permissions,
-        ];
+        return self::$dummyPasswordHash ??= Hash::make(bin2hex(random_bytes(16)));
     }
 
     /**

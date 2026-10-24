@@ -20,6 +20,10 @@ final readonly class MappedProducto
         public ?float $priceFull,
         public ?float $cost,
         public ?string $excludedReason = null,
+        // SCRUM-921 — stock real de AL4 (legacy.productos.stock_al4), consumido por
+        // CatalogProductLoader SOLO al crear el catalog_product (nunca en update). `null` =
+        // artículo sin fila en AL4, distinto de 0 (stock real cero) — ver docblock de esa clase.
+        public ?float $stockInicial = null,
     ) {
     }
 

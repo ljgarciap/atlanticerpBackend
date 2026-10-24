@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 
 final class ProjectService
 {
+    public function __construct(private readonly CrmSettingsService $settings) {}
+
     /**
      * @param array{
      *   search?: string,
@@ -26,6 +28,7 @@ final class ProjectService
      *   despacho?: string,
      *   ubicacion?: string,
      *   user_id?: int,
+     *   user_ids?: list<int>,
      *   dialux?: bool,
      *   per_page?: int,
      * } $filters
@@ -38,7 +41,9 @@ final class ProjectService
             ->orderBy('updated_at', 'desc');
 
         // Visibility: management/superadmin see all; others see only assigned projects
-        if (! $user->canViewTeamV2('ventas_diseno')) {
+        // SCRUM-1150 — `ventas_diseno.gerencia_scope` ve todo igual que Gerencia.
+        if (! $user->canViewTeamV2('ventas_diseno')
+            && ! in_array('ventas_diseno.gerencia_scope', $user->extra_permissions ?? [], true)) {
             $query->whereHas('assignees', fn ($q) => $q->where('user_id', $user->id));
         }
 
@@ -71,7 +76,10 @@ final class ProjectService
             $query->where('ubicacion', 'ilike', "%{$filters['ubicacion']}%");
         }
 
-        if (! empty($filters['user_id'])) {
+        if (! empty($filters['user_ids'])) {
+            // SCRUM-854 — multi-selección (OR entre seleccionados), gana sobre user_id singular.
+            $query->whereHas('assignees', fn ($q) => $q->whereIn('user_id', $filters['user_ids']));
+        } elseif (! empty($filters['user_id'])) {
             $query->whereHas('assignees', fn ($q) => $q->where('user_id', (int) $filters['user_id']));
         }
 
@@ -86,15 +94,15 @@ final class ProjectService
                     ->whereDate('fecha_entrega', '<', now()),
                 'proximo' => $query->whereNotNull('fecha_entrega')
                     ->whereDate('fecha_entrega', '>=', now())
-                    ->whereDate('fecha_entrega', '<=', now()->addDays(3)),
+                    ->whereDate('fecha_entrega', '<=', now()->addDays($this->settings->proximoDias())),
                 default => null,
             };
         }
 
         // Freshness filter — based on last activity date, via EXISTS subqueries
         if (! empty($filters['freshness'])) {
-            $cutRecent = now()->subDays(7);
-            $cutStale = now()->subDays(21);
+            $cutRecent = now()->subDays($this->settings->freshnessRecentDias());
+            $cutStale = now()->subDays($this->settings->freshnessStaleDias());
 
             match ($filters['freshness']) {
                 'recent' => $query->whereHas(

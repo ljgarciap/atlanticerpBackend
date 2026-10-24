@@ -24,22 +24,33 @@ final class Pagination
     private const MAX_ALL = 1000; // techo defensivo para "todos" — evita traer un dataset infinito.
 
     /**
+     * SCRUM-992 (Pre-QA H6) — techo de `page`. Con `per_page` máximo 1000 el OFFSET más grande
+     * posible es ~1e9, siempre dentro de un entero. Sin techo, `page=9223372036854775808` se
+     * convertía en PHP_INT_MAX y `(page - 1) * per_page` desbordaba a float: devolvía las filas de
+     * la página 1 con un `current_page` absurdo. Una página válida (<= techo) no cambia; una fuera
+     * de rango sigue devolviendo `data: []` con el `current_page` pedido, como siempre.
+     */
+    private const MAX_PAGE = 1_000_000;
+
+    /**
      * @param list<string> $allowedSorts
      * @return array{per_page: int, page: int, sort_by: string, sort_dir: string}
      */
     public static function params(Request $request, array $allowedSorts, string $defaultSort, string $defaultDir = 'asc'): array
     {
-        $perPageRaw = (string) $request->query('per_page', (string) self::DEFAULT_PER_PAGE);
+        // H8 — un parámetro no escalar (`per_page[]=1`) se trata como ausente, ver QueryParams.
+        $perPageRaw = QueryParams::string($request, 'per_page', (string) self::DEFAULT_PER_PAGE);
         $perPage = $perPageRaw === 'all'
             ? self::MAX_ALL
             : (in_array((int) $perPageRaw, self::ALLOWED_PER_PAGE, true) ? (int) $perPageRaw : self::DEFAULT_PER_PAGE);
 
-        $page = max(1, (int) $request->query('page', 1));
+        $pageRaw = $request->query('page', 1);
+        $page = is_scalar($pageRaw) ? min(self::MAX_PAGE, max(1, (int) $pageRaw)) : 1;
 
         $sortByRaw = $request->query('sort_by');
         $sortBy = is_string($sortByRaw) && in_array($sortByRaw, $allowedSorts, true) ? $sortByRaw : $defaultSort;
 
-        $sortDirRaw = strtolower((string) $request->query('sort_dir', $defaultDir));
+        $sortDirRaw = strtolower(QueryParams::string($request, 'sort_dir', $defaultDir));
         $sortDir = $sortDirRaw === 'desc' ? 'desc' : 'asc';
 
         return ['per_page' => $perPage, 'page' => $page, 'sort_by' => $sortBy, 'sort_dir' => $sortDir];

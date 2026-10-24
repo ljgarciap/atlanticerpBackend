@@ -15,7 +15,7 @@ use Illuminate\Validation\Rule;
 final class AutocompleteController extends Controller
 {
     // Fields allowed for distinct-value autocomplete — explicit allowlist against arbitrary column queries.
-    private const ALLOWED_FIELDS = ['encargado', 'developer', 'arquitecto', 'despacho', 'ubicacion', 'contacto', 'area'];
+    public const ALLOWED_FIELDS = ['encargado', 'developer', 'arquitecto', 'despacho', 'ubicacion', 'contacto', 'area'];
 
     /**
      * GET /api/crm/autocomplete/fields?field={field}&q={query}
@@ -26,7 +26,7 @@ final class AutocompleteController extends Controller
     public function fields(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'field' => ['required', 'string', Rule::in(self::ALLOWED_FIELDS)],
+            'field' => ['required', 'string', Rule::in(AutocompleteController::ALLOWED_FIELDS)],
             'q'     => ['nullable', 'string', 'max:100'],
         ]);
 

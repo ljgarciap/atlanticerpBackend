@@ -377,6 +377,151 @@ class InsumoReservaTest extends FeatureTestCase
         $this->assertSame(InsumoPurchaseRequest::ESTADO_RECIBIDA, $purchaseRequest->estado);
     }
 
+    // ── SCRUM-837 — rebote real de Gerencia Test: duplicación de stock ──────────────────────────
+
+    /**
+     * Reproduce EXACTAMENTE el bug reportado: el usuario que recibe la orden elige "Reserva
+     * Servicios" directo como bodega del Ingreso de Mercancía (lo más natural para una orden de
+     * Servicios) en vez de "Bodega Central". Antes del fix, el listener asumía ciegamente que la
+     * Entrada caía en Bodega Central y reubicaba de todos modos: +10 duplicado en Reserva
+     * Servicios (10 reales -> 20) y -10 en Bodega Central (0 -> -10, nunca tuvo esas unidades).
+     */
+    public function test_orden_recibida_con_ingreso_directo_a_reserva_servicios_no_duplica_stock(): void
+    {
+        $provider = $this->makeLocalProvider();
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
+
+        $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $this->withHeaders($this->authHeaders($liderToken))
+            ->postJson('/api/servicios/insumos', [
+                'catalog_product_id' => $product->id,
+                'minimo' => 5,
+                'cantidad_inicial' => 10,
+            ])
+            ->assertStatus(201);
+
+        $this->reMakeCurrent();
+        $purchaseRequest = InsumoPurchaseRequest::where('catalog_product_id', $product->id)->firstOrFail();
+        $orderId = $purchaseRequest->purchase_order_id;
+        $reservaId = $this->reservaWarehouseId();
+        $bodegaCentralId = $this->bodegaCentralWarehouseId();
+
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $headers = $this->authHeaders($comprasToken);
+
+        $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200);
+        $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200);
+
+        // Ingreso de mercancía asignado DIRECTO a Reserva Servicios (no a Bodega Central).
+        $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
+            'purchase_order_id' => $orderId,
+            'lines' => [['catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 8, 'warehouse_id' => $reservaId]],
+        ])->assertStatus(201);
+
+        $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")
+            ->assertStatus(200)->assertJsonPath('status', PurchaseOrder::STATUS_RECIBIDO);
+
+        $this->reMakeCurrent();
+
+        // Exactamente 10 en Reserva Servicios — nunca 20.
+        $reservaStock = ProductWarehouseStock::where('catalog_product_id', $product->id)
+            ->where('warehouse_id', $reservaId)->first();
+        $this->assertSame(10, $reservaStock->quantity);
+
+        // Bodega Central nunca participó — ni siquiera existe una fila para este producto ahí
+        // (nunca se creó con firstOrCreate), y mucho menos en negativo.
+        $centralStock = ProductWarehouseStock::where('catalog_product_id', $product->id)
+            ->where('warehouse_id', $bodegaCentralId)->first();
+        $this->assertNull($centralStock);
+
+        // Ningún movimiento de Reubicación se generó — la Entrada ya cumplió RN2 directamente.
+        $reubicaciones = InventoryMovement::where('catalog_product_id', $product->id)
+            ->where('tipo', InventoryMovement::TIPO_REUBICACION)->count();
+        $this->assertSame(0, $reubicaciones);
+
+        // Solo el movimiento de Entrada real (+10), nada más.
+        $movimientos = InventoryMovement::where('catalog_product_id', $product->id)->get();
+        $this->assertCount(1, $movimientos);
+        $this->assertSame(InventoryMovement::TIPO_ENTRADA, $movimientos->first()->tipo);
+        $this->assertSame(10, $movimientos->first()->cantidad);
+
+        $purchaseRequest->refresh();
+        $this->assertSame(InsumoPurchaseRequest::ESTADO_RECIBIDA, $purchaseRequest->estado);
+
+        $listResponse = $this->withHeaders($this->authHeaders($this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios')))
+            ->getJson('/api/servicios/insumos')
+            ->assertStatus(200);
+        $row = collect($listResponse->json('data'))->firstWhere('catalog_product_id', $product->id);
+        $this->assertSame(10, $row['disponible']);
+    }
+
+    /**
+     * Caso mixto: 2 recepciones parciales del mismo pedido, cada una a una bodega distinta (6 a
+     * Bodega Central, 4 directo a Reserva Servicios). Solo la porción de Bodega Central debe
+     * reubicarse — la de Reserva Servicios ya está en destino.
+     */
+    public function test_orden_recibida_parcial_en_dos_bodegas_distintas_solo_reubica_lo_que_no_esta_en_destino(): void
+    {
+        $provider = $this->makeLocalProvider();
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
+
+        $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $this->withHeaders($this->authHeaders($liderToken))
+            ->postJson('/api/servicios/insumos', [
+                'catalog_product_id' => $product->id,
+                'minimo' => 3,
+                'cantidad_inicial' => 10,
+            ])
+            ->assertStatus(201);
+
+        $this->reMakeCurrent();
+        $purchaseRequest = InsumoPurchaseRequest::where('catalog_product_id', $product->id)->firstOrFail();
+        $orderId = $purchaseRequest->purchase_order_id;
+        $reservaId = $this->reservaWarehouseId();
+        $bodegaCentralId = $this->bodegaCentralWarehouseId();
+
+        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $headers = $this->authHeaders($comprasToken);
+
+        $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200);
+        $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200);
+
+        $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
+            'purchase_order_id' => $orderId,
+            'lines' => [['catalog_product_id' => $product->id, 'quantity' => 6, 'unit_cost' => 8, 'warehouse_id' => $bodegaCentralId]],
+            'pending_remainder_status' => PurchaseOrder::REMAINDER_EN_TRANSITO_LOCAL,
+        ])->assertStatus(201);
+
+        $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
+            'purchase_order_id' => $orderId,
+            'lines' => [['catalog_product_id' => $product->id, 'quantity' => 4, 'unit_cost' => 8, 'warehouse_id' => $reservaId]],
+        ])->assertStatus(201);
+
+        $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")
+            ->assertStatus(200)->assertJsonPath('status', PurchaseOrder::STATUS_RECIBIDO);
+
+        $this->reMakeCurrent();
+
+        // Bodega Central: recibió 6, se reubicaron los 6 -> queda en 0.
+        $centralStock = ProductWarehouseStock::where('catalog_product_id', $product->id)
+            ->where('warehouse_id', $bodegaCentralId)->first();
+        $this->assertSame(0, $centralStock->quantity ?? null);
+
+        // Reserva Servicios: 4 directos (Entrada) + 6 reubicados = 10, nunca más.
+        $reservaStock = ProductWarehouseStock::where('catalog_product_id', $product->id)
+            ->where('warehouse_id', $reservaId)->first();
+        $this->assertSame(10, $reservaStock->quantity);
+
+        // Un solo par de Reubicación (por los 6 de Bodega Central), no dos pares.
+        $reubicaciones = InventoryMovement::where('catalog_product_id', $product->id)
+            ->where('tipo', InventoryMovement::TIPO_REUBICACION)->get();
+        $this->assertCount(2, $reubicaciones);
+        $this->assertTrue($reubicaciones->contains(fn ($m) => $m->warehouse_id === $bodegaCentralId && $m->cantidad === -6));
+        $this->assertTrue($reubicaciones->contains(fn ($m) => $m->warehouse_id === $reservaId && $m->cantidad === 6));
+    }
+
     public function test_orden_de_compras_normal_sin_origen_servicios_no_dispara_reubicacion(): void
     {
         $provider = $this->makeLocalProvider();

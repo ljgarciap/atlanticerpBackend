@@ -157,6 +157,9 @@ final class AlbaranStagingLoader
             'icg_codvendedor'  => $row->icgCodvendedor,
             'icg_numseriefac'  => $row->icgNumseriefac,
             'icg_numfac'       => $row->icgNumfac,
+            // SCRUM-842 — viene del Extractor en cada corrida (no del Matcher), sí va en el
+            // $update para que una segunda corrida la refresque si cambió en ICG.
+            'observaciones'    => $row->observaciones,
             'created_at'       => $now,
         ], $rows);
 
@@ -166,7 +169,7 @@ final class AlbaranStagingLoader
                 ['icg_numserie', 'icg_numalbaran', 'icg_n'],
                 [
                     'icg_codcliente', 'fecha', 'totalneto', 'facturado', 'icg_codvendedor',
-                    'icg_numseriefac', 'icg_numfac',
+                    'icg_numseriefac', 'icg_numfac', 'observaciones',
                 ],
             );
         }

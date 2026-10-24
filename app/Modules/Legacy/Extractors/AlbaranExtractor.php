@@ -83,12 +83,19 @@ final class AlbaranExtractor implements AlbaranExtractorContract
         ));
     }
 
+    /**
+     * SCRUM-842 — LEFT JOIN a ALBVENTACAMPOSLIBRES (OBSERVACIONES), misma llave natural que la
+     * cabecera. LEFT, nunca INNER: un albarán sin fila satélite igual se extrae completo,
+     * `observaciones` queda `null`.
+     */
     public static function albaranesQuery(): string
     {
         return <<<'SQL'
             SELECT a.NUMSERIE, a.NUMALBARAN, a.N, a.CODCLIENTE, a.FECHA, a.TOTALNETO,
-                   a.FACTURADO, a.CODVENDEDOR, a.NUMSERIEFAC, a.NUMFAC
+                   a.FACTURADO, a.CODVENDEDOR, a.NUMSERIEFAC, a.NUMFAC, cl.OBSERVACIONES
             FROM ALBVENTACAB a
+            LEFT JOIN ALBVENTACAMPOSLIBRES cl
+                ON cl.NUMSERIE = a.NUMSERIE AND cl.NUMALBARAN = a.NUMALBARAN AND cl.N = a.N
             SQL;
     }
 
@@ -133,6 +140,7 @@ final class AlbaranExtractor implements AlbaranExtractorContract
             icgCodvendedor: self::nullableInt($row['CODVENDEDOR'] ?? null),
             icgNumseriefac: self::nullableString($row['NUMSERIEFAC'] ?? null),
             icgNumfac: self::nullableInt($row['NUMFAC'] ?? null),
+            observaciones: self::nullableString($row['OBSERVACIONES'] ?? null),
         );
     }
 

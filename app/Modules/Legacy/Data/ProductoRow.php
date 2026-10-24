@@ -17,6 +17,10 @@ final readonly class ProductoRow
         public ?string $marcaNombre,
         public ?string $refProveedor,
         public bool $descatalogado,
+        // SCRUM-921 — stock real de STOCKS WHERE CODALMACEN='AL4' (Bodega Central, única fuente
+        // de stock vendible según el negocio, ver v_msl_stock). `null` = el artículo no tiene
+        // ninguna fila en AL4 (nunca tuvo movimiento ahí), distinto de 0 (stock real cero).
+        public ?float $stockAl4 = null,
     ) {
     }
 }

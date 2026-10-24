@@ -168,26 +168,19 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
     }
 
     /**
-     * Senior Review 2026-07-22, Blocker 2 — escenario EXACTO reportado por el Arquitecto:
-     * Bodega A tiene 10 unidades, Bodega B tiene 5 (total 15). Pedido 1 pide 10 y completa
-     * picking primero → antes del fix, `resolvePrimaryWarehouseId()` elegía "la bodega con más
-     * stock" de forma independiente y SIEMPRE devolvía Bodega A para ambos pedidos (10 > 5, sin
-     * descontar lo que Pedido 1 ya se llevó) — Pedido 2 (pide 5) completaba picking DESPUÉS,
-     * antes de que Pedido 1 despachara, y el algoritmo viejo también le asignaba Bodega A (10 > 5
-     * en la lectura cruda de `product_warehouse_stock`, que todavía no se decrementa hasta el
-     * despacho). Al despachar ambos, Bodega A terminaba en -5 (Kardex sin guarda contra saldo
-     * negativo) y Bodega B se quedaba con sus 5 unidades intactas, nunca tocadas.
+     * Senior Review 2026-07-22, Blocker 2 — escenario: Bodega Central tiene 10, Merma tiene 5. Pedido 1 pide 10, Pedido 2 pide 5 y completa el picking
+     * ANTES de que Pedido 1 despache (Central en `product_warehouse_stock` todavía muestra 10).
      *
-     * Con el fix (reparto por-bodega dentro del mismo cálculo de back-allocation, congelando el
-     * warehouse_id de items ya pickeados y descontando su consumo real del remanente antes de
-     * repartir entre los competidores todavía en plan): Pedido 2 debe terminar con warehouse_id
-     * = Bodega B (no A), y ambos despachos deben dejar cada bodega en 0, nunca en negativo.
+     * SCRUM-1196 CAMBIA el resultado esperado: antes Pedido 2 caía en Merma («la bodega con más remanente»), que es exactamente el bug del ticket (se
+     * vendía stock de bodegas que no son de venta). Ahora solo cuenta Bodega Central: Pedido 1 se lleva sus 10, a Pedido 2 no le queda nada que alistar (no
+     * puede tomar Merma, ni sobrepasar Central), así que el picking solo se completa con 0 y el resto cae en faltante. Ninguna bodega queda en negativo y
+     * Merma queda intacta.
      */
-    public function test_dos_pedidos_consecutivos_en_2_bodegas_no_dejan_stock_negativo(): void
+    public function test_dos_pedidos_consecutivos_no_dejan_stock_negativo_y_nunca_usan_merma(): void
     {
         $product = $this->makeCatalogProduct();
-        $bodegaA = Warehouse::where('name', 'Bodega Central')->firstOrFail();
-        $bodegaB = Warehouse::where('name', 'Merma')->firstOrFail();
+        $central = Warehouse::where('name', 'Bodega Central')->firstOrFail();
+        $merma = Warehouse::where('name', 'Merma')->firstOrFail();
         $this->setStock($product, 10, 'Bodega Central');
         $this->setStock($product, 5, 'Merma');
 
@@ -206,46 +199,43 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
         ])->assertStatus(200);
 
         $this->makeCurrentTenant();
-        $this->assertSame($bodegaA->id, $item1->fresh()->warehouse_id, 'Pedido 1 (10 unidades) debe resolver a Bodega A (10 disponibles).');
+        $this->assertSame($central->id, $item1->fresh()->warehouse_id, 'Pedido 1 sale de Bodega Central.');
 
-        // Pedido 2 — pide 5, completa picking DESPUÉS, ANTES de que Pedido 1 despache (Bodega A
-        // en product_warehouse_stock todavía muestra 10, sin decrementar).
+        // Pedido 2 — pide 5. Central ya está comprometida por Pedido 1 y Merma NO es bodega de venta: no hay nada que reservar ni alistar.
         $order2 = $this->makeOrder([], ['catalog_product_id' => $product->id, 'qty_requested' => 5]);
         $item2 = $order2->items->first();
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order2->id}/assign-picker", ['picker_id' => $pickerId])->assertStatus(200);
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order2->id}/start-picking")->assertStatus(200);
-        $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order2->id}/complete-picking", [
-            'items' => [['order_item_id' => $item2->id, 'qty_picked' => 5]],
-        ])->assertStatus(200);
 
         $this->makeCurrentTenant();
-        $this->assertSame(
-            $bodegaB->id,
-            $item2->fresh()->warehouse_id,
-            'Blocker 2 — Pedido 2 debe resolver a Bodega B (la A ya está comprometida por Pedido 1), NO a Bodega A.',
-        );
+        $this->assertNull($item2->fresh()->warehouse_id, 'No se le asigna Merma: sin saldo en una bodega de venta no hay bodega.');
+        $this->assertSame(0, $item2->fresh()->qty_reserved);
 
-        // Despachar ambos.
-        foreach ([$order1, $order2] as $order) {
-            $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order->id}/register-delivery", [
-                'items' => [['order_item_id' => $order->items->first()->id, 'qty_delivered' => $order->items->first()->qty_requested]],
-            ])->assertStatus(200);
-            $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order->id}/assign-courier", ['courier_id' => $courierId])->assertStatus(200);
-            $this->makeCurrentTenant();
-            Order::find($order->id)->update(['invoice_ready' => true]);
-            $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order->id}/dispatch")->assertStatus(200);
-            $this->makeCurrentTenant();
-        }
+        $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order2->id}/complete-picking", [
+            'items' => [['order_item_id' => $item2->id, 'qty_picked' => 5]],
+        ])->assertStatus(422)->assertJsonPath('message', fn (string $m): bool => str_contains($m, 'No hay saldo suficiente'));
 
-        $stockA = ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $bodegaA->id)->value('quantity');
-        $stockB = ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $bodegaB->id)->value('quantity');
+        // Alistar 0 (todo a faltante) sí se completa: el resto queda pendiente de compra por el flujo de revisión de inventario.
+        $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order2->id}/complete-picking", [
+            'items' => [['order_item_id' => $item2->id, 'qty_picked' => 0]],
+        ])->assertStatus(200);
 
-        $this->assertSame(0, $stockA, 'Bodega A debe quedar exactamente en 0 (nunca negativa).');
-        $this->assertSame(0, $stockB, 'Bodega B debe quedar exactamente en 0 (el remanente sí se usó, no queda fantasma).');
+        // Se despacha solo Pedido 1.
+        $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order1->id}/register-delivery", [
+            'items' => [['order_item_id' => $item1->id, 'qty_delivered' => 10]],
+        ])->assertStatus(200);
+        $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order1->id}/assign-courier", ['courier_id' => $courierId])->assertStatus(200);
+        $this->makeCurrentTenant();
+        Order::find($order1->id)->update(['invoice_ready' => true]);
+        $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order1->id}/dispatch")->assertStatus(200);
+        $this->makeCurrentTenant();
 
-        $movement1 = InventoryMovement::where('referencia_entidad_id', $order1->id)->first();
-        $movement2 = InventoryMovement::where('referencia_entidad_id', $order2->id)->first();
-        $this->assertSame($bodegaA->id, $movement1->warehouse_id);
-        $this->assertSame($bodegaB->id, $movement2->warehouse_id);
+        $stockCentral = ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $central->id)->value('quantity');
+        $stockMerma = ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $merma->id)->value('quantity');
+
+        $this->assertSame(0, $stockCentral, 'Bodega Central queda exactamente en 0 (nunca negativa).');
+        $this->assertSame(5, $stockMerma, 'Merma no es bodega de venta: queda intacta.');
+        $this->assertSame(0, InventoryMovement::where('referencia_entidad_id', $order2->id)->count(), 'Pedido 2 no movió stock.');
+        $this->assertSame($central->id, InventoryMovement::where('referencia_entidad_id', $order1->id)->first()->warehouse_id);
     }
 }

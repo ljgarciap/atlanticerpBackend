@@ -5,12 +5,12 @@
 <style>
     @page { margin: 40px; }
     body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #2a2520; }
-    .header { display: table; width: 100%; margin-bottom: 18px; }
+    .header { display: table; width: 100%; margin-bottom: 18px; border-bottom: 2px solid #5BA5A0; padding-bottom: 10px; }
     .header .col { display: table-cell; vertical-align: top; width: 50%; }
     .header .col.right { text-align: right; }
-    .logo { height: 40px; margin-bottom: 6px; }
-    .empresa-nombre { font-size: 14px; font-weight: bold; }
-    .empresa-datos { color: #6b7280; font-size: 9.5px; line-height: 1.5; }
+    .logo { height: 36px; vertical-align: middle; }
+    .brand-name { font-size: 15px; font-weight: bold; color: #2a2520; padding-left: 8px; vertical-align: middle; }
+    .empresa-datos { color: #6b7280; font-size: 9.5px; line-height: 1.5; margin-top: 6px; }
     .nota-numero { font-size: 16px; font-weight: bold; color: #3D7E7A; }
     .nota-fecha { color: #6b7280; font-size: 9.5px; }
     .estado-badge {
@@ -60,11 +60,15 @@
     @endphp
 
     <div class="header">
+        {{-- SCRUM-857/858 — marca unificada (isótipo + "ATLANTIC", igual que cotizaciones/
+             Estado de Cuenta/Recibo). La nota de crédito es un documento fiscal: nombre legal, RUC
+             y dirección del emisor van como bloque de datos fino debajo de la marca. El guion del
+             RUC solo si hay dígito verificador. --}}
         <div class="col">
-            <img class="logo" src="{{ $logoDataUri }}">
-            <div class="empresa-nombre">{{ $fiscal->nombre_comercial }}</div>
+            <div><img class="logo" src="{{ $logoDataUri }}"><span class="brand-name">ATLANTIC</span></div>
             <div class="empresa-datos">
-                RUC {{ $fiscal->ruc }}-{{ $fiscal->dv }}<br>
+                @if (trim($fiscal->nombre_comercial) !== ''){{ $fiscal->nombre_comercial }}<br>@endif
+                @if (trim($fiscal->ruc) !== '')RUC {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? "-{$fiscal->dv}" : '' }}<br>@endif
                 {{ $fiscal->direccion_fiscal }}
             </div>
         </div>

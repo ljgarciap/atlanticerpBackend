@@ -101,6 +101,25 @@ return [
             'report'                  => false,
         ],
 
+        // SCRUM-984 — biblioteca de manuales/videos, bucket ÚNICO compartido por dev/test/prod
+        // (ver docs/architecture/biblioteca-manuales-s3-diseno.md). Credenciales propias
+        // (usuarios IAM atlanticerp-library-{env}), distintas de las del resto de los discos.
+        // `throw => true`: la biblioteca debe fallar ruidoso. Sin AWS_LIBRARY_BUCKET los
+        // endpoints responden 503 (interruptor de rollback). NUNCA 'visibility' => 'public'
+        // (bucket owner enforced rechaza ACLs).
+        's3-library' => [
+            'driver'                  => 's3',
+            'key'                     => env('AWS_LIBRARY_ACCESS_KEY_ID'),
+            'secret'                  => env('AWS_LIBRARY_SECRET_ACCESS_KEY'),
+            'region'                  => env('AWS_LIBRARY_REGION', 'us-east-1'),
+            'bucket'                  => env('AWS_LIBRARY_BUCKET'),
+            'root'                    => 'library',
+            'endpoint'                => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw'                   => true,
+            'report'                  => true,
+        ],
+
     ],
 
     /*

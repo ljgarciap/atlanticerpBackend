@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * SCRUM-745 — borra la data de prueba UAT del Catálogo (reference `UAT-%`,
  * familias `[PRUEBA UAT] %`) una vez terminado el UAT. Mismo precedente que
- * DemoCleanupController (Auth), adaptado a las FKs reales de
+ * tenía DemoCleanupController (Auth, removido 2026-09-17), adaptado a las FKs reales de
  * `catalog_products`: a diferencia de `users`, varias tablas de
  * Bodega/Compras usan `restrictOnDelete()` sobre `catalog_product_id`
  * (zona_libre_request_lines, replacement_requests) — si un producto UAT

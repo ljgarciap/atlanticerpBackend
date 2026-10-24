@@ -1,0 +1,34 @@
+# Reglas propias de AtlanticERP para Semgrep (SCRUM-963) — familia `crypto-deser`. Prueba al lado (crypto-deser.php):
+#   docker run --rm -v "$PWD":/src semgrep/semgrep:1.178.0 semgrep --test /src/infra/semgrep/rules
+# Un par YAML/prueba por familia A PROPÓSITO: Semgrep evalúa cada regla de un YAML contra TODO su archivo de prueba, así que
+# mezclar reglas que se solapan (flujo vs inventario) produce falsos errores de prueba.
+# Niveles: ERROR = flujo (entrada del usuario → sumidero, precisas, 0 hoy); INFO = inventario con contador en baseline-counts.json.
+# Limitación: el flujo de Semgrep OSS es por archivo; una entrada que cruza controlador → servicio no se ve.
+rules:
+  - id: atlanticerp-weak-hash
+    languages: [php]
+    severity: WARNING
+    message: >-
+      md5()/sha1() no sirven para contraseñas, tokens ni firmas. Usar Hash::make (contraseñas), hash('sha256', ...) o hash_hmac.
+      Si es solo una huella no criptográfica (clave de caché, ETag), dejar `// nosemgrep: atlanticerp-weak-hash — huella no criptográfica`.
+    metadata:
+      category: security
+      cwe: "CWE-328: Use of Weak Hash"
+      owner: cybersecurity
+    pattern-either:
+      - pattern: md5(...)
+      - pattern: sha1(...)
+
+  - id: atlanticerp-unserialize
+    languages: [php]
+    severity: ERROR
+    message: >-
+      unserialize() sobre datos que pueden venir de fuera permite inyección de objetos. Usar json_decode, o pasar
+      ['allowed_classes' => false].
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      owner: cybersecurity
+    patterns:
+      - pattern: unserialize($X)
+      - pattern-not: unserialize($X, ["allowed_classes" => false])

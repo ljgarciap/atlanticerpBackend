@@ -12,6 +12,7 @@ use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Modules\VentasDiseno\Services\ClientsService;
+use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -116,18 +117,26 @@ final class ClientsController extends Controller
         /**
          * @var array{
          *   name: string, default_price_type?: string|null,
-         *   business_name: string, tax_id: string, delivery_address?: string|null, category?: string|null,
+         *   business_name: string, receptor_tipo?: string|null, tax_id?: string|null, tax_id_dv?: string|null, delivery_address?: string|null, category?: string|null,
          *   contacts: list<array{name: string, role: string, phone?: string|null, email?: string|null}>,
+         *   from_quote_context?: bool,
          * } $validated
          */
         $validated = $request->validated();
+
+        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Mark/Felix).
+        if (($validated['receptor_tipo'] ?? null) === ReceptorTipo::CONSUMIDOR_FINAL && ! $user->hasPermission(ReceptorTipo::PERMISO_CONSUMIDOR_FINAL)) {
+            return response()->json(['message' => ReceptorTipo::MENSAJE_SIN_PERMISO], 403);
+        }
 
         // REQ-034/067: solo Mark (grant individual, no de rol) puede seleccionar Precio Socio.
         if (($validated['default_price_type'] ?? null) === 'partner' && ! $user->hasPermission('ventas_diseno.select_partner_price')) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        $client = $this->service->createClient($validated, $user->id);
+        // SCRUM-1187 — crear un cliente NO crea proyecto ni Lead (reemplaza REQ-068). `from_quote_context` (SCRUM-873) se sigue aceptando
+        // por compatibilidad con el frontend, pero ya no cambia nada: ningún contexto crea Lead.
+        $client = $this->service->createClient($validated);
 
         return response()->json($this->formatDetail($client), 201);
     }
@@ -146,13 +155,20 @@ final class ClientsController extends Controller
 
         /**
          * @var array{
-         *   business_name: string, tax_id: string, delivery_address?: string|null, category?: string|null,
+         *   business_name: string, receptor_tipo?: string|null, tax_id?: string|null, tax_id_dv?: string|null, delivery_address?: string|null, category?: string|null,
          *   contacts: list<array{name: string, role: string, phone?: string|null, email?: string|null}>,
+         *   from_quote_context?: bool,
          * } $validated
          */
         $validated = $request->validated();
 
-        $subClient = $this->service->addSubClient($master, $validated, $user->id);
+        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Mark/Felix).
+        if (($validated['receptor_tipo'] ?? null) === ReceptorTipo::CONSUMIDOR_FINAL && ! $user->hasPermission(ReceptorTipo::PERMISO_CONSUMIDOR_FINAL)) {
+            return response()->json(['message' => ReceptorTipo::MENSAJE_SIN_PERMISO], 403);
+        }
+
+        // SCRUM-1187 — ver nota equivalente en store() arriba: ningún contexto crea Lead.
+        $subClient = $this->service->addSubClient($master, $validated);
 
         return response()->json($this->formatSubClient($subClient), 201);
     }
@@ -195,9 +211,14 @@ final class ClientsController extends Controller
             'id'                => $subClient->id,
             'master_client_id'  => $subClient->master_client_id,
             'business_name'     => $subClient->business_name,
+            'receptor_tipo'     => $subClient->receptor_tipo ?? ReceptorTipo::CONTRIBUYENTE,
             'tax_id'            => $subClient->tax_id,
+            'tax_id_dv'         => $subClient->tax_id_dv,
             'delivery_address'  => $subClient->delivery_address,
             'category'          => $subClient->category,
+            // SCRUM-1166 — para avisar en la ficha del cliente que está exento de ITBMS (solo lectura aquí).
+            'itbms_exento'             => $subClient->itbms_exento,
+            'itbms_exencion_documento' => $subClient->itbms_exencion_documento,
             'contacts'          => $subClient->contacts->map(fn ($c) => [
                 'id' => $c->id, 'name' => $c->name, 'role' => $c->role, 'phone' => $c->phone, 'email' => $c->email,
             ])->values(),

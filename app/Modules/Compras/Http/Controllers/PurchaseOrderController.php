@@ -18,6 +18,9 @@ use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\Compras\Services\GoodsReceiptConfirmationService;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\Compras\Services\PurchaseOrderPdfService;
+use App\Modules\Compras\Services\PurchaseOrderTranslationService;
+use App\Modules\Compras\Support\OrderMoneyVisibility;
+use App\Modules\Compras\Support\TranslationException;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Shared\Http\Pagination;
@@ -45,6 +48,7 @@ final class PurchaseOrderController extends Controller
 
     public function __construct(
         private readonly PurchaseOrderPdfService $pdfService,
+        private readonly PurchaseOrderTranslationService $translations,
         private readonly InventoryKpiService $inventoryKpis,
         private readonly GoodsReceiptConfirmationService $goodsReceiptConfirmation,
     ) {}
@@ -128,7 +132,11 @@ final class PurchaseOrderController extends Controller
         $paymentStatus = $request->query('payment_status');
         $validPaymentStatuses = ['sin_enviar', 'por_pagar', PurchaseOrder::PAYMENT_STATUS_PARCIAL, PurchaseOrder::PAYMENT_STATUS_COMPLETO];
 
-        $pagination = Pagination::params($request, self::ALLOWED_SORTS, 'created_at', 'desc');
+        // SCRUM-1013 (Pre-QA H2) — quien solo tiene compras.logistica.view (vendedor) no ve costos ni montos:
+        // tampoco puede ordenar por monto (el orden revelaría cuánto cuesta cada orden).
+        $hidesMoney = $this->hidesMoney($request);
+        $allowedSorts = $hidesMoney ? array_values(array_diff(self::ALLOWED_SORTS, ['total_amount'])) : self::ALLOWED_SORTS;
+        $pagination = Pagination::params($request, $allowedSorts, 'created_at', 'desc');
 
         // REQ-187 — los 5 KPIs se calculan siempre sobre el universo COMPLETO de "payment_pending"
         // (con los demás filtros combinables ya aplicados a $query — proveedor/búsqueda/etc, pero
@@ -138,8 +146,8 @@ final class PurchaseOrderController extends Controller
             /** @var list<PurchaseOrder> $allForKpis */
             $allForKpis = (clone $query)->get()->all();
             $paymentKpis = [
-                'total_pending_balance' => round(array_sum(array_map(
-                    fn (PurchaseOrder $o): float => $o->total_amount - $o->paidAmount(), $allForKpis
+                'total_pending_balance' => $hidesMoney ? null : round(array_sum(array_map(
+                    fn (PurchaseOrder $o): float => $o->payableTotal() - $o->paidAmount(), $allForKpis
                 )), 2),
                 'sin_enviar' => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->payment_requested_at === null && $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PENDIENTE)),
                 'por_pagar' => count(array_filter($allForKpis, fn (PurchaseOrder $o): bool => $o->payment_requested_at !== null && $o->paymentStatus() === PurchaseOrder::PAYMENT_STATUS_PENDIENTE)),
@@ -184,7 +192,9 @@ final class PurchaseOrderController extends Controller
                 // resuelta por el batch (0 recibido, ver Recepción "pendiente") — pasar null acá
                 // dispararía otra query individual dentro de formatSummary(), justo lo que el
                 // batch de arriba busca evitar.
-                fn (PurchaseOrder $o) => $this->formatSummary($o, $receivedByOrder[$o->id] ?? collect())
+                fn (PurchaseOrder $o) => $hidesMoney
+                    ? $this->maskMoney($this->formatSummary($o, $receivedByOrder[$o->id] ?? collect()))
+                    : $this->formatSummary($o, $receivedByOrder[$o->id] ?? collect())
             )->values(),
             'meta' => Pagination::meta($paginator),
             // SCRUM-201/250 — lista de responsables/proveedores reales (para los <select> de
@@ -279,7 +289,64 @@ final class PurchaseOrderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        return response()->json($this->formatDetail($order));
+        $detail = $this->formatDetail($order);
+
+        return response()->json($this->hidesMoney($request) ? $this->maskMoney($detail) : $detail);
+    }
+
+    /**
+     * SCRUM-1013 (Pre-QA H2, decisión de Luis 2026-10-02) — el vendedor entra a Logística y Envío con
+     * `compras.logistica.view` y nunca ve costos de compra (regla SCRUM-818): con costo unitario y
+     * montos de la orden se deduce el costo del producto y se anula el enmascarado de Inventario.
+     * Quien tenga cualquier permiso "de verdad" de Compras/Bodega (o superadmin) ve todo igual que antes.
+     */
+    private function hidesMoney(Request $request): bool
+    {
+        return OrderMoneyVisibility::hiddenFor($request);
+    }
+
+    /**
+     * @param  array<string, mixed>  $order  resumen o detalle de una orden
+     * @return array<string, mixed>
+     */
+    private function maskMoney(array $order): array
+    {
+        foreach (['total_amount', 'shipping_cost', 'import_cost', 'freight_cost', 'handling_cost', 'other_cost', 'additional_costs_total', 'payable_total', 'paid_amount', 'pending_amount_change'] as $key) {
+            if (array_key_exists($key, $order)) {
+                $order[$key] = null;
+            }
+        }
+
+        if (isset($order['lines']) && is_iterable($order['lines'])) {
+            $order['lines'] = collect($order['lines'])->map(function (array $line): array {
+                foreach (['unit_cost', 'subtotal', 'additional_cost_percent', 'additional_cost_amount', 'additional_cost_type'] as $key) {
+                    if (array_key_exists($key, $line)) {
+                        $line[$key] = null;
+                    }
+                }
+
+                return $line;
+            })->values();
+        }
+
+        return $order;
+    }
+
+    /**
+     * SCRUM-1145 — costos adicionales opcionales (importación, flete, manejo, otros): un valor
+     * vacío/ausente se persiste como NULL.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, float|null>
+     */
+    private function additionalCostFields(array $validated): array
+    {
+        $fields = [];
+        foreach (['import_cost', 'freight_cost', 'handling_cost', 'other_cost'] as $key) {
+            $fields[$key] = isset($validated[$key]) ? (float) $validated[$key] : null;
+        }
+
+        return $fields;
     }
 
     public function store(StorePurchaseOrderRequest $request): JsonResponse
@@ -312,6 +379,13 @@ final class PurchaseOrderController extends Controller
                 $validated['shipping_type'] ?? null,
                 $validated['who_pays_shipping'] ?? null,
             );
+            // SCRUM-954 — no persistir who_pays_shipping/shipping_cost si el tipo de envío no es
+            // Aéreo, sin importar lo que traiga el payload.
+            $shippingFields = PurchaseOrder::normalizeShippingFields(
+                $validated['shipping_type'] ?? null,
+                $validated['who_pays_shipping'] ?? null,
+                $validated['shipping_cost'] ?? null,
+            );
 
             // SCRUM-204 (REQ-141, 2026-08-06 — hallazgo Gerencia Test): antes toda orden nacía en
             // "Por aprobar" sin importar si de verdad requería la aprobación de Mark (RN3/REQ-118)
@@ -327,8 +401,9 @@ final class PurchaseOrderController extends Controller
                     : PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
                 'status_changed_at' => now(),
                 'shipping_type' => $validated['shipping_type'] ?? null,
-                'who_pays_shipping' => $validated['who_pays_shipping'] ?? null,
-                'shipping_cost' => $validated['shipping_cost'] ?? null,
+                'who_pays_shipping' => $shippingFields['who_pays_shipping'],
+                'shipping_cost' => $shippingFields['shipping_cost'],
+                ...$this->additionalCostFields($validated),
                 'modality' => $validated['modality'] ?? PurchaseOrder::MODALITY_DIRECTO,
                 'estimated_arrival_date' => $validated['estimated_arrival_date'] ?? null,
                 'requires_primary_approval' => $requiresApproval,
@@ -362,8 +437,10 @@ final class PurchaseOrderController extends Controller
         if ($order === null) {
             return response()->json(['message' => 'Not found'], 404);
         }
-        if ($order->status !== PurchaseOrder::STATUS_POR_APROBAR) {
-            return response()->json(['message' => 'Solo se puede editar una orden mientras está "Por aprobar".'], 422);
+        // SCRUM-852 — se amplía de un único estado a los 2 previos a "Ordenado" (edición sigue
+        // bloqueada desde ahí en adelante, es donde el proveedor ya recibió/confirmó la orden).
+        if (! in_array($order->status, [PurchaseOrder::STATUS_POR_APROBAR, PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR], true)) {
+            return response()->json(['message' => 'Solo se puede editar una orden antes de "Ordenado".'], 422);
         }
 
         /**
@@ -389,11 +466,19 @@ final class PurchaseOrderController extends Controller
                 $validated['shipping_type'] ?? null,
                 $validated['who_pays_shipping'] ?? null,
             );
+            // SCRUM-954 — no persistir who_pays_shipping/shipping_cost si el tipo de envío no es
+            // Aéreo, sin importar lo que traiga el payload.
+            $shippingFields = PurchaseOrder::normalizeShippingFields(
+                $validated['shipping_type'] ?? null,
+                $validated['who_pays_shipping'] ?? null,
+                $validated['shipping_cost'] ?? null,
+            );
 
             $order->update([
                 'shipping_type' => $validated['shipping_type'] ?? null,
-                'who_pays_shipping' => $validated['who_pays_shipping'] ?? null,
-                'shipping_cost' => $validated['shipping_cost'] ?? null,
+                'who_pays_shipping' => $shippingFields['who_pays_shipping'],
+                'shipping_cost' => $shippingFields['shipping_cost'],
+                ...$this->additionalCostFields($validated),
                 'modality' => $validated['modality'] ?? PurchaseOrder::MODALITY_DIRECTO,
                 'estimated_arrival_date' => $validated['estimated_arrival_date'] ?? null,
                 'requires_primary_approval' => $requiresApproval,
@@ -742,7 +827,17 @@ final class PurchaseOrderController extends Controller
         }
 
         $includeCost = $request->query('include_cost', '1') !== '0';
-        $pdf = $this->pdfService->generate($order, $includeCost);
+        $lang = $this->resolveLang($request->query('lang'));
+        if ($lang instanceof JsonResponse) {
+            return $lang;
+        }
+
+        // SCRUM-1127 — `lang=en` nunca genera ni llama a la IA: sirve la versión guardada; si no existe o quedó desactualizada, 409 y el usuario decide.
+        try {
+            $pdf = $this->pdfService->generate($order, $includeCost, $lang);
+        } catch (TranslationException $e) {
+            return $this->translationError($e);
+        }
 
         // SCRUM-791 (Epic SCRUM-788 — Logs y Telemetría) — documento formal, incluye costo real
         // cuando include_cost=1.
@@ -750,10 +845,58 @@ final class PurchaseOrderController extends Controller
             action: AuditService::COMPRAS_PURCHASE_ORDER_PDF_DOWNLOADED,
             entityType: 'purchase_order',
             entityId: $order->id,
-            metadata: ['include_cost' => $includeCost],
+            metadata: ['include_cost' => $includeCost, 'lang' => $lang],
         );
 
-        return $pdf->stream("orden-compra-{$order->id}.pdf");
+        return $pdf->stream($lang === 'en' ? "purchase-order-{$order->id}.pdf" : "orden-compra-{$order->id}.pdf");
+    }
+
+    /**
+     * SCRUM-1127 — genera (o regenera) la versión en inglés de UNA orden, a pedido del usuario. Síncrono por lote, todo o nada. La traducción
+     * queda guardada: ver/descargar/enviar después no llama a la IA. Si falla, 503 y el frontend ofrece el PDF en español.
+     */
+    public function translate(Request $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $order = PurchaseOrder::find($id);
+        if ($order === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        try {
+            $this->translations->generate($order, $user->id);
+        } catch (TranslationException $e) {
+            return $this->translationError($e);
+        }
+
+        return response()->json(['translations' => ['en' => $this->translations->status($order)]]);
+    }
+
+    /** @return 'es'|'en'|JsonResponse */
+    private function resolveLang(mixed $value): string|JsonResponse
+    {
+        if ($value === null || $value === '' || $value === 'es') {
+            return 'es';
+        }
+
+        return $value === 'en' ? 'en' : response()->json([
+            'message' => 'Idioma no soportado.', 'errors' => ['lang' => ['Idioma no soportado.']],
+        ], 422);
+    }
+
+    private function translationError(TranslationException $e): JsonResponse
+    {
+        $status = match ($e->reason) {
+            'failed' => 503,
+            'busy' => 409,
+            default => 409, // missing | stale
+        };
+
+        return response()->json(['message' => $e->getMessage(), 'code' => 'translation_'.$e->reason, 'fallback_lang' => 'es'], $status);
     }
 
     /** REQ-136 — envío por correo al proveedor, PDF real adjunto (job encolado, no síncrono). */
@@ -773,7 +916,28 @@ final class PurchaseOrderController extends Controller
         }
 
         $includeCost = $request->boolean('include_cost', true);
-        SendPurchaseOrderEmailJob::dispatch($order->id, $includeCost);
+        $lang = $this->resolveLang($request->input('lang'));
+        if ($lang instanceof JsonResponse) {
+            return $lang;
+        }
+
+        // SCRUM-1127 — un idioma por envío. En inglés la traducción debe existir y estar vigente ANTES de encolar: el job nunca traduce, así que
+        // ningún reintento de Horizon cobra IA ni manda una versión vieja.
+        if ($lang === 'en') {
+            try {
+                $this->translations->linesForRender($order);
+            } catch (TranslationException $e) {
+                return $this->translationError($e);
+            }
+        }
+
+        SendPurchaseOrderEmailJob::dispatch($order->id, $includeCost, $lang);
+        app(AuditService::class)->log(
+            action: AuditService::COMPRAS_PURCHASE_ORDER_EMAIL_SENT,
+            entityType: 'purchase_order',
+            entityId: $order->id,
+            metadata: ['include_cost' => $includeCost, 'lang' => $lang],
+        );
 
         return response()->json(['message' => 'Envío en proceso.'], 202);
     }
@@ -842,11 +1006,13 @@ final class PurchaseOrderController extends Controller
             $validated['lines'],
         )));
         $porServirMap = $this->inventoryKpis->porServirMap($existingProductIds);
+        $enExcluidaMap = $this->inventoryKpis->enBodegaExcluidaMap($existingProductIds);
 
         foreach ($validated['lines'] as $line) {
             if (isset($line['catalog_product_id'])) {
                 $product = CatalogProduct::findOrFail($line['catalog_product_id']);
                 $porServir = $porServirMap[$product->id] ?? 0;
+                $enExcluida = $enExcluidaMap[$product->id] ?? 0;
             } else {
                 $newProduct = $line['new_product'] ?? null;
                 if ($newProduct === null) {
@@ -856,6 +1022,7 @@ final class PurchaseOrderController extends Controller
                 }
                 $product = $this->createProduct($validated['provider_id'], $newProduct);
                 $porServir = 0; // producto recién creado en este mismo request: no puede tener líneas previas
+                $enExcluida = 0;
             }
 
             // REQ-130 Escenario 2 (SCRUM-193, hallazgo de Gerencia Test): el costo precargado del
@@ -883,7 +1050,7 @@ final class PurchaseOrderController extends Controller
                 'additional_cost_amount' => $line['additional_cost_amount'] ?? null,
                 'additional_cost_type' => $line['additional_cost_type'] ?? null,
                 'sales_project_id' => $line['sales_project_id'] ?? null,
-                'stock_state_at_order' => $this->inventoryKpis->stockState($product, $porServir),
+                'stock_state_at_order' => $this->inventoryKpis->stockState($product, $porServir, $enExcluida),
             ]);
         }
 
@@ -963,6 +1130,13 @@ final class PurchaseOrderController extends Controller
             // texto fijo "Aprobada por Mark" sin importar quién aprobó de verdad.
             'approved_by_name' => $this->approvedByName($order),
             'total_amount' => $order->total_amount,
+            // SCRUM-1145 — costos adicionales + total a pagar al proveedor (total_amount NO los incluye).
+            'import_cost' => $order->import_cost,
+            'freight_cost' => $order->freight_cost,
+            'handling_cost' => $order->handling_cost,
+            'other_cost' => $order->other_cost,
+            'additional_costs_total' => $order->additionalCostsTotal(),
+            'payable_total' => $order->payableTotal(),
             'currency' => $order->currency,
             // REQ-187→190 (SCRUM-250→253) — Pagos a Proveedores.
             'payment_status' => $order->paymentStatus(),
@@ -979,8 +1153,23 @@ final class PurchaseOrderController extends Controller
             'sales_project_count' => $projectSummary['project_count'],
             // REQ-140/145/158 — "Recepción" consolidada de la orden.
             'reception_status' => $reception['status'],
-            // REQ-157 — enlace "Ingreso de mercancía" (Logística).
-            'shows_goods_receipt_link' => $order->showsGoodsReceiptLink(),
+            // REQ-157 — enlace "Ingreso de mercancía" (Logística). SCRUM-861 punto 2: manda la
+            // completitud real de la recepción, no solo la etapa/remanente — ver docblock del
+            // método. Reusa el mismo `$receivedByProduct` ya calculado en batch para
+            // `receptionSummary()` arriba, sin disparar una query extra por orden.
+            //
+            // `hasTrackableLines` — `isFullyReceived()` es `true` por vacuidad (Collection::every()
+            // sobre colección vacía) cuando la orden no tiene ninguna línea con catalog_product_id
+            // (fixture de test sin líneas, o único caso real: producto borrado tras la orden,
+            // FK nullOnDelete). Ese vacío NO debe leerse como "ya se recibió todo" para efectos de
+            // ocultar el enlace — solo tiene sentido esconderlo cuando de verdad había algo
+            // esperado y se completó. No se toca `isFullyReceived()` en sí (fuente única
+            // compartida con `advance()`/`eligibleOrders()`, cuyo propósito — nada que bloquee el
+            // avance de estado — sí es correcto tratar "nada esperado" como satisfecho).
+            'shows_goods_receipt_link' => $order->showsGoodsReceiptLink(
+                $order->lines->contains(fn ($l) => $l->catalog_product_id !== null)
+                    && $this->goodsReceiptConfirmation->isFullyReceived($order, $receivedByProduct)
+            ),
             'pending_remainder_status' => $order->pending_remainder_status,
             // SCRUM-208 (rediseño 2026-08-15) — próxima etapa del remanente, análogo a
             // `next_status` de arriba pero para `advanceRemainder()`. El frontend (ya
@@ -1056,6 +1245,8 @@ final class PurchaseOrderController extends Controller
             'pending_amount_change' => $order->pending_amount_change,
             'amount_change_requested_by' => $order->amount_change_requested_by,
             'notes' => $order->notes,
+            // SCRUM-1127 — versión en inglés guardada de la orden (la muestra el detalle para ofrecer ver/descargar/regenerar).
+            'translations' => ['en' => $this->translations->status($order)],
             'lines' => $order->lines->map(function (PurchaseOrderLine $line) use ($receptionByLine): array {
                 /** @var array{received: int, status: string}|null $reception */
                 $reception = $receptionByLine[$line->catalog_product_id] ?? null;

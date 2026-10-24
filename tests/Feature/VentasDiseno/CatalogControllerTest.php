@@ -474,4 +474,71 @@ class CatalogControllerTest extends FeatureTestCase
             ->postJson("/api/ventas-diseno/catalog/{$product->id}/technical-sheet", ['file' => $file])
             ->assertStatus(200);
     }
+
+    // ── docs/specs/demo-mode.md — hallazgo 2026-09-04: esta ES la pantalla "Catálogo" real,
+    // CatalogController::index() ≠ CatalogProductController::index() (buscador de Cotización) ──
+
+    public function test_ambos_gates_apagados_muestra_catalogo_completo(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->makeProduct(['name' => 'Completo', 'photo_url' => 'https://cdn/foto.jpg']);
+        $this->makeProduct(['reference' => 'IL-INCOMPLETO', 'name' => '', 'photo_url' => null, 'price_full' => 0]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog')
+            ->assertStatus(200);
+
+        $this->assertCount(2, $response->json('data'));
+    }
+
+    public function test_gate_global_on_personal_off_muestra_catalogo_completo(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->makeProduct(['name' => 'Completo', 'photo_url' => 'https://cdn/foto.jpg']);
+        $this->makeProduct(['reference' => 'IL-INCOMPLETO', 'name' => '', 'photo_url' => null, 'price_full' => 0]);
+
+        $admin = $this->loginAs();
+        $this->withHeaders($this->authHeaders($admin))
+            ->patchJson('/api/settings/system', ['demo_mode_enabled' => true])
+            ->assertStatus(200);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog')
+            ->assertStatus(200);
+
+        $this->assertCount(2, $response->json('data'));
+    }
+
+    public function test_ambos_gates_activos_filtra_por_nombre_imagen_y_precio(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $completo = $this->makeProduct(['name' => 'Completo', 'photo_url' => 'https://cdn/foto.jpg']);
+        $this->makeProduct(['reference' => 'IL-SIN-NOMBRE',  'name' => '', 'photo_url' => 'https://cdn/x.jpg']);
+        $this->makeProduct(['reference' => 'IL-SIN-IMAGEN',  'name' => 'Sin imagen', 'photo_url' => null]);
+        $this->makeProduct(['reference' => 'IL-SIN-PRECIO',  'name' => 'Sin precio', 'photo_url' => 'https://cdn/y.jpg', 'price_full' => 0]);
+        $this->makeProduct(['reference' => 'IL-PHOTO-KEY',   'name' => 'Con photo_key', 'photo_url' => null, 'photo_key' => 'ventas_diseno/foo.jpg']);
+
+        $admin = $this->loginAs();
+        $this->withHeaders($this->authHeaders($admin))
+            ->patchJson('/api/settings/system', ['demo_mode_enabled' => true])
+            ->assertStatus(200);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson('/api/settings/preferences', ['demo_mode_enabled' => true])
+            ->assertStatus(200);
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/catalog')
+            ->assertStatus(200);
+
+        $refs = collect($response->json('data'))->pluck('reference')->all();
+        $this->assertContains($completo->reference, $refs, 'Producto completo debe verse en Modo Demo.');
+        $this->assertContains('IL-PHOTO-KEY', $refs, 'photo_key sin photo_url igual cuenta como "tiene imagen".');
+        $this->assertNotContains('IL-SIN-NOMBRE', $refs);
+        $this->assertNotContains('IL-SIN-IMAGEN', $refs);
+        $this->assertNotContains('IL-SIN-PRECIO', $refs);
+    }
 }

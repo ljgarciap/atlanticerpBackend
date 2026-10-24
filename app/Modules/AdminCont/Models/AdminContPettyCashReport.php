@@ -7,6 +7,7 @@ namespace App\Modules\AdminCont\Models;
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class AdminContPettyCashReport extends Model
 {
+    use LogsAuditTrail;
+
     public const FORMA_PAGO_TRANSFERENCIA = 'transferencia';
 
     public const FORMA_PAGO_EFECTIVO = 'efectivo';

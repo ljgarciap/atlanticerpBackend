@@ -14,6 +14,10 @@ Route::middleware('permission:settings.global')->group(function () {
 // Read-only: accessible to all authenticated users (needed by DocumentSection for all roles)
 Route::get('/documents/max-size', [SettingsController::class, 'getDocumentsMaxSize']);
 
+// Read-only: accessible to all authenticated users (needed by TopBar's personal Demo Mode toggle
+// to know whether the global gate is on — see docs/specs/demo-mode.md)
+Route::get('/demo-mode-status', [SettingsController::class, 'getDemoModeStatus']);
+
 Route::middleware('permission:superadmin.all')->group(function () {
     Route::get('/ai-key',             [SettingsController::class, 'getAiKey']);
     Route::put('/ai-key',             [SettingsController::class, 'updateAiKey']);

@@ -181,7 +181,9 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     // ── REQ-016: Cotización → Propuesta requiere superficie + cotización firmada ─
 
-    public function test_mover_de_cotizacion_a_propuesta_sin_cotizacion_firmada_retorna_422(): void
+    // SCRUM-849.3 — el check de cotización firmada se movió de esta transición a
+    // Propuesta→Aprobado (ver abajo): ya no bloquea acá, solo exige la superficie trabajada.
+    public function test_mover_de_cotizacion_a_propuesta_sin_cotizacion_firmada_ya_no_bloquea(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
@@ -192,10 +194,12 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'proposal'])
-            ->assertStatus(422);
+            ->assertStatus(200)
+            ->assertJsonPath('stage', 'proposal');
     }
 
-    // ── REQ-017: Propuesta → Aprobado requiere fecha de entrega + comprobante ───
+    // ── REQ-017 / SCRUM-849.3: Propuesta → Aprobado requiere fecha de entrega +
+    // cotización firmada + comprobante de aprobación ────────────────────────────
 
     public function test_mover_de_propuesta_a_aprobado_sin_fecha_de_entrega_retorna_422(): void
     {
@@ -214,12 +218,34 @@ class PipelineStageTransitionTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_mover_de_propuesta_a_aprobado_con_fecha_y_comprobante_ok(): void
+    public function test_mover_de_propuesta_a_aprobado_sin_cotizacion_firmada_retorna_422(): void
     {
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $card = $this->makeCard($designerId, 'proposal');
         $card->deliveryDates()->create(['date' => '2026-12-01']);
+        $card->files()->create([
+            'type' => 'approval_proof', 'file_name' => 'aprobacion.pdf', 'storage_key' => 'x/y.pdf',
+            'size_bytes' => 100, 'mime_type' => 'application/pdf', 'uploaded_by' => $designerId,
+        ]);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'approved'])
+            ->assertStatus(422);
+    }
+
+    public function test_mover_de_propuesta_a_aprobado_con_fecha_firma_y_comprobante_ok(): void
+    {
+        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $card = $this->makeCard($designerId, 'proposal');
+        $card->deliveryDates()->create(['date' => '2026-12-01']);
+        $card->files()->create([
+            'type' => 'signed_quote', 'file_name' => 'cotizacion.pdf', 'storage_key' => 'x/y.pdf',
+            'size_bytes' => 100, 'mime_type' => 'application/pdf', 'uploaded_by' => $designerId,
+        ]);
         $card->files()->create([
             'type' => 'approval_proof', 'file_name' => 'aprobacion.pdf', 'storage_key' => 'x/y.pdf',
             'size_bytes' => 100, 'mime_type' => 'application/pdf', 'uploaded_by' => $designerId,

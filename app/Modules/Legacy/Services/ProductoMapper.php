@@ -27,22 +27,18 @@ final class ProductoMapper
      */
     private const PUBLIC_IDTARIFAV = 1;
 
-    /**
-     * Corrección 2026-08-17 (hallazgo del cliente: "no sé qué son esos números, esa no es la
-     * referencia") — `CODPROVEEDOR` por defecto para resolver `cost` desde `PRECIOSCOMPRA`.
-     * Confirmado con data real de dev.atlanticerp.ai: es el proveedor dominante, concentra 7928/9677
-     * (82%) de las filas de `legacy.producto_costos` — criterio de negocio confirmado por Luis
-     * (proveedor/almacén interno por defecto de ICG). Mismo tratamiento que `PriceTypeMap`: es un
-     * cruce estructural fijo del origen de datos, no un umbral/margen configurable, se mantiene
-     * como constante de código.
-     */
-    private const DEFAULT_CODPROVEEDOR = 1001;
+    public function __construct(private readonly ProductoCostoResolver $costoResolver = new ProductoCostoResolver) {}
 
     /**
+     * `$paraDescatalogadoInactivo` (SCRUM-1136 F5): vía explícita para crear un producto INACTIVO desde un descatalogado de ICG con stock. Con `false` (default,
+     * todo el flujo de activos) el comportamiento es el de siempre: un descatalogado se excluye ('descatalogado en ICG') y un artículo sin precio público también.
+     * Con `true` el descatalogado NO se excluye, no hay stock inicial (RF6: el stock por bodega es otra fase) y la falta de precio público no excluye (queda
+     * `priceFull = null`; el llamador decide qué hacer).
+     *
      * @param  list<int>  $icgCodarticulos
      * @return list<MappedProducto>
      */
-    public function buildPayloads(array $icgCodarticulos): array
+    public function buildPayloads(array $icgCodarticulos, bool $paraDescatalogadoInactivo = false): array
     {
         if ($icgCodarticulos === []) {
             return [];
@@ -64,23 +60,40 @@ final class ProductoMapper
             ->get()
             ->groupBy('icg_codarticulo');
 
+        // Solo los artículos con VARIOS proveedores y sin el por defecto necesitan la última compra para desempatar.
+        $necesitanCompras = $costosPorArticulo
+            ->filter(fn (Collection $costos): bool => $costos->count() > 1
+                && $costos->doesntContain(fn (ProductoCosto $c): bool => (int) $c->codproveedor === ProductoCostoResolver::DEFAULT_CODPROVEEDOR))
+            ->keys()
+            ->map(fn ($k): int => (int) $k)
+            ->values()
+            ->all();
+        $compras = $this->costoResolver->ultimasComprasPorProveedor($necesitanCompras);
+
         return array_map(
             fn (int $codigo): MappedProducto => $this->mapOne(
                 $codigo,
                 $productos->get($codigo),
                 $preciosPublico->get($codigo),
                 $costosPorArticulo->get($codigo) ?? new Collection,
+                $compras[$codigo] ?? [],
+                $paraDescatalogadoInactivo,
             ),
             $icgCodarticulos,
         );
     }
 
-    /** @param Collection<int, ProductoCosto> $costosDelArticulo */
+    /**
+     * @param  Collection<int, ProductoCosto>  $costosDelArticulo
+     * @param  array<int, string>  $ultimaCompraPorProveedor
+     */
     private function mapOne(
         int $codigo,
         ?Producto $producto,
         ?ProductoPrecio $precioPublico,
         Collection $costosDelArticulo,
+        array $ultimaCompraPorProveedor = [],
+        bool $paraDescatalogadoInactivo = false,
     ): MappedProducto {
         // Corrección 2026-08-27 (SCRUM-799, reporte de Gerencia Test) — reabre la decisión del
         // 2026-08-17 (commit 45fca4c): esa corrección dejó el código real de fabricante en
@@ -112,6 +125,21 @@ final class ProductoMapper
             );
         }
 
+        if ($paraDescatalogadoInactivo) {
+            // SCRUM-1136 F5 — descatalogado con stock que se crea como producto inactivo: mismos campos que un activo (costo, precio público, marca), sin stock inicial.
+            return new MappedProducto(
+                icgCodarticulo: $codigo,
+                reference: $reference,
+                factoryReference: $factoryReference,
+                description: $producto->descripcion,
+                brand: $producto->marca_nombre,
+                priceFull: $precioPublico?->precio_neto,
+                cost: $this->costoResolver->resolve($costosDelArticulo, $ultimaCompraPorProveedor),
+                excludedReason: null,
+                stockInicial: null,
+            );
+        }
+
         if ($producto->descatalogado) {
             return new MappedProducto(
                 icgCodarticulo: $codigo,
@@ -122,6 +150,7 @@ final class ProductoMapper
                 priceFull: null,
                 cost: null,
                 excludedReason: 'descatalogado en ICG',
+                stockInicial: $producto->stock_al4,
             );
         }
 
@@ -135,6 +164,7 @@ final class ProductoMapper
                 priceFull: null,
                 cost: null,
                 excludedReason: 'sin precio público (IDTARIFAV=1) en PRECIOSVENTA',
+                stockInicial: $producto->stock_al4,
             );
         }
 
@@ -145,27 +175,9 @@ final class ProductoMapper
             description: $producto->descripcion,
             brand: $producto->marca_nombre,
             priceFull: $precioPublico->precio_neto,
-            cost: $this->resolveCost($costosDelArticulo),
+            cost: $this->costoResolver->resolve($costosDelArticulo, $ultimaCompraPorProveedor),
             excludedReason: null,
+            stockInicial: $producto->stock_al4,
         );
-    }
-
-    /**
-     * Corrección 2026-08-17 — ya NO usa `ARTICULOS.REFPROVEEDOR` (era la ambigüedad original:
-     * confirmado con data real que es la referencia alfanumérica del fabricante, ej. "42016B-WH",
-     * no un `CODPROVEEDOR` numérico — por eso el join fallaba en el 92% de los casos y `cost`
-     * quedaba `null` casi siempre sin que nada lo marcara como error). Ahora resuelve directo
-     * contra `legacy.producto_costos` por el proveedor por defecto (`DEFAULT_CODPROVEEDOR`).
-     *
-     * @param  Collection<int, ProductoCosto>  $costosDelArticulo
-     */
-    private function resolveCost(Collection $costosDelArticulo): ?float
-    {
-        /** @var ProductoCosto|null $match */
-        $match = $costosDelArticulo->first(
-            fn (ProductoCosto $costo): bool => $costo->codproveedor === self::DEFAULT_CODPROVEEDOR,
-        );
-
-        return $match?->costo_neto;
     }
 }

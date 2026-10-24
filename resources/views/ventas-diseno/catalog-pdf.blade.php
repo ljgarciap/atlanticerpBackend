@@ -3,16 +3,28 @@
 <head>
 <meta charset="utf-8">
 <style>
-    body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #2a2520; }
-    .header { border-bottom: 3px solid #5BA5A0; padding-bottom: 10px; margin-bottom: 16px; }
-    .brand { font-size: 18px; font-weight: bold; color: #5BA5A0; }
-    .sub { color: #6b7280; font-size: 10px; }
-    .title { font-size: 14px; font-weight: bold; margin-top: 12px; margin-bottom: 12px; }
+    {{-- SCRUM-844 — @page + .doc-header fijo + footer real vía page_text(), mismo mecanismo que
+         quote-pdf.blade.php (único soporte real de paginación de dompdf). Márgenes idénticos a
+         Cotización para que ambos documentos compartan posición de header/footer. --}}
+    @page { margin: 95px 40px 60px 40px; }
+    body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #2a2520; margin: 0; }
+
+    .doc-header { position: fixed; top: -80px; left: 0; right: 0; height: 70px; }
+    .doc-header .brand-row { display: table; width: 100%; }
+    .doc-header .brand-cell { display: table-cell; vertical-align: middle; }
+    .doc-header .brand-name { font-size: 15px; font-weight: bold; color: #2a2520; padding-left: 10px; }
+    .doc-header .brand-line { border-bottom: 2px solid #5BA5A0; margin-top: 10px; }
+
+    .title { font-size: 14px; font-weight: bold; margin-top: 0; margin-bottom: 12px; }
+    .sub { color: #6b7280; font-size: 10px; margin-bottom: 12px; }
 
     .card { width: 100%; border: 1px solid #E3F0EE; border-radius: 4px; margin-bottom: 14px; page-break-inside: avoid; }
     .card table.layout { width: 100%; border-collapse: collapse; }
-    .card .photo-cell { width: 32%; padding: 10px; vertical-align: top; text-align: center; }
-    .card .photo-cell img { max-width: 100%; max-height: 120px; }
+    {{-- SCRUM-847 — recuadro consistente, mismo criterio que quote-pdf.blade.php: max-width igual
+         a max-height (antes solo limitaba max-height, ancho variaba con la proporción original) +
+         fondo blanco + centrado, para que fotos con canal alfa (SCRUM-830) no muestren hueco. --}}
+    .card .photo-cell { width: 32%; padding: 10px; vertical-align: middle; text-align: center; background: #fff; }
+    .card .photo-cell img { max-width: 120px; max-height: 120px; }
     .card .photo-placeholder {
         width: 100%; height: 100px; background: #f7f5ef; border: 1px dashed #d1d5db;
         color: #9ca3af; font-size: 9px; text-align: center; vertical-align: middle;
@@ -27,17 +39,23 @@
     table.specs td { padding: 3px 6px; border-bottom: 1px solid #f0f0f0; font-size: 9px; }
 
     .empty-note { color: #9ca3af; font-style: italic; margin-top: 20px; }
-
-    .footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #E3F0EE; font-size: 8px; color: #9ca3af; text-align: center; }
 </style>
 </head>
 <body>
-    <div class="header">
-        <div class="brand">ATLANTIC</div>
-        <div class="sub">Catálogo — generado el {{ $generatedAt->format('d/m/Y') }}</div>
+    {{-- SCRUM-844 — encabezado con logo (antes texto "ATLANTIC"), repetido en cada página vía
+         position:fixed, mismo patrón que quote-pdf.blade.php. --}}
+    <div class="doc-header">
+        <div class="brand-row">
+            <div class="brand-cell" style="width: 40px;">
+                <img src="{{ $logoDataUri }}" width="36" height="36" alt="Atlantic">
+            </div>
+            <div class="brand-cell brand-name">ATLANTIC</div>
+        </div>
+        <div class="brand-line"></div>
     </div>
 
     <div class="title">Catálogo de productos</div>
+    <div class="sub">Catálogo — generado el {{ $generatedAt->format('d/m/Y') }}@if(!empty($volumeLabel)) — {{ $volumeLabel }}@endif</div>
 
     @forelse($products as $product)
         <div class="card">
@@ -83,8 +101,19 @@
         <p class="empty-note">No hay productos para incluir en este catálogo.</p>
     @endforelse
 
-    <div class="footer">
-        Atlantic · Panamá · Documento generado automáticamente desde el Catálogo — precios sujetos a cambio sin previo aviso.
-    </div>
+    {{-- SCRUM-844 — pie de página REAL (antes un <div> inline, dependiente del contenido) vía
+         page_text() de dompdf, mismo mecanismo que quote-pdf.blade.php §16/§17. --}}
+    <script type="text/php">
+        if (isset($pdf)) {
+            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
+            $footerText = "Atlantic - Panama - Documento generado automaticamente desde el Catalogo - precios sujetos a cambio sin previo aviso.";
+            $w1 = $fontMetrics->getTextWidth($footerText, $font, 7);
+            $pdf->page_text((612 - $w1) / 2, 762, $footerText, $font, 7, array(0.55, 0.55, 0.55));
+
+            $pageText = "Pagina {PAGE_NUM} de {PAGE_COUNT}";
+            $w2 = $fontMetrics->getTextWidth("Pagina 00 de 00", $font, 7);
+            $pdf->page_text((612 - $w2) / 2, 774, $pageText, $font, 7, array(0.55, 0.55, 0.55));
+        }
+    </script>
 </body>
 </html>

@@ -52,7 +52,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
             ->getJson('/api/admin-contab/bank-movements')
             ->assertStatus(200);
 
-        $byTipo = collect($response->json())->keyBy('tipo');
+        $byTipo = collect($response->json('data'))->keyBy('tipo');
         $this->assertSame('entrada', $byTipo['cobro']['direccion']);
         $this->assertSame('salida', $byTipo['devolucion']['direccion']);
         $this->assertSame('salida', $byTipo['comision']['direccion']);
@@ -73,8 +73,26 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
             ->getJson("/api/admin-contab/bank-movements?bank_account_id={$account1->id}")
             ->assertStatus(200);
 
-        $this->assertCount(1, $response->json());
-        $this->assertSame('A', $response->json()[0]['concepto']);
+        $this->assertCount(1, $response->json('data'));
+        $this->assertSame('A', $response->json('data')[0]['concepto']);
+    }
+
+    // ── SCRUM-947 — paginación estándar ─────────────────────────────────────────────────────
+
+    public function test_index_pagina_20_por_defecto_y_expone_meta(): void
+    {
+        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        for ($i = 0; $i < 25; $i++) {
+            AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => "Mov {$i}", 'monto' => 10]);
+        }
+        $token = $this->loginAsFelix();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/bank-movements')
+            ->assertStatus(200)->json();
+
+        $this->assertCount(20, $response['data']);
+        $this->assertSame(['total' => 25, 'per_page' => 20, 'current_page' => 1, 'last_page' => 2], $response['meta']);
     }
 
     public function test_assign_account_yaneth_puede_asignar_cuenta_a_comision_sin_cuenta(): void

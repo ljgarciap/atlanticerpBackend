@@ -15,6 +15,12 @@ use Illuminate\Validation\Rule;
  * tampoco cuando el saldo a favor cubre el 100% — ese cálculo es responsabilidad del frontend
  * mandar `monto_recibido_estimado` para que esta regla se valide sin recalcular acá el saldo a
  * favor real dos veces con posible desincronización de timing).
+ *
+ * SCRUM-902 §4.4 — `aplicar_saldo_favor` (checkbox todo-o-nada) se retiró: `monto_saldo_cliente_
+ * aplicado` es el monto que el usuario decidió aplicar de su saldo Cliente master, validado de
+ * verdad contra el disponible real en `PaymentService::register()` (nunca acá, que es solo forma).
+ * La aplicación de abonos nivel Factura/Proyecto es obligatoria y no pasa por ningún campo de
+ * este request — la resuelve el backend solo.
  */
 class StorePaymentRequest extends FormRequest
 {
@@ -34,7 +40,7 @@ class StorePaymentRequest extends FormRequest
             'master_client_id'   => ['required', 'integer'],
             'invoice_ids'        => ['required', 'array', 'min:1'],
             'invoice_ids.*'      => ['integer'],
-            'aplicar_saldo_favor' => ['sometimes', 'boolean'],
+            'monto_saldo_cliente_aplicado' => ['sometimes', 'numeric', 'min:0'],
             'metodo_pago'         => ['required', Rule::in(AdminContPayment::METODOS)],
             'monto_recibido_estimado' => ['required', 'numeric', 'min:0'],
             'bank_account_id'     => [
@@ -53,8 +59,8 @@ class StorePaymentRequest extends FormRequest
         ];
     }
 
-    public function aplicarSaldoFavor(): bool
+    public function montoSaldoClienteAplicado(): float
     {
-        return (bool) $this->input('aplicar_saldo_favor', false);
+        return (float) $this->input('monto_saldo_cliente_aplicado', 0);
     }
 }

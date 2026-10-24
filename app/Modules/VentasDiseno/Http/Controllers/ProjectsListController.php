@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Services\ProjectsListService;
 use App\Shared\Http\Pagination;
+use App\Shared\Support\ParsesIdListQueryParam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -22,6 +23,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final class ProjectsListController extends Controller
 {
+    use ParsesIdListQueryParam;
+
     /** @var list<string> */
     private const ALLOWED_SORTS = ['stage_changed_at', 'amount', 'stage'];
 
@@ -129,7 +132,7 @@ final class ProjectsListController extends Controller
         ]);
     }
 
-    /** @return array{scope?: string, owner_id?: int, search?: string, stage?: string, tag?: string} */
+    /** @return array{scope?: string, owner_id?: int, owner_ids?: list<int>, search?: string, stage?: string, tag?: string} */
     private function parseFilters(Request $request): array
     {
         $raw = $request->only(['scope', 'owner_id', 'search', 'stage', 'tag']);
@@ -137,6 +140,8 @@ final class ProjectsListController extends Controller
         return array_filter([
             'scope'    => isset($raw['scope']) ? (string) $raw['scope'] : null,
             'owner_id' => isset($raw['owner_id']) && is_numeric($raw['owner_id']) ? (int) $raw['owner_id'] : null,
+            // SCRUM-854 — multi-selección Vendedor/Diseñador (OR entre seleccionados).
+            'owner_ids' => $this->parseIdListParam($request, 'owner_ids'),
             'search'   => isset($raw['search']) ? (string) $raw['search'] : null,
             'stage'    => isset($raw['stage']) ? (string) $raw['stage'] : null,
             'tag'      => isset($raw['tag']) ? (string) $raw['tag'] : null,

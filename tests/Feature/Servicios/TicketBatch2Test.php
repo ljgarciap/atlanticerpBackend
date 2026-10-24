@@ -650,7 +650,7 @@ class TicketBatch2Test extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->map(fn (array $t) => $t['first_name'])->all();
-        $this->assertSame(['Miguel'], $names);
+        $this->assertSame(['Garantias Servicios'], $names);
     }
 
     public function test_technicians_internal_filtra_por_tipo_no_garantia(): void
@@ -663,6 +663,6 @@ class TicketBatch2Test extends FeatureTestCase
 
         $names = collect($response->json('data'))->map(fn (array $t) => $t['first_name'])->all();
         $this->assertCount(3, $names);
-        $this->assertNotContains('Miguel', $names);
+        $this->assertNotContains('Garantias Servicios', $names);
     }
 }

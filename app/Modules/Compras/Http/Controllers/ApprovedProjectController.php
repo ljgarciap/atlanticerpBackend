@@ -28,7 +28,15 @@ final class ApprovedProjectController extends Controller
 
         $search = trim((string) $request->query('search', ''));
 
-        return response()->json(['data' => $this->service->searchApprovedProjects($search)]);
+        // SCRUM-818 — catalog_product_id opcional: picker de "Proyecto de venta" en Comparación de
+        // Referencias. Sin este parámetro (Nueva Orden), searchApprovedProjects() se comporta
+        // exactamente igual que antes — ver docblock del método.
+        $catalogProductId = $request->query('catalog_product_id');
+        $catalogProductId = is_numeric($catalogProductId) ? (int) $catalogProductId : null;
+
+        return response()->json([
+            'data' => $this->service->searchApprovedProjects($search, $catalogProductId, $user, $this->jwtPermissions($request)),
+        ]);
     }
 
     private function resolveUser(Request $request): ?User
@@ -41,5 +49,16 @@ final class ApprovedProjectController extends Controller
         }
 
         return User::find((int) $payload['sub']);
+    }
+
+    /** @return list<string> */
+    private function jwtPermissions(Request $request): array
+    {
+        /** @var array{permissions?: mixed}|null $payload */
+        $payload = $request->attributes->get('jwt');
+
+        return is_array($payload['permissions'] ?? null)
+            ? array_values(array_filter($payload['permissions'], 'is_string'))
+            : [];
     }
 }

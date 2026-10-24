@@ -1,6 +1,7 @@
 *.log
 .DS_Store
 /.claude/worktrees
+/.claude/settings.json
 .env
 .env.backup
 .env.production
@@ -25,3 +26,15 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 docs/legacy-sync-logs/
+
+# Llaves y certificados privados: NUNCA versionar (p. ej. la llave SSH de deploy ~/.ssh/atlanticerp/atlanticerp-key.pem).
+# Los certificados PÚBLICOS de Lafayette viven en storage/certs/ y sí se versionan.
+*.pem
+*.key
+id_rsa*
+*.p12
+!storage/certs/*.pem
+
+# SCRUM-964: informes de ZAP (pueden contener datos de dev)
+infra/dast/out/
+infra/security-out/

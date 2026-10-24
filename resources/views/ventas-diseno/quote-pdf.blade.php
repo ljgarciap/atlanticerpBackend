@@ -31,44 +31,77 @@
     .info-label { font-weight: bold; }
 
     /* SCRUM-766 §7/§8 — tabla de productos. Sin margin-top propio (SCRUM-801): el espacio hacia
-       Partidas ya lo da .info-row margin-bottom, para no duplicar el espaciado. */
+       Partidas ya lo da .info-row margin-bottom, para no duplicar el espaciado.
+       line-height explícito en th/td (SCRUM-801 3er rebote) — QuotePdfLayoutEstimator necesita un
+       valor fijo y conocido para simular la altura de cada fila; sin esto dependía del "normal"
+       default de dompdf, no reproducible desde PHP. */
     table.items { width: 100%; border-collapse: collapse; }
-    table.items th { background: #E3F0EE; color: #3D7E7A; text-align: left; padding: 4px 5px; font-size: 8px; text-transform: uppercase; }
+    table.items th { background: #E3F0EE; color: #3D7E7A; text-align: left; padding: 4px 5px; font-size: 8px; line-height: 10px; text-transform: uppercase; }
     table.items th.numeric, table.items td.numeric { text-align: right; }
-    table.items td { padding: 4px 5px; border-bottom: 1px solid #f0f0f0; font-size: 10px; vertical-align: top; }
-    table.items td.photo-cell img { max-width: 100%; max-height: 42px; }
+    table.items td { padding: 4px 5px; border-bottom: 1px solid #f0f0f0; font-size: 10px; line-height: 13px; vertical-align: top; }
+    /* SCRUM-847 — recuadro consistente: antes solo limitaba max-height, así que el ancho
+       renderizado variaba según la proporción original de cada foto ("algunas cuadradas, otras
+       rectangulares"). max-width/max-height iguales (42px, el mismo valor ya usado por
+       QuotePdfLayoutEstimator::itemRowHeight() — no tocar sin actualizar esa clase) + fondo blanco
+       en la celda para que las fotos con canal alfa (SCRUM-830) no muestren hueco. */
+    table.items td.photo-cell { background: #fff; text-align: center; vertical-align: middle; }
+    table.items td.photo-cell img { max-width: 42px; max-height: 42px; }
     table.items td.photo-cell .no-photo { color: #cbd5e1; font-size: 8px; }
 
     /* SCRUM-766 §9 — fila de partida: fondo gris claro, negrita, ancho completo. */
-    tr.part-header td { background: #f3f4f6; font-weight: bold; padding: 6px 5px; font-size: 10.5px; }
+    tr.part-header td { background: #f3f4f6; font-weight: bold; padding: 6px 5px; font-size: 10.5px; line-height: 13px; }
     /* SCRUM-766 §10 — total de partida, alineado a la derecha, separado antes de la siguiente sección. */
-    tr.part-total td { text-align: right; font-weight: bold; font-size: 10.5px; padding: 4px 5px 10px 5px; border-bottom: none; }
+    tr.part-total td { text-align: right; font-weight: bold; font-size: 10.5px; line-height: 13px; padding: 4px 5px 10px 5px; border-bottom: none; }
 
-    /* SCRUM-766 §11/§12/§13 — sección inferior en 2 columnas: izq info comercial, der resumen.
-       SCRUM-801 — 2 espacios verticales (24px) entre la última partida y el bloque que arranca
-       con Condiciones (izq). vertical-align:bottom en la columna derecha alinea Totales+Firma con
-       la ÚLTIMA línea de Condiciones (no con el tope de la columna izquierda, que empieza más
-       arriba con Observaciones/Instrucciones de pago). */
-    .bottom-section { display: table; width: 100%; margin-top: 24px; }
-    .bottom-col { display: table-cell; width: 50%; vertical-align: top; }
-    .bottom-col.left { padding-right: 16px; }
-    .bottom-col.right { padding-left: 16px; vertical-align: bottom; }
-    .block-title { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #6b7280; margin-bottom: 3px; margin-top: 12px; }
+    /* SCRUM-766 §11/§12 — Observaciones + Instrucciones de pago, ancho completo (columna
+       izquierda solamente — no hay nada que alinear a la derecha todavía acá). */
+    .bottom-top { margin-top: 24px; }
+    .block-title { font-size: 9px; line-height: 11px; font-weight: bold; text-transform: uppercase; color: #6b7280; margin-bottom: 3px; margin-top: 12px; }
     .block-title:first-child { margin-top: 0; }
-    .block-value { font-size: 10px; white-space: pre-line; }
+    .block-value { font-size: 10px; line-height: 13px; white-space: pre-line; }
 
-    /* SCRUM-766 §13 — bloque de totales SIN recuadro completo, solo las líneas necesarias.
-       SCRUM-801 — compacto y alineado a la derecha (width:auto + margin-left:auto, en vez de
-       100% de la columna de 50%): ya no se extiende hasta la mitad de la hoja. */
-    table.totals { width: auto; margin: 0 0 0 auto; }
+    /* SCRUM-801 (3er rebote, 2026-09-01) — Observaciones→Firma tratado como un único bloque
+       indivisible, pegado al pie de la página que lo contiene. `page-break-inside: avoid` es la
+       garantía DURA (nunca se parte, con o sin acierto de la estimación de PHP); el espaciador
+       `.bottom-block-spacer` (altura calculada por QuotePdfLayoutEstimator, ver ese docblock) es
+       puramente cosmético — empuja el bloque hacia el pie cuando sobra espacio. Ver también
+       `.force-new-page` más abajo para el Escenario 3 del ticket (bloque no entra en lo que queda
+       de la página actual → se fuerza página nueva completa para él). */
+    .bottom-block-spacer { height: 0; }
+    .force-new-page { page-break-before: always; }
+    .final-block { page-break-inside: avoid; }
+
+    /* SCRUM-986 — Condiciones ya no comparte fila con Totales/Firma (esos subieron a
+       .sig-totals-block, justo bajo el último ítem). Se conserva el ancho de media página (50%) que
+       tenía su columna para no alterar los saltos de línea del texto de Condiciones. */
+    .bottom-condiciones-row { margin-top: 12px; }
+    .conditions-col { width: 50%; padding-right: 16px; }
+
+    /* SCRUM-986 — Firma (izq) | Totales (der): DOS bloques independientes, mismo alto de arranque
+       (ambas celdas vertical-align:top), inmediatamente tras el último ítem de la última partida.
+       Indivisible: page-break-inside:avoid en el envoltorio — si no cabe en lo que queda de la
+       página pasa íntegro a la siguiente (nunca partido). display:table/table-cell, no flex (dompdf
+       rompe la paginación con flex, ver rebote SCRUM-801 2026-08-31). */
+    .sig-totals-block { page-break-inside: avoid; margin-top: 12px; }
+    .sig-totals-row { display: table; width: 100%; }
+    .sig-totals-col { display: table-cell; width: 50%; vertical-align: top; }
+    .sig-totals-col.left { padding-right: 16px; }
+    .sig-totals-col.right { padding-left: 16px; }
+
+    /* SCRUM-766 §13 — bloque de totales SIN recuadro completo, solo las líneas necesarias;
+       compacto y alineado a la derecha de su columna (SCRUM-801). */
+    table.totals { width: auto; margin: 0 0 0 auto; border-collapse: collapse; border-spacing: 0; }
     table.totals td { padding: 2px 0; font-size: 11px; }
     table.totals td:first-child { padding-right: 18px; }
     table.totals td.numeric { text-align: right; }
     table.totals tr.grand-total td { font-size: 13px; font-weight: bold; border-top: 1px solid #2a2520; padding-top: 4px; }
 
-    /* SCRUM-766 §14 — firma. SCRUM-801 — 2 espacios verticales (24px) entre Total y Firma. */
-    .signature { margin-top: 24px; padding-top: 4px; border-top: 1px solid #9ca3af; text-align: center; font-size: 9px; color: #6b7280; }
-    .signature .signed-name { font-size: 15px; color: #2a2520; margin-bottom: 2px; }
+    /* SCRUM-766 §14 / SCRUM-986 — firma: bloque propio en la columna izquierda. El margen superior
+       deja lugar físico para firmar (con $signed lo ocupa el nombre del firmante). */
+    .signature { width: 70%; margin: 28px 0 0 0; padding-top: 4px; border-top: 1px solid #9ca3af; text-align: center; font-size: 9px; color: #6b7280; white-space: nowrap; }
+    /* Nombre largo del firmante: wrap dentro de la columna (el nowrap del bloque lo sacaba del margen y
+       empujaba los Totales fuera de la hoja — Pre-QA SCRUM-986). */
+    .signature .signed-name { font-size: 15px; color: #2a2520; margin-bottom: 2px; white-space: normal; word-wrap: break-word; }
 
     .empty-note { color: #9ca3af; font-style: italic; font-size: 10px; }
 </style>
@@ -96,9 +129,18 @@
     {{-- §6 — Cliente/Subcliente/RUC/Contacto (izq) + Proyecto/Cotización/Fecha/Diseñador (der). --}}
     <div class="info-row">
         <div class="info-col">
-            <div><span class="info-label">Cliente:</span> {{ $quote['master_client']['name'] ?? '—' }}</div>
-            <div><span class="info-label">Subcliente:</span> {{ $quote['sub_client']['business_name'] ?? '—' }}</div>
-            <div><span class="info-label">RUC:</span> {{ $quote['ruc'] ?? '—' }}</div>
+            @if(($quote['origin'] ?? 'comercial') === 'cotizaya')
+                {{-- SCRUM-1120 — CotizaYA: el comprador real es texto libre (el Cliente Master es siempre el fijo «CotizaYA»);
+                     sin Subcliente/RUC/Proyecto, que no existen en este flujo. --}}
+                <div><span class="info-label">Cliente:</span> {{ $quote['cotizaya']['customer_name'] ?? '—' }}</div>
+                @if(filled($quote['cotizaya']['customer_phone'] ?? null))
+                    <div><span class="info-label">Teléfono:</span> {{ $quote['cotizaya']['customer_phone'] }}</div>
+                @endif
+            @else
+                <div><span class="info-label">Cliente:</span> {{ $quote['master_client']['name'] ?? '—' }}</div>
+                <div><span class="info-label">Subcliente:</span> {{ $quote['sub_client']['business_name'] ?? '—' }}</div>
+                <div><span class="info-label">RUC:</span> {{ ($quote['sub_client']['receptor_tipo'] ?? null) === '02' ? 'Consumidor final' : (filled($quote['ruc'] ?? null) ? $quote['ruc'] : '—') }}</div>
+            @endif
             @forelse($quote['contacts'] as $contact)
                 <div>
                     <span class="info-label">Contacto:</span> {{ $contact['name'] }}
@@ -110,10 +152,16 @@
             @endforelse
         </div>
         <div class="info-col right">
-            <div>Proyecto: {{ $quote['sales_project']['name'] ?? '—' }}</div>
+            @if(($quote['origin'] ?? 'comercial') !== 'cotizaya')
+                <div>Proyecto: {{ $quote['sales_project']['name'] ?? '—' }}</div>
+            @endif
             <div>Cotización n°: {{ $quote['folio'] ?? '—' }}</div>
             <div>Fecha: {{ $quote['generated_at'] ? \Illuminate\Support\Carbon::parse($quote['generated_at'])->translatedFormat('d F Y') : '—' }}</div>
-            <div>Diseñador: {{ $quote['owner']['name'] }}</div>
+            <div>
+                {{-- SCRUM-1195 — el Responsable del proyecto (`designer`); `owner` es quien generó la versión y no va en el documento del cliente. --}}
+                Diseñador: {{ ($quote['designer'] ?? $quote['owner'])['name'] }}
+                @if(($quote['designer'] ?? $quote['owner'])['phone'] ?? null) · {{ ($quote['designer'] ?? $quote['owner'])['phone'] }} @endif
+            </div>
         </div>
     </div>
 
@@ -180,45 +228,62 @@
         @endforelse
     </table>
 
-    {{-- §11/§12/§13/§14 — sección inferior, solo interna (política SCRUM-140 sin cambios). --}}
+    {{-- SCRUM-986 — Firma (izq) | Totales (der), inmediatamente bajo el último ítem de la última
+         partida, como dos bloques independientes. Solo interna (política SCRUM-140: la externa
+         nunca muestra totales ni firma, sin cambios). Indivisible vía .sig-totals-block. --}}
     @if(!$external)
-        <div class="bottom-section">
-            <div class="bottom-col left">
+        <div class="sig-totals-block">
+            <div class="sig-totals-row">
+                <div class="sig-totals-col left">
+                    <div class="signature">
+                        @if($signed && $signerName)
+                            <div class="signed-name">{{ $signerName }}</div>
+                        @endif
+                        Firma del cliente
+                    </div>
+                </div>
+                <div class="sig-totals-col right">
+                    <table class="totals">
+                        <tr>
+                            <td>Subtotal</td>
+                            <td class="numeric">${{ number_format($quote['subtotal'], 2) }}</td>
+                        </tr>
+                        @if($quote['discount_totals_amount'] > 0)
+                            <tr>
+                                <td>Descuento</td>
+                                <td class="numeric">-${{ number_format($quote['discount_totals_amount'], 2) }}</td>
+                            </tr>
+                        @endif
+                        <tr>
+                            <td>ITBMS{{ ($quote['itbms_exento'] ?? false) ? ' (Exento)' : '' }}</td>
+                            <td class="numeric">${{ number_format($quote['itbms'], 2) }}</td>
+                        </tr>
+                        <tr class="grand-total">
+                            <td>Total</td>
+                            <td class="numeric">${{ number_format($quote['grand_total'], 2) }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- §11/§12/§13 — Observaciones, Instrucciones de pago y Condiciones, solo interna.
+             SCRUM-801 (3er rebote) — envuelto en .final-block (indivisible), con un espaciador
+             previo calculado por QuotePdfLayoutEstimator para quedar pegado al pie de la página.
+             SCRUM-986 — ahora SIN Totales/Firma (subieron arriba, ver bloque anterior). --}}
+        <div class="bottom-block-spacer{{ $bottomBlockForceNewPage ? ' force-new-page' : '' }}" style="height: {{ $bottomBlockSpacerPt }}pt;"></div>
+        <div class="final-block">
+            <div class="bottom-top">
                 <div class="block-title">Observaciones</div>
                 <div class="block-value">{{ $quote['observations_preview'] ?: '—' }}</div>
 
                 <div class="block-title">Instrucciones de pago</div>
-                <div class="block-value">Cheque a nombre de: Atlantic<br>Pagos ACH: consultar con su diseñador</div>
-
-                <div class="block-title">Condiciones</div>
-                <div class="block-value">{{ $quote['conditions_text'] ?: '—' }}</div>
+                <div class="block-value">Cheque a nombre de: ATLANTIC USA CORP<br>Pagos ACH: Cuenta 03-01-01-074455-4, cuenta corriente, Banco General</div>
             </div>
-            <div class="bottom-col right">
-                <table class="totals">
-                    <tr>
-                        <td>Subtotal</td>
-                        <td class="numeric">${{ number_format($quote['subtotal'], 2) }}</td>
-                    </tr>
-                    @if($quote['discount_totals_amount'] > 0)
-                        <tr>
-                            <td>Descuento</td>
-                            <td class="numeric">-${{ number_format($quote['discount_totals_amount'], 2) }}</td>
-                        </tr>
-                    @endif
-                    <tr>
-                        <td>ITBMS</td>
-                        <td class="numeric">${{ number_format($quote['itbms'], 2) }}</td>
-                    </tr>
-                    <tr class="grand-total">
-                        <td>Total</td>
-                        <td class="numeric">${{ number_format($quote['grand_total'], 2) }}</td>
-                    </tr>
-                </table>
-                <div class="signature">
-                    @if($signed && $signerName)
-                        <div class="signed-name">{{ $signerName }}</div>
-                    @endif
-                    Firma del cliente
+            <div class="bottom-condiciones-row">
+                <div class="conditions-col">
+                    <div class="block-title">Condiciones</div>
+                    <div class="block-value">{{ $quote['conditions_text'] ?: '—' }}</div>
                 </div>
             </div>
         </div>

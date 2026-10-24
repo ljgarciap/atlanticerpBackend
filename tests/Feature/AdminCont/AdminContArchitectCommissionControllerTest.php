@@ -7,6 +7,7 @@ namespace Tests\Feature\AdminCont;
 use App\Models\User;
 use App\Modules\AdminCont\Jobs\SendArchitectReminderEmailJob;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
+use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\ArchitectCommission;
 use App\Modules\AdminCont\Models\ArchitectFiscalProfile;
@@ -19,6 +20,7 @@ use App\Modules\VentasDiseno\Models\Quote;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Services\AuditService;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
@@ -131,9 +133,24 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
     {
         $service = app(ArchitectCommissionService::class);
 
-        $this->assertSame(ArchitectCommissionService::ESTADO_AUN_NO_GENERADA, $service->estadoFor(1000.0, 600.0, null));
-        $this->assertSame(ArchitectCommissionService::ESTADO_PENDIENTE_FACTURA, $service->estadoFor(1000.0, 1000.0, null));
-        $this->assertSame(ArchitectCommissionService::ESTADO_PAGADA, $service->estadoFor(1000.0, 1000.0, CarbonImmutable::now()));
+        $this->assertSame(ArchitectCommissionService::ESTADO_AUN_NO_GENERADA, $service->estadoFor(1000.0, 600.0, null, 1000.0));
+        $this->assertSame(ArchitectCommissionService::ESTADO_PENDIENTE_FACTURA, $service->estadoFor(1000.0, 1000.0, null, 1000.0));
+        $this->assertSame(ArchitectCommissionService::ESTADO_PAGADA, $service->estadoFor(1000.0, 1000.0, CarbonImmutable::now(), 1000.0));
+    }
+
+    /**
+     * SCRUM-929 (B3b, decisión de Luis 2026-09-19) — el bug real que motivó el "todo o nada" por
+     * PEDIDO: un proyecto de 963 con comisión del 10% (96.30), solo la entrega 1 (321) facturada Y
+     * cobrada. Antes de este fix, `total_facturado == total_cobrado` (321 == 321) ya generaba
+     * `pendiente_factura_arquitecto` — el arquitecto podía cobrar los 96.30 completos con 2/3 del
+     * proyecto todavía sin facturar. Ahora exige además que lo facturado alcance el monto del
+     * proyecto entero.
+     */
+    public function test_estado_for_una_parcial_cobrada_no_genera_comision_del_proyecto_entero(): void
+    {
+        $service = app(ArchitectCommissionService::class);
+
+        $this->assertSame(ArchitectCommissionService::ESTADO_AUN_NO_GENERADA, $service->estadoFor(321.0, 321.0, null, 963.0));
     }
 
     /** Escenarios 1/2/3 de REQ-511. */
@@ -167,7 +184,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_CON_ITBMS]);
 
-        $this->makeArchitectProject($architect, 34000.0, 34000.0); // pendiente_factura_arquitecto
+        $card = $this->makeArchitectProject($architect, 34000.0, 34000.0); // pendiente_factura_arquitecto, cliente ya cobró 100%
+        $projectName = $card->salesProject->name;
 
         $token = $this->loginAsMark();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -181,6 +199,30 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $response->assertJsonPath('arquitectos.0.datos_fiscales_completos', true);
         $response->assertJsonPath('arquitectos.0.proyectos.0.impuesto', 238);
         $response->assertJsonPath('arquitectos.0.proyectos.0.total', 3638);
+        // SCRUM-866 punto 2 — columna Proyecto + split de Estado.
+        $response->assertJsonPath('arquitectos.0.proyectos.0.proyecto_nombre', $projectName);
+        $response->assertJsonPath('arquitectos.0.proyectos.0.estado_cobro_cliente', ArchitectCommissionService::ESTADO_COBRO_COBRADO);
+    }
+
+    /** SCRUM-866 punto 2 — "Estado Cobro del cliente" es independiente de "Estado de comisión": un
+     *  proyecto puede seguir sin facturar (comisión aun_no_generada) con el cliente ya habiendo
+     *  pagado un anticipo parcial. */
+    public function test_estado_cobro_cliente_independiente_del_estado_de_comision(): void
+    {
+        $architect = $this->makeArchitect();
+        ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio Y', 'ruc' => '2-2-2', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_CON_ITBMS]);
+
+        // Facturado 34000, cobrado solo 10000 → comisión "aun_no_generada" (no cubre el 100%), pero
+        // el cliente sí pagó algo → "parcial", no "pendiente".
+        $this->makeArchitectProject($architect, 34000.0, 10000.0);
+
+        $token = $this->loginAsMark();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/external')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('arquitectos.0.proyectos.0.estado', ArchitectCommissionService::ESTADO_AUN_NO_GENERADA);
+        $response->assertJsonPath('arquitectos.0.proyectos.0.estado_cobro_cliente', ArchitectCommissionService::ESTADO_COBRO_PARCIAL);
     }
 
     /** Visual Review — mockup del ticket (4F__Admin_Contabilidad_ComisionesExt.html) pide 3
@@ -370,6 +412,36 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertStatus(404);
     }
 
+    /** SCRUM-808 (REQ-632, Epic SCRUM-788) — lectura sensible: documento financiero de comisión. */
+    public function test_ver_cuenta_de_cobro_registra_admin_cont_cuenta_cobro_viewed(): void
+    {
+        $architect = $this->makeArchitect();
+        $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
+
+        $felixToken = $this->loginAsFelix();
+        $file = UploadedFile::fake()->create('cuenta.pdf', 100, 'application/pdf');
+        $this->withHeaders($this->authHeaders($felixToken))
+            ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro", ['file' => $file])
+            ->assertStatus(201);
+
+        $markToken = $this->loginAsMark();
+        $this->withHeaders($this->authHeaders($markToken))
+            ->getJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro")
+            ->assertStatus(200);
+
+        $this->reactivateTenant();
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        $commission = ArchitectCommission::where('pipeline_card_id', $card->id)->firstOrFail();
+        $log = DB::table('atlantic_auth.audit_logs')
+            ->where('action', AuditService::ADMIN_CONT_CUENTA_COBRO_VIEWED)
+            ->where('entity_id', (string) $commission->id)
+            ->where('user_id', $markId)
+            ->first();
+
+        $this->assertNotNull($log, 'Debe existir una entrada admin_cont.cuenta_cobro.viewed en audit_logs.');
+        $this->assertSame('architect_commission', $log->entity_type);
+    }
+
     // ==================== Batch 17 (SCRUM-591→596, REQ-514→519) ====================
 
     private function makeBankAccount(): AdminContBankAccount
@@ -413,6 +485,37 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->getJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion")
             ->assertStatus(200);
         $this->assertNotNull($response->json('url'));
+    }
+
+    /** SCRUM-808 (REQ-632, Epic SCRUM-788) — lectura sensible: documento financiero de comisión. */
+    public function test_ver_comprobante_retencion_registra_admin_cont_comprobante_retencion_viewed(): void
+    {
+        $architect = $this->makeArchitect();
+        ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_RETENCION_50]);
+        $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
+
+        $felixToken = $this->loginAsFelix();
+        $file = UploadedFile::fake()->create('retencion.pdf', 100, 'application/pdf');
+        $this->withHeaders($this->authHeaders($felixToken))
+            ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion", ['file' => $file])
+            ->assertStatus(201);
+
+        $markToken = $this->loginAsMark();
+        $this->withHeaders($this->authHeaders($markToken))
+            ->getJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion")
+            ->assertStatus(200);
+
+        $this->reactivateTenant();
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        $commission = ArchitectCommission::where('pipeline_card_id', $card->id)->firstOrFail();
+        $log = DB::table('atlantic_auth.audit_logs')
+            ->where('action', AuditService::ADMIN_CONT_COMPROBANTE_RETENCION_VIEWED)
+            ->where('entity_id', (string) $commission->id)
+            ->where('user_id', $markId)
+            ->first();
+
+        $this->assertNotNull($log, 'Debe existir una entrada admin_cont.comprobante_retencion.viewed en audit_logs.');
+        $this->assertSame('architect_commission', $log->entity_type);
     }
 
     public function test_bank_account_options_lista_solo_cuentas_activas(): void
@@ -626,6 +729,22 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/mark-paid")
             ->assertStatus(200)
             ->assertJsonPath('fecha_pago', now()->toDateString());
+
+        // SCRUM-879 (E-2) — marcar pagada SIN cuenta de pago igual registra el movimiento de caja,
+        // con bank_account_id null (aparece en Movimientos con "Sin cuenta asignada").
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $movement = DB::table("{$slug}_admin_contab.bank_movements")
+            ->where('source_type', 'architect_commission')->first();
+        $this->assertNotNull($movement);
+        $this->assertNull($movement->bank_account_id);
+        $this->assertSame('comision', $movement->tipo);
+        $this->assertEquals(1000.0, (float) $movement->monto);
+
+        // Idempotente — volver a llamar no crea un segundo movimiento.
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/mark-paid");
+        $this->assertSame(1, (int) DB::table("{$slug}_admin_contab.bank_movements")
+            ->where('source_type', 'architect_commission')->count());
     }
 
     /**
@@ -705,5 +824,88 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/remind")
             ->assertStatus(422);
+    }
+
+    public function test_876_pedido_con_entregas_parciales_genera_una_sola_linea_de_comision(): void
+    {
+        $architect = $this->makeArchitect();
+        $card = $this->makeArchitectProject($architect, 10000.0, 10000.0); // cobrado 100%
+
+        // El pedido se dividió en 3 entregas parciales: 2 tarjetas hijas más, misma pipeline_card.
+        $root = Order::where('pipeline_card_id', $card->id)->whereNull('family_id')->firstOrFail();
+        $root->update(['sequence_in_family' => 1, 'total_in_family' => 3]);
+        foreach ([2, 3] as $seq) {
+            Order::create([
+                'order_number' => $root->order_number, 'pipeline_card_id' => $card->id,
+                'order_type' => Order::ORDER_TYPE_PEDIDO, 'stage' => Order::STAGE_POR_DESPACHAR,
+                'customer_name' => $root->customer_name,
+                'family_id' => $root->id, 'sequence_in_family' => $seq, 'total_in_family' => 3,
+            ]);
+        }
+
+        $filas = app(ArchitectCommissionService::class)->allProjects()
+            ->where('pipeline_card_id', $card->id);
+
+        $this->assertCount(1, $filas, 'Un pedido dividido en entregas parciales debe generar UNA sola línea de comisión.');
+    }
+
+    public function test_879_backfill_genera_el_movimiento_de_caja_de_comisiones_externas_ya_pagadas(): void
+    {
+        AdminContFiscalSettings::current()
+            ->update(['arqueo_tracking_start_date' => CarbonImmutable::now()->subMonths(6)->toDateString()]);
+
+        $architect = $this->makeArchitect();
+        ArchitectFiscalProfile::create([
+            'architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1',
+            'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_EXENTO,
+        ]);
+        $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
+        // Comisión ya pagada (fixture directo, sin movimiento — el estado previo al fix de E-2).
+        ArchitectCommission::create([
+            'pipeline_card_id' => $card->id, 'architect_id' => $architect->id,
+            'fecha_pago' => CarbonImmutable::now()->subDays(20)->toDateString(),
+        ]);
+
+        $created = app(ArchitectCommissionService::class)->backfillCashMovements();
+        $this->assertSame(1, $created);
+
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $mov = DB::table("{$slug}_admin_contab.bank_movements")
+            ->where('source_type', 'architect_commission')->first();
+        $this->assertNotNull($mov);
+        $this->assertEquals(1000.0, (float) $mov->monto);
+
+        // Idempotente.
+        $this->assertSame(0, app(ArchitectCommissionService::class)->backfillCashMovements());
+    }
+
+    // ── SCRUM-947 — paginación estándar ─────────────────────────────────────────────────────
+
+    /**
+     * Pagina a nivel de ARQUITECTO (nunca parte los proyectos de un mismo arquitecto entre 2
+     * páginas): `Pagination::ofArray()` recibe el array YA agrupado por arquitecto, así que un
+     * grupo no puede partirse por construcción. `per_page` real (10/20/50/100) — 3 arquitectos
+     * reales alcanzan para confirmar el shape de `meta` sin necesitar 20+ de fixture.
+     */
+    public function test_summary_pagina_a_nivel_de_arquitecto(): void
+    {
+        foreach (range(1, 3) as $i) {
+            $architect = $this->makeArchitect();
+            $this->makeArchitectProject($architect, 10000.0, 10000.0);
+        }
+
+        $token = $this->loginAsMark();
+
+        $page1 = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/external?per_page=10')
+            ->assertStatus(200)->json();
+
+        $this->assertCount(3, $page1['arquitectos']);
+        $this->assertSame(['total' => 3, 'per_page' => 10, 'current_page' => 1, 'last_page' => 1], $page1['meta']);
+
+        $page2 = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/external?per_page=10&page=2')
+            ->assertStatus(200)->json();
+        $this->assertCount(0, $page2['arquitectos'], 'los 3 arquitectos ya entraron en la página 1');
     }
 }

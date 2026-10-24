@@ -37,6 +37,9 @@ use Throwable;
  * `AlbaranExtractor`, a propósito, para que `mapFacturaRow()` sea testeable con arrays de filas
  * fake, sin ninguna conexión real — ver tests/Unit/Legacy/FacturaExtractorTest.php): es `static`,
  * pura, y `extract()` es el único método que toca la red.
+ *
+ * SCRUM-841 — `facturasQuery()` agrega un LEFT JOIN a `FACTURASVENTACAMPOSLIBRES` (Facturación
+ * Electrónica: QR, número de autorización, estado ante la DGI) — ver docblock del método.
  */
 final class FacturaExtractor implements FacturaExtractorContract
 {
@@ -56,12 +59,22 @@ final class FacturaExtractor implements FacturaExtractorContract
         return new ExtractedFacturas($facturas);
     }
 
+    /**
+     * LEFT JOIN a FACTURASVENTACAMPOSLIBRES (SCRUM-841, Facturación Electrónica) — misma llave
+     * natural que la cabecera (NUMSERIE+NUMFACTURA+N). LEFT, nunca INNER: una factura sin fila en
+     * la tabla satélite (ej. anterior a que el cliente adoptara FE) igual se extrae completa, los
+     * campos `fe_*` quedan `null`.
+     */
     public static function facturasQuery(): string
     {
         return <<<'SQL'
             SELECT f.NUMSERIE, f.NUMFACTURA, f.N, f.CODCLIENTE, f.CODVENDEDOR, f.FECHA,
-                   f.TOTALNETO, f.TOTALIMPUESTOS, f.TOTALBRUTO, f.SUFACTURA
+                   f.TOTALNETO, f.TOTALIMPUESTOS, f.TOTALBRUTO, f.SUFACTURA,
+                   cl.FEQR, cl.FEAUTHNUMBER, cl.FESERIE, cl.FENUMERO,
+                   cl.FEFECHAEMISON, cl.FEFECHARECEPCION, cl.FEERROR, cl.FEESTADO
             FROM FACTURASVENTA f
+            LEFT JOIN FACTURASVENTACAMPOSLIBRES cl
+                ON cl.NUMSERIE = f.NUMSERIE AND cl.NUMFACTURA = f.NUMFACTURA AND cl.N = f.N
             SQL;
     }
 
@@ -86,6 +99,14 @@ final class FacturaExtractor implements FacturaExtractorContract
             totalImpuestos: self::nullableFloat($row['TOTALIMPUESTOS'] ?? null),
             totalBruto: self::nullableFloat($row['TOTALBRUTO'] ?? null),
             sufactura: self::nullableString($row['SUFACTURA'] ?? null),
+            feQr: self::nullableString($row['FEQR'] ?? null),
+            feAuthNumber: self::nullableString($row['FEAUTHNUMBER'] ?? null),
+            feSerie: self::nullableString($row['FESERIE'] ?? null),
+            feNumero: self::nullableString($row['FENUMERO'] ?? null),
+            feFechaEmision: self::nullableString($row['FEFECHAEMISON'] ?? null),
+            feFechaRecepcion: self::nullableString($row['FEFECHARECEPCION'] ?? null),
+            feError: self::nullableString($row['FEERROR'] ?? null),
+            feEstado: self::nullableString($row['FEESTADO'] ?? null),
         );
     }
 

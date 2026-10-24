@@ -19,8 +19,12 @@ final class ReportsService
 
     private const ACTIVITY_TYPES = ['llamada', 'email', 'reunion', 'whatsapp', 'visita', 'otro'];
 
-    /** @return array<string, mixed> */
-    public function monthly(User $currentUser, bool $isManagement, string $month, ?int $filterUserId): array
+    /**
+     * @param  list<int>|null  $filterUserIds  SCRUM-854 — multi-selección (OR entre seleccionados).
+     *                                         null/vacío = todo el equipo (solo tiene efecto real para management, igual que antes).
+     * @return array<string, mixed>
+     */
+    public function monthly(User $currentUser, bool $isManagement, string $month, ?array $filterUserIds): array
     {
         $parts = explode('-', $month, 2);
         $year = (int) ($parts[0] ?? 0);
@@ -30,21 +34,21 @@ final class ReportsService
         $end = $start->copy()->endOfMonth()->endOfDay();
 
         // Resolve display title
-        $filterUser = null;
-        if ($isManagement && $filterUserId !== null) {
-            /** @var User|null $filterUser */
-            $filterUser = User::find($filterUserId);
+        $filterUsers = [];
+        if ($isManagement && ! empty($filterUserIds)) {
+            /** @var Collection<int, User> $filterUsers */
+            $filterUsers = User::whereIn('id', $filterUserIds)->orderBy('first_name')->get();
         } elseif (! $isManagement) {
-            $filterUser = $currentUser;
+            $filterUsers = collect([$currentUser]);
         }
-        $userTitle = $filterUser !== null
-            ? "{$filterUser->first_name} {$filterUser->last_name}"
+        $userTitle = count($filterUsers) > 0
+            ? collect($filterUsers)->map(fn (User $u) => "{$u->first_name} {$u->last_name}")->implode(', ')
             : trans('crm.all_team');
 
-        // Effective userId for project / activity scoping
-        $effectiveUserId = $isManagement ? $filterUserId : $currentUser->id;
+        // Effective userIds for project / activity scoping
+        $effectiveUserIds = $isManagement ? ($filterUserIds ?: null) : [$currentUser->id];
 
-        $baseQuery = $this->projectQuery($currentUser, $isManagement, $effectiveUserId);
+        $baseQuery = $this->projectQuery($currentUser, $isManagement, $effectiveUserIds);
 
         /** @var Collection<int, Project> $nuevos */
         $nuevos = (clone $baseQuery)->whereBetween('created_at', [$start, $end])->with('assignees')->get();
@@ -66,8 +70,8 @@ final class ReportsService
             ->whereBetween('fecha', [$start, $end])
             ->with(['user', 'project']);
 
-        if ($effectiveUserId !== null) {
-            $activitiesQuery->where('user_id', $effectiveUserId);
+        if ($effectiveUserIds !== null) {
+            $activitiesQuery->whereIn('user_id', $effectiveUserIds);
         }
 
         /** @var Collection<int, ProjectActivity> $activities */
@@ -83,7 +87,7 @@ final class ReportsService
         }
 
         $teamBreakdown = [];
-        if ($isManagement && $filterUserId === null) {
+        if ($isManagement && empty($filterUserIds)) {
             $teamBreakdown = $this->teamMonthlyBreakdown($start, $end);
         }
 
@@ -163,15 +167,19 @@ final class ReportsService
         })->values()->all();
     }
 
-    /** @return Builder<Project> */
-    private function projectQuery(User $user, bool $isManagement, ?int $filterUserId): Builder
+    /**
+     * @param  list<int>|null  $filterUserIds
+     * @return Builder<Project>
+     */
+    private function projectQuery(User $user, bool $isManagement, ?array $filterUserIds): Builder
     {
         $query = Project::query();
 
         if (! $isManagement) {
             $query->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $user->id));
-        } elseif ($filterUserId !== null) {
-            $query->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $filterUserId));
+        } elseif (! empty($filterUserIds)) {
+            // SCRUM-854 — multi-selección (OR entre seleccionados).
+            $query->whereHas('assignees', fn (Builder $q) => $q->whereIn('user_id', $filterUserIds));
         }
 
         return $query;

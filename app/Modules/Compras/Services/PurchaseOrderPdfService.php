@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Compras\Services;
 
 use App\Modules\Compras\Models\PurchaseOrder;
+use App\Modules\Compras\Support\TranslationException;
+use App\Shared\Support\PdfLogo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as PdfDocument;
 
@@ -17,34 +19,44 @@ use Barryvdh\DomPDF\PDF as PdfDocument;
  */
 final class PurchaseOrderPdfService
 {
-    private const STATUS_LABELS = [
-        PurchaseOrder::STATUS_POR_APROBAR       => 'Por aprobar',
-        PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR => 'Pendiente por liquidar',
-        PurchaseOrder::STATUS_ORDENADO           => 'Ordenado',
-        PurchaseOrder::STATUS_EN_TRANSITO        => 'En tránsito',
-        PurchaseOrder::STATUS_EN_ADUANA          => 'En aduana',
-        PurchaseOrder::STATUS_EN_TRANSITO_LOCAL  => 'En tránsito local',
-        PurchaseOrder::STATUS_RECIBIDO           => 'Recibido',
-    ];
+    public const LANG_ES = 'es';
+    public const LANG_EN = 'en';
 
-    private const SHIPPING_LABELS = [
-        PurchaseOrder::SHIPPING_AEREO      => 'Aéreo',
-        PurchaseOrder::SHIPPING_MARITIMO   => 'Marítimo',
-        PurchaseOrder::SHIPPING_TERRESTRE  => 'Terrestre',
-    ];
+    public function __construct(private readonly PurchaseOrderTranslationService $translations)
+    {
+    }
 
-    /** REQ-136 Escenario 1: "sin costo" no muestra ningún precio ni monto total, solo productos y cantidades. */
-    public function generate(PurchaseOrder $order, bool $includeCost): PdfDocument
+    /**
+     * REQ-136 Escenario 1: "sin costo" no muestra ningún precio ni monto total, solo productos y cantidades.
+     *
+     * SCRUM-1127 — `$lang`: `es` (default, exactamente el documento de siempre) o `en`, que se renderiza desde la traducción GUARDADA de la
+     * orden (nunca llama a la IA). Los textos fijos salen de `lang/{es,en}/purchase_order_pdf.php`.
+     *
+     * @throws TranslationException si `$lang` es `en` y la orden no tiene versión en inglés vigente
+     */
+    public function generate(PurchaseOrder $order, bool $includeCost, string $lang = self::LANG_ES): PdfDocument
     {
         $order->loadMissing(['provider', 'lines.catalogProduct']);
 
-        return Pdf::loadView('compras.purchase-order-pdf', [
-            'order'              => $order,
-            'includeCost'        => $includeCost,
-            'statusLabel'        => self::STATUS_LABELS[$order->status] ?? $order->status,
-            'shippingTypeLabel'  => $order->shipping_type !== null
-                ? (self::SHIPPING_LABELS[$order->shipping_type] ?? $order->shipping_type)
-                : 'Sin especificar',
-        ])->setPaper('letter');
+        $lang = $lang === self::LANG_EN ? self::LANG_EN : self::LANG_ES;
+        $descriptions = $lang === self::LANG_EN ? $this->translations->linesForRender($order) : [];
+
+        $shippingLabel = $order->shipping_type !== null
+            ? trans("purchase_order_pdf.shipping.{$order->shipping_type}", [], $lang)
+            : trans('purchase_order_pdf.unspecified', [], $lang);
+
+        // SCRUM-886/893 — isPhpEnabled requerido para el pie de página real (page_text(), ver
+        // `pdf.partials.footer`), mismo mecanismo que ServiceQuotePdfService/QuotePdfService.
+        return Pdf::setOption('isPhpEnabled', true)
+            ->loadView('compras.purchase-order-pdf', [
+                'order'              => $order,
+                'includeCost'        => $includeCost,
+                'lang'               => $lang,
+                'descriptions'       => $descriptions,
+                'statusLabel'        => trans("purchase_order_pdf.statuses.{$order->status}", [], $lang),
+                'shippingTypeLabel'  => $shippingLabel,
+                'pageLabel'          => trans('purchase_order_pdf.page', [], $lang),
+                'logoDataUri'        => PdfLogo::dataUri(),
+            ])->setPaper('letter');
     }
 }

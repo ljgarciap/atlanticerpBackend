@@ -9,11 +9,16 @@ use App\Modules\VentasDiseno\Exceptions\QuoteActionBlockedException;
 use App\Modules\VentasDiseno\Exceptions\QuoteValidationBlockedException;
 use App\Modules\VentasDiseno\Http\Requests\QuoteRequest;
 use App\Modules\VentasDiseno\Models\PricingSettings;
+use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\Quote;
+use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use App\Modules\VentasDiseno\Models\QuoteItem;
 use App\Modules\VentasDiseno\Models\QuotePart;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
+use App\Modules\VentasDiseno\Services\CatalogService;
+use App\Modules\VentasDiseno\Services\QuoteItemPhotoService;
+use App\Modules\VentasDiseno\Services\ProjectAssociateService;
 use App\Modules\VentasDiseno\Services\QuotePdfService;
 use App\Modules\VentasDiseno\Services\QuoteService;
 use Illuminate\Http\JsonResponse;
@@ -29,25 +34,14 @@ use Illuminate\Routing\Controller;
 final class QuoteController extends Controller
 {
     /**
-     * SCRUM-725 (decisión de Luis, 2026-08-05) — revierte la regla de REQ-040/045
-     * (Pre-QA SCRUM-132/137) de "nunca revelar el porcentaje mínimo real": el
-     * criterio de este ticket pide el número explícito, y de acá en más aplica a
-     * todo el sistema de margen para no dejar dos mensajes iguales con
-     * comportamiento distinto. Siempre interpolado desde
-     * `PricingSettings::min_margin_percent` (configurable, nunca un número fijo).
-     * Mismo texto/fórmula que QuoteItemController::marginErrorMessage() (clase
-     * distinta, no se puede compartir directamente sin acoplar los dos controllers).
+     * SCRUM-1152 (decisión de Luis, 2026-10-15) — el mensaje de margen ya no muestra el porcentaje mínimo, tampoco en el margen
+     * global (generar/confirmar/guardar). Revierte la parte de SCRUM-725 (2026-08-05) que lo pedía explícito; el valor sigue siendo
+     * configurable (`PricingSettings::min_margin_percent`) y la validación no cambia, solo el texto. Mismo texto que
+     * `QuoteItemController::marginErrorMessage()` salvo «del producto» (clase distinta, no se comparte sin acoplar los controllers).
      */
     private function marginErrorMessage(): string
     {
-        return 'Este cambio dejaría el margen por debajo del mínimo permitido ('
-            . $this->formatPercent(PricingSettings::current()->min_margin_percent) . '%)';
-    }
-
-    /** `30.0` -> "30", `28.5` -> "28.5" — sin ceros decimales de relleno. */
-    private function formatPercent(float $value): string
-    {
-        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
+        return 'Este cambio dejaría el margen por debajo del mínimo permitido';
     }
 
     /**
@@ -57,9 +51,24 @@ final class QuoteController extends Controller
      */
     private const MARGIN_OVERRIDE_PERMISSION = 'ventas_diseno.override_min_margin';
 
+    /**
+     * SCRUM-930/931/932 (rebote Daniela 2026-09-20) — mismos roles que
+     * `OrderStatusController::ADMIN_CONTAB_ROLES`/`OrderBoardController::ADMIN_CONTAB_ROLES`.
+     * `superadmin` no hace falta acá porque ya cae en `superadmin.all` (bypass de `hasPermission()`
+     * más abajo no aplica aquí, pero `management` sí tiene `ventas_diseno.read` real y jamás llega
+     * a necesitar esta rama — se lista igual por explicitud, mismo criterio que los otros dos).
+     *
+     * @var list<string>
+     * SCRUM-1139 — `lider_operaciones` espeja a la asistente (mismos grupos `role:` de `routes/admin-contab.php`).
+     */
+    private const ADMIN_CONTAB_ROLES = ['lider_admin_contab', 'asistente_administrativa', 'lider_operaciones', 'management'];
+
     public function __construct(
         private readonly QuoteService $service,
         private readonly QuotePdfService $pdf,
+        private readonly QuoteItemPhotoService $itemPhotos,
+        private readonly CatalogService $catalog,
+        private readonly ProjectAssociateService $associates,
     ) {}
 
     private function hasMarginOverride(User $user): bool
@@ -87,6 +96,17 @@ final class QuoteController extends Controller
          */
         $validated = $request->validated();
 
+        // SCRUM-912 — antes, este endpoint persistía SIEMPRE, incluso al simplemente
+        // abrir "+ Nueva cotización" sin tocar nada (el frontend llamaba a store() al
+        // montar el formulario para tener un id con el que autoguardar) — eso dejaba
+        // una fila en `quotes` por cada apertura del formulario, aunque el usuario
+        // nunca guardara nada. Ahora el registro nace recién con el primer dato real
+        // (el equivalente, a nivel de esta API, del primer "Guardar borrador"); mientras
+        // tanto el frontend no debe depender de un id de BD — ver docs/changelog.md.
+        if (! $this->hasMeaningfulContent($validated)) {
+            return response()->json(['persisted' => false], 200);
+        }
+
         // REQ-025/027 no aplican a la precarga de REQ-050: los datos vienen ya
         // consistentes entre sí desde la tarjeta/subcliente de origen, no del
         // formulario. Solo cross-validamos lo que el propio $validated trae explícito.
@@ -106,7 +126,57 @@ final class QuoteController extends Controller
             $validated['from_sub_client_id'] ?? null,
         );
 
-        return response()->json($this->formatDetail($quote, $user), 201);
+        return response()->json(['persisted' => true] + $this->formatDetail($quote, $user), 201);
+    }
+
+    /**
+     * SCRUM-912 — true si $validated trae al menos un dato real de la cotización, más
+     * allá de la precarga opcional (from_pipeline_card_id/from_sub_client_id, que YA
+     * son datos reales por sí solos: disparan copiar cliente/proyecto/contacto desde
+     * el origen). Los campos de configuración con default de negocio propio
+     * (price_type/discount_mode/global_discount_percent/discount_totals_*) no cuentan
+     * por sí solos — un formulario recién abierto puede mandarlos con su valor por
+     * defecto sin que el usuario haya tocado nada todavía.
+     *
+     * @param array{
+     *   from_pipeline_card_id?: int|null, from_sub_client_id?: int|null,
+     *   master_client_id?: int|null, sub_client_id?: int|null, sales_project_id?: int|null,
+     *   ruc?: string|null, description?: string|null, architect_id?: int|null,
+     *   delivery_type?: string|null, delivery_dates?: list<string>,
+     *   observations?: string|null, includes_installation?: bool,
+     * } $validated
+     */
+    private function hasMeaningfulContent(array $validated): bool
+    {
+        if (($validated['from_pipeline_card_id'] ?? null) !== null) {
+            return true;
+        }
+        if (($validated['from_sub_client_id'] ?? null) !== null) {
+            return true;
+        }
+
+        $identityFields = ['master_client_id', 'sub_client_id', 'sales_project_id', 'ruc', 'description', 'architect_id'];
+        foreach ($identityFields as $field) {
+            $value = $validated[$field] ?? null;
+            if ($value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        if (! empty($validated['delivery_type'])) {
+            return true;
+        }
+        if (! empty($validated['delivery_dates'])) {
+            return true;
+        }
+        if (! empty($validated['observations'])) {
+            return true;
+        }
+        if (($validated['includes_installation'] ?? false) === true) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -305,11 +375,12 @@ final class QuoteController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($quote, $user)) {
+        if (! $this->canView($quote, $user) && ! $this->canViewFromAdminContab($request)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        return response()->json($this->formatDetail($quote, $user));
+        // SCRUM-1195 — «Diseñador a cargo» del formulario = el mismo Responsable que imprime el PDF (`owner` sigue siendo quien generó la versión).
+        return response()->json($this->formatDetail($quote, $user) + ['designer' => $this->service->pdfDesigner($quote)]);
     }
 
     /**
@@ -330,12 +401,14 @@ final class QuoteController extends Controller
             abort(404);
         }
 
-        if (! $this->canAccess($quote, $user)) {
+        if (! $this->canView($quote, $user) && ! $this->canViewFromAdminContab($request)) {
             abort(403);
         }
 
         $external = $request->boolean('external');
         $detail   = $this->formatDetail($quote, $user);
+        // SCRUM-1195 — «Diseñador» del PDF = Responsable del proyecto; `owner` sigue siendo quien generó la versión («Generado por»).
+        $detail['designer'] = $this->service->pdfDesigner($quote);
 
         return $this->pdf->generate($detail, $external)
             ->download("Cotizacion-{$quote->folio}.pdf");
@@ -422,7 +495,7 @@ final class QuoteController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($quote, $user)) {
+        if (! $this->canUseAsBase($quote, $user, $quote->linkedPipelineCard())) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -453,11 +526,13 @@ final class QuoteController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $this->canAccess($quote, $user)) {
+        if (! $this->canView($quote, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
         $result = $this->service->versionsFor($quote);
+        // Todas las versiones comparten proyecto y tarjeta: se resuelve una vez, no por versión.
+        $card = $quote->linkedPipelineCard();
 
         return response()->json([
             'card_stage' => $result['card_stage'],
@@ -468,6 +543,9 @@ final class QuoteController extends Controller
                 'confirmed_at' => $v->confirmed_at?->toIso8601String(),
                 'generated_by' => trim("{$v->owner->first_name} {$v->owner->last_name}"),
                 'grand_total'  => $v->grandTotal(),
+                // «Usar como base» crea una cotización nueva a partir de esa versión (`duplicate`): el frontend oculta el botón cuando no se
+                // puede, en vez de mostrarlo para dar 403. Ver `canUseAsBase()` (SCRUM-1195 amplió SCRUM-1143: el Responsable también puede).
+                'can_use_as_base' => $this->canUseAsBase($v, $user, $card),
             ]),
         ]);
     }
@@ -561,6 +639,61 @@ final class QuoteController extends Controller
     }
 
     /**
+     * SCRUM-1195 — quién puede partir de una versión para crear una nueva («Usar como base»): quien tiene acceso a la fila (`canAccess`) y,
+     * además, el Responsable del proyecto (dueño de la tarjeta o en `compartido_con`) sobre las versiones CONFIRMADAS. Gerencia suele crear la
+     * cotización y el diseñador la trabaja y la ajusta: parte de la última versión sin pedirle a Gerencia que se la ceda. SCRUM-1143 había dejado
+     * al Responsable en solo lectura; esto le da únicamente esta acción — la versión nueva nace como borrador suyo (`owner_id` = quien la crea, así
+     * que luego la edita como cualquier dueño) y NO abre la edición, generación ni confirmación de las filas ajenas, que siguen con `canAccess()`.
+     * `QuoteService::duplicate()` mantiene sus propias reglas (confirmada, tarjeta en Lead/Diseño/Cotización).
+     */
+    private function canUseAsBase(Quote $quote, User $user, ?PipelineCard $card): bool
+    {
+        if ($this->canAccess($quote, $user)) {
+            return true;
+        }
+
+        return $quote->confirmed_at !== null && $card !== null && $card->isResponsible($user);
+    }
+
+    /**
+     * SCRUM-1143 — acceso de SOLO LECTURA (show / pdf / versions). Además de `canAccess()` (equipo del módulo o dueño de
+     * la fila), el Responsable del proyecto —dueño de la tarjeta del Pipeline o en `compartido_con`— puede leer las
+     * versiones CONFIRMADAS de su proyecto aunque las haya generado otra persona: cuando Gerencia guarda una versión
+     * nueva, `quotes.owner_id` de esa fila es Gerencia («Generado por»), pero el Responsable sigue siendo el Vendedor.
+     * Nunca abre borradores ajenos, ni cotizaciones sin proyecto (ej. CotizaYA), y NO concede ninguna escritura: todos
+     * los métodos que modifican siguen con `canAccess()`.
+     */
+    private function canView(Quote $quote, User $user): bool
+    {
+        if ($this->canAccess($quote, $user)) {
+            return true;
+        }
+
+        if ($quote->confirmed_at === null) {
+            return false;
+        }
+
+        return $quote->linkedPipelineCard()?->isResponsible($user) === true;
+    }
+
+    /**
+     * SCRUM-930/931/932 — acceso de solo lectura a UNA cotización puntual desde Admin&Contab
+     * (Cobros/Estado de Cuenta/Notas de Crédito, vía `QuoteViewerModal`), sin depender de
+     * `ventas_diseno.read`/`canAccess()` (que exigiría ser dueño de la cotización o tener
+     * visibilidad de equipo del módulo Ventas y Diseño — ninguna de las dos aplica a un usuario de
+     * Admin&Contab abriendo la cotización de OTRO vendedor). Solo se usa en show()/pdf() — nunca en
+     * los métodos de escritura, mismo criterio que `OrderStatusController`/`OrderBoardController`.
+     */
+    private function canViewFromAdminContab(Request $request): bool
+    {
+        /** @var array{role?: mixed}|null $jwt */
+        $jwt  = $request->attributes->get('jwt');
+        $role = is_string($jwt['role'] ?? null) ? $jwt['role'] : null;
+
+        return $role !== null && in_array($role, self::ADMIN_CONTAB_ROLES, true);
+    }
+
+    /**
      * REQ-034: "Precio Socio" restringido al mismo permiso angosto ya usado para
      * MasterClient::default_price_type (ventas_diseno.select_partner_price).
      *
@@ -606,8 +739,14 @@ final class QuoteController extends Controller
         $globalDiscount = $data['global_discount_percent'] ?? $quote->global_discount_percent;
         $settings       = PricingSettings::current();
 
+        $clearOverrides = filter_var($data['clear_item_price_overrides'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
         foreach ($quote->parts as $part) {
             foreach ($part->items as $item) {
+                if ($clearOverrides && $item->price_type_override !== null) {
+                    $item = clone $item;   // SCRUM-1164: simula «Aplicar a todos», sin persistir
+                    $item->price_type_override = null;
+                }
                 if ($item->violatesMinMargin($discountMode, $globalDiscount, $priceType, $settings)) {
                     return true;
                 }
@@ -646,6 +785,7 @@ final class QuoteController extends Controller
             globalDiscountOverride: $data['global_discount_percent'] ?? null,
             discountTotalsTypeOverride: $data['discount_totals_type'] ?? null,
             discountTotalsValueOverride: $data['discount_totals_value'] ?? null,
+            ignoreItemPriceOverrides: filter_var($data['clear_item_price_overrides'] ?? false, FILTER_VALIDATE_BOOLEAN),
         );
     }
 
@@ -709,6 +849,17 @@ final class QuoteController extends Controller
         ];
     }
 
+    /**
+     * SCRUM-1120 — el módulo CotizaYA arma su detalle con el mismo formato exacto que Cotizaciones (así reutiliza
+     * `QuotePartCard`, el PDF y los totales sin duplicar nada).
+     *
+     * @return array<string, mixed>
+     */
+    public function detailPayload(Quote $quote, User $user): array
+    {
+        return $this->formatDetail($quote, $user);
+    }
+
     /** @return array<string, mixed> */
     private function formatDetail(Quote $quote, User $user): array
     {
@@ -719,6 +870,12 @@ final class QuoteController extends Controller
 
         return [
             'id'               => $quote->id,
+            // SCRUM-1120 — 'comercial' | 'cotizaya'; `cotizaya` solo trae datos en las de venta chica.
+            'origin'           => $quote->origin,
+            'cotizaya'         => $quote->isCotizaYa() ? [
+                'customer_name'  => $quote->cotizaya_customer_name,
+                'customer_phone' => $quote->cotizaya_customer_phone,
+            ] : null,
             'status'           => $quote->status,
             'folio'            => $quote->folio,
             'generated_at'     => $quote->generated_at?->toIso8601String(),
@@ -734,6 +891,10 @@ final class QuoteController extends Controller
             ] : null,
             'sub_client'       => $quote->subClient !== null ? [
                 'id' => $quote->subClient->id, 'business_name' => $quote->subClient->business_name,
+                // SCRUM-1003 — el PDF imprime "Consumidor final" en vez de un RUC vacío.
+                'receptor_tipo' => $quote->subClient->receptor_tipo ?? ReceptorTipo::CONTRIBUYENTE,
+                // SCRUM-1166 — el cliente HOY (la cotización puede conservar otra marca si ya estaba confirmada): permite avisar la diferencia.
+                'itbms_exento'  => $quote->subClient->itbms_exento,
             ] : null,
             'sales_project'    => $quote->salesProject !== null ? [
                 'id' => $quote->salesProject->id, 'name' => $quote->salesProject->name, 'tag' => $quote->salesProject->tag,
@@ -742,11 +903,18 @@ final class QuoteController extends Controller
             'description'      => $quote->description,
             'owner'            => [
                 'id' => $quote->owner->id, 'name' => trim("{$quote->owner->first_name} {$quote->owner->last_name}"),
+                // SCRUM-849.5 — WhatsApp/celular del diseñador junto a su nombre en la cotización.
+                // Mismo campo users.phone que ya expone 'architect' arriba; null si no está registrado.
+                'phone' => $quote->owner->phone,
             ],
             'architect'        => $quote->architect !== null ? [
                 'id' => $quote->architect->id, 'name' => $quote->architect->name,
                 'phone' => $quote->architect->phone, 'email' => $quote->architect->email,
             ] : null,
+            // SCRUM-1121 — asociados (arquitectos, diseñadores, contratistas...): los del proyecto, o los del borrador si aún no hay proyecto.
+            'associates'       => $quote->isCotizaYa()
+                ? []
+                : $this->associates->forQuote($quote)->map(fn ($a): array => ProjectAssociateService::format($a))->values(),
             'delivery_type'    => $quote->delivery_type,
             'delivery_dates'   => $quote->deliveryDates->map(fn ($d) => $d->date->toDateString())->values(),
             'contacts'         => $quote->contacts->map(fn ($c) => [
@@ -769,6 +937,12 @@ final class QuoteController extends Controller
                 // cada ítem de la cotización).
                 $settings = PricingSettings::current();
 
+                // SCRUM-1196 — alerta de stock (REQ-039) contra el DISPONIBLE de venta (solo Bodega Central), no contra el stock total que suma Reclamos,
+                // Merma y showrooms; una sola pasada por todos los productos de la cotización.
+                /** @var list<int> $quoteProductIds */
+                $quoteProductIds = $quote->parts->flatMap(fn (QuotePart $p) => $p->items->pluck('catalog_product_id'))->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
+                $availability    = $this->catalog->availableForSaleMap($quoteProductIds);
+
                 return $quote->parts->map(fn (QuotePart $p) => [
                     'id' => $p->id, 'name' => $p->name, 'position' => $p->position,
                     'subtotal' => $p->subtotal($quote->discount_mode, $quote->global_discount_percent, $quote->price_type, $settings),
@@ -783,12 +957,18 @@ final class QuoteController extends Controller
                         'line_total' => $i->lineTotal($quote->discount_mode, $quote->global_discount_percent, $quote->price_type, $settings),
                         // REQ-039 — null = sin control de stock para este producto (no dispara
                         // alerta), número = stock real contra el que el frontend compara `quantity`.
-                        'stock_quantity' => $i->catalogProduct?->stock_quantity,
+                        'stock_quantity' => $i->catalogProduct?->stock_quantity === null ? null : ($availability[(int) $i->catalog_product_id] ?? 0),
                         // SCRUM-725 — resalte visual del producto en Vista Previa/edición.
                         'below_min_margin' => in_array($i->id, $marginViolation['item_ids'], true),
-                        // SCRUM-766 — columna FOTO del PDF (QuotePdfService); null si el ítem es
-                        // custom (sin catalog_product_id) o el producto no tiene foto cargada.
-                        'photo_url' => $i->catalogProduct?->photo_url,
+                        // SCRUM-766 — columna FOTO del PDF (QuotePdfService); null si el producto
+                        // no tiene foto cargada. SCRUM-849.6 — un ítem custom usa su propia foto
+                        // ad-hoc (QuoteItemPhotoService), nunca la del Catálogo (no tiene ninguna).
+                        // SCRUM-1138 — un producto de Catálogo resuelve su foto con la misma precedencia que el resto del
+                        // sistema (`photo_key` subida gana; si no, el `photo_url` legacy de ICG). Leer solo `photo_url`
+                        // dejaba sin foto a los productos con imagen subida.
+                        'photo_url' => $i->is_custom
+                            ? $this->itemPhotos->photoUrl($i)
+                            : ($i->catalogProduct !== null ? $this->catalog->photoThumbnailUrl($i->catalogProduct) : null),
                     ])->values(),
                 ])->values();
             })(),
@@ -800,6 +980,9 @@ final class QuoteController extends Controller
             'discount_totals_amount'   => $quote->discountTotalsAmount(),
             'net_total'                => $quote->netTotal(),
             'itbms'                    => $quote->itbms(),
+            // SCRUM-1166 — para mostrar «ITBMS (7%)» o «ITBMS (Exento)» según la cotización, sin texto fijo.
+            'itbms_exento'             => $quote->isItbmsExempt(),
+            'itbms_percentage'         => $quote->itbmsPercentage(),
             'grand_total'              => $quote->grandTotal(),
             'conditions_text'          => $quote->conditions_text,
             'observations_preview'     => $quote->observationsForDocument(),

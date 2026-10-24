@@ -6,6 +6,7 @@ namespace App\Modules\AdminCont\Models;
 
 use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,9 +27,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon|null $cerrado_at
  * @property int|null    $aprobado_por
  * @property \Carbon\Carbon|null $aprobado_at
+ * @property array<string, mixed>|null $snapshot
+ * @property \Carbon\Carbon $created_at
  */
 class AdminContDailyCashCount extends Model
 {
+    use LogsAuditTrail;
+
     public const ESTADO_ABIERTO              = 'abierto';
     public const ESTADO_PENDIENTE_APROBACION = 'pendiente_aprobacion';
     public const ESTADO_APROBADO             = 'aprobado';
@@ -36,16 +41,20 @@ class AdminContDailyCashCount extends Model
     /** @var list<string> */
     protected $fillable = [
         'fecha', 'numero', 'estado', 'observacion_general',
-        'cerrado_por', 'cerrado_at', 'aprobado_por', 'aprobado_at',
+        'cerrado_por', 'cerrado_at', 'aprobado_por', 'aprobado_at', 'snapshot',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
-            'fecha'      => 'date',
-            'cerrado_at' => 'datetime',
+            'fecha'       => 'date',
+            'cerrado_at'  => 'datetime',
             'aprobado_at' => 'datetime',
+            // Pre-QA SCRUM-878/879 (2026-09-10) — total congelado al cerrar, ver migración
+            // 2026_09_11_100000. `array` (no `json`) porque se lee/escribe como PHP array siempre,
+            // igual que el resto del módulo (`AdminContBankMovement`, etc. no usan json crudo).
+            'snapshot'    => 'array',
         ];
     }
 

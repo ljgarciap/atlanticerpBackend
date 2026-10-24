@@ -3,8 +3,10 @@
 namespace Tests\Feature\Users;
 
 use App\Models\User;
+use App\Modules\Auth\Mail\WelcomeMail;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Tests\Feature\FeatureTestCase;
 
 class UserControllerTest extends FeatureTestCase
@@ -428,7 +430,7 @@ class UserControllerTest extends FeatureTestCase
 
     // ── security.users por permiso, no por rol hardcodeado ──────────────────────
 
-    public function test_actor_con_permiso_security_users_pero_rol_no_gerencial_puede_listar_usuarios(): void
+    public function test_actor_con_permiso_security_users_pero_rol_no_gerencial_no_puede_listar_usuarios(): void
     {
         // Senior Review 2026-08-02 (Fase 4 — Servicios, hallazgo CRÍTICO): este test verificaba
         // originalmente que supervisor@ (Nivel 5 "Team Lead") podía listar usuarios porque el
@@ -446,9 +448,11 @@ class UserControllerTest extends FeatureTestCase
 
         $token = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
 
+        // SCRUM-1012: el permiso (flag manage_users) ya no alcanza solo — Usuarios exige ADEMAS
+        // el rol base management/superadmin.
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/users')
-            ->assertStatus(200);
+            ->assertStatus(403);
     }
 
     // ── extra_permissions ────────────────────────────────────────────────────
@@ -533,14 +537,7 @@ class UserControllerTest extends FeatureTestCase
         ]);
         $response->assertStatus(200);
 
-        // Multi-role: need select-role
-        $token = $response->json('token') ?? (function () use ($response): string {
-            $select = $this->postJson('/api/auth/select-role', [
-                'selection_token' => $response->json('selection_token'),
-                'role'            => 'management',
-            ]);
-            return (string) $select->json('token');
-        })();
+        $token = (string) $response->json('token');
 
         // Decode JWT payload (middle segment)
         $parts   = explode('.', $token);
@@ -779,5 +776,153 @@ class UserControllerTest extends FeatureTestCase
     {
         $this->patchJson('/api/admin/users/1/flags', ['manage_users' => true])
             ->assertStatus(401);
+    }
+
+    // ── SCRUM-822 — cargo/fecha de ingreso/jefe directo ─────────────────────────
+
+    public function test_crear_usuario_con_cargo_fecha_ingreso_y_jefe_directo(): void
+    {
+        $token = $this->loginAs();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $manager = User::where('email', 'management@atlantic.test')->firstOrFail();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/users', [
+                'first_name'        => 'Con',
+                'last_name'         => 'Jefe',
+                'email'             => 'con.jefe@atlantic.test',
+                'roles'             => ['designer'],
+                'security_level_id' => $this->defaultLevelId(),
+                'job_title'         => 'Diseñador Senior',
+                'hire_date'         => '2026-01-15',
+                'manager_id'        => $manager->id,
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('job_title', 'Diseñador Senior')
+            ->assertJsonPath('hire_date', '2026-01-15')
+            ->assertJsonPath('manager.id', $manager->id)
+            ->assertJsonPath('manager.name', $manager->first_name . ' ' . $manager->last_name);
+    }
+
+    public function test_crear_usuario_sin_jefe_directo_retorna_manager_null(): void
+    {
+        // RN2 — null = "Ninguno — Socio Director", el nivel más alto sin jefe asignado.
+        $token = $this->loginAs();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/users', [
+                'first_name'        => 'Sin',
+                'last_name'         => 'Jefe',
+                'email'             => 'sin.jefe@atlantic.test',
+                'roles'             => ['designer'],
+                'security_level_id' => $this->defaultLevelId(),
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('manager', null)
+            ->assertJsonPath('job_title', null)
+            ->assertJsonPath('hire_date', null);
+    }
+
+    public function test_actualizar_cargo_fecha_ingreso_y_jefe_directo(): void
+    {
+        $token   = $this->loginAs();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $manager = User::where('email', 'management@atlantic.test')->firstOrFail();
+
+        $created = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/users', [
+                'first_name'        => 'Para',
+                'last_name'         => 'Actualizar',
+                'email'             => 'para.actualizar.822@atlantic.test',
+                'roles'             => ['designer'],
+                'security_level_id' => $this->defaultLevelId(),
+            ]);
+        $id = $created->json('id');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/users/{$id}", [
+                'job_title'  => 'Coordinador',
+                'hire_date'  => '2026-03-01',
+                'manager_id' => $manager->id,
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('job_title', 'Coordinador')
+            ->assertJsonPath('hire_date', '2026-03-01')
+            ->assertJsonPath('manager.id', $manager->id);
+    }
+
+    public function test_actualizar_usuario_no_puede_ser_su_propio_jefe_directo(): void
+    {
+        $token = $this->loginAs();
+
+        $created = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/users', [
+                'first_name'        => 'Auto',
+                'last_name'         => 'Referencia',
+                'email'             => 'auto.referencia@atlantic.test',
+                'roles'             => ['designer'],
+                'security_level_id' => $this->defaultLevelId(),
+            ]);
+        $id = $created->json('id');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/users/{$id}", ['manager_id' => $id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['manager_id']);
+    }
+
+    public function test_crear_usuario_con_jefe_directo_inexistente_retorna_422(): void
+    {
+        $token = $this->loginAs();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/users', [
+                'first_name'        => 'Jefe',
+                'last_name'         => 'Inexistente',
+                'email'             => 'jefe.inexistente@atlantic.test',
+                'roles'             => ['designer'],
+                'security_level_id' => $this->defaultLevelId(),
+                'manager_id'        => 999999,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['manager_id']);
+    }
+
+    public function test_crear_usuario_inactivo_no_envia_correo_de_bienvenida(): void
+    {
+        // RN3 — estado elegible al crear; is_active=false no debe disparar WelcomeMail.
+        $token = $this->loginAs();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/users', [
+                'first_name'        => 'Inactivo',
+                'last_name'         => 'AlCrear',
+                'email'             => 'inactivo.alcrear@atlantic.test',
+                'roles'             => ['designer'],
+                'security_level_id' => $this->defaultLevelId(),
+                'is_active'         => false,
+            ]);
+
+        $response->assertStatus(201)->assertJsonPath('is_active', false);
+        Mail::assertNotSent(WelcomeMail::class);
+    }
+
+    public function test_crear_usuario_activo_por_defecto_envia_correo_de_bienvenida(): void
+    {
+        $token = $this->loginAs();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/users', [
+                'first_name'        => 'Activo',
+                'last_name'         => 'PorDefecto',
+                'email'             => 'activo.pordefecto@atlantic.test',
+                'roles'             => ['designer'],
+                'security_level_id' => $this->defaultLevelId(),
+            ])
+            ->assertStatus(201);
+
+        Mail::assertSent(WelcomeMail::class);
     }
 }

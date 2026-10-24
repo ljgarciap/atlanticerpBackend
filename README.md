@@ -163,3 +163,9 @@ filtros en código.
 
 Diseño de arquitectura completo, modelo de datos, eventos de dominio, convenciones de
 nomenclatura y reglas del equipo de agentes: ver `../CLAUDE.md` (carpeta padre `atlanticerp/`).
+
+## CI/CD y despliegue
+
+Antes de empujar a `dev`, `test` o `master` hay que correr el **gate local** (`infra/gate.sh`) y activar el hook
+(`git config core.hooksPath .githooks`). `dev` y `test` solo despliegan; `master` corre el CI completo en GitHub
+Actions. Procedimiento completo, errores comunes y deploy manual: [`docs/runbooks/ci-cd-gate-local.md`](docs/runbooks/ci-cd-gate-local.md).

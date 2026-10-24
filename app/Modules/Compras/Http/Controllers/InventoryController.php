@@ -13,14 +13,16 @@ use App\Modules\Bodega\Services\ArrivalConfirmationService;
 use App\Modules\Compras\Http\Requests\StoreInventoryProductRequest;
 use App\Modules\Compras\Http\Requests\StoreInventoryProductTechnicalSheetRequest;
 use App\Modules\Compras\Http\Requests\UpdateInventoryProductRequest;
+use App\Modules\Compras\Http\Requests\UploadInventoryProductPhotoRequest;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Modules\VentasDiseno\Services\CatalogService;
-use App\Modules\VentasDiseno\Services\FuzzySearchService;
 use App\Shared\Http\Pagination;
+use App\Shared\Http\QueryParams;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -56,7 +58,6 @@ final class InventoryController extends Controller
     private const ALLOWED_SORTS = ['reference', 'name', 'price_full', 'stock_quantity', 'created_at'];
 
     public function __construct(
-        private readonly FuzzySearchService $fuzzySearch,
         private readonly InventoryKpiService $inventoryKpis,
         private readonly CatalogService $catalogService,
         private readonly ArrivalConfirmationService $arrivalConfirmation,
@@ -72,7 +73,7 @@ final class InventoryController extends Controller
      */
     public function checkReference(Request $request): JsonResponse
     {
-        $reference = trim((string) $request->query('reference', ''));
+        $reference = trim(QueryParams::string($request, 'reference'));
         $excludeId = $request->query('exclude_id');
 
         if ($reference === '') {
@@ -160,6 +161,32 @@ final class InventoryController extends Controller
         ]);
     }
 
+    /**
+     * SCRUM-830 — reemplazo de imagen en edición. Mismo mecanismo de creación (RN08/RN09): esta
+     * ruta SIEMPRE exige un archivo válido (`UploadInventoryProductPhotoRequest`), así que
+     * `PUT /inventory/{id}` (UpdateInventoryProductRequest, sin campo de imagen) nunca puede dejar
+     * un producto sin foto — la única forma de tocar la imagen es este endpoint, que nunca borra
+     * la anterior hasta confirmar la nueva (ver `CatalogService::uploadPhoto()`).
+     */
+    public function uploadPhoto(UploadInventoryProductPhotoRequest $request, int $id): JsonResponse
+    {
+        $product = CatalogProduct::find($id);
+        if ($product === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        /** @var UploadedFile $file */
+        $file = $request->validated()['photo'];
+        $this->catalogService->uploadPhoto($product, $file);
+
+        return response()->json([
+            'id' => $product->id,
+            'photo_url' => $this->catalogService->photoThumbnailUrl($product),
+            'photo_full_url' => $this->catalogService->photoUrl($product),
+            'has_uploaded_photo' => $product->hasUploadedPhoto(),
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $access = $this->resolveAccess($request);
@@ -168,119 +195,105 @@ final class InventoryController extends Controller
         }
         [$user, $restricted, $canManage] = $access;
 
-        $chip = (string) $request->query('chip', 'todos');
+        $chip = QueryParams::string($request, 'chip', 'todos');
         $warehouseIds = $this->parseWarehouseIds($request);
+        $familyId = $this->parseFamilyId($request);
+        $pagination = Pagination::params($request, self::ALLOWED_SORTS, 'reference');
 
-        /** @var list<CatalogProduct> $products */
-        $products = CatalogProduct::query()
-            ->with(['families', 'provider'])
-            ->when($chip !== 'inactivos', fn ($q) => $q->where('is_active', true))
-            ->when($chip === 'inactivos', fn ($q) => $q->where('is_active', false))
-            // SCRUM-743 — `warehouse_ids[]` ausente o vacío = sin filtro (todas las bodegas, nunca
-            // tabla vacía por default, criterio explícito del ticket). Con 1+ IDs: unión/OR entre
-            // bodegas seleccionadas (whereHas + whereIn, no un AND por bodega) — un producto con
-            // stock en CUALQUIERA de las bodegas elegidas matchea. `quantity > 0` usa el mismo
-            // criterio que `InventoryKpiService::warehousesMap()`/`warehouseBreakdown()` (la
-            // columna "Bodega(s)" ya solo muestra bodegas con stock > 0), para que el filtro nunca
-            // devuelva un producto que la propia tabla no puede mostrar como "en esa bodega".
-            ->when($warehouseIds !== [], fn ($q) => $q->whereHas(
-                'warehouseStocks',
-                fn ($wq) => $wq->whereIn('warehouse_id', $warehouseIds)->where('quantity', '>', 0),
-            ))
-            ->get()->all();
+        // SCRUM-993 — filtro, orden y paginación en SQL. Antes: `->get()->all()` del catálogo completo
+        // (~30K productos con 2 relaciones eager) + 4 mapas por ID + `usort` en PHP, y recién al final
+        // `Pagination::ofArray()` — agotaba `memory_limit` (256 MB) con el catálogo de Lafayette.
+        // Las relaciones (`families`, `provider`) se cargan SOLO para las filas de la página.
+        $query = $this->inventoryKpis->withAggregates(
+            $this->inventoryKpis->baseQuery()
+                ->when($chip !== 'inactivos', fn ($q) => $q->where('cp.is_active', true))
+                ->when($chip === 'inactivos', fn ($q) => $q->where('cp.is_active', false))
+                // SCRUM-743 — `warehouse_ids[]` ausente o vacío = sin filtro (todas las bodegas, nunca
+                // tabla vacía por default, criterio explícito del ticket). Con 1+ IDs: unión/OR entre
+                // bodegas seleccionadas — un producto con stock en CUALQUIERA de las bodegas elegidas
+                // matchea. `quantity > 0` usa el mismo criterio que `InventoryKpiService::warehousesMap()`
+                // (la columna "Bodega(s)" ya solo muestra bodegas con stock > 0), para que el filtro
+                // nunca devuelva un producto que la propia tabla no puede mostrar como "en esa bodega".
+                ->when($warehouseIds !== [], fn ($q) => $q->whereIn('cp.id', fn ($sub) => $sub
+                    ->select('catalog_product_id')
+                    ->from((new ProductWarehouseStock)->getTable())
+                    ->whereIn('warehouse_id', $warehouseIds)
+                    ->where('quantity', '>', 0)))
+                // SCRUM-1010 — `family_id` ausente o inválido = sin filtro. Una sola familia (select, no
+                // multiselección): la relación es N:M, así que un producto compartido aparece al filtrar
+                // por cualquiera de sus familias. Subconsulta sobre el pivot (índice único
+                // (family_id, catalog_product_id)), nunca carga la familia en PHP — mismo criterio SQL
+                // de SCRUM-993 con el catálogo completo.
+                ->when($familyId !== null, fn ($q) => $q->whereIn('cp.id', fn ($sub) => $sub
+                    ->select('catalog_product_id')
+                    ->from((new CatalogProductFamily)->products()->getTable())
+                    ->where('family_id', $familyId))),
+        );
 
-        $search = trim((string) $request->query('search', ''));
+        $search = trim(QueryParams::string($request, 'search'));
         $fuzzy = false;
         if ($search !== '') {
-            [$products, $fuzzy] = $this->fuzzySearch->search(
-                $products,
-                $search,
-                fn (CatalogProduct $p): string => "{$p->reference} {$p->name}",
-            );
+            // SCRUM-992 — búsqueda en SQL sobre `search_text` (índice trigram, sin acentos), con respaldo
+            // tolerante a typos solo si la parcial da 0 resultados. Ya no recorre las ~30K filas en PHP.
+            $fuzzy = CatalogProduct::applySearch($query, $search, fuzzyFallback: true, prefix: 'cp.');
         }
 
-        $productIds = array_map(fn (CatalogProduct $p): int => $p->id, $products);
-        $porServirMap = $this->inventoryKpis->porServirMap($productIds);
-        $porIngresarMap = $this->inventoryKpis->porIngresarMap($productIds);
-        $enCaminoMap = $this->inventoryKpis->enCaminoMap($productIds);
+        // REQ-172 Escenario 1/REQ-235, REQ-112, SCRUM-168 RN2 — chips por_ingresar / en_atencion /
+        // bajo_stock / sin_stock / bajo_stock_sin_ordenar: las reglas viven en `InventoryKpiService`
+        // (`sql*()`), la misma fuente que `kpis()` y `stockState()`, nunca una definición paralela.
+        $this->inventoryKpis->applyChip($query, $chip);
 
-        // REQ-172 Escenario 1/REQ-235 (fix Pre-QA 2026-07-20, rechazado por marly: el chip
-        // devolvía [] siempre) — el chip "por_ingresar" filtra productos EXISTENTES con unidades
-        // pendientes de confirmar (porIngresarMap > 0). El alta automática de un producto NUEVO
-        // vía ingreso (RN de REQ-166) sigue sin implementarse (REQ-163 acota el buscador de un
-        // ingreso a productos que ya existen en catalog_products), así que ese caso aparte sigue
-        // sin tener nada que mostrar — pero un producto ya existente con unidades "Por ingresar"
-        // sí debe listarse acá, no solo verse en la columna `por_ingresar` de "Todos".
-        if ($chip === 'por_ingresar') {
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => ($porIngresarMap[$p->id] ?? 0) > 0,
-            ));
-        } elseif ($chip === 'en_atencion') {
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => $this->inventoryKpis->isInAttention($p, $porServirMap[$p->id] ?? 0),
-            ));
-        } elseif ($chip === 'bajo_stock' || $chip === 'sin_stock') {
-            // REQ-112 (Inicio de Compras) — "Bajo stock"/"Sin stock" navegan acá con el filtro de
-            // Estado ya aplicado. Reusa InventoryKpiService::stockState(), misma clasificación que
-            // ya usa format() para la columna "estado" -- nunca una definición paralela.
-            $targetState = $chip === 'bajo_stock' ? InventoryKpiService::STOCK_BAJO_STOCK : InventoryKpiService::STOCK_SIN_STOCK;
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => $this->inventoryKpis->stockState($p, $porServirMap[$p->id] ?? 0) === $targetState,
-            ));
-        } elseif ($chip === 'bajo_stock_sin_ordenar') {
-            // SCRUM-168 RN2 (Salud · Compras de Gerencia) — bajo_stock/sin_stock que además no
-            // tiene ninguna orden abierta cubriéndolo (enCaminoMap = 0).
-            $products = array_values(array_filter(
-                $products,
-                fn (CatalogProduct $p): bool => $this->inventoryKpis->isLowStockWithoutOpenOrder(
-                    $p,
-                    $porServirMap[$p->id] ?? 0,
-                    $enCaminoMap[$p->id] ?? 0,
-                ),
-            ));
-        }
+        $this->applySort($query, $pagination['sort_by'], $pagination['sort_dir']);
+        $paginator = $query->paginate($pagination['per_page'], ['*'], 'page', $pagination['page']);
+        (new \Illuminate\Database\Eloquent\Collection($paginator->items()))->load(['families', 'provider', 'providers']);
 
-        $pagination = Pagination::params($request, self::ALLOWED_SORTS, 'reference');
-        usort($products, function (CatalogProduct $a, CatalogProduct $b) use ($pagination): int {
-            /** @var string $field */
-            $field = $pagination['sort_by'];
-            $cmp = match ($field) {
-                'created_at' => $a->created_at <=> $b->created_at,
-                'price_full', 'stock_quantity' => $a->{$field} <=> $b->{$field},
-                default => strcasecmp((string) $a->{$field}, (string) $b->{$field}),
-            };
-
-            return $pagination['sort_dir'] === 'desc' ? -$cmp : $cmp;
-        });
-        $paginator = Pagination::ofArray($products, $pagination['per_page'], $pagination['page']);
-
-        // SCRUM-234/238 — "Bodega(s)" solo se calcula para la página actual (no para todo
-        // $productIds, que puede incluir productos filtrados fuera de la página), evita una query
-        // más pesada de lo necesario en listados grandes.
+        // SCRUM-234/238 — "Bodega(s)" solo se calcula para la página actual.
         $pageIds = array_values(array_map(fn (CatalogProduct $p): int => $p->id, $paginator->items()));
         $warehousesMap = $this->inventoryKpis->warehousesMap($pageIds);
+        $showroomMap = $this->inventoryKpis->enShowroomMap($pageIds); // SCRUM-1196 — una consulta agregada por página
 
         return response()->json([
             'fuzzy' => $fuzzy,
             'restricted' => $restricted,
             'can_manage' => $canManage,
-            'kpis' => $this->kpis(),
+            // SCRUM-1013 (Pre-QA H1) — en modo restringido (vendedor) `total_value` (precio × stock) tampoco viaja:
+            // la pantalla lo ocultaba pero la API lo devolvía igual (familias ya lo enmascaraba).
+            'kpis' => $restricted ? [...$this->kpis(), 'total_value' => null] : $this->kpis(),
             'data' => array_map(
                 fn (CatalogProduct $p) => $this->format(
                     $p,
-                    $porServirMap[$p->id] ?? 0,
+                    (int) $p->getAttribute('por_servir'),
                     $restricted,
-                    $porIngresarMap[$p->id] ?? 0,
-                    $enCaminoMap[$p->id] ?? 0,
+                    (int) $p->getAttribute('por_ingresar'),
+                    (int) $p->getAttribute('en_camino'),
                     $warehousesMap[$p->id] ?? [],
+                    enExcluida: (int) $p->getAttribute('en_excluida'),
+                    showroom: $showroomMap[$p->id] ?? 0,
                 ),
                 $paginator->items(),
             ),
             'meta' => Pagination::meta($paginator),
         ]);
+    }
+
+    /**
+     * SCRUM-993 — orden en SQL equivalente al `usort` anterior: texto con `strcasecmp` (minúsculas, byte a
+     * byte → `LOWER() COLLATE "C"`, NULL como cadena vacía) y números/fechas con NULL primero en asc y
+     * último en desc (el `<=>` de PHP trata null como el menor). Desempate estable por `id`.
+     *
+     * @param  Builder<CatalogProduct>  $query
+     */
+    private function applySort($query, string $field, string $dir): void
+    {
+        $desc = $dir === 'desc';
+        $column = 'cp.'.$field; // `$field` ya viene validado contra ALLOWED_SORTS por Pagination::params()
+
+        if (in_array($field, ['reference', 'name'], true)) {
+            $query->orderByRaw("LOWER(COALESCE({$column}, '')) COLLATE \"C\" ".($desc ? 'DESC' : 'ASC'));
+        } else {
+            $query->orderByRaw("{$column} ".($desc ? 'DESC NULLS LAST' : 'ASC NULLS FIRST'));
+        }
+        $query->orderBy('cp.id');
     }
 
     public function show(Request $request, int $id): JsonResponse
@@ -291,7 +304,7 @@ final class InventoryController extends Controller
         }
         [, $restricted] = $access;
 
-        $product = CatalogProduct::with(['families', 'provider'])->find($id);
+        $product = CatalogProduct::with(['families', 'provider', 'providers'])->find($id);
         if ($product === null) {
             return response()->json(['message' => 'Not found'], 404);
         }
@@ -300,12 +313,14 @@ final class InventoryController extends Controller
         $porIngresar = $this->inventoryKpis->porIngresarMap([$id])[$id] ?? 0;
         $enCamino = $this->inventoryKpis->enCaminoMap([$id])[$id] ?? 0;
         $warehouses = $this->inventoryKpis->warehousesMap([$id])[$id] ?? [];
+        $enExcluida = $this->inventoryKpis->enBodegaExcluidaMap([$id])[$id] ?? 0;
+        $showroom = $this->inventoryKpis->enShowroomMap([$id])[$id] ?? 0;
         // Rebote REQ-427 (Gerencia Test 2026-08-13) — el detalle de Compras debe reflejar si
         // Bodega ya confirmó la llegada física (cantidad + quién), solo en el detalle completo
         // (no en index(), para no pagar 1 query extra por fila de la tabla).
         $arrival = $this->arrivalConfirmation->pendingSummary($id);
 
-        return response()->json($this->format($product, $porServir, $restricted, $porIngresar, $enCamino, $warehouses, includeRestrictedDetail: true, arrival: $arrival));
+        return response()->json($this->format($product, $porServir, $restricted, $porIngresar, $enCamino, $warehouses, includeRestrictedDetail: true, arrival: $arrival, enExcluida: $enExcluida, showroom: $showroom));
     }
 
     public function store(StoreInventoryProductRequest $request): JsonResponse
@@ -329,8 +344,11 @@ final class InventoryController extends Controller
         $technicalSheetFile = $request->file('file');
         $technicalSheetLink = $request->input('link');
 
+        /** @var UploadedFile $photoFile */
+        $photoFile = $request->file('photo');
+
         $product = DB::transaction(function () use (
-            $validated, $initialStock, $totalStockQuantity, $technicalSheetFile, $technicalSheetLink,
+            $validated, $initialStock, $totalStockQuantity, $technicalSheetFile, $technicalSheetLink, $photoFile,
         ): CatalogProduct {
             // RN1/Escenario 1 (REQ-177): el stock inicial cuenta como disponible de inmediato,
             // nunca pasa por "Por ingresar" — a diferencia de un producto creado desde una orden.
@@ -362,6 +380,9 @@ final class InventoryController extends Controller
                 $product->families()->sync([$validated['family_id']]);
             }
 
+            // SCRUM-1126 — pivote de proveedores (el principal siempre incluido).
+            $product->syncProviders($validated['provider_ids'] ?? [], (int) $validated['provider_id']);
+
             foreach ($initialStock as $entry) {
                 if ($entry['quantity'] <= 0) {
                     continue;
@@ -386,12 +407,16 @@ final class InventoryController extends Controller
                 ]);
             }
 
+            // SCRUM-830 — mismo criterio que la ficha técnica de arriba: DENTRO de esta transacción,
+            // nunca un producto sin imagen en la base ni siquiera transitoriamente (RN01/RN02/RN08).
+            $this->catalogService->uploadPhoto($product, $photoFile);
+
             return $product;
         });
 
         // `format()` lee `family`/`provider_name` vía relationLoaded() — sin este load() vuelven
         // null aunque family_id/provider_id ya estén seteados (mismo criterio que update()).
-        $product->load(['families', 'provider']);
+        $product->load(['families', 'provider', 'providers']);
 
         return response()->json($this->format($product, porServir: 0, restricted: false, porIngresar: 0, enCamino: 0), 201);
     }
@@ -416,11 +441,31 @@ final class InventoryController extends Controller
         $familyId = $validated['family_id'] ?? null;
         unset($validated['family_id']);
 
-        $product->update($validated);
-        if ($hasFamilyId) {
-            $product->families()->sync($familyId !== null ? [$familyId] : []);
-        }
-        $product->load(['families', 'provider']);
+        // SCRUM-1126 — `provider_ids` tampoco es columna: se sincroniza en la pivote. `provider_id` (principal)
+        // ya viene resuelto por UpdateInventoryProductRequest::prepareForValidation().
+        $hasProviderIds = array_key_exists('provider_ids', $validated);
+        $providerIds = $validated['provider_ids'] ?? [];
+        unset($validated['provider_ids']);
+
+        DB::transaction(function () use ($product, $validated, $hasProviderIds, $providerIds, $hasFamilyId, $familyId): void {
+            $product->update($validated);
+            if ($hasProviderIds) {
+                $product->syncProviders($providerIds, $product->provider_id);
+            } elseif (array_key_exists('provider_id', $validated)) {
+                if ($product->provider_id !== null) {
+                    // Cambio de principal sin lista: el nuevo principal entra a la pivote, los demás se conservan.
+                    $product->providers()->syncWithoutDetaching([$product->provider_id]);
+                } else {
+                    // provider_id null sin lista = producto sin proveedores (igual que provider_ids: []): sin filas viejas en la pivote.
+                    $product->providers()->sync([]);
+                    $product->unsetRelation('providers');
+                }
+            }
+            if ($hasFamilyId) {
+                $product->families()->sync($familyId !== null ? [$familyId] : []);
+            }
+        });
+        $product->load(['families', 'provider', 'providers']);
 
         $porServir = $this->inventoryKpis->porServirMap([$id])[$id] ?? 0;
         $porIngresar = $this->inventoryKpis->porIngresarMap([$id])[$id] ?? 0;
@@ -455,7 +500,7 @@ final class InventoryController extends Controller
         }
 
         $product->update(['is_active' => ! $product->is_active]);
-        $product->load('provider');
+        $product->load(['provider', 'providers']);
 
         $porServir = $this->inventoryKpis->porServirMap([$id])[$id] ?? 0;
         $enCamino = $this->inventoryKpis->enCaminoMap([$id])[$id] ?? 0;
@@ -464,7 +509,7 @@ final class InventoryController extends Controller
         return response()->json($this->format($product, $porServir, restricted: false, porIngresar: $porIngresar, enCamino: $enCamino, warehouses: $warehouses));
     }
 
-    /** SCRUM-244 (REQ-181) — desglose de stock por bodega; solo bodegas con stock > 0. */
+    /** SCRUM-244 (REQ-181) — desglose de stock por bodega; todas las bodegas con saldo distinto de 0 (SCRUM-1196: también las negativas). */
     public function warehouseBreakdown(Request $request, int $id): JsonResponse
     {
         $access = $this->resolveAccess($request);
@@ -477,9 +522,11 @@ final class InventoryController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // SCRUM-990: una fila residual contra una bodega de solo consulta (Zona Libre) no es stock de Atlantic.
         $rows = ProductWarehouseStock::with('warehouse')
+            ->enBodegaOperativa()
             ->where('catalog_product_id', $id)
-            ->where('quantity', '>', 0)
+            ->where('quantity', '<>', 0) // SCRUM-1196: también los negativos; la suma coincide con el Stock total
             ->get();
 
         return response()->json([
@@ -752,7 +799,7 @@ final class InventoryController extends Controller
         }
 
         return response()->json([
-            'data' => Warehouse::orderBy('id')->get(['id', 'name']),
+            'data' => Warehouse::operativas()->orderBy('id')->get(['id', 'name']),
         ]);
     }
 
@@ -792,17 +839,26 @@ final class InventoryController extends Controller
         )));
     }
 
+    /** SCRUM-1010 — `family_id` entero positivo; cualquier otra cosa (ausente, vacío, no numérico, 0) = sin filtro. */
+    private function parseFamilyId(Request $request): ?int
+    {
+        $raw = $request->query('family_id');
+
+        return is_numeric($raw) && (int) $raw > 0 ? (int) $raw : null;
+    }
+
     /**
      * @param  list<array{warehouse_id: int, warehouse_name: string|null, quantity: int}>  $warehouses
      * @param  array{pending_bodega_action: bool, awaiting_compras: bool, confirmed_quantity: int, confirmed_by_name: string|null}|null  $arrival
      * @return array<string, mixed>
      */
-    private function format(CatalogProduct $product, int $porServir, bool $restricted, int $porIngresar = 0, int $enCamino = 0, array $warehouses = [], bool $includeRestrictedDetail = false, ?array $arrival = null): array
+    private function format(CatalogProduct $product, int $porServir, bool $restricted, int $porIngresar = 0, int $enCamino = 0, array $warehouses = [], bool $includeRestrictedDetail = false, ?array $arrival = null, int $enExcluida = 0, int $showroom = 0): array
     {
         // REQ-172 Escenario 1/2 — "Disponible" nunca cuenta lo "Por ingresar" (llegó, falta
         // confirmar) hasta que se confirma; "En camino" (todavía no llegó de ninguna forma) es un
-        // eje aparte que no afecta ni a Disponible ni al estado de stock.
-        $disponible = ($product->stock_quantity ?? 0) - $porServir;
+        // eje aparte que no afecta ni a Disponible ni al estado de stock. SCRUM-851 — tampoco
+        // cuenta lo ubicado en una bodega excluida (Reserva Servicios/Merma/Reclamos).
+        $disponible = $this->inventoryKpis->disponibleParaVenta($product, $porServir, $enExcluida);
         $estado = match (true) {
             $disponible <= 0 => 'sin_stock',
             $disponible <= ($product->reorder_point ?? 0) => 'bajo_stock',
@@ -821,7 +877,11 @@ final class InventoryController extends Controller
             'name' => $product->name,
             'description' => $product->description,
             'brand' => $product->brand,
-            'photo_url' => $product->photo_url,
+            // SCRUM-830 — 'photo_url' sigue siendo la miniatura (ya la consume la tabla como
+            // thumbnail chico), 'photo_full_url' es la imagen completa para el detalle.
+            'photo_url' => $this->catalogService->photoThumbnailUrl($product),
+            'photo_full_url' => $this->catalogService->photoUrl($product),
+            'has_uploaded_photo' => $product->hasUploadedPhoto(),
             'category' => $product->category,
             'rotation' => $product->rotation,
             'reorder_point' => $product->reorder_point,
@@ -832,7 +892,11 @@ final class InventoryController extends Controller
             'por_ingresar' => $porIngresar,
             'en_camino' => $enCamino,
             'provider_name' => $product->relationLoaded('provider') ? $product->provider?->name : null,
+            // SCRUM-1126 — todos los proveedores del producto (principal primero); `provider_name` sigue siendo el principal.
+            'providers' => $product->relationLoaded('providers') ? $product->providersPayload() : [],
             'disponible' => $disponible,
+            // SCRUM-1196 — lo que hay en Showroom Obarrio (se puede vender, pero NO suma al disponible): dato aparte para el vendedor.
+            'stock_showroom' => $showroom,
             'estado' => $estado,
             'is_active' => $product->is_active,
             // SCRUM-425 (REQ-355, RN1) — ficha técnica de solo lectura, visible para Bodega igual

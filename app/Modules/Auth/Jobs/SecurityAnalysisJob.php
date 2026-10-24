@@ -4,11 +4,21 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Jobs;
 
+use App\Modules\AdminCont\Models\AdminContPayment;
+use App\Modules\AdminCont\Models\AdminContPaymentConfirmation;
+use App\Modules\AdminCont\Services\AdminContSettingsService;
 use App\Modules\Auth\Events\SecurityAnomalyDetected;
 use App\Modules\Auth\Models\AuditLog;
+use App\Modules\Auth\Models\ImpersonationSession;
 use App\Modules\Auth\Models\SecurityAnomaly;
+use App\Modules\Auth\Services\ImpersonationSettings;
+use App\Modules\Bodega\Models\AdjustmentRequest;
+use App\Modules\Bodega\Models\AdjustmentRequestLine;
+use App\Modules\Bodega\Models\RelocationRequest;
+use App\Modules\Bodega\Services\BodegaSettingsService;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Services\AuditService;
+use App\Shared\Support\AiUsageAuditor;
 use App\Shared\Support\AnthropicClient;
 use App\Shared\Support\CircuitBreaker;
 use App\Shared\Support\CircuitOpenException;
@@ -77,10 +87,33 @@ final class SecurityAnalysisJob implements ShouldQueue
 
             $this->flagPublicUploads($rangeStart, $rangeEnd);
 
+            // REQ-635 (SCRUM-811) — reglas determinísticas de fraude económico en Bodega y
+            // Admin&Cont, mismo patrón que flagPublicUploads() (sin IA). Ver
+            // docs/security/THREAT-MODEL-bodega-admincont-fraude.md para el razonamiento de cada
+            // regla y sus umbrales configurables.
+            $this->flagBodegaLargeAdjustments($rangeStart, $rangeEnd);
+            $this->flagBodegaOffHoursActivity($rangeStart, $rangeEnd);
+            $this->flagBodegaCorrelatedAdjustmentRelocation($rangeStart, $rangeEnd);
+            $this->flagBodegaNewIpActivity($rangeStart, $rangeEnd);
+            $this->flagAdminContUnusualPaymentAmounts($rangeStart, $rangeEnd);
+            $this->flagAdminContRepeatedApprovals($rangeStart, $rangeEnd);
+
+            // SCRUM-1158 (C7) — uso inusual de «Ver como usuario». Umbrales en los ajustes globales (grupo `impersonation`).
+            $this->flagImpersonationUsage($rangeStart, $rangeEnd);
+
             $summary = $this->buildUserSummary($rangeStart, $rangeEnd);
 
             if ($summary === []) {
                 return; // sin actividad de usuarios en la ventana, nada que analizar
+            }
+
+            if ($this->attempts() === 1) {
+                AiUsageAuditor::log(
+                    static::class,
+                    'security_analysis_run',
+                    $rangeStart->toDateString(),
+                    $this->systemPrompt(),
+                );
             }
 
             $cb = new CircuitBreaker('anthropic', threshold: 5, windowSeconds: 60, openTimeout: 30);
@@ -140,6 +173,7 @@ final class SecurityAnalysisJob implements ShouldQueue
                 'user_id'                   => $userId,
                 'auth_failed_count'         => 0,
                 'auth_login_count'          => 0,
+                'refresh_token_reuse_count' => 0,
                 'distinct_login_ips'        => [],
                 'document_downloads'        => 0,
                 'distinct_projects_touched' => [],
@@ -150,6 +184,9 @@ final class SecurityAnalysisJob implements ShouldQueue
             switch ($log->action) {
                 case AuditService::AUTH_FAILED:
                     $summary[$userId]['auth_failed_count']++;
+                    break;
+                case AuditService::AUTH_REFRESH_TOKEN_REUSE:   // SCRUM-1033 (A-03)
+                    $summary[$userId]['refresh_token_reuse_count']++;
                     break;
                 case AuditService::AUTH_LOGIN:
                     $summary[$userId]['auth_login_count']++;
@@ -220,6 +257,478 @@ final class SecurityAnalysisJob implements ShouldQueue
             ]);
 
             event(new SecurityAnomalyDetected($row));
+        }
+    }
+
+    /**
+     * SCRUM-1158 (condición C7 del threat model de «Ver como usuario») — tres señales determinísticas, sin IA, sobre las sesiones de
+     * impersonación de la ventana. Los umbrales viven en los ajustes globales de superadmin (`ImpersonationSettings`), no en código; una señal salta
+     * cuando el valor SUPERA el umbral:
+     *  - sesiones de un mismo actor en el día (reconocimiento masivo de colegas);
+     *  - personas distintas vistas por un actor dentro de una misma hora (barrido);
+     *  - intentos de escritura bloqueados dentro de UNA sesión (un guion probando endpoints; el modo solo lectura los rechaza, pero que alguien
+     *    insista es en sí una señal).
+     */
+    private function flagImpersonationUsage(Carbon $start, Carbon $end): void
+    {
+        $settings = app(ImpersonationSettings::class);
+
+        $sessions = ImpersonationSession::query()
+            ->whereBetween('started_at', [$start, $end])
+            ->orderBy('started_at')
+            ->get(['id', 'actor_id', 'target_id', 'started_at']);
+
+        foreach ($sessions->groupBy('actor_id') as $actorId => $mine) {
+            $actorId = (int) $actorId;
+
+            $perDayLimit = $settings->alertSessionsPerDay();
+            if ($mine->count() > $perDayLimit) {
+                $this->emitImpersonationAnomaly(
+                    SecurityAnomaly::SEVERITY_MEDIUM,
+                    sprintf('Un superadmin inició %d sesiones de «Ver como usuario» en un día (umbral %d).', $mine->count(), $perDayLimit),
+                    'impersonation_sesiones_por_dia',
+                    ['sessions' => $mine->count(), 'threshold' => $perDayLimit, 'target_user_ids' => $mine->pluck('target_id')->unique()->values()->all()],
+                    $actorId,
+                    $start,
+                    $end,
+                );
+            }
+
+            // Ventana deslizante de 1 hora que empieza en cada sesión: ¿a cuántas personas distintas vio el actor?
+            $perHourLimit = $settings->alertTargetsPerHour();
+            $worstTargets = [];
+            foreach ($mine->values() as $i => $first) {
+                $limit   = $first->started_at->copy()->addHour();
+                $targets = $mine->slice($i)
+                    ->filter(fn (ImpersonationSession $s): bool => $s->started_at->lessThanOrEqualTo($limit))
+                    ->pluck('target_id')->unique()->values()->all();
+
+                if (count($targets) > count($worstTargets)) {
+                    $worstTargets = $targets;
+                }
+            }
+            if (count($worstTargets) > $perHourLimit) {
+                $this->emitImpersonationAnomaly(
+                    SecurityAnomaly::SEVERITY_MEDIUM,
+                    sprintf('Un superadmin vio como %d personas distintas en una misma hora con «Ver como usuario» (umbral %d).', count($worstTargets), $perHourLimit),
+                    'impersonation_objetivos_por_hora',
+                    ['distinct_targets' => count($worstTargets), 'threshold' => $perHourLimit, 'target_user_ids' => $worstTargets],
+                    $actorId,
+                    $start,
+                    $end,
+                );
+            }
+        }
+
+        $blockedLimit = $settings->alertBlockedWritesPerSession();
+        $blocked = AuditLog::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->where('action', AuditService::AUTH_IMPERSONATION_WRITE_BLOCKED)
+            ->get(['user_id', 'metadata'])
+            ->filter(fn (AuditLog $log): bool => is_string($log->metadata['impersonation_id'] ?? null))
+            ->groupBy(fn (AuditLog $log): string => (string) $log->metadata['impersonation_id']);
+
+        foreach ($blocked as $sessionId => $logs) {
+            if ($logs->count() <= $blockedLimit) {
+                continue;
+            }
+
+            $this->emitImpersonationAnomaly(
+                SecurityAnomaly::SEVERITY_MEDIUM,
+                sprintf('%d intentos de escritura bloqueados dentro de una sola sesión de «Ver como usuario» (umbral %d).', $logs->count(), $blockedLimit),
+                'impersonation_escrituras_bloqueadas',
+                ['impersonation_id' => (string) $sessionId, 'blocked_writes' => $logs->count(), 'threshold' => $blockedLimit],
+                $logs->first()?->user_id,
+                $start,
+                $end,
+            );
+        }
+    }
+
+    /** @param array<string, mixed> $details */
+    private function emitImpersonationAnomaly(string $severity, string $reasoning, string $rule, array $details, ?int $actorId, Carbon $start, Carbon $end): void
+    {
+        $row = SecurityAnomaly::create([
+            'severity'         => $severity,
+            'reasoning'        => $reasoning,
+            'raw_response'     => ['source' => 'deterministic', 'rule' => $rule] + $details,
+            'affected_user_id' => $actorId,
+            'range_start'      => $start,
+            'range_end'        => $end,
+            'status'           => SecurityAnomaly::STATUS_PENDING,
+        ]);
+
+        event(new SecurityAnomalyDetected($row));
+    }
+
+    /**
+     * REQ-635 (Hallazgo 1 del threat model) — línea de ajuste cuya magnitud supera el umbral
+     * configurable de Bodega. `AdjustmentRequestLine::cantidad` ya viene sin signo (la dirección
+     * la da `tipo`), `abs()` es solo defensa en profundidad.
+     */
+    private function flagBodegaLargeAdjustments(Carbon $start, Carbon $end): void
+    {
+        $threshold = (new BodegaSettingsService())->fraudeAjusteGrandeUnidades();
+
+        $lines = AdjustmentRequestLine::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->with('request')
+            ->get();
+
+        foreach ($lines as $line) {
+            if (abs($line->cantidad) < $threshold) {
+                continue;
+            }
+
+            $request = $line->request;
+            if ($request === null) {
+                continue;
+            }
+
+            $row = SecurityAnomaly::create([
+                'severity'  => SecurityAnomaly::SEVERITY_MEDIUM,
+                'reasoning' => sprintf(
+                    'Ajuste de inventario de %d unidades (umbral configurado: %d) — producto #%d.',
+                    abs($line->cantidad),
+                    $threshold,
+                    $request->catalog_product_id,
+                ),
+                'raw_response' => [
+                    'source'                => 'deterministic',
+                    'rule'                  => 'bodega_ajuste_grande',
+                    'adjustment_request_id' => $request->id,
+                    'adjustment_line_id'    => $line->id,
+                    'catalog_product_id'    => $request->catalog_product_id,
+                    'cantidad'              => $line->cantidad,
+                ],
+                'affected_user_id' => $request->solicitado_por,
+                'range_start'      => $start,
+                'range_end'        => $end,
+                'status'           => SecurityAnomaly::STATUS_PENDING,
+            ]);
+
+            event(new SecurityAnomalyDetected($row));
+        }
+    }
+
+    /**
+     * REQ-635 (Hallazgo 2 del threat model) — ajustes/reubicaciones registrados en madrugada,
+     * ventana siempre [00:00, fraude_horario_fin_hora) en hora local del tenant. A propósito NO
+     * usa una ventana de "horario de oficina": los datos reales de producción mostraron actividad
+     * legítima hasta las 22:27 y en domingo — ver threat model, Hallazgo 2.
+     */
+    private function flagBodegaOffHoursActivity(Carbon $start, Carbon $end): void
+    {
+        $finHora = (new BodegaSettingsService())->fraudeHorarioFinHora();
+
+        $adjustments = AdjustmentRequest::query()->whereBetween('created_at', [$start, $end])->get();
+
+        foreach ($adjustments as $adjustment) {
+            $local = $adjustment->created_at->copy()->timezone(self::BUSINESS_TIMEZONE);
+            if ($local->hour >= $finHora) {
+                continue;
+            }
+
+            $row = SecurityAnomaly::create([
+                'severity'  => SecurityAnomaly::SEVERITY_MEDIUM,
+                'reasoning' => sprintf('Ajuste de inventario registrado en madrugada (%s hora local).', $local->format('H:i')),
+                'raw_response' => [
+                    'source'                 => 'deterministic',
+                    'rule'                   => 'bodega_fuera_de_horario',
+                    'adjustment_request_id'  => $adjustment->id,
+                    'catalog_product_id'     => $adjustment->catalog_product_id,
+                    'hora_local'             => $local->format('H:i'),
+                ],
+                'affected_user_id' => $adjustment->solicitado_por,
+                'range_start'      => $start,
+                'range_end'        => $end,
+                'status'           => SecurityAnomaly::STATUS_PENDING,
+            ]);
+
+            event(new SecurityAnomalyDetected($row));
+        }
+
+        $relocations = RelocationRequest::query()->whereBetween('created_at', [$start, $end])->get();
+
+        foreach ($relocations as $relocation) {
+            $local = $relocation->created_at->copy()->timezone(self::BUSINESS_TIMEZONE);
+            if ($local->hour >= $finHora) {
+                continue;
+            }
+
+            $row = SecurityAnomaly::create([
+                'severity'  => SecurityAnomaly::SEVERITY_MEDIUM,
+                'reasoning' => sprintf('Reubicación de inventario registrada en madrugada (%s hora local).', $local->format('H:i')),
+                'raw_response' => [
+                    'source'                 => 'deterministic',
+                    'rule'                   => 'bodega_fuera_de_horario',
+                    'relocation_request_id'  => $relocation->id,
+                    'catalog_product_id'     => $relocation->catalog_product_id,
+                    'hora_local'             => $local->format('H:i'),
+                ],
+                'affected_user_id' => $relocation->solicitado_por,
+                'range_start'      => $start,
+                'range_end'        => $end,
+                'status'           => SecurityAnomaly::STATUS_PENDING,
+            ]);
+
+            event(new SecurityAnomalyDetected($row));
+        }
+    }
+
+    /**
+     * REQ-635 (Hallazgo 3 del threat model) — mismo actor ajustando y reubicando el mismo
+     * producto dentro de la ventana configurable. Busca ajustes con un margen a ambos lados del
+     * rango del día (padding = la ventana de correlación) para no perder correlaciones cerca del
+     * borde del día calendario — limitación conocida documentada en el threat model: una
+     * correlación que cruce la medianoche por más que ese margen no se detecta.
+     */
+    private function flagBodegaCorrelatedAdjustmentRelocation(Carbon $start, Carbon $end): void
+    {
+        $windowMinutes = (new BodegaSettingsService())->fraudeVentanaCorrelacionMinutos();
+
+        $relocations = RelocationRequest::query()->whereBetween('created_at', [$start, $end])->get();
+        if ($relocations->isEmpty()) {
+            return;
+        }
+
+        $adjustments = AdjustmentRequest::query()
+            ->whereBetween('created_at', [
+                $start->copy()->subMinutes($windowMinutes),
+                $end->copy()->addMinutes($windowMinutes),
+            ])
+            ->get();
+
+        foreach ($relocations as $relocation) {
+            foreach ($adjustments as $adjustment) {
+                if ((int) $adjustment->solicitado_por !== (int) $relocation->solicitado_por
+                    || (int) $adjustment->catalog_product_id !== (int) $relocation->catalog_product_id
+                ) {
+                    continue;
+                }
+
+                $diffMinutes = abs($adjustment->created_at->diffInMinutes($relocation->created_at));
+                if ($diffMinutes > $windowMinutes) {
+                    continue;
+                }
+
+                $row = SecurityAnomaly::create([
+                    'severity'  => SecurityAnomaly::SEVERITY_MEDIUM,
+                    'reasoning' => sprintf(
+                        'Mismo usuario ajustó y reubicó el producto #%d con %d min de diferencia (umbral: %d min).',
+                        $relocation->catalog_product_id,
+                        $diffMinutes,
+                        $windowMinutes,
+                    ),
+                    'raw_response' => [
+                        'source'                 => 'deterministic',
+                        'rule'                   => 'bodega_correlacion_ajuste_reubicacion',
+                        'adjustment_request_id'  => $adjustment->id,
+                        'relocation_request_id'  => $relocation->id,
+                        'catalog_product_id'     => $relocation->catalog_product_id,
+                        'diff_minutos'           => $diffMinutes,
+                    ],
+                    'affected_user_id' => $relocation->solicitado_por,
+                    'range_start'      => $start,
+                    'range_end'        => $end,
+                    'status'           => SecurityAnomaly::STATUS_PENDING,
+                ]);
+
+                event(new SecurityAnomalyDetected($row));
+
+                break; // un hallazgo por reubicación alcanza, no uno por cada ajuste que matchee
+            }
+        }
+    }
+
+    /**
+     * REQ-635 (Hallazgo 4 del threat model) — IP nueva para el usuario en una acción de Bodega.
+     * Solo se evalúa si el usuario ya tiene al menos 1 evento previo con IP registrada dentro de
+     * la ventana de lookback — evita el falso positivo garantizado de "primera acción del usuario
+     * siempre dispara" (arranque en frío, ver threat model).
+     */
+    private function flagBodegaNewIpActivity(Carbon $start, Carbon $end): void
+    {
+        $lookbackDays = (new BodegaSettingsService())->fraudeIpLookbackDias();
+
+        $events = AuditLog::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->whereIn('action', ['bodega.adjustment_request.created', 'bodega.relocation_request.created'])
+            ->whereNotNull('user_id')
+            ->whereNotNull('ip_address')
+            ->get(['id', 'user_id', 'ip_address', 'action', 'entity_id', 'created_at']);
+
+        foreach ($events as $auditEvent) {
+            $priorIps = AuditLog::query()
+                ->where('user_id', $auditEvent->user_id)
+                ->where('created_at', '<', $auditEvent->created_at)
+                ->where('created_at', '>=', $auditEvent->created_at->copy()->subDays($lookbackDays))
+                ->whereNotNull('ip_address')
+                ->pluck('ip_address')
+                ->unique();
+
+            if ($priorIps->isEmpty()) {
+                continue; // sin historial previo — arranque en frío, no evaluar
+            }
+
+            if ($priorIps->contains($auditEvent->ip_address)) {
+                continue; // IP ya conocida para este usuario
+            }
+
+            $row = SecurityAnomaly::create([
+                'severity'  => SecurityAnomaly::SEVERITY_LOW,
+                'reasoning' => sprintf('Acción de Bodega desde una IP nueva para este usuario (%s).', $auditEvent->ip_address),
+                'raw_response' => [
+                    'source'     => 'deterministic',
+                    'rule'       => 'bodega_ip_nueva',
+                    'action'     => $auditEvent->action,
+                    'entity_id'  => $auditEvent->entity_id,
+                    'ip_address' => $auditEvent->ip_address,
+                ],
+                'affected_user_id' => $auditEvent->user_id,
+                'range_start'      => $start,
+                'range_end'        => $end,
+                'status'           => SecurityAnomaly::STATUS_PENDING,
+            ]);
+
+            event(new SecurityAnomalyDetected($row));
+        }
+    }
+
+    /**
+     * REQ-635 (Hallazgo 5 del threat model) — Admin&Cont no tenía NINGÚN dato histórico real al
+     * momento del threat model (2026-09-01), así que en vez de un monto fijo en dólares (que
+     * hubiera sido una adivinanza sin respaldo), el umbral se auto-calibra por desviación
+     * estándar sobre la media móvil de los últimos N días de esa misma tabla. Con menos de 10
+     * pagos en la ventana, la muestra no es significativa y la regla simplemente no se evalúa —
+     * se activa sola a medida que haya suficiente historial real.
+     */
+    private function flagAdminContUnusualPaymentAmounts(Carbon $start, Carbon $end): void
+    {
+        $settings   = new AdminContSettingsService();
+        $windowDays = $settings->fraudeMontoVentanaDias();
+        $deviations = $settings->fraudeMontoDesviaciones();
+
+        $baseline = AdminContPayment::query()
+            ->whereBetween('created_at', [$start->copy()->subDays($windowDays), $start])
+            ->pluck('monto_recibido');
+
+        if ($baseline->count() < 10) {
+            return;
+        }
+
+        $mean   = (float) $baseline->avg();
+        $stdDev = $this->populationStdDev(array_values($baseline->map(fn (mixed $v): float => (float) $v)->all()), $mean);
+
+        if ($stdDev <= 0.0) {
+            return;
+        }
+
+        $ceiling = $mean + ($deviations * $stdDev);
+
+        $todaysPayments = AdminContPayment::query()->whereBetween('created_at', [$start, $end])->get();
+
+        foreach ($todaysPayments as $payment) {
+            if ($payment->monto_recibido <= $ceiling) {
+                continue;
+            }
+
+            $row = SecurityAnomaly::create([
+                'severity'  => SecurityAnomaly::SEVERITY_HIGH,
+                'reasoning' => sprintf(
+                    'Pago de $%s muy por encima del histórico reciente (media $%s + %d desviaciones = $%s).',
+                    number_format($payment->monto_recibido, 2),
+                    number_format($mean, 2),
+                    $deviations,
+                    number_format($ceiling, 2),
+                ),
+                'raw_response' => [
+                    'source'              => 'deterministic',
+                    'rule'                => 'admin_cont_monto_fuera_de_rango',
+                    'payment_id'          => $payment->id,
+                    'monto'               => $payment->monto_recibido,
+                    'media_baseline'      => $mean,
+                    'desviacion_estandar' => $stdDev,
+                    'techo'               => $ceiling,
+                ],
+                'affected_user_id' => $payment->created_by,
+                'range_start'      => $start,
+                'range_end'        => $end,
+                'status'           => SecurityAnomaly::STATUS_PENDING,
+            ]);
+
+            event(new SecurityAnomalyDetected($row));
+        }
+    }
+
+    /** @param list<float> $values */
+    private function populationStdDev(array $values, float $mean): float
+    {
+        $count = count($values);
+        if ($count === 0) {
+            return 0.0;
+        }
+
+        $sumSquares = 0.0;
+        foreach ($values as $value) {
+            $sumSquares += ($value - $mean) ** 2;
+        }
+
+        return sqrt($sumSquares / $count);
+    }
+
+    /**
+     * REQ-635 (Hallazgo 6 del threat model) — el mismo actor confirmando N+ pagos en una ventana
+     * corta. Un hallazgo por actor por corrida (no uno por cada ventana deslizante que matchee).
+     */
+    private function flagAdminContRepeatedApprovals(Carbon $start, Carbon $end): void
+    {
+        $settings      = new AdminContSettingsService();
+        $n             = $settings->fraudeAprobacionesRepetidasN();
+        $windowMinutes = $settings->fraudeAprobacionesRepetidasMinutos();
+
+        $confirmations = AdminContPaymentConfirmation::query()
+            ->whereBetween('confirmed_at', [$start, $end])
+            ->whereNotNull('confirmed_by')
+            ->orderBy('confirmed_at')
+            ->get(['id', 'confirmed_by', 'confirmed_at', 'payment_id']);
+
+        if ($confirmations->count() < $n) {
+            return;
+        }
+
+        foreach ($confirmations->groupBy('confirmed_by') as $actorId => $actorConfirmations) {
+            $sorted = $actorConfirmations->values();
+
+            for ($i = 0; $i <= $sorted->count() - $n; $i++) {
+                $first = $sorted->get($i);
+                $last  = $sorted->get($i + $n - 1);
+                if ($first === null || $last === null) {
+                    continue;
+                }
+
+                if ($first->confirmed_at->diffInMinutes($last->confirmed_at) > $windowMinutes) {
+                    continue;
+                }
+
+                $row = SecurityAnomaly::create([
+                    'severity'  => SecurityAnomaly::SEVERITY_LOW,
+                    'reasoning' => sprintf('%d confirmaciones de pago en %d minutos por el mismo actor.', $n, $windowMinutes),
+                    'raw_response' => [
+                        'source'      => 'deterministic',
+                        'rule'        => 'admin_cont_aprobaciones_repetidas',
+                        'payment_ids' => $sorted->slice($i, $n)->pluck('payment_id')->values()->all(),
+                    ],
+                    'affected_user_id' => (int) $actorId,
+                    'range_start'      => $start,
+                    'range_end'        => $end,
+                    'status'           => SecurityAnomaly::STATUS_PENDING,
+                ]);
+
+                event(new SecurityAnomalyDetected($row));
+
+                break;
+            }
         }
     }
 
@@ -302,6 +811,9 @@ exactas — tu valor es detectar variantes que no calcen exacto):
 CREDENTIAL STUFFING:
 - medio: más de 5 auth_failed_count en la ventana para un usuario, o intentos fallidos distribuidos
 - alto: más de 10 auth_failed_count, o auth_login_count exitoso inmediatamente tras ráfaga de fallos
+
+REUSO DE REFRESH TOKEN (posible robo de sesión):
+- medio: refresh_token_reuse_count mayor a 0 (un token de refresco ya rotado se presentó de nuevo); sube a alto si coincide con distinct_login_ips distintas o auth_failed_count elevado
 
 EXFILTRACIÓN GRADUAL:
 - medio: más de 20 document_downloads en la ventana, o distinct_projects_touched mayor a 5

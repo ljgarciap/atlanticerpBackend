@@ -6,6 +6,7 @@ namespace App\Modules\Bodega\Services;
 
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderItem;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 
 /**
@@ -57,6 +58,24 @@ final class OrderCommitmentService
         }
 
         return $map;
+    }
+
+    /**
+     * SCRUM-992 (H1) — mismo cálculo que `committedMap()` (suma de `max(0, qty_requested -
+     * qty_delivered)` por producto, solo pedidos en etapa activa) como subconsulta agrupada, para
+     * filtrar/contar sobre TODO el catálogo sin hidratar los `OrderItem` ni pasar decenas de miles de
+     * IDs. Devuelve `catalog_product_id, total`. Cualquier cambio de regla se hace en los dos lados;
+     * `CatalogControllerTest` (paridad del filtro `stock`) falla si divergen.
+     */
+    public function committedSub(): QueryBuilder
+    {
+        $orders = (new Order())->getTable();
+
+        return (new OrderItem())->newQuery()->toBase()
+            ->whereNotNull('catalog_product_id')
+            ->whereIn('order_id', fn ($q) => $q->select('id')->from($orders)->whereIn('stage', self::ACTIVE_STAGES))
+            ->selectRaw('catalog_product_id, SUM(GREATEST(0, qty_requested - qty_delivered)) AS total')
+            ->groupBy('catalog_product_id');
     }
 
     /**

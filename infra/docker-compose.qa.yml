@@ -54,8 +54,20 @@ services:
       POSTGRES_DB: ${DB_DATABASE}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # SCRUM-1073 (HA F2): archivado continuo de WAL. Cada segmento terminado (o cada 5 min si hubo actividad) se
+    # comprime en /wal-archive (= /data/wal-archive del host, creada por infra/scripts/setup-wal-archiving.sh ANTES de
+    # desplegar esto); ship-wal.sh los sube a S3. Permite restaurar a un instante (RPO de minutos).
+    command:
+      - postgres
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_timeout=300
+      - -c
+      - archive_command=test ! -f /wal-archive/%f.gz && gzip -c %p > /wal-archive/%f.gz.tmp && mv /wal-archive/%f.gz.tmp /wal-archive/%f.gz
     volumes:
       - /data/postgres/pgdata:/var/lib/postgresql/data
+      - /data/wal-archive:/wal-archive
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
       interval: 5s
@@ -71,6 +83,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # SCRUM-563 (2026-09-15, expuesto por IP 2026-09-16 a pedido de Luis) — captura de correo
+  # saliente para verificar features de email sin depender de un buzón real ni de
+  # storage/logs/laravel.log. Mailpit (sucesor activo de MailHog, que quedó sin mantenimiento
+  # upstream): SMTP falso en el puerto 1025, solo alcanzable desde otros contenedores de este
+  # compose por nombre de servicio (`mailpit`, sin publicar puerto al host) + UI web en 8025.
+  # Puerto 8025 publicado en 0.0.0.0 (acceso directo por IP:8025, sin dominio/SSL/nginx, mismo
+  # patrón que usaba MailHog) — la protección real es `MP_UI_AUTH` (usuario/clave nativo de
+  # Mailpit, valor real solo en el `.env` del servidor, nunca en este archivo versionado):
+  # captura correos reales de features como MFA/reset de password, así que la UI nunca queda sin
+  # auth. Security Group (`sg-058c00000f9c0e23b`, compartido con `atlanticerp-prod`) tiene 8025 abierto
+  # a 0.0.0.0/0 — decisión explícita de Luis, la protección vive en la app, no en la red.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "8025:8025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_UI_AUTH: ${MAILPIT_UI_AUTH}
 
   laravel:
     build:
@@ -117,6 +150,43 @@ services:
       timeout: 10s
       retries: 6
       start_period: 20s
+
+  # SCRUM-838/839 (2026-09-14) — hallazgo real: el Scheduler de Laravel (routes/console.php)
+  # nunca tuvo nada que lo dispare en ningún ambiente — sin crontab del SO, sin systemd timer, sin
+  # contenedor dedicado (confirmado: `laravel` solo corre php-fpm, `horizon` solo corre
+  # `php artisan horizon`, ninguno invoca schedule:run). Esto afecta a TODO Schedule:: ya
+  # registrado, no solo a legacy:sync-incremental-* — security:analyze, audit-logs:archive,
+  # commissions:settle-internal y las notificaciones tampoco corrieron nunca automáticamente.
+  #
+  # Contenedor dedicado (no un cron del SO) a propósito: los ambientes se clonan desde la AMI
+  # `atlanticerp-base` — un cron del host se pierde/hay que recordarlo a mano en cada clon nuevo; este
+  # servicio, versionado en docker-compose.qa.yml, se levanta solo con `docker compose up -d
+  # --build`, igual que `horizon`. Costo medido en vivo en dev.atlanticerp.ai (2026-09-14): ~126ms de
+  # CPU por chequeo (`time php artisan schedule:run` sin nada debido), ~0.2% de CPU promedio
+  # corriendo cada 60s.
+  #
+  # NOTA 2026-09-15: el diseño original de SCRUM-838 escalonaba las 9 entidades por minuto
+  # (:05/:07/:15/.../:32), que motivaba correr este loop cada 60s para no perder ningún offset —
+  # reemplazado por `legacy:sync-incremental-all` (una sola entrada de Schedule::, ver
+  # routes/console.php), pero el intervalo de 60s se mantiene igual: sigue siendo el más ajustado
+  # a la granularidad real de cron (por minuto) sin agregar complejidad, y el costo medido arriba
+  # sigue siendo despreciable.
+  scheduler:
+    build:
+      context: ./php
+    restart: unless-stopped
+    logging: *default-logging
+    working_dir: /var/www/html
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+    env_file:
+      - ../.env
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   nginx:
     build:

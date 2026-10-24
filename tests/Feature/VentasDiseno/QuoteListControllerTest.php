@@ -273,6 +273,53 @@ class QuoteListControllerTest extends FeatureTestCase
     }
 
     /**
+     * SCRUM-912 (criterios 6/7) — "Solo Borradores" (?view=drafts) NUNCA incluye el
+     * borrador de "nueva versión" de un proyecto ya confirmado (mismo fixture que el
+     * test de arriba) — solo cotizaciones nuevas sin folio y sin ningún hermano
+     * confirmado. El listado normal (sin ?view=drafts) sigue mostrando ambos, sin
+     * cambios — ver test_borrador_sobre_proyecto_con_version_confirmada_no_se_funde_con_ella.
+     */
+    public function test_solo_borradores_excluye_el_borrador_de_nueva_version_de_un_proyecto_confirmado(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+
+        $master = MasterClient::create(['name' => 'Cliente Borrador Test']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Borrador Test']);
+        PipelineCard::create([
+            'sales_project_id' => $project->id, 'stage' => 'quote',
+            'master_client_id' => $master->id, 'sub_client_id' => $sub->id,
+            'owner_id' => $designerId, 'stage_changed_at' => now(),
+        ]);
+
+        Quote::create([
+            'owner_id' => $designerId, 'master_client_id' => $master->id, 'sub_client_id' => $sub->id,
+            'sales_project_id' => $project->id, 'folio' => 'COT-2026-0091',
+            'generated_at' => now(), 'confirmed_at' => now(),
+        ]);
+        // Borrador de "nueva versión" (QuoteService::duplicate()) sobre ese mismo
+        // proyecto — NO debe aparecer en "Solo Borradores".
+        $versionDraft = Quote::create([
+            'owner_id' => $designerId, 'master_client_id' => $master->id, 'sub_client_id' => $sub->id,
+            'sales_project_id' => $project->id, 'folio' => null,
+            'generated_at' => null, 'confirmed_at' => null,
+        ]);
+        // Cotización genuinamente nueva ("+ Nueva cotización"), sin proyecto — SÍ debe
+        // aparecer en "Solo Borradores".
+        $newDraft = $this->makeQuote($designerId, ['project' => 'Proyecto Nuevo Sin Confirmar']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/quotes?view=drafts')
+            ->assertStatus(200);
+
+        $ids = collect($response->json('data'))->pluck('id');
+        $this->assertContains($newDraft->id, $ids);
+        $this->assertNotContains($versionDraft->id, $ids);
+    }
+
+    /**
      * SCRUM-796 (secc. 10, RN1.3) — 2 Borradores sueltos de proyectos distintos, sin
      * ninguna versión confirmada todavía: ninguno se agrupa con nada, ambos visibles.
      */
@@ -447,5 +494,119 @@ class QuoteListControllerTest extends FeatureTestCase
         $response->assertJsonPath('fuzzy', true);
         $ids = collect($response->json('data'))->pluck('id');
         $this->assertContains($quote->id, $ids);
+    }
+
+    // ── SCRUM-1195 — el listado muestra al Responsable del proyecto y le incluye lo que Gerencia generó ─────────────────
+
+    /**
+     * Proyecto asignado a `$responsibleId` (dueño de su tarjeta) con su versión 1 y una versión 2 confirmada que generó `$generatorId`
+     * (Gerencia), más un borrador de Gerencia sobre el mismo proyecto.
+     *
+     * @return array{project: SalesProject, v1: Quote, v2: Quote, draft: Quote}
+     */
+    private function assignedProjectWithManagementVersion(int $responsibleId, int $generatorId): array
+    {
+        $master = MasterClient::create(['name' => 'Cliente Asignado']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Asignado', 'tax_id' => '155-0000-1-2026']);
+        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Asignado']);
+        $base = ['master_client_id' => $master->id, 'sub_client_id' => $sub->id, 'sales_project_id' => $project->id];
+
+        $v1 = Quote::create($base + ['owner_id' => $responsibleId, 'folio' => 'COT-A-1', 'generated_at' => now()->subHour(), 'confirmed_at' => now()->subHour()]);
+        $v2 = Quote::create($base + ['owner_id' => $generatorId, 'folio' => 'COT-A-2', 'generated_at' => now(), 'confirmed_at' => now()]);
+        $draft = Quote::create($base + ['owner_id' => $generatorId]);
+        PipelineCard::create([
+            'sales_project_id' => $project->id, 'stage' => 'quote', 'master_client_id' => $master->id, 'sub_client_id' => $sub->id,
+            'owner_id' => $responsibleId, 'created_by' => $responsibleId, 'stage_changed_at' => now(),
+        ]);
+
+        return ['project' => $project, 'v1' => $v1, 'v2' => $v2, 'draft' => $draft];
+    }
+
+    public function test_1195_el_vendedor_ve_la_version_de_gerencia_de_su_proyecto_y_la_columna_responsable_es_el_dueno_de_la_tarjeta(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $data = $this->assignedProjectWithManagementVersion($designerId, $managerId);
+        $unrelated = $this->makeQuote($managerId, ['folio' => 'COT-X-1', 'project' => 'Proyecto de Gerencia']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $rows = $this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/quotes?scope=own')->assertStatus(200)->json('data');
+        $byId = collect($rows)->keyBy('id');
+
+        $this->assertTrue($byId->has($data['v2']->id), 've la versión más reciente, la que generó Gerencia, igual que su tarjeta del Pipeline');
+        $this->assertFalse($byId->has($data['v1']->id), 'una sola fila por proyecto (la versión confirmada más reciente)');
+        $this->assertFalse($byId->has($data['draft']->id), 'el borrador de Gerencia sigue siendo privado');
+        $this->assertFalse($byId->has($unrelated->id), 'tampoco lo que no está asignado a él');
+
+        $row = $byId->get($data['v2']->id);
+        $this->assertSame($managerId, $row['owner']['id'], 'owner = quien generó la versión');
+        $this->assertSame($designerId, $row['designer']['id'], 'Responsable = dueño de la tarjeta');
+    }
+
+    public function test_1195_otro_vendedor_no_ve_el_proyecto_y_un_responsable_compartido_si(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('supervisor@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');
+        $data = $this->assignedProjectWithManagementVersion($designerId, $managerId);
+
+        $tokenSup = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
+        $ids = collect($this->withHeaders($this->authHeaders($tokenSup))->getJson('/api/ventas-diseno/quotes?scope=own')->json('data'))->pluck('id');
+        $this->assertNotContains($data['v2']->id, $ids, 'sin asignación no ve nada del proyecto');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        PipelineCard::where('sales_project_id', $data['project']->id)->update(['compartido_con' => json_encode([$supervisorId])]);
+        $ids = collect($this->withHeaders($this->authHeaders($tokenSup))->getJson('/api/ventas-diseno/quotes?scope=own')->json('data'))->pluck('id');
+        $this->assertContains($data['v2']->id, $ids, 'como responsable adicional (compartido_con) sí lo ve');
+    }
+
+    public function test_1195_el_filtro_vendedor_de_gerencia_trae_los_proyectos_asignados_a_esa_persona(): void
+    {
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $data = $this->assignedProjectWithManagementVersion($designerId, $managerId);
+
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $rows = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/quotes?scope=team&owner_ids[]={$designerId}")->assertStatus(200)->json('data');
+
+        $ids = collect($rows)->pluck('id');
+        $this->assertContains($data['v2']->id, $ids, 'filtrar por el vendedor incluye el proyecto que le asignaron aunque la versión la haya generado Gerencia');
+        $this->assertNotContains($data['draft']->id, $ids);
+    }
+
+    public function test_1195_sin_tarjeta_la_fila_no_trae_responsable_y_el_front_cae_a_owner(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $quote = $this->makeQuote($designerId, ['folio' => 'COT-S-1']); // sin 'stage' => sin tarjeta
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $row = collect($this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/quotes')->json('data'))->firstWhere('id', $quote->id);
+
+        $this->assertNotNull($row);
+        $this->assertNull($row['designer']);
+        $this->assertSame($designerId, $row['owner']['id']);
+    }
+
+    public function test_1195_en_alcance_propio_los_filtros_de_persona_ajenos_se_ignoran_y_no_filtran_borradores_de_otros(): void
+    {
+        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $mine = $this->makeQuote($designerId, ['folio' => 'COT-M-1']);
+        $draft = $this->makeQuote($managerId, []); // borrador de Gerencia
+        $their = $this->makeQuote($managerId, ['folio' => 'COT-G-1']);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        foreach (["owner_id={$managerId}", "owner_ids[]={$managerId}", "scope=own&owner_ids[]={$managerId}"] as $qs) {
+            $ids = collect($this->withHeaders($this->authHeaders($token))->getJson("/api/ventas-diseno/quotes?{$qs}")->assertStatus(200)->json('data'))->pluck('id');
+            $this->assertContains($mine->id, $ids, "{$qs}: sigue viendo lo suyo");
+            $this->assertNotContains($draft->id, $ids, "{$qs}: el borrador ajeno es privado");
+            $this->assertNotContains($their->id, $ids, "{$qs}: tampoco lo confirmado ajeno que no le asignaron");
+        }
     }
 }

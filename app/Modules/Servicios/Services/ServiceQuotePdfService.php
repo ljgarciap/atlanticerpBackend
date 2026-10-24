@@ -33,12 +33,16 @@ use Barryvdh\DomPDF\PDF as PdfDocument;
  */
 final class ServiceQuotePdfService
 {
-    public function __construct(private readonly ServiciosSettingsService $settings) {}
+    public function __construct(
+        private readonly ServiciosSettingsService $settings,
+        private readonly ServiceQuotePdfLayoutEstimator $layoutEstimator,
+    ) {}
 
     /** @param array<string, mixed> $detail Salida de `TicketService::detail()`. */
     public function generate(ServiceQuote $quote, Ticket $ticket, array $detail): PdfDocument
     {
-        return Pdf::loadView('servicios.service-quote-pdf', $this->viewData($quote, $ticket, $detail))
+        return Pdf::setOption('isPhpEnabled', true)
+            ->loadView('servicios.service-quote-pdf', $this->viewData($quote, $ticket, $detail))
             ->setPaper('letter');
     }
 
@@ -53,15 +57,30 @@ final class ServiceQuotePdfService
      */
     public function viewData(ServiceQuote $quote, Ticket $ticket, array $detail): array
     {
+        $items = $this->formatItems($quote);
+        $conditions = $quote->conditions ?? $this->settings->conditionsCotizacionServicios();
+        $firmada = $quote->estado === ServiceQuote::ESTADO_APPROVED;
+
+        // SCRUM-824 — bloque final indivisible, pegado al pie de página (mismo mecanismo que
+        // SCRUM-801). El estimator no conoce modelos Eloquent, solo el array plano equivalente.
+        $layout = $this->layoutEstimator->estimate([
+            'items'            => $items,
+            'observations'     => $quote->observations,
+            'conditions_text'  => $conditions,
+            'firmada'          => $firmada,
+        ], external: false);
+
         return [
-            'ticket'      => $ticket,
-            'detail'      => $detail,
-            'quote'       => $quote,
-            'items'       => $this->formatItems($quote),
-            'conditions'  => $quote->conditions ?? $this->settings->conditionsCotizacionServicios(),
-            'firmada'     => $quote->estado === ServiceQuote::ESTADO_APPROVED,
-            'generatedAt' => now(),
-            'logoDataUri' => PdfLogo::dataUri(),
+            'ticket'                  => $ticket,
+            'detail'                  => $detail,
+            'quote'                   => $quote,
+            'items'                   => $items,
+            'conditions'              => $conditions,
+            'firmada'                 => $firmada,
+            'generatedAt'             => now(),
+            'logoDataUri'             => PdfLogo::dataUri(),
+            'bottomBlockSpacerPt'     => $layout['spacerPt'],
+            'bottomBlockForceNewPage' => $layout['forceNewPage'],
         ];
     }
 

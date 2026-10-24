@@ -19,7 +19,7 @@ use Illuminate\Support\Carbon;
 final class ProjectsListService
 {
     /**
-     * @param array{scope?: string, owner_id?: int, search?: string, stage?: string, tag?: string} $filters
+     * @param array{scope?: string, owner_id?: int, owner_ids?: list<int>, search?: string, stage?: string, tag?: string} $filters
      * @return Builder<PipelineCard>
      */
     public function query(User $user, array $filters = []): Builder
@@ -38,6 +38,9 @@ final class ProjectsListService
         $scope      = $filters['scope'] ?? 'own';
         if ($scope !== 'team' || ! $canSeeTeam) {
             $query->where('owner_id', $user->id);
+        } elseif (! empty($filters['owner_ids'])) {
+            // SCRUM-854 — multi-selección (OR entre seleccionados), gana sobre owner_id singular.
+            $query->whereIn('owner_id', $filters['owner_ids']);
         } elseif (isset($filters['owner_id'])) {
             // RN4 (REQ-611): filtro de Responsable, solo tiene efecto real si ya se pasó el
             // gate de arriba (scope=team + canSeeTeam) — un Vendedor/Diseñador nunca llega acá.

@@ -50,7 +50,7 @@ return [
         ],
 
         'ses' => [
-            'transport' => 'ses',
+            'transport' => 'ses-role', // SES v2 con el rol de la instancia (AppServiceProvider)
         ],
 
         'postmark' => [
@@ -84,6 +84,16 @@ return [
             'mailers' => [
                 'smtp',
                 'log',
+            ],
+            'retry_after' => 60,
+        ],
+
+        // SCRUM-1178 — SES primero y, si falla, el SMTP de Office 365 (se retira cuando SES demuestre estabilidad). MAIL_MAILER=ses_respaldo.
+        'ses_respaldo' => [
+            'transport' => 'failover',
+            'mailers' => [
+                'ses',
+                'smtp',
             ],
             'retry_after' => 60,
         ],

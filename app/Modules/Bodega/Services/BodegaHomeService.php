@@ -14,7 +14,6 @@ use App\Modules\Bodega\Models\OrderDocument;
 use App\Modules\Bodega\Models\OrderStageHistory;
 use App\Modules\Bodega\Support\BodegaRoles;
 use App\Modules\Compras\Models\PurchaseOrder;
-use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\Integrations\Outlook\Services\OutlookCalendarService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use Carbon\Carbon;
@@ -46,7 +45,7 @@ final class BodegaHomeService
     public function __construct(
         private readonly OrderBoardService $orderBoard,
         private readonly BodegaSettingsService $settings,
-        private readonly InventoryKpiService $inventoryKpis,
+        private readonly BodegaInventoryKpiService $bodegaKpis,
         private readonly OutlookCalendarService $outlook,
     ) {}
 
@@ -133,8 +132,9 @@ final class BodegaHomeService
             ? "El equipo tiene {$asignadosHoy} pedidos asignados hoy y {$pendientesCount} pendientes."
             : "Tienes {$asignadosHoy} pedidos asignados hoy y {$pendientesCount} pendientes.";
 
+        // SCRUM-863 — solo primer nombre en el saludo, alineado con el resto de los módulos.
         return [
-            'nombre'  => trim("{$user->first_name} {$user->last_name}"),
+            'nombre'  => trim((string) $user->first_name),
             'fecha'   => CarbonImmutable::now()->toDateString(),
             'resumen' => $resumen,
         ];
@@ -614,45 +614,19 @@ final class BodegaHomeService
     // ── SCRUM-374 (REQ-304) — Artículos críticos (no cambia con el scope) ───
 
     /**
-     * REQ-304 — reusa `InventoryKpiService::stockState()` directo (mismo umbral que Inventario/
-     * Compras, nunca un cálculo paralelo): cualquier producto activo cuyo estado no sea
-     * "disponible" (o sea, "bajo_stock" o "sin_stock") cuenta como crítico.
+     * REQ-304 — cualquier producto activo cuyo estado sea "bajo_stock" o "sin_stock" cuenta como crítico. Desde
+     * SCRUM-996 (auditoría SCRUM-995, sitio C) se resuelve en SQL con la MISMA regla del chip `criticos` del
+     * Inventario de Bodega (`BodegaInventoryKpiService::criticalArticles()`, compromiso a pedidos de Bodega,
+     * REQ-351 RN1): el total del botón "Ver los N artículos" coincide con el listado al que enlaza
+     * (`/bodega/inventario?filter=criticos`), y la tarjeta ya no hidrata el catálogo activo completo en cada
+     * visita al Home (2,2 s y 93 MB). Historial: SCRUM-871 Pre-QA (2026-09-13) ya había acotado la lista a
+     * `articulosCriticosTopN()` + el total real (antes devolvía las ~11K filas completas, 13-14 s y 2,19 MB).
      *
-     * @return array<int, array<string, mixed>>
+     * @return array{items: list<array<string, mixed>>, total: int}
      */
     private function articulosCriticos(): array
     {
-        /** @var Collection<int, CatalogProduct> $active */
-        $active = CatalogProduct::where('is_active', true)->get();
-        if ($active->isEmpty()) {
-            return [];
-        }
-
-        /** @var list<int> $productIds */
-        $productIds = array_values(array_map('intval', $active->pluck('id')->all()));
-        $porServirMap = $this->inventoryKpis->porServirMap($productIds);
-
-        return $active
-            ->filter(function (CatalogProduct $p) use ($porServirMap): bool {
-                $state = $this->inventoryKpis->stockState($p, $porServirMap[$p->id] ?? 0);
-
-                return $state !== InventoryKpiService::STOCK_DISPONIBLE;
-            })
-            ->map(function (CatalogProduct $p) use ($porServirMap): array {
-                $porServir  = $porServirMap[$p->id] ?? 0;
-                $disponible = ($p->stock_quantity ?? 0) - $porServir;
-
-                return [
-                    'catalog_product_id' => $p->id,
-                    'factory_reference'  => $p->factory_reference,
-                    'reference'          => $p->reference,
-                    'description'        => $p->name,
-                    'disponible'         => $disponible,
-                    'reorder_point'      => $p->reorder_point,
-                    'estado'             => $this->inventoryKpis->stockState($p, $porServir),
-                ];
-            })
-            ->values()->all();
+        return $this->bodegaKpis->criticalArticles($this->settings->articulosCriticosTopN());
     }
 
     // ── Alcance Mío/Equipo (REQ-295/296) ─────────────────────────────────────
@@ -713,7 +687,7 @@ final class BodegaHomeService
      */
     private function scopedOrdersQuery(?array $targetIds): Builder
     {
-        $query = Order::query()->whereIn('stage', Order::STAGE_ORDER);
+        $query = Order::query()->whereIn('stage', Order::STAGE_ORDER)->sinGemelosEntregados();
 
         if ($targetIds !== null) {
             $query->where(function (Builder $q) use ($targetIds): void {

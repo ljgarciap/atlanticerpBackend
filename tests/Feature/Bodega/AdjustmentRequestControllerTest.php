@@ -19,6 +19,7 @@ use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Services\AuditService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -574,8 +575,9 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-428 RN1 — cantidad actual por cada una de las 8 bodegas para el selector del modal (7
-     * físicas originales + "Reserva Servicios" desde Grupo D parte 2, REQ-291/SCRUM-361).
+     * SCRUM-428 RN1 — cantidad actual por cada bodega OPERATIVA para el selector del modal (7 físicas originales +
+     * "Reserva Servicios" desde Grupo D parte 2, REQ-291/SCRUM-361 = 8). SCRUM-990: "Bodega Zona Libre" es de solo
+     * consulta (catálogo de Lafayette, no inventario de Atlantic) y ya no aparece: quedan 7.
      */
     public function test_product_warehouse_stock_expone_cantidad_por_bodega(): void
     {
@@ -590,7 +592,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
             ->getJson("/api/bodega/adjustment-requests/products/{$product->id}/warehouse-stock");
 
         $response->assertStatus(200);
-        $response->assertJsonCount(8, 'warehouses');
+        $response->assertJsonCount(7, 'warehouses');
+        $this->assertNull(collect($response->json('warehouses'))->firstWhere('name', 'Bodega Zona Libre'), 'Zona Libre (solo consulta) no aparece en el desglose de stock');
         $centralRow = collect($response->json('warehouses'))->firstWhere('warehouse_id', $central->id);
         $this->assertSame(12, $centralRow['quantity']);
         $otherRow = collect($response->json('warehouses'))->firstWhere('name', 'Merma');
@@ -621,6 +624,30 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $response->assertStatus(200);
         $response->assertJsonPath('por_servir', 4);
+    }
+
+    /** SCRUM-807 (REQ-632, Epic SCRUM-788) — lectura sensible: stock por bodega antes de ajustar. */
+    public function test_product_warehouse_stock_registra_bodega_adjustment_warehouse_stock_viewed(): void
+    {
+        $product = $this->makeProduct();
+
+        $this->grantBodega('designer@atlantic.test');
+        $userId = User::where('email', 'designer@atlantic.test')->firstOrFail()->id;
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/bodega/adjustment-requests/products/{$product->id}/warehouse-stock")
+            ->assertStatus(200);
+
+        $log = DB::table('atlantic_auth.audit_logs')
+            ->where('action', AuditService::BODEGA_ADJUSTMENT_WAREHOUSE_STOCK_VIEWED)
+            ->where('user_id', $userId)
+            ->latest('created_at')
+            ->first();
+
+        $this->assertNotNull($log, 'Debe existir una entrada de audit con action=bodega.adjustment_request.warehouse_stock_viewed');
+        $this->assertSame('catalog_product', $log->entity_type);
+        $this->assertSame((string) $product->id, $log->entity_id);
     }
 
     /**

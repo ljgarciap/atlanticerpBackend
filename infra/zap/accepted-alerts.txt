@@ -1,0 +1,3 @@
+# SCRUM-964 — alertas de ZAP aceptadas, una por línea: <pluginId>|<razón escrita>. Las de riesgo informativo (0) nunca cuentan.
+# `--strict` solo falla por alertas de riesgo ALTO que no estén aquí. Vacío al inicio: se llena al clasificar el primer informe
+# real contra dev en docs/security/DAST-BASELINE.md.

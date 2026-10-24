@@ -37,7 +37,70 @@ class BodegaSettingsControllerTest extends FeatureTestCase
         $response->assertJsonPath('pendientes_guia_dias', 2);
         $response->assertJsonPath('rotacion_ventana_dias', 30);
         $response->assertJsonPath('rotacion_top_n', 5);
+        $response->assertJsonPath('articulos_criticos_top_n', 5);
         $response->assertJsonPath('capacidad_concentracion_pct', 75);
+        // REQ-635 (SCRUM-811)
+        $response->assertJsonPath('fraude_ajuste_grande_unidades', 10);
+        $response->assertJsonPath('fraude_horario_fin_hora', 5);
+        $response->assertJsonPath('fraude_ventana_correlacion_minutos', 60);
+        $response->assertJsonPath('fraude_ip_lookback_dias', 90);
+    }
+
+    public function test_update_cambia_los_umbrales_de_fraude(): void
+    {
+        $this->grantBodegaPermissions('liderbodega@test.com', [
+            'bodega.read', 'bodega.settings.configure',
+        ]);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/bodega/settings', [
+                'fraude_ajuste_grande_unidades' => 20,
+                'fraude_horario_fin_hora' => 6,
+                'fraude_ventana_correlacion_minutos' => 30,
+                'fraude_ip_lookback_dias' => 30,
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('fraude_ajuste_grande_unidades', 20)
+            ->assertJsonPath('fraude_horario_fin_hora', 6)
+            ->assertJsonPath('fraude_ventana_correlacion_minutos', 30)
+            ->assertJsonPath('fraude_ip_lookback_dias', 30);
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/bodega/settings')
+            ->assertStatus(200);
+        $response->assertJsonPath('fraude_ajuste_grande_unidades', 20);
+    }
+
+    /** SCRUM-871 Pre-QA — articulos_criticos_top_n ajustable sin deploy, mismo patrón que rotacion_top_n. */
+    public function test_update_cambia_el_top_n_de_articulos_criticos(): void
+    {
+        $this->grantBodegaPermissions('liderbodega@test.com', [
+            'bodega.read', 'bodega.settings.configure',
+        ]);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/bodega/settings', ['articulos_criticos_top_n' => 15])
+            ->assertStatus(200)
+            ->assertJsonPath('articulos_criticos_top_n', 15);
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/bodega/settings')
+            ->assertStatus(200);
+        $response->assertJsonPath('articulos_criticos_top_n', 15);
+    }
+
+    public function test_update_fraude_horario_fuera_de_rango_retorna_422(): void
+    {
+        $this->grantBodegaPermissions('liderbodega@test.com', [
+            'bodega.read', 'bodega.settings.configure',
+        ]);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/bodega/settings', ['fraude_horario_fin_hora' => 24])
+            ->assertStatus(422);
     }
 
     public function test_update_cambia_el_umbral_de_concentracion_de_capacidad(): void

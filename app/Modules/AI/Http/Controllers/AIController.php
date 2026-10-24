@@ -11,10 +11,13 @@ use App\Modules\AI\Jobs\MonthlyAnalysisJob;
 use App\Modules\AI\Jobs\SuggestActionsJob;
 use App\Modules\AI\Jobs\SummarizeProjectJob;
 use App\Modules\AI\Models\AiAnalysis;
+use App\Modules\CRM\Models\Project;
+use App\Modules\CRM\Support\ProjectAccess;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Str;
 
 final class AIController extends Controller
 {
@@ -29,6 +32,10 @@ final class AIController extends Controller
         $validated = $request->validate([
             'project_id' => ['required', 'integer', 'min:1'],
         ]);
+
+        if (($denied = $this->denyUnlessProjectAccess($request, $user, (int) $validated['project_id'])) !== null) {
+            return $denied;
+        }
 
         $analysis = $this->findOrCreate(
             entityType:   'project',
@@ -61,6 +68,10 @@ final class AIController extends Controller
         $validated = $request->validate([
             'project_id' => ['required', 'integer', 'min:1'],
         ]);
+
+        if (($denied = $this->denyUnlessProjectAccess($request, $user, (int) $validated['project_id'])) !== null) {
+            return $denied;
+        }
 
         $analysis = $this->findOrCreate(
             entityType:   'project',
@@ -95,6 +106,10 @@ final class AIController extends Controller
             'message_type' => ['required', 'string', 'in:email,whatsapp,llamada'],
             'intent'       => ['required', 'string', 'max:200'],
         ]);
+
+        if (($denied = $this->denyUnlessProjectAccess($request, $user, (int) $validated['project_id'])) !== null) {
+            return $denied;
+        }
 
         $extra = [
             'message_type' => $validated['message_type'],
@@ -170,10 +185,12 @@ final class AIController extends Controller
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
+        // SCRUM-1056 (I-02): un id que no es UUID no puede existir (antes era un 500 de Postgres); y quien no puede ver el análisis recibe
+        // el mismo 404 que si no existiera, para no confirmar que el id existe.
         /** @var AiAnalysis|null $analysis */
-        $analysis = AiAnalysis::find($id);
+        $analysis = Str::isUuid($id) ? AiAnalysis::find($id) : null;
 
-        if ($analysis === null) {
+        if ($analysis === null || ! $this->canReadAnalysis($request, $user, $analysis)) {
             return response()->json(['message' => 'Not found.'], 404);
         }
 
@@ -234,6 +251,52 @@ final class AIController extends Controller
         ]);
 
         return $analysis;
+    }
+
+    /**
+     * SCRUM-1056 (I-01, I-03): las funciones de IA de proyecto aplican la misma regla de acceso que el CRM, con sus mismas respuestas:
+     * proyecto inexistente → 404, sin acceso → 403. Se evalúa ANTES de crear el análisis y de enviar nada al tercero.
+     */
+    private function denyUnlessProjectAccess(Request $request, User $user, int $projectId): ?JsonResponse
+    {
+        /** @var Project|null $project */
+        $project = Project::with('assignees')->find($projectId);
+
+        if ($project === null) {
+            return response()->json(['message' => 'Not found.'], 404);
+        }
+
+        if (! ProjectAccess::canAccess($this->activeRole($request), $project, $user)) {
+            return response()->json(['message' => trans('auth.unauthorized')], 403);
+        }
+
+        return null;
+    }
+
+    /**
+     * SCRUM-1056 (I-02): el solicitante siempre lee el suyo; si no, rige el acceso a la entidad: proyecto → regla del CRM; informe mensual →
+     * superadmin o management; cualquier otro tipo (análisis de Compras, p. ej. datos bancarios extraídos) → solo superadmin.
+     */
+    private function canReadAnalysis(Request $request, User $user, AiAnalysis $analysis): bool
+    {
+        if ($analysis->requested_by === $user->id) {
+            return true;
+        }
+
+        $role = $this->activeRole($request);
+
+        if ($analysis->entity_type === 'project') {
+            /** @var Project|null $project */
+            $project = Project::with('assignees')->find((int) $analysis->entity_id);
+
+            return $project !== null && ProjectAccess::canAccess($role, $project, $user);
+        }
+
+        if ($analysis->entity_type === 'monthly_report') {
+            return in_array($role, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
+        }
+
+        return $role === User::ROLE_SUPERADMIN;
     }
 
     /** @return array{0: User|null, 1: Tenant|null} */

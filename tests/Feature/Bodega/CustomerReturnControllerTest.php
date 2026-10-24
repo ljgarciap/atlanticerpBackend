@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bodega;
 
+use App\Models\User;
 use App\Modules\Bodega\Events\ReturnReceived;
 use App\Modules\Bodega\Models\CustomerReturn;
 use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
+use App\Modules\Bodega\Services\CustomerReturnService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
@@ -594,6 +596,64 @@ class CustomerReturnControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/returns/search-orders?q=991020');
         $response->assertJsonPath('data.0.items.0.factory_reference', 'REF-FAB-DEV');
+    }
+
+    /**
+     * SCRUM-865 punto 2 — `finalizeForCreditNote()` recibía el id de la nota de crédito generada
+     * pero nunca lo persistía; el listado de Devoluciones no podía armar el enlace "Ver nota de
+     * crédito". Test directo del servicio (no vía AdminCont) para no depender del round-trip HTTP
+     * cross-módulo completo del registro de notas.
+     */
+    public function test_finalize_for_credit_note_persiste_status_y_credit_note_id(): void
+    {
+        $customerReturn = $this->makeCustomerReturn();
+        $customerReturn->update(['status' => CustomerReturn::STATUS_ESPERANDO_NOTA_CREDITO]);
+        $actor = User::find($this->userIdByEmail('management@atlantic.test'));
+
+        app(CustomerReturnService::class)->finalizeForCreditNote($customerReturn->id, 999, 'NC-999', $actor);
+
+        $customerReturn->refresh();
+        $this->assertSame(CustomerReturn::STATUS_FINALIZADO, $customerReturn->status);
+        $this->assertSame(999, $customerReturn->credit_note_id);
+        $this->assertNotNull($customerReturn->finalized_at);
+    }
+
+    /**
+     * SCRUM-865 punto 2c — "Ver nota de crédito" en Bodega, gateado por `bodega.read` (no
+     * `admin_contab.*`, un usuario de Bodega no lo tiene). Cubre el gate 404 cuando todavía no hay
+     * nota vinculada; la generación real del PDF ya está cubierta en
+     * `AdminContCreditNoteControllerTest::test_pdf_genera_el_documento_formal` (mismo
+     * `CreditNoteService::show()` + `CreditNotePdfService::generate()`, solo cambia el controller
+     * que los invoca).
+     */
+    public function test_credit_note_pdf_404_sin_nota_vinculada(): void
+    {
+        $customerReturn = $this->makeCustomerReturn();
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/bodega/returns/{$customerReturn->id}/credit-note-pdf")
+            ->assertStatus(404);
+    }
+
+    /**
+     * SCRUM-865 punto 2 — el frontend decide mostrar "Ver nota de crédito" en la fila según
+     * `credit_note_id` del listado; antes esa columna estaba siempre vacía. Confirma que el id
+     * viaja en la respuesta de la bandeja una vez finalizada la devolución.
+     */
+    public function test_index_expone_credit_note_id_tras_finalizar(): void
+    {
+        $customerReturn = $this->makeCustomerReturn();
+        $customerReturn->update(['status' => CustomerReturn::STATUS_ESPERANDO_NOTA_CREDITO]);
+        $actor = User::find($this->userIdByEmail('management@atlantic.test'));
+        app(CustomerReturnService::class)->finalizeForCreditNote($customerReturn->id, 777, 'NC-777', $actor);
+
+        $this->grantBodegaPermissions('designer@atlantic.test');
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/bodega/returns')
+            ->assertJsonPath('data.0.credit_note_id', 777);
     }
 
     /**

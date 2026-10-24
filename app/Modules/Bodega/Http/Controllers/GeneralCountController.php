@@ -119,7 +119,7 @@ final class GeneralCountController extends Controller
         }
 
         $validated = $request->validate([
-            'warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
+            'warehouse_id' => ['required', 'integer', Warehouse::operativaRule()],
             'confirm_replace' => ['nullable', 'boolean'],
         ]);
         $confirmReplace = (bool) ($validated['confirm_replace'] ?? false);

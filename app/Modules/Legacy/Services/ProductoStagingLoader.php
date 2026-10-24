@@ -76,6 +76,7 @@ final class ProductoStagingLoader
             'marca_nombre'    => $row->marcaNombre,
             'ref_proveedor'   => $row->refProveedor,
             'descatalogado'   => $row->descatalogado,
+            'stock_al4'       => $row->stockAl4,
             'created_at'      => $now,
             'updated_at'      => $now,
         ], $rows);
@@ -84,7 +85,7 @@ final class ProductoStagingLoader
             Producto::query()->upsert(
                 $chunk,
                 ['icg_codarticulo'],
-                ['descripcion', 'familia_nombre', 'marca_nombre', 'ref_proveedor', 'descatalogado', 'updated_at'],
+                ['descripcion', 'familia_nombre', 'marca_nombre', 'ref_proveedor', 'descatalogado', 'stock_al4', 'updated_at'],
             );
         }
 

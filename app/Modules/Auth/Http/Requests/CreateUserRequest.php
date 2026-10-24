@@ -25,6 +25,14 @@ class CreateUserRequest extends FormRequest
             'last_name'           => ['required', 'string', 'max:120'],
             'email'               => ['required', 'email', Rule::unique('users', 'email')],
             'phone'               => ['nullable', 'string', 'max:30'],
+            // SCRUM-822 (REQ-548) — cargo/fecha de ingreso/jefe directo, campos del ticket
+            // original que nunca se implementaron. manager_id sin `different:id` (no aplica al
+            // crear, el usuario todavía no tiene id) — RN2: null = "Ninguno — Socio Director".
+            'job_title'           => ['nullable', 'string', 'max:120'],
+            'hire_date'           => ['nullable', 'date'],
+            'manager_id'          => ['nullable', 'integer', Rule::exists('users', 'id')],
+            // RN3 — estado elegible al crear, default true (comportamiento ya existente) si no se manda.
+            'is_active'           => ['sometimes', 'boolean'],
             'department_id'      => ['nullable', 'integer', Rule::exists('departments', 'id')],
             'security_level_id'  => [
                 'sometimes',

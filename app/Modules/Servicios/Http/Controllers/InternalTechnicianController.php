@@ -7,6 +7,7 @@ namespace App\Modules\Servicios\Http\Controllers;
 use App\Models\User;
 use App\Modules\Servicios\Http\Requests\StoreCommissionCaptureRequest;
 use App\Modules\Servicios\Http\Requests\StoreInternalTechnicianRequest;
+use App\Modules\Servicios\Http\Requests\UpdateInternalTechnicianRequest;
 use App\Modules\Servicios\Models\InternalTechnician;
 use App\Modules\Servicios\Services\CommissionCaptureService;
 use App\Modules\Servicios\Services\InternalTechnicianService;
@@ -210,6 +211,51 @@ final class InternalTechnicianController extends Controller
             // hay tickets todavía.
             'estado'       => $this->status->statusFor($technician, collect()),
         ], 201);
+    }
+
+    /** PUT /api/servicios/internal-technicians/{id} — SCRUM-1015 (mismo rol que el alta, validado en la ruta). */
+    public function update(UpdateInternalTechnicianRequest $request, int $id): JsonResponse
+    {
+        $technician = InternalTechnician::find($id);
+        if ($technician === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        /** @var array{nombre: string, telefono?: ?string, email?: ?string, especialidad: string} $validated */
+        $validated = $request->validated();
+        $technician = $this->technicians->update($technician, $validated);
+
+        return response()->json([
+            'id'           => $technician->id,
+            'nombre'       => $technician->nombre,
+            'telefono'     => $technician->telefono,
+            'email'        => $technician->email,
+            'especialidad' => $technician->especialidad,
+            'color'        => $technician->color,
+        ]);
+    }
+
+    /**
+     * DELETE /api/servicios/internal-technicians/{id} — SCRUM-1015, soft delete. 422 con el motivo
+     * si el técnico todavía tiene servicios sin cerrar o herramientas asignadas.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $technician = InternalTechnician::find($id);
+        if ($technician === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $blockers = $this->technicians->deletionBlockers($technician);
+        if ($blockers !== []) {
+            return response()->json([
+                'message' => 'No se puede eliminar al técnico: '.implode(' y ', $blockers).'. Reasígnalos primero.',
+            ], 422);
+        }
+
+        $technician->delete();
+
+        return response()->json(null, 204);
     }
 
     private function resolveUser(Request $request): ?User

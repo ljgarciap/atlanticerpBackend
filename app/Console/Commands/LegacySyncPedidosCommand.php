@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\PedidoExtractorContract;
 use App\Modules\Legacy\Data\PedidoRow;
 use App\Modules\Legacy\Models\SyncRun;
 use App\Modules\Legacy\Services\PedidoMatcher;
 use App\Modules\Legacy\Services\PedidoStagingLoader;
+use App\Modules\Legacy\Services\SyncRunDetailRecorder;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -55,6 +57,7 @@ final class LegacySyncPedidosCommand extends Command
         private readonly PedidoExtractorContract $extractor,
         private readonly PedidoStagingLoader $stagingLoader,
         private readonly PedidoMatcher $matcher,
+        private readonly SyncRunDetailRecorder $detailRecorder,
     ) {
         parent::__construct();
     }
@@ -66,7 +69,7 @@ final class LegacySyncPedidosCommand extends Command
         // PEDVENTACAB solas. ini_set() aplica directo porque este comando ES el proceso PHP
         // top-level. Items (PEDVENTALIN, 173,764 filas) ya NO se traen enteros de una — ver
         // docblock de la clase, "ITEMS PAGINADOS".
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');
@@ -156,7 +159,7 @@ final class LegacySyncPedidosCommand extends Command
 
         $status = $matchResult['errores'] > 0 ? SyncRun::STATUS_PARTIAL : SyncRun::STATUS_SUCCESS;
 
-        $this->recordRun(
+        $syncRun = $this->recordRun(
             $startedAt, $start,
             extraidos: count($pedidos),
             staged: $stagingCounts['pedidos'],
@@ -167,12 +170,14 @@ final class LegacySyncPedidosCommand extends Command
             status: $status,
         );
 
+        $this->detailRecorder->record($syncRun, $matchResult['details']);
+
         return self::SUCCESS;
     }
 
     /**
      * @param array{pedidos: int, items: int, pedido_ids: list<int>} $stagingCounts
-     * @param array{matched: int, orphan: int, errores: int}         $matchResult
+     * @param array{matched: int, orphan: int, errores: int, details: list<array{referencia: string, status: string, motivo: string}>} $matchResult
      */
     private function renderReport(int $pedidosExtraidos, int $itemsExtraidos, array $stagingCounts, array $matchResult): void
     {
@@ -198,8 +203,8 @@ final class LegacySyncPedidosCommand extends Command
         int $excluidos,
         int $errores,
         string $status,
-    ): void {
-        SyncRun::query()->create([
+    ): SyncRun {
+        return SyncRun::query()->create([
             'entidad'     => 'pedidos',
             'extraidos'   => $extraidos,
             'staged'      => $staged,

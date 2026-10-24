@@ -9,6 +9,7 @@ use App\Modules\Compras\Models\Provider;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Modules\VentasDiseno\Services\CatalogService;
+use App\Shared\Rules\SafePhotoUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -69,17 +70,21 @@ class StoreInventoryProductRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:2000'],
             'brand' => ['required', 'string', 'max:255'],
             'barcode' => ['required', 'string', 'max:255'],
-            'photo_url' => ['nullable', 'string', 'max:2048'],
+            'photo_url' => ['nullable', 'string', 'max:2048', new SafePhotoUrl],
             'price_full' => ['required', 'numeric', 'min:0'],
             'cost' => ['required', 'numeric', 'min:0'],
             'other_cost' => ['required', 'numeric', 'min:0'],
             'reorder_point' => ['required', 'integer', 'min:0'],
+            // SCRUM-1126 — `provider_id` = proveedor principal; `provider_ids` = todos (principal incluido).
+            // Con solo `provider_ids`, prepareForValidation() toma el primero como principal.
             'provider_id' => ['required', 'integer', 'min:1', $this->existsRule(Provider::class)],
+            'provider_ids' => ['sometimes', 'array', 'min:1'],
+            'provider_ids.*' => ['integer', 'min:1', 'distinct', $this->existsRule(Provider::class)],
             'family_id' => ['nullable', 'integer', 'min:1', $this->existsRule(CatalogProductFamily::class)],
             'category' => ['required', 'string', Rule::in(CatalogProduct::CATEGORIES)],
             'rotation' => ['required', 'string', Rule::in(CatalogProduct::ROTATIONS)],
             'initial_stock' => ['nullable', 'array'],
-            'initial_stock.*.warehouse_id' => ['required', 'integer', 'min:1', $this->existsRule(Warehouse::class)],
+            'initial_stock.*.warehouse_id' => ['required', 'integer', 'min:1', Warehouse::operativaRule()],
             'initial_stock.*.quantity' => ['required', 'integer', 'min:0'],
             // SCRUM-426 — mismas reglas que StoreInventoryProductTechnicalSheetRequest (Caso A/B:
             // archivo O link, nunca ambos ni ninguno).
@@ -92,7 +97,23 @@ class StoreInventoryProductRequest extends FormRequest
                 Rule::requiredIf(fn (): bool => ! $this->hasFile('file')),
                 'nullable', 'string', 'url', 'max:2048',
             ],
+            // SCRUM-830 (RN01/RN02/RN03) — imagen del producto obligatoria al crear, siempre
+            // archivo (sin alternativa de link, a diferencia de la ficha técnica de arriba).
+            // max:10240 (10MB, sección 5 del ticket: "controlar el tamaño máximo del archivo
+            // original") — GD decodifica el archivo completo en memoria antes de redimensionar,
+            // a diferencia de la ficha técnica (documento, nunca se decodifica como raster), así
+            // que un límite explícito acá evita agotar memoria del worker con un archivo enorme.
+            'photo' => ['required', 'file', 'max:10240', 'extensions:'.implode(',', CatalogService::PHOTO_EXTENSIONS)],
         ];
+    }
+
+    /** SCRUM-1126 — sin `provider_id` explícito, el principal es el primero de `provider_ids`. */
+    protected function prepareForValidation(): void
+    {
+        $ids = $this->input('provider_ids');
+        if (! $this->filled('provider_id') && is_array($ids) && $ids !== [] && is_numeric($ids[array_key_first($ids)])) {
+            $this->merge(['provider_id' => (int) $ids[array_key_first($ids)]]);
+        }
     }
 
     /**
@@ -137,20 +158,19 @@ class StoreInventoryProductRequest extends FormRequest
         };
     }
 
-    /** REQ-178 Escenarios 2/3 — única solo dentro del mismo proveedor, mismo criterio que Nueva Orden. */
+    /** REQ-178 Escenarios 2/3 — única solo dentro del mismo proveedor (principal o secundario, SCRUM-1126), mismo criterio que Nueva Orden. */
     private function uniqueFactoryReferenceRule(): \Closure
     {
         return function (string $attribute, mixed $value, \Closure $fail): void {
             if (! is_string($value) || $value === '') {
                 return;
             }
-            $providerId = $this->input('provider_id');
-            if (! is_numeric($providerId)) {
-                return;
-            }
-            $existing = CatalogProduct::where('provider_id', (int) $providerId)
-                ->where('factory_reference', $value)
-                ->first();
+            // SCRUM-1126 — se valida contra TODOS los proveedores del producto nuevo (principal + provider_ids).
+            $providerIds = array_values(array_unique(array_map('intval', array_filter(
+                array_merge([$this->input('provider_id')], (array) $this->input('provider_ids', [])),
+                'is_numeric',
+            ))));
+            $existing = CatalogProduct::findByFactoryReferenceForProviders($value, $providerIds);
             if ($existing !== null) {
                 $fail("La referencia de fábrica '{$value}' ya pertenece al producto '{$existing->name}' de este proveedor.");
             }

@@ -30,16 +30,19 @@ final class ReportsService
      * puede pedir "team") y período (mes/trimestre/año, siempre el período EN CURSO,
      * no un selector de fecha libre — así lo pide el mock).
      *
-     * @param array{scope?: string, period?: string, owner_id?: int} $filters
+     * @param array{scope?: string, period?: string, owner_id?: int, owner_ids?: list<int>} $filters
      * @return array<string, mixed>
      */
     public function summary(User $user, array $filters = []): array
     {
-        $scope    = $this->resolveScope($user, $filters);
-        $period   = $filters['period'] ?? 'month';
-        $ownerId  = $filters['owner_id'] ?? null;
+        $scope     = $this->resolveScope($user, $filters);
+        $period    = $filters['period'] ?? 'month';
+        // SCRUM-854 — multi-selección; owner_ids gana sobre owner_id singular (retrocompat).
+        $ownerIds  = ! empty($filters['owner_ids'])
+            ? $filters['owner_ids']
+            : (isset($filters['owner_id']) ? [(int) $filters['owner_id']] : null);
 
-        $allApproved    = $this->approvedCards($user, $scope, $ownerId);
+        $allApproved    = $this->approvedCards($user, $scope, $ownerIds);
         $periodApproved = $this->filterByPeriod($allApproved, $period);
 
         $result = [
@@ -47,7 +50,7 @@ final class ReportsService
             'period'       => $period,
             'surface_m2'   => round((float) $periodApproved->sum('worked_area_m2'), 2),
             'best_clients' => $this->bestClients($periodApproved),
-            'meta'         => $this->metaPanel($user, $scope, $ownerId),
+            'meta'         => $this->metaPanel($user, $scope, $ownerIds),
         ];
 
         // REQ-075/076: exclusivos de alcance Equipo — no se muestran en Resumen personal.
@@ -101,13 +104,14 @@ final class ReportsService
      * histórico de 6 meses del panel Metas, que necesita ver más atrás del
      * período en curso.
      *
+     * @param list<int>|null $ownerIds
      * @return Collection<int, PipelineCard>
      */
-    public function approvedCards(User $user, string $scope, ?int $ownerId = null): Collection
+    public function approvedCards(User $user, string $scope, ?array $ownerIds = null): Collection
     {
         $cards = $this->pipeline->list($user, array_filter([
-            'scope'    => $scope,
-            'owner_id' => $ownerId,
+            'scope'     => $scope,
+            'owner_ids' => $ownerIds,
         ], fn (mixed $v): bool => $v !== null));
 
         return $cards->where('stage', 'approved')->values();
@@ -171,11 +175,12 @@ final class ReportsService
      * suma de sus Metas individuales (mismo criterio que usa el propio mock
      * para "meta de equipo").
      *
+     * @param list<int>|null $ownerIds
      * @return array{monthly_history: list<array{month: string, amount: float}>, goal_amount: float|null}
      */
-    private function metaPanel(User $user, string $scope, ?int $ownerId): array
+    private function metaPanel(User $user, string $scope, ?array $ownerIds): array
     {
-        $allApproved = $this->approvedCards($user, $scope, $ownerId);
+        $allApproved = $this->approvedCards($user, $scope, $ownerIds);
         $now         = CarbonImmutable::now();
 
         $history = [];
@@ -191,8 +196,12 @@ final class ReportsService
         }
 
         $goalQuery = SalesGoal::query();
-        if ($scope === 'own' || $ownerId !== null) {
-            $goalQuery->where('user_id', $ownerId ?? $user->id);
+        if (! empty($ownerIds)) {
+            // SCRUM-854 — multi-selección: meta = suma de las metas individuales de cada
+            // seleccionado, mismo criterio ya usado acá para "meta de equipo" sin filtro.
+            $goalQuery->whereIn('user_id', $ownerIds);
+        } elseif ($scope === 'own') {
+            $goalQuery->where('user_id', $user->id);
         } else {
             $goalQuery->whereIn('user_id', $this->home->vendors()->pluck('id'));
         }
@@ -217,7 +226,7 @@ final class ReportsService
         $vendors  = $this->home->vendors();
 
         $rows = $vendors->map(function (array $vendor) use ($user, $settings) {
-            $cards = $this->approvedCards($user, 'team', $vendor['id']);
+            $cards = $this->approvedCards($user, 'team', [$vendor['id']]);
             $now   = CarbonImmutable::now();
 
             $monthlyTotals = [];

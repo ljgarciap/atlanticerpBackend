@@ -4,18 +4,23 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bodega;
 
+use App\Models\User;
 use App\Modules\Bodega\Models\AdjustmentRequest;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\BodegaSetting;
+use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderDocument;
 use App\Modules\Bodega\Models\OrderStageHistory;
+use App\Modules\Bodega\Models\RelocationRequest;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Bodega\Services\BodegaSettingsService;
+use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
+use App\Modules\Gerencia\Models\ReglaAprobacion;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use Carbon\Carbon;
 use Illuminate\Http\Client\Factory;
@@ -132,6 +137,23 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $this->assertTrue($names->contains('Ayudante General Bodega Test'));
         $this->assertFalse($names->contains('Transporte Test'));
         $this->assertFalse($names->contains('Asistente Bodega Test'));
+    }
+
+    // SCRUM-1142 — Picker Bodega Test (picker), Repartidor Test y "Personal de Bodega" (repartidor).
+    public function test_team_members_incluye_a_carlos_joel_y_personal_de_bodega(): void
+    {
+        $headers = $this->authHeadersFor('liderbodega@test.com', 'lider_bodega');
+
+        $pickers = collect($this->withHeaders($headers)->getJson('/api/bodega/team-members?role=picker')->assertStatus(200)->json('data'))->pluck('name');
+        $this->assertTrue($pickers->contains('Picker Bodega Test'));
+        $this->assertTrue($pickers->contains('Ayudante General Bodega Test'), 'Las opciones existentes se mantienen.');
+        $this->assertFalse($pickers->contains('Repartidor Test'));
+
+        $couriers = collect($this->withHeaders($headers)->getJson('/api/bodega/team-members?role=courier')->assertStatus(200)->json('data'))->pluck('name');
+        $this->assertTrue($couriers->contains('Repartidor Test'));
+        $this->assertTrue($couriers->contains('Personal de Bodega'));
+        $this->assertTrue($couriers->contains('Transporte Test'), 'Las opciones existentes se mantienen.');
+        $this->assertFalse($couriers->contains('Picker Bodega Test'));
     }
 
     public function test_team_members_role_asistente_bodega_mismo_resultado_que_home_team(): void
@@ -404,8 +426,8 @@ class BodegaHomeControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $items = collect($response->json('pendientes.items'));
-        $this->assertNotNull($items->first(fn (array $i) => $i['type'] === 'ajuste_inventario_pendiente' && str_contains((string) $i['solicitante'], 'Osvaldo')));
-        $this->assertNull($items->first(fn (array $i) => $i['type'] === 'ajuste_inventario_pendiente' && str_contains((string) $i['solicitante'], 'Mariano')));
+        $this->assertNotNull($items->first(fn (array $i) => $i['type'] === 'ajuste_inventario_pendiente' && (string) $i['solicitante'] === 'Asistente Bodega Test'));
+        $this->assertNull($items->first(fn (array $i) => $i['type'] === 'ajuste_inventario_pendiente' && (string) $i['solicitante'] === 'Asistente Bodega Test 2'));
     }
 
     public function test_pendientes_de_ajuste_ve_todas_las_solicitudes_en_equipo_completo(): void
@@ -617,9 +639,50 @@ class BodegaHomeControllerTest extends FeatureTestCase
             ->getJson('/api/bodega/home/summary')
             ->assertStatus(200);
 
-        $rows = collect($response->json('articulos_criticos'));
+        // SCRUM-871 Pre-QA — articulos_criticos ahora es {items, total}, no un array plano
+        // (el summary solo trae el top-N configurable, ver BodegaSettingsService::articulosCriticosTopN()).
+        $rows = collect($response->json('articulos_criticos.items'));
         $this->assertNotNull($rows->firstWhere('catalog_product_id', $critical->id));
         $this->assertNull($rows->firstWhere('catalog_product_id', $healthy->id));
+        $this->assertSame(1, $response->json('articulos_criticos.total'));
+    }
+
+    /**
+     * SCRUM-871 Pre-QA (CRÍTICO real, 2026-09-13) — antes esto devolvía TODOS los productos
+     * activos en estado crítico sin límite (11670 en dev, ~13-14s). Confirma que el summary de
+     * Home solo trae `articulosCriticosTopN()` (default 5) ordenados por importancia (sin_stock
+     * antes que bajo_stock, luego por disponible ascendente), mientras `total` sigue reflejando
+     * el conteo real completo — el link "Ver más" de la tarjeta usa `total` para su texto, no
+     * `items.length`.
+     */
+    public function test_articulos_criticos_capa_al_top_n_configurado_y_ordena_por_importancia(): void
+    {
+        // sin_stock (disponible <= 0), debería quedar primero pese a crearse último.
+        $sinStock = CatalogProduct::create([
+            'reference' => 'REF-SIN-STOCK', 'name' => 'Sin stock', 'description' => 'Sin stock',
+            'price_full' => 100, 'cost' => 60, 'stock_quantity' => 0, 'reorder_point' => 5, 'is_active' => true,
+        ]);
+        // 6 productos en bajo_stock (más que el default top_n=5) para forzar el cap.
+        for ($i = 1; $i <= 6; $i++) {
+            CatalogProduct::create([
+                'reference' => "REF-BAJO-{$i}", 'name' => "Bajo stock {$i}", 'description' => "Bajo stock {$i}",
+                'price_full' => 100, 'cost' => 60, 'stock_quantity' => $i, 'reorder_point' => 10, 'is_active' => true,
+            ]);
+        }
+
+        $response = $this->withHeaders($this->authHeadersFor('asistentebodega@test.com', 'asistente_bodega'))
+            ->getJson('/api/bodega/home/summary')
+            ->assertStatus(200);
+
+        $items = collect($response->json('articulos_criticos.items'));
+        $this->assertCount(5, $items, 'el summary de Home nunca debería traer más que el top-N configurado');
+        $this->assertSame(7, $response->json('articulos_criticos.total'), 'total debe reflejar el conteo real (1 sin_stock + 6 bajo_stock), no items.length');
+        $this->assertSame($sinStock->id, $items->first()['catalog_product_id'], 'sin_stock siempre debe ir primero, sin importar el orden de creación');
+        // Dentro del top-5 (sin_stock + 4 de los 6 bajo_stock), el disponible debe venir ascendente.
+        $disponibles = $items->pluck('disponible')->all();
+        $sorted = $disponibles;
+        sort($sorted);
+        $this->assertSame($sorted, $disponibles, 'los productos deben venir ordenados por disponible ascendente dentro de cada estado');
     }
 
     // ── SCRUM-368 (REQ-298) — Mi calendario ──────────────────────────────────
@@ -635,5 +698,114 @@ class BodegaHomeControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->assertSame(1, $response->json('mi_calendario.events_today_count'));
+    }
+
+    // ── SCRUM-908 — tarjeta "Aprobaciones Pendientes" ───────────────────────────
+
+    /**
+     * Senior Review SCRUM-908: `bodega.approve` es solo el gate grueso de la ruta —
+     * `RelocationRequestController::resolveMarkAccess()` decide 100% vía `AprobacionGate` (Mark, o
+     * una `ReglaAprobacion` activa para 'relocation', SCRUM-161/162). Este test ya no le da
+     * `bodega.approve` a almacen@ (no alcanzaría solo) — usa el mecanismo real: una
+     * `ReglaAprobacion` que lo vuelve aprobador de ese tipo específico.
+     */
+    public function test_approvals_pending_incluye_reubicacion_pendiente_para_aprobador_via_regla(): void
+    {
+        $product = CatalogProduct::create([
+            'reference' => 'REF-APROB-908', 'name' => 'Reflector LED', 'description' => 'Reflector LED',
+            'price_full' => 80, 'cost' => 40, 'stock_quantity' => 10, 'is_active' => true,
+        ]);
+        $central = Warehouse::where('name', 'Bodega Central')->first();
+        $merma = Warehouse::where('name', 'Merma')->first();
+        $solicitante = User::where('email', 'designer@atlantic.test')->first();
+        $aprobador = User::where('email', 'liderbodega@test.com')->firstOrFail();
+
+        RelocationRequest::create([
+            'catalog_product_id' => $product->id,
+            'origin_warehouse_id' => $central->id,
+            'destination_warehouse_id' => $merma->id,
+            'cantidad' => 2,
+            'motivo' => 'Prueba SCRUM-908',
+            'solicitado_por' => $solicitante->id,
+            'estado' => RelocationRequest::ESTADO_PENDIENTE,
+        ]);
+        $regla = ReglaAprobacion::create(['tipo' => 'relocation', 'activo' => true]);
+        $regla->aprobadores()->attach($aprobador->id);
+
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/bodega/home/approvals-pending')
+            ->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'relocation'));
+
+        // SCRUM-1154 — la notificación lleva a Bodega → Bodegas (donde está la bandeja de solicitudes), con el id de ESA
+        // solicitud; antes llevaba a Inventario, donde no hay nada que aprobar.
+        $relocation = $items->firstWhere('tipo', 'relocation');
+        $this->assertMatchesRegularExpression('#^/bodega/bodegas\?relocation=\d+$#', $relocation['detail_route']);
+        $this->assertStringNotContainsString('/bodega/inventario', $relocation['detail_route']);
+    }
+
+    public function test_approvals_pending_vacio_sin_bodega_approve(): void
+    {
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
+            ->getJson('/api/bodega/home/approvals-pending')
+            ->assertStatus(200);
+
+        $this->assertSame([], $response->json('data'));
+    }
+
+    /** relocation/adjustment/general_count comparten `ComprasSettings.primary_approver_user_id`. */
+    private function makeBodegaMark(): int
+    {
+        $markId = (int) User::where('email', 'liderbodega@test.com')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+
+        return $markId;
+    }
+
+    public function test_approvals_pending_incluye_ajuste_de_inventario_para_mark(): void
+    {
+        $this->makeBodegaMark();
+        $product = CatalogProduct::create([
+            'reference' => 'REF-ADJ-908', 'name' => 'Bombillo LED', 'description' => 'Bombillo LED',
+            'price_full' => 20, 'cost' => 10, 'stock_quantity' => 10, 'is_active' => true,
+        ]);
+        $central = Warehouse::where('name', 'Bodega Central')->first();
+        $solicitante = User::where('email', 'designer@atlantic.test')->first();
+        $adjustmentRequest = AdjustmentRequest::create(['catalog_product_id' => $product->id, 'solicitado_por' => $solicitante->id]);
+        AdjustmentRequestLine::create([
+            'adjustment_request_id' => $adjustmentRequest->id, 'warehouse_id' => $central->id,
+            'tipo' => 'Sumar', 'cantidad' => 5, 'motivo' => 'Prueba SCRUM-908',
+            'evidencia_storage_key' => 'bodega/test.jpg', 'estado' => AdjustmentRequestLine::ESTADO_PENDIENTE,
+        ]);
+
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/bodega/home/approvals-pending')
+            ->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'adjustment'));
+    }
+
+    public function test_approvals_pending_incluye_conteo_general_para_mark(): void
+    {
+        $this->makeBodegaMark();
+        $central = Warehouse::where('name', 'Bodega Central')->first();
+        $solicitante = User::where('email', 'designer@atlantic.test')->first();
+        GeneralCountRequest::create([
+            'warehouse_id' => $central->id, 'realizado_por' => $solicitante->id,
+            'estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION,
+        ]);
+
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/bodega/home/approvals-pending')
+            ->assertStatus(200);
+
+        $items = collect($response->json('data'));
+        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'general_count'));
     }
 }

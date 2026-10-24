@@ -62,7 +62,7 @@ class CommissionCapture extends Model
     /** @return BelongsTo<InternalTechnician, $this> */
     public function internalTechnician(): BelongsTo
     {
-        return $this->belongsTo(InternalTechnician::class);
+        return $this->belongsTo(InternalTechnician::class)->withTrashed();
     }
 
     /** @return BelongsTo<User, $this> */

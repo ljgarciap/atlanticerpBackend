@@ -25,11 +25,18 @@ final class DashboardService
 
     public function __construct(private readonly NotificationService $notifications) {}
 
-    /** @return array<string, mixed> */
-    public function summary(): array
+    /**
+     * @param list<int> $ownerIds SCRUM-854 — filtro multi-selección Vendedor/Diseñador (OR
+     *   semántico, vacío = todos). Un solo `whereIn` sobre la query base alcanza para filtrar
+     *   alerts/stage_counts/totals/by_tag, que ya derivan todos de `$cards`.
+     * @return array<string, mixed>
+     */
+    public function summary(array $ownerIds = []): array
     {
         /** @var Collection<int, PipelineCard> $cards */
-        $cards = PipelineCard::with(['salesProject', 'masterClient'])->get();
+        $cards = PipelineCard::with(['salesProject', 'masterClient'])
+            ->when($ownerIds !== [], fn ($q) => $q->whereIn('owner_id', $ownerIds))
+            ->get();
 
         return [
             'alerts'       => $this->alerts($cards),
@@ -82,6 +89,8 @@ final class DashboardService
                     'subject' => 'Recordatorio: propuestas vencidas pendientes de seguimiento',
                     'body'    => "Tenés {$ownerCards->count()} proyecto(s) con propuesta vencida (más de 15 días "
                         ."sin movimiento): {$projectNames}. Da seguimiento con el cliente cuanto antes.",
+                    // SCRUM-1167 — el clic de la campana lleva al Pipeline.
+                    'cta_url' => '/ventas-diseno/pipeline',
                 ],
                 channels: [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL],
                 source: NotificationSend::SOURCE_CRM_DASHBOARD_PROPOSAL_REMINDER,

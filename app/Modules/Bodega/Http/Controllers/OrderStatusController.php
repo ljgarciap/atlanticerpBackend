@@ -25,6 +25,17 @@ use Illuminate\Routing\Controller;
  */
 final class OrderStatusController extends Controller
 {
+    /**
+     * SCRUM-897 — mismos roles que gatean Facturación/Cobros de Administración & Contabilidad
+     * (`role:superadmin,lider_admin_contab,asistente_administrativa,management` en
+     * `routes/admin-contab.php`). `superadmin` no hace falta acá porque ya cae en la rama
+     * `$isSuperadmin` (`superadmin.all`) de `resolveAccess()` antes de llegar a este chequeo.
+     *
+     * @var list<string>
+     * SCRUM-1139 — `lider_operaciones` espeja a la asistente (mismos grupos `role:` de `routes/admin-contab.php`).
+     */
+    private const ADMIN_CONTAB_ROLES = ['lider_admin_contab', 'asistente_administrativa', 'lider_operaciones', 'management'];
+
     public function __construct(
         private readonly OrderStatusService $status,
         private readonly OrderDocumentService $documents,
@@ -56,8 +67,9 @@ final class OrderStatusController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // SCRUM-1171 — un pedido AJENO responde igual que uno inexistente (404): con 403 vs 404 un vendedor podía enumerar qué ids existen.
         if (! $this->canAccessOrder($root, $restrictToOwnerId)) {
-            return response()->json(['message' => trans('auth.unauthorized')], 403);
+            return response()->json(['message' => 'Not found'], 404);
         }
 
         return response()->json($this->status->detailPayload($root));
@@ -66,7 +78,7 @@ final class OrderStatusController extends Controller
     /**
      * GET /api/bodega/orders/status/{id}/document
      *
-     * REQ-341 — genera (siempre una fila nueva, mismo criterio append-only que Guía de Entrega) y
+     * REQ-341 — genera (o reutiliza, ver SCRUM-1171 más abajo) y
      * devuelve de una sola vez la URL firmada del documento "Estatus de Pedido", para no obligar
      * al frontend a un segundo round-trip al endpoint de descarga genérico
      * (`GET /api/bodega/orders/{id}/documents/{documentId}/download`) — aunque ese endpoint
@@ -86,11 +98,13 @@ final class OrderStatusController extends Controller
         }
 
         if (! $this->canAccessOrder($root, $restrictToOwnerId)) {
-            return response()->json(['message' => trans('auth.unauthorized')], 403);
+            return response()->json(['message' => 'Not found'], 404);
         }
 
+        // SCRUM-1171 — antes cada clic en «Ver/Descargar» creaba un documento nuevo (fila + objeto en S3) aunque nada hubiera cambiado: ahora se reutiliza
+        // el que ya tiene exactamente el mismo contenido (huella del payload) y se genera uno nuevo solo si el estatus cambió.
         $payload  = $this->status->detailPayload($root);
-        $document = $this->documents->generateEstatusPedido($root, $payload, $user);
+        $document = $this->documents->findOrGenerateEstatusPedido($root, $payload, $user);
 
         return response()->json([
             'document_id' => $document->id,
@@ -105,6 +119,16 @@ final class OrderStatusController extends Controller
      * el propio usuario — devuelve `[$user, null]` para Bodega (sin restricción) o
      * `[$user, $user->id]` para Ventas & Diseño (restringido). `null` de retorno = sin acceso.
      *
+     * SCRUM-897 — Administración & Contabilidad replica el botón "Status de Pedidos" en
+     * Facturación (frontend, en paralelo) contra este MISMO endpoint, sin duplicar lógica acá. Ve
+     * TODOS los pedidos igual que Bodega (Administración no tiene noción de "pedidos propios").
+     * Mismos roles que ya gatean Facturación/Cobros — `role:superadmin,lider_admin_contab,
+     * asistente_administrativa,management` (ver `routes/admin-contab.php`, rutas de `invoices`/
+     * `payments`) — leídos del claim `role` del JWT, igual que `EnforceRole`. `superadmin` y
+     * `management` (Gerencia) ya tenían acceso real de hecho antes de este cambio, vía
+     * `superadmin.all`/`bodega.read` (ver SCRUM-741 más abajo) — se listan igual acá por
+     * explicitud, sin depender de esa coincidencia.
+     *
      * @return array{0: User, 1: int|null}|null
      */
     private function resolveAccess(Request $request): ?array
@@ -114,9 +138,12 @@ final class OrderStatusController extends Controller
             return null;
         }
 
+        /** @var array{permissions?: mixed, role?: mixed}|null $jwt */
+        $jwt = $request->attributes->get('jwt');
+
         /** @var list<string> $permissions */
-        $permissions = is_array($request->attributes->get('jwt')['permissions'] ?? null)
-            ? array_values(array_filter($request->attributes->get('jwt')['permissions'], 'is_string'))
+        $permissions = is_array($jwt['permissions'] ?? null)
+            ? array_values(array_filter($jwt['permissions'], 'is_string'))
             : [];
 
         $isSuperadmin = in_array('superadmin.all', $permissions, true);
@@ -130,6 +157,14 @@ final class OrderStatusController extends Controller
         }
 
         if ($isSuperadmin || in_array('bodega.read', $permissions, true)) {
+            return [$user, null];
+        }
+
+        /** @var string|null $role */
+        $role = is_string($jwt['role'] ?? null) ? $jwt['role'] : null;
+        // SCRUM-1150 — el rol de Admin&Cont va ANTES de la restricción por propietario de Ventas & Diseño: Félix
+        // (`lider_admin_contab`) ahora también tiene `ventas_diseno.read` y no debe pasar a ver solo sus pedidos.
+        if ($role !== null && in_array($role, self::ADMIN_CONTAB_ROLES, true)) {
             return [$user, null];
         }
 

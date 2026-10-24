@@ -24,6 +24,8 @@ use Illuminate\Support\Collection;
  * @property int $id
  * @property string $name
  * @property string|null $category
+ * @property string|null $tax_id
+ * @property string|null $tax_id_dv
  * @property string $origin
  * @property string $currency
  * @property string|null $contact_name
@@ -36,6 +38,10 @@ use Illuminate\Support\Collection;
  * @property string|null $bank_account_number
  * @property string|null $bank_swift
  * @property string|null $bank_beneficiary
+ * @property string|null $bank_image_storage_key
+ * @property string|null $bank_image_original_filename
+ * @property int|null $bank_image_size_bytes
+ * @property string|null $bank_image_mime_type
  * @property bool $is_active
  * @property Carbon $created_at
  */
@@ -58,17 +64,25 @@ class Provider extends Model
 
     public const CATEGORY_ONLINE = 'online';
 
+    /** SCRUM-820 — 6ta categoría, agregada 2026-08-31 a pedido de Gerencia Test. */
+    public const CATEGORY_LATINOAMERICA = 'latinoamerica';
+
     /** @var list<string> */
     public const CATEGORIES = [
         self::CATEGORY_LOCALES, self::CATEGORY_ZONA_LIBRE, self::CATEGORY_CHINA,
-        self::CATEGORY_EUROPA, self::CATEGORY_ONLINE,
+        self::CATEGORY_EUROPA, self::CATEGORY_ONLINE, self::CATEGORY_LATINOAMERICA,
     ];
 
     /** @var list<string> */
     protected $fillable = [
-        'name', 'category', 'origin', 'currency', 'contact_name', 'whatsapp', 'phone', 'email',
+        'name', 'category', 'tax_id', 'tax_id_dv', 'origin', 'currency', 'contact_name', 'whatsapp', 'phone', 'email',
         'address', 'country', 'bank_name', 'bank_account_number', 'bank_swift', 'bank_beneficiary',
         'is_active', 'created_by',
+        // SCRUM-819 — solo asignados por ProviderBankImageService (upload()/delete()), nunca por
+        // StoreProviderRequest/UpdateProviderRequest (esas Requests no los validan, así que
+        // $request->validated() nunca los deja pasar por ProviderController::store()/update()).
+        'bank_image_storage_key', 'bank_image_original_filename',
+        'bank_image_size_bytes', 'bank_image_mime_type',
     ];
 
     /**

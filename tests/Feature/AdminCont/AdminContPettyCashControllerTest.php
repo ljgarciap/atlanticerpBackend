@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Modules\AdminCont\Models\AdminContPettyCashExpense;
 use App\Modules\AdminCont\Models\AdminContPettyCashReport;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\UploadedFile;
@@ -167,6 +168,81 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
             ->getJson('/api/admin-contab/petty-cash/pending')->json();
         $this->assertCount(1, $pending['grupos']);
         $this->assertEquals(20.0, $pending['total_general']);
+    }
+
+    // ── SCRUM-947 — paginación estándar ─────────────────────────────────────────────────────
+
+    /**
+     * Pendientes pagina a nivel de GRUPO (por solicitante), no de línea: `Pagination::ofArray()`
+     * recibe el array YA agrupado (`$result['grupos']`), así que un grupo nunca puede partirse
+     * entre 2 páginas por construcción — no por un chequeo especial. `per_page` real (10/20/50/100)
+     * — 3 solicitantes reales alcanzan para confirmar el shape de `meta` y que `total_general`
+     * sigue siendo el total real de TODO lo pendiente, no solo la página.
+     */
+    public function test_pending_pagina_a_nivel_de_grupo_sin_afectar_total_general(): void
+    {
+        $token = $this->loginAsFelix();
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $yanethId = $this->userIdByEmail(self::YANETH_EMAIL);
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+
+        $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/petty-cash/expenses', [
+            'lineas' => [
+                $this->lineaPayload($felixId, 'A', 10, 0),
+                $this->lineaPayload($yanethId, 'B', 20, 0),
+                $this->lineaPayload($markId, 'C', 30, 0),
+            ],
+        ])->assertStatus(201);
+
+        $page1 = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/petty-cash/pending?per_page=10')
+            ->assertStatus(200)->json();
+
+        $this->assertCount(3, $page1['grupos']);
+        $this->assertEquals(60.0, $page1['total_general'], 'total_general sigue siendo el total real de TODO lo pendiente, no solo la página');
+        $this->assertSame(['total' => 3, 'per_page' => 10, 'current_page' => 1, 'last_page' => 1], $page1['meta']);
+
+        $page2 = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/petty-cash/pending?per_page=10&page=2')
+            ->assertStatus(200)->json();
+        $this->assertCount(0, $page2['grupos'], 'los 3 grupos ya entraron en la página 1, la 2 debe venir vacía');
+    }
+
+    public function test_rejected_pagina_20_por_defecto(): void
+    {
+        $solicitanteId = $this->userIdByEmail(self::FELIX_EMAIL);
+        for ($i = 0; $i < 25; $i++) {
+            AdminContPettyCashExpense::create([
+                'fecha' => '2026-07-01', 'solicitante_id' => $solicitanteId, 'proveedor' => "Proveedor {$i}",
+                'descripcion' => 'Gasto rechazado', 'monto_bruto' => 10, 'itbms' => 0,
+                'report_id' => null, 'intentos_rechazo' => 5, 'created_by' => $solicitanteId,
+            ]);
+        }
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/petty-cash/rejected')
+            ->assertStatus(200)->json();
+
+        $this->assertCount(20, $response['lineas']);
+        $this->assertSame(['total' => 25, 'per_page' => 20, 'current_page' => 1, 'last_page' => 2], $response['meta']);
+    }
+
+    public function test_reports_pagina_20_por_defecto(): void
+    {
+        $realizadoPor = $this->userIdByEmail(self::FELIX_EMAIL);
+        for ($i = 0; $i < 25; $i++) {
+            AdminContPettyCashReport::create([
+                'numero' => sprintf('%04d-2026', $i + 1), 'forma_pago' => AdminContPettyCashReport::FORMA_PAGO_EFECTIVO,
+                'estado' => AdminContPettyCashReport::ESTADO_PENDIENTE_APROBACION, 'realizado_por' => $realizadoPor,
+            ]);
+        }
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/petty-cash/reports')
+            ->assertStatus(200)->json();
+
+        $this->assertCount(20, $response['data']);
+        $this->assertSame(['total' => 25, 'per_page' => 20, 'current_page' => 1, 'last_page' => 2], $response['meta']);
     }
 
     public function test_generar_reporte_sin_seleccion_falla_validacion(): void
@@ -364,6 +440,39 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
             AdminContPettyCashReport::ESTADO_RECHAZADO,
             DB::table($this->tableFqn('petty_cash_reports'))->where('numero', $reporte['numero'])->value('estado'),
         );
+    }
+
+    /**
+     * SCRUM-868 punto 2 — la pestaña "Rechazados" mostraba el Solicitante vacío: `expensePayload()`
+     * (lista plana, sin agrupar por solicitante como Pendientes) nunca incluyó `solicitante_nombre`
+     * ni `solicitante_id`, aunque el frontend ya los esperaba en la línea.
+     */
+    public function test_rejected_incluye_solicitante_nombre_e_id_en_cada_linea(): void
+    {
+        $this->ensureMarkIsApprover();
+        $tokenFelix = $this->loginAsFelix();
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $tokenMark = $this->loginAsMark();
+
+        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Subway');
+        DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $id)->update(['intentos_rechazo' => 1]);
+        $reporte = $this->crearReporteConLineas($tokenFelix, [$id]);
+
+        $this->withHeaders($this->authHeaders($tokenMark))
+            ->putJson("/api/admin-contab/petty-cash/expenses/{$id}/reject", ['motivo' => 'No corresponde.'])
+            ->assertStatus(200);
+
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        $felix = DB::table("{$slug}_auth.users")->where('id', $felixId)->first();
+        $nombreEsperado = trim("{$felix->first_name} {$felix->last_name}");
+
+        $rejected = $this->withHeaders($this->authHeaders($tokenFelix))
+            ->getJson('/api/admin-contab/petty-cash/rejected')->json();
+
+        $linea = collect($rejected['lineas'])->firstWhere('id', $id);
+        $this->assertNotNull($linea);
+        $this->assertSame($felixId, $linea['solicitante_id']);
+        $this->assertSame($nombreEsperado, $linea['solicitante_nombre']);
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
@@ -36,7 +37,9 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
         $response->assertJsonPath('regimen_tributario', 'general');
         $response->assertJsonPath('pac_provider', 'digifact');
-        $response->assertJsonPath('pac_connection_status', 'conectado');
+        // SCRUM-943 (2026-09-25) — 'digifact' nunca está wireado, así que nunca hay credenciales
+        // reales que chequear: 'desconectado' es el default honesto, ya no un 'conectado' fijo.
+        $response->assertJsonPath('pac_connection_status', 'desconectado');
         $response->assertJsonPath('pac_ambiente', 'testing');
         $response->assertJsonPath('pac_doc_factura_habilitado', true);
         $response->assertJsonPath('retencion_proveedores_activa', false);
@@ -78,6 +81,23 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
         $response->assertJsonPath('regimen_tributario', 'pequeno_contribuyente');
     }
 
+    // Pre-QA SCRUM-857/858 (2026-09-09) — la pantalla no permitía VACIAR un campo de texto ya
+    // cargado: ConvertEmptyStringsToNull convertía el "" a null y `string` lo rechazaba.
+    public function test_update_permite_vaciar_un_campo_de_texto_ya_cargado(): void
+    {
+        $token = $this->loginAsMark();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/fiscal-settings', ['nombre_comercial' => 'Algo Cargado'])
+            ->assertStatus(200)
+            ->assertJsonPath('nombre_comercial', 'Algo Cargado');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/fiscal-settings', ['nombre_comercial' => ''])
+            ->assertStatus(200)
+            ->assertJsonPath('nombre_comercial', '');
+    }
+
     public function test_update_ignora_pac_last_sync_at_y_primary_approver_user_id_del_body(): void
     {
         $token = $this->loginAsMark();
@@ -95,19 +115,104 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
         $response->assertJsonPath('primary_approver_user_id', fn ($id) => $id !== 999999);
     }
 
-    public function test_update_ignora_pac_connection_status_del_body(): void
+    /**
+     * SCRUM-943 (2026-09-25) — `pac_connection_status` ya no es un valor de BD que el cliente
+     * pueda intentar mandar: siempre se recalcula real (¿el proveedor/ambiente activo tiene API
+     * key configurada?), sin importar lo que venga en el body.
+     */
+    public function test_update_ignora_pac_connection_status_del_body_y_calcula_el_real(): void
     {
+        config(['services.msl_fe.sandbox.api_key' => 'una-key-real']);
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl'])->save();
         $token = $this->loginAsMark();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
-                'pac_connection_status' => 'desconectado',
-                'pac_ambiente' => 'production',
+                'pac_connection_status' => 'desconectado', // se ignora — el real es 'conectado'
+                'pac_ambiente' => 'testing',
             ])
             ->assertStatus(200);
 
         $response->assertJsonPath('pac_connection_status', 'conectado');
-        $response->assertJsonPath('pac_ambiente', 'production');
+        $response->assertJsonPath('pac_ambiente', 'testing');
+    }
+
+    public function test_pac_connection_status_desconectado_sin_api_key_configurada(): void
+    {
+        config(['services.msl_fe.sandbox.api_key' => null]);
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl', 'pac_ambiente' => 'testing'])->save();
+        $token = $this->loginAsMark();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/fiscal-settings')
+            ->assertStatus(200)
+            ->assertJsonPath('pac_connection_status', 'desconectado');
+    }
+
+    public function test_pac_connection_status_desconectado_en_apagado_aunque_haya_api_key(): void
+    {
+        config(['services.msl_fe.sandbox.api_key' => 'una-key-real']);
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl', 'pac_ambiente' => 'apagado'])->save();
+        $token = $this->loginAsMark();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/fiscal-settings')
+            ->assertStatus(200)
+            ->assertJsonPath('pac_connection_status', 'desconectado');
+    }
+
+    /** SCRUM-943 — interruptor global apagado/sandbox/producción, Senior Review 2026-09-24. */
+    public function test_update_acepta_apagado_como_valor_de_pac_ambiente(): void
+    {
+        $token = $this->loginAsMark();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/fiscal-settings', ['pac_ambiente' => 'apagado'])
+            ->assertStatus(200);
+
+        $response->assertJsonPath('pac_ambiente', 'apagado');
+    }
+
+    public function test_update_rechaza_un_valor_invalido_de_pac_ambiente(): void
+    {
+        $token = $this->loginAsMark();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/fiscal-settings', ['pac_ambiente' => 'no-existe'])
+            ->assertStatus(422);
+    }
+
+    // SCRUM-550 (rebote de Daniela 2026-09-10) — contacto de la empresa (teléfono/correo), nuevo
+    // en Configuración Fiscal para que el recibo de cobro pueda mostrarlo (RN1).
+    public function test_update_carga_y_vacia_el_contacto_de_la_empresa(): void
+    {
+        $token = $this->loginAsMark();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/fiscal-settings', [
+                'telefono_contacto' => '+507 6000-9999',
+                'correo_contacto' => 'facturacion@atlantic.com.pa',
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('telefono_contacto', '+507 6000-9999')
+            ->assertJsonPath('correo_contacto', 'facturacion@atlantic.com.pa');
+
+        // Mismo criterio que el resto de campos de texto (test_update_permite_vaciar_...): ""
+        // debe poder vaciar un contacto ya cargado, no rechazarse.
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/fiscal-settings', ['telefono_contacto' => '', 'correo_contacto' => ''])
+            ->assertStatus(200)
+            ->assertJsonPath('telefono_contacto', '')
+            ->assertJsonPath('correo_contacto', '');
+    }
+
+    public function test_update_rechaza_correo_contacto_con_formato_invalido(): void
+    {
+        $token = $this->loginAsMark();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/fiscal-settings', ['correo_contacto' => 'no-es-un-correo'])
+            ->assertStatus(422);
     }
 
     public function test_update_rechaza_regimen_tributario_invalido(): void

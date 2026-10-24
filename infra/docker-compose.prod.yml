@@ -47,8 +47,20 @@ services:
       POSTGRES_DB: ${DB_DATABASE}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # SCRUM-1073 (HA F2): archivado continuo de WAL. Cada segmento terminado (o cada 5 min si hubo actividad) se
+    # comprime en /wal-archive (= /data/wal-archive del host, creada por infra/scripts/setup-wal-archiving.sh ANTES de
+    # desplegar esto); ship-wal.sh los sube a S3. Permite restaurar a un instante (RPO de minutos).
+    command:
+      - postgres
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_timeout=300
+      - -c
+      - archive_command=test ! -f /wal-archive/%f.gz && gzip -c %p > /wal-archive/%f.gz.tmp && mv /wal-archive/%f.gz.tmp /wal-archive/%f.gz
     volumes:
       - /data/postgres/pgdata:/var/lib/postgresql/data
+      - /data/wal-archive:/wal-archive
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
       interval: 5s
@@ -95,6 +107,32 @@ services:
     logging: *default-logging
     working_dir: /var/www/html
     command: php artisan horizon
+    env_file:
+      - ../.env
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # SCRUM-918 (2026-09-15) — agrega a producción el contenedor `scheduler` ya validado en
+  # dev/test.atlanticerp.ai desde SCRUM-838/839 (ver docblock equivalente en docker-compose.qa.yml para
+  # el hallazgo completo: el Scheduler de Laravel nunca tuvo nada que lo dispare en ningún
+  # ambiente — sin crontab del SO, sin systemd timer, sin contenedor dedicado). Hasta esta fecha
+  # producción tenía el código de Schedule:: desplegado pero ningún proceso corriendo
+  # `schedule:run` — el cron de legacy:sync-incremental-all/legacy:check-sync-health (y
+  # security:analyze, audit-logs:archive, commissions:settle-internal, notificaciones) nunca se
+  # disparó solo en atlanticerp.ai. Mismo comando/intervalo que en QA, costo de CPU ya medido ahí como
+  # despreciable (~0.2% promedio).
+  scheduler:
+    build:
+      context: ./php
+    restart: unless-stopped
+    logging: *default-logging
+    working_dir: /var/www/html
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     env_file:
       - ../.env
     volumes:

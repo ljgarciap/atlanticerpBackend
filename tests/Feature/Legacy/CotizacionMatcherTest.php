@@ -29,7 +29,10 @@ final class CotizacionMatcherTest extends FeatureTestCase
 
         $result = (new CotizacionMatcher())->match([$cotizacion->id]);
 
-        $this->assertSame(['matched' => 1, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(1, $result['matched']);
+        $this->assertSame(0, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertSame([], $result['details']);
         $cotizacion->refresh();
         $this->assertSame($cliente->id, $cotizacion->legacy_cliente_id);
         $this->assertFalse($cotizacion->orphan);
@@ -41,7 +44,11 @@ final class CotizacionMatcherTest extends FeatureTestCase
 
         $result = (new CotizacionMatcher())->match([$cotizacion->id]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 1, 'errores' => 0], $result);
+        $this->assertSame(0, $result['matched']);
+        $this->assertSame(1, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertCount(1, $result['details']);
+        $this->assertSame('orphan', $result['details'][0]['status']);
         $cotizacion->refresh();
         $this->assertNull($cotizacion->legacy_cliente_id);
         $this->assertTrue($cotizacion->orphan);
@@ -53,7 +60,11 @@ final class CotizacionMatcherTest extends FeatureTestCase
 
         $result = (new CotizacionMatcher())->match([$cotizacion->id]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 1, 'errores' => 0], $result);
+        $this->assertSame(0, $result['matched']);
+        $this->assertSame(1, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertCount(1, $result['details']);
+        $this->assertSame('orphan', $result['details'][0]['status']);
         $cotizacion->refresh();
         $this->assertTrue($cotizacion->orphan);
     }
@@ -62,7 +73,7 @@ final class CotizacionMatcherTest extends FeatureTestCase
     {
         $result = (new CotizacionMatcher())->match([]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(['matched' => 0, 'orphan' => 0, 'errores' => 0, 'details' => []], $result);
     }
 
     public function test_matchea_multiples_cotizaciones_del_mismo_cliente(): void
@@ -73,7 +84,9 @@ final class CotizacionMatcherTest extends FeatureTestCase
 
         $result = (new CotizacionMatcher())->match([$c1->id, $c2->id]);
 
-        $this->assertSame(['matched' => 2, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(2, $result['matched']);
+        $this->assertSame(0, $result['orphan']);
+        $this->assertSame([], $result['details']);
     }
 
     private static function makeCotizacion(

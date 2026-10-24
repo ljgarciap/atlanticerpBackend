@@ -367,7 +367,7 @@ final class TicketService
      *
      * @param array{
      *   tipo: string, subtipo?: string|null, tipo_instalacion: string, descripcion: string,
-     *   sales_project_id: int, contacto?: string|null,
+     *   sales_project_id: int|null, contacto?: string|null,
      *   telefono?: string|null, email?: string|null, direccion?: string|null,
      *   requerimientos_especiales?: array{catalog?: list<string>, otros?: list<string>}|null,
      *   observaciones?: string|null,
@@ -380,7 +380,8 @@ final class TicketService
             $numero = $this->folio->next($data['tipo']);
             [$quoteStatus, $inspectionStatus] = $this->deriveInitialStatuses($data['tipo'], $data['subtipo'] ?? null);
 
-            $salesProject = SalesProject::with('subClient')->find($data['sales_project_id']);
+            $salesProjectId = $data['sales_project_id'] ?? null;
+            $salesProject = $salesProjectId !== null ? SalesProject::with('subClient')->find($salesProjectId) : null;
             $clienteSnapshot = $salesProject?->subClient?->business_name;
 
             $ticket = Ticket::create([
@@ -389,7 +390,7 @@ final class TicketService
                 'subtipo'                   => $data['subtipo'] ?? null,
                 'tipo_instalacion'          => $data['tipo_instalacion'],
                 'descripcion'               => $data['descripcion'],
-                'sales_project_id'          => $data['sales_project_id'],
+                'sales_project_id'          => $salesProjectId,
                 'cliente'                   => $clienteSnapshot,
                 'contacto'                  => $data['contacto'] ?? null,
                 'telefono'                  => $data['telefono'] ?? null,

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Modules\Auth\Support\NoLoginAccounts;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Roster genérico del catálogo de 13 roles de negocio (scaffolding — ver Atlantic/CLAUDE.md,
@@ -43,7 +45,7 @@ class BusinessRoleUserSeeder extends Seeder
         ['first_name' => 'Transporte', 'last_name' => 'Test', 'email' => 'transporte@test.com', 'role_key' => 'transporte'],
         ['first_name' => 'Lider Servicios', 'last_name' => 'Test', 'email' => 'liderservicios@test.com', 'role_key' => 'lider_servicios'],
         ['first_name' => 'Tecnico Servicios', 'last_name' => 'Test', 'email' => 'tecnicoservicios@test.com', 'role_key' => 'tecnico_servicios'],
-        ['first_name' => 'Tecnico Servicios', 'last_name' => 'Test', 'email' => 'tecnicoservicios2@test.com', 'role_key' => 'tecnico_servicios'],
+        ['first_name' => 'Tecnico Servicios', 'last_name' => 'Test 2', 'email' => 'tecnicoservicios2@test.com', 'role_key' => 'tecnico_servicios'],
         ['first_name' => 'Tecnico Servicios', 'last_name' => 'Test 3', 'email' => 'tecnicoservicios3@test.com', 'role_key' => 'tecnico_servicios'],
         ['first_name' => 'Garantias Servicios', 'last_name' => 'Test', 'email' => 'garantiasservicios@test.com', 'role_key' => 'garantias_servicios'],
         ['first_name' => 'Vendedor Disenador', 'last_name' => 'Test', 'email' => 'vendedordisenador@test.com', 'role_key' => 'vendedor_disenador'],
@@ -59,6 +61,10 @@ class BusinessRoleUserSeeder extends Seeder
         // explícito, se incluye igual (no es de los 3 sin cargo).
         ['first_name' => 'Vendedor Disenador', 'last_name' => 'Test 10', 'email' => 'vendedordisenador10@test.com', 'role_key' => 'vendedor_disenador'],
         ['first_name' => 'Lider Operaciones', 'last_name' => 'Test', 'email' => 'lideroperaciones@test.com', 'role_key' => 'lider_operaciones'],
+        // SCRUM-1142 — picker, repartidor y la opción «Personal de Bodega» de los dropdowns de Pedidos (genéricos).
+        ['first_name' => 'Picker Bodega', 'last_name' => 'Test', 'email' => 'pickerbodega@test.com', 'role_key' => 'ayudante_general_bodega'],
+        ['first_name' => 'Repartidor', 'last_name' => 'Test', 'email' => 'repartidor@test.com', 'role_key' => 'transporte'],
+        ['first_name' => 'Personal de', 'last_name' => 'Bodega', 'email' => 'personalbodega@test.com', 'role_key' => 'transporte'],
     ];
 
     private const RESTRICTED_LEVEL_OVERRIDE_EMAIL = 'gerencia5@test.com';
@@ -106,7 +112,8 @@ class BusinessRoleUserSeeder extends Seeder
                     'first_name' => $data['first_name'],
                     'last_name' => $data['last_name'],
                     'email' => $data['email'],
-                    'password_hash' => $data['email'],
+                    // Cuentas sin acceso (`NoLoginAccounts`): la contraseña no es el correo sino un valor aleatorio.
+                    'password_hash' => NoLoginAccounts::isNoLogin($data['email']) ? Str::random(40) : $data['email'],
                     'is_active' => true,
                     'role_id' => $roleIds[$data['role_key']],
                     'security_level_id' => $securityLevelId,

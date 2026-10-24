@@ -10,7 +10,7 @@ use App\Shared\Contracts\DomainEvent;
  * SCRUM-734 (Batch F, sección 11-12) — disparado por QuoteService::generate()
  * cuando se le asigna folio a una cotización por primera vez. Higiene
  * arquitectónica (consistencia con el resto del sistema de eventos, ej.
- * QuoteApproved) — ningún AC del ticket exige un consumidor real hoy; no hay
+ * QuoteConfirmed) — ningún AC del ticket exige un consumidor real hoy; no hay
  * listener todavía.
  */
 class QuoteGenerated implements DomainEvent

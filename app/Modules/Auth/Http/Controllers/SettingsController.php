@@ -39,6 +39,7 @@ class SettingsController extends Controller
             'language'            => 'sometimes|string|in:es,en',
             'theme'               => 'sometimes|string|in:light,dark',
             'session_timeout_min' => 'sometimes|integer|in:15,30,60,120,240,480,600,1440,2880',
+            'demo_mode_enabled'   => 'sometimes|boolean',
         ]);
 
         return response()->json($this->service->updateUserPreferences($user, $data));
@@ -49,6 +50,19 @@ class SettingsController extends Controller
     public function getSystemSettings(): JsonResponse
     {
         return response()->json($this->service->getSystemSettings());
+    }
+
+    /**
+     * docs/specs/demo-mode.md — hallazgo de Frontend Dev (2026-09-04): el toggle PERSONAL de
+     * Modo Demo (TopBar, cualquier usuario autenticado) necesita saber si el gate GLOBAL está
+     * encendido para decidir si se muestra, pero `getSystemSettings()` de arriba está detrás de
+     * `permission:settings.global` — un usuario sin ese permiso nunca vería el toggle aunque el
+     * gate global esté realmente activo. Mismo patrón que `getDocumentsMaxSize()`: lectura mínima,
+     * sin el resto de system_settings, accesible a cualquier autenticado.
+     */
+    public function getDemoModeStatus(): JsonResponse
+    {
+        return response()->json(['enabled' => $this->service->getSystemSettings()['demo_mode_enabled']]);
     }
 
     public function updateSystemSettings(Request $request): JsonResponse
@@ -65,7 +79,16 @@ class SettingsController extends Controller
             'mfa_mode'                    => 'sometimes|string|in:disabled,optional,required',
             'share_links_expiration_days' => 'sometimes|integer|min:1|max:365',
             'session_inactivity_hours'    => 'sometimes|integer|min:1|max:720',
+            'demo_mode_enabled'           => 'sometimes|boolean',
+            // SCRUM-990 — umbral de la guarda del sincronizador de Lafayette. Rango 0,5..1,0: por debajo de 0,5 la guarda dejaría de proteger el catálogo.
+            'lafayette_guarda_min_ratio'  => 'sometimes|numeric|min:0.5|max:1',
         ]);
+
+        // `/settings/system` exige settings.global, pero este umbral es solo de superadmin (afecta qué productos de Zona Libre se ocultan).
+        $permissions = (array) ($request->attributes->get('jwt')['permissions'] ?? []);
+        if (array_key_exists('lafayette_guarda_min_ratio', $data) && ! in_array('superadmin.all', $permissions, true)) {
+            return response()->json(['message' => trans('auth.unauthorized')], 403);
+        }
 
         return response()->json($this->service->updateSystemSettings($user, $data));
     }

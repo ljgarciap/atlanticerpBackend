@@ -120,6 +120,39 @@ final class ProductoStagingLoaderTest extends FeatureTestCase
         $this->assertDatabaseHas('atlantic_legacy.productos', ['icg_codarticulo' => 600, 'descripcion' => 'Producto 600']);
     }
 
+    public function test_load_stagea_stock_al4(): void
+    {
+        $loader = new ProductoStagingLoader();
+        $loader->load(new ExtractedProductos(
+            productos: [new ProductoRow(1001, 'Lámpara LED', null, null, null, false, stockAl4: 42.0)],
+            precios: [],
+            costos: [],
+        ));
+
+        $producto = Producto::query()->where('icg_codarticulo', 1001)->firstOrFail();
+        $this->assertSame(42.0, $producto->stock_al4);
+    }
+
+    public function test_re_correr_full_sync_siempre_refresca_stock_al4(): void
+    {
+        // Full sync (sin hash-gate) siempre re-escribe stock_al4 — a diferencia del incremental.
+        $loader = new ProductoStagingLoader();
+        $loader->load(new ExtractedProductos(
+            productos: [new ProductoRow(1001, 'Lámpara LED', null, null, null, false, stockAl4: 42.0)],
+            precios: [],
+            costos: [],
+        ));
+
+        $loader->load(new ExtractedProductos(
+            productos: [new ProductoRow(1001, 'Lámpara LED', null, null, null, false, stockAl4: 10.0)],
+            precios: [],
+            costos: [],
+        ));
+
+        $producto = Producto::query()->where('icg_codarticulo', 1001)->firstOrFail();
+        $this->assertSame(10.0, $producto->stock_al4);
+    }
+
     private static function sampleExtraction(): ExtractedProductos
     {
         return new ExtractedProductos(

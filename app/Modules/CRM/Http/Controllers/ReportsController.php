@@ -7,6 +7,7 @@ namespace App\Modules\CRM\Http\Controllers;
 use App\Models\User;
 use App\Modules\CRM\Services\ReportsService;
 use App\Shared\Services\AuditService;
+use App\Shared\Support\ParsesIdListQueryParam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -14,6 +15,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class ReportsController extends Controller
 {
+    use ParsesIdListQueryParam;
+
     public function __construct(private readonly ReportsService $service) {}
 
     /** GET /api/crm/reports/monthly */
@@ -32,9 +35,13 @@ final class ReportsController extends Controller
         ]);
 
         $month = isset($validated['month']) ? (string) $validated['month'] : now()->format('Y-m');
-        $filterUserId = $isManagement && isset($validated['user_id']) ? (int) $validated['user_id'] : null;
+        // SCRUM-854 — multi-selección; user_ids[] gana sobre user_id singular (retrocompat).
+        $userIds = $this->parseIdListParam($request, 'user_ids');
+        $filterUserIds = $isManagement
+            ? ($userIds !== [] ? $userIds : (isset($validated['user_id']) ? [(int) $validated['user_id']] : null))
+            : null;
 
-        return response()->json($this->service->monthly($user, $isManagement, $month, $filterUserId));
+        return response()->json($this->service->monthly($user, $isManagement, $month, $filterUserIds));
     }
 
     /** GET /api/crm/reports/monthly/export */
@@ -53,9 +60,13 @@ final class ReportsController extends Controller
         ]);
 
         $month = isset($validated['month']) ? (string) $validated['month'] : now()->format('Y-m');
-        $filterUserId = $isManagement && isset($validated['user_id']) ? (int) $validated['user_id'] : null;
+        // SCRUM-854 — multi-selección; user_ids[] gana sobre user_id singular (retrocompat).
+        $userIds = $this->parseIdListParam($request, 'user_ids');
+        $filterUserIds = $isManagement
+            ? ($userIds !== [] ? $userIds : (isset($validated['user_id']) ? [(int) $validated['user_id']] : null))
+            : null;
 
-        $data = $this->service->monthly($user, $isManagement, $month, $filterUserId);
+        $data = $this->service->monthly($user, $isManagement, $month, $filterUserIds);
         $filename = 'reporte-'.$month.'.csv';
 
         // SCRUM-791 (Epic SCRUM-788 — Logs y Telemetría) — export real de datos, potencialmente
@@ -64,7 +75,7 @@ final class ReportsController extends Controller
         app(AuditService::class)->log(
             action: AuditService::CRM_REPORT_EXPORTED,
             entityType: 'monthly_report',
-            metadata: ['month' => $month, 'filter_user_id' => $filterUserId, 'is_management' => $isManagement],
+            metadata: ['month' => $month, 'filter_user_ids' => $filterUserIds, 'is_management' => $isManagement],
         );
 
         return response()->streamDownload(function () use ($data, $isManagement): void {

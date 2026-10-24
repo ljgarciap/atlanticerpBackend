@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\PagoExtractorContract;
 use App\Modules\Legacy\Models\SyncRun;
 use App\Modules\Legacy\Services\PagoStagingLoader;
@@ -61,7 +62,7 @@ final class LegacySyncPagosCommand extends Command
         // trae entera de una — ver docblock de la clase, "PAGINADO DESDE 2026-08-27" — 512M sigue
         // siendo margen de sobra para una página a la vez, muy lejos del límite real del host que
         // causó el OOM real cuando SÍ se traía todo junto.
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');

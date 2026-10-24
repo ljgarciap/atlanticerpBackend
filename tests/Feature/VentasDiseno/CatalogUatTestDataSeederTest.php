@@ -7,6 +7,7 @@ namespace Tests\Feature\VentasDiseno;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Shared\Multitenancy\Tenant;
+use Database\Seeders\CatalogUatTestDataSeeder;
 use Tests\Feature\FeatureTestCase;
 
 /**
@@ -36,5 +37,23 @@ class CatalogUatTestDataSeederTest extends FeatureTestCase
         $this->assertTrue(app()->environment('testing'));
         $this->assertSame(0, CatalogProduct::where('reference', 'like', 'UAT-%')->count());
         $this->assertSame(0, CatalogProductFamily::where('name', 'like', '[PRUEBA UAT] %')->count());
+    }
+
+    /**
+     * SCRUM-1111: en producción el seeder ya no corre (se ejecuta en cada deploy y recrearía la data UAT tras la
+     * limpieza previa al lanzamiento). El control en `dev` demuestra que el seeder SÍ siembra donde corresponde, así
+     * que el 0 de producción es por el guard y no porque el seeder esté roto.
+     */
+    public function test_no_siembra_en_produccion_pero_si_en_dev(): void
+    {
+        app()->detectEnvironment(static fn (): string => 'production');
+        (new CatalogUatTestDataSeeder)->run();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame(0, CatalogProduct::where('reference', 'like', 'UAT-%')->count());
+
+        app()->detectEnvironment(static fn (): string => 'dev');
+        (new CatalogUatTestDataSeeder)->run();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertGreaterThan(0, CatalogProduct::where('reference', 'like', 'UAT-%')->count());
     }
 }

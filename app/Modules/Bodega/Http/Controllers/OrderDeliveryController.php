@@ -40,7 +40,9 @@ final class OrderDeliveryController extends Controller
             'items.*.order_item_id'          => ['required', 'integer'],
             'items.*.qty_delivered'          => ['required', 'integer', 'min:0'],
             'items.*.motivo'                 => ['nullable', 'string'],
-            'items.*.motivo_detalle'         => ['nullable', 'string'],
+            // SCRUM-1148 — `shortage_reason` es varchar(255) y guarda `otra:<texto>` (5 caracteres de prefijo): el texto libre
+            // máximo es 250. Sin tope, uno más largo devolvía 500.
+            'items.*.motivo_detalle'         => ['nullable', 'string', 'max:250'],
             'observacion_general'            => ['nullable', 'string'],
         ]);
 

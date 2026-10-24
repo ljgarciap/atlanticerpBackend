@@ -26,6 +26,9 @@ final readonly class CotizacionRow
         public ?int $icgCodvendedor,
         public ?string $idestado,
         public ?string $supresupuesto,
+        // SCRUM-842 — de PRESUPUESTOSCAMPOSLIBRES (LEFT JOIN, ver CotizacionExtractor::cotizacionesQuery()).
+        public ?string $proyecto = null,
+        public ?string $promocion = null,
     ) {
     }
 }

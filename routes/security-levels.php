@@ -3,9 +3,14 @@
 use App\Modules\Auth\Http\Controllers\SecurityLevelController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [SecurityLevelController::class, 'index']);
+// SCRUM-1012 — administración de usuarios/niveles/departamentos exclusiva de Gerencia (rol base `management`) + superadmin, ADEMÁS del permiso. Un grant individual (extra_permissions/manage_users) sin ese rol ya NO alcanza.
+// El listado (GET /) dejó de ser abierto a cualquier autenticado: solo lo consume la pantalla de
+// Seguridad (UsersPage/RolesPage/niveles), ningún picker de otro módulo (verificado por grep en atlanticerp-frontend).
+Route::middleware('role:superadmin,management')->group(function () {
+    Route::get('/', [SecurityLevelController::class, 'index']);
+});
 
-Route::middleware('permission:security.levels')->group(function () {
+Route::middleware(['role:superadmin,management', 'permission:security.levels'])->group(function () {
     Route::post('/',              [SecurityLevelController::class, 'store']);
     Route::put('/{id}',           [SecurityLevelController::class, 'update']);
     Route::patch('/{id}/status',  [SecurityLevelController::class, 'toggleStatus']);

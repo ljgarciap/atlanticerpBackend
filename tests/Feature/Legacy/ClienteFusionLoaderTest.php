@@ -70,6 +70,59 @@ final class ClienteFusionLoaderTest extends FeatureTestCase
         $this->assertSame('SIN-CIF-1003', $subClient->tax_id);
     }
 
+    /** SCRUM-1137: la promoción usa el RUC completo y el DV que trajo ICG, no el CIF truncado. */
+    public function test_usa_el_ruc_completo_y_su_dv_en_vez_del_cif_truncado(): void
+    {
+        $cliente = self::makeCliente(1101, cif: '155783782-2', ruc: '155783782-2-2026', rucDv: '35');
+        self::makeCotizacion($cliente->id, numpresupuesto: 11);
+
+        (new ClienteFusionLoader())->fuse();
+
+        $cliente->refresh();
+        $sub = SubClient::query()->findOrFail($cliente->sub_client_id);
+        $this->assertSame('155783782-2-2026', $sub->tax_id);
+        $this->assertSame('35', $sub->tax_id_dv);
+    }
+
+    /** Sin DV en ICG el DV queda vacío: nunca se inventa. */
+    public function test_sin_dv_en_icg_el_dv_queda_vacio(): void
+    {
+        $cliente = self::makeCliente(1102, cif: '6-712-881', ruc: '6-712-881');
+        self::makeCotizacion($cliente->id, numpresupuesto: 12);
+
+        (new ClienteFusionLoader())->fuse();
+
+        $sub = SubClient::query()->findOrFail($cliente->refresh()->sub_client_id);
+        $this->assertSame('6-712-881', $sub->tax_id);
+        $this->assertNull($sub->tax_id_dv);
+    }
+
+    /** Un valor que la normalización marcó `revisar` no se usa: queda el CIF como antes, sin DV. */
+    public function test_ruc_en_revisar_cae_al_cif_y_no_guarda_dv(): void
+    {
+        $cliente = self::makeCliente(1103, cif: 'RUC 1671600-', ruc: 'RUC 1671600-', rucDv: '9', rucEstado: 'revisar');
+        self::makeCotizacion($cliente->id, numpresupuesto: 13);
+
+        (new ClienteFusionLoader())->fuse();
+
+        $sub = SubClient::query()->findOrFail($cliente->refresh()->sub_client_id);
+        $this->assertSame('RUC 1671600-', $sub->tax_id);
+        $this->assertNull($sub->tax_id_dv);
+    }
+
+    /** Un RUC que contradice al CIF no se usa para promover (podría ser el RUC de otra empresa). */
+    public function test_ruc_que_contradice_al_cif_se_ignora_al_promover(): void
+    {
+        $cliente = self::makeCliente(1104, cif: '8-123-456', ruc: '9-999-999-37', rucDv: '12');
+        self::makeCotizacion($cliente->id, numpresupuesto: 14);
+
+        (new ClienteFusionLoader())->fuse();
+
+        $sub = SubClient::query()->findOrFail($cliente->refresh()->sub_client_id);
+        $this->assertSame('8-123-456', $sub->tax_id);
+        $this->assertNull($sub->tax_id_dv);
+    }
+
     public function test_cliente_sin_transacciones_no_se_promueve(): void
     {
         self::makeCliente(1004, cif: '8-111-111'); // sin cotización ni pedido
@@ -129,12 +182,15 @@ final class ClienteFusionLoaderTest extends FeatureTestCase
         $this->assertSame(1, $result['promovidos']);
     }
 
-    private static function makeCliente(int $icgCodcliente, ?string $cif): Cliente
+    private static function makeCliente(int $icgCodcliente, ?string $cif, ?string $ruc = null, ?string $rucDv = null, ?string $rucEstado = null): Cliente
     {
         return Cliente::query()->create([
             'icg_codcliente' => $icgCodcliente,
             'razon_social'   => "Cliente {$icgCodcliente}",
             'cif'            => $cif,
+            'ruc'            => $ruc,
+            'ruc_dv'         => $rucDv,
+            'ruc_estado'     => $rucEstado ?? ($ruc !== null ? 'ok' : null),
             'bloqueado'      => false,
         ]);
     }

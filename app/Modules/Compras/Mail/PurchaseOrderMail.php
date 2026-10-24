@@ -20,12 +20,13 @@ final class PurchaseOrderMail extends Mailable
         public readonly int $orderId,
         public readonly string $providerName,
         private readonly string $pdfContent,
+        public readonly string $lang = 'es',
     ) {
     }
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: "Atlantic — Orden de Compra #{$this->orderId}");
+        return new Envelope(subject: trans('purchase_order_pdf.mail.subject', ['id' => $this->orderId], $this->lang));
     }
 
     public function content(): Content
@@ -33,6 +34,7 @@ final class PurchaseOrderMail extends Mailable
         return new Content(view: 'emails.purchase-order', with: [
             'orderId'      => $this->orderId,
             'providerName' => $this->providerName,
+            'lang'         => $this->lang,
         ]);
     }
 
@@ -40,7 +42,7 @@ final class PurchaseOrderMail extends Mailable
     public function attachments(): array
     {
         return [
-            Attachment::fromData(fn () => $this->pdfContent, "orden-compra-{$this->orderId}.pdf")
+            Attachment::fromData(fn () => $this->pdfContent, ($this->lang === 'en' ? "purchase-order-{$this->orderId}.pdf" : "orden-compra-{$this->orderId}.pdf"))
                 ->withMime('application/pdf'),
         ];
     }

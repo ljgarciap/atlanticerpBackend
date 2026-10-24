@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\ClienteExtractorContract;
 use App\Modules\Legacy\Data\ExtractedClientes;
 use App\Modules\Legacy\Models\SyncRun;
 use App\Modules\Legacy\Services\ClienteMatcher;
 use App\Modules\Legacy\Services\ClienteStagingLoader;
+use App\Modules\Legacy\Services\SyncRunDetailRecorder;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -54,6 +56,7 @@ final class LegacySyncClientesCommand extends Command
         private readonly ClienteExtractorContract $extractor,
         private readonly ClienteStagingLoader $stagingLoader,
         private readonly ClienteMatcher $matcher,
+        private readonly SyncRunDetailRecorder $detailRecorder,
     ) {
         parent::__construct();
     }
@@ -64,7 +67,7 @@ final class LegacySyncClientesCommand extends Command
         // CLIENTES (7,707 filas) + CONTACTOSCLIENTES (821 filas) revienta el memory_limit default
         // de PHP CLI (128M). ini_set() aplica directo porque este comando ES el proceso PHP
         // top-level (no spawnea un hijo separado como `artisan test`).
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');
@@ -146,7 +149,7 @@ final class LegacySyncClientesCommand extends Command
 
         $status = $matchResult['errores'] > 0 ? SyncRun::STATUS_PARTIAL : SyncRun::STATUS_SUCCESS;
 
-        $this->recordRun(
+        $syncRun = $this->recordRun(
             $startedAt, $start,
             extraidos: count($extracted->clientes),
             staged: $stagingCounts['clientes'],
@@ -156,6 +159,20 @@ final class LegacySyncClientesCommand extends Command
             errores: $matchResult['errores'],
             status: $status,
         );
+
+        $auditables = array_values(array_filter(
+            $matchResult['details'],
+            static fn (array $d): bool => $d['match_status'] !== 'matched',
+        ));
+
+        $this->detailRecorder->record($syncRun, array_map(
+            static fn (array $d): array => [
+                'referencia' => $d['cif'] ?? $d['email'] ?? (string) $d['icg_codcliente'],
+                'status'     => $d['match_status'],
+                'motivo'     => $d['motivo'],
+            ],
+            $auditables,
+        ));
 
         return self::SUCCESS;
     }
@@ -216,8 +233,8 @@ final class LegacySyncClientesCommand extends Command
         int $excluidos,
         int $errores,
         string $status,
-    ): void {
-        SyncRun::query()->create([
+    ): SyncRun {
+        return SyncRun::query()->create([
             'entidad'     => 'clientes',
             'extraidos'   => $extraidos,
             'staged'      => $staged,

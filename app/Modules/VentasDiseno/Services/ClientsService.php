@@ -7,6 +7,7 @@ namespace App\Modules\VentasDiseno\Services;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\SubClient;
+use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use App\Shared\Http\Pagination;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
@@ -118,26 +119,31 @@ final class ClientsService
     }
 
     /**
-     * REQ-067 (modo "crear cliente") + REQ-068: crea el Cliente Master, su primer
-     * Subcliente y sus contactos, y dispara la tarjeta Lead automática en Pipeline.
+     * REQ-067 (modo "crear cliente"): crea el Cliente Master, su primer Subcliente y sus contactos. NADA MÁS:
+     * SCRUM-1187 reemplazó REQ-068 — crear un cliente ya no crea proyecto ni tarjeta Lead en el Pipeline (quien crea
+     * el cliente muchas veces no es quien lo va a vender). El proyecto y la tarjeta nacen cuando el vendedor crea su
+     * cotización o su Lead, a su nombre.
      *
      * @param array{
      *   name: string, default_price_type?: string|null,
-     *   business_name: string, tax_id: string, delivery_address?: string|null, category?: string|null,
+     *   business_name: string, receptor_tipo?: string|null, tax_id?: string|null, tax_id_dv?: string|null, delivery_address?: string|null, category?: string|null,
      *   contacts: list<array{name: string, role: string, phone?: string|null, email?: string|null}>,
      * } $data
      */
-    public function createClient(array $data, int $creatorUserId): MasterClient
+    public function createClient(array $data): MasterClient
     {
-        return DB::transaction(function () use ($data, $creatorUserId): MasterClient {
+        return DB::transaction(function () use ($data): MasterClient {
             $master = MasterClient::create([
                 'name'               => $data['name'],
                 'default_price_type' => $data['default_price_type'] ?? null,
             ]);
 
+            $fiscal = ReceptorTipo::normalizar($data);
             $sub = $master->subClients()->create([
                 'business_name'     => $data['business_name'],
-                'tax_id'            => $data['tax_id'],
+                'receptor_tipo'     => $fiscal['receptor_tipo'],
+                'tax_id'            => $fiscal['tax_id'],
+                'tax_id_dv'         => $fiscal['tax_id_dv'] ?? null,
                 'delivery_address'  => $data['delivery_address'] ?? null,
                 'category'          => $data['category'] ?? null,
             ]);
@@ -146,8 +152,6 @@ final class ClientsService
                 $sub->contacts()->create($contactData);
             }
 
-            $this->createLeadCard($master, $sub, $creatorUserId);
-
             /** @var MasterClient $fresh */
             $fresh = $master->fresh(['subClients.contacts']);
             return $fresh;
@@ -155,20 +159,23 @@ final class ClientsService
     }
 
     /**
-     * REQ-067 (modo "crear subcliente") + REQ-068: Subcliente adicional bajo un
-     * Cliente Master ya existente, con sus contactos y su propia tarjeta Lead.
+     * REQ-067 (modo "crear subcliente"): Subcliente adicional bajo un Cliente Master ya existente, con sus contactos.
+     * Tampoco crea proyecto ni Lead (SCRUM-1187, ver docblock de createClient()).
      *
      * @param array{
-     *   business_name: string, tax_id: string, delivery_address?: string|null, category?: string|null,
+     *   business_name: string, receptor_tipo?: string|null, tax_id?: string|null, tax_id_dv?: string|null, delivery_address?: string|null, category?: string|null,
      *   contacts: list<array{name: string, role: string, phone?: string|null, email?: string|null}>,
      * } $data
      */
-    public function addSubClient(MasterClient $master, array $data, int $creatorUserId): SubClient
+    public function addSubClient(MasterClient $master, array $data): SubClient
     {
-        return DB::transaction(function () use ($master, $data, $creatorUserId): SubClient {
+        return DB::transaction(function () use ($master, $data): SubClient {
+            $fiscal = ReceptorTipo::normalizar($data);
             $sub = $master->subClients()->create([
                 'business_name'    => $data['business_name'],
-                'tax_id'           => $data['tax_id'],
+                'receptor_tipo'    => $fiscal['receptor_tipo'],
+                'tax_id'           => $fiscal['tax_id'],
+                'tax_id_dv'        => $fiscal['tax_id_dv'] ?? null,
                 'delivery_address' => $data['delivery_address'] ?? null,
                 'category'         => $data['category'] ?? null,
             ]);
@@ -176,8 +183,6 @@ final class ClientsService
             foreach ($data['contacts'] as $contactData) {
                 $sub->contacts()->create($contactData);
             }
-
-            $this->createLeadCard($master, $sub, $creatorUserId);
 
             /** @var SubClient $fresh */
             $fresh = $sub->fresh(['contacts']);
@@ -189,40 +194,5 @@ final class ClientsService
     {
         $subClient->update(['category' => $category]);
         return $subClient;
-    }
-
-    /**
-     * REQ-068: toda tarjeta Lead automática nace con los contactos recién cargados
-     * del Subcliente que la origina, para no forzar una segunda captura de datos
-     * antes de poder avanzarla de etapa (REQ-011 exige al menos 1 contacto en la
-     * tarjeta para salir de Lead). Público: también lo llama ClientController
-     * cuando un Subcliente nuevo nace desde el flujo de vinculación de Pipeline
-     * (REQ-010/068 en sentido inverso, ver SCRUM-79) — REQ-068 no hace excepción
-     * para ese caso, aunque quede una tarjeta Lead "extra" además de la que el
-     * usuario esté vinculando en ese momento (decisión confirmada con Luis).
-     */
-    public function createLeadCard(MasterClient $master, SubClient $sub, int $ownerId): PipelineCard
-    {
-        $project = $sub->salesProjects()->create(['name' => $sub->business_name]);
-
-        $card = PipelineCard::create([
-            'sales_project_id' => $project->id,
-            'stage'            => 'lead',
-            'master_client_id' => $master->id,
-            'sub_client_id'    => $sub->id,
-            'owner_id'         => $ownerId,
-            'stage_changed_at' => now(),
-        ]);
-
-        foreach ($sub->contacts as $contact) {
-            $card->contacts()->create([
-                'name'  => $contact->name,
-                'role'  => $contact->role,
-                'phone' => $contact->phone,
-                'email' => $contact->email,
-            ]);
-        }
-
-        return $card;
     }
 }

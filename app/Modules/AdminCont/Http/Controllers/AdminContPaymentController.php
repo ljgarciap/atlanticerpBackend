@@ -5,14 +5,24 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\AdminCont\Exceptions\InvoiceStateException;
 use App\Modules\AdminCont\Exceptions\PaymentStateException;
 use App\Modules\AdminCont\Http\Requests\StorePaymentRequest;
+use App\Modules\AdminCont\Http\Requests\StorePaymentV2Request;
 use App\Modules\AdminCont\Http\Requests\UploadPaymentRetentionAttachmentRequest;
+use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContPayment;
+use App\Modules\AdminCont\Models\AdminContPaymentReversalRequest;
 use App\Modules\AdminCont\Services\AdminContPaymentRetentionAttachmentService;
+use App\Modules\AdminCont\Services\CobrosConfigService;
+use App\Modules\AdminCont\Services\PaymentLedger;
 use App\Modules\AdminCont\Services\PaymentReceiptPdfService;
 use App\Modules\AdminCont\Services\PaymentService;
+use App\Modules\AdminCont\Support\GuiaEntregaResolver;
+use App\Modules\Bodega\Models\Order;
+use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 /**
@@ -29,6 +39,8 @@ class AdminContPaymentController
         private readonly PaymentService $payments,
         private readonly PaymentReceiptPdfService $receiptPdf,
         private readonly AdminContPaymentRetentionAttachmentService $retentionAttachments,
+        private readonly CobrosConfigService $cobrosConfig,
+        private readonly PaymentLedger $ledger,
     ) {}
 
     /** GET /api/admin-contab/payments/summary — REQ-463, 4 tarjetas del mes en curso. */
@@ -37,12 +49,20 @@ class AdminContPaymentController
         return response()->json($this->payments->summaryForCurrentMonth());
     }
 
-    /** GET /api/admin-contab/payments/clients?search= — REQ-462, buscador de cliente del formulario. */
+    /**
+     * GET /api/admin-contab/payments/clients?search=&only_with_invoice=&only_with_pending_invoice=
+     * — REQ-462, buscador de cliente del formulario. `only_with_invoice` (SCRUM-865) lo pasa el
+     * formulario de Notas de Crédito. `only_with_pending_invoice` (SCRUM-905) lo pasa "Registrar
+     * nuevo cobro" — más angosto, solo clientes con algo pendiente de cobro. Ambos default false,
+     * independientes entre sí (ver docblock de `PaymentService::searchMasterClients()`).
+     */
     public function clients(Request $request): JsonResponse
     {
         $search = (string) $request->query('search', '');
+        $onlyWithInvoice = $request->boolean('only_with_invoice');
+        $onlyWithPendingInvoice = $request->boolean('only_with_pending_invoice');
 
-        return response()->json(['data' => $this->payments->searchMasterClients($search)]);
+        return response()->json(['data' => $this->payments->searchMasterClients($search, $onlyWithInvoice, $onlyWithPendingInvoice)]);
     }
 
     /** GET /api/admin-contab/payments/open-invoices?master_client_id= — REQ-464 RN1. */
@@ -69,7 +89,11 @@ class AdminContPaymentController
         ]);
     }
 
-    /** GET /api/admin-contab/payments — REQ-470, historial con búsqueda + filtros. */
+    /**
+     * GET /api/admin-contab/payments — REQ-470, historial con búsqueda + filtros. SCRUM-947 —
+     * paginación estándar sobre `rows`; `total` sigue siendo el conteo GLOBAL sin ningún filtro
+     * (denominador de referencia ya existente, no se toca — ver PaymentService::historial()).
+     */
     public function index(Request $request): JsonResponse
     {
         $result = $this->payments->historial([
@@ -81,7 +105,14 @@ class AdminContPaymentController
             'hasta'   => $request->filled('hasta') ? $request->string('hasta')->toString() : null,
         ]);
 
-        return response()->json($result);
+        $pagination = Pagination::params($request, [], 'fecha', 'desc');
+        $paginator  = Pagination::ofArray(array_values($result['rows']), $pagination['per_page'], $pagination['page']);
+
+        return response()->json([
+            'rows'  => $paginator->items(),
+            'total' => $result['total'],
+            'meta'  => Pagination::meta($paginator),
+        ]);
     }
 
     /** GET /api/admin-contab/payments/{id} — REQ-471, detalle completo de un cobro. */
@@ -103,20 +134,70 @@ class AdminContPaymentController
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $payment = $this->payments->register(
-            masterClientId: (int) $request->validated('master_client_id'),
-            invoiceIds: $request->validated('invoice_ids'),
-            aplicarSaldoFavor: $request->aplicarSaldoFavor(),
-            metodoPago: (string) $request->validated('metodo_pago'),
-            bankAccountId: $request->validated('bank_account_id') !== null ? (int) $request->validated('bank_account_id') : null,
-            numeroDocumentoRetencion: $request->validated('numero_documento_retencion'),
-            comentarioAjuste: $request->validated('comentario_ajuste'),
-            referencia: $request->validated('referencia'),
-            comprobante: $request->file('comprobante'),
-            actor: $actor,
-        );
+        // SCRUM-1168 F2 — con el concepto nuevo encendido el registro de cobros es otro (con o sin factura, aplicación decidida por el usuario);
+        // el flujo anterior se bloquea para no mezclar dos modelos de saldo.
+        if ($this->cobrosConfig->v2Activo()) {
+            return response()->json(['message' => 'El registro de cobros cambió: use el nuevo formulario de cobros (con o sin factura).'], 422);
+        }
+
+        try {
+            $payment = $this->payments->register(
+                masterClientId: (int) $request->validated('master_client_id'),
+                invoiceIds: $request->validated('invoice_ids'),
+                montoSaldoClienteAplicado: $request->montoSaldoClienteAplicado(),
+                metodoPago: (string) $request->validated('metodo_pago'),
+                bankAccountId: $request->validated('bank_account_id') !== null ? (int) $request->validated('bank_account_id') : null,
+                numeroDocumentoRetencion: $request->validated('numero_documento_retencion'),
+                comentarioAjuste: $request->validated('comentario_ajuste'),
+                referencia: $request->validated('referencia'),
+                comprobante: $request->file('comprobante'),
+                actor: $actor,
+            );
+        } catch (InvoiceStateException|PaymentStateException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json($this->present($payment), 201);
+    }
+
+    /** POST /api/admin-contab/payments/cobro — SCRUM-1168 F2, registra un cobro del concepto nuevo (con o sin factura). */
+    public function storeV2(StorePaymentV2Request $request): JsonResponse
+    {
+        $actor = $this->resolveUser($request);
+        if ($actor === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+        if (! $this->cobrosConfig->v2Activo()) {
+            return response()->json(['message' => 'El nuevo registro de cobros todavía no está activo.'], 422);
+        }
+
+        try {
+            $payment = $this->payments->registerV2(
+                masterClientId: (int) $request->validated('master_client_id'),
+                monto: (float) $request->validated('monto_recibido'),
+                metodoPago: (string) $request->validated('metodo_pago'),
+                bankAccountId: $request->validated('bank_account_id') !== null ? (int) $request->validated('bank_account_id') : null,
+                numeroDocumentoRetencion: $request->validated('numero_documento_retencion'),
+                comentarioAjuste: $request->validated('comentario_ajuste'),
+                referencia: $request->validated('referencia'),
+                comprobante: $request->file('comprobante'),
+                aplicaciones: $request->aplicaciones(),
+                actor: $actor,
+            );
+        } catch (InvoiceStateException|PaymentStateException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json($this->presentDetail($payment->fresh() ?? $payment), 201);
+    }
+
+    /** GET /api/admin-contab/payments/config — SCRUM-1168 F2, qué concepto de cobros está activo y la ventana de «movimiento reciente». */
+    public function config(): JsonResponse
+    {
+        return response()->json([
+            'v2'                             => $this->cobrosConfig->v2Activo(),
+            'compensaciones_dias_movimiento' => $this->cobrosConfig->diasMovimientoReciente(),
+        ]);
     }
 
     /** @return array<string, mixed> */
@@ -134,6 +215,9 @@ class AdminContPaymentController
             'numero_documento_retencion'  => $payment->numero_documento_retencion,
             'comentario_ajuste'           => $payment->comentario_ajuste,
             'estado'                      => $payment->estado,
+            'cobros_v2'                   => (bool) $payment->cobros_v2,
+            'anulado_at'                  => $payment->anulado_at?->toIso8601String(),
+            'motivo_anulacion'            => $payment->motivo_anulacion,
             'created_at'                  => $payment->created_at->toIso8601String(),
         ];
     }
@@ -149,6 +233,22 @@ class AdminContPaymentController
         $creator     = $payment->created_by !== null ? User::find($payment->created_by) : null;
         $confirmacion = $payment->confirmation;
 
+        // SCRUM-931 — Cotización/Guía de Entrega por factura, mismo patrón que
+        // `AccountStatementService::movements()`: se resuelven en lote (no una query por línea)
+        // sobre los `order_id` de las facturas de ESTE cobro.
+        $invoices = $payment->invoiceLines->pluck('invoice')->filter()->unique('id');
+        $orders   = Order::query()
+            ->whereIn('id', $invoices->pluck('order_id')->filter()->unique())
+            ->get()
+            ->keyBy('id');
+
+        // SCRUM-931 — Notas de Crédito no tienen relación directa con el cobro, solo transitiva vía
+        // la factura (`factura_origen_id`) — mismo query que ya usa `AccountStatementService`.
+        $notasCredito = AdminContCreditNote::query()
+            ->where('estado', AdminContCreditNote::ESTADO_APLICADA)
+            ->whereIn('factura_origen_id', $invoices->pluck('id'))
+            ->get();
+
         return [
             ...$this->present($payment),
             'cliente'           => $this->payments->masterClientName($payment->master_client_id),
@@ -156,13 +256,66 @@ class AdminContPaymentController
             'registrado_por'    => $creator !== null ? trim("{$creator->first_name} {$creator->last_name}") : null,
             'bank_account'      => $payment->bankAccount?->label(),
             'tiene_comprobante' => $payment->attachment !== null,
-            // RN1 REQ-473 — total antes de aplicar el saldo a favor, para el recibo formal.
-            'total_facturas'    => round($payment->monto_recibido + $payment->saldo_favor_aplicado, 2),
-            'facturas'          => $payment->invoiceLines->map(fn ($l) => [
-                'invoice_id'     => $l->invoice_id,
-                'numero'         => $l->invoice?->numero,
-                'monto_aplicado' => $l->monto_aplicado,
+            // RN1 REQ-473 — total antes de aplicar cualquier saldo a favor (abono obligatorio o
+            // saldo Cliente opcional), para el recibo formal. SCRUM-902 — ya suma también el
+            // abono obligatorio de cada línea, no solo `saldo_favor_aplicado` (nivel Cliente).
+            'total_facturas'    => $payment->cobros_v2
+                ? round((float) $payment->invoiceLines->sum('monto_aplicado'), 2)
+                : round(
+                    $payment->monto_recibido + $payment->saldo_favor_aplicado
+                        + (float) $payment->invoiceLines->sum('monto_abono_aplicado'),
+                    2,
+                ),
+            // SCRUM-1168 F2 — cobro del concepto nuevo: lo que NO se aplicó a facturas es saldo a favor del cliente. Confirmado: lo que dice el
+            // libro (sigue vigente aunque luego se compense); esperando confirmación: lo que quedaría tras aplicar las líneas registradas.
+            'saldo_sin_aplicar' => $payment->cobros_v2
+                ? ($payment->estado === AdminContPayment::ESTADO_CONFIRMADO
+                    ? $this->ledger->remanenteDeCobro($payment->id)
+                    : round(max(0.0, $payment->monto_recibido - (float) $payment->invoiceLines->sum('monto_aplicado')), 2))
+                : null,
+            // SCRUM-902 §4.2 — desglose visible por factura: monto original, abono obligatorio
+            // aplicado (si hubo), y neto — los 3 explícitos, no solo el resultado final. SCRUM-931
+            // agrega quote_id/cotizacion_folio/order_id/guia_entrega_* para enlazar cada factura a
+            // su Cotización y Guía de Entrega desde el detalle del cobro.
+            'facturas'          => $payment->invoiceLines->map(function ($l) use ($orders) {
+                $invoice = $l->invoice;
+                $order   = $invoice !== null ? $orders->get($invoice->order_id) : null;
+                $quote   = $order?->linkedQuote();
+                [$guiaNumero, $guiaOrderId] = $invoice !== null
+                    ? GuiaEntregaResolver::resolve($invoice, $order, $orders)
+                    : [null, null];
+
+                return [
+                    'invoice_id'            => $l->invoice_id,
+                    'numero'                => $invoice?->numero,
+                    'monto_original'        => $invoice?->monto,
+                    'monto_abono_aplicado'  => $l->monto_abono_aplicado,
+                    'monto_aplicado'        => $l->monto_aplicado,
+                    'quote_id'              => $quote?->id,
+                    'cotizacion_folio'      => $quote?->folio,
+                    'order_id'              => $order?->id,
+                    'guia_entrega_numero'   => $guiaNumero,
+                    'guia_entrega_order_id' => $guiaOrderId,
+                ];
+            })->values()->all(),
+            // SCRUM-931 — un cobro puede cubrir varias facturas, cada una con su propio abono (el
+            // pivote `payment_invoices.abono_id` es por línea, no hay uno solo "del cobro") — lista
+            // de ids únicos, nunca inventa un abono que no exista.
+            'abonos'            => $payment->invoiceLines->pluck('abono_id')->filter()->unique()->values()->all(),
+            // SCRUM-931 — igual que arriba: puede haber varias notas, una o más por factura.
+            'notas_credito'     => $notasCredito->map(fn (AdminContCreditNote $n) => [
+                'id'     => $n->id,
+                'numero' => $n->numero,
             ])->values()->all(),
+            // SCRUM-1168 F4 — la última solicitud de anulación de este cobro (pendiente, ejecutada o rechazada), para mostrarla en el detalle.
+            'solicitud_anulacion' => (function () use ($payment): ?array {
+                $s = AdminContPaymentReversalRequest::query()->where('tipo', AdminContPaymentReversalRequest::TIPO_ANULACION)->where('payment_id', $payment->id)->orderByDesc('id')->first();
+
+                return $s === null ? null : [
+                    'id' => $s->id, 'estado' => $s->estado, 'motivo' => $s->motivo, 'motivo_rechazo' => $s->motivo_rechazo,
+                    'created_at' => $s->created_at->toIso8601String(),
+                ];
+            })(),
             'confirmacion' => $confirmacion !== null ? [
                 'numero_confirmacion' => $confirmacion->numero_confirmacion,
                 'confirmado_por'      => $confirmacion->confirmedBy !== null
@@ -171,6 +324,46 @@ class AdminContPaymentController
                 'confirmado_at' => $confirmacion->confirmed_at->toIso8601String(),
             ] : null,
         ];
+    }
+
+    /**
+     * POST /api/admin-contab/payments/{id}/datos (multipart) — SCRUM-1168 F5: después de confirmado, un cobro solo admite corregir lo que no afecta la
+     * contabilidad: la referencia y el comprobante adjunto. Monto, método, cuenta, cliente o aplicaciones requieren anular el cobro y registrarlo de nuevo.
+     */
+    public function updateDatos(int $id, Request $request): JsonResponse
+    {
+        $actor = $this->resolveUser($request);
+        if ($actor === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+        $data = $request->validate([
+            'referencia'  => ['nullable', 'string', 'max:255'],
+            'comprobante' => ['nullable', 'file', 'max:10240', 'extensions:pdf,jpg,jpeg,png,webp'],
+        ]);
+        $extra = array_diff(array_keys($request->all()), ['referencia', 'comprobante']);
+        if ($extra !== []) {
+            return response()->json(['message' => 'Solo se pueden corregir la referencia y el comprobante; para cambiar monto, método, cuenta o aplicaciones anula el cobro y regístralo de nuevo.'], 422);
+        }
+
+        /** @var AdminContPayment|null $payment */
+        $payment = AdminContPayment::query()->find($id);
+        if ($payment === null) {
+            return response()->json(['message' => 'Cobro no encontrado.'], 404);
+        }
+        if ($payment->estado === AdminContPayment::ESTADO_ANULADO) {
+            return response()->json(['message' => 'Un cobro anulado no se puede editar.'], 422);
+        }
+
+        DB::transaction(function () use ($payment, $data, $request, $actor): void {
+            if (array_key_exists('referencia', $data) && $data['referencia'] !== null) {
+                $payment->update(['referencia' => trim($data['referencia'])]);
+            }
+            if ($request->hasFile('comprobante')) {
+                $this->payments->replaceComprobante($payment, $request->file('comprobante'), $actor->id);
+            }
+        });
+
+        return response()->json(['id' => $payment->id, 'referencia' => $payment->referencia]);
     }
 
     /** GET /api/admin-contab/payments/{id}/attachment — REQ-472, comprobante adjunto o `null`. */
@@ -193,6 +386,9 @@ class AdminContPaymentController
         }
 
         $detail = $this->presentDetail($payment);
+        // SCRUM-936 — solo el PDF (documento que recibe el cliente) usa el número completo o
+        // "-"; `presentDetail()` en sí no cambia, sigue enmascarado para show()/confirm().
+        $detail['bank_account'] = $payment->bankAccount?->receiptLabel();
 
         return $this->receiptPdf->generate($detail)->stream("recibo-{$payment->numero_recibo}.pdf");
     }
@@ -206,12 +402,25 @@ class AdminContPaymentController
         }
 
         try {
-            $payment = $this->payments->confirm($id, $actor);
+            $result = $this->payments->confirmWithAdjustments($id, $actor);
         } catch (PaymentStateException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($this->presentDetail($payment));
+        // SCRUM-1168 F0 — si lo registrado ya no cabía en alguna factura, qué se aplicó y qué pasó a saldo a favor (null = tal cual).
+        return response()->json($this->presentDetail($result['payment']) + ['ajustes_confirmacion' => $result['ajustes']]);
+    }
+
+    /** GET /api/admin-contab/payments/{id}/confirm-preview — SCRUM-1168 F0, qué pasaría al confirmar ahora (sin cambiar nada). */
+    public function confirmPreview(int $id): JsonResponse
+    {
+        try {
+            $ajustes = $this->payments->previewConfirmation($id);
+        } catch (PaymentStateException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['ajustes_confirmacion' => $ajustes]);
     }
 
     /**

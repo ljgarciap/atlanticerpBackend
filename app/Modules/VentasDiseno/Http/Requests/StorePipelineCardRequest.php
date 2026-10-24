@@ -9,7 +9,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * Grupo 1d — REQ-019 (tipo "lead", sin cliente) / REQ-020 (tipo "design", requiere
- * Subcliente y crea directo en etapa Diseño, saltando el Lead automático de REQ-068).
+ * Subcliente y crea directo en etapa Diseño).
  */
 class StorePipelineCardRequest extends FormRequest
 {
@@ -30,6 +30,10 @@ class StorePipelineCardRequest extends FormRequest
                 Rule::requiredIf(fn (): bool => $this->input('type') === 'design'),
                 'nullable', 'integer', Rule::exists('sub_clients', 'id'),
             ],
+            // SCRUM-849.4 — Gerencia puede asignar a uno o varios vendedores/diseñadores ya
+            // desde la creación (gate de rol en el controller, no acá).
+            'assignee_ids'   => ['sometimes', 'array', 'min:1'],
+            'assignee_ids.*' => ['integer', Rule::exists('users', 'id')],
         ];
     }
 }

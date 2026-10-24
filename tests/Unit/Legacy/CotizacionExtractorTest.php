@@ -141,6 +141,36 @@ final class CotizacionExtractorTest extends TestCase
         $this->assertStringContainsString('PRESUPUESTOSCAB', CotizacionExtractor::cotizacionesQuery());
     }
 
+    // ── SCRUM-842 — campos libres (PROYECTO/PROMOCION) ─────────────────────────────────────
+
+    public function test_cotizaciones_query_hace_left_join_a_camposlibres(): void
+    {
+        $query = CotizacionExtractor::cotizacionesQuery();
+
+        $this->assertStringContainsString('PRESUPUESTOSCAMPOSLIBRES', $query);
+        $this->assertStringContainsString('LEFT JOIN', $query);
+    }
+
+    public function test_map_cotizacion_row_mapea_proyecto_y_promocion(): void
+    {
+        $row = self::cotizacionRow(['PROYECTO' => 'Torre Delta', 'PROMOCION' => 'Verano2026']);
+
+        $cotizacion = CotizacionExtractor::mapCotizacionRow($row);
+
+        $this->assertSame('Torre Delta', $cotizacion->proyecto);
+        $this->assertSame('Verano2026', $cotizacion->promocion);
+    }
+
+    public function test_map_cotizacion_row_sin_camposlibres_no_revienta(): void
+    {
+        $row = self::cotizacionRow();
+
+        $cotizacion = CotizacionExtractor::mapCotizacionRow($row);
+
+        $this->assertNull($cotizacion->proyecto);
+        $this->assertNull($cotizacion->promocion);
+    }
+
     public function test_items_page_query_apunta_a_presupuestoslin_paginada(): void
     {
         $query = CotizacionExtractor::itemsPageQuery();

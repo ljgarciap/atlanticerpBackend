@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Services;
 
 use App\Models\User;
+use App\Modules\AdminCont\Models\AdminContBankMovement;
+use App\Modules\AdminCont\Models\AdminContCommissionAdjustment;
+use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\CommissionMonthSnapshot;
+use App\Shared\Auth\JwtActor;
 use App\Modules\AdminCont\Models\CommissionTier;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\CarbonImmutable;
@@ -37,7 +41,8 @@ use Illuminate\Support\Facades\DB;
  *     fecha_factura: CarbonImmutable|null, fecha_cobro_completo: CarbonImmutable|null,
  *     mes_cierre: CarbonImmutable|null, total_pedido: float, total_pedido_completo: float|null,
  *     total_facturado: float|null, total_cobrado: float, total_nota_credito: float,
- *     nota_credito_numeros: mixed, compartido_con: array<int, string>, estado: string}
+ *     nota_credito_numeros: mixed, compartido_con: array<int, string>, responsables_count: int,
+ *     estado: string}
  */
 final class CommissionOrderService
 {
@@ -106,11 +111,31 @@ final class CommissionOrderService
         $invoiceTable    = "{$tenant->slug}_admin_contab.invoices";
         $paymentTable    = "{$tenant->slug}_admin_contab.payments";
         $payInvTable     = "{$tenant->slug}_admin_contab.payment_invoices";
+        $compTable       = "{$tenant->slug}_admin_contab.compensations";
+        $compLineTable   = "{$tenant->slug}_admin_contab.compensation_lines";
         $creditNoteTable = "{$tenant->slug}_admin_contab.credit_notes";
 
+        // SCRUM-929 (B3b, decisión de Luis 2026-09-19) — igual que en `ArchitectCommissionService`:
+        // una `parcial` cuelga de SU entrega (`order_id` ≠ raíz), así que `inv.order_id = o.id` (a)
+        // no veía las parciales de entregas hijas y (b) con una parcial Y un completo en la raíz
+        // hacía fan-out (dos filas por pedido, duplicando `total_pedido` en el Σ del mes — infla el
+        // % de escalón). Se agrega por `family_root_id`. `factura_numero`/`fecha_factura` (solo
+        // display) pasan a ser los de la factura MÁS RECIENTE de la familia — con varias activas ya
+        // no hay una candidata única, y la más reciente es la que normalmente cierra el pedido.
         $rows = DB::table("{$pipelineTable} as pc")
-            ->leftJoin("{$orderTable} as o", 'o.pipeline_card_id', '=', 'pc.id')
-            ->leftJoin("{$invoiceTable} as inv", 'inv.order_id', '=', 'o.id')
+            ->leftJoin("{$orderTable} as o", function ($join): void {
+                $join->on('o.pipeline_card_id', '=', 'pc.id')->whereNull('o.family_id');
+            })
+            ->leftJoinSub(
+                DB::table($invoiceTable)
+                    ->whereNull('anulada_at')
+                    ->selectRaw('family_root_id, sum(monto) as total_facturado, sum(saldo_aplicado) as total_cobrado')
+                    ->groupBy('family_root_id'),
+                'invagg',
+                'invagg.family_root_id',
+                '=',
+                'o.id',
+            )
             ->where('pc.stage', 'approved')
             ->select([
                 'pc.id as pedido_id',
@@ -120,28 +145,46 @@ final class CommissionOrderService
                 'pc.stage_changed_at',
                 'o.order_number as numero_pedido',
                 'o.customer_name as cliente',
-                'inv.id as invoice_id',
-                'inv.numero as factura_numero',
-                'inv.created_at as fecha_factura',
-                'inv.monto as total_facturado',
-                'inv.saldo_aplicado as total_cobrado',
-                // Fecha del cobro más reciente CONFIRMADO aplicado a esta factura — proxy
-                // razonable de "cuándo llegó al 100%" (no se trackea ese instante exacto en
+                'invagg.total_facturado',
+                'invagg.total_cobrado',
+                DB::raw("(
+                    select inv3.numero from {$invoiceTable} inv3
+                    where inv3.family_root_id = o.id and inv3.anulada_at is null
+                    order by inv3.created_at desc limit 1
+                ) as factura_numero"),
+                DB::raw("(
+                    select inv3.created_at from {$invoiceTable} inv3
+                    where inv3.family_root_id = o.id and inv3.anulada_at is null
+                    order by inv3.created_at desc limit 1
+                ) as fecha_factura"),
+                // Fecha del cobro más reciente CONFIRMADO de CUALQUIER factura activa de la familia —
+                // proxy razonable de "cuándo llegó al 100%" (no se trackea ese instante exacto en
                 // ningún lado; solo es dato de display en la tabla de pedidos, RN5 de REQ-501 usa
                 // el mes de CIERRE DEL PEDIDO, no esta fecha, para decidir el estado).
                 DB::raw("(
-                    select max(p.created_at) from {$paymentTable} p
-                    inner join {$payInvTable} pi on pi.payment_id = p.id
-                    where pi.invoice_id = inv.id and p.estado = 'confirmado'
+                    select max(f) from (
+                        select coalesce(pi.fecha_aplicacion, p.created_at) as f from {$paymentTable} p
+                        inner join {$payInvTable} pi on pi.payment_id = p.id
+                        inner join {$invoiceTable} inv2 on inv2.id = pi.invoice_id
+                        where inv2.family_root_id = o.id and inv2.anulada_at is null and p.estado = 'confirmado'
+                        union all
+                        select cmp.confirmed_at as f from {$compLineTable} cl
+                        inner join {$compTable} cmp on cmp.id = cl.compensation_id and cmp.estado = 'confirmado'
+                        inner join {$invoiceTable} inv5 on inv5.id = cl.invoice_id
+                        where cl.source_type in ('abono', 'nota_credito') and inv5.family_root_id = o.id and inv5.anulada_at is null
+                    ) fechas
                 ) as fecha_cobro_completo"),
-                // REQ-503 — solo notas YA aplicadas (pendientes/rechazadas no han reducido nada).
+                // REQ-503 — solo notas YA aplicadas (pendientes/rechazadas no han reducido nada),
+                // contra cualquier factura ACTIVA de la familia (antes: solo la factura única).
                 DB::raw("(
                     select coalesce(sum(cn.monto), 0) from {$creditNoteTable} cn
-                    where cn.factura_origen_id = inv.id and cn.estado = 'aplicada'
+                    inner join {$invoiceTable} inv4 on inv4.id = cn.factura_origen_id
+                    where inv4.family_root_id = o.id and inv4.anulada_at is null and cn.estado = 'aplicada'
                 ) as total_nota_credito"),
                 DB::raw("(
                     select string_agg(cn.numero, ', ') from {$creditNoteTable} cn
-                    where cn.factura_origen_id = inv.id and cn.estado = 'aplicada'
+                    inner join {$invoiceTable} inv5 on inv5.id = cn.factura_origen_id
+                    where inv5.family_root_id = o.id and inv5.anulada_at is null and cn.estado = 'aplicada'
                 ) as nota_credito_numeros"),
             ])
             ->get();
@@ -166,7 +209,7 @@ final class CommissionOrderService
             $totalFacturado = $row->total_facturado !== null ? (float) $row->total_facturado : null;
             $totalCobrado   = $row->total_cobrado !== null ? (float) $row->total_cobrado : 0.0;
             $totalNC        = (float) $row->total_nota_credito;
-            $estado         = $this->estadoFor($mesCierre, $totalFacturado, $totalCobrado);
+            $estado         = $this->estadoFor($mesCierre, $totalFacturado, $totalCobrado, $totalCompleto);
 
             /** @var list<int> $sharedIds */
             $sharedIds = $row->compartido_con !== null ? array_map('intval', json_decode((string) $row->compartido_con, true) ?? []) : [];
@@ -200,6 +243,7 @@ final class CommissionOrderService
                     'total_nota_credito'    => $totalNC,
                     'nota_credito_numeros'  => $row->nota_credito_numeros,
                     'compartido_con'        => $others,
+                    'responsables_count'    => $count,
                     'estado'                => $estado,
                 ];
             }, $responsableIds);
@@ -208,14 +252,21 @@ final class CommissionOrderService
 
     /**
      * REQ-501, RN1-RN5. La comisión es todo o nada (RN1) — nunca proporcional a un abono parcial.
+     *
+     * SCRUM-929 (B3b, decisión de Luis 2026-09-19) — `$totalPedidoCompleto` es el monto TOTAL del
+     * pedido (`pipeline_cards.amount`), no la parte ya facturada: con entregas parciales
+     * `$totalFacturado` puede ser < `$totalPedidoCompleto` mientras falten entregas por facturar, y
+     * "cobrado ≥ facturado" por sí solo ya no alcanza (una parcial cobrada al 100% no es el pedido
+     * cobrado al 100%). Ahora exige ADEMÁS que el pedido esté COMPLETAMENTE facturado (tolerancia
+     * 0.005 = medio centavo, épsilon de redondeo, no un umbral de negocio).
      */
-    public function estadoFor(?CarbonImmutable $mesCierre, ?float $totalFacturado, float $totalCobrado): string
+    public function estadoFor(?CarbonImmutable $mesCierre, ?float $totalFacturado, float $totalCobrado, float $totalPedidoCompleto): string
     {
         if ($mesCierre === null || $totalFacturado === null || $totalFacturado <= 0) {
             return self::ESTADO_PENDIENTE_COBRO;
         }
 
-        if ($totalCobrado < $totalFacturado) {
+        if ($totalFacturado + 0.005 < $totalPedidoCompleto || $totalCobrado < $totalFacturado) {
             return self::ESTADO_PENDIENTE_COBRO;
         }
 
@@ -282,6 +333,12 @@ final class CommissionOrderService
         $percent = $this->percentFor($total);
 
         if ($isClosed && $total > 0) {
+            // SCRUM-1158 (Pre-QA MEDIO-2) — «Ver como usuario» es de solo lectura: el GET de inicio del observado calcula y devuelve lo mismo (mes
+            // cerrado = `fijo: true`) pero NO congela el snapshot; lo congelará la primera consulta real de la persona. Sin `act` queda idéntico.
+            if (JwtActor::currentRequestIsImpersonating()) {
+                return ['total' => $total, 'porcentaje' => $percent, 'fijo' => true];
+            }
+
             $snapshot = CommissionMonthSnapshot::create([
                 'vendedor_id'     => $vendorId,
                 'mes_cierre'      => $monthStart->toDateString(),
@@ -294,6 +351,23 @@ final class CommissionOrderService
         }
 
         return ['total' => $total, 'porcentaje' => $percent, 'fijo' => false];
+    }
+
+    /**
+     * SCRUM-1168 F4 — monto de la comisión de UN pedido para su vendedor (mismo cálculo que el resumen: base × % del mes de cierre). Lo usa el descuento por
+     * reverso de un cobro para saber cuánto se había pagado de un pedido que vuelve a quedar sin cobrar.
+     *
+     * @param CommissionOrderRow $order
+     * @param Collection<int, CommissionOrderRow> $ordersForVendor
+     */
+    public function montoComisionDe(array $order, Collection $ordersForVendor): float
+    {
+        if ($order['mes_cierre'] === null) {
+            return 0.0;
+        }
+        $mesData = $this->percentForVendorMonth($order['vendedor_id'], $order['mes_cierre'], $ordersForVendor);
+
+        return round($this->comisionBase($order) * $mesData['porcentaje'] / 100, 2);
     }
 
     /**
@@ -342,15 +416,30 @@ final class CommissionOrderService
     /** Base de comisión de un pedido (REQ-503 RN1): total_cobrado (o el estimado, si aún no
      *  cobró) MENOS notas de crédito aplicadas — nunca negativa.
      *
+     * REQ-506 RN4 (SCRUM-906, corrección) — en un pedido compartido, `total_facturado`/
+     * `total_cobrado`/`total_nota_credito` del row son siempre el monto COMPLETO del pedido
+     * (iguales para las N filas del mismo pedido, uno por responsable — ver `enrichOrder()`, que
+     * los muestra sin dividir a propósito para que el usuario vea el pedido completo). La base de
+     * comisión de cada responsable, en cambio, debe prorratearse por `responsables_count` — nunca
+     * calcularse ni pagarse sobre el monto completo repetido para cada uno. El fallback a
+     * `total_pedido` (cuando el pedido aún no tiene factura) YA viene dividido — dividirlo de
+     * nuevo sería un doble prorrateo.
+     *
      * @param CommissionOrderRow $order
      */
     private function comisionBase(array $order): float
     {
-        $bruta = $order['estado'] === self::ESTADO_PENDIENTE_COBRO
-            ? ($order['total_facturado'] ?? $order['total_pedido'])
-            : $order['total_cobrado'];
+        $count = max(1, $order['responsables_count']);
 
-        return max(0.0, $bruta - $order['total_nota_credito']);
+        if ($order['estado'] === self::ESTADO_PENDIENTE_COBRO) {
+            $bruta = $order['total_facturado'] !== null
+                ? $order['total_facturado'] / $count
+                : $order['total_pedido']; // ya viene dividido — no dividir de nuevo
+        } else {
+            $bruta = $order['total_cobrado'] / $count;
+        }
+
+        return max(0.0, $bruta - ($order['total_nota_credito'] / $count));
     }
 
     /**
@@ -464,6 +553,9 @@ final class CommissionOrderService
             'por_pagar'          => round($porPagar, 2),
             'pendiente_cobro'    => round($pendiente, 2),
             'total_nota_credito' => round($totalNC, 2),
+            // SCRUM-1168 F4 — descuentos por cobros reversados que se restarán de la siguiente liquidación de este vendedor.
+            'ajustes_pendientes' => round((float) AdminContCommissionAdjustment::query()->where('vendedor_id', $vendor->id)->whereColumn('monto_aplicado', '<', 'monto')
+                ->get()->sum(fn (AdminContCommissionAdjustment $a): float => $a->pendiente()), 2),
             'groups'             => $this->buildGroups($vendor->id, $relevant, $orders, $viewMonth),
         ];
     }
@@ -536,16 +628,135 @@ final class CommissionOrderService
     }
 
     /**
+     * SCRUM-879 (decisión E-1/E-5) — fecha de corte para generar movimientos de caja de comisiones:
+     * el arranque del módulo Flujo de Caja (Batch 18). Antes de esa fecha no se genera nada, ni el
+     * job ni el backfill.
+     */
+    public const CASH_LEDGER_CUTOFF_FALLBACK = '2026-08-25';
+
+    /**
+     * SCRUM-879 — refleja como salida de caja (`bank_movements`, tipo comisión, sin cuenta
+     * asignada) cada `CommissionMonthSnapshot` de un mes YA CERRADO cuyo monto de comisión sea > 0.
+     * Fuerza la creación del snapshot si nadie abrió la pantalla de ese vendedor/mes (mismo gotcha
+     * que SCRUM-867). Idempotente por `(source_type, source_id=snapshot.id)`. Fecha del movimiento:
+     * día 1 del mes siguiente al de cierre (decisión E-5). Lo usan el job `commissions:settle-internal`
+     * y el backfill.
+     *
+     * @return int cantidad de movimientos creados
+     */
+    public function settleInternalCommissionsToCashLedger(): int
+    {
+        $cutoff = AdminContFiscalSettings::current()->arqueo_tracking_start_date?->startOfMonth()
+            ?? CarbonImmutable::parse(self::CASH_LEDGER_CUTOFF_FALLBACK)->startOfMonth();
+        $currentMonth = CarbonImmutable::now()->startOfMonth();
+
+        $allOrders = $this->ordersForAllVendors();
+        $vendorIds = $allOrders->pluck('vendedor_id')->unique();
+
+        $names = User::query()->whereIn('id', $vendorIds)->get(['id', 'first_name', 'last_name'])
+            ->mapWithKeys(fn (User $u): array => [$u->id => trim("{$u->first_name} {$u->last_name}")]);
+
+        $created = 0;
+        foreach ($vendorIds as $vendorId) {
+            $vendorOrders = $this->ordersForVendor((int) $vendorId);
+
+            /** @var array<string, CarbonImmutable> $mesesCierre */
+            $mesesCierre = [];
+            foreach ($vendorOrders->pluck('mes_cierre')->filter() as $raw) {
+                $mes = CarbonImmutable::parse($raw)->startOfMonth();
+                if ($mes->lt($currentMonth) && $mes->gte($cutoff)) {
+                    $mesesCierre[$mes->toDateString()] = $mes;
+                }
+            }
+
+            foreach ($mesesCierre as $mesCierre) {
+                // Fuerza el snapshot (create-if-closed) y luego lo lee para el monto exacto.
+                $this->percentForVendorMonth((int) $vendorId, $mesCierre, $vendorOrders);
+                $snapshot = CommissionMonthSnapshot::where('vendedor_id', $vendorId)
+                    ->whereDate('mes_cierre', $mesCierre->toDateString())
+                    ->first();
+                if ($snapshot === null || $snapshot->monto_comision <= 0) {
+                    continue;
+                }
+
+                $yaRegistrado = AdminContBankMovement::query()
+                    ->where('source_type', AdminContBankMovement::SOURCE_INTERNAL_COMMISSION)
+                    ->where('source_id', $snapshot->id)
+                    ->exists()
+                    // SCRUM-1168 F4 — una liquidación que los descuentos dejaron en cero no genera movimiento: su marca es el descuento aplicado.
+                    || AdminContCommissionAdjustment::query()->where('applied_snapshot_id', $snapshot->id)->exists();
+                if ($yaRegistrado) {
+                    continue;
+                }
+
+                // SCRUM-1168 F4 — descuentos pendientes del vendedor (reversos de cobros de pedidos ya liquidados) registrados hasta el cierre de este
+                // mes: se restan de esta liquidación; si no alcanza, el resto queda para la siguiente.
+                $descuento = 0.0;
+                $disponible = (float) $snapshot->monto_comision;
+                $pendientes = AdminContCommissionAdjustment::query()
+                    ->where('vendedor_id', $vendorId)->whereColumn('monto_aplicado', '<', 'monto')
+                    ->where('created_at', '<', $mesCierre->addMonth()->startOfMonth())->orderBy('id')->lockForUpdate()->get();
+                foreach ($pendientes as $ajuste) {
+                    $aplica = round(min($ajuste->pendiente(), max(0.0, $disponible - $descuento)), 2);
+                    if ($aplica <= 0.004) {
+                        break;
+                    }
+                    $ajuste->update(['monto_aplicado' => round($ajuste->monto_aplicado + $aplica, 2), 'applied_snapshot_id' => $snapshot->id]);
+                    $descuento = round($descuento + $aplica, 2);
+                }
+                $neto = round($snapshot->monto_comision - $descuento, 2);
+                if ($neto <= 0.004) {
+                    continue;
+                }
+
+                $vendorName = $names->get((int) $vendorId) ?? "vendedor #{$vendorId}";
+                AdminContBankMovement::create([
+                    'bank_account_id' => null,
+                    'fecha'           => $mesCierre->addMonth()->startOfMonth()->toDateString(),
+                    'tipo'            => AdminContBankMovement::TIPO_COMISION,
+                    'concepto'        => "Comisión interna pagada — {$vendorName} (".self::mesEtiqueta($mesCierre).')'
+                        .($descuento > 0 ? ' — descuento por cobros reversados $'.number_format($descuento, 2) : ''),
+                    'monto'           => $neto,
+                    'source_type'     => AdminContBankMovement::SOURCE_INTERNAL_COMMISSION,
+                    'source_id'       => $snapshot->id,
+                ]);
+                $created++;
+            }
+        }
+
+        return $created;
+    }
+
+    /** "jun 2026" — etiqueta corta de mes en español, sin depender de la config de locale de Carbon. */
+    private static function mesEtiqueta(CarbonImmutable $mes): string
+    {
+        $nombres = [
+            '01' => 'ene', '02' => 'feb', '03' => 'mar', '04' => 'abr', '05' => 'may', '06' => 'jun',
+            '07' => 'jul', '08' => 'ago', '09' => 'sep', '10' => 'oct', '11' => 'nov', '12' => 'dic',
+        ];
+
+        return $nombres[$mes->format('m')].' '.$mes->format('Y');
+    }
+
+    /**
      * Aviso global de pago automático (REQ-499 RN3) — independiente del mes filtrado, cuenta
      * TODAS las comisiones en "por_pagar" de toda la operación, listas para liquidarse en el
      * cierre del mes en curso.
      *
+     * SCRUM-904 — `$vendorId` angosta el banner a un único vendedor (actor sin team-view,
+     * auto-scope a sí mismo). `null` (default) mantiene el comportamiento histórico: total
+     * agregado de todos los vendedores, para roles con visibilidad total. Nunca se angosta por un
+     * filtro manual de vendedor_id (ese es un filtro de tabla, no de este banner/tarjetas — mismo
+     * criterio que `$cardRows` en `AdminContInternalCommissionController::buildSummary()`).
+     *
      * @return array{count: int, total: float}
      */
-    public function pendingAutoPayBanner(): array
+    public function pendingAutoPayBanner(?int $vendorId = null): array
     {
         $allOrders = $this->ordersForAllVendors();
-        $vendorIds = $allOrders->pluck('vendedor_id')->unique();
+        $vendorIds = $vendorId !== null
+            ? collect([$vendorId])
+            : $allOrders->pluck('vendedor_id')->unique();
 
         $count = 0;
         $total = 0.0;

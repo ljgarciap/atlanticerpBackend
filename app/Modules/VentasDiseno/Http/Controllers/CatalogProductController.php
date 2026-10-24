@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Http\Controllers;
 
+use App\Models\User;
+use App\Modules\Auth\Services\PreferencesService;
 use App\Modules\Bodega\Services\OrderCommitmentService;
+use App\Modules\Compras\Services\InventoryKpiService;
+use App\Modules\VentasDiseno\Services\CatalogService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Shared\Http\QueryParams;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -28,43 +33,51 @@ final class CatalogProductController extends Controller
 {
     private const MAX_RESULTS = 6;
 
-    public function __construct(private readonly OrderCommitmentService $commitments) {}
+    /** Listado sin texto de búsqueda (SCRUM-734 secc. 9), acotado desde SCRUM-992. */
+    private const MAX_LISTING = 100;
+
+    public function __construct(
+        private readonly OrderCommitmentService $commitments,
+        private readonly PreferencesService $preferences,
+        private readonly InventoryKpiService $inventoryKpis,
+        private readonly CatalogService $catalog,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
-        $search = trim((string) $request->query('search', ''));
+        $search = trim(QueryParams::string($request, 'search'));
+        $demoModeActive = $this->isDemoModeActive($request);
 
         if ($search === '') {
-            /** @var list<CatalogProduct> $products */
-            $products = CatalogProduct::where('is_active', true)->orderBy('name')->get()->all();
-        } else {
-            $like = '%' . addcslashes($search, '%_\\') . '%';
-
+            // SCRUM-734 (secc. 9) — al abrir la lupa sin escribir nada se muestra el catálogo; con ~30K
+            // productos "completo" ya no es viable (SCRUM-992): primeras MAX_LISTING por nombre.
             /** @var list<CatalogProduct> $products */
             $products = CatalogProduct::where('is_active', true)
-                ->where(function ($q) use ($like): void {
-                    $q->where('reference', 'ilike', $like)
-                        ->orWhere('factory_reference', 'ilike', $like)
-                        ->orWhere('name', 'ilike', $like)
-                        ->orWhere('brand', 'ilike', $like);
-                })
-                ->orderBy('name')
-                ->get()
-                // SCRUM-796 (secc. 6) — coincidencia exacta primero (sort estable de PHP 8+
-                // conserva el orden alfabético entre productos con el mismo booleano).
-                ->sortByDesc(fn (CatalogProduct $p): bool => $this->isExactMatch($p, $search))
-                ->take(self::MAX_RESULTS)
-                ->values()
-                ->all();
+                ->visibleForDemoMode($demoModeActive)
+                ->orderBy('name')->orderBy('id')->limit(self::MAX_LISTING)->get()->all();
+        } else {
+            // SCRUM-992 — coincidencia parcial sobre `search_text` (índice trigram; sin acentos ni
+            // mayúsculas), SIN respaldo tolerante a typos (SCRUM-796 secc. 6: nunca un resultado sin
+            // relación clara con lo escrito). Exacta primero, luego prefijo, luego el resto; el tope
+            // (MAX_RESULTS) se aplica en SQL en vez de cargar todas las coincidencias.
+            $query = CatalogProduct::where('is_active', true)->visibleForDemoMode($demoModeActive);
+            CatalogProduct::applySearch($query, $search, fuzzyFallback: false);
+            CatalogProduct::orderByRelevance($query, $search);
+
+            /** @var list<CatalogProduct> $products */
+            $products = $query->orderBy('name')->orderBy('id')->limit(self::MAX_RESULTS)->get()->all();
         }
 
-        $committedMap = $this->commitments->committedMap(array_map(fn (CatalogProduct $p): int => $p->id, $products));
+        $productIds = array_map(fn (CatalogProduct $p): int => $p->id, $products);
+        $committedMap  = $this->commitments->committedMap($productIds);
+        $enExcluidaMap = $this->inventoryKpis->enBodegaExcluidaMap($productIds);
+        $showroomMap   = $this->inventoryKpis->enShowroomMap($productIds);
 
         return response()->json([
             // SCRUM-796 (secc. 6) — nunca heurístico, este flag queda siempre en false; se
             // mantiene el campo por compatibilidad de shape con el frontend existente.
             'fuzzy' => false,
-            'data'  => array_map(fn (CatalogProduct $p) => $this->format($p, $committedMap[$p->id] ?? 0), $products),
+            'data'  => array_map(fn (CatalogProduct $p) => $this->format($p, $committedMap[$p->id] ?? 0, $enExcluidaMap[$p->id] ?? 0, $showroomMap[$p->id] ?? 0), $products),
         ]);
     }
 
@@ -75,26 +88,29 @@ final class CatalogProductController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        $committed = $this->commitments->committedMap([$id])[$id] ?? 0;
+        $committed  = $this->commitments->committedMap([$id])[$id] ?? 0;
+        $enExcluida = $this->inventoryKpis->enBodegaExcluidaMap([$id])[$id] ?? 0;
+        $showroom   = $this->inventoryKpis->enShowroomMap([$id])[$id] ?? 0;
 
-        return response()->json($this->format($product, $committed));
+        return response()->json($this->format($product, $committed, $enExcluida, $showroom));
     }
 
-    private function isExactMatch(CatalogProduct $product, string $search): bool
+    /** docs/specs/demo-mode.md — sin usuario autenticado (no debería pasar, ruta ya exige JWT), el filtro no se activa. */
+    private function isDemoModeActive(Request $request): bool
     {
-        $needle = mb_strtolower($search);
-
-        foreach ([$product->reference, $product->factory_reference, $product->name, $product->brand] as $field) {
-            if ($field !== null && mb_strtolower($field) === $needle) {
-                return true;
-            }
+        /** @var array{sub?: int}|null $payload */
+        $payload = $request->attributes->get('jwt');
+        if ($payload === null || !isset($payload['sub'])) {
+            return false;
         }
 
-        return false;
+        $user = User::find((int) $payload['sub']);
+
+        return $user !== null && $this->preferences->isDemoModeActive($user);
     }
 
     /** @return array<string, mixed> — REQ-036 AC2: foto, marca, descripción, disponible, precio. Nunca `cost`. */
-    private function format(CatalogProduct $product, int $committed = 0): array
+    private function format(CatalogProduct $product, int $committed = 0, int $enExcluida = 0, int $showroom = 0): array
     {
         return [
             'id'                => $product->id,
@@ -103,11 +119,15 @@ final class CatalogProductController extends Controller
             'name'              => $product->name,
             'description'       => $product->description,
             'brand'             => $product->brand,
-            'photo_url'         => $product->photo_url,
+            // SCRUM-1138 — foto resuelta (subida o legacy), no solo `photo_url`.
+            'photo_url'         => $this->catalog->photoThumbnailUrl($product),
             'price_full'        => $product->price_full,
             // SCRUM-796 (secc. 5) — neto de compromisos de Bodega (mismo cálculo que
-            // CatalogService/Bodega), ya no el stock bruto.
-            'stock_quantity'    => max(0, ($product->stock_quantity ?? 0) - $committed),
+            // CatalogService/Bodega), ya no el stock bruto. SCRUM-851 — tampoco cuenta lo
+            // ubicado en una bodega excluida.
+            'stock_quantity'    => max(0, (int) $this->inventoryKpis->disponibleParaVenta($product, $committed, $enExcluida)),
+            // SCRUM-1196 — Showroom Obarrio, aparte del disponible (no suma): para mostrar a clientes o vender una última pieza.
+            'stock_showroom'    => $showroom,
         ];
     }
 }

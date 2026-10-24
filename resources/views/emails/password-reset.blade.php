@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{ $locale }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,16 +21,16 @@
     <div class="card">
         <div class="logo">ATLANTICERP</div>
         <div class="brand">ATLANTICERP</div>
-        <span class="tag">Restablecer contraseña</span>
-        <h2>Hola, {{ $firstName }}</h2>
-        <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el botón para continuar:</p>
-        <a href="{{ $resetUrl }}" class="btn">Restablecer contraseña</a>
-        <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+        <span class="tag">{{ $tag }}</span>
+        <h2>{{ $greeting }}</h2>
+        <p>{{ $body }}</p>
+        <a href="{{ $resetUrl }}" class="btn">{{ $button }}</a>
+        <p>{{ $fallback }}</p>
         <div class="url-wrap">{{ $resetUrl }}</div>
         <div class="warning">
-            ⚠️ Este enlace expira en 1 hora. Si no solicitaste restablecer tu contraseña, ignora este correo.
+            {{ $warning }}
         </div>
-        <div class="footer">AtlanticERP CRM · Atlantic · No respondas a este correo</div>
+        <div class="footer">{{ $footer }}</div>
     </div>
 </body>
 </html>

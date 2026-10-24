@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Http\Controllers;
 
 use App\Modules\Auth\Models\AuditLog;
+use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * SCRUM-792 (Epic SCRUM-788 — Logs y Telemetría) — visor generalizado de audit_logs, TODOS los
@@ -27,8 +29,38 @@ final class AuditLogController
     /** @var list<string> */
     private const CHANGE_SUFFIXES = ['created', 'updated', 'deleted'];
 
+    /**
+     * SCRUM-813 (Epic SCRUM-788) — catálogo de entity_type para reemplazar el <input> de texto
+     * libre del filtro por un <select> en LogsPage.tsx. DISTINCT contra audit_logs en vez de un
+     * catálogo hardcodeado (ni en backend ni en frontend): con ~90 entidades hoy repartidas entre
+     * LogsAuditTrail automático y llamadas manuales a AuditService::log() en ~15 puntos distintos
+     * del código, un catálogo mantenido a mano driftea en cuanto se agrega una entidad nueva sin
+     * que alguien recuerde actualizar 2 archivos más. Cacheado 5 min por tenant — mismo TTL que
+     * GlobalSetting::resolveRetentionMonths() en ArchiveAuditLogsJob.
+     */
+    public function entityTypes(): JsonResponse
+    {
+        $cacheKey = 'audit_logs:entity_types:' . (string) Tenant::current()?->slug;
+
+        $types = Cache::remember($cacheKey, 300, fn () => AuditLog::query()
+            ->whereNotNull('entity_type')
+            ->distinct()
+            ->orderBy('entity_type')
+            ->pluck('entity_type')
+            ->values());
+
+        return response()->json(['data' => $types]);
+    }
+
     public function index(Request $request): JsonResponse
     {
+        // SCRUM-1020 (Pre-QA) — antes un `from`/`to` inválido llegaba crudo a whereDate() y respondía
+        // 500 con el mensaje SQL; ahora que Logs toma el rango de la URL, se valida como 422.
+        $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to'   => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
         $query = AuditLog::with('user')->orderByDesc('created_at');
 
         $module = $request->query('module');
@@ -104,6 +136,12 @@ final class AuditLogController
             'entity_id'   => $log->entity_id,
             'old_values'  => $log->old_values,
             'new_values'  => $log->new_values,
+            // SCRUM-814 — antes nunca se devolvía, así que el preview de prompt de uso de IA
+            // (ai.usage.requested, ver AiUsageAuditor) quedaba capturado en la base pero invisible
+            // en la pantalla de Logs. metadata ya es JSONB de propósito general, mismo nivel de
+            // confianza que old_values/new_values (nunca contenido no confiable del tenant, ver
+            // docblock de AiUsageAuditor).
+            'metadata'    => $log->metadata,
             'user'        => $log->user !== null ? ['id' => $log->user->id, 'name' => trim("{$log->user->first_name} {$log->user->last_name}")] : null,
             'created_at'  => $log->created_at->toIso8601String(),
         ];

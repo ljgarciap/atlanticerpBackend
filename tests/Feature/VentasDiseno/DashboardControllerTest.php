@@ -334,6 +334,8 @@ class DashboardControllerTest extends FeatureTestCase
             ->get()
             ->filter(fn (NotificationSend $s) => in_array($designerId, $s->audience, true));
         $this->assertGreaterThanOrEqual(1, $sendsForDesigner->count());
+        // SCRUM-1167 — el clic de la campana lleva al Pipeline.
+        $this->assertSame('/ventas-diseno/pipeline', $sendsForDesigner->first()->content['cta_url'] ?? null);
         foreach ($sendsForDesigner as $send) {
             $this->assertNotContains($managerId, $send->audience);
         }
@@ -392,5 +394,39 @@ class DashboardControllerTest extends FeatureTestCase
             ->filter(fn (NotificationSend $s) => in_array($managerId, $s->audience, true));
         // Exactamente 1 send para este responsable/día, no 2 — antes del fix, esto daba 2.
         $this->assertCount(1, $sendsForManager);
+    }
+
+    // ── SCRUM-854: filtro multi-selección Vendedor/Diseñador (owner_ids) ────────────────────
+
+    public function test_owner_ids_filtra_stage_counts_y_totales_a_los_seleccionados(): void
+    {
+        $this->grantVentasDisenoRead('management@atlantic.test');
+        $managerId = $this->userIdByEmail('management@atlantic.test');
+        $otherOwnerId = $this->userIdByEmail('designer@atlantic.test');
+
+        $this->makeCard($managerId, 'quote', amount: 1234, projectName: 'SCRUM854 Owner A');
+        $this->makeCard($otherOwnerId, 'quote', amount: 5678, projectName: 'SCRUM854 Owner B');
+
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        // Filtrado a un solo owner (el manager): el total activo NO debe incluir el monto de
+        // la tarjeta del otro owner (5678) — se asertan montos exactos, no >=, porque el
+        // filtro aísla la respuesta de cualquier ruido del seeder demo.
+        $filtered = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/dashboard/summary?owner_ids[]={$managerId}")
+            ->assertStatus(200);
+        $this->assertSame(1234.0, (float) $filtered->json('totals.active_pipeline'));
+
+        // Ambos owners seleccionados (OR semántico) — el total activo incluye los 2 montos.
+        $both = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/dashboard/summary?owner_ids[]={$managerId}&owner_ids[]={$otherOwnerId}")
+            ->assertStatus(200);
+        $this->assertSame(1234.0 + 5678.0, (float) $both->json('totals.active_pipeline'));
+
+        // Sin owner_ids: comportamiento default sin cambios (todos), no se puede aserir un
+        // monto exacto por el ruido del seeder — solo que el filtro no rompe el caso base.
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/dashboard/summary')
+            ->assertStatus(200);
     }
 }

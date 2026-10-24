@@ -7,6 +7,7 @@ namespace App\Modules\Bodega\Services;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderDocument;
 use App\Shared\Support\CircuitBreaker;
+use App\Shared\Support\PdfLogo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -28,8 +29,19 @@ final class OrderDocumentService
         // Lote 4 (SCRUM-395, 2026-08-17) — `pipelineCard.contacts` agregado para exponer
         // teléfono/correo sueltos en el documento rediseñado (ver `guia-entrega-pdf.blade.php`),
         // mismo criterio que `OrderBoardService::detail()` para el modal "Ver detalle".
+        //
+        // SCRUM-894 (rebote Daniela, 2026-09-13) — `items` se recarga con `load()` (SIEMPRE
+        // fresco desde BD), nunca `loadMissing()`: `DeliveryService::registerDelivery()` llama a
+        // este método DESPUÉS de actualizar `qty_delivered` de cada item vía instancias de
+        // Eloquent separadas (`$locked->items()->lockForUpdate()->findOrFail(...)`), que nunca
+        // tocan la colección `items` ya cacheada en `$locked` desde antes del loop —
+        // `loadMissing()` no vuelve a consultar una relación que Eloquent ya considera "cargada",
+        // así que el PDF se generaba con los `qty_delivered` viejos (típicamente todos en 0,
+        // pedido recién llegado de Packing) → guía descargada sin ningún producto. El resto de
+        // relaciones no se mutan en este flujo, así que quedan en `loadMissing()`.
+        $order->load(['items.catalogProduct']);
         $order->loadMissing([
-            'items.catalogProduct', 'assistant', 'picker', 'courier',
+            'assistant', 'picker', 'courier',
             'pipelineCard.owner', 'pipelineCard.contacts', 'pipelineCard.salesProject',
         ]);
 
@@ -40,7 +52,7 @@ final class OrderDocumentService
         // para repetir contenido al pie en cada página es `page_text()`, mismo patrón que
         // `QuotePdfService` (SCRUM-766).
         $pdf = Pdf::setOption('isPhpEnabled', true)
-            ->loadView('bodega.guia-entrega-pdf', ['order' => $order])
+            ->loadView('bodega.guia-entrega-pdf', ['order' => $order, 'logoDataUri' => PdfLogo::dataUri()])
             ->setPaper('letter');
         $key = "bodega/orders/{$order->id}/guia-entrega-".now()->format('YmdHis').'-'.Str::uuid()->toString().'.pdf';
 
@@ -77,7 +89,8 @@ final class OrderDocumentService
     public function generateEstatusPedido(Order $order, array $statusPayload, \App\Models\User $actor): OrderDocument
     {
         $pdf = Pdf::loadView('bodega.estatus-pedido-pdf', ['status' => $statusPayload])->setPaper('letter');
-        $key = "bodega/orders/{$order->id}/estatus-pedido-".now()->format('YmdHis').'-'.Str::uuid()->toString().'.pdf';
+        // La huella del contenido va en el nombre del objeto (sin migración): permite reconocer después un documento con el MISMO contenido.
+        $key = "bodega/orders/{$order->id}/estatus-pedido-".self::estatusFingerprint($statusPayload).'-'.now()->format('YmdHis').'-'.Str::uuid()->toString().'.pdf';
 
         (new CircuitBreaker(self::DISK))->call(function () use ($key, $pdf): void {
             $ok = Storage::disk(self::DISK)->put($key, $pdf->output());
@@ -92,6 +105,36 @@ final class OrderDocumentService
             'uploaded_by' => $actor->id,
             'created_at'  => now(),
         ]);
+    }
+
+    /**
+     * SCRUM-1171 — reutiliza el documento «Estatus de Pedido» ya generado cuando el contenido NO cambió, y genera uno nuevo solo si cambió. «Mismo
+     * contenido» = misma huella del payload (el mismo array que alimenta el PDF, incluida `fecha_estatus`: como mucho un documento nuevo por día
+     * aunque nada más cambie, y nunca se sirve un PDF con una fecha o cantidades viejas). Se reutiliza solo si el objeto sigue existiendo en S3.
+     *
+     * @param array<string, mixed> $statusPayload
+     */
+    public function findOrGenerateEstatusPedido(Order $order, array $statusPayload, \App\Models\User $actor): OrderDocument
+    {
+        $needle = "bodega/orders/{$order->id}/estatus-pedido-".self::estatusFingerprint($statusPayload).'-';
+
+        $existing = $order->documents()
+            ->where('tipo', OrderDocument::TIPO_ESTATUS_PEDIDO)
+            ->where('storage_key', 'like', addcslashes($needle, '%_\\').'%')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($existing !== null && Storage::disk(self::DISK)->exists($existing->storage_key)) {
+            return $existing;
+        }
+
+        return $this->generateEstatusPedido($order, $statusPayload, $actor);
+    }
+
+    /** @param array<string, mixed> $statusPayload */
+    private static function estatusFingerprint(array $statusPayload): string
+    {
+        return substr(hash('sha256', (string) json_encode($statusPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), 0, 16);
     }
 
     /** REQ-329 — evidencia física (foto/escaneo) de la guía firmada por el cliente. */

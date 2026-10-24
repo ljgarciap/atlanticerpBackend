@@ -5,9 +5,15 @@ declare(strict_types=1);
 namespace Tests\Feature\Compras;
 
 use App\Models\User;
+use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Models\RoleModuleVisibility;
+use App\Modules\Compras\Models\Provider;
+use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\Quote;
+use App\Modules\VentasDiseno\Models\QuoteItem;
+use App\Modules\VentasDiseno\Models\QuotePart;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
@@ -34,9 +40,9 @@ class ApprovedProjectControllerTest extends FeatureTestCase
             ->update(['extra_permissions' => json_encode($perms)]);
     }
 
-    private function makeQuote(string $projectName, ?string $stage, bool $withFolio = true): Quote
+    private function makeQuote(string $projectName, ?string $stage, bool $withFolio = true, string $ownerEmail = 'designer@atlantic.test'): Quote
     {
-        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $owner = User::where('email', $ownerEmail)->firstOrFail();
         $master = MasterClient::create(['name' => "Cliente {$projectName}"]);
         $sub = SubClient::create([
             'master_client_id' => $master->id, 'business_name' => "Cliente {$projectName} SA", 'tax_id' => uniqid(),
@@ -59,6 +65,25 @@ class ApprovedProjectControllerTest extends FeatureTestCase
         }
 
         return $quote;
+    }
+
+    private function makeCatalogProduct(): CatalogProduct
+    {
+        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+
+        return CatalogProduct::create([
+            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo LED', 'description' => 'Bombillo LED',
+            'price_full' => 20, 'cost' => 12, 'provider_id' => $provider->id, 'is_active' => true,
+        ]);
+    }
+
+    private function addItemToQuote(Quote $quote, CatalogProduct $product): void
+    {
+        $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'L1', 'position' => 1]);
+        QuoteItem::create([
+            'quote_part_id' => $part->id, 'catalog_product_id' => $product->id, 'is_custom' => false,
+            'reference' => $product->reference, 'description' => $product->name, 'quantity' => 1, 'unit_price' => 20,
+        ]);
     }
 
     public function test_sin_autenticar_retorna_401(): void
@@ -148,5 +173,190 @@ class ApprovedProjectControllerTest extends FeatureTestCase
         $rows = collect($response->json('data'))->where('project_name', 'Proyecto Con Versiones');
         $this->assertCount(1, $rows);
         $this->assertSame('COT-2222', $rows->first()['folio']);
+    }
+
+    // ── SCRUM-818 — picker "Proyecto de venta" filtrado por producto (Comparación de Referencias) ──
+
+    /** Sin catalog_product_id (Nueva Orden), cero cambio de comportamiento — mismo resultado que antes. */
+    public function test_sin_catalog_product_id_no_filtra_por_producto(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $product = $this->makeCatalogProduct();
+        $withProduct = $this->makeQuote('Proyecto Con Producto', 'approved');
+        $this->addItemToQuote($withProduct, $product);
+        $this->makeQuote('Proyecto Sin Producto', 'approved');
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/compras/approved-projects')
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('project_name');
+        $this->assertContains('Proyecto Con Producto', $names);
+        $this->assertContains('Proyecto Sin Producto', $names);
+    }
+
+    /** Con catalog_product_id, solo aparecen los proyectos cuya cotización aprobada incluye ese producto. */
+    public function test_con_catalog_product_id_filtra_a_proyectos_que_contienen_el_producto(): void
+    {
+        $this->grantCompras('lidercompras@test.com', ['compras.read']);
+        $product = $this->makeCatalogProduct();
+        $withProduct = $this->makeQuote('Proyecto Con Producto', 'approved');
+        $this->addItemToQuote($withProduct, $product);
+        $this->makeQuote('Proyecto Sin Producto', 'approved');
+
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('project_name');
+        $this->assertContains('Proyecto Con Producto', $names);
+        $this->assertNotContains('Proyecto Sin Producto', $names);
+    }
+
+    /** Sin ningún proyecto que contenga el producto, la lista queda vacía (CA06). */
+    public function test_con_catalog_product_id_sin_ningun_proyecto_que_lo_contenga_devuelve_vacio(): void
+    {
+        $this->grantCompras('lidercompras@test.com', ['compras.read']);
+        $product = $this->makeCatalogProduct();
+        $this->makeQuote('Proyecto Sin Producto', 'approved');
+
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
+            ->assertStatus(200);
+
+        $this->assertSame([], $response->json('data'));
+    }
+
+    /** Vendedor con catalog_product_id: solo ve SUS proyectos con el producto, aunque otro proyecto ajeno también lo tenga. */
+    public function test_vendedor_con_catalog_product_id_solo_ve_sus_propios_proyectos(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $product = $this->makeCatalogProduct();
+        $ownProject = $this->makeQuote('Proyecto Propio', 'approved', ownerEmail: 'designer@atlantic.test');
+        $this->addItemToQuote($ownProject, $product);
+        $otherProject = $this->makeQuote('Proyecto Ajeno', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $this->addItemToQuote($otherProject, $product);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('project_name');
+        $this->assertContains('Proyecto Propio', $names);
+        $this->assertNotContains('Proyecto Ajeno', $names);
+    }
+
+    /** Líder de Compras/Operaciones/Gerencia con catalog_product_id: ven TODOS los proyectos con el producto, sin restricción de owner. */
+    public function test_lider_compras_con_catalog_product_id_ve_proyectos_de_cualquier_vendedor(): void
+    {
+        $this->grantCompras('lidercompras@test.com', ['compras.read']);
+        $product = $this->makeCatalogProduct();
+        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $this->addItemToQuote($otherProject, $product);
+
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('project_name');
+        $this->assertContains('Proyecto De Otro Vendedor', $names);
+    }
+
+    /** Operaciones (compras.sustitutos.manage, sin compras.read) también ve todos los proyectos, sin restricción de owner. */
+    public function test_operaciones_con_catalog_product_id_ve_proyectos_de_cualquier_vendedor(): void
+    {
+        $this->grantCompras('lideroperaciones@test.com', ['compras.sustitutos.manage', 'compras.limited.view']);
+        $product = $this->makeCatalogProduct();
+        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $this->addItemToQuote($otherProject, $product);
+
+        $token = $this->loginAs('lideroperaciones@test.com', 'lideroperaciones@test.com', 'lider_operaciones');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('project_name');
+        $this->assertContains('Proyecto De Otro Vendedor', $names);
+    }
+
+    // ── SCRUM-818 (rebote 2026-09-03) — reproduce el bug real reportado por Daniela ────────────
+
+    /**
+     * Hallazgo 2 — a diferencia de los tests de arriba (que simulan el caso "ya arreglado"
+     * otorgando `compras.read` manualmente vía `grantCompras()`, un permiso v1), este reproduce
+     * la cuenta REAL de Yirena: acceso a Compras solo vía su ROL (`RoleModuleVisibility`, v2) —
+     * nunca tuvo `compras.read`/`compras.sustitutos.manage` cargado en `extra_permissions`. Antes
+     * del fix, `QuoteListService::hasFullComprasAccess()` usaba `$user->hasPermission()` (v1) y
+     * la trataba como si no tuviera ningún acceso — "No existe ningún proyecto que contenga este
+     * producto" para cualquier producto, sin importar cuál.
+     */
+    public function test_lider_compras_ve_proyectos_solo_con_acceso_de_rol_sin_permiso_v1_extra(): void
+    {
+        $role = Role::where('key', 'lider_compras')->firstOrFail();
+        RoleModuleVisibility::updateOrCreate(
+            ['role_id' => $role->id, 'module' => 'compras'],
+            ['can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => false],
+        );
+
+        $product = $this->makeCatalogProduct();
+        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $this->addItemToQuote($otherProject, $product);
+
+        $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('project_name');
+        $this->assertContains('Proyecto De Otro Vendedor', $names);
+    }
+
+    /** Mismo caso que arriba, pero para Gerencia (David/Mark) — rol `management`, sin `gerencia.view` en v1. */
+    public function test_gerencia_ve_proyectos_solo_con_acceso_de_rol_sin_permiso_v1_extra(): void
+    {
+        $role = Role::where('key', 'management')->firstOrFail();
+        RoleModuleVisibility::updateOrCreate(
+            ['role_id' => $role->id, 'module' => 'compras'],
+            ['can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => true],
+        );
+
+        $product = $this->makeCatalogProduct();
+        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $this->addItemToQuote($otherProject, $product);
+
+        $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('project_name');
+        $this->assertContains('Proyecto De Otro Vendedor', $names);
+    }
+
+    /**
+     * Hallazgo 4 — con catalog_product_id, un proyecto con cotización real confirmada (folio) pero
+     * aún en etapa Cotización (documentStatus() === 'sent', stage ni 'proposal' ni 'approved') SÍ
+     * debe aparecer — a diferencia de "Nueva Orden" (test_solo_incluye_pedidos_aprobados arriba),
+     * que sigue excluyéndolo a propósito (picker deliberadamente más estricto, "Pedidos Aprobados").
+     */
+    public function test_con_catalog_product_id_incluye_proyectos_en_etapa_cotizacion(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $product = $this->makeCatalogProduct();
+        $stillInCotizacion = $this->makeQuote('Proyecto En Cotizacion', 'quote'); // documentStatus() === 'sent'
+        $this->addItemToQuote($stillInCotizacion, $product);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('project_name');
+        $this->assertContains('Proyecto En Cotizacion', $names);
     }
 }

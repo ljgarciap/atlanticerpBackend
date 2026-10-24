@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Models;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -24,6 +25,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class AdminContCompanyProfile extends Model
 {
+    use LogsAuditTrail;
+
     /** @var list<string> */
     protected $fillable = [
         'descripcion_corta', 'sitio_web', 'redes_sociales', 'zona_horaria',

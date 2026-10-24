@@ -26,6 +26,20 @@ class UpdateUserRequest extends FormRequest
             'last_name'           => ['sometimes', 'string', 'min:1', 'max:120'],
             'email'               => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($userId)],
             'phone'               => ['nullable', 'string', 'max:30'],
+            // SCRUM-822 — mismos 3 campos que CreateUserRequest. manager_id además valida que un
+            // usuario no pueda ser su propio jefe directo (a diferencia de crear, acá el usuario
+            // ya tiene un id real para comparar) — closure en vez de `different:`, que solo
+            // compara contra OTRO CAMPO del body, no contra el id de la ruta.
+            'job_title'           => ['nullable', 'string', 'max:120'],
+            'hire_date'           => ['nullable', 'date'],
+            'manager_id'          => [
+                'nullable', 'integer', Rule::exists('users', 'id'),
+                function (string $attribute, mixed $value, \Closure $fail) use ($userId): void {
+                    if ((int) $value === $userId) {
+                        $fail('Un usuario no puede ser su propio jefe directo.');
+                    }
+                },
+            ],
             'department_id'       => ['nullable', 'integer', Rule::exists('departments', 'id')],
             'security_level_id'   => [
                 'sometimes',

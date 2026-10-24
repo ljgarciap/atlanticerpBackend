@@ -2,27 +2,37 @@
 
 declare(strict_types=1);
 
+use App\Modules\AdminCont\Http\Controllers\AdminContAbonoController;
 use App\Modules\AdminCont\Http\Controllers\AdminContAccountStatementController;
 use App\Modules\AdminCont\Http\Controllers\AdminContArchitectCommissionController;
 use App\Modules\AdminCont\Http\Controllers\AdminContBankAccountController;
 use App\Modules\AdminCont\Http\Controllers\AdminContBankMovementController;
 use App\Modules\AdminCont\Http\Controllers\AdminContCarteraCommissionController;
 use App\Modules\AdminCont\Http\Controllers\AdminContCashPositionController;
+use App\Modules\AdminCont\Http\Controllers\AdminContClientItbmsExemptionController;
 use App\Modules\AdminCont\Http\Controllers\AdminContClientReportsController;
 use App\Modules\AdminCont\Http\Controllers\AdminContCompanyProfileController;
+use App\Modules\AdminCont\Http\Controllers\AdminContCompensacionController;
 use App\Modules\AdminCont\Http\Controllers\AdminContContactController;
 use App\Modules\AdminCont\Http\Controllers\AdminContCreditNoteController;
+use App\Modules\AdminCont\Http\Controllers\AdminContFeReintentoController;
+use App\Modules\AdminCont\Http\Controllers\AdminContFeTransmisionController;
 use App\Modules\AdminCont\Http\Controllers\AdminContFiscalSettingsController;
 use App\Modules\AdminCont\Http\Controllers\AdminContHomeController;
 use App\Modules\AdminCont\Http\Controllers\AdminContInternalCommissionController;
 use App\Modules\AdminCont\Http\Controllers\AdminContInvoiceBookController;
 use App\Modules\AdminCont\Http\Controllers\AdminContInvoiceController;
+use App\Modules\AdminCont\Http\Controllers\AdminContInvoiceReceptorController;
 use App\Modules\AdminCont\Http\Controllers\AdminContItbmsRateController;
 use App\Modules\AdminCont\Http\Controllers\AdminContLocationController;
 use App\Modules\AdminCont\Http\Controllers\AdminContPaymentController;
 use App\Modules\AdminCont\Http\Controllers\AdminContPaymentMethodSalesController;
+use App\Modules\AdminCont\Http\Controllers\AdminContPedidosGemelosController;
 use App\Modules\AdminCont\Http\Controllers\AdminContPettyCashController;
 use App\Modules\AdminCont\Http\Controllers\AdminContReportsController;
+use App\Modules\AdminCont\Http\Controllers\AdminContReversalController;
+use App\Modules\AdminCont\Http\Controllers\AdminContSaldoFavorController;
+use App\Modules\AdminCont\Http\Controllers\AdminContSettingsController;
 use App\Modules\Integrations\Outlook\Http\Controllers\OutlookCalendarController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +41,22 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('primary_approver_only')->group(function (): void {
     Route::get('/fiscal-settings', [AdminContFiscalSettingsController::class, 'show']);
     Route::put('/fiscal-settings', [AdminContFiscalSettingsController::class, 'update']);
+
+    // SCRUM-987 — payload enviado + respuesta del PAC por documento (evidencia fiscal, con PII del receptor).
+    Route::get('/invoices/{order}/fe-transmisiones', [AdminContFeTransmisionController::class, 'factura'])->whereNumber('order');
+    Route::get('/notas-credito/{creditNote}/fe-transmisiones', [AdminContFeTransmisionController::class, 'notaCredito'])->whereNumber('creditNote');
+
+    // SCRUM-1007 — reintentar la certificación de un documento rechazado / con error de configuración y actualizar el
+    // estado de uno pendiente. Solo Mark/superadmin (este grupo), 6 acciones por minuto por USUARIO (limitador 'fe-accion').
+    Route::middleware('throttle:fe-accion')->group(function (): void {
+        Route::post('/invoices/{order}/fe-reintentar', [AdminContFeReintentoController::class, 'reintentarFactura'])->whereNumber('order');
+        Route::post('/invoices/{order}/fe-actualizar-estado', [AdminContFeReintentoController::class, 'actualizarEstadoFactura'])->whereNumber('order');
+        Route::post('/notas-credito/{creditNote}/fe-reintentar', [AdminContFeReintentoController::class, 'reintentarNotaCredito'])->whereNumber('creditNote');
+        Route::post('/notas-credito/{creditNote}/fe-actualizar-estado', [AdminContFeReintentoController::class, 'actualizarEstadoNotaCredito'])->whereNumber('creditNote');
+        // SCRUM-1019 — "Reconciliar con MSL": recupera el CUFE de un documento que MSL ya tiene (mismo gate Mark/superadmin y limitador).
+        Route::post('/invoices/{order}/fe-reconciliar', [AdminContFeReintentoController::class, 'reconciliarFactura'])->whereNumber('order');
+        Route::post('/notas-credito/{creditNote}/fe-reconciliar', [AdminContFeReintentoController::class, 'reconciliarNotaCredito'])->whereNumber('creditNote');
+    });
 
     Route::get('/itbms-rates', [AdminContItbmsRateController::class, 'index']);
     Route::post('/itbms-rates', [AdminContItbmsRateController::class, 'store']);
@@ -65,6 +91,7 @@ Route::get('/bank-accounts', [AdminContBankAccountController::class, 'index'])
 
 Route::middleware('permission:admin_contab.records.manage')->group(function (): void {
     Route::post('/bank-accounts', [AdminContBankAccountController::class, 'store']);
+    Route::put('/bank-accounts/{id}', [AdminContBankAccountController::class, 'update'])->whereNumber('id');
     Route::put('/bank-accounts/{id}/deactivate', [AdminContBankAccountController::class, 'deactivate'])->whereNumber('id');
     Route::put('/bank-accounts/{id}/reactivate', [AdminContBankAccountController::class, 'reactivate'])->whereNumber('id');
 });
@@ -82,16 +109,24 @@ Route::put('/bank-movements/{id}/assign-account', [AdminContBankMovementControll
 // no es exclusiva de Mark (a diferencia de Configuración Fiscal/Datos de la Empresa).
 Route::middleware('permission:admin_contab.records.manage')->prefix('invoices')->group(function (): void {
     Route::get('/summary', [AdminContInvoiceController::class, 'summary']);
+    Route::get('/sellers', [AdminContInvoiceController::class, 'sellers']); // SCRUM-1175 — antes de '/' por el mismo motivo que '/export'.
     Route::get('/pending', [AdminContInvoiceController::class, 'pending']);
     Route::get('/export', [AdminContInvoiceController::class, 'export']); // REQ-446, Batch 3 — antes de '/' para no matchear como {id} en ninguna ruta futura.
     Route::get('/aging', [AdminContInvoiceController::class, 'aging']); // REQ-450, Batch 4 — antes de '/' por el mismo motivo.
     Route::get('/', [AdminContInvoiceController::class, 'index']);
     Route::post('/preview', [AdminContInvoiceController::class, 'preview']);
     Route::post('/', [AdminContInvoiceController::class, 'store']);
+    // Guarda de RUC al facturar: corregir el receptor desde la vista previa (valida contra la DGI antes de guardar).
+    Route::patch('/receptors/{subClientId}', [AdminContInvoiceReceptorController::class, 'update'])
+        ->whereNumber('subClientId')
+        ->middleware(['permission:'.AdminContInvoiceReceptorController::PERMISO, 'throttle:tax-lookup']); // consulta a la DGI: mismo límite por usuario que la pantalla de Clientes
 
     // Batch 4 (SCRUM-524→528, REQ-447/449/448 proponer) — mismo gate de rol estándar de Facturación.
     Route::get('/{order}/detail', [AdminContInvoiceController::class, 'detail'])->whereNumber('order');
     Route::get('/{order}/pdf', [AdminContInvoiceController::class, 'pdf'])->whereNumber('order');
+    // SCRUM-943 — previsualiza el JSON que se armaría para el PAC, sin certificar (útil sobre todo
+    // en pac_ambiente: apagado).
+    Route::get('/{order}/fe-preview', [AdminContInvoiceController::class, 'fePreview'])->whereNumber('order');
     Route::post('/{order}/mark-uncollectible', [AdminContInvoiceController::class, 'markUncollectible'])->whereNumber('order');
 });
 
@@ -102,10 +137,13 @@ Route::middleware('primary_approver_only')->prefix('invoices')->group(function (
 });
 
 // SCRUM-539→544 (REQ-462→467) — Cobros, Batch 5 del cuerpo principal (ver
-// docs/architecture/admin-contab-batches.md). REQ-463 (tarjetas resumen) es más angosto que el
-// resto del batch: "Visible para Felix, Mark y Gerencia" — sin Yaneth, a diferencia de todo lo
-// demás de este módulo que sí la incluye.
-Route::middleware('permission:admin_contab.oversight.manage')->prefix('payments')->group(function (): void {
+// docs/architecture/admin-contab-batches.md). REQ-463 (tarjetas resumen) originalmente era más
+// angosto que el resto del batch ("Visible para Felix, Mark y Gerencia" — sin Yaneth). Corrección
+// SCRUM-881 (Daniela, 2026-09-09): esa restricción dejaba a Yaneth viendo el Historial de cobros
+// completo pero las 4 tarjetas de indicadores en guion — inconsistente con el resto del módulo,
+// donde Yaneth sí tiene el mismo alcance que Felix. Se agrega asistente_administrativa acá,
+// alineado con el resto de rutas de payments abajo.
+Route::middleware('permission:admin_contab.records.manage')->prefix('payments')->group(function (): void {
     Route::get('/summary', [AdminContPaymentController::class, 'summary']);
 });
 
@@ -114,15 +152,44 @@ Route::middleware('permission:admin_contab.oversight.manage')->prefix('payments'
 // SCRUM-549→552 (REQ-472→475), Batch 7 — ver comprobante/recibo formal/confirmación manual, mismo
 // gate de rol (REQ-474, apertura automática, no necesita ruta propia, ver docblock del controller).
 Route::middleware('permission:admin_contab.records.manage')->prefix('payments')->group(function (): void {
+    Route::get('/config', [AdminContPaymentController::class, 'config']);
     Route::get('/clients', [AdminContPaymentController::class, 'clients']);
     Route::get('/open-invoices', [AdminContPaymentController::class, 'openInvoices']);
     Route::get('/default-bank-account', [AdminContPaymentController::class, 'defaultBankAccount']);
     Route::get('/{id}/attachment', [AdminContPaymentController::class, 'attachment'])->whereNumber('id');
     Route::get('/{id}/pdf', [AdminContPaymentController::class, 'pdf'])->whereNumber('id');
     Route::put('/{id}/confirm', [AdminContPaymentController::class, 'confirm'])->whereNumber('id');
+    Route::post('/{id}/datos', [AdminContPaymentController::class, 'updateDatos'])->whereNumber('id');
+    Route::get('/{id}/confirm-preview', [AdminContPaymentController::class, 'confirmPreview'])->whereNumber('id');
     Route::get('/{id}', [AdminContPaymentController::class, 'show'])->whereNumber('id');
     Route::get('/', [AdminContPaymentController::class, 'index']);
     Route::post('/', [AdminContPaymentController::class, 'store']);
+    Route::post('/cobro', [AdminContPaymentController::class, 'storeV2']);
+});
+
+// SCRUM-1168 F3 — Compensaciones: cruzar el dinero disponible de un cliente contra sus facturas pendientes. Mismo gate de rol que Cobros
+// ("Disponible para Felix, Yaneth, Mark y Gerencia"). Solo responde con el concepto nuevo de cobros activo.
+Route::middleware('permission:admin_contab.records.manage')->prefix('compensaciones')->group(function (): void {
+    Route::get('/clientes', [AdminContCompensacionController::class, 'clientes']);
+    Route::get('/clientes/{masterClientId}', [AdminContCompensacionController::class, 'cliente'])->whereNumber('masterClientId');
+    Route::post('/preview', [AdminContCompensacionController::class, 'preview']);
+    // SCRUM-1168 F4 — reversar un cruce completo (sin aprobación: queda en el libro con motivo y autor).
+    Route::post('/{id}/reverse', [AdminContReversalController::class, 'reversarCompensacion'])->whereNumber('id');
+    Route::get('/{id}/pdf', [AdminContCompensacionController::class, 'pdfDocument'])->whereNumber('id');
+    Route::get('/{id}', [AdminContCompensacionController::class, 'show'])->whereNumber('id');
+    Route::post('/', [AdminContCompensacionController::class, 'store']);
+});
+
+// SCRUM-1168 F4 — reversos del dinero de los cobros. Desaplicar una aplicación no necesita aprobación; anular un cobro (o devolver dinero, F5) se
+// SOLICITA con este gate de rol estándar y lo DECIDE solo Mark (`primary_approver_only`, mismo criterio que la decisión de notas de crédito).
+Route::middleware('permission:admin_contab.records.manage')->group(function (): void {
+    Route::post('/movimientos/{id}/desaplicar', [AdminContReversalController::class, 'desaplicar'])->whereNumber('id');
+    Route::post('/payments/{id}/anular', [AdminContReversalController::class, 'solicitarAnulacion'])->whereNumber('id');
+    Route::post('/clientes/{masterClientId}/devolucion', [AdminContReversalController::class, 'solicitarDevolucion'])->whereNumber('masterClientId');
+    Route::get('/reversal-requests', [AdminContReversalController::class, 'index']);
+});
+Route::middleware('primary_approver_only')->prefix('reversal-requests')->group(function (): void {
+    Route::put('/{id}/decision', [AdminContReversalController::class, 'decision'])->whereNumber('id');
 });
 
 // Batch 19 de Admin&Cont (SCRUM-602, REQ-525) — sube o reemplaza la constancia de retención. Más
@@ -139,6 +206,7 @@ Route::middleware('permission:admin_contab.read')->prefix('account-statement')->
     Route::get('/clients', [AdminContAccountStatementController::class, 'clients']);
     Route::get('/projects', [AdminContAccountStatementController::class, 'projects']);
     Route::get('/export', [AdminContAccountStatementController::class, 'exportExcel']); // antes de '/' — no matchear como el GET base.
+    Route::get('/pdf', [AdminContAccountStatementController::class, 'pdf']); // SCRUM-857 — mismo criterio, antes de '/'.
     Route::get('/', [AdminContAccountStatementController::class, 'show']);
 });
 
@@ -157,6 +225,7 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('notas-credi
     Route::get('/facturas/{order}/itbms-treatment', [AdminContCreditNoteController::class, 'itbmsTreatment'])->whereNumber('order');
     Route::get('/clientes/{masterClient}/facturas', [AdminContCreditNoteController::class, 'facturas'])->whereNumber('masterClient');
     Route::get('/devoluciones/{customerReturn}', [AdminContCreditNoteController::class, 'devolucionDetail'])->whereNumber('customerReturn');
+    Route::get('/devoluciones/{customerReturn}/signed-document', [AdminContCreditNoteController::class, 'devolucionSignedDocumentUrl'])->whereNumber('customerReturn');
     Route::post('/correccion/preview', [AdminContCreditNoteController::class, 'previewCorreccion']);
     Route::post('/correccion', [AdminContCreditNoteController::class, 'storeCorreccion']);
     Route::post('/', [AdminContCreditNoteController::class, 'store']);
@@ -164,6 +233,8 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('notas-credi
     // Yaneth, Mark y Gerencia" (a diferencia de /decision, abajo, que es exclusiva de Mark).
     Route::get('/{creditNote}/comprobante', [AdminContCreditNoteController::class, 'comprobante'])->whereNumber('creditNote');
     Route::get('/{creditNote}/pdf', [AdminContCreditNoteController::class, 'pdf'])->whereNumber('creditNote');
+    // SCRUM-943 — mismo criterio que invoices/{order}/fe-preview.
+    Route::get('/{creditNote}/fe-preview', [AdminContCreditNoteController::class, 'fePreview'])->whereNumber('creditNote');
     Route::get('/{creditNote}', [AdminContCreditNoteController::class, 'show'])->whereNumber('creditNote');
     Route::get('/', [AdminContCreditNoteController::class, 'index']);
 });
@@ -172,6 +243,29 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('notas-credi
 // mismo criterio que `invoices/{order}/uncollectible-decision`.
 Route::middleware('primary_approver_only')->prefix('notas-credito')->group(function (): void {
     Route::put('/{creditNote}/decision', [AdminContCreditNoteController::class, 'decision'])->whereNumber('creditNote');
+});
+
+// SCRUM-902 (Registrar Abono, 4O) — mismo gate de rol estándar que Cobros/Notas Crédito
+// ("Disponible para Felix, Yaneth, Mark y Gerencia"), menú "Movimientos" justo después de Notas
+// Crédito. Rutas de cascada del formulario (`cascada/*`) van antes de `/{id}` por el mismo motivo
+// que `/correccion`/`/devoluciones` en notas-credito arriba.
+Route::middleware('permission:admin_contab.records.manage')->prefix('abonos')->group(function (): void {
+    Route::get('/cascada/sub-clientes', [AdminContAbonoController::class, 'subClientes']);
+    Route::get('/cascada/proyectos', [AdminContAbonoController::class, 'proyectos']);
+    Route::get('/cascada/facturas', [AdminContAbonoController::class, 'facturas']);
+    Route::get('/cascada/facturas-por-subcliente', [AdminContAbonoController::class, 'facturasPorSubcliente']);
+    Route::post('/{id}/confirm', [AdminContAbonoController::class, 'confirm'])->whereNumber('id');
+    Route::get('/{id}/pdf', [AdminContAbonoController::class, 'pdf'])->whereNumber('id');
+    Route::put('/{id}', [AdminContAbonoController::class, 'update'])->whereNumber('id');
+    Route::get('/{id}', [AdminContAbonoController::class, 'show'])->whereNumber('id');
+    Route::get('/', [AdminContAbonoController::class, 'index']);
+    Route::post('/', [AdminContAbonoController::class, 'store']);
+});
+
+// SCRUM-903 (Saldo a Favor de Clientes, 4N) — pantalla de solo consulta, menú "Movimientos"
+// después de Registrar Abonos. Mismo gate de rol que Abonos/Cobros/Notas Crédito.
+Route::middleware('permission:admin_contab.records.manage')->prefix('saldo-favor')->group(function (): void {
+    Route::get('/', [AdminContSaldoFavorController::class, 'index']);
 });
 
 // SCRUM-575→579 (REQ-498→502) — Comisiones Internas, Batch 14 (ver
@@ -365,13 +459,12 @@ Route::middleware('primary_approver_only')->prefix('petty-cash')->group(function
 
 // Batch 22 (SCRUM-643→647, REQ-566→570) — home de Reportes. Roster amplio Felix/Yaneth/Mark/
 // Gerencia (Excel de requerimientos, hoja "Matriz de Permisos por Rol", fila "Ver pantalla
-// Reportes" — CONFIRMADO con el cliente que Yaneth ve el dashboard completo, solo lectura), mismo
-// grupo ya usado en `cash-position`/`petty-cash/summary`. Ninguno de estos 4 endpoints acepta
+// Reportes" — el cliente había confirmado que Yaneth ve el dashboard completo, solo lectura), mismo
+// grupo ya usado en `cash-position`/`petty-cash/summary`. Ninguno de estos endpoints acepta
 // `window`/período propio distinto del selector — Felix-commission y cartera son fijos (RN4
 // REQ-567/RN3 REQ-568), ventas/flujo-caja sí toman `periodo` (RN3 REQ-566: se recalculan juntas).
 Route::middleware('permission:admin_contab.records.manage')
     ->prefix('reports')->group(function (): void {
-        Route::get('/felix-commission', [AdminContReportsController::class, 'felixCommission']);
         Route::get('/cartera', [AdminContReportsController::class, 'cartera']);
         Route::get('/ventas', [AdminContReportsController::class, 'ventas']);
         Route::get('/flujo-caja', [AdminContReportsController::class, 'flujoCaja']);
@@ -380,6 +473,16 @@ Route::middleware('permission:admin_contab.records.manage')
         // criterio fijo-al-mes-actual que Comisión Felix/Cartera).
         Route::get('/comisiones', [AdminContReportsController::class, 'comisiones']);
         Route::get('/notas-credito', [AdminContReportsController::class, 'notasCredito']);
+    });
+
+// Corrección SCRUM-881 (Daniela, 2026-09-09) — "Comisión por gestión de cartera +90 días — Felix"
+// debe verse SOLO para Felix y Gerencia, no para Yaneth (asistente_administrativa): a diferencia
+// del resto de Reportes (matriz de permisos original la incluía en todo el dashboard), este ticket
+// específico angosta este único endpoint. Se separa del grupo de arriba a propósito — el resto de
+// Reportes no cambia.
+Route::middleware('permission:admin_contab.oversight.manage')
+    ->prefix('reports')->group(function (): void {
+        Route::get('/felix-commission', [AdminContReportsController::class, 'felixCommission']);
     });
 
 // Batch 23 Grupo 2 (SCRUM-651→660, REQ-574→583) — "Reporte mensual por cliente" (4M1, agrupación
@@ -401,6 +504,9 @@ Route::middleware('permission:admin_contab.records.manage')
         Route::get('/libro-facturas/excel', [AdminContInvoiceBookController::class, 'excel']);
         Route::get('/ventas-medio-pago', [AdminContPaymentMethodSalesController::class, 'index']);
         Route::get('/ventas-medio-pago/excel', [AdminContPaymentMethodSalesController::class, 'excel']);
+        // Vista de validación de los pedidos gemelos de ICG (solo lectura; facturar el saldo va por /invoices).
+        Route::get('/pedidos-gemelos', [AdminContPedidosGemelosController::class, 'index']);
+        Route::get('/pedidos-gemelos/excel', [AdminContPedidosGemelosController::class, 'excel']);
     });
 
 // Batch final de Admin&Cont — "Inicio" (SCRUM-503→512, REQ-426→435), Grupo 1 (SCRUM-504→508,
@@ -410,6 +516,9 @@ Route::middleware('permission:admin_contab.records.manage')
         Route::get('/resumen-mes', [AdminContHomeController::class, 'resumenMes']);
         Route::get('/pendientes', [AdminContHomeController::class, 'pendientes']);
         Route::get('/vencidos-por-vencer', [AdminContHomeController::class, 'vencidosPorVencer']);
+        // SCRUM-908 — tarjeta "Aprobaciones Pendientes", mismo roster de Home (el filtro fino real
+        // es por permiso efectivo de cada tipo, dentro de ApprovalsPendingService).
+        Route::get('/approvals-pending', [AdminContHomeController::class, 'approvalsPending']);
     });
 
 // Grupo 2 (SCRUM-509, REQ-432) — "Mi calendario". Mismo endpoint compartido con Ventas & Diseño/
@@ -435,3 +544,18 @@ Route::middleware('primary_approver_only')->prefix('commissions/cartera')->group
     Route::put('/tiers/{id}', [AdminContCarteraCommissionController::class, 'updateTier'])->whereNumber('id');
     Route::delete('/tiers/{id}', [AdminContCarteraCommissionController::class, 'destroyTier'])->whereNumber('id');
 });
+
+// REQ-635 (SCRUM-811) — umbrales configurables de alertas de fraude, ver
+// `AdminContSettingsService`. Mismo patrón que `routes/bodega.php` (`/settings`): GET con
+// `admin_contab.read`, PUT con el permiso angosto `admin_contab.settings.configure` (ver
+// migración de permission_catalog).
+Route::prefix('settings')->group(function (): void {
+    Route::get('/', [AdminContSettingsController::class, 'show'])->middleware('permission:admin_contab.read');
+    Route::put('/', [AdminContSettingsController::class, 'update'])->middleware('permission:admin_contab.settings.configure');
+});
+
+// SCRUM-1166 — marcar o quitar la exención de ITBMS de un cliente fiscal. Permiso angosto (Mark, Felix y Yaneth por SpecialPermissionSeeder; superadmin la
+// pasa con `superadmin.all`); no toca el bloqueo de edición de datos fiscales de SCRUM-1002 porque solo afecta a documentos futuros.
+Route::put('/clientes/{subClientId}/exencion-itbms', [AdminContClientItbmsExemptionController::class, 'update'])
+    ->middleware('permission:'.AdminContClientItbmsExemptionController::PERMISO)
+    ->whereNumber('subClientId');

@@ -173,14 +173,30 @@ class AdminContReportsControllerTest extends FeatureTestCase
         }
     }
 
-    public function test_yaneth_puede_ver_los_4_endpoints_de_reportes(): void
+    public function test_yaneth_puede_ver_cartera_ventas_y_flujo_caja(): void
     {
         $token = $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
 
-        foreach (['/api/admin-contab/reports/felix-commission', '/api/admin-contab/reports/cartera',
+        foreach (['/api/admin-contab/reports/cartera',
             '/api/admin-contab/reports/ventas', '/api/admin-contab/reports/flujo-caja'] as $url) {
             $this->withHeaders($this->authHeaders($token))->getJson($url)->assertStatus(200);
         }
+    }
+
+    /**
+     * Corrección SCRUM-881 (Daniela, 2026-09-09) — "Comisión por gestión de cartera +90 días —
+     * Felix" debe verse SOLO para Felix y Gerencia, no para Yaneth. Antes de esta corrección,
+     * Yaneth SÍ veía este endpoint junto con el resto de Reportes (matriz de permisos original) —
+     * `test_yaneth_puede_ver_los_4_endpoints_de_reportes` cubría exactamente lo contrario y se
+     * divide acá.
+     */
+    public function test_yaneth_recibe_403_en_felix_commission(): void
+    {
+        $token = $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/reports/felix-commission')
+            ->assertStatus(403);
     }
 
     // ------------------------------------------------------------------- REQ-569 ventas/periodo ----

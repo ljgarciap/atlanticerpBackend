@@ -33,6 +33,10 @@ use Barryvdh\DomPDF\PDF as PdfDocument;
  */
 final class QuotePdfService
 {
+    public function __construct(private readonly QuotePdfLayoutEstimator $layoutEstimator)
+    {
+    }
+
     /** @param array<string, mixed> $detail Salida de `QuoteController::formatDetail()`. */
     public function generate(array $detail, bool $external): PdfDocument
     {
@@ -48,13 +52,19 @@ final class QuotePdfService
      */
     public function viewData(array $detail, bool $external): array
     {
+        // SCRUM-801 (3er rebote) — bloque final (Observaciones→Firma) pegado al pie de página y
+        // sin partirse entre páginas. Ver docblock de QuotePdfLayoutEstimator para el diseño.
+        $bottomBlockLayout = $this->layoutEstimator->estimate($detail, $external);
+
         return [
-            'quote'       => $detail,
-            'external'    => $external,
-            'signed'      => $detail['document_status'] === 'approved',
-            'signerName'  => $detail['contacts'][0]['name'] ?? $detail['sub_client']['business_name'] ?? '',
-            'generatedAt' => now(),
-            'logoDataUri' => PdfLogo::dataUri(),
+            'quote'              => $detail,
+            'external'           => $external,
+            'signed'             => $detail['document_status'] === 'approved',
+            'signerName'         => $detail['contacts'][0]['name'] ?? $detail['sub_client']['business_name'] ?? '',
+            'generatedAt'        => now(),
+            'logoDataUri'        => PdfLogo::dataUri(),
+            'bottomBlockSpacerPt' => $bottomBlockLayout['spacerPt'],
+            'bottomBlockForceNewPage' => $bottomBlockLayout['forceNewPage'],
         ];
     }
 }

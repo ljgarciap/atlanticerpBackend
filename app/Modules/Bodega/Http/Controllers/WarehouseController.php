@@ -7,10 +7,13 @@ namespace App\Modules\Bodega\Http\Controllers;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Bodega\Models\WarehouseLocation;
+use App\Modules\Bodega\Services\ZonaLibreCatalogoService;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
-use App\Modules\VentasDiseno\Services\FuzzySearchService;
+use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Shared\Http\Pagination;
+use App\Shared\Http\QueryParams;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -36,14 +39,16 @@ final class WarehouseController extends Controller
 {
     public function __construct(
         private readonly InventoryKpiService $inventoryKpis,
-        private readonly FuzzySearchService $fuzzySearch,
+        private readonly ZonaLibreCatalogoService $zonaLibre,
     ) {}
 
     /** SCRUM-451 (REQ-381) — pestañas del selector. */
     public function index(): JsonResponse
     {
         return response()->json([
-            'data' => Warehouse::orderBy('id')->get(['id', 'name', 'responsable', 'capacidad_pct', 'modo_detalle']),
+            // SCRUM-990 — `solo_consulta` identifica explícitamente las bodegas de solo consulta (Zona Libre): el frontend ya no lo
+            // infiere por `modo_detalle`. Siguen apareciendo aquí (Vista Bodegas las lista), pero sin sumar a ningún total.
+            'data' => Warehouse::orderBy('id')->get(['id', 'name', 'responsable', 'capacidad_pct', 'modo_detalle', 'solo_consulta']),
         ]);
     }
 
@@ -54,61 +59,115 @@ final class WarehouseController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // SCRUM-990 — bodega de SOLO CONSULTA (Zona Libre / Lafayette): no hay stock propio que listar. Se devuelve el mismo shape
+        // de nivel superior (`warehouse`/`kpis`/`ubicaciones`/`data`/`meta`) con `data` vacío y KPIs del catálogo externo; el listado
+        // real está en `GET /bodega/zona-libre/productos`. No consulta `product_warehouse_stock` (era lo que agotaba memoria).
+        if ($warehouse->solo_consulta) {
+            return response()->json($this->buildSoloConsultaResponse($warehouse, $request));
+        }
+
         $chip = (string) $request->query('chip', 'todos');
         if ($chip === 'espacio_libre') {
             return response()->json($this->buildEspacioLibreResponse($warehouse, $request));
         }
 
-        $stockRows = ProductWarehouseStock::with(['catalogProduct.families', 'catalogProduct.provider', 'cliente'])
+        // SCRUM-991 — solo productos ACTIVOS, igual que las listas de Compras y de Bodega → Ver Inventario (que ocultan los
+        // inactivos por defecto). Antes `whereHas('catalogProduct')` también contaba los inactivos con stock y esta vista daba
+        // N productos más que el filtro por la misma bodega en las otras pantallas (3.354 contra 3.350 en dev).
+        $baseQuery = ProductWarehouseStock::query()
             ->where('warehouse_id', $id)
-            ->where('quantity', '>', 0)
-            ->get()
-            ->filter(fn (ProductWarehouseStock $row): bool => $row->catalogProduct !== null)
-            ->values();
+            ->whereIn('catalog_product_id', CatalogProduct::query()->select('id')->where('is_active', true));
 
-        // REQ-383 RN1 — ubicaciones disponibles para el selector, recalculadas por bodega actual.
-        $ubicaciones = $stockRows->pluck('ubicacion')->filter()->unique()->sort()->values();
+        // Bodegas operativas: solo productos con unidades. (SCRUM-990: el caso "listar también los de 0 unidades" era solo de Zona
+        // Libre, que ahora es de solo consulta y se atiende arriba con su propia tabla.)
+        $baseQuery->where('quantity', '>', 0);
+
+        // REQ-383 RN1 — ubicaciones disponibles para el selector: sobre quantity/catalogProduct ya
+        // aplicados, pero ANTES de categoria/ubicacion (el selector debe listar todas las opciones,
+        // no solo la ya elegida) — mismo criterio que antes, ahora resuelto en SQL en vez de sobre
+        // una Collection completa en memoria (ver CRÍTICO de Pre-QA SCRUM-973 abajo).
+        $ubicaciones = (clone $baseQuery)
+            ->whereNotNull('ubicacion')
+            ->distinct()
+            ->orderBy('ubicacion')
+            ->pluck('ubicacion')
+            ->values();
 
         $categoria = $request->query('categoria');
         if ($categoria !== null && $categoria !== '') {
-            $stockRows = $stockRows->filter(
-                fn (ProductWarehouseStock $row): bool => $row->catalogProduct?->families?->contains('id', (int) $categoria) ?? false
-            )->values();
+            $familyId = (int) $categoria;
+            $baseQuery->whereHas(
+                'catalogProduct.families',
+                fn ($q) => $q->where((new CatalogProductFamily)->getTable().'.id', $familyId)
+            );
         }
 
         $ubicacionFilter = $request->query('ubicacion');
         if ($ubicacionFilter !== null && $ubicacionFilter !== '') {
-            $stockRows = $stockRows->filter(
-                fn (ProductWarehouseStock $row): bool => $row->ubicacion === $ubicacionFilter
-            )->values();
+            $baseQuery->where('ubicacion', $ubicacionFilter);
         }
-
-        $search = trim((string) $request->query('search', ''));
-        if ($search !== '') {
-            [$stockRows] = $this->fuzzySearch->search(
-                array_values($stockRows->all()),
-                $search,
-                fn (ProductWarehouseStock $row): string => trim($row->catalogProduct?->reference.' '.$row->catalogProduct?->description.' '.($row->ubicacion ?? '')),
-            );
-            $stockRows = collect($stockRows);
-        }
-
-        // SCRUM-754 (rebote de Daniela 2026-08-18, "Bodega → Bodegas" quedó como el único
-        // listado sin paginar del batch de estandarización) — KPIs sobre el set YA filtrado
-        // (search/categoria/ubicacion), paginación se aplica después para no contar solo la
-        // página actual. Mismo patrón que `ProviderController::index()` (Pagination::ofArray()
-        // porque este listado ya es un array filtrado en PHP, no una query).
-        $totalProducts = $stockRows->count();
-        $totalUnits = $stockRows->sum('quantity');
 
         $pagination = Pagination::params($request, [], 'id');
-        $paginator = Pagination::ofArray(array_values($stockRows->all()), $pagination['per_page'], $pagination['page']);
+        $search = trim(QueryParams::string($request, 'search'));
+
+        // CRÍTICO real (Pre-QA SCRUM-973, 2026-09-27): con Bodega Zona Libre esta pantalla cargaba TODO el stock
+        // filtrado en memoria con 3 relaciones eager ANTES de paginar y moría con "Allowed memory size exhausted"
+        // (500 opaco, sin traza). Se corrigió el caso sin `search`; SCRUM-996 (auditoría SCRUM-995, sitio G) cierra
+        // el caso CON `search`, que seguía cargando todo el conjunto en PHP para aplicar Levenshtein
+        // (2,9-3,4 s y 200 MB de pico en Zona Libre, 78 % del límite de 256 MB): ahora el texto se resuelve en SQL
+        // y hay UNA sola ruta `paginate()` con las relaciones solo para la página.
+        $sortByRelevance = null;
+        $totals = null;
+        if ($search !== '') {
+            $textQuery = clone $baseQuery;
+            $this->applyTextSearch($textQuery, $search);
+
+            // Un solo agregado (conteo + unidades) decide si hubo coincidencia parcial y alimenta los KPIs y el
+            // paginador: antes eran `exists()` + `count()` + `sum()` + el `count()` propio del paginador (~110 ms de
+            // 4 pasadas sobre las filas de Zona Libre, medido en dev).
+            $totals = $this->stockTotals($textQuery);
+
+            if ($totals['products'] > 0) {
+                $baseQuery = $textQuery;
+            } else {
+                $totals = null;
+                // Respaldo tolerante a typos SOLO si la coincidencia parcial da 0 (mismo criterio que el resto de
+                // buscadores de catálogo, SCRUM-992): candidatos acotados a los productos de ESTA bodega.
+                $inWarehouse = ProductWarehouseStock::query()->select('catalog_product_id')->where('warehouse_id', $id)->where('quantity', '>', 0);
+                $fuzzyProducts = CatalogProduct::query()->select('id')->whereIn('id', $inWarehouse);
+                CatalogProduct::applySearch($fuzzyProducts, $search, fuzzyFallback: true);
+                $baseQuery->whereIn('catalog_product_id', $fuzzyProducts);
+            }
+
+            $sortByRelevance = CatalogProduct::relevanceRank($search, 'cp.');
+        }
+
+        $totals ??= $this->stockTotals($baseQuery);
+        $totalProducts = $totals['products'];
+        $totalUnits = $totals['units'];
+
+        if ($sortByRelevance !== null) {
+            // Relevancia por producto (exacto > prefijo > resto) sin unir tablas: subconsulta correlacionada.
+            $productsTable = (new CatalogProduct)->getTable();
+            $stockTable = (new ProductWarehouseStock)->getTable();
+            $baseQuery->orderByRaw(
+                "(SELECT {$sortByRelevance['sql']} FROM {$productsTable} cp WHERE cp.id = {$stockTable}.catalog_product_id)",
+                $sortByRelevance['bindings'],
+            );
+        }
+
+        $paginator = $baseQuery
+            ->with(['catalogProduct.families', 'catalogProduct.provider', 'cliente'])
+            ->orderBy('id')
+            ->paginate($pagination['per_page'], ['*'], 'page', $pagination['page'], $totalProducts);
+
         $pageRows = collect($paginator->items());
 
         $productIds = array_values($pageRows->map(fn (ProductWarehouseStock $row): int => $row->catalog_product_id)->unique()->all());
         $porServirMap = $this->inventoryKpis->porServirMap($productIds);
         $porIngresarMap = $this->inventoryKpis->porIngresarMap($productIds);
         $enCaminoMap = $this->inventoryKpis->enCaminoMap($productIds);
+        $enExcluidaMap = $this->inventoryKpis->enBodegaExcluidaMap($productIds);
 
         return response()->json([
             'warehouse' => $this->formatWarehouse($warehouse),
@@ -125,9 +184,37 @@ final class WarehouseController extends Controller
                 $porServirMap[$row->catalog_product_id] ?? 0,
                 $porIngresarMap[$row->catalog_product_id] ?? 0,
                 $enCaminoMap[$row->catalog_product_id] ?? 0,
+                $enExcluidaMap[$row->catalog_product_id] ?? 0,
             ))->values(),
             'meta' => Pagination::meta($paginator),
         ]);
+    }
+
+    /**
+     * SCRUM-990 — respuesta de `show()` para una bodega de solo consulta. Mismo shape que la rama normal para que el selector y las
+     * tarjetas reusen el hook: `kpis.total_products` = productos vigentes de Lafayette, `kpis.total_units` = suma de su `disponible`
+     * (NO es inventario de Atlantic), `kpis.last_synced_at` = última corrida exitosa; `data` vacío (el listado es el endpoint dedicado).
+     *
+     * @return array<string, mixed>
+     */
+    private function buildSoloConsultaResponse(Warehouse $warehouse, Request $request): array
+    {
+        $resumen = $this->zonaLibre->resumen();
+        $pagination = Pagination::params($request, [], 'id');
+
+        return [
+            'warehouse' => $this->formatWarehouse($warehouse),
+            'kpis' => [
+                'responsable' => $warehouse->responsable,
+                'total_products' => $resumen['total_catalogo'],
+                'total_units' => $resumen['total_unidades'],
+                'capacidad_pct' => $warehouse->capacidad_pct,
+                'last_synced_at' => $this->zonaLibre->ultimaSincronizacion(),
+            ],
+            'ubicaciones' => [],
+            'data' => [],
+            'meta' => Pagination::meta(Pagination::ofArray([], $pagination['per_page'], 1)),
+        ];
     }
 
     /**
@@ -189,6 +276,43 @@ final class WarehouseController extends Controller
         ];
     }
 
+    /**
+     * Filas de stock y unidades del conjunto filtrado, en una sola consulta agregada.
+     *
+     * @param  Builder<ProductWarehouseStock>  $query
+     * @return array{products: int, units: int}
+     */
+    private function stockTotals(Builder $query): array
+    {
+        $row = (clone $query)->toBase()->selectRaw('COUNT(*) AS products, COALESCE(SUM(quantity), 0) AS units')->first();
+
+        return ['products' => (int) ($row->products ?? 0), 'units' => (int) ($row->units ?? 0)];
+    }
+
+    /**
+     * SCRUM-996 — filtro de texto libre del stock por bodega, en SQL. Cada palabra (en cualquier orden, sin
+     * distinguir mayúsculas ni acentos) debe aparecer en el producto (`search_text` = referencia + ref. de
+     * fábrica + nombre + marca, o la descripción) o en la ubicación de ESA fila. Mismos campos que el
+     * `FuzzySearchService` de antes (referencia, descripción, ubicación) más los que ya cubre `search_text`;
+     * usa las mismas expresiones normalizadas (`public.f_unaccent(lower())`) que los índices trigram de
+     * SCRUM-992.
+     *
+     * @param  Builder<ProductWarehouseStock>  $query
+     */
+    private function applyTextSearch(Builder $query, string $search): void
+    {
+        foreach (CatalogProduct::searchWords($search) as $word) {
+            $escaped = addcslashes($word, '%_\\');
+
+            $query->where(function (Builder $w) use ($escaped): void {
+                $w->whereIn('catalog_product_id', CatalogProduct::query()->select('id')->where(function ($p) use ($escaped): void {
+                    $p->whereRaw("search_text LIKE '%' || public.f_unaccent(lower(?)) || '%'", [$escaped])
+                        ->orWhereRaw("public.f_unaccent(lower(coalesce(description, ''))) LIKE '%' || public.f_unaccent(lower(?)) || '%'", [$escaped]);
+                }))->orWhereRaw("public.f_unaccent(lower(coalesce(ubicacion, ''))) LIKE '%' || public.f_unaccent(lower(?)) || '%'", [$escaped]);
+            });
+        }
+    }
+
     /** @return array<string, mixed> */
     private function formatWarehouse(Warehouse $warehouse): array
     {
@@ -198,6 +322,7 @@ final class WarehouseController extends Controller
             'responsable' => $warehouse->responsable,
             'capacidad_pct' => $warehouse->capacidad_pct,
             'modo_detalle' => $warehouse->modo_detalle,
+            'solo_consulta' => $warehouse->solo_consulta,
         ];
     }
 
@@ -208,6 +333,7 @@ final class WarehouseController extends Controller
         int $porServir,
         int $porIngresar,
         int $enCamino,
+        int $enExcluida = 0,
     ): array {
         /** @var CatalogProduct $product */
         $product = $row->catalogProduct;
@@ -239,13 +365,13 @@ final class WarehouseController extends Controller
             // solo nunca se devolvía.
             'unidades_en_bodega' => $row->quantity,
             // REQ-386 RN1 — dato GLOBAL del producto (toda la empresa), no exclusivo de esta bodega.
-            'disponible' => ($product->stock_quantity ?? 0) - $porServir,
+            'disponible' => $this->inventoryKpis->disponibleParaVenta($product, $porServir, $enExcluida),
             'por_servir' => $porServir,
             'stock_total' => $product->stock_quantity,
             'por_ingresar' => $porIngresar,
             'en_camino' => $enCamino,
             'stock_minimo' => $product->reorder_point,
-            'estado' => $this->inventoryKpis->stockState($product, $porServir),
+            'estado' => $this->inventoryKpis->stockState($product, $porServir, $enExcluida),
             'proveedor' => $product->provider?->name,
         ];
 

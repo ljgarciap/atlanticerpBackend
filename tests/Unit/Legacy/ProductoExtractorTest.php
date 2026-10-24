@@ -34,6 +34,24 @@ final class ProductoExtractorTest extends TestCase
         $this->assertTrue($producto->descatalogado);
     }
 
+    public function test_map_producto_row_interpreta_descatalogado_t_como_inactivo(): void
+    {
+        // SCRUM-1136 F5 — el valor REAL de ICG para descatalogado es 'T' (medido 2026-10-15), no 'V'.
+        $producto = ProductoExtractor::mapProductoRow(self::articuloRow(['DESCATALOGADO' => 'T']));
+
+        $this->assertTrue($producto->descatalogado);
+    }
+
+    public function test_las_consultas_por_defecto_siguen_filtrando_solo_activos(): void
+    {
+        // Regresión F5: el flujo de activos no cambió; ninguna de las 3 consultas por defecto incluye 'T' ni EXISTS de stock.
+        foreach ([ProductoExtractor::articulosQuery(), ProductoExtractor::preciosQuery(), ProductoExtractor::costosQuery()] as $sql) {
+            $this->assertStringContainsString("a.DESCATALOGADO = 'F'", $sql);
+            $this->assertStringNotContainsString("'T'", $sql);
+            $this->assertStringNotContainsString('EXISTS', $sql);
+        }
+    }
+
     public function test_map_producto_row_no_confunde_v_f_con_0_1(): void
     {
         // Si alguien tratara DESCATALOGADO como bit por error, '0'/'1' pasarían silenciosamente.
@@ -80,6 +98,47 @@ final class ProductoExtractorTest extends TestCase
         $second = ProductoExtractor::mapProductoRow($row);
 
         $this->assertEquals($first, $second);
+    }
+
+    // ── SCRUM-921 — STOCK_AL4 (LEFT JOIN STOCKS WHERE CODALMACEN='AL4') ────────────────────────
+
+    public function test_map_producto_row_mapea_stock_al4(): void
+    {
+        $row = self::articuloRow(['STOCK_AL4' => 42.0]);
+
+        $producto = ProductoExtractor::mapProductoRow($row);
+
+        $this->assertSame(42.0, $producto->stockAl4);
+    }
+
+    public function test_map_producto_row_preserva_stock_al4_negativo(): void
+    {
+        // Decisión de negocio de Luis 2026-09-20 — no se trunca a 0 ni se excluye.
+        $row = self::articuloRow(['STOCK_AL4' => -5.0]);
+
+        $producto = ProductoExtractor::mapProductoRow($row);
+
+        $this->assertSame(-5.0, $producto->stockAl4);
+    }
+
+    public function test_map_producto_row_stock_al4_null_si_articulo_sin_fila_en_al4(): void
+    {
+        // LEFT JOIN sin match — el artículo nunca tuvo movimiento en AL4.
+        $row = self::articuloRow(['STOCK_AL4' => null]);
+
+        $producto = ProductoExtractor::mapProductoRow($row);
+
+        $this->assertNull($producto->stockAl4);
+    }
+
+    public function test_articulos_query_hace_left_join_a_stocks_de_al4(): void
+    {
+        $sql = ProductoExtractor::articulosQuery();
+
+        $this->assertStringContainsString('LEFT JOIN STOCKS', $sql);
+        $this->assertStringContainsString("CODALMACEN = 'AL4'", $sql);
+        $this->assertStringContainsString("TALLA = '.'", $sql);
+        $this->assertStringContainsString("COLOR = '.'", $sql);
     }
 
     // ── mapPrecioRow() — PRECIOSVENTA.DESCATALOGADO es BIT real 0/1 ────────────────────────────

@@ -76,7 +76,7 @@ final class PurchaseOrderPaymentController extends Controller
         $validated = $request->validated();
         $amount = (float) $validated['amount'];
 
-        $balance = $order->total_amount - $order->paidAmount();
+        $balance = round($order->payableTotal() - $order->paidAmount(), 2);
         if ($amount > $balance) {
             return response()->json([
                 'message' => sprintf('El monto excede el saldo pendiente. El máximo permitido es %.2f.', $balance),

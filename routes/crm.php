@@ -3,6 +3,7 @@
 use App\Modules\CRM\Http\Controllers\ActivityController;
 use App\Modules\CRM\Http\Controllers\AutocompleteController;
 use App\Modules\CRM\Http\Controllers\ContactController;
+use App\Modules\CRM\Http\Controllers\CrmSettingsController;
 use App\Modules\CRM\Http\Controllers\DashboardController;
 use App\Modules\CRM\Http\Controllers\DirectoryController;
 use App\Modules\CRM\Http\Controllers\DocumentController;
@@ -11,6 +12,14 @@ use App\Modules\CRM\Http\Controllers\ReminderController;
 use App\Modules\CRM\Http\Controllers\ReportsController;
 use App\Modules\CRM\Http\Controllers\ShareLinkController;
 use Illuminate\Support\Facades\Route;
+
+// SCRUM-944/945 — umbrales configurables de CRM (urgencia de entrega, frescura de actividad),
+// consumidos por DashboardService/ProjectService. Exclusivo de superadmin (sin pantalla propia
+// todavía, solo la vista consolidada) — ver CrmSettingsController.
+Route::prefix('settings')->middleware('permission:superadmin.all')->group(function (): void {
+    Route::get('/', [CrmSettingsController::class, 'show']);
+    Route::put('/', [CrmSettingsController::class, 'update']);
+});
 
 // Documents — document-level routes (no project in path)
 Route::prefix('documents')->group(function (): void {

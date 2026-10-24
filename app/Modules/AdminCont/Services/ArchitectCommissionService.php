@@ -47,10 +47,10 @@ use Illuminate\Support\Str;
  * proyecto (consolida REQ-508→518, sin lógica nueva propia).
  *
  * @phpstan-type ArchitectProjectRow array{pipeline_card_id: int, architect_id: int,
- *     numero_pedido: mixed, cliente: mixed, fecha_pedido: CarbonImmutable|null,
+ *     numero_pedido: mixed, cliente: mixed, proyecto_nombre: mixed, fecha_pedido: CarbonImmutable|null,
  *     monto_proyecto: float, total_facturado: float|null, total_cobrado: float,
  *     cuenta_cobro_nombre_archivo: string|null, cuenta_cobro_uploaded_at: CarbonImmutable|null,
- *     fecha_pago: CarbonImmutable|null, estado: string,
+ *     fecha_pago: CarbonImmutable|null, estado: string, estado_cobro_cliente: string,
  *     comprobante_retencion_nombre_archivo: string|null,
  *     comprobante_retencion_uploaded_at: CarbonImmutable|null,
  *     bank_account_id: int|null, porcentaje_aprobado: float|null, porcentaje_pendiente: float|null,
@@ -63,6 +63,15 @@ final class ArchitectCommissionService
     public const ESTADO_PENDIENTE_FACTURA = 'pendiente_factura_arquitecto';
 
     public const ESTADO_PAGADA = 'pagada';
+
+    // SCRUM-866 punto 2 — "Estado de comisión" (arriba) y "Estado Cobro del cliente" (acá) eran el
+    // mismo campo conflacionado. `estado` sigue siendo la comisión del arquitecto; esto es si el
+    // CLIENTE ya pagó la factura del proyecto, independiente de si la comisión ya se liquidó.
+    public const ESTADO_COBRO_PENDIENTE = 'pendiente';
+
+    public const ESTADO_COBRO_PARCIAL = 'parcial';
+
+    public const ESTADO_COBRO_COBRADO = 'cobrado';
 
     /** REQ-513 RN1 — mismo disco privado que el resto de adjuntos del módulo. */
     private const DISK = 's3-private';
@@ -95,16 +104,40 @@ final class ArchitectCommissionService
 
         $pipelineTable = "{$tenant->slug}_ventas_diseno.pipeline_cards";
         $quoteTable = "{$tenant->slug}_ventas_diseno.quotes";
+        $salesProjectTable = "{$tenant->slug}_ventas_diseno.sales_projects";
         $orderTable = "{$tenant->slug}_bodega.orders";
         $invoiceTable = "{$tenant->slug}_admin_contab.invoices";
         $paymentTable = "{$tenant->slug}_admin_contab.payments";
         $payInvTable = "{$tenant->slug}_admin_contab.payment_invoices";
+        $compTable = "{$tenant->slug}_admin_contab.compensations";
+        $compLineTable = "{$tenant->slug}_admin_contab.compensation_lines";
         $architectCommissionTable = "{$tenant->slug}_admin_contab.architect_commissions";
 
+        // SCRUM-929 (B3b, decisión de Luis 2026-09-19) — un pedido con entregas parciales tiene
+        // VARIAS facturas activas (`family_root_id` = la raíz, ver `AdminContInvoice::forOrder()`):
+        // una `parcial` cuelga de la entrega que la originó (`order_id` = esa tarjeta, no la raíz),
+        // así que el JOIN directo `inv.order_id = o.id` (a) no veía las parciales de entregas hijas
+        // (`total_facturado` quedaba corto) y (b) con una parcial Y un completo en la raíz (mismo
+        // `order_id`) hacía fan-out — DOS filas por proyecto, duplicando `monto_proyecto` en
+        // cualquier suma aguas abajo. Se agrega por `family_root_id` en una subquery — UNA fila por
+        // pedido, viendo todas las activas de la familia (parciales de hijas + completo).
         $rows = DB::table("{$pipelineTable} as pc")
-            ->leftJoin("{$orderTable} as o", 'o.pipeline_card_id', '=', 'pc.id')
-            ->leftJoin("{$invoiceTable} as inv", 'inv.order_id', '=', 'o.id')
+            ->leftJoin("{$orderTable} as o", function ($join): void {
+                $join->on('o.pipeline_card_id', '=', 'pc.id')->whereNull('o.family_id');
+            })
+            ->leftJoinSub(
+                DB::table($invoiceTable)
+                    ->whereNull('anulada_at')
+                    ->selectRaw('family_root_id, sum(monto) as total_facturado, sum(saldo_aplicado) as total_cobrado')
+                    ->groupBy('family_root_id'),
+                'invagg',
+                'invagg.family_root_id',
+                '=',
+                'o.id',
+            )
             ->leftJoin("{$architectCommissionTable} as ac", 'ac.pipeline_card_id', '=', 'pc.id')
+            // SCRUM-866 punto 2 — columna "Proyecto" faltante en la tabla del desplegable del arquitecto.
+            ->leftJoin("{$salesProjectTable} as sp", 'sp.id', '=', 'pc.sales_project_id')
             ->where('pc.stage', 'approved')
             ->select([
                 'pc.id as pipeline_card_id',
@@ -112,8 +145,9 @@ final class ArchitectCommissionService
                 'pc.stage_changed_at',
                 'o.order_number as numero_pedido',
                 'o.customer_name as cliente',
-                'inv.monto as total_facturado',
-                'inv.saldo_aplicado as total_cobrado',
+                'sp.name as proyecto_nombre',
+                'invagg.total_facturado',
+                'invagg.total_cobrado',
                 'ac.cuenta_cobro_nombre_archivo',
                 'ac.cuenta_cobro_uploaded_at',
                 'ac.fecha_pago',
@@ -130,12 +164,23 @@ final class ArchitectCommissionService
                 DB::raw("(
                     select q.architect_id from {$quoteTable} q
                     where q.sales_project_id = pc.sales_project_id and q.architect_id is not null
+                      and q.origin = 'comercial'
                     order by q.created_at desc limit 1
                 ) as architect_id"),
+                // Último cobro CONFIRMADO de CUALQUIER factura activa de la familia (antes: solo de
+                // LA factura, que ya no existe como singular) — proxy de "cuándo se terminó de cobrar".
                 DB::raw("(
-                    select max(p.created_at) from {$paymentTable} p
-                    inner join {$payInvTable} pi on pi.payment_id = p.id
-                    where pi.invoice_id = inv.id and p.estado = 'confirmado'
+                    select max(f) from (
+                        select coalesce(pi.fecha_aplicacion, p.created_at) as f from {$paymentTable} p
+                        inner join {$payInvTable} pi on pi.payment_id = p.id
+                        inner join {$invoiceTable} inv2 on inv2.id = pi.invoice_id
+                        where inv2.family_root_id = o.id and inv2.anulada_at is null and p.estado = 'confirmado'
+                        union all
+                        select cmp.confirmed_at as f from {$compLineTable} cl
+                        inner join {$compTable} cmp on cmp.id = cl.compensation_id and cmp.estado = 'confirmado'
+                        inner join {$invoiceTable} inv5 on inv5.id = cl.invoice_id
+                        where cl.source_type in ('abono', 'nota_credito') and inv5.family_root_id = o.id and inv5.anulada_at is null
+                    ) fechas
                 ) as fecha_cobro_completo"),
             ])
             ->get();
@@ -158,6 +203,7 @@ final class ArchitectCommissionService
                 'architect_id' => (int) $row->architect_id,
                 'numero_pedido' => $row->numero_pedido,
                 'cliente' => $row->cliente,
+                'proyecto_nombre' => $row->proyecto_nombre,
                 'fecha_pedido' => $row->stage_changed_at !== null ? CarbonImmutable::parse($row->stage_changed_at) : null,
                 'monto_proyecto' => $monto,
                 'total_facturado' => $totalFacturado,
@@ -165,7 +211,8 @@ final class ArchitectCommissionService
                 'cuenta_cobro_nombre_archivo' => $row->cuenta_cobro_nombre_archivo !== null ? (string) $row->cuenta_cobro_nombre_archivo : null,
                 'cuenta_cobro_uploaded_at' => $row->cuenta_cobro_uploaded_at !== null ? CarbonImmutable::parse($row->cuenta_cobro_uploaded_at) : null,
                 'fecha_pago' => $fechaPago,
-                'estado' => $this->estadoFor($totalFacturado, $totalCobrado, $fechaPago),
+                'estado' => $this->estadoFor($totalFacturado, $totalCobrado, $fechaPago, $monto),
+                'estado_cobro_cliente' => $this->estadoCobroClienteFor($totalFacturado, $totalCobrado),
                 'comprobante_retencion_nombre_archivo' => $row->comprobante_retencion_nombre_archivo !== null ? (string) $row->comprobante_retencion_nombre_archivo : null,
                 'comprobante_retencion_uploaded_at' => $row->comprobante_retencion_uploaded_at !== null ? CarbonImmutable::parse($row->comprobante_retencion_uploaded_at) : null,
                 'bank_account_id' => $row->bank_account_id !== null ? (int) $row->bank_account_id : null,
@@ -184,14 +231,34 @@ final class ArchitectCommissionService
      * REQ-512, RN1-RN3. "Todo o nada" (RN1, mismo criterio que Comisiones Internas REQ-501) — un
      * cobro parcial o vencido nunca genera comisión. "Pagada" solo se alcanza con `fecha_pago`
      * real (RN3) — nunca automático, a diferencia de Internas.
+     *
+     * SCRUM-929 (B3b, decisión de Luis 2026-09-19) — `$montoProyecto` es el monto TOTAL del
+     * proyecto (`pipeline_cards.amount`), no solo lo facturado hasta ahora: con entregas parciales
+     * `$totalFacturado` puede ser < `$montoProyecto` mientras el pedido no se termine de facturar,
+     * y "cobrado ≥ facturado" por sí solo ya no alcanza para generar la comisión (caso real: un
+     * proyecto de 963 con solo la entrega 1 (321) facturada y cobrada tenía cobrado==facturado y
+     * generaba la comisión completa con 2/3 del proyecto todavía sin facturar). El "todo o nada"
+     * ahora exige ADEMÁS que el pedido esté COMPLETAMENTE facturado (tolerancia 0.005 = medio
+     * centavo, épsilon de redondeo, no un umbral de negocio) antes de generar/estimar la comisión.
      */
-    public function estadoFor(?float $totalFacturado, float $totalCobrado, ?CarbonImmutable $fechaPago): string
+    public function estadoFor(?float $totalFacturado, float $totalCobrado, ?CarbonImmutable $fechaPago, float $montoProyecto): string
     {
-        if ($totalFacturado === null || $totalFacturado <= 0 || $totalCobrado < $totalFacturado) {
+        if ($totalFacturado === null || $totalFacturado <= 0 || $totalFacturado + 0.005 < $montoProyecto || $totalCobrado < $totalFacturado) {
             return self::ESTADO_AUN_NO_GENERADA;
         }
 
         return $fechaPago !== null ? self::ESTADO_PAGADA : self::ESTADO_PENDIENTE_FACTURA;
+    }
+
+    /** SCRUM-866 punto 2 — mismos insumos que `estadoFor()`, pero responde "¿el cliente ya pagó la
+     *  factura del proyecto?", no "¿ya se liquidó la comisión?". */
+    private function estadoCobroClienteFor(?float $totalFacturado, float $totalCobrado): string
+    {
+        if ($totalFacturado === null || $totalFacturado <= 0 || $totalCobrado <= 0) {
+            return self::ESTADO_COBRO_PENDIENTE;
+        }
+
+        return $totalCobrado >= $totalFacturado ? self::ESTADO_COBRO_COBRADO : self::ESTADO_COBRO_PARCIAL;
     }
 
     /** REQ-508/511 RN1 — 10% fijo por defecto en este batch (override por proyecto es REQ-514,
@@ -460,6 +527,8 @@ final class ArchitectCommissionService
             'pipeline_card_id' => $p['pipeline_card_id'],
             'numero_pedido' => $p['numero_pedido'],
             'cliente' => $p['cliente'],
+            // SCRUM-866 punto 2 — columna "Proyecto" faltante en la tabla del desplegable del arquitecto.
+            'proyecto_nombre' => $p['proyecto_nombre'],
             'fecha_pedido' => $p['fecha_pedido']?->toDateString(),
             'monto_proyecto' => $p['monto_proyecto'],
             'total_facturado' => $p['total_facturado'],
@@ -469,6 +538,9 @@ final class ArchitectCommissionService
             'impuesto' => $montos['impuesto'],
             'total' => $montos['total'],
             'estado' => $p['estado'],
+            // SCRUM-866 punto 2 — "Estado" se separa en "Estado de comisión" (`estado`, sin
+            // cambios) y "Estado Cobro del cliente" (este campo nuevo).
+            'estado_cobro_cliente' => $p['estado_cobro_cliente'],
             'cuenta_cobro' => $p['cuenta_cobro_nombre_archivo'] !== null ? [
                 'nombre_archivo' => $p['cuenta_cobro_nombre_archivo'],
                 'uploaded_at' => $p['cuenta_cobro_uploaded_at']?->toIso8601String(),
@@ -786,13 +858,18 @@ final class ArchitectCommissionService
                 ['architect_id' => $project['architect_id'], 'fecha_pago' => now()],
             );
 
-            // Batch 18 (SCRUM-597→601) — ver ADR-SCRUM597-601, reconciliación punto 5: a
-            // diferencia de Comisiones Internas (liquidación automática por cierre de mes, sin
-            // cuenta bancaria capturada), acá SÍ hay una cuenta de pago real (REQ-517) y una acción
-            // explícita de pago — es lo único de este servicio que alimenta la Vista real
-            // (histórico) del flujo de caja. `bank_account_id` puede seguir null si nunca se
-            // configuró la cuenta de pago (REQ-517 no la exige para llegar a "Pagada").
-            if ($commission->bank_account_id !== null) {
+            // SCRUM-879 (decisión E-2) — el movimiento de salida de caja se crea SIEMPRE al marcar
+            // "Pagada", con `bank_account_id` posible null (REQ-517 no exige la cuenta para llegar a
+            // "Pagada"). Un movimiento de comisión sin cuenta aparece igual en Cuentas Bancarias →
+            // Movimientos con "Sin cuenta asignada" + "Seleccionar cuenta" (REQ-534), y cuenta como
+            // salida real en el Flujo de Caja (scope `realCashImpact`). Idempotente por
+            // (source_type, source_id) — marcar pagada es una acción de una sola vez, pero se
+            // defiende igual.
+            $yaRegistrado = AdminContBankMovement::query()
+                ->where('source_type', AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION)
+                ->where('source_id', $commission->id)
+                ->exists();
+            if (! $yaRegistrado) {
                 $montos = $this->montoFor($project['monto_proyecto'], $profile->regimen_fiscal, $project['porcentaje_aprobado']);
                 $architect = Architect::find($project['architect_id']);
 
@@ -809,6 +886,67 @@ final class ArchitectCommissionService
 
             return $commission->refresh();
         });
+    }
+
+    /**
+     * SCRUM-879 (decisión E-2/E-5/E-7) — genera el `bank_movement` de salida de caja de cada
+     * comisión externa YA PAGADA (`fecha_pago` no null) desde la fecha de corte, que todavía no
+     * tenga movimiento. Idempotente por `(source_type, source_id=commission.id)`. `bank_account_id`
+     * = el de la comisión (puede ser null). Fecha = `fecha_pago` real.
+     *
+     * @return int cantidad de movimientos creados
+     */
+    public function backfillCashMovements(): int
+    {
+        $cutoff = CarbonImmutable::parse(
+            AdminContFiscalSettings::current()->arqueo_tracking_start_date?->toDateString()
+            ?? CommissionOrderService::CASH_LEDGER_CUTOFF_FALLBACK,
+        );
+
+        $projects = $this->allProjects()->keyBy('pipeline_card_id');
+        $created = 0;
+
+        foreach (ArchitectCommission::whereNotNull('fecha_pago')->get() as $commission) {
+            $fechaPago = CarbonImmutable::parse($commission->fecha_pago);
+            if ($fechaPago->lt($cutoff)) {
+                continue;
+            }
+
+            $yaRegistrado = AdminContBankMovement::query()
+                ->where('source_type', AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION)
+                ->where('source_id', $commission->id)
+                ->exists();
+            if ($yaRegistrado) {
+                continue;
+            }
+
+            /** @var array<string, mixed>|null $project */
+            $project = $projects->get($commission->pipeline_card_id);
+            if ($project === null) {
+                continue;
+            }
+
+            $profile = ArchitectFiscalProfile::where('architect_id', $commission->architect_id)->first();
+            $montos = $this->montoFor(
+                (float) $project['monto_proyecto'],
+                $profile?->regimen_fiscal,
+                $project['porcentaje_aprobado'] !== null ? (float) $project['porcentaje_aprobado'] : null,
+            );
+            $architect = Architect::find($commission->architect_id);
+
+            AdminContBankMovement::create([
+                'bank_account_id' => $commission->bank_account_id,
+                'fecha' => $fechaPago->toDateString(),
+                'tipo' => AdminContBankMovement::TIPO_COMISION,
+                'concepto' => "Comisión arquitecto {$architect?->name} — {$project['numero_pedido']}",
+                'monto' => $montos['total'] ?? $montos['comision'],
+                'source_type' => AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION,
+                'source_id' => $commission->id,
+            ]);
+            $created++;
+        }
+
+        return $created;
     }
 
     /**

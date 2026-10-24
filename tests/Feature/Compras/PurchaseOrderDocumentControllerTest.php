@@ -123,4 +123,62 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
             ])
             ->assertStatus(201);
     }
+
+    /**
+     * SCRUM-826 — antes de este fix, GET .../documents exigía `compras.read` exclusivo mientras
+     * que `show()` de la misma orden acepta `compras.read,bodega.read,compras.limited.view` — un
+     * usuario con solo `bodega.read` (ej. Líder de Operaciones en Logística) recibía 403
+     * garantizado en cada orden visible, suficiente en volumen para disparar un ban de CrowdSec
+     * (http-probing, capacity=10). Decisión de negocio de Luis (2026-09-02): SÍ deberían poder ver
+     * el checklist de documentos, así que se amplía al mismo OR que `show()`.
+     */
+    public function test_index_documentos_permitido_con_solo_bodega_read(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['bodega.read']);
+        $provider = $this->makeProvider();
+        $order = $this->makeOrder($provider->id);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/orders/{$order->id}/documents")
+            ->assertStatus(200);
+    }
+
+    public function test_index_documentos_permitido_con_solo_compras_limited_view(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.limited.view']);
+        $provider = $this->makeProvider();
+        $order = $this->makeOrder($provider->id);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/orders/{$order->id}/documents")
+            ->assertStatus(200);
+    }
+
+    /** Regresión: un rol sin ninguno de los 3 permisos sigue bloqueado (el gate no se abrió de más). */
+    public function test_index_documentos_sigue_bloqueado_sin_ninguno_de_los_3_permisos(): void
+    {
+        $this->grantCompras('designer@atlantic.test', []);
+        $provider = $this->makeProvider();
+        $order = $this->makeOrder($provider->id);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/orders/{$order->id}/documents")
+            ->assertStatus(403);
+    }
+
+    /** Regresión: compras.read (el caso ya cubierto antes de este fix) sigue funcionando igual. */
+    public function test_index_documentos_sigue_permitido_con_compras_read(): void
+    {
+        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $provider = $this->makeProvider();
+        $order = $this->makeOrder($provider->id);
+
+        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/compras/orders/{$order->id}/documents")
+            ->assertStatus(200);
+    }
 }

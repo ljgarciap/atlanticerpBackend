@@ -342,7 +342,7 @@ final class CustomerReturnService
      * inmediato, a diferencia del bridge de stock (SCRUM-406, evento+listener con try/catch
      * aislado) — acá si esta llamada falla, la nota de crédito tampoco debe quedar creada.
      */
-    public function finalizeForCreditNote(int $customerReturnId, string $creditNoteNumero, User $actor): void
+    public function finalizeForCreditNote(int $customerReturnId, int $creditNoteId, string $creditNoteNumero, User $actor): void
     {
         /** @var CustomerReturn|null $locked */
         $locked = CustomerReturn::lockForUpdate()->find($customerReturnId);
@@ -353,7 +353,14 @@ final class CustomerReturnService
             throw new CustomerReturnException("La devolución {$locked->return_number} ya no está esperando nota de crédito (estado actual: {$locked->status}).");
         }
 
-        $locked->update(['status' => CustomerReturn::STATUS_FINALIZADO, 'finalized_at' => now()]);
+        // SCRUM-865 punto 2 — antes solo quedaba en el log; sin persistirlo el listado de
+        // Devoluciones no podía armar el enlace "Ver nota de crédito" tras Finalizar. Se guarda el
+        // id (no solo el folio) porque el detalle/PDF de AdminCont resuelven por id.
+        $locked->update([
+            'status'          => CustomerReturn::STATUS_FINALIZADO,
+            'finalized_at'    => now(),
+            'credit_note_id'  => $creditNoteId,
+        ]);
 
         Log::info("Devolución {$locked->return_number} finalizada — nota de crédito {$creditNoteNumero} (usuario {$actor->id}).");
     }

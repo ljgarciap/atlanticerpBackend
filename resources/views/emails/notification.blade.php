@@ -21,8 +21,8 @@
         <div class="brand">ATLANTIC</div>
         <h2>{{ $subject }}</h2>
         <div class="body-text">{{ $body }}</div>
-        @if($ctaUrl)
-            <a href="{{ $ctaUrl }}" class="btn">Ver en AtlanticERP</a>
+        @if($ctaHref)
+            <a href="{{ $ctaHref }}" class="btn">Ver en AtlanticERP</a>
         @endif
         <div class="footer">AtlanticERP CRM · Atlantic · No respondas a este correo</div>
     </div>

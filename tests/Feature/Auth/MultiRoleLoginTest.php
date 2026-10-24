@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Models\UserAdditionalRole;
-use App\Shared\Auth\JwtService;
+use Firebase\JWT\JWT;
 use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
@@ -20,11 +20,8 @@ use Tests\Feature\FeatureTestCase;
  * que SIEMPRE devuelve el JWT en un solo paso, sin importar cuántos roles legados o nuevos tenga
  * el usuario.
  *
- * select-role/switch-role (y `JwtService::encodeSelectionToken()`) quedan en el código — no se
- * borraron por decisión explícita de Luis ("no se borran, pero no se ejercitan") — pero login()
- * ya no los invoca. Se prueban acá de forma aislada (token de selección armado a mano) solo para
- * confirmar que siguen funcionando si alguna vez se re-wirean, no porque un usuario real hoy
- * pueda llegar a ellos vía login.
+ * SCRUM-1035 (A-06): select-role/switch-role y `JwtService::encodeSelectionToken()` se eliminaron (código muerto: login() ya no
+ * emite tokens de selección). Abajo se prueba que ya no existen y que un token de selección fabricado no vale como token de acceso.
  */
 class MultiRoleLoginTest extends FeatureTestCase
 {
@@ -91,105 +88,58 @@ class MultiRoleLoginTest extends FeatureTestCase
         $response->assertJsonPath('user.modules.compras.view', true);
     }
 
-    // ── select-role / switch-role — sin llamador real desde login(), se prueban aislados ───────
+    // ── SCRUM-1035 (A-06): select-role/switch-role eliminados; un token con `type` no es un token de acceso ───────
 
-    public function test_select_role_valido_retorna_jwt(): void
+    private function tokenDeSeleccionFabricado(): string
     {
-        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
-        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
-        $selectionToken = app(JwtService::class)->encodeSelectionToken($user->id, ['management', 'superadmin'], $tenant->slug);
+        $user   = User::where('email', 'management@atlantic.test')->firstOrFail();
+        $now    = time();
 
-        $response = $this->postJson('/api/auth/select-role', [
-            'selection_token' => $selectionToken,
-            'role'            => 'management',
-        ]);
-
-        $response->assertStatus(200);
-        $response->assertJsonStructure(['token', 'refresh_token', 'user']);
-        $response->assertJsonPath('user.role', 'management');
+        // Mismo formato que acuñaba el antiguo encodeSelectionToken(): sin rol ni permisos, con `type = selection`.
+        return JWT::encode([
+            'sub' => $user->id, 'tenant' => 'atlantic', 'roles' => ['management', 'superadmin'],
+            'type' => 'selection', 'iat' => $now, 'exp' => $now + 300,
+        ], (string) config('jwt.secret'), 'HS256');
     }
 
-    public function test_select_role_con_rol_no_disponible_retorna_403(): void
+    public function test_select_role_ya_no_existe(): void
     {
-        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
-        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
-        $selectionToken = app(JwtService::class)->encodeSelectionToken($user->id, ['management'], $tenant->slug);
-
-        $this->postJson('/api/auth/select-role', [
-            'selection_token' => $selectionToken,
-            'role'            => 'superadmin',
-        ])->assertStatus(403);
+        $this->postJson('/api/auth/select-role', ['selection_token' => $this->tokenDeSeleccionFabricado(), 'role' => 'management'])
+            ->assertStatus(404);
     }
 
-    public function test_select_role_con_token_invalido_retorna_401(): void
-    {
-        $this->postJson('/api/auth/select-role', [
-            'selection_token' => 'token.invalido.aqui',
-            'role'            => 'management',
-        ])->assertStatus(401);
-    }
-
-    public function test_select_role_sin_campos_retorna_422(): void
-    {
-        $this->postJson('/api/auth/select-role', [])->assertStatus(422);
-    }
-
-    public function test_switch_role_valido_retorna_nuevo_token(): void
-    {
-        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
-        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
-        $selectionToken = app(JwtService::class)->encodeSelectionToken($user->id, ['management', 'designer'], $tenant->slug);
-
-        $selectResponse = $this->postJson('/api/auth/select-role', [
-            'selection_token' => $selectionToken,
-            'role'            => 'management',
-        ]);
-        $selectResponse->assertStatus(200);
-        $jwt = $selectResponse->json('token');
-
-        $switchResponse = $this->withHeaders($this->authHeaders($jwt))
-            ->postJson('/api/auth/switch-role', ['role' => 'designer']);
-
-        $switchResponse->assertStatus(200);
-        $switchResponse->assertJsonPath('user.role', 'designer');
-        $this->assertNotEquals($jwt, $switchResponse->json('token'));
-    }
-
-    public function test_switch_role_con_rol_no_disponible_retorna_403(): void
-    {
-        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
-        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
-        $selectionToken = app(JwtService::class)->encodeSelectionToken($user->id, ['management'], $tenant->slug);
-
-        $selectResponse = $this->postJson('/api/auth/select-role', [
-            'selection_token' => $selectionToken,
-            'role'            => 'management',
-        ]);
-        $jwt = $selectResponse->json('token');
-
-        $this->withHeaders($this->authHeaders($jwt))
-            ->postJson('/api/auth/switch-role', ['role' => 'electrician'])
-            ->assertStatus(403);
-    }
-
-    public function test_switch_role_sin_autenticar_retorna_401(): void
-    {
-        $this->postJson('/api/auth/switch-role', ['role' => 'management'])
-            ->assertStatus(401);
-    }
-
-    /**
-     * Hallazgo de Senior Review 2026-07-10 (3 ángulos de revisión independientes lo encontraron):
-     * un JWT emitido por login() normal (JwtClaimsBuilder, sin 'roles' plural) pegándole a
-     * switch-role crasheaba con 500 (in_array() con null) en vez de devolver 403. Corregido en
-     * AuthController::switchRole() con un default a array vacío.
-     */
-    public function test_switch_role_con_jwt_de_login_normal_sin_roles_retorna_403_no_500(): void
+    public function test_switch_role_ya_no_existe(): void
     {
         $token = $this->loginAs('designer@atlantic.test', 'Password123!');
 
-        $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/auth/switch-role', ['role' => 'management'])
-            ->assertStatus(403);
+        $this->withHeaders($this->authHeaders($token))->postJson('/api/auth/switch-role', ['role' => 'management'])
+            ->assertStatus(404);
+    }
+
+    public function test_un_token_de_seleccion_da_401_en_rutas_protegidas(): void
+    {
+        $headers = $this->authHeaders($this->tokenDeSeleccionFabricado());
+
+        $this->getJson('/api/auth/me', $headers)->assertStatus(401);
+        $this->getJson('/api/crm/projects', $headers)->assertStatus(401);
+    }
+
+    public function test_cualquier_token_con_claim_type_se_rechaza_aunque_la_firma_sea_valida(): void
+    {
+        $user = User::where('email', 'management@atlantic.test')->firstOrFail();
+        $now  = time();
+        $token = JWT::encode([
+            'sub' => $user->id, 'tenant' => 'atlantic', 'email' => $user->email, 'role' => 'management',
+            'permissions' => ['superadmin.all'], 'type' => 'otro', 'iat' => $now, 'exp' => $now + 300,
+        ], (string) config('jwt.secret'), 'HS256');
+
+        $this->getJson('/api/auth/me', $this->authHeaders($token))->assertStatus(401);
+    }
+
+    public function test_un_token_de_acceso_normal_sigue_funcionando(): void
+    {
+        $token = $this->loginAs('management@atlantic.test');
+
+        $this->getJson('/api/auth/me', $this->authHeaders($token))->assertStatus(200);
     }
 }

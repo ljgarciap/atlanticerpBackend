@@ -6,6 +6,7 @@ namespace App\Modules\AdminCont\Services;
 
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
+use App\Modules\AdminCont\Services\Billing\InvoiceTaxBreakdown;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\VentasDiseno\Models\Quote;
 
@@ -21,14 +22,17 @@ use App\Modules\VentasDiseno\Models\Quote;
  * resolver cliente/RUC), `null` si algún eslabón falta. El nombre de cliente usa el snapshot ya
  * guardado en `invoice.cliente`/`creditNote.cliente`, no se re-deriva.
  *
- * Base imponible/ITBMS de una FACTURA: se derivan de `Quote::netTotal()`/`Quote::itbms()` (mismo
+ * Base imponible/ITBMS de una FACTURA (SCRUM-929, B3b): se leen de sus `invoice_lines` (Σ `subtotal`/Σ
+ * `itbms`) cuando las tiene — una factura `parcial` cubre solo una entrega, y derivarlas de la cotización
+ * ENTERA sobrestimaba ×N el libro fiscal (ver `Billing\InvoiceTaxBreakdown`). Las facturas legadas, SIN
+ * líneas, se derivan de `Quote::netTotal()`/`Quote::itbms()` (mismo
  * cálculo canónico que ya usa `InvoiceService::fiscalBreakdown()` en el resto del módulo) cuando
  * la factura tiene cotización vinculada — nunca una fórmula paralela por división
  * (`monto / (1 + tasa)`), que puede desviarse por redondeo acumulado en cotizaciones con varios
  * ítems de distinto precio. Fallback a la división solo para el caso borde de una factura sin
  * `quote_id` (no debería pasar en datos reales, pero el campo es nullable).
  *
- * @phpstan-type InvoiceBookRow array{fecha: string, ruc: string|null, cliente: string, tipo: string, motivo: string|null, documento: string, base_imponible: float, porcentaje: float, itbms: float, total: float}
+ * @phpstan-type InvoiceBookRow array{fecha: string, ruc: string|null, cliente: string, tipo: string, motivo: string|null, documento: string, base_imponible: float, porcentaje: float, itbms: float, total: float, vendedor: string|null}
  */
 final class InvoiceBookService
 {
@@ -67,7 +71,7 @@ final class InvoiceBookService
     /** @return list<InvoiceBookRow> */
     private function facturaRows(?string $desde, ?string $hasta): array
     {
-        $query = AdminContInvoice::query()->whereNull('anulada_at')->with('itbmsRate');
+        $query = AdminContInvoice::query()->whereNull('anulada_at')->with('itbmsRate', 'lines');
         $this->applyDateRange($query, $desde, $hasta);
         $invoices = $query->get();
 
@@ -77,30 +81,24 @@ final class InvoiceBookService
         $orders = Order::whereIn('id', $invoices->pluck('order_id')->filter()->unique())
             ->with('pipelineCard.subClient')
             ->get()->keyBy('id');
-        $quotes = Quote::whereIn('id', $invoices->pluck('quote_id')->filter()->unique())
+        // SCRUM-1175 — vendedores responsables de todas las tarjetas, en una sola consulta.
+        $vendedoresUsers = InvoiceSellers::usersFor($orders->map(fn (Order $o) => $o->pipelineCard));
+        // Solo las facturas SIN líneas (legadas) necesitan la cotización para su base/ITBMS.
+        $quotes = Quote::withIcgLegacy()->whereIn('id', $invoices->filter(fn (AdminContInvoice $i): bool => $i->lines->isEmpty())->pluck('quote_id')->filter()->unique())
             ->with('parts.items')
             ->get()->keyBy('id');
 
-        $rows = $invoices->map(function (AdminContInvoice $invoice) use ($orders, $quotes): array {
-            $rate       = $invoice->itbmsRate;
-            $porcentaje = $rate !== null ? $rate->porcentaje : 0.0;
+        $rows = $invoices->map(function (AdminContInvoice $invoice) use ($orders, $quotes, $vendedoresUsers): array {
             /** @var Quote|null $quote */
             $quote = $invoice->quote_id !== null ? $quotes->get($invoice->quote_id) : null;
-            if ($quote !== null) {
-                $base  = round($quote->netTotal(), 2);
-                $itbms = round($quote->itbms(), 2);
-            } else {
-                // Fallback — factura sin cotización vinculada, caso borde no esperado en datos reales.
-                $base  = round($invoice->monto / (1 + $porcentaje / 100), 2);
-                $itbms = round($invoice->monto - $base, 2);
-            }
+            [$base, $itbms, $porcentaje] = InvoiceTaxBreakdown::of($invoice, $quote);
 
             /** @var Order|null $order */
             $order = $invoice->order_id !== null ? $orders->get($invoice->order_id) : null;
 
             return [
                 'fecha'           => $invoice->created_at->toDateString(),
-                'ruc'             => $order?->pipelineCard?->subClient?->tax_id,
+                'ruc'             => $order?->pipelineCard?->subClient?->tax_id ?: null, // SCRUM-1003 — '' (Consumidor Final) = sin RUC
                 'cliente'         => $invoice->cliente,
                 'tipo'            => 'Factura',
                 'motivo'          => null,
@@ -109,6 +107,7 @@ final class InvoiceBookService
                 'porcentaje'      => $porcentaje,
                 'itbms'           => $itbms,
                 'total'           => round($invoice->monto, 2),
+                'vendedor'        => self::vendedorTexto($order?->pipelineCard, $vendedoresUsers),
             ];
         })->all();
 
@@ -123,7 +122,13 @@ final class InvoiceBookService
             ->with(['facturaOrigen.itbmsRate', 'nuevoTratamientoItbms']);
         $this->applyDateRange($query, $desde, $hasta, column: 'fecha');
 
-        $rows = $query->get()->map(function (AdminContCreditNote $nota): array {
+        $notas = $query->get();
+        // SCRUM-1175 — la nota hereda el vendedor del pedido de su factura de origen.
+        $ordersOrigen = Order::whereIn('id', $notas->map(fn (AdminContCreditNote $n) => $n->facturaOrigen?->order_id)->filter()->unique())
+            ->with('pipelineCard')->get()->keyBy('id');
+        $vendedoresUsers = InvoiceSellers::usersFor($ordersOrigen->map(fn (Order $o) => $o->pipelineCard));
+
+        $rows = $notas->map(function (AdminContCreditNote $nota) use ($ordersOrigen, $vendedoresUsers): array {
             $facturaOrigen = $nota->facturaOrigen;
             $nuevoRate     = $nota->nuevoTratamientoItbms;
             $origenRate    = $facturaOrigen?->itbmsRate;
@@ -143,10 +148,19 @@ final class InvoiceBookService
                 'porcentaje'     => $porcentaje,
                 'itbms'          => -abs($itbms),
                 'total'          => -abs(round($nota->monto, 2)),
+                'vendedor'       => self::vendedorTexto($ordersOrigen->get((int) $nota->facturaOrigen?->order_id)?->pipelineCard, $vendedoresUsers),
             ];
         })->all();
 
         return array_values($rows);
+    }
+
+    /** @param \Illuminate\Support\Collection<int, \App\Models\User> $users */
+    private static function vendedorTexto(?\App\Modules\VentasDiseno\Models\PipelineCard $card, \Illuminate\Support\Collection $users): ?string
+    {
+        $names = InvoiceSellers::namesFor($card, $users);
+
+        return $names === [] ? null : implode(', ', $names);
     }
 
     /** @param \Illuminate\Database\Eloquent\Builder<AdminContInvoice>|\Illuminate\Database\Eloquent\Builder<AdminContCreditNote> $query */
@@ -168,6 +182,6 @@ final class InvoiceBookService
 
         $order = Order::find($orderId);
 
-        return $order?->pipelineCard?->subClient?->tax_id;
+        return $order?->pipelineCard?->subClient?->tax_id ?: null; // SCRUM-1003 — '' (Consumidor Final) = sin RUC
     }
 }

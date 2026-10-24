@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\FacturaExtractorContract;
 use App\Modules\Legacy\Data\ExtractedFacturas;
 use App\Modules\Legacy\Models\SyncRun;
 use App\Modules\Legacy\Services\FacturaMatcher;
 use App\Modules\Legacy\Services\FacturaStagingLoader;
+use App\Modules\Legacy\Services\SyncRunDetailRecorder;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -48,6 +50,7 @@ final class LegacySyncFacturasCommand extends Command
         private readonly FacturaExtractorContract $extractor,
         private readonly FacturaStagingLoader $stagingLoader,
         private readonly FacturaMatcher $matcher,
+        private readonly SyncRunDetailRecorder $detailRecorder,
     ) {
         parent::__construct();
     }
@@ -57,7 +60,7 @@ final class LegacySyncFacturasCommand extends Command
         // Mismo gotcha que LegacySyncAlbaranesCommand/LegacySyncPedidosCommand (§13.3): el
         // volumen real de FACTURASVENTA (60,215 filas §2) revienta el memory_limit default de PHP
         // CLI (128M) por buen margen.
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');
@@ -138,7 +141,7 @@ final class LegacySyncFacturasCommand extends Command
 
         $status = $matchResult['errores'] > 0 ? SyncRun::STATUS_PARTIAL : SyncRun::STATUS_SUCCESS;
 
-        $this->recordRun(
+        $syncRun = $this->recordRun(
             $startedAt, $start,
             extraidos: count($extracted->facturas),
             staged: $stagingCounts['facturas'],
@@ -149,12 +152,14 @@ final class LegacySyncFacturasCommand extends Command
             status: $status,
         );
 
+        $this->detailRecorder->record($syncRun, $matchResult['details']);
+
         return self::SUCCESS;
     }
 
     /**
      * @param array{facturas: int, factura_ids: list<int>} $stagingCounts
-     * @param array{matched: int, orphan: int, errores: int} $matchResult
+     * @param array{matched: int, orphan: int, errores: int, details: list<array{referencia: string, status: string, motivo: string}>} $matchResult
      */
     private function renderReport(ExtractedFacturas $extracted, array $stagingCounts, array $matchResult): void
     {
@@ -178,8 +183,8 @@ final class LegacySyncFacturasCommand extends Command
         int $excluidos,
         int $errores,
         string $status,
-    ): void {
-        SyncRun::query()->create([
+    ): SyncRun {
+        return SyncRun::query()->create([
             'entidad'     => 'facturas',
             'extraidos'   => $extraidos,
             'staged'      => $staged,

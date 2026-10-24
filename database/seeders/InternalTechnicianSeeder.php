@@ -45,7 +45,10 @@ class InternalTechnicianSeeder extends Seeder
                 continue;
             }
 
-            $technician = InternalTechnician::firstOrCreate(
+            // SCRUM-1015 — withTrashed(): un técnico eliminado (soft delete) por Aaron NO se vuelve a
+            // crear ni resucitar en cada deploy (el CD corre db:seed); sin esto firstOrCreate no lo
+            // ve, intenta insertar de nuevo y choca con el unique de user_id.
+            $technician = InternalTechnician::withTrashed()->firstOrCreate(
                 ['user_id' => $user->id],
                 [
                     'nombre' => trim("{$user->first_name} {$user->last_name}"),

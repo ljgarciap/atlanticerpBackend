@@ -18,8 +18,9 @@ use Illuminate\Support\Facades\DB;
  * ICG (SQL Server, conexión `legacy_icg`) para el batch de Productos.
  *
  * GOTCHA CRÍTICO — tipo `NDBOOLEANF` de ICG, inconsistente ENTRE tablas (confirmado 2026-08-06,
- * ver §9 riesgo #4 del diseño): `ARTICULOS.DESCATALOGADO` es TEXTO ('V'/'F'), nunca comparar
- * contra 0/1. `PRECIOSVENTA.DESCATALOGADO` en cambio SÍ es un `bit` real (0/1). Cada método de
+ * ver §9 riesgo #4 del diseño): `ARTICULOS.DESCATALOGADO` es TEXTO: los valores REALES medidos en
+ * ICG son 'T' (descatalogado) y 'F' (activo); 'V' se acepta solo por compatibilidad con el supuesto original
+ * (SCRUM-1136 F5). Nunca comparar contra 0/1. `PRECIOSVENTA.DESCATALOGADO` en cambio SÍ es un `bit` real (0/1). Cada método de
  * mapeo de esta clase interpreta el formato correcto para SU tabla — no asumir uniformidad.
  *
  * Separación construcción-de-query / mapeo-de-filas / acto-de-conectar (a propósito, para que
@@ -79,12 +80,23 @@ final class ProductoExtractor implements ProductoExtractorContract
         return new ExtractedProductos($productos, $precios, $costos);
     }
 
+    /**
+     * SCRUM-921 — `LEFT JOIN` (no INNER) a `STOCKS` filtrado a `CODALMACEN='AL4'` (Bodega
+     * Central — única fuente de stock vendible según el negocio, ver docblock de
+     * `App\Modules\Legacy\Services\CatalogProductLoader` para el uso). Es 1:1 por `CODARTICULO`:
+     * `TALLA`/`COLOR` siempre son `'.'` para Illumination (esas variantes son de retail de ropa,
+     * no aplican acá), así que junto con `CODALMACEN='AL4'` fijo no hay riesgo de fila duplicada.
+     * `LEFT JOIN` a propósito — un artículo activo sin ninguna fila en AL4 (nunca tuvo movimiento
+     * ahí) debe seguir llegando a `articulosQuery()`, con `STOCK_AL4` en `NULL`.
+     */
     public static function articulosQuery(): string
     {
         return <<<'SQL'
             SELECT a.CODARTICULO, a.DESCRIPCION, a.MARCA, a.FAMILIA, a.SUBFAMILIA,
-                   a.REFPROVEEDOR, a.DESCATALOGADO
+                   a.REFPROVEEDOR, a.DESCATALOGADO, s.STOCK AS STOCK_AL4
             FROM ARTICULOS a
+            LEFT JOIN STOCKS s ON s.CODARTICULO = a.CODARTICULO
+                               AND s.CODALMACEN = 'AL4' AND s.TALLA = '.' AND s.COLOR = '.'
             WHERE a.DESCATALOGADO = 'F'
             SQL;
     }
@@ -129,8 +141,11 @@ final class ProductoExtractor implements ProductoExtractorContract
             familiaNombre: self::joinNullable($familia, $subfamilia),
             marcaNombre: $marca,
             refProveedor: self::nullableString($row['REFPROVEEDOR'] ?? null),
-            // ARTICULOS.DESCATALOGADO es NDBOOLEANF de texto: 'V' = true, 'F' = false.
-            descatalogado: ($row['DESCATALOGADO'] ?? null) === 'V',
+            // ARTICULOS.DESCATALOGADO es NDBOOLEANF de texto. Valores REALES medidos en ICG (2026-10-15, SCRUM-1136 F5):
+            // 'T' = descatalogado, 'F' = activo. 'V' se conserva por compatibilidad con el supuesto original del
+            // código (nunca observado en datos reales). El flujo de activos solo extrae 'F', así que este cambio no lo altera.
+            descatalogado: in_array($row['DESCATALOGADO'] ?? null, ['T', 'V'], true),
+            stockAl4: self::nullableFloat($row['STOCK_AL4'] ?? null),
         );
     }
 

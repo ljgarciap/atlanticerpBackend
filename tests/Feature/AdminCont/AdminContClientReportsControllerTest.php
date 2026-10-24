@@ -7,16 +7,21 @@ namespace Tests\Feature\AdminCont;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
+use App\Modules\AdminCont\Support\ExcelMoney;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use Tests\Feature\AdminCont\Concerns\ReadsXlsxResponse;
 use Tests\Feature\FeatureTestCase;
 
 /** Batch 23 Grupo 2 de Admin&Cont (SCRUM-651→660, REQ-574→583) — "Reporte mensual por cliente"
  *  (4M1, agrupación 'dia') y "Mensual por cliente — acumulado" (4M2, agrupación 'mes'). */
 class AdminContClientReportsControllerTest extends FeatureTestCase
 {
+    use ReadsXlsxResponse;
+
     private const FELIX_EMAIL = 'contabilidad@test.com';
 
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
@@ -220,5 +225,94 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
+
+    // ------------------------------------------------- SCRUM-935 — formato de moneda y sin "Media" ----
+
+    public function test_935_mensual_excel_escribe_numeros_con_formato_de_moneda_y_sin_columna_media(): void
+    {
+        [$masterClientId, $projectId] = $this->makeClientWithProject('Proyecto 935 Mensual');
+        $invoice = $this->makeInvoice($masterClientId, $projectId, 1200.0, 0, '2026-10-01 10:00:00');
+        $this->makePayment($invoice, 1200.0, AdminContPayment::METODO_YAPPY, '2026-10-01 10:00:00');
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->get("/api/admin-contab/reports/mensual-cliente/excel?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31")
+            ->assertStatus(200);
+        $sheet = $this->loadWorkbook($response)->getActiveSheet();
+
+        $this->assertSame(
+            ['Fecha', 'Núm.', 'Importe', 'Transferencia', 'Cheque', 'Efectivo', 'Yappy', 'Otros', 'Total Caja'],
+            $sheet->toArray()[0],
+        );
+        $this->assertNotContains('Media', $sheet->toArray()[0]);
+
+        // Fila de datos (2) y fila "Total del período" (3): Importe(C) … Total Caja(I) son moneda.
+        foreach ([2, 3] as $row) {
+            $this->assertMoneyCell($sheet, "C{$row}", 1200.0);
+            $this->assertMoneyCell($sheet, "G{$row}", 1200.0);
+            $this->assertMoneyCell($sheet, "I{$row}", 1200.0);
+            $this->assertMoneyCell($sheet, "D{$row}", 0.0);
+        }
+        // "Núm." es conteo: número real pero SIN formato de moneda.
+        $this->assertSame(DataType::TYPE_NUMERIC, $sheet->getCell('B2')->getDataType());
+        $this->assertSame(1, (int) $sheet->getCell('B2')->getValue());
+        $this->assertNotSame(ExcelMoney::FORMAT, $sheet->getStyle('B2')->getNumberFormat()->getFormatCode());
+    }
+
+    public function test_935_acumulado_excel_escribe_numeros_con_formato_de_moneda_y_sin_columna_media(): void
+    {
+        [$masterClientId, $projectId] = $this->makeClientWithProject('Proyecto 935 Acumulado');
+        $invoice = $this->makeInvoice($masterClientId, $projectId, 800.5, 0, '2026-10-05 10:00:00');
+        $this->makePayment($invoice, 800.5, AdminContPayment::METODO_YAPPY, '2026-10-05 10:00:00');
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->get("/api/admin-contab/reports/mensual-cliente-acumulado/excel?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31")
+            ->assertStatus(200);
+        $sheet = $this->loadWorkbook($response)->getActiveSheet();
+
+        $this->assertSame(
+            ['Año', 'Mes', 'Núm.', 'Importe', 'Transferencia', 'Cheque', 'Efectivo', 'Yappy', 'Otros', 'Total Caja'],
+            $sheet->toArray()[0],
+        );
+        foreach ([2, 3] as $row) {
+            $this->assertMoneyCell($sheet, "D{$row}", 800.5);   // Importe
+            $this->assertMoneyCell($sheet, "H{$row}", 800.5);   // Yappy
+            $this->assertMoneyCell($sheet, "J{$row}", 800.5);   // Total Caja
+        }
+    }
+
+    public function test_935_hoja_pendientes_del_excel_tambien_lleva_el_monto_como_moneda(): void
+    {
+        [$masterClientId, $projectId] = $this->makeClientWithProject('Proyecto 935 Pendiente');
+        $cobrada = $this->makeInvoice($masterClientId, $projectId, 500.0, 0, '2026-10-01 10:00:00');
+        $this->makePayment($cobrada, 500.0, AdminContPayment::METODO_YAPPY, '2026-10-01 10:00:00');
+        $this->makeInvoice($masterClientId, $projectId, 6200.0, 0, '2026-10-02 10:00:00'); // sin cobrar → Pendientes
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->get("/api/admin-contab/reports/mensual-cliente/excel?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31")
+            ->assertStatus(200);
+        $pendientes = $this->loadWorkbook($response)->getSheetByName('Pendientes');
+
+        $this->assertNotNull($pendientes);
+        $this->assertMoneyCell($pendientes, 'D2', 6200.0);
+    }
+
+    public function test_935_json_del_reporte_ya_no_expone_media_ni_en_filas_ni_en_totales(): void
+    {
+        [$masterClientId, $projectId] = $this->makeClientWithProject('Proyecto 935 Json');
+        $invoice = $this->makeInvoice($masterClientId, $projectId, 300.0, 0, '2026-10-01 10:00:00');
+        $this->makePayment($invoice, 300.0, AdminContPayment::METODO_YAPPY, '2026-10-01 10:00:00');
+
+        foreach (['mensual-cliente', 'mensual-cliente-acumulado'] as $reporte) {
+            $json = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+                ->getJson("/api/admin-contab/reports/{$reporte}?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31")
+                ->assertStatus(200)
+                ->json();
+
+            $this->assertNotEmpty($json['filas'], $reporte);
+            $this->assertArrayNotHasKey('media', $json['filas'][0], "{$reporte}: filas");
+            $this->assertArrayNotHasKey('media', $json['totales'], "{$reporte}: totales");
+            $this->assertArrayHasKey('importe', $json['totales'], "{$reporte}: el resto del contrato no cambia");
+        }
     }
 }

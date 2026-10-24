@@ -10,6 +10,7 @@ use App\Modules\CRM\Http\Requests\UpdateProjectRequest;
 use App\Modules\CRM\Models\Project;
 use App\Modules\CRM\Models\ProjectReminder;
 use App\Modules\CRM\Services\ProjectService;
+use App\Shared\Support\ParsesIdListQueryParam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -17,6 +18,8 @@ use Illuminate\Validation\Rule;
 
 final class ProjectController extends Controller
 {
+    use ParsesIdListQueryParam;
+
     public function __construct(private readonly ProjectService $service) {}
 
     public function index(Request $request): JsonResponse
@@ -41,6 +44,8 @@ final class ProjectController extends Controller
             'despacho' => isset($raw['despacho']) ? (string) $raw['despacho'] : null,
             'ubicacion' => isset($raw['ubicacion']) ? (string) $raw['ubicacion'] : null,
             'user_id' => isset($raw['user_id']) ? (int) $raw['user_id'] : null,
+            // SCRUM-854 — multi-selección Vendedor/Diseñador (OR entre seleccionados).
+            'user_ids' => $this->parseIdListParam($request, 'user_ids'),
             'dialux' => isset($raw['dialux']) && $raw['dialux'] !== ''
                              ? filter_var($raw['dialux'], FILTER_VALIDATE_BOOLEAN)
                              : null,

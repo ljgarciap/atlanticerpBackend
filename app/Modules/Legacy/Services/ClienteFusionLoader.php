@@ -108,21 +108,29 @@ final class ClienteFusionLoader
         return array_values(array_map(static fn (mixed $id): int => (int) $id, $ids));
     }
 
-    private function promoteOne(Cliente $cliente): void
+    public function promoteOne(Cliente $cliente): void
     {
         DB::transaction(function () use ($cliente): void {
             $name = $cliente->nombre_comercial ?: $cliente->razon_social;
 
             $masterClient = MasterClient::query()->create(['name' => $name]);
 
-            $taxId = $cliente->cif !== null && trim($cliente->cif) !== ''
-                ? $cliente->cif
-                : "SIN-CIF-{$cliente->icg_codcliente}";
+            // SCRUM-1137: RUC completo y DV de NIF20 (solo si es confiable: no `revisar` y sin contradecir al CIF, ver
+            // `ClienteMatcher::rucUsable`; si no, se usa el CIF como antes). El DV solo se guarda si ICG lo trajo; nunca se inventa. Sin nada: placeholder.
+            $usaRuc = ClienteMatcher::rucUsable($cliente);
+            $cif    = $cliente->cif !== null ? trim($cliente->cif) : '';
+
+            $taxId = match (true) {
+                $usaRuc     => trim((string) $cliente->ruc),
+                $cif !== '' => $cliente->cif,
+                default     => "SIN-CIF-{$cliente->icg_codcliente}",
+            };
 
             $subClient = SubClient::query()->create([
                 'master_client_id' => $masterClient->id,
                 'business_name'    => $name,
                 'tax_id'           => $taxId,
+                'tax_id_dv'        => $usaRuc ? $cliente->ruc_dv : null,
             ]);
 
             $cliente->sub_client_id = $subClient->id;

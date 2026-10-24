@@ -1,13 +1,23 @@
 # =============================================================================
 # AtlanticERP Backend — CI/CD
 #
-# CI:  PHPStan Level 8 + PHPUnit con Postgres real.
-#      Corre en todo push y en toda PR a cualquier rama.
+# Rediseño 2026-10-03 (ADR-009, atlanticerp/docs/adr/009-gate-local-con-recibo.md): el plan Free de la organización
+# incluye 2.000 min/mes de Actions y se agotaron en agosto y septiembre (los jobs ni arrancaban); además
+# el MISMO commit corría su suite completa tres veces (dev, test, master). Ahora:
 #
-# CD:  Deploy vía SSH al EC2 correspondiente.
-#      dev    → EC2_DEV_HOST  (dev.atlanticerp.ai)   — solo en push a `dev`
-#      test   → EC2_TEST_HOST (test.atlanticerp.ai)  — solo en push a `test`
-#      master → EC2_PROD_HOST (atlanticerp.ai)        — solo en push a `master`
+# Gate: la verificación completa (PHPStan + suite) se corre UNA vez en local con `infra/gate.sh`, que deja
+#       un recibo por SHA; el hook .githooks/pre-push lo exige para empujar a dev/test/master.
+#
+# CI:  PHPStan Level 8 + PHPUnit con Postgres real — SOLO en `master` (última barrera antes de
+#      producción), en ramas `hotfix/**`, en PRs a master y a pedido (workflow_dispatch).
+#      No corre en `dev` ni `test`, ni cuando el push solo toca docs/ o archivos .md.
+#
+# CD:  Deploy vía SSH al EC2 correspondiente (el deploy en sí tarda ~40 s).
+#      dev    → EC2_DEV_HOST  (dev.atlanticerp.ai)   — push a `dev`, SIN CI (el gate local ya corrió)
+#      test   → EC2_TEST_HOST (test.atlanticerp.ai)  — push a `test`, SIN CI
+#      master → EC2_PROD_HOST (atlanticerp.ai)        — push a `master`, DESPUÉS del CI completo
+#      Cada deploy termina verificando /up y que la API responda (401 sin token).
+#      Si Actions no tiene minutos: infra/deploy-manual.sh <dev|test|prod> (reutiliza el recibo del gate).
 #
 # Secrets requeridos (GitHub → Settings → Secrets and variables → Actions):
 #   EC2_DEV_HOST    — IP del EC2 de dev   (dev.atlanticerp.ai)
@@ -15,6 +25,15 @@
 #   EC2_PROD_HOST   — IP del EC2 de prod  (atlanticerp.ai)
 #   EC2_SSH_KEY     — Clave privada SSH (PEM); el par público debe estar
 #                     en /home/ubuntu/.ssh/authorized_keys de cada EC2.
+#   DB_ADMIN_PASSWORD_DEV/TEST/PROD — password del rol superuser `atlanticerp` de Postgres en
+#                     cada entorno (agregado 2026-09-01, SCRUM-810/REQ-634 — desde que el
+#                     .env de cada EC2 corre con DB_USERNAME=atlanticerp_app (sin superuser, sin
+#                     CREATE), los pasos administrativos del deploy — migrate, sync-schemas,
+#                     grant-app-role — necesitan estas credenciales por separado, vía
+#                     `docker compose exec -e DB_USERNAME=atlanticerp -e DB_PASSWORD=...`. Sin
+#                     esto, TODO deploy falla en "sync tenant schemas" con
+#                     "permission denied for database atlanticerp" — bloqueante encontrado el
+#                     2026-09-01 en el push de SCRUM-801, afectaba deploys desde el 31-ago.
 #
 # GitHub Environments a configurar (Settings → Environments):
 #   dev   — sin protección (deploy automático en cada push a `dev`)
@@ -27,14 +46,26 @@ name: CI/CD Backend
 on:
   push:
     branches:
-      - '**'
+      - dev
+      - test
+      - master
+      - 'hotfix/**'
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.gitignore'
   pull_request:
     branches:
-      - '**'
+      - master
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.gitignore'
+  workflow_dispatch:
 
-concurrency:
-  group: backend-ci-${{ github.ref }}
-  cancel-in-progress: true
+# OJO: NO hay `concurrency` a nivel de workflow. Con cancel-in-progress un segundo push cancelaría el
+# deploy del primero A MEDIAS (migraciones o `docker compose up` a medio aplicar). La concurrencia vive
+# en cada job: el CI se cancela al llegar un push nuevo; los deploys se encolan y nunca se cancelan.
 
 jobs:
 
@@ -44,6 +75,15 @@ jobs:
   ci:
     name: CI — PHPStan + PHPUnit
     runs-on: ubuntu-22.04
+    # Solo master (gate de producción), hotfix, PRs y ejecución manual. dev y test despliegan sin CI.
+    if: >-
+      github.ref == 'refs/heads/master'
+      || startsWith(github.ref, 'refs/heads/hotfix/')
+      || github.event_name == 'pull_request'
+      || github.event_name == 'workflow_dispatch'
+    concurrency:
+      group: backend-ci-${{ github.ref }}
+      cancel-in-progress: true
 
     # Postgres como servicio nativo de GHA: solo se levanta este contenedor,
     # no los 5 del docker-compose, para acelerar el cold-start del runner.
@@ -84,7 +124,10 @@ jobs:
           php-version: '8.3'
           extensions: pdo_pgsql, pgsql, pcntl, zip, sodium, redis
           coverage: pcov
-          ini-values: memory_limit=512M
+          # 2G (2026-10-24): con ~6.4K tests pcov agota también 1G dentro de php-code-coverage al escribir
+          # coverage.xml (los tests pasan y el job muere con exit 255). 1G (2026-10-01, ~4.5K tests) y 512M antes.
+          # El runner de GitHub tiene 7 GB.
+          ini-values: memory_limit=2G
 
       - name: Cache dependencias Composer
         uses: actions/cache@v4
@@ -95,6 +138,16 @@ jobs:
 
       - name: Instalar dependencias Composer
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      # SCRUM-962 — auditoría de dependencias: solo reporte (resumen en la pestaña del run), nunca falla el CI.
+      - name: Auditoría de dependencias (informativa)
+        continue-on-error: true
+        run: infra/audit.sh
+
+      # SCRUM-963 — SAST con Semgrep (imagen fijada, reglas propias en infra/semgrep): solo reporte, nunca falla el CI.
+      - name: SAST — Semgrep (informativo)
+        continue-on-error: true
+        run: infra/sast.sh
 
       # DB_HOST=127.0.0.1 porque el servicio Postgres está mapeado al loopback del
       # runner, no al hostname interno de Docker.
@@ -184,7 +237,6 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   deploy-dev:
     name: CD — Deploy dev.atlanticerp.ai
-    needs: ci
     runs-on: ubuntu-22.04
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     concurrency:
@@ -215,11 +267,22 @@ jobs:
             git checkout dev
             git reset --hard origin/dev
 
+            # SCRUM-810/REQ-634 (2026-08-31) puso el runtime de Laravel a correr como
+            # atlanticerp_app (sin superuser, sin permiso CREATE en la base) — los comandos
+            # administrativos (crear schema/tabla, GRANT/REVOKE) necesitan seguir
+            # corriendo como atlanticerp (superuser/dueño de los objetos), overrideado por
+            # comando vía `docker compose exec -e ...` (mismo mecanismo que infra/test.sh
+            # ya usa localmente para pisar lo horneado por env_file). ci-backend.yml nunca
+            # se ajustó tras ese cambio — SCRUM-801 (2026-09-01) lo detectó bloqueando
+            # TODO deploy, no solo el que lo encontró.
+            DB_ADMIN_PASSWORD='${{ secrets.DB_ADMIN_PASSWORD_DEV }}'
+
+            # Solo dev instala dependencias de desarrollo (sin --no-dev): Scramble sirve /docs/api. test y prod siguen con --no-dev.
             echo "==> composer install"
             docker run --rm \
               -v /var/www/backend:/app -w /app \
               composer:latest install \
-                --no-dev --optimize-autoloader --no-interaction \
+                --optimize-autoloader --no-interaction \
                 --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-gd
 
             echo "==> fix ownership + permissions"
@@ -227,7 +290,7 @@ jobs:
             chmod -R 777 storage bootstrap/cache
 
             echo "==> docker compose build + up"
-            docker compose -f infra/docker-compose.qa.yml up -d --build --remove-orphans
+            docker compose -f infra/docker-compose.qa.yml up -d --build --pull always --remove-orphans
 
             echo "==> wait for postgres"
             until docker compose -f infra/docker-compose.qa.yml exec -T postgres \
@@ -242,20 +305,41 @@ jobs:
               php artisan config:clear < /dev/null
 
             echo "==> migrate (landlord)"
-            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+            docker compose -f infra/docker-compose.qa.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan migrate --force < /dev/null
 
             echo "==> sync tenant schemas (crea los que falten para modulos nuevos)"
-            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+            docker compose -f infra/docker-compose.qa.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan tenant:sync-schemas < /dev/null
 
             echo "==> migrate (tenant schemas)"
-            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+            docker compose -f infra/docker-compose.qa.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan tenants:artisan "migrate --force --path=database/migrations/tenant" < /dev/null
+
+            # SCRUM-810/REQ-634 — nunca se había agregado al pipeline (ver comentario arriba).
+            # Otorga a atlanticerp_app sus permisos de runtime (con UPDATE/DELETE revocado sobre
+            # audit_logs) en cada schema de tenant — siempre DESPUÉS de crear/migrar todo,
+            # siempre con credenciales de atlanticerp (GRANT/REVOKE los ejecuta el dueño de los
+            # objetos o un superuser). db:seed, más abajo, ya corre con atlanticerp_app normal —
+            # necesita este paso corrido antes para tener acceso a las tablas recién migradas.
+            echo "==> grant app role (permisos de runtime para atlanticerp_app + inmutabilidad de audit_logs)"
+            docker compose -f infra/docker-compose.qa.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
+              php artisan tenant:grant-app-role < /dev/null
 
             echo "==> seed (tenant + usuarios)"
             docker compose -f infra/docker-compose.qa.yml exec -T laravel \
               php artisan db:seed --force < /dev/null
+
+            echo "==> scramble: regenerar la documentación de la API (cache) y reiniciar nginx para tomar API_DOCS_BASIC_AUTH_B64"
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php artisan scramble:clear < /dev/null || true
+            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+              php -d memory_limit=768M artisan scramble:cache < /dev/null || echo "  (scramble:cache falló — /docs/api no estará disponible, el resto del deploy sigue)"
+            docker compose -f infra/docker-compose.qa.yml up -d --force-recreate nginx < /dev/null || true
 
             echo "==> reload nginx"
             docker compose -f infra/docker-compose.qa.yml exec -T nginx \
@@ -265,8 +349,28 @@ jobs:
             docker compose -f infra/docker-compose.qa.yml exec -T laravel \
               php artisan horizon:terminate < /dev/null || true
 
+            # Limpiar cache de builds > 72 h e imagenes huerfanas (ver infra/deploy-manual.sh: dev y test
+            # llegaron a 7-8 GB recuperables, disco al 74%). "|| true": una limpieza fallida no debe
+            # marcar como fallido un deploy que ya termino bien.
+            echo "==> limpiar cache de builds > 72 h e imagenes huerfanas"
+            docker builder prune -f --filter until=72h < /dev/null || true
+            docker image prune -f < /dev/null || true
+
             echo "==> Deploy dev completado."
           ENDSSH
+
+      - name: Verificar el sitio tras el deploy (/up y API)
+        run: |
+          for i in 1 2 3 4 5 6; do
+            UP=$(curl -s -o /dev/null -w '%{http_code}' "https://dev.atlanticerp.ai/up" || true)
+            API=$(curl -s -o /dev/null -w '%{http_code}' "https://dev.atlanticerp.ai/api/compras/orders" || true)
+            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "https://dev.atlanticerp.ai/api/health/deep" || true)
+            echo "intento $i: /up=$UP  /api/compras/orders=$API  /api/health/deep=$DEEP (se espera 200, 401 y 200)"
+            if [ "$UP" = "200" ] && [ "$API" = "401" ] && [ "$DEEP" = "200" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "ERROR: dev.atlanticerp.ai no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
+          exit 1
 
       - name: Limpiar clave SSH
         if: always()
@@ -277,7 +381,6 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   deploy-test:
     name: CD — Deploy test.atlanticerp.ai
-    needs: ci
     runs-on: ubuntu-22.04
     if: github.event_name == 'push' && github.ref == 'refs/heads/test'
     concurrency:
@@ -308,6 +411,9 @@ jobs:
             git checkout test
             git reset --hard origin/test
 
+            # SCRUM-810/REQ-634 — ver comentario del job deploy-dev para el detalle completo.
+            DB_ADMIN_PASSWORD='${{ secrets.DB_ADMIN_PASSWORD_TEST }}'
+
             echo "==> composer install"
             docker run --rm \
               -v /var/www/backend:/app -w /app \
@@ -320,7 +426,7 @@ jobs:
             chmod -R 777 storage bootstrap/cache
 
             echo "==> docker compose build + up"
-            docker compose -f infra/docker-compose.qa.yml up -d --build --remove-orphans
+            docker compose -f infra/docker-compose.qa.yml up -d --build --pull always --remove-orphans
 
             echo "==> wait for postgres"
             until docker compose -f infra/docker-compose.qa.yml exec -T postgres \
@@ -335,16 +441,24 @@ jobs:
               php artisan config:clear < /dev/null
 
             echo "==> migrate (landlord)"
-            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+            docker compose -f infra/docker-compose.qa.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan migrate --force < /dev/null
 
             echo "==> sync tenant schemas (crea los que falten para modulos nuevos)"
-            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+            docker compose -f infra/docker-compose.qa.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan tenant:sync-schemas < /dev/null
 
             echo "==> migrate (tenant schemas)"
-            docker compose -f infra/docker-compose.qa.yml exec -T laravel \
+            docker compose -f infra/docker-compose.qa.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan tenants:artisan "migrate --force --path=database/migrations/tenant" < /dev/null
+
+            echo "==> grant app role (permisos de runtime para atlanticerp_app + inmutabilidad de audit_logs)"
+            docker compose -f infra/docker-compose.qa.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
+              php artisan tenant:grant-app-role < /dev/null
 
             echo "==> seed (tenant + usuarios)"
             docker compose -f infra/docker-compose.qa.yml exec -T laravel \
@@ -358,8 +472,28 @@ jobs:
             docker compose -f infra/docker-compose.qa.yml exec -T laravel \
               php artisan horizon:terminate < /dev/null || true
 
+            # Limpiar cache de builds > 72 h e imagenes huerfanas (ver infra/deploy-manual.sh: dev y test
+            # llegaron a 7-8 GB recuperables, disco al 74%). "|| true": una limpieza fallida no debe
+            # marcar como fallido un deploy que ya termino bien.
+            echo "==> limpiar cache de builds > 72 h e imagenes huerfanas"
+            docker builder prune -f --filter until=72h < /dev/null || true
+            docker image prune -f < /dev/null || true
+
             echo "==> Deploy test completado."
           ENDSSH
+
+      - name: Verificar el sitio tras el deploy (/up y API)
+        run: |
+          for i in 1 2 3 4 5 6; do
+            UP=$(curl -s -o /dev/null -w '%{http_code}' "https://test.atlanticerp.ai/up" || true)
+            API=$(curl -s -o /dev/null -w '%{http_code}' "https://test.atlanticerp.ai/api/compras/orders" || true)
+            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "https://test.atlanticerp.ai/api/health/deep" || true)
+            echo "intento $i: /up=$UP  /api/compras/orders=$API  /api/health/deep=$DEEP (se espera 200, 401 y 200)"
+            if [ "$UP" = "200" ] && [ "$API" = "401" ] && [ "$DEEP" = "200" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "ERROR: test.atlanticerp.ai no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
+          exit 1
 
       - name: Limpiar clave SSH
         if: always()
@@ -403,6 +537,9 @@ jobs:
             git checkout master
             git reset --hard origin/master
 
+            # SCRUM-810/REQ-634 — ver comentario del job deploy-dev para el detalle completo.
+            DB_ADMIN_PASSWORD='${{ secrets.DB_ADMIN_PASSWORD_PROD }}'
+
             echo "==> composer install"
             docker run --rm \
               -v /var/www/backend:/app -w /app \
@@ -415,7 +552,7 @@ jobs:
             chmod -R 777 storage bootstrap/cache
 
             echo "==> docker compose build + up"
-            docker compose -f infra/docker-compose.prod.yml up -d --build --remove-orphans
+            docker compose -f infra/docker-compose.prod.yml up -d --build --pull always --remove-orphans
 
             echo "==> wait for postgres"
             until docker compose -f infra/docker-compose.prod.yml exec -T postgres \
@@ -430,16 +567,24 @@ jobs:
               php artisan config:clear < /dev/null
 
             echo "==> migrate (landlord)"
-            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+            docker compose -f infra/docker-compose.prod.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan migrate --force < /dev/null
 
             echo "==> sync tenant schemas (crea los que falten para modulos nuevos)"
-            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+            docker compose -f infra/docker-compose.prod.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan tenant:sync-schemas < /dev/null
 
             echo "==> migrate (tenant schemas)"
-            docker compose -f infra/docker-compose.prod.yml exec -T laravel \
+            docker compose -f infra/docker-compose.prod.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
               php artisan tenants:artisan "migrate --force --path=database/migrations/tenant" < /dev/null
+
+            echo "==> grant app role (permisos de runtime para atlanticerp_app + inmutabilidad de audit_logs)"
+            docker compose -f infra/docker-compose.prod.yml exec -T \
+              -e DB_USERNAME=atlanticerp -e DB_PASSWORD="$DB_ADMIN_PASSWORD" laravel \
+              php artisan tenant:grant-app-role < /dev/null
 
             echo "==> seed (tenant + usuarios)"
             docker compose -f infra/docker-compose.prod.yml exec -T laravel \
@@ -453,8 +598,28 @@ jobs:
             docker compose -f infra/docker-compose.prod.yml exec -T laravel \
               php artisan horizon:terminate < /dev/null || true
 
+            # Limpiar cache de builds > 72 h e imagenes huerfanas (ver infra/deploy-manual.sh: dev y test
+            # llegaron a 7-8 GB recuperables, disco al 74%). "|| true": una limpieza fallida no debe
+            # marcar como fallido un deploy que ya termino bien.
+            echo "==> limpiar cache de builds > 72 h e imagenes huerfanas"
+            docker builder prune -f --filter until=72h < /dev/null || true
+            docker image prune -f < /dev/null || true
+
             echo "==> Deploy prod completado."
           ENDSSH
+
+      - name: Verificar el sitio tras el deploy (/up y API)
+        run: |
+          for i in 1 2 3 4 5 6; do
+            UP=$(curl -s -o /dev/null -w '%{http_code}' "https://atlanticerp.ai/up" || true)
+            API=$(curl -s -o /dev/null -w '%{http_code}' "https://atlanticerp.ai/api/compras/orders" || true)
+            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "https://atlanticerp.ai/api/health/deep" || true)
+            echo "intento $i: /up=$UP  /api/compras/orders=$API  /api/health/deep=$DEEP (se espera 200, 401 y 200)"
+            if [ "$UP" = "200" ] && [ "$API" = "401" ] && [ "$DEEP" = "200" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "ERROR: atlanticerp.ai no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
+          exit 1
 
       - name: Limpiar clave SSH
         if: always()

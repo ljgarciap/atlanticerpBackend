@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Legacy;
 
+use App\Modules\Legacy\Models\AlbaranCompra;
+use App\Modules\Legacy\Models\AlbaranCompraItem;
 use App\Modules\Legacy\Models\Producto;
 use App\Modules\Legacy\Models\ProductoCosto;
 use App\Modules\Legacy\Models\ProductoPrecio;
@@ -33,7 +35,7 @@ final class ProductoMapperTest extends FeatureTestCase
         ProductoPrecio::query()->create([
             'icg_codarticulo' => 1001, 'idtarifav' => 1, 'precio_neto' => 100.0, 'descatalogado_fila' => false,
         ]);
-        // codproveedor 1001 = proveedor por defecto (ProductoMapper::DEFAULT_CODPROVEEDOR).
+        // codproveedor 1001 = proveedor por defecto (ProductoCostoResolver::DEFAULT_CODPROVEEDOR).
         ProductoCosto::query()->create(['icg_codarticulo' => 1001, 'codproveedor' => 1001, 'costo_neto' => 60.0]);
 
         $mapped = (new ProductoMapper())->buildPayloads([1001]);
@@ -49,22 +51,92 @@ final class ProductoMapperTest extends FeatureTestCase
         $this->assertSame(60.0, $mapped[0]->cost);
     }
 
-    public function test_costo_de_proveedor_no_default_no_se_usa(): void
+    public function test_mapea_stock_inicial_desde_stock_al4(): void
     {
         Producto::query()->create([
-            'icg_codarticulo' => 1006, 'descripcion' => 'Costo de otro proveedor', 'ref_proveedor' => 'XY-1',
-            'descatalogado' => false,
+            'icg_codarticulo' => 1010, 'descripcion' => 'Con stock AL4', 'descatalogado' => false,
+            'stock_al4' => -3.0, // negativo, se preserva tal cual (decisión de Luis 2026-09-20)
         ]);
         ProductoPrecio::query()->create([
-            'icg_codarticulo' => 1006, 'idtarifav' => 1, 'precio_neto' => 70.0, 'descatalogado_fila' => false,
+            'icg_codarticulo' => 1010, 'idtarifav' => 1, 'precio_neto' => 80.0, 'descatalogado_fila' => false,
         ]);
-        // Existe costo, pero no del proveedor por defecto (1001) — no se usa, cost queda null.
-        ProductoCosto::query()->create(['icg_codarticulo' => 1006, 'codproveedor' => 55, 'costo_neto' => 40.0]);
+
+        $mapped = (new ProductoMapper())->buildPayloads([1010]);
+
+        $this->assertFalse($mapped[0]->isExcluded());
+        $this->assertSame(-3.0, $mapped[0]->stockInicial);
+    }
+
+    public function test_stock_inicial_null_si_articulo_sin_fila_en_al4(): void
+    {
+        Producto::query()->create([
+            'icg_codarticulo' => 1011, 'descripcion' => 'Sin stock AL4', 'descatalogado' => false,
+        ]);
+        ProductoPrecio::query()->create([
+            'icg_codarticulo' => 1011, 'idtarifav' => 1, 'precio_neto' => 80.0, 'descatalogado_fila' => false,
+        ]);
+
+        $mapped = (new ProductoMapper())->buildPayloads([1011]);
+
+        $this->assertNull($mapped[0]->stockInicial);
+    }
+
+    public function test_costo_de_unico_proveedor_no_default_se_usa(): void
+    {
+        // Caso A691-451471527K: su único costo estaba con MARSET (proveedor 70) y el mapper lo dejaba en null.
+        $this->articulo(1006);
+        ProductoCosto::query()->create(['icg_codarticulo' => 1006, 'codproveedor' => 70, 'costo_neto' => 480.06]);
 
         $mapped = (new ProductoMapper())->buildPayloads([1006]);
 
         $this->assertFalse($mapped[0]->isExcluded());
-        $this->assertNull($mapped[0]->cost);
+        $this->assertSame(480.06, $mapped[0]->cost);
+    }
+
+    public function test_proveedor_por_defecto_gana_sobre_otros(): void
+    {
+        $this->articulo(1007);
+        ProductoCosto::query()->create(['icg_codarticulo' => 1007, 'codproveedor' => 70, 'costo_neto' => 480.06]);
+        ProductoCosto::query()->create(['icg_codarticulo' => 1007, 'codproveedor' => 1001, 'costo_neto' => 400.0]);
+
+        $this->assertSame(400.0, (new ProductoMapper())->buildPayloads([1007])[0]->cost);
+    }
+
+    public function test_varios_proveedores_usa_el_de_la_compra_mas_reciente(): void
+    {
+        $this->articulo(1008);
+        ProductoCosto::query()->create(['icg_codarticulo' => 1008, 'codproveedor' => 70, 'costo_neto' => 480.0]);
+        ProductoCosto::query()->create(['icg_codarticulo' => 1008, 'codproveedor' => 38, 'costo_neto' => 510.0]);
+        $this->compra(1008, 70, '2026-01-10 00:00:00', 1);
+        $this->compra(1008, 38, '2026-06-10 00:00:00', 2);
+        // Una compra más reciente de OTRO proveedor sin costo registrado no cuenta.
+        $this->compra(1008, 99, '2026-09-10 00:00:00', 3);
+
+        $this->assertSame(510.0, (new ProductoMapper())->buildPayloads([1008])[0]->cost);
+    }
+
+    public function test_varios_proveedores_sin_compras_o_con_empate_deja_cost_null(): void
+    {
+        $this->articulo(1009);
+        ProductoCosto::query()->create(['icg_codarticulo' => 1009, 'codproveedor' => 70, 'costo_neto' => 480.0]);
+        ProductoCosto::query()->create(['icg_codarticulo' => 1009, 'codproveedor' => 38, 'costo_neto' => 510.0]);
+        $this->assertNull((new ProductoMapper())->buildPayloads([1009])[0]->cost, 'sin compras no se adivina');
+
+        $this->compra(1009, 70, '2026-06-10 00:00:00', 4);
+        $this->compra(1009, 38, '2026-06-10 00:00:00', 5);
+        $this->assertNull((new ProductoMapper())->buildPayloads([1009])[0]->cost, 'empate en la fecha más reciente no se adivina');
+    }
+
+    private function articulo(int $codigo): void
+    {
+        Producto::query()->create(['icg_codarticulo' => $codigo, 'descripcion' => "Art {$codigo}", 'ref_proveedor' => "R-{$codigo}", 'descatalogado' => false]);
+        ProductoPrecio::query()->create(['icg_codarticulo' => $codigo, 'idtarifav' => 1, 'precio_neto' => 70.0, 'descatalogado_fila' => false]);
+    }
+
+    private function compra(int $codarticulo, int $codproveedor, string $fecha, int $n): void
+    {
+        $cab = AlbaranCompra::query()->create(['icg_numserie' => 'T', 'icg_numalbaran' => $n, 'icg_n' => 'B', 'icg_codproveedor' => $codproveedor, 'fecha' => $fecha]);
+        AlbaranCompraItem::query()->create(['legacy_albaran_compra_id' => $cab->id, 'icg_codarticulo' => $codarticulo, 'precio' => 1.0]);
     }
 
     public function test_excluye_articulo_sin_precio_publico(): void

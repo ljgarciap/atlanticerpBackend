@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
@@ -12,13 +13,24 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentConfirmation;
+use App\Modules\AdminCont\Services\DailyCashCountService;
+use App\Modules\AdminCont\Services\DailyCashCountSummaryPdfService;
+use App\Modules\Bodega\Models\Order;
+use App\Modules\VentasDiseno\Models\MasterClient;
+use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Modules\VentasDiseno\Models\SalesProject;
+use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
+use Tests\Feature\AdminCont\Concerns\ReadsXlsxResponse;
 use Tests\Feature\FeatureTestCase;
 
 /** Batch 18 (SCRUM-597→601, REQ-520→524) — ver ADR-SCRUM597-601-batch18-arqueo-caja.md. */
 class AdminContCashPositionControllerTest extends FeatureTestCase
 {
+    use ReadsXlsxResponse;
+
     private const FELIX_EMAIL = 'contabilidad@test.com';
 
     private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
@@ -76,6 +88,32 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'saldo_caja_menuda' => 340.0,
             'saldo_disponible_hoy' => 740.0,
         ]);
+    }
+
+    public function test_879_comision_sin_cuenta_asignada_cuenta_en_saldo_de_bancos_y_vista_real(): void
+    {
+        $activa = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        AdminContBankMovement::create(['bank_account_id' => $activa->id, 'fecha' => now()->subDays(3), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 1000]);
+        // Comisión pagada SIN cuenta asignada — igual es salida real de dinero (E-3).
+        AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now()->subDays(2), 'tipo' => 'comision', 'concepto' => 'Comisión interna pagada — Vendedor X (jun 2026)', 'monto' => 250, 'source_type' => 'internal_commission', 'source_id' => 1]);
+
+        $token = $this->loginAsFelix();
+
+        // saldo_bancos: 1000 cobro - 250 comisión sin cuenta = 750.
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position')
+            ->assertStatus(200)
+            ->assertJson(['saldo_bancos' => 750.0]);
+
+        // Vista Real incluye el movimiento de comisión sin cuenta como salida.
+        $real = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position/real?window=30')
+            ->assertStatus(200)
+            ->json();
+        $conceptos = array_column($real['movimientos'], 'concepto');
+        $this->assertContains('Comisión interna pagada — Vendedor X (jun 2026)', $conceptos);
+        // La última fila cierra en saldo_actual (invariante de real()).
+        $this->assertSame($real['saldo_actual'], end($real['movimientos'])['saldo_acumulado']);
     }
 
     // ---------------------------------------------------------------- REQ-521/522 projected, gates ----
@@ -256,6 +294,98 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         );
     }
 
+    // ---------------------------------------------------------- SCRUM-939 formato de moneda ----
+
+    public function test_939_excel_real_escribe_entrada_salida_y_saldo_como_celdas_numericas(): void
+    {
+        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9036']);
+        AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 300]);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->get('/api/admin-contab/cash-position/export?view=real&window=30&format=excel')
+            ->assertStatus(200);
+        $sheet = $this->loadWorkbook($response)->getActiveSheet();
+
+        $this->assertSame(['Fecha', 'Concepto', 'Origen', 'Entrada', 'Salida', 'Saldo acumulado'], $sheet->toArray()[0]);
+        $this->assertMoneyCell($sheet, 'D2', 300.0);
+        $this->assertMoneyCell($sheet, 'E2', 0.0);
+        $this->assertMoneyCell($sheet, 'F2', 300.0);
+    }
+
+    public function test_939_excel_proyectado_escribe_monto_y_neto_como_celdas_numericas(): void
+    {
+        AdminContInvoice::create(['numero' => 'F-9201', 'order_id' => 920100, 'cliente' => 'Cliente Test', 'monto' => 1000]);
+        $token = $this->loginAsFelix();
+
+        $neto = (float) $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position/projected?window=30')
+            ->assertStatus(200)
+            ->json('neto');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->get('/api/admin-contab/cash-position/export?view=proyectado&window=30&format=excel')
+            ->assertStatus(200);
+        $sheet = $this->loadWorkbook($response)->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        $this->assertSame(['Tipo', 'Concepto', 'Referencia', 'Monto'], $rows[0]);
+        $this->assertMoneyCell($sheet, 'D2', 1000.0);
+
+        $netoRow = null;
+        foreach ($rows as $i => $row) {
+            if (($row[2] ?? null) === 'Neto proyectado') {
+                $netoRow = $i + 1;
+                break;
+            }
+        }
+        $this->assertNotNull($netoRow, 'no se encontró la fila de Neto proyectado');
+        $this->assertMoneyCell($sheet, "D{$netoRow}", $neto);
+    }
+
+    /**
+     * AC de SCRUM-939 — "los negativos (notas de crédito) quedan numéricos": Salida es el único
+     * lugar de estos 3 reportes donde el monto se escribe en negativo (`-1 * monto`, ver
+     * `CashPositionExportService::proyectadoExcel()`) — una nota de crédito pendiente es una salida
+     * proyectada real (mismo fixture que `test_projected_salidas_incluye_nota_credito_...`).
+     */
+    public function test_939_excel_proyectado_escribe_salida_de_nota_de_credito_como_celda_numerica_negativa(): void
+    {
+        $userId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $invoice = AdminContInvoice::create(['numero' => 'F-9202', 'order_id' => 920101, 'cliente' => 'Fam. Herrera 939', 'monto' => 1000, 'saldo_aplicado' => 800]);
+        AdminContCreditNote::create([
+            'numero' => 'NC-9002', 'master_client_id' => 1, 'cliente' => 'Fam. Herrera 939',
+            'tipo' => AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, 'factura_origen_id' => $invoice->id,
+            'monto' => 350, 'subtotal' => 350, 'itbms' => 0, 'motivo' => 'Test',
+            'resultado' => AdminContCreditNote::RESULTADO_DEVUELTO, 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION,
+            'registrado_por' => $userId, 'fecha' => now()->subDays(5)->toDateString(),
+        ]);
+        $token = $this->loginAsFelix();
+
+        // 350 - (1000-800) saldo pendiente = 150 en la salida real, -150.0 en el Excel.
+        $salidaMonto = (float) $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position/projected?window=30')
+            ->assertStatus(200)
+            ->json('salidas.0.monto');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->get('/api/admin-contab/cash-position/export?view=proyectado&window=30&format=excel')
+            ->assertStatus(200);
+        $sheet = $this->loadWorkbook($response)->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        $salidaRow = null;
+        foreach ($rows as $i => $row) {
+            if (($row[0] ?? null) === 'Salida') {
+                $salidaRow = $i + 1;
+                break;
+            }
+        }
+        $this->assertNotNull($salidaRow, 'no se encontró la fila de Salida');
+        $this->assertMoneyCell($sheet, "D{$salidaRow}", -$salidaMonto);
+        $this->assertLessThan(0, (float) $sheet->getCell("D{$salidaRow}")->getValue(), 'la salida debe quedar numérica y en negativo, no solo con formato de moneda');
+    }
+
     // ---------------------------------------------------------------- REQ-524 daily-count ----
 
     public function test_daily_count_rechaza_a_management(): void
@@ -324,6 +454,30 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
         $this->assertEquals(500.0, $response->json('total_notas_credito'));
         $this->assertSame('Devolución de dinero — Fam. Herrera', $response->json('notas_credito.0.concepto'));
+    }
+
+    /**
+     * SCRUM-879 (rebote PM Review 2026-09-10) — Daniela reportó que una comisión ya pagada
+     * aparecía en Real 30/90d (`bank_movements`) pero no en "Real (histórico)" + "Hoy", que en
+     * realidad es el Arqueo del día (`DailyCashCountService`, no `CashPositionService::real()`).
+     * Cubre también el pago sin cuenta asignada (REQ-534) — igual debe contar como salida real.
+     */
+    public function test_daily_count_incluye_comision_pagada_hoy_como_salida_real(): void
+    {
+        AdminContBankMovement::create([
+            'bank_account_id' => null, 'fecha' => now()->toDateString(), 'tipo' => AdminContBankMovement::TIPO_COMISION,
+            'concepto' => 'Comisión arquitecto Arquitecto 12 — PED-2026-0070', 'monto' => 18.10,
+            'source_type' => AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION, 'source_id' => 1,
+        ]);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position/daily-count')
+            ->assertStatus(200);
+
+        $this->assertEquals(18.10, $response->json('total_comisiones'));
+        $this->assertSame('Comisión arquitecto Arquitecto 12 — PED-2026-0070', $response->json('comisiones.0.concepto'));
+        $this->assertEquals(-18.10, $response->json('total_neto'));
     }
 
     public function test_daily_count_persiste_observacion_por_fila_y_observacion_general(): void
@@ -397,6 +551,49 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(409);
     }
 
+    /**
+     * Pre-QA SCRUM-878/879 (2026-09-10) — hallazgo CRÍTICO confirmado en vivo en dev: un
+     * `bank_movement` de comisión creado DESPUÉS del cierre, pero fechado el mismo día del arqueo,
+     * cambiaba en silencio el `total_neto` que Felix ya había cerrado (y que Mark aprobaría sin
+     * saberlo). El fix congela el total en `close()` — este test reproduce exactamente el
+     * escenario real (arqueo #1, 2026-08-25) para que no vuelva a pasar.
+     */
+    public function test_close_congela_el_total_neto_contra_un_movimiento_retroactivo_posterior(): void
+    {
+        AdminContPayment::create([
+            'numero_recibo' => 'REC-9010', 'master_client_id' => 1, 'monto_recibido' => 1000, 'saldo_favor_aplicado' => 0,
+            'metodo_pago' => AdminContPayment::METODO_EFECTIVO, 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
+        ]);
+
+        $token = $this->loginAsFelix();
+        $headers = $this->authHeaders($token);
+        $closed = $this->withHeaders($headers)
+            ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
+            ->assertStatus(200);
+
+        $this->assertEquals(1000.0, $closed->json('total_neto'));
+        $id = $closed->json('id');
+
+        // Simula el backfill retroactivo: comisión fechada el mismo día del arqueo YA CERRADO,
+        // pero creada (created_at) recién ahora, después del cierre. La request HTTP de arriba deja
+        // el contexto de tenant limpio al terminar — hay que re-establecerlo antes de escribir acá.
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        AdminContBankMovement::create([
+            'bank_account_id' => null, 'fecha' => now()->toDateString(), 'tipo' => AdminContBankMovement::TIPO_COMISION,
+            'concepto' => 'Comisión arquitecto Arquitecto 12 — PED-2026-0070', 'monto' => 845.81,
+            'source_type' => AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION, 'source_id' => 1,
+        ]);
+
+        $detail = $this->withHeaders($headers)
+            ->getJson("/api/admin-contab/cash-position/history/{$id}")
+            ->assertStatus(200);
+        $this->assertEquals(1000.0, $detail->json('total_neto'), 'el total congelado no debe incluir la comisión retroactiva');
+        $this->assertEmpty($detail->json('comisiones'), 'la comisión retroactiva tampoco debe aparecer en el detalle de movimientos del snapshot');
+
+        $history = $this->withHeaders($headers)->getJson('/api/admin-contab/cash-position/history')->assertStatus(200);
+        $this->assertEquals(1000.0, $history->json('data.0.total_neto'), 'el listado del historial debe leer el mismo total congelado');
+    }
+
     public function test_editar_observacion_de_arqueo_ya_cerrado_es_rechazado(): void
     {
         $token = $this->loginAsFelix();
@@ -436,6 +633,82 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
         $this->assertSame(now()->toDateString(), $response->json('fecha'));
         $this->assertFalse($response->json('es_atrasado'));
+    }
+
+    /**
+     * SCRUM-867 — hallazgo del cliente: con el arqueo de un día anterior sin cerrar, el sistema
+     * mostraba directamente el de hoy sin ningún aviso. Reproduce el escenario real reportado: un
+     * día SIN NINGUNA fila (cero movimientos ese día — nadie tocó Arqueo de Caja, así que
+     * `activeRecordForWrite()` nunca corrió `firstOrCreate()` para esa fecha), en medio de
+     * historial real ya existente (no en el piso de la tabla, para descartar que el fix dependa
+     * de tener el gap justo al principio).
+     */
+    public function test_bloqueo_secuencial_detecta_un_dia_atrasado_sin_ninguna_fila_creada(): void
+    {
+        // Historial real: hace 3 y 2 días, ambos ya cerrados. Hace 1 día — CERO movimiento, sin
+        // fila (el escenario real reportado: 7 sept nunca tuvo ninguna acción registrada).
+        AdminContDailyCashCount::create(['fecha' => now()->subDays(3)->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_APROBADO]);
+        AdminContDailyCashCount::create(['fecha' => now()->subDays(2)->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_APROBADO]);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position/daily-count')
+            ->assertStatus(200);
+
+        $this->assertSame(now()->subDay()->toDateString(), $response->json('fecha'));
+        $this->assertTrue($response->json('es_atrasado'));
+    }
+
+    /**
+     * SCRUM-867 — LIMITACIÓN CONOCIDA, no cubierta por este fix (documentada a propósito, no es
+     * un "debería pasar"): si alguien setea `arqueo_tracking_start_date` a una fecha posterior a
+     * un gap real, ese gap queda invisible para siempre — el piso explícito sigue pisando
+     * cualquier otra señal. Hoy no existe ninguna pantalla para editar este campo (solo API
+     * directa), así que el riesgo real es bajo, pero queda señalado para Arquitecto/Luis: si en
+     * algún momento se agrega una UI para este campo, este mismo caso vuelve a ser alcanzable por
+     * error humano y merece su propio fix (ej. validar que el nuevo valor no sea posterior a
+     * ningún día con actividad real sin arquear).
+     */
+    public function test_bloqueo_secuencial_con_start_date_en_hoy_ignora_el_gap_anterior(): void
+    {
+        AdminContFiscalSettings::current()->update(['arqueo_tracking_start_date' => now()->toDateString()]);
+        AdminContDailyCashCount::create(['fecha' => now()->subDays(3)->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_APROBADO]);
+        AdminContDailyCashCount::create(['fecha' => now()->subDays(2)->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_APROBADO]);
+        // hace 1 día: sin fila, cero movimiento — igual que el escenario reportado.
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position/daily-count')
+            ->assertStatus(200);
+
+        $this->assertSame(now()->toDateString(), $response->json('fecha'));
+        $this->assertFalse($response->json('es_atrasado'));
+    }
+
+    /**
+     * SCRUM-867 — reproduce el escenario real reportado, confirmado por la evidencia del ticket
+     * (N° de arqueo 1 en el modal de cierre, "Historial de arqueos cerrados" vacío): la tabla
+     * `daily_cash_counts` está completamente vacía (primer uso real de la pantalla), pero YA hubo
+     * un cobro confirmado ayer que nadie arqueó. Antes del fix, el piso caía directo en "hoy" sin
+     * ningún aviso — exactamente el síntoma reportado.
+     */
+    public function test_bloqueo_secuencial_primer_uso_detecta_cobro_confirmado_el_dia_anterior(): void
+    {
+        $payment = AdminContPayment::create([
+            'numero_recibo' => 'REC-8001', 'master_client_id' => 1, 'monto_recibido' => 150, 'saldo_favor_aplicado' => 0,
+            'metodo_pago' => AdminContPayment::METODO_EFECTIVO, 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
+        ]);
+        // created_at no es mass-assignable en create() — se fuerza después, sin tocar updated_at.
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_admin_contab.payments")->where('id', $payment->id)->update(['created_at' => now()->subDay()]);
+
+        $token = $this->loginAsFelix();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position/daily-count')
+            ->assertStatus(200);
+
+        $this->assertSame(now()->subDay()->toDateString(), $response->json('fecha'));
+        $this->assertTrue($response->json('es_atrasado'));
     }
 
     public function test_history_lista_solo_cerrados_con_contador_de_pendientes(): void
@@ -558,6 +831,58 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ->assertHeader('Content-Type', 'application/pdf');
     }
 
+    // SCRUM-878 — dompdf degrada en silencio (nunca 500), así que el test de arriba no agarraría un
+    // rediseño mal armado. Éste renderiza el Blade directamente y verifica la estructura del mockup
+    // (tabla única, recuadro de totales al final, bloque Conciliación) sobre el estándar de
+    // encabezado/pie del sistema.
+    public function test_scrum878_resumen_sigue_el_mockup_en_el_cuerpo_y_el_estandar_en_encabezado_pie(): void
+    {
+        // Efectivo = confirmación inmediata, cuenta por created_at (sin necesidad de un
+        // AdminContPaymentConfirmation).
+        AdminContPayment::create([
+            'numero_recibo' => 'REC-878', 'master_client_id' => 1, 'monto_recibido' => 400, 'saldo_favor_aplicado' => 0,
+            'metodo_pago' => AdminContPayment::METODO_EFECTIVO, 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
+        ]);
+
+        $data = app(DailyCashCountService::class)->active();
+        $viewData = app(DailyCashCountSummaryPdfService::class)->viewData($data);
+        $html = view('admin-cont.daily-cash-count-summary-pdf', $viewData)->render();
+
+        // Estándar del sistema, NO el mockup.
+        $this->assertStringContainsString('<img src="data:image/png;base64,', $html);
+        $this->assertStringContainsString('<script type="text/php">', $html);
+        $this->assertStringContainsString('Pagina {PAGE_NUM} de {PAGE_COUNT}', $html);
+        $this->assertStringNotContainsString('Documento generado por AtlanticERP', $html);
+        $this->assertStringNotContainsString('FORMATO DE ARQUEO DE CAJA DIARIO', $html);
+
+        // Bloque Resumen + Conciliación.
+        $this->assertStringContainsString('Resumen', $html);
+        $this->assertStringContainsString('Conciliación', $html);
+        $this->assertStringContainsString('Retenciones con constancia:', $html);
+        $this->assertMatchesRegularExpression('/Retenciones con constancia:<\/span>\s*0 de 0/', $html);
+
+        // Una sola tabla de movimientos con las 4 columnas del mockup.
+        $this->assertStringContainsString('Movimientos del día', $html);
+        $this->assertStringContainsString('Concepto</th>', $html);
+        $this->assertStringContainsString('Medio</th>', $html);
+        $this->assertStringContainsString('Observaciones</th>', $html);
+        $this->assertStringContainsString('Monto</th>', $html);
+        $this->assertStringNotContainsString('Cobros del día', $html);
+        $this->assertStringNotContainsString('Notas de crédito devueltas', $html);
+
+        // Medio con etiqueta legible (METODO_LABELS), no el valor crudo en minúscula.
+        $this->assertMatchesRegularExpression('/<td>Efectivo<\/td>/', $html);
+        $this->assertStringNotContainsString('<td>efectivo</td>', $html);
+
+        // Recuadro de totales DESPUÉS de la tabla.
+        $posTabla = strpos($html, 'Movimientos del día');
+        $posTotales = strpos($html, 'Total neto del día');
+        $this->assertNotFalse($posTabla);
+        $this->assertNotFalse($posTotales);
+        $this->assertGreaterThan($posTabla, $posTotales);
+        $this->assertStringContainsString('Notas crédito y devoluciones', $html);
+    }
+
     public function test_history_detail_export_devuelve_pdf(): void
     {
         $felixHeaders = $this->authHeaders($this->loginAsFelix());
@@ -570,5 +895,206 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ->getJson("/api/admin-contab/cash-position/history/{$id}/export")
             ->assertStatus(200)
             ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    // ------------------------------------------------ SCRUM-934 indicadores del día ----
+
+    private function makeInvoiceAt(float $monto, string $createdAt, bool $anulada = false): AdminContInvoice
+    {
+        $invoice = AdminContInvoice::create([
+            'numero' => 'F-934-'.self::uniqueTestNumber(), 'order_id' => self::uniqueTestNumber(),
+            'cliente' => 'Cliente 934', 'monto' => $monto, 'saldo_aplicado' => 0,
+            'anulada_at' => $anulada ? now() : null,
+        ]);
+        $invoice->forceFill(['created_at' => $createdAt])->save();
+
+        return $invoice;
+    }
+
+    /** Pedido raíz (o hermano de familia si se pasa `$familyId`) con la tarjeta de pipeline que porta el monto. */
+    private function makePedido(float $amount, string $createdAt, ?int $familyId = null, ?PipelineCard $card = null): Order
+    {
+        if ($card === null) {
+            $n = self::uniqueTestNumber();
+            $master = MasterClient::create(['name' => "Cliente 934 {$n}"]);
+            $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Sub 934 {$n}", 'tax_id' => "155-{$n}-1"]);
+            $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => "Proyecto 934 {$n}"]);
+            $card = PipelineCard::create([
+                'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
+                'sub_client_id' => $sub->id, 'owner_id' => (int) User::query()->value('id'), 'amount' => $amount, 'stage_changed_at' => now(),
+            ]);
+        }
+
+        $order = Order::create([
+            'order_number' => 'PED-934-'.self::uniqueTestNumber(), 'pipeline_card_id' => $card->id,
+            'order_type' => Order::ORDER_TYPE_PEDIDO, 'stage' => Order::STAGE_ASIGNADO,
+            'customer_name' => 'Cliente 934', 'family_id' => $familyId,
+        ]);
+        $order->forceFill(['created_at' => $createdAt])->save();
+
+        return $order;
+    }
+
+    private function getActiveDailyCount(string $token): TestResponse
+    {
+        return $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/cash-position/daily-count')
+            ->assertStatus(200);
+    }
+
+    public function test_934_indicadores_suman_solo_lo_de_hoy_y_excluyen_anuladas_ayer_y_hermanas_de_familia(): void
+    {
+        $hoy = now()->toDateTimeString();
+        $ayer = now()->subDay()->toDateTimeString();
+
+        $this->makeInvoiceAt(100.00, $hoy);
+        $this->makeInvoiceAt(250.50, $hoy);
+        $this->makeInvoiceAt(999.00, $hoy, anulada: true); // anulada → nunca cuenta
+        $this->makeInvoiceAt(777.00, $ayer);               // ayer → otro día
+
+        $raiz = $this->makePedido(1000.00, $hoy);
+        $this->makePedido(1000.00, $hoy, familyId: $raiz->id, card: $raiz->pipelineCard); // entrega hermana → NO doble cuenta
+        $this->makePedido(500.00, $hoy);
+        $this->makePedido(888.00, $ayer);                  // ayer → otro día
+
+        $response = $this->getActiveDailyCount($this->loginAsFelix());
+
+        $this->assertEquals(350.50, $response->json('total_facturado_dia'));
+        $this->assertEquals(1500.00, $response->json('total_pasado_a_pedido_dia'));
+        // Informativos: nunca entran al total neto de caja.
+        $this->assertEquals(0.0, $response->json('total_neto'));
+    }
+
+    public function test_934_indicadores_parten_en_cero_si_solo_hubo_movimiento_otro_dia(): void
+    {
+        $ayer = now()->subDay()->toDateTimeString();
+        $this->makeInvoiceAt(400.00, $ayer);
+        $this->makePedido(600.00, $ayer);
+
+        $response = $this->getActiveDailyCount($this->loginAsFelix());
+
+        // El arqueo activo es el de HOY (no hay filas ni cobros previos) → contador de hoy en cero.
+        // `assertIsNumeric` primero: `assertEquals(0.0, null)` pasaría igual con el campo AUSENTE
+        // (Senior Review BAJO-1) y no probaría nada.
+        $this->assertIsNumeric($response->json('total_facturado_dia'));
+        $this->assertIsNumeric($response->json('total_pasado_a_pedido_dia'));
+        $this->assertEqualsWithDelta(0.0, (float) $response->json('total_facturado_dia'), 0.001);
+        $this->assertEqualsWithDelta(0.0, (float) $response->json('total_pasado_a_pedido_dia'), 0.001);
+    }
+
+    public function test_934_indicadores_reflejan_el_estado_al_momento_de_generar_y_cambian_si_se_regenera(): void
+    {
+        $token = $this->loginAsFelix();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el login HTTP deja el tenant limpio
+        $this->makeInvoiceAt(100.00, now()->toDateTimeString());
+        $primero = $this->getActiveDailyCount($token);
+        $this->assertEquals(100.00, $primero->json('total_facturado_dia'));
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->makeInvoiceAt(50.00, now()->toDateTimeString());
+        $segundo = $this->getActiveDailyCount($token);
+        $this->assertEquals(150.00, $segundo->json('total_facturado_dia'), 'un arqueo abierto regenerado más tarde acumula lo nuevo');
+    }
+
+    public function test_934_close_congela_los_indicadores_contra_una_factura_posterior(): void
+    {
+        $token = $this->loginAsFelix();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el login HTTP deja el tenant limpio
+        $this->makeInvoiceAt(100.00, now()->toDateTimeString());
+        $this->makePedido(300.00, now()->toDateTimeString());
+
+        $closed = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
+            ->assertStatus(200);
+        $this->assertEquals(100.00, $closed->json('total_facturado_dia'));
+        $this->assertEquals(300.00, $closed->json('total_pasado_a_pedido_dia'));
+        $id = $closed->json('id');
+
+        // Senior Review BAJO-2 — sin esto el test pasaría aunque el snapshot NO trajera los
+        // indicadores: `totalsFor()` los reconstruiría a la hora del cierre y daría lo mismo.
+        // Se afirma sobre el snapshot PERSISTIDO, que es lo que de verdad se congela.
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $snapshot = AdminContDailyCashCount::findOrFail($id)->snapshot;
+        $this->assertIsArray($snapshot);
+        $this->assertArrayHasKey('total_facturado_dia', $snapshot);
+        $this->assertArrayHasKey('total_pasado_a_pedido_dia', $snapshot);
+        $this->assertEqualsWithDelta(100.00, (float) $snapshot['total_facturado_dia'], 0.001);
+        $this->assertEqualsWithDelta(300.00, (float) $snapshot['total_pasado_a_pedido_dia'], 0.001);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->makeInvoiceAt(900.00, now()->addMinute()->toDateTimeString());
+        $this->makePedido(900.00, now()->addMinute()->toDateTimeString());
+
+        $detail = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/admin-contab/cash-position/history/{$id}")
+            ->assertStatus(200);
+        $this->assertEquals(100.00, $detail->json('total_facturado_dia'));
+        $this->assertEquals(300.00, $detail->json('total_pasado_a_pedido_dia'));
+    }
+
+    public function test_934_snapshot_legado_sin_indicadores_se_reconstruye_a_la_hora_del_cierre_no_en_vivo(): void
+    {
+        $cierre = now()->addMinutes(5);
+        $this->makeInvoiceAt(100.00, now()->toDateTimeString());              // antes del cierre
+        $this->makeInvoiceAt(900.00, now()->addMinutes(10)->toDateTimeString()); // después del cierre
+
+        $record = AdminContDailyCashCount::create([
+            'fecha' => now()->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION,
+        ]);
+        $record->forceFill([
+            'numero' => 1, 'cerrado_at' => $cierre,
+            'snapshot' => [
+                'fecha' => now()->toDateString(), 'cobros' => [], 'notas_credito' => [], 'comisiones' => [],
+                'total_cobrado' => 0, 'total_notas_credito' => 0, 'total_comisiones' => 0, 'total_neto' => 0,
+            ],
+        ])->save();
+
+        $detail = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson("/api/admin-contab/cash-position/history/{$record->id}")
+            ->assertStatus(200);
+
+        $this->assertEquals(100.00, $detail->json('total_facturado_dia'));
+    }
+
+    public function test_934_el_pdf_del_arqueo_muestra_los_indicadores_bajo_los_totales(): void
+    {
+        $this->makeInvoiceAt(350.50, now()->toDateTimeString());
+        $this->makePedido(1500.00, now()->toDateTimeString());
+
+        $data = $this->getActiveDailyCount($this->loginAsFelix())->json();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $html = view('admin-cont.daily-cash-count-summary-pdf', (new DailyCashCountSummaryPdfService)->viewData($data))->render();
+
+        $this->assertStringContainsString('Total facturado en el día', $html);
+        $this->assertStringContainsString('$350.50', $html);
+        $this->assertStringContainsString('Total pasado a pedido en el día', $html);
+        $this->assertStringContainsString('$1,500.00', $html);
+        $this->assertGreaterThan(strpos($html, 'Total neto del día'), strpos($html, 'Total facturado en el día'), 'los indicadores van DESPUÉS de los totales');
+    }
+
+    // ── SCRUM-947 — per_page real (antes fijo en 20, sin selector) ─────────────────────────────
+
+    public function test_history_pagina_20_por_defecto_y_respeta_per_page(): void
+    {
+        for ($i = 0; $i < 25; $i++) {
+            AdminContDailyCashCount::create([
+                'fecha' => now()->subDays($i + 1)->toDateString(), 'numero' => 100 + $i,
+                'estado' => AdminContDailyCashCount::ESTADO_APROBADO, 'cerrado_por' => 1, 'cerrado_at' => now()->subDays($i + 1),
+                'snapshot' => ['fecha' => now()->subDays($i + 1)->toDateString(), 'cobros' => [], 'notas_credito' => [], 'comisiones' => [], 'total_cobrado' => 0.0, 'total_notas_credito' => 0.0, 'total_comisiones' => 0.0, 'total_neto' => 0.0, 'observacion_general' => null],
+            ]);
+        }
+
+        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/cash-position/history')
+            ->assertStatus(200)->json();
+
+        $this->assertCount(20, $response['data']);
+        $this->assertSame(['total' => 25, 'per_page' => 20, 'current_page' => 1, 'last_page' => 2], $response['meta']);
+
+        $perPage10 = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            ->getJson('/api/admin-contab/cash-position/history?per_page=10')
+            ->assertStatus(200)->json();
+        $this->assertCount(10, $perPage10['data']);
+        $this->assertSame(10, $perPage10['meta']['per_page']);
     }
 }

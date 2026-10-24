@@ -84,15 +84,17 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
         $this->assertNotSame(403, $status);
     }
 
-    // ── admin_contab.oversight.manage — Felix + Daniela, NO Yaneth ──────────────
+    // ── payments/summary — SCRUM-881 (binax, 2026-09-09): la asistente entra al resumen de cobros, mismo alcance que
+    //    Félix; SCRUM-1139 (2026-10-14): operaciones espeja a la asistente. La ruta pasó a records.manage. ─────────────
 
-    public function test_payments_summary_felix_y_daniela_pueden_yaneth_no(): void
+    public function test_payments_summary_felix_daniela_yaneth_y_operaciones_pueden(): void
     {
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::YANETH, 'asistente_administrativa')))
-            ->getJson('/api/admin-contab/payments/summary')
-            ->assertStatus(403);
-
-        foreach ([[self::FELIX, 'lider_admin_contab'], [self::DANIELA, 'management']] as [$email, $role]) {
+        foreach ([
+            [self::FELIX, 'lider_admin_contab'],
+            [self::DANIELA, 'management'],
+            [self::YANETH, 'asistente_administrativa'],
+            [self::MARIAM, 'lider_operaciones'],
+        ] as [$email, $role]) {
             $status = $this->withHeaders($this->authHeaders($this->tokenFor($email, $role)))
                 ->getJson('/api/admin-contab/payments/summary')
                 ->status();
@@ -107,18 +109,17 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    // ── lider_operaciones (compartía nivel "Read Only" con Yaneth antes de la migración) sigue
-    //    sin ningún acceso de escritura — la separación de niveles no le dio nada de más. ─────
+    // ── lider_operaciones (nivel propio «Read Only») espeja a la asistente (SCRUM-1139) pero NO gana el
+    //    permiso de supervisión (oversight.manage: Félix + Gerencia), que binax tampoco le da. ─────────────
 
-    public function test_lider_operaciones_no_gana_ningun_permiso_de_admin_contab(): void
+    public function test_lider_operaciones_espeja_a_la_asistente_pero_no_gana_oversight(): void
     {
         $token = $this->tokenFor(self::MARIAM, 'lider_operaciones');
 
+        $this->assertNotSame(403, $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/payments/summary')->status());
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/admin-contab/bank-accounts', ['nombre' => 'X'])
-            ->assertStatus(403);
-        $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/payments/summary')
+            ->getJson('/api/admin-contab/reports/felix-commission')
             ->assertStatus(403);
     }
 

@@ -28,6 +28,9 @@ class StoreBankAccountRequest extends FormRequest
                 AdminContBankAccount::TIPO_TARJETA_CREDITO,
             ])],
             'moneda' => ['sometimes', 'string', 'size:3'],
+            // SCRUM-857 (REQ-458) — opcional; ver docblock de la migración/modelo para la excepción
+            // a RN4 de REQ-530.
+            'numero_cuenta_completo' => ['sometimes', 'nullable', 'string', 'max:50'],
         ];
     }
 }

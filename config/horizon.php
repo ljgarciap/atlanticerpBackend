@@ -224,6 +224,22 @@ return [
             'timeout' => 120,
             'nice' => 0,
         ],
+
+        // SCRUM-998 — cola `pdf` de la conexión `redis-long` (`retry_after` de 130 min, ver config/queue.php): el ZIP de volúmenes
+        // del Catálogo tarda minutos. Un solo proceso a propósito: no compite con la cola `default` ni genera dos catálogos a la vez
+        // (dompdf gasta ~85 MB por tanda de 500 productos). `tries` 1: el job maneja su propio estado y avisa si falla.
+        'supervisor-pdf' => [
+            'connection' => 'redis-long',
+            'queue' => ['pdf'],
+            'balance' => 'simple',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 768,
+            'tries' => 1,
+            'timeout' => 7200,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -241,12 +257,16 @@ return [
                 'balanceCooldown' => 3,
                 'memory' => 512,
             ],
+            // SCRUM-998 — cola `pdf` (ZIP de volúmenes del Catálogo): hereda todo de `defaults['supervisor-pdf']`.
+            'supervisor-pdf' => [],
         ],
 
         'local' => [
             'supervisor-1' => [
                 'maxProcesses' => 3,
             ],
+            // SCRUM-998 — cola `pdf` (ZIP de volúmenes del Catálogo): hereda todo de `defaults['supervisor-pdf']`.
+            'supervisor-pdf' => [],
         ],
 
         // APP_ENV values used in AWS EC2 environments (dev/test/prod servers)
@@ -267,6 +287,8 @@ return [
                 'maxProcesses' => 4,
                 'memory'       => 512,
             ],
+            // SCRUM-998 — cola `pdf` (ZIP de volúmenes del Catálogo): hereda todo de `defaults['supervisor-pdf']`.
+            'supervisor-pdf' => [],
         ],
 
         'qa' => [
@@ -274,6 +296,8 @@ return [
                 'maxProcesses' => 4,
                 'memory'       => 512,
             ],
+            // SCRUM-998 — cola `pdf` (ZIP de volúmenes del Catálogo): hereda todo de `defaults['supervisor-pdf']`.
+            'supervisor-pdf' => [],
         ],
 
         'test' => [
@@ -281,12 +305,16 @@ return [
                 'maxProcesses' => 4,
                 'memory'       => 512,
             ],
+            // SCRUM-998 — cola `pdf` (ZIP de volúmenes del Catálogo): hereda todo de `defaults['supervisor-pdf']`.
+            'supervisor-pdf' => [],
         ],
 
         'staging' => [
             'supervisor-1' => [
                 'maxProcesses' => 2,
             ],
+            // SCRUM-998 — cola `pdf` (ZIP de volúmenes del Catálogo): hereda todo de `defaults['supervisor-pdf']`.
+            'supervisor-pdf' => [],
         ],
     ],
 

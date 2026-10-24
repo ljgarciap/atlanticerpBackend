@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Models;
 
+use App\Modules\VentasDiseno\Models\Scopes\CotizaYaOriginScope;
+use App\Modules\VentasDiseno\Models\Scopes\IcgLegacyOriginScope;
+use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use App\Models\User;
 use App\Modules\AdminCont\Services\ItbmsRateResolver;
 use App\Shared\Multitenancy\Tenant;
@@ -20,6 +23,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * en Cotización-B/C/D, ver memory/project_backlog_ventas_diseno_req.md.
  *
  * @property int                                    $id
+ * @property string                                 $origin  SCRUM-1120 — 'comercial' | 'cotizaya'
+ * @property string|null                            $cotizaya_customer_name
+ * @property string|null                            $cotizaya_customer_phone
  * @property int|null                                $master_client_id
  * @property int|null                                $sub_client_id
  * @property int|null                                $sales_project_id
@@ -49,10 +55,59 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Collection<int, QuoteDeliveryDate>          $deliveryDates
  * @property Collection<int, QuotePart>                  $parts
  * @property \Carbon\Carbon                            $created_at
+  * @property bool $itbms_exento SCRUM-1166 — cotización de un cliente exento de ITBMS (sigue al cliente hasta confirmarse; después queda fija)
  */
 class Quote extends Model
 {
     use LogsAuditTrail;
+
+    /** SCRUM-1120 — origen de la cotización: el flujo comercial de siempre o CotizaYA (venta chica). */
+    public const ORIGIN_COMERCIAL = 'comercial';
+    public const ORIGIN_COTIZAYA  = 'cotizaya';
+    /** Cotización gemela de un pedido de ICG (ver `IcgLegacyOriginScope`): oculta por defecto, solo facturación la lee. */
+    public const ORIGIN_ICG_LEGACY = 'icg_legacy';
+
+    /**
+     * SCRUM-1120 — fuera del módulo CotizaYA, ninguna consulta ve las cotizaciones de venta chica (ver el scope).
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new CotizaYaOriginScope());
+        static::addGlobalScope(new IcgLegacyOriginScope());
+
+        // SCRUM-1166 — la cotización sigue al cliente fiscal mientras no esté confirmada: al crearla, o si cambia de cliente, copia su exención de
+        // ITBMS. Una cotización confirmada queda fija (ni cambiar la marca del cliente ni nada posterior la mueve); el cambio de marca de un cliente
+        // actualiza sus borradores desde `ItbmsExemptionService`.
+        static::saving(function (Quote $quote): void {
+            if ($quote->confirmed_at !== null || ($quote->exists && ! $quote->isDirty('sub_client_id'))) {
+                return;
+            }
+
+            $quote->itbms_exento = $quote->sub_client_id !== null
+                && (bool) SubClient::query()->whereKey($quote->sub_client_id)->value('itbms_exento');
+        });
+    }
+
+    /**
+     * Consulta que SÍ incluye las cotizaciones gemelas de ICG. Solo para los caminos de facturación/cobro que parten de
+     * `invoice.quote_id` o de `Order::linkedQuote()`; cualquier otro uso es un error.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<Quote>
+     */
+    public static function withIcgLegacy(): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::withoutGlobalScope(IcgLegacyOriginScope::class);
+    }
+
+    public function isIcgLegacy(): bool
+    {
+        return $this->origin === self::ORIGIN_ICG_LEGACY;
+    }
+
+    public function isCotizaYa(): bool
+    {
+        return $this->origin === self::ORIGIN_COTIZAYA;
+    }
 
     /**
      * REQ-046: texto fijo por defecto de Condiciones al crear una cotización —
@@ -74,7 +129,7 @@ class Quote extends Model
         'owner_id', 'architect_id', 'delivery_type', 'status', 'folio', 'generated_at', 'confirmed_at',
         'price_type', 'discount_mode', 'global_discount_percent',
         'observations', 'includes_installation', 'discount_totals_type', 'discount_totals_value',
-        'conditions_text',
+        'conditions_text', 'origin', 'cotizaya_customer_name', 'cotizaya_customer_phone',
     ];
 
     /** @return array<string, string> */
@@ -86,6 +141,7 @@ class Quote extends Model
             'discount_totals_value'   => 'float',
             'generated_at'            => 'datetime',
             'confirmed_at'            => 'datetime',
+            'itbms_exento'            => 'boolean',
         ];
     }
 
@@ -135,10 +191,16 @@ class Quote extends Model
         return $this->hasMany(QuoteDeliveryDate::class);
     }
 
-    /** @return HasMany<QuotePart, $this> */
+    /**
+     * SCRUM-953 — sin `orderBy('position')` explícito, Postgres devuelve las filas en el orden
+     * que decida el plan de consulta (coincidía con el orden de creación hasta que dejó de
+     * coincidir); `position` ya se asigna correctamente al crear/duplicar partidas
+     * (QuotePartController), pero nada ordenaba por él al leer.
+     * @return HasMany<QuotePart, $this>
+     */
     public function parts(): HasMany
     {
-        return $this->hasMany(QuotePart::class);
+        return $this->hasMany(QuotePart::class)->orderBy('position');
     }
 
     /**
@@ -197,6 +259,7 @@ class Quote extends Model
         ?float $discountTotalsValueOverride = null,
         ?int $excludeItemId = null,
         ?QuoteItem $probeItem = null,
+        bool $ignoreItemPriceOverrides = false,
     ): bool {
         $priceType      = $priceTypeOverride ?? $this->price_type;
         $discountMode   = $discountModeOverride ?? $this->discount_mode;
@@ -210,6 +273,12 @@ class Quote extends Model
             foreach ($part->items as $item) {
                 if ($excludeItemId !== null && $item->id === $excludeItemId) {
                     continue;
+                }
+
+                if ($ignoreItemPriceOverrides && $item->price_type_override !== null) {
+                    // SCRUM-1164 — simula «Aplicar a todos»: copia en memoria sin el tipo de precio propio (nada se persiste).
+                    $item = clone $item;
+                    $item->price_type_override = null;
                 }
 
                 $lineTotal = $item->lineTotal($discountMode, $globalDiscount, $priceType, $settings);
@@ -266,7 +335,25 @@ class Quote extends Model
      */
     public function itbms(): float
     {
-        return round($this->netTotal() * (ItbmsRateResolver::defaultPercentage() / 100), 2);
+        return round($this->netTotal() * ($this->itbmsPercentage() / 100), 2);
+    }
+
+    /** SCRUM-1166 — la cotización es de un cliente exento de ITBMS (marca propia, fija desde que se confirma). */
+    public function isItbmsExempt(): bool
+    {
+        return (bool) $this->itbms_exento;
+    }
+
+    /** Porcentaje que aplica a esta cotización: 0 si es exenta (sin consultar nada), la tasa por defecto si no. */
+    public function itbmsPercentage(): float
+    {
+        return $this->isItbmsExempt() ? 0.0 : ItbmsRateResolver::defaultPercentage();
+    }
+
+    /** Tasa con la que se factura esta cotización: «0% — Exento» si es exenta, la tasa por defecto si no. */
+    public function itbmsRate(): \App\Modules\AdminCont\Models\AdminContItbmsRate
+    {
+        return $this->isItbmsExempt() ? ItbmsRateResolver::exemptRate() : ItbmsRateResolver::defaultRate();
     }
 
     /** REQ-045: neto + ITBMS. */
@@ -308,7 +395,7 @@ class Quote extends Model
 
     /**
      * REQ-047/REQ-086: campos obligatorios — Cliente Master, Subcliente, RUC,
-     * Proyecto, Descripción, Arquitecto, al menos 1 Contacto, al menos 1 fecha de
+     * Proyecto, Descripción, al menos 1 Contacto, al menos 1 fecha de
      * entrega, al menos 1 ítem en Partidas. "Generar" (REQ-047) exige los 3 últimos
      * ($requireItems=true, $requireContacts=true por defecto); "Guardar borrador"
      * (REQ-086) los relaja — un borrador puede quedar sin productos NI contacto.
@@ -340,7 +427,9 @@ class Quote extends Model
         if ($this->sub_client_id === null) {
             $errors[] = 'Subcliente';
         }
-        if (empty($this->ruc)) {
+        // SCRUM-1003 — un SubCliente Consumidor Final (`02`) no tiene RUC ni cédula: no se exige. Sin esto ningún Consumidor Final
+        // podía cotizarse y, sin cotización, no hay pedido ni factura (hallazgo de la Senior Review).
+        if (empty($this->ruc) && $this->subClient?->receptor_tipo !== ReceptorTipo::CONSUMIDOR_FINAL) {
             $errors[] = 'RUC / Cédula'; // SCRUM-796 (secc. 8) — rename de label, mismo campo/regla
         }
         if ($this->sales_project_id === null) {
@@ -349,9 +438,11 @@ class Quote extends Model
         if (empty($this->description)) {
             $errors[] = 'Descripción';
         }
-        if ($this->architect_id === null) {
-            $errors[] = 'Arquitecto';
-        }
+        // SCRUM-873 — "Arquitecto" ya NO es obligatorio para guardar/generar: el campo
+        // está asociado a una comisión que no siempre existe (ArchitectCommissionService
+        // ya trata architect_id=null como "sin comisión de arquitecto", no como error —
+        // ver `where q.architect_id is not null` ahí). Cuando SÍ se completa, el cálculo
+        // de comisión sigue funcionando exactamente igual que antes.
         if ($requireContacts && $this->contacts->isEmpty()) {
             $errors[] = 'Contacto';
         }
@@ -448,6 +539,20 @@ class Quote extends Model
         }
 
         return 'sent';
+    }
+
+    /**
+     * SCRUM-1121 — asociados de una cotización que TODAVÍA NO tiene proyecto (borrador); con proyecto, los asociados viven en el proyecto
+     * (ver `ProjectAssociateService`).
+     *
+     * @return BelongsToMany<Architect, $this>
+     */
+    public function draftAssociates(): BelongsToMany
+    {
+        $tenant = Tenant::current();
+        $pivot  = $tenant !== null ? "{$tenant->slug}_ventas_diseno.quote_associates" : 'quote_associates';
+
+        return $this->belongsToMany(Architect::class, $pivot, 'quote_id', 'architect_id')->withTimestamps()->orderBy('name');
     }
 
     /** @return BelongsToMany<SubClientContact, $this> */

@@ -14,7 +14,9 @@ use App\Modules\Bodega\Events\OrderDispatched;
 use App\Modules\Bodega\Events\OrderSplit;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderDocument;
+use App\Modules\Bodega\Services\DeliveryService;
 use App\Modules\Notifications\Models\NotificationSend;
+use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
@@ -59,10 +61,53 @@ class DeliveryFlowTest extends FeatureTestCase
             OrderDocument::TIPO_GUIA_ENTREGA,
             OrderDocument::where('order_id', $order->id)->value('tipo'),
         );
-        $this->assertNotNull(
-            NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ORDER_READY_TO_INVOICE)
-                ->where('source_ref', "order:{$order->id}")->first(),
-        );
+        $facturar = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ORDER_READY_TO_INVOICE)
+            ->where('source_ref', "order:{$order->id}")->first();
+        $this->assertNotNull($facturar);
+        // SCRUM-1167 — el clic de la campana lleva a Facturación.
+        $this->assertSame('/admin-contab/facturacion', $facturar->content['cta_url'] ?? null);
+    }
+
+    /**
+     * SCRUM-914 (hallazgo de Pre-QA, 2026-09-13) — `OrderDocumentService::generateGuiaEntrega()`
+     * se llamaba ANTES de `transitionStage(..., STAGE_POR_DESPACHAR, ...)`, así que la guía
+     * siempre se generaba con `$order->stage` todavía en 'packing' — impreso tal cual en
+     * "Estado de la entrega: {{ $order->stage }}" del PDF, sin importar a qué etapa avanzara el
+     * pedido después. Verifica el ORDEN real interceptando la llamada real a
+     * `OrderDocumentService::generateGuiaEntrega()` dentro del flujo HTTP completo de
+     * `DeliveryService::registerDelivery()` — un test que solo mirara el `stage` final de
+     * `$order` (como el test de arriba) no puede distinguir "se generó antes" de "se generó
+     * después", ambos terminan en 'por_despachar'.
+     */
+    public function test_registrar_entrega_genera_la_guia_con_el_pedido_ya_en_por_despachar(): void
+    {
+        $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
+        $item = $order->items->first();
+
+        // `OrderDocumentService` es `final` (no se puede mockear parcialmente contra el
+        // type-hint del constructor de `DeliveryService`) — en vez de eso, se usa el hook real de
+        // Eloquent `OrderDocument::creating()` (se dispara DENTRO de
+        // `generateGuiaEntrega()->$order->documents()->create([...])`, misma transacción) para
+        // leer el `stage` real del pedido en BD en el momento EXACTO en que se crea el documento.
+        $capturedStage = null;
+        OrderDocument::creating(function () use ($order, &$capturedStage) {
+            $capturedStage = Order::find($order->id)?->stage;
+        });
+
+        try {
+            $this->grantBodegaPermissions('liderbodega@test.com');
+            $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+            $this->withHeaders($this->authHeaders($token))
+                ->postJson("/api/bodega/orders/{$order->id}/register-delivery", [
+                    'items' => [['order_item_id' => $item->id, 'qty_delivered' => 5]],
+                ])
+                ->assertStatus(200);
+        } finally {
+            OrderDocument::flushEventListeners();
+        }
+
+        $this->assertSame(Order::STAGE_POR_DESPACHAR, $capturedStage);
     }
 
     /** REQ-324 RN2 — motivo obligatorio por artículo si la entrega quedó parcial. */
@@ -85,7 +130,11 @@ class DeliveryFlowTest extends FeatureTestCase
     {
         Event::fake([OrderSplit::class]);
 
-        $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
+        // SCRUM-929 — la tarjeta Faltante hereda vínculo a la cotización y precio del ítem padre.
+        $quoteItemId = self::uniqueTestNumber();
+        $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], [
+            'qty_requested' => 5, 'qty_picked' => 5, 'quote_item_id' => $quoteItemId, 'unit_price' => 87.25,
+        ]);
         $item = $order->items->first();
         $this->grantBodegaPermissions('liderbodega@test.com');
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
@@ -102,8 +151,61 @@ class DeliveryFlowTest extends FeatureTestCase
         $this->assertSame(Order::STAGE_ASIGNADO, $faltante->stage);
         $this->assertSame(2, $faltante->items->first()->qty_requested);
         $this->assertSame($order->id, $faltante->family_id);
+        $this->assertSame($quoteItemId, $faltante->items->first()->quote_item_id);
+        $this->assertSame(87.25, $faltante->items->first()->unit_price);
+        // Lo entregado queda en el ítem original, con su vínculo intacto: es lo que se factura.
+        $this->assertSame(3, $item->fresh()->qty_delivered);
+        $this->assertSame($quoteItemId, $item->fresh()->quote_item_id);
 
         Event::assertDispatched(OrderSplit::class);
+    }
+
+    // SCRUM-1148 — el motivo/comentario del artículo pendiente queda persistido y se expone en el detalle
+    // de AMBAS tarjetas (la original ya despachada parcialmente y la Faltante), con el artículo correcto.
+    public function test_comentario_del_articulo_pendiente_se_conserva_y_se_expone_tras_el_despacho_parcial(): void
+    {
+        $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
+        $item = $order->items->first();
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+        $headers = $this->authHeaders($token);
+
+        $this->withHeaders($headers)
+            ->postJson("/api/bodega/orders/{$order->id}/register-delivery", [
+                'items' => [['order_item_id' => $item->id, 'qty_delivered' => 3, 'motivo' => 'otra', 'motivo_detalle' => 'Llega el martes con el proveedor']],
+            ])
+            ->assertStatus(200);
+
+        $this->makeCurrentTenant();
+        $faltanteId = Order::where('order_type', Order::ORDER_TYPE_FALTANTE)->where('order_number', $order->order_number)->value('id');
+        $this->assertNotNull($faltanteId);
+
+        foreach ([$order->id, $faltanteId] as $orderId) {
+            $detail = $this->withHeaders($headers)->getJson("/api/bodega/orders/{$orderId}")->assertStatus(200);
+            $this->assertSame('otra:Llega el martes con el proveedor', $detail->json('items.0.shortage_reason'));
+            $this->assertSame('REF-TEST', $detail->json('items.0.reference'), 'El comentario corresponde al artículo registrado.');
+        }
+    }
+
+    // SCRUM-1148 (Pre-QA) — el texto libre de "Otra" tiene tope (shortage_reason es varchar(255) con prefijo "otra:"):
+    // 250 caracteres pasan, 251 devuelven 422 con el campo señalado (antes 500).
+    public function test_motivo_detalle_largo_se_valida_en_vez_de_devolver_500(): void
+    {
+        $order = $this->makeOrder(['stage' => Order::STAGE_PACKING], ['qty_requested' => 5, 'qty_picked' => 5]);
+        $item = $order->items->first();
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read', 'bodega.write']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+        $headers = $this->authHeaders($token);
+        $payload = fn (int $len) => ['items' => [['order_item_id' => $item->id, 'qty_delivered' => 3, 'motivo' => 'otra', 'motivo_detalle' => str_repeat('a', $len)]]];
+
+        $this->withHeaders($headers)
+            ->postJson("/api/bodega/orders/{$order->id}/register-delivery", $payload(251))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['items.0.motivo_detalle']);
+
+        $this->withHeaders($headers)
+            ->postJson("/api/bodega/orders/{$order->id}/register-delivery", $payload(250))
+            ->assertStatus(200);
     }
 
     /**
@@ -163,6 +265,25 @@ class DeliveryFlowTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/assign-courier", ['courier_id' => $courierId])
             ->assertStatus(403);
+    }
+
+    // SCRUM-1142 — "Personal de Bodega" (retiro directo del cliente) se asigna como cualquier repartidor,
+    // se guarda y deja pasar el gate de despacho ("Falta asignar el repartidor").
+    public function test_asignar_personal_de_bodega_como_repartidor_se_guarda_y_permite_despachar(): void
+    {
+        $order = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR]);
+        $personalId = $this->userIdByEmail('personalbodega@test.com');
+        $this->grantBodegaPermissions('liderbodega@test.com');
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/orders/{$order->id}/assign-courier", ['courier_id' => $personalId])
+            ->assertStatus(200)
+            ->assertJsonPath('courier_id', $personalId);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame($personalId, Order::findOrFail($order->id)->courier_id);
+        $this->assertSame([], app(DeliveryService::class)->blockingReasonsForDispatch(Order::findOrFail($order->id)));
     }
 
     public function test_asignar_repartidor_propaga_a_hermano_de_familia_en_por_despachar(): void
@@ -240,7 +361,9 @@ class DeliveryFlowTest extends FeatureTestCase
             ->assertJsonFragment(['message' => 'Falta asignar el repartidor.']);
     }
 
-    public function test_despachar_sin_factura_retorna_422(): void
+    /** SCRUM-860 — REQ-328 (bloqueo de despacho sin factura) se elimina a propósito: Admin ya
+     *  recibe la notificación de facturación desde registerDelivery(), no hace falta bloquear acá. */
+    public function test_despachar_sin_factura_ya_no_bloquea(): void
     {
         $courierId = $this->userIdByEmail('transporte@test.com');
         $order = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $courierId, 'invoice_ready' => false]);
@@ -249,19 +372,20 @@ class DeliveryFlowTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/dispatch")
-            ->assertStatus(422)
-            ->assertJsonFragment(['message' => 'Falta la factura de Administración.']);
+            ->assertStatus(200)
+            ->assertJsonPath('order.stage', Order::STAGE_DESPACHADO);
     }
 
-    /** REQ-319 RN3/REQ-328 RN3 — despacho conjunto SOLO si el hermano también tiene repartidor+factura propios. */
-    public function test_despachar_arrastra_hermano_listo_pero_no_al_que_le_falta_factura(): void
+    /** REQ-319 RN3 — despacho conjunto SOLO si el hermano también tiene repartidor propio.
+     *  SCRUM-860 — un hermano sin factura ya se despacha igual (REQ-328 eliminado). */
+    public function test_despachar_arrastra_hermano_listo_incluso_sin_factura(): void
     {
         Event::fake([OrderDispatched::class]);
 
         $courierId = $this->userIdByEmail('transporte@test.com');
         $root = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'courier_id' => $courierId, 'invoice_ready' => true]);
-        $readySibling = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'family_id' => $root->id, 'courier_id' => $courierId, 'invoice_ready' => true]);
-        $notReadySibling = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'family_id' => $root->id, 'courier_id' => $courierId, 'invoice_ready' => false]);
+        $readySiblingSinFactura = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'family_id' => $root->id, 'courier_id' => $courierId, 'invoice_ready' => false]);
+        $siblingSinRepartidor = $this->makeOrder(['stage' => Order::STAGE_POR_DESPACHAR, 'family_id' => $root->id, 'courier_id' => null, 'invoice_ready' => true]);
 
         $this->grantBodegaPermissions('liderbodega@test.com');
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
@@ -272,12 +396,12 @@ class DeliveryFlowTest extends FeatureTestCase
             ->assertJsonPath('order.stage', Order::STAGE_DESPACHADO);
 
         $this->makeCurrentTenant();
-        $this->assertSame(Order::STAGE_DESPACHADO, $readySibling->fresh()->stage, 'El hermano listo se despacha junto.');
-        $this->assertSame(Order::STAGE_POR_DESPACHAR, $notReadySibling->fresh()->stage, 'El que no tiene factura se queda esperando.');
+        $this->assertSame(Order::STAGE_DESPACHADO, $readySiblingSinFactura->fresh()->stage, 'El hermano sin factura se despacha igual (SCRUM-860).');
+        $this->assertSame(Order::STAGE_POR_DESPACHAR, $siblingSinRepartidor->fresh()->stage, 'El que no tiene repartidor se queda esperando.');
 
         $dispatchedIds = collect($response->json('dispatched_siblings'))->pluck('id')->all();
-        $this->assertContains($readySibling->id, $dispatchedIds);
-        $this->assertNotContains($notReadySibling->id, $dispatchedIds);
+        $this->assertContains($readySiblingSinFactura->id, $dispatchedIds);
+        $this->assertNotContains($siblingSinRepartidor->id, $dispatchedIds);
 
         Event::assertDispatchedTimes(OrderDispatched::class, 2);
     }

@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string      $status
  * @property int|null    $requested_by
  * @property int|null    $approved_by
+ * @property int|null    $rejected_by
  * @property int|null    $generated_order_id
  * @property \Carbon\Carbon $created_at
  */
@@ -37,7 +38,7 @@ class ReplacementRequest extends Model
     /** @var list<string> */
     protected $fillable = [
         'original_catalog_product_id', 'sales_project_id', 'proposed_catalog_product_id',
-        'margin_percent', 'status', 'requested_by', 'approved_by', 'generated_order_id',
+        'margin_percent', 'status', 'requested_by', 'approved_by', 'rejected_by', 'generated_order_id',
     ];
 
     /** @return array<string, string> */
@@ -78,6 +79,18 @@ class ReplacementRequest extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function rejecter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     /** @return BelongsTo<PurchaseOrder, $this> */

@@ -30,6 +30,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
     {
         parent::setUp();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        (new \Database\Seeders\ServiciosDemoSeeder)->seedParaTests();
         Carbon::setTestNow(Carbon::parse(self::FROZEN_NOW, 'UTC'));
     }
 
@@ -39,9 +40,16 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
         parent::tearDown();
     }
 
+    /**
+     * SCRUM-883 — antes forzaba ->utc() porque Postgres interpretaba las columnas timestamptz
+     * bajo su timezone de sesión (server default, UTC) sin importar el timezone de PHP. Ahora que
+     * config/database.php sincroniza la sesión de Postgres a America/Panama (mismo default que
+     * config('app.timezone')), Postgres interpreta el string naive resultante como hora de
+     * Panamá directamente — convertir a UTC acá duplicaría el offset y correría el valor 5h.
+     */
     private function panama(string $time): Carbon
     {
-        return Carbon::parse('2026-08-10 '.$time, 'America/Panama')->utc();
+        return Carbon::parse('2026-08-10 '.$time, 'America/Panama');
     }
 
     private function carlosId(): int
@@ -170,7 +178,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
                 'satisfaccion_promedio' => 5.0, 'incidencias_puntualidad' => 0, 'calificacion_actitud' => 5.0,
             ])
             ->assertStatus(200)
-            ->assertJsonPath('data.updated_by', 'Daniela');
+            ->assertJsonPath('data.updated_by', 'Gerencia');
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame(1, CommissionCapture::where('internal_technician_id', $id)->count());

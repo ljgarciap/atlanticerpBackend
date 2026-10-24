@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Shared\Support\MemoryLimit;
 use App\Modules\Legacy\Contracts\AlbaranExtractorContract;
 use App\Modules\Legacy\Data\AlbaranRow;
 use App\Modules\Legacy\Models\SyncRun;
 use App\Modules\Legacy\Services\AlbaranMatcher;
 use App\Modules\Legacy\Services\AlbaranStagingLoader;
+use App\Modules\Legacy\Services\SyncRunDetailRecorder;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -58,6 +60,7 @@ final class LegacySyncAlbaranesCommand extends Command
         private readonly AlbaranExtractorContract $extractor,
         private readonly AlbaranStagingLoader $stagingLoader,
         private readonly AlbaranMatcher $matcher,
+        private readonly SyncRunDetailRecorder $detailRecorder,
     ) {
         parent::__construct();
     }
@@ -71,7 +74,7 @@ final class LegacySyncAlbaranesCommand extends Command
         // docblock de la clase, "ITEMS PAGINADOS" — 512M sigue siendo margen de sobra para
         // cabeceras + una página de items a la vez, muy lejos del límite real del host que causó
         // el OOM real cuando SÍ se traían todos los items juntos.
-        ini_set('memory_limit', '512M');
+        MemoryLimit::atLeast('512M');
 
         $tenantSlug = (string) $this->option('tenant');
         $isDryRun   = (bool) $this->option('dry-run');
@@ -164,7 +167,7 @@ final class LegacySyncAlbaranesCommand extends Command
 
         $status = $matchResult['errores'] > 0 ? SyncRun::STATUS_PARTIAL : SyncRun::STATUS_SUCCESS;
 
-        $this->recordRun(
+        $syncRun = $this->recordRun(
             $startedAt, $start,
             extraidos: count($albaranes),
             staged: $stagingCounts['albaranes'],
@@ -175,12 +178,14 @@ final class LegacySyncAlbaranesCommand extends Command
             status: $status,
         );
 
+        $this->detailRecorder->record($syncRun, $matchResult['details']);
+
         return self::SUCCESS;
     }
 
     /**
      * @param array{albaranes: int, items: int, albaran_ids: list<int>} $stagingCounts
-     * @param array{matched: int, orphan: int, errores: int}            $matchResult
+     * @param array{matched: int, orphan: int, errores: int, details: list<array{referencia: string, status: string, motivo: string}>} $matchResult
      */
     private function renderReport(int $albaranesExtraidos, int $itemsExtraidos, array $stagingCounts, array $matchResult): void
     {
@@ -206,8 +211,8 @@ final class LegacySyncAlbaranesCommand extends Command
         int $excluidos,
         int $errores,
         string $status,
-    ): void {
-        SyncRun::query()->create([
+    ): SyncRun {
+        return SyncRun::query()->create([
             'entidad'     => 'albaranes',
             'extraidos'   => $extraidos,
             'staged'      => $staged,

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
+use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
+use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Services\CommissionOrderService;
 use App\Modules\Bodega\Models\Order;
@@ -28,6 +30,8 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     private const FELIX_EMAIL = 'contabilidad@test.com';
 
+    private const YANETH_EMAIL = 'asistenteadministrativa@test.com';
+
     private const DESIGNER_EMAIL = 'designer@atlantic.test';
 
     protected function setUp(): void
@@ -44,6 +48,11 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     private function loginAsFelix(): string
     {
         return $this->loginAs(self::FELIX_EMAIL, self::FELIX_EMAIL, 'lider_admin_contab');
+    }
+
+    private function loginAsYaneth(): string
+    {
+        return $this->loginAs(self::YANETH_EMAIL, self::YANETH_EMAIL, 'asistente_administrativa');
     }
 
     /**
@@ -132,7 +141,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         // RN2 REQ-501: $3,000 de $6,600 — abono parcial, nunca dispara comisión.
         $this->assertSame(
             CommissionOrderService::ESTADO_PENDIENTE_COBRO,
-            $service->estadoFor($mes, 6600.0, 3000.0),
+            $service->estadoFor($mes, 6600.0, 3000.0, 6600.0),
         );
     }
 
@@ -144,7 +153,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         // RN3 REQ-501: 100% cobrado, mes de cierre = mes en curso → ganada pero no liquidada.
         $this->assertSame(
             CommissionOrderService::ESTADO_POR_PAGAR,
-            $service->estadoFor($mes, 6600.0, 6600.0),
+            $service->estadoFor($mes, 6600.0, 6600.0, 6600.0),
         );
     }
 
@@ -156,7 +165,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         // RN4/RN5 REQ-501: mes de cierre anterior al mes en curso + 100% cobrado → liquidada.
         $this->assertSame(
             CommissionOrderService::ESTADO_PAGADO,
-            $service->estadoFor($mesPasado, 6600.0, 6600.0),
+            $service->estadoFor($mesPasado, 6600.0, 6600.0, 6600.0),
         );
     }
 
@@ -165,7 +174,25 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $service = app(CommissionOrderService::class);
         $this->assertSame(
             CommissionOrderService::ESTADO_PENDIENTE_COBRO,
-            $service->estadoFor(null, null, 0.0),
+            $service->estadoFor(null, null, 0.0, 0.0),
+        );
+    }
+
+    /**
+     * SCRUM-929 (B3b, decisión de Luis 2026-09-19) — mismo bug que en Externas: con la regla vieja
+     * (solo cobrado vs facturado, sin comparar contra el pedido completo), tras cobrar la 1ª parcial
+     * el pedido pasaba a `por_pagar`/`pagado` con base parcial y, al emitirse la 2ª factura, volvía
+     * a `pendiente_cobro` — una comisión ya "pagada" retrocedía. Ahora exige que lo facturado
+     * alcance el pedido completo antes de dejar `pendiente_cobro`.
+     */
+    public function test_estado_for_una_parcial_cobrada_del_pedido_permanece_pendiente_de_cobro(): void
+    {
+        $service = app(CommissionOrderService::class);
+        $mes = CarbonImmutable::now()->startOfMonth();
+
+        $this->assertSame(
+            CommissionOrderService::ESTADO_PENDIENTE_COBRO,
+            $service->estadoFor($mes, 321.0, 321.0, 963.0),
         );
     }
 
@@ -306,6 +333,39 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $vendedores = $response->json('vendedores');
         $this->assertCount(1, $vendedores);
         $this->assertSame($vendorId, $vendedores[0]['vendedor_id']);
+    }
+
+    /**
+     * SCRUM-881 (corrección de Daniela, 2026-09-09) — regresión del bug real: Asistente
+     * Administrativa (Yaneth) quedaba auto-filtrada a su propia fila, como si fuera vendedora
+     * (`can_view_team` en `false` para su rol en `admin_contab`, ver
+     * `AdminContRoleVisibilityBackfillSeeder`). Debe ver la tabla COMPLETA de vendedores (11
+     * reales + el fixture de este test), igual que Felix, con `puede_ver_equipo`/`puede_exportar`
+     * en `true` y los indicadores agregados sobre TODOS los vendedores, no solo ella.
+     */
+    public function test_yaneth_ve_la_tabla_completa_de_vendedores_no_solo_su_propia_fila(): void
+    {
+        $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
+        $this->makeCommissionableOrder($designerId, 20000.0, 20000.0);
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
+
+        $token = $this->loginAsYaneth();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/internal')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('puede_ver_equipo', true);
+        $response->assertJsonPath('puede_exportar', true);
+        // total_pedidos_mes agregado sobre TODOS los vendedores (50000 = 20000 + 30000), no solo
+        // el de Yaneth (que no tiene ningún pedido propio acá — confirma que no se auto-filtró).
+        $response->assertJsonPath('total_pedidos_mes', 50000);
+
+        $vendedores = collect($response->json('vendedores'));
+        $this->assertGreaterThan(1, $vendedores->count(), 'Yaneth debe ver la tabla completa, no una sola fila.');
+        $this->assertNotNull($vendedores->firstWhere('vendedor_id', $designerId), 'Debe incluir vendedores que no son ella misma.');
+        $this->assertNotNull($vendedores->firstWhere('vendedor_id', $felixId), 'Debe incluir vendedores que no son ella misma.');
     }
 
     public function test_export_prohibido_para_un_vendedor(): void
@@ -478,12 +538,65 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             ->getJson('/api/admin-contab/commissions/internal?vendedor_id='.$vendorA)
             ->assertStatus(200)->json();
 
-        foreach (['total_pedidos_mes', 'ya_pagada', 'por_pagar', 'pendiente_cobro'] as $key) {
+        // SCRUM-904 — el banner de "se pagará automáticamente" sigue la misma regla que las 4
+        // tarjetas: no se angosta por el filtro manual de vendedor_id (solo por falta de team-view).
+        foreach (['total_pedidos_mes', 'ya_pagada', 'por_pagar', 'pendiente_cobro', 'banner_comisiones_count', 'banner_comisiones_total'] as $key) {
             $this->assertSame($unfiltered[$key], $filtered[$key], "La tarjeta {$key} no debe cambiar con el filtro de vendedor.");
         }
 
         $this->assertCount(1, $filtered['vendedores']);
         $this->assertSame($vendorA, $filtered['vendedores'][0]['vendedor_id']);
+    }
+
+    /**
+     * SCRUM-904 — un Vendedor/Diseñador sin team-view debe ver el banner "se pagará
+     * automáticamente al cierre de mes" calculado SOLO sobre sus propias comisiones "por pagar",
+     * nunca el total agregado de todos los vendedores (bug real: Vendedor Disenador Test 2 con $0.00 "por pagar"
+     * veía el mismo texto "4 comisión(es) por USD 876.04" que Asistente Administrativa).
+     */
+    public function test_banner_auto_pago_se_angosta_al_vendedor_sin_view_team_scrum904(): void
+    {
+        $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+
+        // Designer: pedido propio, cobrado, "por pagar" — 8000 * 1.5% = 120.
+        $this->makeCommissionableOrder($designerId, 8000.0, 8000.0);
+        // Otro vendedor con una comisión "por pagar" grande — NO debe filtrarse al banner del designer.
+        $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
+
+        $token = $this->loginAsDesigner();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/internal')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('banner_comisiones_count', 1);
+        $this->assertEqualsWithDelta(120.0, $response->json('banner_comisiones_total'), 0.01);
+    }
+
+    /**
+     * SCRUM-904 — caso de prueba explícito del ticket: un vendedor sin NINGUNA comisión "por
+     * pagar" (todo en $0.00) no debe ver el banner reflejando comisiones/montos de otro vendedor.
+     */
+    public function test_banner_auto_pago_en_cero_no_muestra_comisiones_ajenas_scrum904(): void
+    {
+        $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+
+        // Designer: facturado pero todavía NO cobrado → pendiente_cobro, no cuenta para el banner.
+        $this->makeCommissionableOrder($designerId, 8000.0, 0.0);
+        // Felix: comisión "por pagar" real de otro vendedor — no debe "prestarse" al designer.
+        $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
+
+        $token = $this->loginAsDesigner();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/internal')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('banner_comisiones_count', 0);
+        // json_encode(0.0) serializa como `0` (sin JSON_PRESERVE_ZERO_FRACTION) → json_decode lo
+        // trae como int(0), no float(0.0); assertSame con tipos estrictos fallaría sin ser un bug
+        // real. Mismo patrón de delta ya usado en el resto del archivo (ver línea 551).
+        $this->assertEqualsWithDelta(0.0, $response->json('banner_comisiones_total'), 0.01);
     }
 
     // ==== Batch 15 (SCRUM-580→584, REQ-503→507) ====================================
@@ -613,6 +726,9 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             $this->assertSame(10000, $pedido['total_pedido']);
             $this->assertSame(20000, $pedido['total_pedido_completo']);
             $this->assertCount(1, $pedido['compartido_con']);
+            // SCRUM-906 — la comisión se calcula sobre la parte YA dividida (10000, 1.5%=150),
+            // nunca sobre el monto completo del pedido (20000, que daría 300 a cada uno).
+            $this->assertSame(150, $pedido['monto_comision']);
         }
     }
 
@@ -633,6 +749,70 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $pedido = collect($row['groups'][0]['pedidos'])->first();
         $this->assertSame(10000, $pedido['total_pedido']); // 30000 / 3
         $this->assertCount(2, $pedido['compartido_con']);
+        // SCRUM-906 — 10000 (parte dividida) * 1.5% = 150, no 30000 * 1.5% = 450 replicado a cada uno.
+        $this->assertSame(150, $pedido['monto_comision']);
+    }
+
+    /**
+     * SCRUM-906 (corrección) — caso real reportado: proyecto de $10,700 compartido entre 3
+     * responsables (Gerencia Test 3, Designer Demo, Vendedor Disenador Test 5 en el ticket original), comisión
+     * 1.5%. Antes del fix, cada uno recibía $160.50 (comisión sobre el monto COMPLETO,
+     * replicada), sumando $481.50 — 3 veces la comisión real de ese proyecto. Con el fix, cada
+     * responsable recibe ~$53.50 (10700/3 * 1.5%), sumando $160.50 en total — la misma comisión
+     * que generaría el proyecto con un solo responsable.
+     */
+    public function test_proyecto_compartido_no_triplica_la_comision_caso_real_scrum906(): void
+    {
+        $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+
+        $this->makeCommissionableOrder($designerId, 10700.0, 10700.0, null, [$felixId, $markId]);
+
+        $token = $this->loginAsMark();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/internal')
+            ->assertStatus(200);
+
+        $vendedores = collect($response->json('vendedores'));
+        $totalComision = 0.0;
+        foreach ([$designerId, $felixId, $markId] as $id) {
+            $row = $vendedores->firstWhere('vendedor_id', $id);
+            $pedido = collect($row['groups'][0]['pedidos'])->first();
+            $this->assertEqualsWithDelta(53.5, $pedido['monto_comision'], 0.05, "Responsable {$id} debería recibir ~\$53.50, no \$160.50.");
+            $totalComision += $pedido['monto_comision'];
+        }
+
+        $this->assertEqualsWithDelta(160.5, $totalComision, 0.05, 'La suma repartida entre los 3 debe ser igual a la comisión de UN proyecto de $10,700, no el triple.');
+    }
+
+    /** SCRUM-906 AC — la lógica de división/prorrateo se mantiene correcta también con 4+ responsables. */
+    public function test_proyecto_compartido_divide_la_comision_entre_4_responsables_scrum906(): void
+    {
+        $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
+        $felixId = $this->userIdByEmail(self::FELIX_EMAIL);
+        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        $neilId = $this->userIdByEmail('vendedordisenador2@test.com');
+
+        // 40000 / 4 = 10000 c/u (tramo 1.5%) → 150 de comisión c/u, 600 en total.
+        $this->makeCommissionableOrder($designerId, 40000.0, 40000.0, null, [$felixId, $markId, $neilId]);
+
+        $token = $this->loginAsMark();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/internal')
+            ->assertStatus(200);
+
+        $vendedores = collect($response->json('vendedores'));
+        $totalComision = 0.0;
+        foreach ([$designerId, $felixId, $markId, $neilId] as $id) {
+            $row = $vendedores->firstWhere('vendedor_id', $id);
+            $pedido = collect($row['groups'][0]['pedidos'])->first();
+            $this->assertSame(10000, $pedido['total_pedido']);
+            $this->assertSame(150, $pedido['monto_comision']);
+            $totalComision += $pedido['monto_comision'];
+        }
+
+        $this->assertSame(600.0, $totalComision);
     }
 
     // ---- REQ-507 — estado de cuenta de comisiones ----
@@ -704,5 +884,48 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->assertStringContainsString('application/pdf', (string) $response->headers->get('Content-Type'));
+    }
+
+    // ---- SCRUM-879 — comisiones internas como salida de caja ----
+
+    public function test_879_job_genera_un_movimiento_de_caja_por_vendedor_y_mes_cerrado(): void
+    {
+        AdminContFiscalSettings::current()->update(['arqueo_tracking_start_date' => CarbonImmutable::now()->subMonths(6)->toDateString()]);
+        $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
+        $mesCierre = CarbonImmutable::now()->subMonth()->startOfMonth();
+
+        // Pedido cobrado 100% cuyo mes de cierre ya pasó → comisión "pagada".
+        $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, Carbon::instance($mesCierre));
+
+        $created = app(CommissionOrderService::class)->settleInternalCommissionsToCashLedger();
+        $this->assertSame(1, $created);
+
+        $mov = AdminContBankMovement::where('source_type', AdminContBankMovement::SOURCE_INTERNAL_COMMISSION)->first();
+        $this->assertNotNull($mov);
+        $this->assertNull($mov->bank_account_id);
+        $this->assertSame('comision', $mov->tipo);
+        // Fecha = día 1 del mes siguiente al de cierre (decisión E-5).
+        $this->assertSame($mesCierre->addMonth()->startOfMonth()->toDateString(), $mov->fecha->toDateString());
+        $this->assertGreaterThan(0, (float) $mov->monto);
+
+        // Idempotente.
+        $this->assertSame(0, app(CommissionOrderService::class)->settleInternalCommissionsToCashLedger());
+        $this->assertSame(1, AdminContBankMovement::where('source_type', AdminContBankMovement::SOURCE_INTERNAL_COMMISSION)->count());
+    }
+
+    public function test_879_job_no_toca_meses_anteriores_a_la_fecha_de_corte(): void
+    {
+        AdminContFiscalSettings::current()->update(['arqueo_tracking_start_date' => CarbonImmutable::now()->subMonth()->startOfMonth()->toDateString()]);
+        $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
+        // Mes de cierre 3 meses atrás — antes del corte.
+        $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, Carbon::instance(CarbonImmutable::now()->subMonths(3)->startOfMonth()));
+
+        $this->assertSame(0, app(CommissionOrderService::class)->settleInternalCommissionsToCashLedger());
+        $this->assertSame(0, AdminContBankMovement::where('source_type', AdminContBankMovement::SOURCE_INTERNAL_COMMISSION)->count());
+    }
+
+    public function test_879_comando_settle_internal_corre_sin_error(): void
+    {
+        $this->artisan('commissions:settle-internal')->assertSuccessful();
     }
 }

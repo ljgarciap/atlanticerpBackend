@@ -165,6 +165,30 @@ class TicketBatch3Part2Test extends FeatureTestCase
         $this->assertNotContains('Torre Business Park', $names);
     }
 
+    /**
+     * Rebote SCRUM-917 (Daniela, 2026-09-14) — reproduce el bug real: con más de 200
+     * Clientes Master, uno cuyo nombre cae alfabéticamente DESPUÉS del top 200 nunca entraba
+     * al pool de búsqueda de la versión vieja (`ClientLookupService::searchMasterClients()`
+     * pre-cargaba `LIMIT 200` ordenado por nombre y recién ahí filtraba en PHP). Confirmado
+     * contra dev.atlanticerp.ai: 7568 Clientes Master reales, muy por encima del límite viejo.
+     */
+    public function test_buscar_master_clients_encuentra_uno_fuera_del_limite_alfabetico_viejo(): void
+    {
+        for ($i = 0; $i < 250; $i++) {
+            MasterClient::create(['name' => sprintf('Cliente Master %03d', $i)]);
+        }
+        MasterClient::create(['name' => 'ZZZ Cliente Master Prueba Guia de Entrega 2']);
+
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/servicios/lookup/master-clients?'.http_build_query(['search' => 'Guia de Entrega']))
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('name')->all();
+        $this->assertContains('ZZZ Cliente Master Prueba Guia de Entrega 2', $names);
+    }
+
     /** RN3 — solo subclientes del Master elegido, nunca de otro. */
     public function test_buscar_sub_clients_acotado_al_master(): void
     {

@@ -7,6 +7,7 @@ namespace App\Modules\Bodega\Services;
 use App\Models\User;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Bodega\Events\OrderCreated;
+use App\Modules\Bodega\Events\OrderSplit;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderStageHistory;
 use App\Modules\Bodega\Models\WarehouseAssistantMapping;
@@ -14,6 +15,7 @@ use App\Modules\Notifications\Models\NotificationSend;
 use App\Modules\Notifications\Services\NotificationService;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\PipelineCardContact;
+use App\Modules\VentasDiseno\Models\PipelineCardProductDelivery;
 use App\Modules\VentasDiseno\Models\PricingSettings;
 use App\Modules\VentasDiseno\Models\Quote;
 use App\Modules\VentasDiseno\Models\QuoteItem;
@@ -24,8 +26,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * SCRUM-329 Oleada A / Batch A1 (REQ-307/308) — crea la tarjeta de Pedido en Bodega cuando una
- * cotización pasa a "Aprobado" en Ventas & Diseño. Único punto de entrada de esta lógica: el
- * listener `App\Modules\Bodega\Listeners\CreateOrderFromApprovedQuote` solo delega acá.
+ * cotización aprobada pasa a Pedido en Ventas & Diseño. Único punto de entrada de esta lógica: el
+ * `App\Modules\VentasDiseno\Services\PipelineService::passToOrder()` (SCRUM-1128) lo invoca.
  */
 final class OrderService
 {
@@ -41,6 +43,7 @@ final class OrderService
     public function __construct(
         private readonly OrderFolioService $folioService,
         private readonly NotificationService $notifications,
+        private readonly FamilyService $family,
     ) {}
 
     /**
@@ -86,52 +89,189 @@ final class OrderService
             ]);
         }
 
-        return DB::transaction(function () use ($card, $quote, $mapping, $sellerId): Order {
+        // SCRUM-875 (REQ-319) — cuando la cotización se aprueba con "Fecha de entrega Parcial" y 2+
+        // fechas, el pedido llega a Bodega dividido en una FAMILIA de tarjetas (una por fecha,
+        // ordenadas de la más cercana a la más lejana). `delivery_type` != 'partial', o 'partial'
+        // con 1 sola fecha → 1 tarjeta, comportamiento sin cambios.
+        //
+        // SCRUM-909 — completa lo de arriba: cada tarjeta de la familia lleva SOLO los productos
+        // asignados a SU fecha (`PipelineCardProductDelivery`, armado en el modal de Pipeline antes
+        // de aprobar) — ya no TODOS los ítems en cada una (esa era la decisión provisoria de Luis
+        // 2026-09-09, "el reparto lo define Bodega en el picking", superada por este ticket).
+        // `$productDateAssignments` vacío (nadie asignó nada — ej. tarjetas aprobadas antes de que
+        // este ticket existiera, o el gate de `PipelineController::changeStage()` no corrió por
+        // algún camino fuera del flujo normal) es el ÚNICO caso que cae de vuelta al
+        // comportamiento viejo (todos los ítems en cada tarjeta, `$allowedQuoteItemIds = null` —
+        // ver `createItemsFromQuote()`) — "no perder ningún producto" (REQ-308) pesa más que exigir
+        // una asignación que, en ese caso, nunca se hizo.
+        $partialDates = $card->delivery_type === 'partial'
+            ? $card->deliveryDates->sortBy('date')->values()
+            : collect();
+
+        $productDateAssignments = ($partialDates->count() >= 2 && $quote !== null)
+            ? PipelineCardProductDelivery::where('pipeline_card_id', $card->id)
+                ->pluck('pipeline_card_delivery_date_id', 'quote_item_id')
+                ->map(fn ($id) => (int) $id)
+            : collect();
+
+        // Ítems de la cotización sin ninguna fila de asignación (no debería pasar — el gate de
+        // aprobación ya lo exige — pero si pasa, van a la tarjeta de la fecha más cercana en vez de
+        // desaparecer silenciosamente de todo el pedido).
+        $unassignedItemIds = [];
+        if ($productDateAssignments->isNotEmpty() && $quote !== null) {
+            $allItemIds = $quote->parts->flatMap(fn (QuotePart $part) => $part->items)->pluck('id')->all();
+            $unassignedItemIds = array_values(array_diff($allItemIds, $productDateAssignments->keys()->all()));
+
+            if ($unassignedItemIds !== []) {
+                Log::warning('bodega.order.partial-products-without-date-assignment', [
+                    'pipeline_card_id' => $card->id,
+                    'quote_item_ids' => $unassignedItemIds,
+                ]);
+            }
+        }
+
+        return DB::transaction(function () use ($card, $quote, $mapping, $sellerId, $partialDates, $productDateAssignments, $unassignedItemIds): Order {
             $primaryContact = $card->contacts->first();
 
-            $order = Order::create([
+            $commonAttrs = [
                 'order_number' => $this->folioService->next(),
                 'pipeline_card_id' => $card->id,
                 'order_type' => Order::ORDER_TYPE_PEDIDO,
                 'stage' => Order::STAGE_ASIGNADO,
                 'assistant_id' => $mapping?->assistant_user_id,
-                'committed_delivery_date' => $card->deliveryDates->min('date'),
                 'customer_name' => $card->subClient->business_name ?? $card->masterClient?->name,
                 'customer_contact' => $this->formatContact($primaryContact),
                 'delivery_address' => $card->subClient?->delivery_address,
-            ]);
+            ];
 
-            if ($quote !== null) {
-                $this->createItemsFromQuote($order, $quote);
+            if ($partialDates->count() >= 2) {
+                /** @var list<Order> $members */
+                $members = [];
+                foreach ($partialDates as $index => $deliveryDate) {
+                    // null = sin ninguna asignación guardada → comportamiento viejo, todos los
+                    // ítems en cada tarjeta (ver docblock de arriba).
+                    /** @var list<int>|null $allowedQuoteItemIds */
+                    $allowedQuoteItemIds = null;
+                    if ($productDateAssignments->isNotEmpty()) {
+                        $allowedQuoteItemIds = array_values($productDateAssignments
+                            ->filter(fn (int $dateId): bool => $dateId === $deliveryDate->id)
+                            ->keys()
+                            ->all());
+
+                        if ($index === 0 && $unassignedItemIds !== []) {
+                            $allowedQuoteItemIds = array_values(array_unique([...$allowedQuoteItemIds, ...$unassignedItemIds]));
+                        }
+                    }
+
+                    $members[] = $this->createOrderRow([
+                        ...$commonAttrs,
+                        'committed_delivery_date' => $deliveryDate->date,
+                        // `family_id` se fija EN el create(), nunca en un update() posterior — el
+                        // índice único parcial `orders_pipeline_card_root_uq` (WHERE family_id IS
+                        // NULL) lo exige (ver docblock de FamilyService::attach()).
+                        'family_id' => $index === 0 ? null : $members[0]->id,
+                    ], $quote, $allowedQuoteItemIds);
+                }
+
+                $root = $members[0];
+                $this->family->attach($root, $root); // resecuencia toda la familia (sequence/total)
+
+                event(new OrderSplit(
+                    parentOrderId: $root->id,
+                    orderNumber: $root->order_number,
+                    childOrderIds: array_map(static fn (Order $o): int => $o->id, array_slice($members, 1)),
+                    tenant: $this->requiredTenantSlug(),
+                ));
+
+                $primaryOrder = $root;
+            } else {
+                $primaryOrder = $this->createOrderRow([
+                    ...$commonAttrs,
+                    'committed_delivery_date' => $card->deliveryDates->min('date'),
+                ], $quote);
             }
-
-            OrderStageHistory::create([
-                'order_id' => $order->id,
-                'from_stage' => null,
-                'to_stage' => Order::STAGE_ASIGNADO,
-                'changed_by' => null, // creación automática del sistema, sin usuario detrás del clic
-                'created_at' => now(),
-            ]);
-
-            event(new OrderCreated(
-                orderId: $order->id,
-                orderNumber: $order->order_number,
-                assistantId: $order->assistant_id,
-                tenant: $this->requiredTenantSlug(),
-            ));
 
             if ($mapping === null) {
                 Log::warning('bodega.order.created-without-assistant-mapping', [
-                    'order_id' => $order->id,
-                    'order_number' => $order->order_number,
+                    'order_id' => $primaryOrder->id,
+                    'order_number' => $primaryOrder->order_number,
                     'seller_user_id' => $sellerId,
                 ]);
 
-                $this->notifyBodegaLeadOfUnassignedOrder($order, $sellerId);
+                $this->notifyBodegaLeadOfUnassignedOrder($primaryOrder, $sellerId);
             }
 
-            return $order;
+            return $primaryOrder;
         });
+    }
+
+    /**
+     * Pedido gemelo de ICG que Bodega todavía debe despachar (los de la hoja «Completo»: nada entregado en ICG): entra como un
+     * pedido normal en «Asignado» — historial de etapa y `OrderCreated` para avisar al asistente — pero sin tarjeta del pipeline.
+     * La reserva de stock ocurre, como siempre, al iniciar el picking. Los ítems ya vienen resueltos (`quote_item_id` de la
+     * cotización gemela), no se derivan de una cotización aprobada.
+     *
+     * @param  array<string, mixed>  $attrs
+     * @param  list<array<string, mixed>>  $items
+     */
+    public function createIcgTwinForDispatch(array $attrs, array $items, \DateTimeInterface $fecha): Order
+    {
+        $order = Order::create($attrs);
+        $order->forceFill(['created_at' => $fecha, 'updated_at' => $fecha])->saveQuietly();
+
+        foreach ($items as $item) {
+            $order->items()->create($item);
+        }
+
+        OrderStageHistory::create([
+            'order_id' => $order->id, 'from_stage' => null, 'to_stage' => Order::STAGE_ASIGNADO, 'changed_by' => null, 'created_at' => $fecha,
+        ]);
+
+        event(new OrderCreated(
+            orderId: $order->id,
+            orderNumber: $order->order_number,
+            assistantId: $order->assistant_id,
+            tenant: $this->requiredTenantSlug(),
+        ));
+
+        return $order;
+    }
+
+    /**
+     * Una tarjeta de Pedido: `Order` + ítems desde la cotización + fila inicial de historial de
+     * etapa + evento `OrderCreated`. Extraído de `createFromApprovedQuote()` para reusarlo tanto en
+     * el pedido de entrega única como en cada miembro de una familia de entregas parciales
+     * (SCRUM-875).
+     *
+     * @param  array<string, mixed>  $attrs
+     * @param  list<int>|null  $allowedQuoteItemIds  SCRUM-909 — si no es null, filtra los ítems de la
+     *                                               cotización a solo estos `quote_item_id` (una fecha de la familia). `null` = sin filtrar,
+     *                                               todos los ítems (entrega única, o entrega parcial sin ninguna asignación guardada).
+     */
+    private function createOrderRow(array $attrs, ?Quote $quote, ?array $allowedQuoteItemIds = null): Order
+    {
+        $order = Order::create($attrs);
+
+        if ($quote !== null) {
+            $this->createItemsFromQuote($order, $quote, $allowedQuoteItemIds);
+        }
+
+        OrderStageHistory::create([
+            'order_id' => $order->id,
+            'from_stage' => null,
+            'to_stage' => Order::STAGE_ASIGNADO,
+            'changed_by' => null, // creación automática del sistema, sin usuario detrás del clic
+            'created_at' => now(),
+        ]);
+
+        event(new OrderCreated(
+            orderId: $order->id,
+            orderNumber: $order->order_number,
+            assistantId: $order->assistant_id,
+            tenant: $this->requiredTenantSlug(),
+        ));
+
+        return $order;
     }
 
     /**
@@ -171,16 +311,26 @@ final class OrderService
      * `BodegaBackfillOrderItemPricesCommand` para el caso de pedidos que no pasaron por acá).
      * `$settings` se resuelve una sola vez fuera del loop, mismo criterio anti-N+1 que
      * `QuoteItem::effectiveUnitPrice()`.
+     *
+     * @param  list<int>|null  $allowedQuoteItemIds  SCRUM-909 — ver docblock de `createOrderRow()`.
      */
-    private function createItemsFromQuote(Order $order, Quote $quote): void
+    private function createItemsFromQuote(Order $order, Quote $quote, ?array $allowedQuoteItemIds = null): void
     {
         $items = $quote->parts->flatMap(fn (QuotePart $part) => $part->items);
+
+        if ($allowedQuoteItemIds !== null) {
+            $items = $items->filter(fn (QuoteItem $item): bool => in_array($item->id, $allowedQuoteItemIds, true));
+        }
+
         $settings = PricingSettings::current();
 
         /** @var QuoteItem $item */
         foreach ($items as $item) {
             $order->items()->create([
                 'catalog_product_id' => $item->catalog_product_id,
+                // SCRUM-929 — vínculo explícito al QuoteItem de origen; llave de "cuánto se facturó
+                // de cada ítem" (ver ADR-SCRUM929). Se propaga a toda tarjeta derivada del ítem.
+                'quote_item_id' => $item->id,
                 'reference_snapshot' => $item->catalogProduct->reference ?? $item->reference,
                 'description_snapshot' => $item->catalogProduct->name ?? $item->description,
                 'unit_price' => $item->unitPriceAfterDiscount(
@@ -241,6 +391,8 @@ final class OrderService
                 'body' => "El pedido {$order->order_number} (vendedor: {$sellerName}) se creó en Bodega "
                     .'sin un Asistente de Bodega asignado — falta el mapeo vendedor->asistente para este '
                     .'vendedor (WarehouseAssistantMapping). Requiere asignación manual.',
+                // SCRUM-1167 — el clic de la campana lleva al pedido.
+                'cta_url' => '/bodega/pedidos/status?search='.rawurlencode((string) $order->order_number),
             ],
             channels: [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL],
             source: NotificationSend::SOURCE_BODEGA_ORDER_UNASSIGNED,

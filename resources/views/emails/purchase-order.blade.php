@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{ $lang ?? 'es' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,10 +17,10 @@
     <div class="card">
         <div class="logo">ATLANTICERP</div>
         <div class="brand">ATLANTIC</div>
-        <h2>Orden de Compra #{{ $orderId }}</h2>
-        <p>Hola {{ $providerName }},</p>
-        <p>Adjuntamos la orden de compra #{{ $orderId }} en PDF.</p>
-        <div class="footer">Atlantic · Este correo fue generado automáticamente</div>
+        <h2>{{ trans('purchase_order_pdf.title', ['id' => $orderId], $lang ?? 'es') }}</h2>
+        <p>{{ trans('purchase_order_pdf.mail.greeting', ['provider' => $providerName], $lang ?? 'es') }}</p>
+        <p>{{ trans('purchase_order_pdf.mail.body', ['id' => $orderId], $lang ?? 'es') }}</p>
+        <div class="footer">{{ trans('purchase_order_pdf.mail.footer', [], $lang ?? 'es') }}</div>
     </div>
 </body>
 </html>

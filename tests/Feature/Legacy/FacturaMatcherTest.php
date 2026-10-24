@@ -30,7 +30,10 @@ final class FacturaMatcherTest extends FeatureTestCase
 
         $result = (new FacturaMatcher())->match([$factura->id]);
 
-        $this->assertSame(['matched' => 1, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(1, $result['matched']);
+        $this->assertSame(0, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertSame([], $result['details']);
         $factura->refresh();
         $this->assertSame($cliente->id, $factura->legacy_cliente_id);
         $this->assertFalse($factura->orphan);
@@ -42,7 +45,11 @@ final class FacturaMatcherTest extends FeatureTestCase
 
         $result = (new FacturaMatcher())->match([$factura->id]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 1, 'errores' => 0], $result);
+        $this->assertSame(0, $result['matched']);
+        $this->assertSame(1, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertCount(1, $result['details']);
+        $this->assertSame('orphan', $result['details'][0]['status']);
         $factura->refresh();
         $this->assertNull($factura->legacy_cliente_id);
         $this->assertTrue($factura->orphan);
@@ -54,7 +61,11 @@ final class FacturaMatcherTest extends FeatureTestCase
 
         $result = (new FacturaMatcher())->match([$factura->id]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 1, 'errores' => 0], $result);
+        $this->assertSame(0, $result['matched']);
+        $this->assertSame(1, $result['orphan']);
+        $this->assertSame(0, $result['errores']);
+        $this->assertCount(1, $result['details']);
+        $this->assertSame('orphan', $result['details'][0]['status']);
         $factura->refresh();
         $this->assertTrue($factura->orphan);
     }
@@ -63,7 +74,7 @@ final class FacturaMatcherTest extends FeatureTestCase
     {
         $result = (new FacturaMatcher())->match([]);
 
-        $this->assertSame(['matched' => 0, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(['matched' => 0, 'orphan' => 0, 'errores' => 0, 'details' => []], $result);
     }
 
     public function test_matchea_multiples_facturas_del_mismo_cliente(): void
@@ -74,7 +85,9 @@ final class FacturaMatcherTest extends FeatureTestCase
 
         $result = (new FacturaMatcher())->match([$f1->id, $f2->id]);
 
-        $this->assertSame(['matched' => 2, 'orphan' => 0, 'errores' => 0], $result);
+        $this->assertSame(2, $result['matched']);
+        $this->assertSame(0, $result['orphan']);
+        $this->assertSame([], $result['details']);
     }
 
     private static function makeFactura(

@@ -22,7 +22,8 @@ use Throwable;
  * Bodega: cuando una `PurchaseOrder` llega a "Recibido", libera las tarjetas "Sin stock"
  * (`Order::isAwaitingStock()`) cuyo stock real ya alcanza. Registrado en
  * `App\Providers\AppServiceProvider::boot()`, despachado síncronamente dentro del mismo request
- * de `PurchaseOrderController::advance()` — mismo criterio que `CreateOrderFromApprovedQuote`: el
+ * de `PurchaseOrderController::advance()` — mismo criterio que el antiguo listener de creación de pedido (eliminado en
+ * SCRUM-1128, hoy el pedido nace de `PipelineService::passToOrder()`): el
  * efecto debe ser inmediato (no `ShouldQueue`), y un fallo del lado de Bodega nunca debe romper
  * el flujo de Compras que lo dispara — por eso TODO `handle()` queda envuelto en try/catch +
  * `Log::error()`.
@@ -188,6 +189,8 @@ class ReleaseOrdersAwaitingStock
                 'subject' => "Pedido {$order->order_number} ya tiene stock disponible",
                 'body'    => "El pedido {$order->order_number} salió de \"Sin stock\": la orden de compra ".
                     'que cubría el faltante ya fue recibida. Puede continuar con el flujo normal de picking.',
+                // SCRUM-1167 — el clic de la campana lleva al pedido (Status de Pedidos, ya filtrado por su número).
+                'cta_url' => '/bodega/pedidos/status?search='.rawurlencode((string) $order->order_number),
             ],
             channels: [NotificationSend::CHANNEL_IN_APP, NotificationSend::CHANNEL_EMAIL],
             source: NotificationSend::SOURCE_BODEGA_ORDER_STOCK_RELEASED,
