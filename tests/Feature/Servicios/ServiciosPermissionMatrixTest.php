@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Servicios;
 
+use App\Models\User;
 use App\Modules\Servicios\Models\Ticket;
 use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
@@ -169,14 +170,14 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
 
     // ── servicios.technicians.commission.view_own — tecnico/garantias/management, NO lider ──
 
-    public function test_comision_carlos_vergara_lider_no_puede_tecnico_si(): void
+    public function test_comision_tecnico_lider_no_puede_tecnico_si(): void
     {
         $this->withHeaders($this->authHeaders($this->tokenFor(self::LIDER_SERVICIOS, 'lider_servicios')))
-            ->getJson('/api/servicios/reportes/comision-carlos-vergara')
+            ->getJson('/api/servicios/reportes/comision-tecnico')
             ->assertStatus(403);
 
         $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico_servicios')))
-            ->getJson('/api/servicios/reportes/comision-carlos-vergara')
+            ->getJson('/api/servicios/reportes/comision-tecnico')
             ->status();
         $this->assertNotSame(403, $status);
     }
@@ -237,6 +238,27 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
                 ->postJson('/api/servicios/tickets', ['tipo' => 'instalacion'])->assertStatus(403);
             $this->withHeaders($this->authHeaders($token))
                 ->getJson('/api/servicios/external-technicians')->assertStatus(403);
+        }
+    }
+
+    // ── servicios.tools.kardex.view (Fase 1b) — solo lider_servicios y management; superadmin por superadmin.all ──
+
+    public function test_kardex_de_herramientas_solo_lider_servicios_y_management(): void
+    {
+        $key = 'servicios.tools.kardex.view';
+        $tienen = [self::LIDER_SERVICIOS, self::MANAGEMENT];
+        $noTienen = [self::TECNICO, self::GARANTIAS, self::VENDEDOR, 'lidercompras@test.com', 'liderbodega@test.com', 'lideradmincontab@test.com'];
+
+        foreach ($tienen as $email) {
+            $user = User::where('email', $email)->firstOrFail();
+            $this->assertContains($key, $user->effectivePermissionsV2(), "{$email} debería tener {$key}");
+        }
+        foreach ($noTienen as $email) {
+            $user = User::where('email', $email)->first();
+            if ($user === null) {
+                continue;
+            }
+            $this->assertNotContains($key, $user->effectivePermissionsV2(), "{$email} NO debería tener {$key}");
         }
     }
 

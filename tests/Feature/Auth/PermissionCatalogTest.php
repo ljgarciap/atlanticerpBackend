@@ -70,11 +70,11 @@ class PermissionCatalogTest extends FeatureTestCase
         $this->assertCount(17, $catalog['ventas_diseno'], 'ventas_diseno debe tener 17 permisos'); // SCRUM-1150: + gerencia_scope
         $this->assertCount(5, $catalog['compras'], 'compras debe tener 5 permisos');
         $this->assertCount(3, $catalog['bodega'], 'bodega debe tener 3 permisos');
-        $this->assertCount(9, $catalog['servicios'], 'servicios debe tener 9 permisos'); // 1 de binax + 8 finos de la Fase 2 de Atlantic
+        $this->assertCount(10, $catalog['servicios'], 'servicios debe tener 10 permisos'); // 1 de binax + 8 finos de la Fase 2 de Atlantic + kardex.view de la Fase 1b
         $this->assertCount(8, $catalog['admin_contab'], 'admin_contab debe tener 8 permisos'); // 5 de binax + 3 finos de la Fase 2 de Atlantic; // SCRUM-1166: + edit.client_itbms_exemption
 
         $totalPermisos = array_sum(array_map('count', $catalog));
-        $this->assertSame(54, $totalPermisos, 'El total de permisos en el catálogo debe ser 54'); // SCRUM-1166: + admin_contab.edit.client_itbms_exemption
+        $this->assertSame(55, $totalPermisos, 'El total de permisos en el catálogo debe ser 55'); // SCRUM-1166: + admin_contab.edit.client_itbms_exemption; Fase 1b: + servicios.tools.kardex.view
 
         $crmKeys = array_column((array) $catalog['crm'], 'key');
         $this->assertContains('crm.read', $crmKeys);

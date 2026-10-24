@@ -78,7 +78,7 @@ final class ReportsController extends Controller
     }
 
     /**
-     * GET /api/servicios/reportes/comision-carlos-vergara — REQ-285. RN1: el desglose viene
+     * GET /api/servicios/reportes/comision-tecnico — REQ-285. RN1: el desglose viene
      * exclusivamente de `CommissionCaptureService::commissionForTechnician()` (REQ-258), nunca de
      * un cálculo paralelo. RN2: gate de visibilidad — SOLO Tecnico Servicios (el propio técnico) y Gerencia
      * (`superadmin`/`management`), replicado a propósito idéntico al de
@@ -89,7 +89,7 @@ final class ReportsController extends Controller
      * (`InternalTechnicianSeeder`), el único `InternalTechnician` con plan de bonificación activo;
      * no se hardcodea su nombre/email para no acoplar el endpoint a un dato de seed.
      */
-    public function comisionCarlosVergara(Request $request): JsonResponse
+    public function comisionTecnico(Request $request): JsonResponse
     {
         $technician = InternalTechnician::where('has_bonus_plan', true)->first();
         if ($technician === null) {

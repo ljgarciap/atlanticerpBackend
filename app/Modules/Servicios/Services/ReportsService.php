@@ -32,7 +32,7 @@ use Illuminate\Support\Collection;
  * omiten). `completadosAnio()` acepta `?int $year` (default año en curso) — RN1 de REQ-280
  * ("enero → mes actual, nunca ventana móvil") aplica SOLO cuando el año pedido es el año en
  * curso; un año pasado ya cerró completo y siempre devuelve los 12 meses.
- * `comisionCarlosVergara()` no vive acá (ver `ReportsController::comisionCarlosVergara()`) pero
+ * `comisionTecnico()` no vive acá (ver `ReportsController::comisionTecnico()`) pero
  * ya soportaba `year`/`month` desde el diseño original — no se tocó. `biblioteca()` es atemporal
  * a propósito (REQ-286 no la ata a ningún período) — no acepta año/mes.
  *
