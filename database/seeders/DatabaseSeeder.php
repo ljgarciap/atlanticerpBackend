@@ -36,8 +36,6 @@ class DatabaseSeeder extends Seeder
             $this->call(AdminContBankAccountSeeder::class);
         }
         $this->call(VentasDisenoSalesGoalsSeeder::class);
-        // SCRUM-1120 — Cliente Master/Subcliente «CotizaYA» y su fila de ajustes (idempotente; reutiliza el de prod).
-        $this->call(CotizaYaClientSeeder::class);
         $this->call(SpecialPermissionSeeder::class);
         // SCRUM-1139 — override de visibilidad de módulo por persona (líder de operaciones ve Admin&Cont como Félix).
         $this->call(UserModuleVisibilityGrantSeeder::class);

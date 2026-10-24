@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Http\Controllers;
 
-use App\Modules\VentasDiseno\Services\CotizaYaClientGuard;
 use App\Models\User;
 use App\Modules\VentasDiseno\Http\Requests\StoreMasterClientRequest;
 use App\Modules\VentasDiseno\Http\Requests\StoreSubClientRequest;
@@ -31,12 +30,6 @@ final class ClientController extends Controller
         }
 
         $query = MasterClient::query()->orderBy('name');
-
-        // SCRUM-1120 — el cliente «CotizaYA» es exclusivo de CotizaYA: no se ofrece en los selectores del flujo normal.
-        $cotizaYaMasterId = app(CotizaYaClientGuard::class)->masterClientId();
-        if ($cotizaYaMasterId !== null) {
-            $query->whereKeyNot($cotizaYaMasterId);
-        }
 
         $search = $request->query('search');
         if (is_string($search) && $search !== '') {
@@ -89,12 +82,6 @@ final class ClientController extends Controller
         }
 
         $query = SubClient::query()->withCount('contacts')->where('master_client_id', (int) $masterClientId)->orderBy('business_name');
-
-        // SCRUM-1120 — ni el Cliente Master ni el Subcliente «CotizaYA» se ofrecen en el flujo normal.
-        $guard = app(CotizaYaClientGuard::class);
-        if ($guard->isMasterClient($masterClientId)) {
-            $query->whereRaw('1 = 0');
-        }
 
         $search = $request->query('search');
         if (is_string($search) && $search !== '') {

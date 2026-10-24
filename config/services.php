@@ -67,20 +67,6 @@ return [
         'client_secret' => env('AZURE_CLIENT_SECRET'),
     ],
 
-    // Illumination Support Tickets — Identity Bridge (SCRUM-923), ver
-    // App\Modules\Soporte\Services\TicketsIdentityBridgeService.
-    'tickets' => [
-        'base_url' => env('TICKETS_BASE_URL', 'https://tickets.atlanticerp.ai'),
-        'api_key' => env('TICKETS_API_KEY'),
-    ],
-
-    // LUMO — Bitácora de Ventas — Identity Bridge (SCRUM-925), ver
-    // App\Modules\Lumo\Services\LumoIdentityBridgeService.
-    'lumo' => [
-        'base_url' => env('LUMO_BASE_URL', 'https://lumo.atlanticerp.ai'),
-        'api_key'  => env('LUMO_API_KEY'),
-    ],
-
     // Digifact — PAC directo para Facturación Electrónica (Panamá/DGI), prep sin ticket todavía,
     // ver docs/architecture/facturacion-electronica-pac-diseno.md. NUNCA usar en llamadas de red
     // reales sin que Luis/Senior Review confirmen — esta pasada solo construye el adapter contra

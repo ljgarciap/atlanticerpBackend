@@ -11,7 +11,6 @@ use App\Modules\VentasDiseno\Http\Controllers\CatalogController;
 use App\Modules\VentasDiseno\Http\Controllers\CatalogProductController;
 use App\Modules\VentasDiseno\Http\Controllers\CatalogProductFamilyController;
 use App\Modules\VentasDiseno\Http\Controllers\ClientController;
-use App\Modules\VentasDiseno\Http\Controllers\CotizaYaController;
 use App\Modules\VentasDiseno\Http\Controllers\ClientsController;
 use App\Modules\VentasDiseno\Http\Controllers\ClientTaxDataController;
 use App\Modules\VentasDiseno\Http\Controllers\HomeController;
@@ -168,8 +167,7 @@ Route::prefix('calendar-events')->group(function (): void {
 
 // Cotización-A (REQ-024 a 032) — ver memory/project_backlog_ventas_diseno_req.md
 // para el desglose completo (Cotización-B/C/D, todavía sin implementar).
-// SCRUM-1120 — contactos, partidas e ítems de una cotización: las MISMAS rutas sirven a Cotizaciones y a CotizaYA
-// (bajo `/cotizaya/{quoteId}/...`, con el contexto de CotizaYA), así la lógica de Partidas se reutiliza sin copiarla.
+// Contactos, partidas e ítems de una cotización (rutas hijas de `/{quoteId}`).
 $quoteChildRoutes = function (): void {
 Route::prefix('/{quoteId}/contacts')->group(function (): void {
     Route::post('/', [QuoteContactController::class, 'store'])->middleware('permission:ventas_diseno.edit');
@@ -238,20 +236,6 @@ Route::prefix('quotes')->group(function () use ($quoteChildRoutes): void {
     // SCRUM-1121 — asociados de la cotización (con proyecto: los del proyecto; sin proyecto: los de su borrador).
     Route::post('/{quoteId}/associates', [AssociateLinkController::class, 'storeForQuote'])->middleware('permission:ventas_diseno.edit');
     Route::delete('/{quoteId}/associates/{architectId}', [AssociateLinkController::class, 'destroyForQuote'])->middleware('permission:ventas_diseno.edit');
-
-    $quoteChildRoutes();
-});
-
-// SCRUM-1120 — CotizaYA: cotizaciones de venta chica, independientes del flujo comercial. El middleware activa el contexto
-// que hace visibles estas cotizaciones (fuera de él ninguna consulta las ve) y exige que el id de la ruta sea de CotizaYA.
-Route::prefix('cotizaya')->middleware('cotizaya.context')->group(function () use ($quoteChildRoutes): void {
-    Route::get('/context', [CotizaYaController::class, 'context'])->middleware('permission:ventas_diseno.read');
-    Route::get('/', [CotizaYaController::class, 'index'])->middleware('permission:ventas_diseno.read');
-    Route::post('/', [CotizaYaController::class, 'store'])->middleware('permission:ventas_diseno.write');
-    Route::get('/{id}', [CotizaYaController::class, 'show'])->whereNumber('id')->middleware('permission:ventas_diseno.read');
-    Route::put('/{id}', [CotizaYaController::class, 'update'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
-    Route::post('/{id}/generate', [CotizaYaController::class, 'generate'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
-    Route::get('/{id}/pdf', [CotizaYaController::class, 'pdf'])->whereNumber('id')->middleware('permission:ventas_diseno.read');
 
     $quoteChildRoutes();
 });

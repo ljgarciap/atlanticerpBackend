@@ -660,7 +660,7 @@ final class QuoteController extends Controller
      * la fila), el Responsable del proyecto —dueño de la tarjeta del Pipeline o en `compartido_con`— puede leer las
      * versiones CONFIRMADAS de su proyecto aunque las haya generado otra persona: cuando Gerencia guarda una versión
      * nueva, `quotes.owner_id` de esa fila es Gerencia («Generado por»), pero el Responsable sigue siendo el Vendedor.
-     * Nunca abre borradores ajenos, ni cotizaciones sin proyecto (ej. CotizaYA), y NO concede ninguna escritura: todos
+     * Nunca abre borradores ajenos, ni cotizaciones sin proyecto, y NO concede ninguna escritura: todos
      * los métodos que modifican siguen con `canAccess()`.
      */
     private function canView(Quote $quote, User $user): bool
@@ -850,8 +850,7 @@ final class QuoteController extends Controller
     }
 
     /**
-     * SCRUM-1120 — el módulo CotizaYA arma su detalle con el mismo formato exacto que Cotizaciones (así reutiliza
-     * `QuotePartCard`, el PDF y los totales sin duplicar nada).
+     * Detalle de una cotización con el formato exacto que reutilizan `QuotePartCard`, el PDF y los totales.
      *
      * @return array<string, mixed>
      */
@@ -870,12 +869,7 @@ final class QuoteController extends Controller
 
         return [
             'id'               => $quote->id,
-            // SCRUM-1120 — 'comercial' | 'cotizaya'; `cotizaya` solo trae datos en las de venta chica.
             'origin'           => $quote->origin,
-            'cotizaya'         => $quote->isCotizaYa() ? [
-                'customer_name'  => $quote->cotizaya_customer_name,
-                'customer_phone' => $quote->cotizaya_customer_phone,
-            ] : null,
             'status'           => $quote->status,
             'folio'            => $quote->folio,
             'generated_at'     => $quote->generated_at?->toIso8601String(),
@@ -912,9 +906,7 @@ final class QuoteController extends Controller
                 'phone' => $quote->architect->phone, 'email' => $quote->architect->email,
             ] : null,
             // SCRUM-1121 — asociados (arquitectos, diseñadores, contratistas...): los del proyecto, o los del borrador si aún no hay proyecto.
-            'associates'       => $quote->isCotizaYa()
-                ? []
-                : $this->associates->forQuote($quote)->map(fn ($a): array => ProjectAssociateService::format($a))->values(),
+            'associates'       => $this->associates->forQuote($quote)->map(fn ($a): array => ProjectAssociateService::format($a))->values(),
             'delivery_type'    => $quote->delivery_type,
             'delivery_dates'   => $quote->deliveryDates->map(fn ($d) => $d->date->toDateString())->values(),
             'contacts'         => $quote->contacts->map(fn ($c) => [

@@ -47,11 +47,6 @@ final class QuoteContactController extends Controller
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        // SCRUM-1120 — una CotizaYA generada queda fija: sus contactos también (cambiarlos cambia el PDF). Solo CotizaYA:
-        // el flujo comercial conserva su comportamiento de siempre.
-        if ($quote->isCotizaYa() && $quote->confirmed_at !== null) {
-            return response()->json(['message' => 'Una cotización de CotizaYA ya generada no se puede editar.'], 422);
-        }
 
         /** @var array{sub_client_contact_id: int} $validated */
         $validated = $request->validate([
@@ -68,7 +63,7 @@ final class QuoteContactController extends Controller
 
         // SCRUM-1121 — una cotización ya confirmada ya vive en Pipeline: el contacto agregado después también pasa a la tarjeta (solo agrega).
         // Un borrador nunca toca Pipeline (SCRUM-734): ahí la copia ocurre al confirmar.
-        if ($quote->confirmed_at !== null && $quote->sales_project_id !== null && ! $quote->isCotizaYa()) {
+        if ($quote->confirmed_at !== null && $quote->sales_project_id !== null) {
             $card = PipelineCard::where('sales_project_id', $quote->sales_project_id)->first();
             if ($card !== null) {
                 $this->cardContactSync->sync($quote, $card);
@@ -94,11 +89,6 @@ final class QuoteContactController extends Controller
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        // SCRUM-1120 — una CotizaYA generada queda fija: sus contactos también (cambiarlos cambia el PDF). Solo CotizaYA:
-        // el flujo comercial conserva su comportamiento de siempre.
-        if ($quote->isCotizaYa() && $quote->confirmed_at !== null) {
-            return response()->json(['message' => 'Una cotización de CotizaYA ya generada no se puede editar.'], 422);
-        }
 
         $quote->contacts()->detach($contactId);
         $this->audit->log('ventas_diseno.quote.contact_removed', 'quote', $quote->id, ['sub_client_contact_id' => $contactId], null);

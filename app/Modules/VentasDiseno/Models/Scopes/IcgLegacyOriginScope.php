@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Models\Scopes;
 
-use App\Modules\VentasDiseno\Support\CotizaYaSchema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
@@ -20,11 +19,6 @@ final class IcgLegacyOriginScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
-        // Esquema todavía sin la columna `origin` (ventana de despliegue): no se filtra nada, igual que `CotizaYaOriginScope`.
-        if (! CotizaYaSchema::ready()) {
-            return;
-        }
-
         $builder->where($model->qualifyColumn('origin'), '<>', 'icg_legacy');
     }
 }

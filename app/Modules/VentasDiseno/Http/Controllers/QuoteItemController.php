@@ -660,10 +660,6 @@ final class QuoteItemController extends Controller
     private function ensureEditable(Quote $quote): ?JsonResponse
     {
         if ($quote->confirmed_at !== null) {
-            // SCRUM-1120 — CotizaYA no tiene "nueva versión": una vez generada queda fija.
-            if ($quote->isCotizaYa()) {
-                return response()->json(['message' => 'Una cotización de CotizaYA ya generada no se puede editar.'], 422);
-            }
 
             return response()->json([
                 'message' => 'Una cotización generada no se puede editar directamente. Use "Usar como base para nueva versión".',

@@ -131,7 +131,7 @@ final class QuoteService
      * quien generó esa versión. Cuando Gerencia (Mark/Whil/Felix) crea una versión nueva sobre la cotización de un vendedor,
      * `quotes.owner_id` de esa fila es Gerencia (queda como «Generado por» en el historial de versiones, trazabilidad interna) pero el
      * documento que llega al cliente debe seguir diciendo el nombre del vendedor. Si Gerencia reasigna la tarjeta, el PDF sale con el
-     * nuevo Responsable. Sin tarjeta (borrador sin confirmar, CotizaYA) o una cotización que Gerencia armó desde cero, el nombre es el
+     * nuevo Responsable. Sin tarjeta (borrador sin confirmar) o una cotización que Gerencia armó desde cero, el nombre es el
      * de quien la generó, como siempre.
      *
      * @return array{id: int, name: string, phone: string|null}

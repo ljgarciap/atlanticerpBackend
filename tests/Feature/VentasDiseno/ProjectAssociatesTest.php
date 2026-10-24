@@ -11,7 +11,6 @@ use App\Modules\VentasDiseno\Models\Quote;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
-use Database\Seeders\CotizaYaClientSeeder;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
@@ -237,19 +236,6 @@ class ProjectAssociatesTest extends FeatureTestCase
         $a = $this->associate();
 
         $this->withHeaders($this->h($token))->postJson("/api/ventas-diseno/pipeline/{$card->id}/associates", ['architect_id' => $a->id])->assertStatus(403);
-    }
-
-    // ── A10: CotizaYA no participa ──────────────────────────────────────────────────────────────────────────
-
-    public function test_a10_cotizaya_no_tiene_asociados_y_no_se_alcanza_por_la_ruta_comercial(): void
-    {
-        $token = $this->token();
-        CotizaYaClientSeeder::ensureClient();
-        $id = (int) $this->withHeaders($this->h($token))->postJson('/api/ventas-diseno/cotizaya', [])->assertStatus(201)->json('id');
-        $a = $this->associate();
-
-        $this->assertSame([], $this->withHeaders($this->h($token))->getJson("/api/ventas-diseno/cotizaya/{$id}")->json('associates'));
-        $this->withHeaders($this->h($token))->postJson("/api/ventas-diseno/quotes/{$id}/associates", ['architect_id' => $a->id])->assertStatus(404);
     }
 
     // ── Senior Review (hallazgos 3 y 4) ─────────────────────────────────────────────────────────────────────

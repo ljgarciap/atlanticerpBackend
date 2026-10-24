@@ -207,15 +207,6 @@ final class AuditService
     // SCRUM-1140 — el receptor congelado de una factura NO certificada se reemplazó antes de reenviarla (A1 de fe-panama).
     public const ADMIN_CONT_FE_RECEPTOR_REFRESCADO = 'admin_cont.fe_documento.receptor_refrescado';
 
-    // ── Biblioteca — SCRUM-984 (manuales/videos en el bucket compartido) ────────
-    // Subida, borrado y descarga de archivos de la biblioteca (Checklist de Cybersecurity del
-    // diseño AWS). entity_id es el uuid del archivo, nunca el nombre visible.
-    public const BIBLIOTECA_FILE_UPLOADED   = 'biblioteca.file.uploaded';
-    public const BIBLIOTECA_FILE_DELETED    = 'biblioteca.file.deleted';
-    public const BIBLIOTECA_FILE_DOWNLOADED = 'biblioteca.file.downloaded';
-    public const BIBLIOTECA_FILE_REJECTED   = 'biblioteca.file.rejected';
-    public const BIBLIOTECA_CONFIG_UPDATED  = 'biblioteca.config.updated';
-
     /**
      * Writes an audit entry. Never throws — any failure is silently logged as a warning.
      *

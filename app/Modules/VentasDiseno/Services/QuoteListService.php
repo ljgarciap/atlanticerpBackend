@@ -488,7 +488,7 @@ final class QuoteListService
             'stage'           => $r['stage'],
             'price_type'      => $q->price_type,
             'owner'           => ['id' => $q->owner->id, 'name' => trim("{$q->owner->first_name} {$q->owner->last_name}")],
-            // SCRUM-1195 — Responsable del proyecto; sin tarjeta (borradores, CotizaYA) cae a quien la generó. `owner` = quién generó esa fila.
+            // SCRUM-1195 — Responsable del proyecto; sin tarjeta (borradores) cae a quien la generó. `owner` = quién generó esa fila.
             'designer'        => $q->sales_project_id !== null ? ($designerByProject[(int) $q->sales_project_id] ?? null) : null,
             'quote_date'      => ($q->generated_at ?? $q->created_at)->toIso8601String(),
             'document_status' => $r['document_status'],

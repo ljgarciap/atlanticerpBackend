@@ -27,7 +27,6 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
             'ventas_diseno.edit.approved',
             'ventas_diseno.override_min_margin',
             'servicios.quotes.view_cost_breakdown',
-            'lumo.view',
             'ventas_diseno.edit.client_tax_data',
             'admin_contab.edit.receptor_fiscal',
             'admin_contab.edit.receptor_consumidor_final',
@@ -42,7 +41,7 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // (`edit.approved`).
         // SCRUM-1150 (2026-10-15, decisión de Luis) — Félix replica a Mark en Ventas & Diseño: suma select_partner_price y
         // override_min_margin (reemplaza la exclusión de SCRUM-1139); ver/editar/aprobar vienen del override en user_module_visibility.
-        'contabilidad@test.com' => ['ventas_diseno.edit.conditions', 'lumo.view', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.receptor_fiscal', 'admin_contab.edit.receptor_consumidor_final', 'ventas_diseno.pass_to_order', 'ventas_diseno.pipeline.read_all', 'ventas_diseno.pipeline.edit', 'ventas_diseno.edit.approved', 'ventas_diseno.select_partner_price', 'ventas_diseno.override_min_margin', 'ventas_diseno.gerencia_scope', 'admin_contab.edit.client_itbms_exemption'],
+        'contabilidad@test.com' => ['ventas_diseno.edit.conditions', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.receptor_fiscal', 'admin_contab.edit.receptor_consumidor_final', 'ventas_diseno.pass_to_order', 'ventas_diseno.pipeline.read_all', 'ventas_diseno.pipeline.edit', 'ventas_diseno.edit.approved', 'ventas_diseno.select_partner_price', 'ventas_diseno.override_min_margin', 'ventas_diseno.gerencia_scope', 'admin_contab.edit.client_itbms_exemption'],
         // Guarda de RUC al facturar (docs/specs/guarda-validacion-ruc-al-facturar.md): `admin_contab.edit.receptor_fiscal`
         // permite corregir RUC/DV/razón social desde la vista previa de "Crear factura". Mark y Felix son quienes facturan;
         // otras personas de Admin&Cont las asigna un superadmin desde la pantalla de usuarios.
@@ -52,7 +51,7 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // David — SCRUM-725 (excepción de margen mínimo, junto con Mark; el ticket los nombra a
         // los dos por email explícitamente, no es un grant de rol) + SCRUM-295 (desglose de costo
         // del ítem Subcontratado, junto con Aaron/Mark/Whil) + SCRUM-925 (LUMO, junto con Mark/Felix)
-        'gerencia2@test.com' => ['ventas_diseno.override_min_margin', 'servicios.quotes.view_cost_breakdown', 'lumo.view'],
+        'gerencia2@test.com' => ['ventas_diseno.override_min_margin', 'servicios.quotes.view_cost_breakdown'],
         // Aaron (lider_servicios) — SCRUM-295: aunque lidera el módulo, ver el desglose de
         // costo/margen del ítem Subcontratado es un grant angosto por persona (el ticket lo nombra
         // explícitamente junto con Mark/David/Whil), no algo que su rol/nivel otorgue por defecto.
@@ -75,10 +74,6 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // que exponga solo Zona Libre, y Luis confirmó que darle lectura completa de Bodega es
         // aceptable para este caso.
         'lidercompras@test.com' => ['compras.settings.configure', 'compras.zona-libre.approve', 'bodega.read'],
-        // Gerencia Test (management, nivel 9) — SCRUM-984: cargar/borrar PDFs y videos de la
-        // biblioteca de Manuales de Usuario. Grant angosto por persona (Luis, 2026-09-30), no un
-        // permiso de su rol; superadmin lo tiene por `superadmin.all`.
-        'gerencia@test.com' => ['manuales.manage'],
         // Lider Operaciones Test (lider_operaciones) — SCRUM-771: acceso COMPLETO a Comparación de
         // Referencias (Sustitutos) dentro de Compras, sin heredar compras.write/.edit (que
         // desbloquearía escritura en el resto del módulo). La visibilidad de solo-lectura del

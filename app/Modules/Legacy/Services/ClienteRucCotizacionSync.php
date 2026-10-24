@@ -20,7 +20,7 @@ use RuntimeException;
  *
  * Candidatas: para cada corrección de sub_client NO revertida (cualquier corrida), si el sub_client TODAVÍA tiene exactamente el `tax_id_nuevo`, sus cotizaciones
  * cuyo `ruc` normalizado (`ClienteMatcher::normalizeCif`) es igual al `tax_id_anterior` normalizado. Una cotización con otro `ruc` (editado a mano, vacío, de otra
- * empresa) NUNCA se toca. Se consulta sin scopes globales: los de origen (CotizaYA, pedidos gemelos) ocultarían cotizaciones que también llevan el RUC viejo.
+ * empresa) NUNCA se toca. Se consulta sin scopes globales: los de origen (pedidos gemelos) ocultarían cotizaciones que también llevan el RUC viejo.
  *
  * Aplica con `Quote::save()` (dispara `LogsAuditTrail`; sin update masivo), una transacción por cotización, y deja el registro de reversa en
  * `legacy.cotizacion_ruc_correcciones`. `plan()` solo lee. Mismas garantías que `ClienteRucCorrector`: idempotente, reversible por corrida, nunca pisa una

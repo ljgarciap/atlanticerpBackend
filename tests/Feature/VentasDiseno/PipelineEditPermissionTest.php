@@ -17,7 +17,7 @@ use Tests\Feature\FeatureTestCase;
 /**
  * SCRUM-1139 — Félix edita el Pipeline con el permiso angosto `ventas_diseno.pipeline.edit` (hermano de
  * `pipeline.read_all`, SCRUM-1128) y los proyectos Aprobados con `ventas_diseno.edit.approved`, SIN abrir ninguna otra
- * ruta de Ventas & Diseño (cotizaciones, asociados, CotizaYA...). Sin ese permiso sigue en solo lectura.
+ * ruta de Ventas & Diseño (cotizaciones, asociados...). Sin ese permiso sigue en solo lectura.
  */
 class PipelineEditPermissionTest extends FeatureTestCase
 {
