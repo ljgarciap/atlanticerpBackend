@@ -1,0 +1,59 @@
+# Reglas propias de AtlanticERP para Semgrep (SCRUM-963) — familia `ssrf-flow`. Prueba al lado (ssrf-flow.php):
+#   docker run --rm -v "$PWD":/src semgrep/semgrep:1.178.0 semgrep --test /src/infra/semgrep/rules
+# Un par YAML/prueba por familia A PROPÓSITO: Semgrep evalúa cada regla de un YAML contra TODO su archivo de prueba, así que
+# mezclar reglas que se solapan (flujo vs inventario) produce falsos errores de prueba.
+# Niveles: ERROR = flujo (entrada del usuario → sumidero, precisas, 0 hoy); INFO = inventario con contador en baseline-counts.json.
+# Limitación: el flujo de Semgrep OSS es por archivo; una entrada que cruza controlador → servicio no se ve.
+rules:
+  - id: atlanticerp-ssrf-user-input
+    mode: taint
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Entrada del usuario llega a la URL de una petición saliente (SSRF: acceso a metadatos de AWS o a la red interna).
+      Validar el host contra una lista permitida o usar una URL de configuración.
+    metadata:
+      category: security
+      cwe: "CWE-918: Server-Side Request Forgery"
+      owner: cybersecurity
+    pattern-sources:
+      - patterns:
+          - pattern: $REQ->input(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - patterns:
+          - pattern: $REQ->query(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - patterns:
+          - pattern: $REQ->get(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - patterns:
+          - pattern: $REQ->all()
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - patterns:
+          - pattern: $REQ->string(...)
+          - metavariable-regex:
+              metavariable: $REQ
+              regex: '^\$(request|req)$'   # sin esto `$REQ->get()` también casa con `Http::get()`
+      - pattern: request(...)
+      - pattern: $_GET[...]
+      - pattern: $_POST[...]
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: file_get_contents($URL, ...)
+              - pattern: curl_init($URL)
+              - pattern: fopen($URL, ...)
+              - pattern: Http::get($URL, ...)
+              - pattern: Http::post($URL, ...)
+              - pattern: Http::$FN(...)->get($URL, ...)
+              - pattern: Http::$FN(...)->post($URL, ...)
+          - focus-metavariable: $URL
+

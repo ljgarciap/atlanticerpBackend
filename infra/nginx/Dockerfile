@@ -34,6 +34,13 @@ RUN { \
       echo 'Include /usr/share/modsecurity-crs/rules/*.conf'; \
     } > /etc/nginx/modsec-main.conf
 
+# SCRUM-1032 (A-07): cabeceras de seguridad (fragmentos incluidos por los server blocks) y server_tokens off.
+COPY security-headers.conf security-headers-https.conf /etc/nginx/snippets/
+COPY 01-hardening.conf /etc/nginx/conf.d/01-hardening.conf
+# CAP-02: rechazo rápido ante saturación (zonas) y los fragmentos con los límites numéricos
+COPY 02-load-shedding.conf /etc/nginx/conf.d/02-load-shedding.conf
+COPY load-shedding.conf load-shedding-login.conf /etc/nginx/snippets/
+
 EXPOSE 80 443
 
 CMD ["nginx", "-g", "daemon off;"]

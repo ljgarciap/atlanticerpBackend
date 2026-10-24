@@ -1,4 +1,4 @@
-FROM php:8.3-fpm
+FROM php:8.3.36-fpm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq-dev \
@@ -21,8 +21,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # nunca instalarlo sin ese ack explícito.
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 ENV ACCEPT_EULA=Y
+# pdo_mysql agregado 2026-09-26 (SCRUM-972, integración Lafayette Lighting) — conexión
+# `lafayette_lighting` en config/database.php necesita el driver PDO mysql para hablar con la
+# MariaDB externa del proveedor. Sin licencia/EULA especial, a diferencia de sqlsrv.
 RUN chmod +x /usr/local/bin/install-php-extensions \
-    && install-php-extensions pdo_pgsql pcntl zip sodium gd sqlsrv pdo_sqlsrv
+    && install-php-extensions pdo_pgsql pcntl zip sodium gd sqlsrv pdo_sqlsrv pdo_mysql
 
 # redis compilado desde el tarball de GitHub, NO vía pecl.php.net ni el instalador de arriba (que
 # también usa pecl.php.net para redis específicamente) — pecl.php.net tuvo una caída sostenida
@@ -39,5 +42,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends $PHPIZE_DEPS \
     && rm -rf /var/lib/apt/lists/*
 
 COPY uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+COPY memory.ini /usr/local/etc/php/conf.d/memory.ini
+# CAP-02: configuración explícita de php-fpm (se carga después de zz-docker.conf, por orden alfabético)
+COPY zz-fpm.conf /usr/local/etc/php-fpm.d/zz-fpm.conf
 
 WORKDIR /var/www/html

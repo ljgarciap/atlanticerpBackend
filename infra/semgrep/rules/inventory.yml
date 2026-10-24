@@ -1,0 +1,64 @@
+# Reglas propias de AtlanticERP para Semgrep (SCRUM-963) — familia `inventory`. Prueba al lado (inventory.php):
+#   docker run --rm -v "$PWD":/src semgrep/semgrep:1.178.0 semgrep --test /src/infra/semgrep/rules
+# Un par YAML/prueba por familia A PROPÓSITO: Semgrep evalúa cada regla de un YAML contra TODO su archivo de prueba, así que
+# mezclar reglas que se solapan (flujo vs inventario) produce falsos errores de prueba.
+# Niveles: ERROR = flujo (entrada del usuario → sumidero, precisas, 0 hoy); INFO = inventario con contador en baseline-counts.json.
+# Limitación: el flujo de Semgrep OSS es por archivo; una entrada que cruza controlador → servicio no se ve.
+rules:
+  - id: atlanticerp-raw-sql-interpolation
+    languages: [php]
+    severity: INFO
+    paths:
+      exclude:
+        - "database/**"    # las migraciones interpolan nombres de tabla propios (DDL), nunca entrada del usuario
+    message: >-
+      INVENTARIO: SQL crudo con una variable interpolada o concatenada. Es seguro solo si el valor sale de una lista blanca
+      (constante de clase, `in_array(..., true)`) o de un nombre de tabla/esquema propio. Código nuevo con este patrón debe
+      explicar su lista blanca en el comentario. Si el contador sube respecto de baseline-counts.json, revisar el sitio nuevo.
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      owner: cybersecurity
+    pattern-either:
+      - pattern: $Q->whereRaw("...$X...", ...)
+      - pattern: $Q->orWhereRaw("...$X...", ...)
+      - pattern: $Q->selectRaw("...$X...", ...)
+      - pattern: $Q->orderByRaw("...$X...", ...)
+      - pattern: $Q->groupByRaw("...$X...", ...)
+      - pattern: $Q->havingRaw("...$X...", ...)
+      - pattern: DB::raw("...$X...")
+      - pattern: DB::select("...$X...", ...)
+      - pattern: DB::statement("...$X...", ...)
+      - pattern: DB::unprepared("...$X...")
+      - pattern: $Q->whereRaw($A . $B, ...)
+      - pattern: $Q->orderByRaw($A . $B, ...)
+      - pattern: $Q->selectRaw($A . $B, ...)
+      - pattern: DB::raw($A . $B)
+      - pattern: DB::select($A . $B, ...)
+      - pattern: DB::statement($A . $B, ...)
+
+  - id: atlanticerp-ssrf-dynamic-url
+    languages: [php]
+    severity: INFO
+    message: >-
+      INVENTARIO: petición saliente (`Http::`, `curl_init`) a una URL que no es constante. Es segura si el host sale de la
+      configuración o de una lista permitida. Si el contador sube respecto de baseline-counts.json, revisar el sitio nuevo.
+    metadata:
+      category: security
+      cwe: "CWE-918: Server-Side Request Forgery"
+      owner: cybersecurity
+    patterns:
+      - pattern-either:
+          - pattern: curl_init($URL)
+          - pattern: Http::get($URL, ...)
+          - pattern: Http::post($URL, ...)
+          - pattern: Http::$FN(...)->get($URL, ...)
+          - pattern: Http::$FN(...)->post($URL, ...)
+      - metavariable-pattern:
+          metavariable: $URL
+          patterns:
+            - pattern-not: '"..."'
+            - pattern-not: config(...)
+            - pattern-not: $CLS::$CONST
+            - pattern-not: self::$CONST
+

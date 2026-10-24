@@ -1,0 +1,28 @@
+# artillery-redis.yml — SCRUM-966/965: caos REAL con tráfico: carga baja constante mientras se detiene Redis (lo hace el script que lo lanza).
+config:
+  target: "{{ $processEnvironment.TARGET }}"
+  http: { timeout: 20 }
+  defaults: { headers: { Accept: application/json } }
+  phases:
+    - { name: "tráfico constante", duration: 150, arrivalRate: 2 }
+  plugins: { metrics-by-endpoint: {} }
+before:
+  flow:
+    - post:
+        url: "/api/auth/login"
+        json: { email: "{{ $processEnvironment.LOAD_EMAIL }}", password: "{{ $processEnvironment.LOAD_PASSWORD }}" }
+        capture: { json: "$.token", as: "token" }
+scenarios:
+  - name: "Sesión ya iniciada (70 %)"
+    weight: 70
+    flow:
+      - get: { url: "/api/auth/me",                    headers: { Authorization: "Bearer {{ token }}" }, name: "me" }
+      - get: { url: "/api/ventas-diseno/home/summary", headers: { Authorization: "Bearer {{ token }}" }, name: "home ventas" }
+      - get: { url: "/api/ventas-diseno/catalog?search=led&per_page=30&page=1", headers: { Authorization: "Bearer {{ token }}" }, name: "catálogo" }
+  - name: "Inicio de sesión nuevo (30 %)"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json: { email: "{{ $processEnvironment.LOAD_EMAIL }}", password: "{{ $processEnvironment.LOAD_PASSWORD }}" }
+          name: "login (con Redis caído: fail-open)"

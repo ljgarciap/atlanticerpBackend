@@ -109,4 +109,9 @@ docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T postgres \
 # `vendor/bin/phpunit` directamente para que el override sí aplique al proceso que realmente corre
 # los tests — mismos argumentos que `artisan test` acepta (`--filter=X`, etc.), sin wrapper de por
 # medio. Solo afecta este proceso de test, no toca `php.ini` de php-fpm/producción.
-docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T "${ENV_ARGS[@]}" laravel php -d memory_limit=512M vendor/bin/phpunit "$@"
+#
+# 1G (2026-10-07, SCRUM-1116) — la suite creció a ~5.000 tests y con 512M el proceso se quedó sin memoria al 99 %
+# de la corrida (en `routes/admin-contab.php`, al arrancar la app de uno de los últimos tests): las corridas verdes
+# anteriores ya estaban al borde (5.004 tests) y 40 tests nuevos lo cruzaron. Es la misma acumulación de memoria entre
+# tests de arriba, no una fuga de un test puntual; 1G es lo que ya usa el CI (`ini-values: memory_limit=1G`).
+docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T "${ENV_ARGS[@]}" laravel php -d memory_limit=1G vendor/bin/phpunit "$@"

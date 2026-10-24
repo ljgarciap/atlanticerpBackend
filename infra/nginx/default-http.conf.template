@@ -9,6 +9,9 @@ server {
 
     client_max_body_size 520M;
 
+    # SCRUM-1032 — cabeceras de seguridad (ver security-headers.conf)
+    include /etc/nginx/snippets/security-headers.conf;
+
     # Epic 11 — Seguridad Agéntica: copia del access log como archivo real (además del
     # destino por defecto a stdout vía nginx.conf) para que CrowdSec, que corre nativo en
     # el host EC2 y no en Docker, pueda leerlo directamente.
@@ -27,16 +30,58 @@ server {
     root  /var/www/frontend;
     index index.html;
 
-    location /api/ {
+    # CAP-02 — rechazo rápido: si hay más de N peticiones simultáneas a PHP, el exceso recibe 503 al instante
+    # (JSON + Retry-After, sin pasar por PHP) en vez de encolarse. /up y la salud quedan exentos (más abajo).
+    error_page 503 @busy;
+    location @busy {
+        default_type application/json;
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Retry-After "5" always;
+        add_header Cache-Control "no-store" always;
+        return 503 '{"message":"Servicio ocupado, intenta de nuevo en unos segundos","code":"server_busy"}';
+    }
+
+    # Salud: sin límite, para que las comprobaciones del despliegue y de las alarmas funcionen bajo saturación.
+    location ~ ^/api/health(/deep)?$ {
         include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
         fastcgi_pass $laravel_upstream;
         fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
         fastcgi_param SCRIPT_NAME     /index.php;
         fastcgi_param REQUEST_URI     $request_uri;
+        fastcgi_connect_timeout 5s;
+        fastcgi_read_timeout 60s;
+    }
+
+    # Inicio de sesión: tope propio (bcrypt es lo más caro de la API).
+    location = /api/auth/login {
+        include /etc/nginx/snippets/load-shedding-login.conf;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+        fastcgi_pass $laravel_upstream;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME     /index.php;
+        fastcgi_param REQUEST_URI     $request_uri;
+        fastcgi_connect_timeout 5s;
+        fastcgi_read_timeout 60s;
+    }
+
+    # API Laravel — pasa directamente a PHP-FPM sin try_files para no romper POST
+    location /api/ {
+        include /etc/nginx/snippets/load-shedding.conf;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+        fastcgi_pass $laravel_upstream;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param SCRIPT_NAME     /index.php;
+        fastcgi_param REQUEST_URI     $request_uri;
+        fastcgi_connect_timeout 5s;
+        fastcgi_read_timeout 60s;
     }
 
     location = /up {
         include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
         fastcgi_pass $laravel_upstream;
         fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
         fastcgi_param SCRIPT_NAME     /index.php;
@@ -45,6 +90,7 @@ server {
 
     location /horizon {
         include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
         fastcgi_pass $laravel_upstream;
         fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
         fastcgi_param SCRIPT_NAME     /index.php;
@@ -55,24 +101,31 @@ server {
     # tiene que llegar a Laravel y no caer en el catch-all de la SPA de más abajo.
     location /public/ {
         include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
         fastcgi_pass $laravel_upstream;
         fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
         fastcgi_param SCRIPT_NAME     /index.php;
         fastcgi_param REQUEST_URI     $request_uri;
     }
 
+    # Documentación interactiva de la API: solo dev (ver entrypoint.sh); el snippet queda vacío en test y prod.
+    include /etc/nginx/snippets/api-docs.conf;
+
     location ~* \.(?:js|css)$ {
         try_files $uri =404;
+        include /etc/nginx/snippets/security-headers.conf;
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
     location = /index.html {
+        include /etc/nginx/snippets/security-headers.conf;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
         expires 0;
     }
 
     location = /version.json {
+        include /etc/nginx/snippets/security-headers.conf;
         add_header Cache-Control "no-store";
         add_header Pragma "no-cache";
         expires 0;

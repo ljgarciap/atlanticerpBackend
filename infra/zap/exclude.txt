@@ -1,0 +1,8 @@
+# SCRUM-964 — rutas que NUNCA se piden (expresión regular sobre el path, una por línea). Fuente: THREAT-MODEL-auth-jwt.md §9.
+# En la fase pasiva solo se envían GET, pero se excluyen igualmente para que una fase activa nazca ya protegida.
+^/api/auth/(login|refresh|logout|register|forgot-password|reset-password|mfa/|password|select-role|switch-role)
+^/api/admin/demo/cleanup
+^/api/users/[^/]+/reset-password
+^/api/users/reset-passwords
+^/api/ai/
+/(send|enviar|transmit|transmitir|certificar|emit|emitir)(/|$)
