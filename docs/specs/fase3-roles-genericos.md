@@ -1,6 +1,6 @@
 # Spec — Fase 3: catálogo de roles genérico (sin vocabulario del cliente anterior)
 
-**Fecha**: 2026-10-25 · **Estado**: BORRADOR — pendiente de aprobación de Luis (no se implementa sin ella).
+**Fecha**: 2026-10-25 · **Estado**: decisiones de §7 RESPONDIDAS por Luis (2026-10-25); pendiente su «adelante» para implementar (incluye confirmar el cambio de datos de §3.1).
 **Contexto**: decisión 5 de Luis (2026-10-24, `docs/analisis/aislamiento-nucleo-2026-10-24.md` §9 y §11): «renombrar los roles a términos genéricos».
 La Fase 2 dejó `role_id` como único mecanismo, así que este renombre ya no toca el enum legado.
 
@@ -47,10 +47,10 @@ Aborta con mensaje claro si ya existe un rol con la clave destino (p. ej. alguie
 Una clase de constantes (`App\Modules\Auth\Support\RoleKeys`) con las 14 claves. Todo literal de rol en código de producción pasa a usarla (los ~9 sitios de §2); `BodegaRoles` y
 las constantes de `TechnicianSpecialtyService` dejan de duplicar el string. Un test falla si aparece un literal de clave de rol fuera de `RoleKeys` (evita que vuelva a pasar).
 
-### 3.3 Claim `role` del JWT y compatibilidad en el despliegue
-Los permisos viajan en el JWT y no dependen de la clave, así que el acceso no cambia. Pero ~12 lecturas del claim `role` comparan contra claves: un token **emitido antes** del renombre
-traería la clave vieja hasta que se refresque. Mitigación: esas lecturas pasan por un helper que normaliza claves viejas a nuevas (`RoleKeys::normalize()`, tabla de alias de los 4 renombres) durante una
-ventana; se retira en la Fase 7. Verificar el TTL real del access token antes de decidir si hace falta (si es de minutos, bastaría con avisar).
+### 3.3 Claim `role` del JWT y sesiones abiertas — **reingreso obligado** (decisión de Luis)
+Los permisos viajan en el JWT y no dependen de la clave, así que el acceso no cambia. Pero ~12 lecturas del claim `role` comparan contra claves: un token **emitido antes** del renombre trae la clave vieja y esas lecturas
+(tablero de Bodega, estado de pedidos, cotizaciones, caja de AdminCont, técnicos externos) no coincidirán hasta que la persona vuelva a iniciar sesión. **No habrá tabla de alias**: se despliega avisando que las sesiones abiertas deben reingresar
+(el token vive poco; verificar el TTL real de `JwtService`). Un test confirma que un token emitido con la clave vieja falla *de forma segura* (sin acceso de más) en esas lecturas.
 
 ### 3.4 Frontend
 - Etiquetas `common:roles.*` (es/en): claves nuevas y quitar las legadas (`designer`, `supervisor`, `electrician`, `guest`, que ya no existen).
@@ -70,7 +70,7 @@ Seeders con las claves nuevas (vía `RoleKeys`); tests renombrados mecánicament
 1. Tras la migración, los 14 roles existen con el catálogo de §2, **todos los usuarios conservan su rol** (mismo `role_id`) y sus permisos efectivos no cambian (test de equivalencia sobre el seed).
 2. Cero literales de clave de rol vieja o nueva en código de producción fuera de `RoleKeys` (test automático) y cero menciones de las 4 claves viejas en tests, seeders, e2e y fixtures (salvo migraciones históricas).
 3. La migración es idempotente, aborta si la clave destino ya existe y su `down()` restaura claves, nombres y reglas de notificación.
-4. Un token emitido antes del renombre sigue funcionando en las lecturas del claim (si 3.3 aplica).
+4. Un token emitido antes del renombre **no** obtiene acceso de más en las lecturas del claim (falla cerrado); tras reingresar todo funciona.
 5. La UI muestra el nombre del rol desde la API: renombrar un rol por la pantalla de Roles se refleja sin tocar i18n.
 6. PHPStan L8 limpio; suites completas de backend y frontend en verde; Playwright CLI: login con un Vendedor, un Técnico y un Auxiliar de Bodega y verificación de que menú y rutas son idénticos al «antes».
 
@@ -78,11 +78,11 @@ Seeders con las claves nuevas (vía `RoleKeys`); tests renombrados mecánicament
 Un PR por repo, backend primero (la migración y `RoleKeys`), frontend después. Antes de implementar: spec aprobada → Senior Review → QA, y confirmar que el `UPDATE` de claves
 (cambio de datos) cuenta con tu confirmación explícita, aunque es reversible.
 
-## 7. Decisiones que necesito de Luis
-1. **Catálogo**: ¿aceptas los 4 renombres de §2 (`vendedor`, `auxiliar_bodega`, `tecnico`, `tecnico_garantias`) con esos nombres en español e inglés, o prefieres otros?
-2. **Alcance de claves**: ¿renombrar las **claves** (recomendado: salen en el JWT y la API) o solo los **nombres visibles** y dejar las claves internas?
-3. **`management`/`superadmin`**: ¿se mantiene la separación (recomendado: superadmin = plataforma técnica, management = negocio)?
-4. **Compatibilidad de tokens**: ¿ventana de alias (recomendado) o aceptamos que las sesiones abiertas deban reingresar?
+## 7. Decisiones (respondidas por Luis el 2026-10-25)
+1. **Catálogo**: los 4 renombres de §2 con los nombres propuestos (`vendedor`, `auxiliar_bodega`, `tecnico`, `tecnico_garantias`). ✅ recomendado
+2. **Alcance**: renombrar **claves y nombres**. ✅ recomendado
+3. **`management`/`superadmin`**: se mantiene la separación. ✅ recomendado
+4. **Tokens**: **reingreso obligado**, sin ventana de alias (no era la recomendación; implica avisar y un test de «falla cerrado», ver §3.3).
 
 ## 8. Riesgos
 - Un literal de clave olvidado en una ruta rara degrada en silencio una función (p. ej. picking sin picker): lo cubre el test de §5.2 y el equivalente de permisos de §5.1.
