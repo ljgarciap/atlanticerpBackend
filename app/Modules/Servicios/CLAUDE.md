@@ -46,7 +46,7 @@ tickets(
 -- Y inspection_report_status ∈ {completed,not_applicable}. cancelled nunca pasa por este gate.
 -- Cambio de estado exclusivo de lider_servicios/superadmin (routes/servicios.php). Crear un
 -- ticket nuevo es más abierto (REQ-245 RN4): superadmin/lider_servicios/management/
--- vendedor_disenador, no solo lider_servicios/superadmin.
+-- vendedor, no solo lider_servicios/superadmin.
 
 ticket_products(                 -- REQ-247, Batch 3 parte 2 — productos reclamados/afectados
   id, ticket_id, catalog_product_id,   -- FK cross-schema → ventas_diseno.catalog_products, nullable
@@ -91,5 +91,5 @@ internal_technicians(           -- Batch 6 — perfil de técnico interno
 -- linkeados vía user_id por InternalTechnicianSeeder (idempotente, todos los entornos).
 ```
 
-> `vendedor_disenador` vive en el Nivel 6 ("Supervisor") por una reasignación deliberada — ver
+> `vendedor` vive en el Nivel 6 ("Supervisor") por una reasignación deliberada — ver
 > `docs/changelog.md` (sección Servicios, nota 2026-08-02) para el detalle.

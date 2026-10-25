@@ -59,7 +59,7 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
 
     public function test_el_rol_vendedor_no_tiene_modulo_compras_asi_el_menu_no_muestra_todo_compras(): void
     {
-        $role = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $role = Role::where('key', 'vendedor')->firstOrFail();
 
         $this->assertFalse(
             RoleModuleVisibility::where('role_id', $role->id)->where('module', 'compras')->exists(),

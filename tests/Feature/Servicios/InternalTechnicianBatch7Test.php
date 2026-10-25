@@ -186,7 +186,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
 
     public function test_tecnico_interno_no_puede_capturar_comision(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $id = $this->carlosId();
 
         $this->withHeaders($this->authHeaders($token))

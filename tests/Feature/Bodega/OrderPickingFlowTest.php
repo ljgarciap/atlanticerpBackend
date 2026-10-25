@@ -75,7 +75,7 @@ class OrderPickingFlowTest extends FeatureTestCase
         $order = $this->makeOrder();
         $this->grantBodegaPermissions('ayudantegeneralbodega@test.com');
         $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
-        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'auxiliar_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/assign-picker", ['picker_id' => $pickerId])
@@ -163,7 +163,7 @@ class OrderPickingFlowTest extends FeatureTestCase
         $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
         $order = $this->makeOrder(['stage' => Order::STAGE_PICKING_PENDIENTE, 'picker_id' => $pickerId]);
         $this->grantBodegaPermissions('ayudantegeneralbodega@test.com');
-        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'auxiliar_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/start-picking")
@@ -329,7 +329,7 @@ class OrderPickingFlowTest extends FeatureTestCase
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $pickerId], ['qty_requested' => 5]);
         $item = $order->items->first();
         $this->grantBodegaPermissions('ayudantegeneralbodega@test.com');
-        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'auxiliar_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/bodega/orders/{$order->id}/picking-sheet", [
@@ -380,7 +380,7 @@ class OrderPickingFlowTest extends FeatureTestCase
         $order = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $pickerId], ['qty_requested' => 5]);
         $item = $order->items->first();
         $this->grantBodegaPermissions('ayudantegeneralbodega@test.com');
-        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'auxiliar_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$order->id}/complete-picking", [

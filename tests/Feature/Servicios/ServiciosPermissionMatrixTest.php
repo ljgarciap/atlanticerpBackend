@@ -16,8 +16,8 @@ use Tests\Feature\FeatureTestCase;
  * frontera real de acceso (quién entra, quién no) se mantiene idéntica a la de los `role:` que
  * reemplaza — no es un test de negocio, es la regresión de seguridad del propio refactor.
  *
- * Roles reales usados (BusinessRoleUserSeeder): lider_servicios=Lider Servicios, tecnico_servicios=Tecnico Servicios,
- * garantias_servicios=Garantias Servicios, vendedor_disenador=Vendedor Disenador. management=Gerencia (CoreUserSeeder).
+ * Roles reales usados (BusinessRoleUserSeeder): lider_servicios=Lider Servicios, tecnico=Tecnico Servicios,
+ * tecnico_garantias=Garantias Servicios, vendedor=Vendedor Disenador. management=Gerencia (CoreUserSeeder).
  */
 class ServiciosPermissionMatrixTest extends FeatureTestCase
 {
@@ -61,7 +61,7 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($this->tokenFor(self::LIDER_SERVICIOS, 'lider_servicios')))
             ->getJson('/api/servicios/settings')->assertStatus(403);
 
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico_servicios')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico')))
             ->getJson('/api/servicios/settings')->assertStatus(403);
     }
 
@@ -74,7 +74,7 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
         foreach ([
             [self::LIDER_SERVICIOS, 'lider_servicios'],
             [self::MANAGEMENT, 'management'],
-            [self::VENDEDOR, 'vendedor_disenador'],
+            [self::VENDEDOR, 'vendedor'],
         ] as [$email, $role]) {
             $status = $this->withHeaders($this->authHeaders($this->tokenFor($email, $role)))
                 ->postJson('/api/servicios/tickets', $payload)
@@ -86,8 +86,8 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
     public function test_crear_ticket_tecnico_y_garantias_no_pueden(): void
     {
         foreach ([
-            [self::TECNICO, 'tecnico_servicios'],
-            [self::GARANTIAS, 'garantias_servicios'],
+            [self::TECNICO, 'tecnico'],
+            [self::GARANTIAS, 'tecnico_garantias'],
         ] as [$email, $role]) {
             $this->withHeaders($this->authHeaders($this->tokenFor($email, $role)))
                 ->postJson('/api/servicios/tickets', ['tipo' => 'instalacion'])
@@ -103,7 +103,7 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
         $ticket = Ticket::query()->first();
         $this->assertNotNull($ticket, 'ServiciosDemoSeeder debe dejar al menos un ticket.');
 
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico_servicios')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico')))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => 'agendado'])
             ->assertStatus(403);
 
@@ -124,11 +124,11 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
         $this->activateTenant();
         $ticket = Ticket::query()->first();
 
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::GARANTIAS, 'garantias_servicios')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::GARANTIAS, 'tecnico_garantias')))
             ->putJson("/api/servicios/tickets/{$ticket->id}/claim-sheet", ['descripcion' => 'x'])
             ->assertStatus(403);
 
-        $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico_servicios')))
+        $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico')))
             ->putJson("/api/servicios/tickets/{$ticket->id}/claim-sheet", ['descripcion' => 'x'])
             ->status();
         $this->assertNotSame(403, $status);
@@ -139,11 +139,11 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
         $this->activateTenant();
         $ticket = Ticket::query()->first();
 
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::GARANTIAS, 'garantias_servicios')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::GARANTIAS, 'tecnico_garantias')))
             ->getJson("/api/servicios/tickets/{$ticket->id}/inspection-report/pdf/blank")
             ->assertStatus(403);
 
-        $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico_servicios')))
+        $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico')))
             ->getJson("/api/servicios/tickets/{$ticket->id}/inspection-report/pdf/blank")
             ->status();
         $this->assertNotSame(403, $status);
@@ -158,8 +158,8 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
 
         foreach ([
             [self::LIDER_SERVICIOS, 'lider_servicios'],
-            [self::TECNICO, 'tecnico_servicios'],
-            [self::GARANTIAS, 'garantias_servicios'],
+            [self::TECNICO, 'tecnico'],
+            [self::GARANTIAS, 'tecnico_garantias'],
         ] as [$email, $role]) {
             $status = $this->withHeaders($this->authHeaders($this->tokenFor($email, $role)))
                 ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", [])
@@ -176,7 +176,7 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
             ->getJson('/api/servicios/reportes/comision-tecnico')
             ->assertStatus(403);
 
-        $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico_servicios')))
+        $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico')))
             ->getJson('/api/servicios/reportes/comision-tecnico')
             ->status();
         $this->assertNotSame(403, $status);
@@ -188,8 +188,8 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
     {
         foreach ([
             [self::LIDER_SERVICIOS, 'lider_servicios'],
-            [self::TECNICO, 'tecnico_servicios'],
-            [self::GARANTIAS, 'garantias_servicios'],
+            [self::TECNICO, 'tecnico'],
+            [self::GARANTIAS, 'tecnico_garantias'],
             [self::MANAGEMENT, 'management'],
         ] as [$email, $role]) {
             $this->withHeaders($this->authHeaders($this->tokenFor($email, $role)))
@@ -200,7 +200,7 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
 
     public function test_external_technicians_index_vendedor_no_puede(): void
     {
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::VENDEDOR, 'vendedor_disenador')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::VENDEDOR, 'vendedor')))
             ->getJson('/api/servicios/external-technicians')
             ->assertStatus(403);
     }
@@ -211,7 +211,7 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
     {
         $payload = ['nombre' => 'Externo Test', 'empresa' => 'X'];
 
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico_servicios')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico')))
             ->postJson('/api/servicios/external-technicians', $payload)
             ->assertStatus(403);
 

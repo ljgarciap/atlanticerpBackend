@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Services;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Services\KardexService;
 use App\Modules\Servicios\Events\InspectionReportCompleted;
@@ -138,11 +139,11 @@ final class InspectionReportService
     {
         $roleKey = $user->role?->key;
 
-        if ($roleKey === 'superadmin' || $roleKey === 'lider_servicios') {
+        if ($roleKey === RoleKeys::SUPERADMIN || $roleKey === RoleKeys::LIDER_SERVICIOS) {
             return;
         }
 
-        if (($roleKey === 'tecnico_servicios' || $roleKey === 'garantias_servicios')
+        if (($roleKey === RoleKeys::TECNICO || $roleKey === RoleKeys::TECNICO_GARANTIAS)
             && $ticket->internal_technician_id === $user->id
         ) {
             return;

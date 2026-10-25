@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Services;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Servicios\Events\ServiceQuoteApproved;
 use App\Modules\Servicios\Events\ServiceQuoteCreated;
 use App\Modules\Servicios\Events\ServiceQuoteRejected;
@@ -52,11 +53,11 @@ final class ServiceQuoteService
     {
         $roleKey = $user->role?->key;
 
-        if ($roleKey === 'superadmin' || $roleKey === 'lider_servicios') {
+        if ($roleKey === RoleKeys::SUPERADMIN || $roleKey === RoleKeys::LIDER_SERVICIOS) {
             return;
         }
 
-        if (($roleKey === 'tecnico_servicios' || $roleKey === 'garantias_servicios')
+        if (($roleKey === RoleKeys::TECNICO || $roleKey === RoleKeys::TECNICO_GARANTIAS)
             && $ticket->internal_technician_id === $user->id
         ) {
             return;

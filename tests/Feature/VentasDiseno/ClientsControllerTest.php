@@ -537,7 +537,7 @@ class ClientsControllerTest extends FeatureTestCase
     public function test_borrar_contacto_de_subcliente_requiere_permiso_edit(): void
     {
         // supervisor@ en vez de designer@ -- ver SCRUM-83. El escenario necesita write SIN edit;
-        // con designer@ (rol real vendedor_disenador desde el fix) el bridge rol+nivel otorga
+        // con designer@ (rol real vendedor desde el fix) el bridge rol+nivel otorga
         // ambos juntos, invalidando el test.
         $this->grantVentasDiseno('supervisor@atlantic.test', 'ventas_diseno.write');
         $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');

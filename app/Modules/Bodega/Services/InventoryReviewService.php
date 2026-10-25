@@ -6,6 +6,7 @@ namespace App\Modules\Bodega\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Events\InventoryReviewResolved;
 use App\Modules\Bodega\Events\OrderShortageConfirmed;
 use App\Modules\Bodega\Events\OrderSplit;
@@ -45,7 +46,7 @@ final class InventoryReviewService
      * — mismo criterio que `OrderService::BODEGA_LEAD_ROLE_KEY`: es un ROL, no una persona
      * puntual configurable.
      */
-    private const COMPRAS_LEAD_ROLE_KEY = 'lider_compras';
+    private const COMPRAS_LEAD_ROLE_KEY = RoleKeys::LIDER_COMPRAS;
 
     public function __construct(
         private readonly StockReservationService $reservations,
@@ -71,7 +72,7 @@ final class InventoryReviewService
      * Pre-QA 2026-07-22 (criterio confirmado contra Jira, REQ-318 "PERMISOS: Asistentes y Jefe de
      * Bodega") — a diferencia de otros pasos del flujo que sí son "visibles para todos los
      * perfiles de Bodega" (ej. completePicking), resolver la Revisión de Inventario está acotado
-     * al mismo `CAN_OPERATE` que `assignPicker` — el Picker (`ayudante_general_bodega`) y el
+     * al mismo `CAN_OPERATE` que `assignPicker` — el Picker (`auxiliar_bodega`) y el
      * Repartidor (`transporte`) NO deberían poder resolverla aunque tengan `bodega.write`.
      *
      * @param  list<array{order_item_id: int, found: bool, location?: string|null}>  $decisions

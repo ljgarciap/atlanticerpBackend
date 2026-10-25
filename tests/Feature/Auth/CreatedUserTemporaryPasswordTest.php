@@ -31,7 +31,7 @@ class CreatedUserTemporaryPasswordTest extends FeatureTestCase
 
         $this->postJson('/api/users', [
             'first_name' => 'Persona', 'last_name' => 'Creada', 'email' => self::EMAIL,
-            'role_id' => (int) DB::table('atlantic_auth.roles')->where('key', 'vendedor_disenador')->value('id'),
+            'role_id' => (int) DB::table('atlantic_auth.roles')->where('key', 'vendedor')->value('id'),
             'security_level_id' => 3,
         ], $admin)->assertStatus(201);
     }

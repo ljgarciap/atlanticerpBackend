@@ -2,6 +2,7 @@
 
 namespace App\Shared\Http\Middleware;
 
+use App\Modules\Auth\Support\RoleKeys;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,9 +28,9 @@ class ApplyGerenciaScope
         if (is_array($payload)
             && is_array($payload['permissions'] ?? null)
             && in_array(self::PERMISSION, $payload['permissions'], true)
-            && ($payload['role'] ?? null) !== 'superadmin') {
+            && ($payload['role'] ?? null) !== RoleKeys::SUPERADMIN) {
             $payload['real_role'] = $payload['role'] ?? null;
-            $payload['role'] = 'management';
+            $payload['role'] = RoleKeys::MANAGEMENT;
             // Las rutas de CRM/Ventas & Diseño ya no deciden por nombre de rol sino por permiso (Fase 1, bloque D): quien tiene el alcance de Gerencia
             // recibe, solo en estas rutas y solo para esta petición, los permisos de rol completo que antes daba el rol `management`.
             $payload['permissions'] = array_values(array_unique([...$payload['permissions'], 'platform.management', 'ventas_diseno.orders.access']));

@@ -11,7 +11,7 @@ use Database\Seeders\VentasDisenoSalesGoalsSeeder;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-146 — verifica que el roster real de vendedor_disenador (sembrado por
+ * SCRUM-146 — verifica que el roster real de vendedor (sembrado por
  * BusinessRoleUserSeeder) tenga su Meta/Meta Plus real seeded, y que Vendedor Disenador
  * (sin valor real confirmado en el ticket) quede sin Meta configurada.
  */

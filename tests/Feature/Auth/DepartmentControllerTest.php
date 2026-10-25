@@ -109,7 +109,7 @@ class DepartmentControllerTest extends FeatureTestCase
         $user = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/users', [
                 'first_name' => 'Con', 'last_name' => 'Departamento',
-                'email' => 'con.departamento@atlantic.test', 'role_id' => (int) \Illuminate\Support\Facades\DB::table('atlantic_auth.roles')->where('key', 'vendedor_disenador')->value('id'),
+                'email' => 'con.departamento@atlantic.test', 'role_id' => (int) \Illuminate\Support\Facades\DB::table('atlantic_auth.roles')->where('key', 'vendedor')->value('id'),
                 'department_id' => $id,
             ])
             ->assertStatus(201);

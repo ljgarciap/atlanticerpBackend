@@ -27,14 +27,14 @@ class AuthUserSeeder extends Seeder
         ['first_name' => 'Management', 'last_name' => 'Demo', 'email' => 'management@atlantic.test',  'level' => 10, 'role_key' => 'management'],
         ['first_name' => 'Gerencia',   'last_name' => 'Demo', 'email' => 'gerencia@atlantic.test',    'level' => 10, 'role_key' => 'management'],
         // level 4 -- SCRUM-83: debe coincidir con roles.default_security_level_id real de
-        // vendedor_disenador (migración 2026_07_18_100002), que es el único nivel con fila de
+        // vendedor (migración 2026_07_18_100002), que es el único nivel con fila de
         // capacidad ventas_diseno.can_edit=true. Antes estaba en nivel 3 (sin fila en
         // security_level_module_permissions -- ver ADR-006 corrección 2026-07-10), por lo que
         // esta cuenta demo podía ver pero nunca crear proyectos/cotizaciones -- el bug que Gerencia
         // reportó. Los tests de VentasDiseno no lo detectaron porque cada uno otorga
         // extra_permissions manualmente vía grantVentasDisenoEdit(), sin pasar por el bridge
         // rol+nivel real.
-        ['first_name' => 'Designer',   'last_name' => 'Demo', 'email' => 'designer@atlantic.test',    'level' => 4, 'role_key' => 'vendedor_disenador'],
+        ['first_name' => 'Designer',   'last_name' => 'Demo', 'email' => 'designer@atlantic.test',    'level' => 4, 'role_key' => 'vendedor'],
         ['first_name' => 'Supervisor', 'last_name' => 'Demo', 'email' => 'supervisor@atlantic.test',  'level' => 5, 'role_key' => null],
         ['first_name' => 'Electrician','last_name' => 'Demo', 'email' => 'electrician@atlantic.test','roles' => ['electrician'],                'level' => 2, 'role_key' => null],
         ['first_name' => 'Multi',      'last_name' => 'Role', 'email' => 'multi@atlantic.test',       'level' => 8, 'role_key' => 'management'],

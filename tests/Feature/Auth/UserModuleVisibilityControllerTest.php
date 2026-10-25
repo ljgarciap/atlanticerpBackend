@@ -58,7 +58,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
         $modules = collect($response->json('modules'))->keyBy('module');
         $this->assertCount(7, $modules);
-        // vendedor_disenador (rol de designer@) tiene ventas_diseno full, sin equipo.
+        // vendedor (rol de designer@) tiene ventas_diseno full, sin equipo.
         $this->assertSame(RoleModuleVisibility::VIEW_FULL, $modules['ventas_diseno']['can_view']);
         $this->assertFalse($modules['ventas_diseno']['can_view_team']);
         // Ningún otro módulo — cae en None por default de rol, no por override.
@@ -75,7 +75,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
         // Manda exactamente lo que GET ya devuelve (simula "abrir el modal y Guardar
         // sin tocar nada") — no debe crear ninguna fila de override. A propósito no
         // hardcodea los valores por rol acá: SCRUM-330 (Servicios) le agregó a
-        // vendedor_disenador visibilidad de solo lectura sobre `servicios` después de
+        // vendedor visibilidad de solo lectura sobre `servicios` después de
         // que este test se escribió, así que asumir VIEW_NONE en todo lo que no sea
         // ventas_diseno quedó desactualizado — leer el default real vía GET es lo que
         // el frontend hace en la práctica, y no depende de qué rol tenga qué hoy.

@@ -24,7 +24,7 @@ use Tests\Feature\FeatureTestCase;
 /**
  * SCRUM-735. Gerencia (gerencia@test.com, seedeada por CoreUserSeeder en TODOS
  * los entornos, incl. `testing`) y Vendedor Disenador (vendedordisenador2@test.com, seedeado por
- * BusinessRoleUserSeeder, rol vendedor_disenador real) son usuarios reales — no hace falta
+ * BusinessRoleUserSeeder, rol vendedor real) son usuarios reales — no hace falta
  * ningún fixture de usuario propio.
  */
 class TestDataCleanupServiceTest extends FeatureTestCase

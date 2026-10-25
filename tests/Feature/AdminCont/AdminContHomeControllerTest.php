@@ -215,9 +215,9 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_comisiones_internas_suma_todos_los_vendedores_sin_scope_de_actor(): void
     {
-        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', 'vendedor')->value('id');
         $vendedor = User::where('role_id', $roleId)->first();
-        $this->assertNotNull($vendedor, 'debe existir al menos un vendedor_disenador real sembrado en testing');
+        $this->assertNotNull($vendedor, 'debe existir al menos un vendedor real sembrado en testing');
 
         // Fixture ANTES de cualquier request HTTP — `CommissionOrderService::rawOrders()` arma el
         // nombre de tabla a mano con `Tenant::current()->slug` (no vía Eloquent/search_path); con

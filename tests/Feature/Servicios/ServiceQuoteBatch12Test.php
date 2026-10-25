@@ -192,7 +192,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
 
     public function test_tecnico_no_puede_editar_condiciones(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson('/api/servicios/settings', ['condiciones_cotizacion_servicios' => 'Intento no autorizado'])
@@ -217,7 +217,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_condiciones_se_congela_al_enviar_y_no_cambia_con_ediciones_posteriores(): void
     {
         $ticket = $this->makeTicket();
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $managementToken = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
 
         // Antes de generar/enviar, el preview siempre refleja el valor vigente.
@@ -252,7 +252,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_condiciones_null_mientras_esta_en_borrador(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -270,7 +270,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_documento_pdf_se_genera_para_cotizacion_enviada(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $quote = $this->generateAndSendQuote($ticket, $token);
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -285,7 +285,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
         // "Ver/Imprimir" no está restringido a un estado — REQ-236 abre cualquier versión del
         // historial (incluida una que siga en Borrador) en modo solo lectura via este mismo endpoint.
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -314,7 +314,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_documento_404_para_borrador_sin_ningun_guardado_real(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -406,7 +406,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_documento_incluye_informacion_de_pago_footer_correcto_y_monto_de_descuento(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -436,7 +436,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_instrucciones_de_pago_muestra_nombre_legal_y_cuenta_ach(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -462,7 +462,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_bloque_final_es_indivisible_y_tiene_espaciador(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -491,7 +491,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_info_cliente_usa_formato_etiqueta_valor_en_una_linea(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -519,7 +519,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_documento_muestra_el_logo_no_solo_texto_plano(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -539,7 +539,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_pdf_firma_simulada_solo_si_aprobada(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $quote = $this->generateAndSendQuote($ticket, $token);
 
         $ticketService = app(TicketService::class);
@@ -671,12 +671,12 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
     public function test_historial_global_incluye_todas_las_versiones_sin_filtrar_por_tecnico(): void
     {
         $ticketCarlos = $this->makeTicket(); // asignado a Tecnico Servicios por defecto (ver makeTicket())
-        $tokenCarlos = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tokenCarlos = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->generateAndSendQuote($ticketCarlos, $tokenCarlos);
 
         // Tecnico Servicios (otro técnico interno, NO asignado a ningún ticket de arriba) consulta el
         // historial global — RN de REQ-250: visibilidad transversal, nunca filtrada por técnico.
-        $tokenPedro = $this->loginAs(self::OTRO_TECNICO, self::OTRO_TECNICO, 'tecnico_servicios');
+        $tokenPedro = $this->loginAs(self::OTRO_TECNICO, self::OTRO_TECNICO, 'tecnico');
 
         $response = $this->withHeaders($this->authHeaders($tokenPedro))
             ->getJson('/api/servicios/quotes')

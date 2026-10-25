@@ -11,6 +11,7 @@ use App\Modules\AdminCont\Services\InvoiceService;
 use App\Modules\AdminCont\Services\PaymentService;
 use App\Modules\AdminCont\Services\PendingAlertsService;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Support\ApprovalsPendingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -62,7 +63,7 @@ final class AdminContHomeController
      */
     private function internalCommissionsPorPagar(): float
     {
-        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', RoleKeys::VENDEDOR)->value('id');
         if ($roleId === null) {
             return 0.0;
         }

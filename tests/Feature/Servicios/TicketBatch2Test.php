@@ -185,7 +185,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_detalle_visible_para_tecnico_interno(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/tickets/{$ticket->id}")
@@ -231,7 +231,7 @@ class TicketBatch2Test extends FeatureTestCase
 
     public function test_editar_cambio_de_tipo_desasigna_tecnico_sin_especialidad_valida(): void
     {
-        $carlosId = $this->technicianId(self::TECNICO_SERVICIOS); // tecnico_servicios, NO atiende Garantías
+        $carlosId = $this->technicianId(self::TECNICO_SERVICIOS); // tecnico, NO atiende Garantías
         $ticket = $this->makeTicket([
             'tipo' => Ticket::TIPO_INSTALLATION, 'subtipo' => Ticket::SUBTIPO_INSTALLATION,
             'internal_technician_id' => $carlosId,
@@ -277,7 +277,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_tecnico_interno_no_puede_editar_ticket(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}", [
@@ -400,7 +400,7 @@ class TicketBatch2Test extends FeatureTestCase
     {
         $ticket = $this->makeTicket();
         $product = $this->makeCatalogProduct();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/products", [
@@ -629,7 +629,7 @@ class TicketBatch2Test extends FeatureTestCase
     {
         $carlosId = $this->technicianId(self::TECNICO_SERVICIOS);
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/agendar", [

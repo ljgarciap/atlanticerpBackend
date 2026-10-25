@@ -13,8 +13,8 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * Fase 4 — Servicios, Batch 1 (REQ-216→221, REQ-249). Usuarios reales de Servicios (Lider Servicios Leis/
- * lider_servicios, Tecnico Servicios Test/tecnico_servicios, Garantias Servicios Test/garantias_servicios) y de
- * Ventas & Diseño (vendedor_disenador) ya existen vía `BusinessRoleUserSeeder` en TODOS los
+ * lider_servicios, Tecnico Servicios Test/tecnico, Garantias Servicios Test/tecnico_garantias) y de
+ * Ventas & Diseño (vendedor) ya existen vía `BusinessRoleUserSeeder` en TODOS los
  * entornos incl. testing — password = el email (cast `hashed`, ver `User::casts()`). Los permisos
  * de módulo (`RoleModuleVisibility`/`SecurityLevelModulePermission`) ya vienen sembrados por las
  * migraciones de tenant de esta misma fecha — no hace falta ningún grant manual acá.
@@ -279,7 +279,7 @@ class TicketFlowTest extends FeatureTestCase
 
     public function test_vendedor_disenador_puede_ver(): void
     {
-        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor_disenador');
+        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/tickets')
@@ -295,7 +295,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_vendedor_disenador_puede_crear_ticket(): void
     {
         $project = $this->makeSalesProject();
-        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor_disenador');
+        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
@@ -426,7 +426,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_tecnico_servicios_no_puede_cambiar_estado(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_SCHEDULED])
@@ -436,7 +436,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_garantias_servicios_no_puede_cambiar_estado(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::GARANTIAS_SERVICIOS, self::GARANTIAS_SERVICIOS, 'garantias_servicios');
+        $token = $this->loginAs(self::GARANTIAS_SERVICIOS, self::GARANTIAS_SERVICIOS, 'tecnico_garantias');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_SCHEDULED])
@@ -471,7 +471,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_tecnico_servicios_no_puede_crear_ticket(): void
     {
         $project = $this->makeSalesProject();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [
@@ -486,7 +486,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_garantias_servicios_no_puede_crear_ticket(): void
     {
         $project = $this->makeSalesProject();
-        $token = $this->loginAs(self::GARANTIAS_SERVICIOS, self::GARANTIAS_SERVICIOS, 'garantias_servicios');
+        $token = $this->loginAs(self::GARANTIAS_SERVICIOS, self::GARANTIAS_SERVICIOS, 'tecnico_garantias');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tickets', [

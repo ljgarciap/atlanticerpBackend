@@ -14,6 +14,7 @@ use App\Modules\AdminCont\Services\CashPositionExportService;
 use App\Modules\AdminCont\Services\CashPositionService;
 use App\Modules\AdminCont\Services\DailyCashCountService;
 use App\Modules\AdminCont\Services\DailyCashCountSummaryPdfService;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,7 +59,7 @@ class AdminContCashPositionController
 
         $data = $this->cashPosition->projected($windowDays);
         // SCRUM-1139 — `lider_operaciones` espeja a la asistente en Admin&Cont: mismo recorte (solo totales/neto).
-        if (in_array($this->roleFromRequest($request), ['asistente_administrativa', 'lider_operaciones'], true)) {
+        if (in_array($this->roleFromRequest($request), [RoleKeys::ASISTENTE_ADMINISTRATIVA, RoleKeys::LIDER_OPERACIONES], true)) {
             $data['entradas'] = [];
             $data['salidas'] = [];
         }

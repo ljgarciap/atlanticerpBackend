@@ -210,7 +210,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         $esteban = $this->resolveUser('liderbodega@test.com', 'lider_bodega');
         $osvaldo = $this->resolveUser('asistentebodega@test.com', 'asistente_bodega');
         $mariano = $this->resolveUser('asistentebodega2@test.com', 'asistente_bodega');
-        $apolonio = $this->resolveUser('ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $apolonio = $this->resolveUser('ayudantegeneralbodega@test.com', 'auxiliar_bodega');
         $gary = $this->resolveUser('transporte@test.com', 'transporte');
 
         if ($osvaldo === null || $mariano === null || $apolonio === null || $gary === null) {
@@ -494,7 +494,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
         }
 
         $osvaldo = $this->resolveUser('asistentebodega@test.com', 'asistente_bodega');
-        $apolonio = $this->resolveUser('ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $apolonio = $this->resolveUser('ayudantegeneralbodega@test.com', 'auxiliar_bodega');
         $yirena = $this->resolveUser('lidercompras@test.com', 'lider_compras');
 
         if ($osvaldo === null || $apolonio === null || $yirena === null) {
@@ -603,7 +603,7 @@ final class QaTicketsBatch20260725Seeder extends Seeder
             return;
         }
 
-        // Vendedor Disenador Test 10 (vendedor_disenador) — vendedora real con WarehouseAssistantMapping
+        // Vendedor Disenador Test 10 (vendedor) — vendedora real con WarehouseAssistantMapping
         // real ya sembrado (-> Asistente Bodega Test, ver WarehouseAssistantMappingSeeder), para que el
         // Order nazca con assistant_id asignado sin disparar la notificación de "sin asistente".
         $owner = User::where('email', 'vendedordisenador10@test.com')->first();
@@ -692,13 +692,13 @@ final class QaTicketsBatch20260725Seeder extends Seeder
     }
 
     /**
-     * Fase 2: por clave de rol real (`roles.key`), no por el enum legado `user_roles`. `designer` (legado) = `vendedor_disenador`.
+     * Fase 2: por clave de rol real (`roles.key`), no por el enum legado `user_roles`. `designer` (legado) = `vendedor`.
      *
      * @param list<string> $roles
      */
     private function userIdByRole(array $roles): ?int
     {
-        $keys = array_map(static fn (string $r): string => $r === 'designer' ? 'vendedor_disenador' : $r, $roles);
+        $keys = array_map(static fn (string $r): string => $r === 'designer' ? 'vendedor' : $r, $roles);
         $userId = User::query()->withRoleKey($keys)->orderBy('id')->value('id');
 
         return $userId !== null ? (int) $userId : null;

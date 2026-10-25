@@ -793,7 +793,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_asignado_sin_crm_delete_no_puede_eliminar_documento(): void
     {
         // electrician@ (nivel 2, Basic User: crm.read+crm.write, sin crm.delete) en vez de
-        // designer@ -- desde SCRUM-83, designer@ es un vendedor_disenador real en nivel 4
+        // designer@ -- desde SCRUM-83, designer@ es un vendedor real en nivel 4
         // ("Power User"), que sí incluye crm.delete en el escape hatch legado, así que ya no
         // sirve como fixture "asignado pero sin crm.delete".
         $mgmt      = $this->loginAs();

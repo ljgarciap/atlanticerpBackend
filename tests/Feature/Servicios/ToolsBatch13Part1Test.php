@@ -148,7 +148,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_tecnico_interno_puede_ver_listado_de_herramientas(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/tools')
@@ -259,7 +259,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     public function test_tecnico_interno_no_puede_cambiar_estado(): void
     {
         $tool = $this->makeTool(['codigo_unico' => 'COD-HER-405']);
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tools/{$tool->id}/estado", ['estado' => Tool::ESTADO_DAMAGED])
@@ -330,7 +330,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
     public function test_tecnico_interno_no_puede_reasignar(): void
     {
         $tool = $this->makeTool(['codigo_unico' => 'COD-HER-503']);
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tools/{$tool->id}/asignacion", ['assigned_to_technician_id' => null])
@@ -419,7 +419,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_tecnico_interno_no_puede_crear_solicitud_de_compra(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tools/purchase-requests', ['nombre' => 'X', 'cantidad' => 1])
@@ -428,7 +428,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     public function test_vendedor_disenador_no_puede_crear_solicitud_de_compra(): void
     {
-        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor_disenador');
+        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/tools/purchase-requests', ['nombre' => 'X', 'cantidad' => 1])
@@ -515,7 +515,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
             ->postJson('/api/servicios/tools/purchase-requests', ['nombre' => 'Andamio', 'cantidad' => 1])
             ->assertStatus(201);
 
-        $tokenTecnico = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tokenTecnico = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $response = $this->withHeaders($this->authHeaders($tokenTecnico))
             ->getJson('/api/servicios/tools/purchase-requests')
             ->assertStatus(200);

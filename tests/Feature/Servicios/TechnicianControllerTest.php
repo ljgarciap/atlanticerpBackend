@@ -8,8 +8,8 @@ use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-721 — GET /servicios/technicians/internal. Los 4 usuarios reales (`tecnico_servicios`
- * x3 + `garantias_servicios` x1) ya vienen sembrados por `BusinessRoleUserSeeder` en todos los
+ * SCRUM-721 — GET /servicios/technicians/internal. Los 4 usuarios reales (`tecnico`
+ * x3 + `tecnico_garantias` x1) ya vienen sembrados por `BusinessRoleUserSeeder` en todos los
  * entornos incl. testing (ver docblock de `TicketFlowTest`).
  */
 class TechnicianControllerTest extends FeatureTestCase
@@ -45,7 +45,7 @@ class TechnicianControllerTest extends FeatureTestCase
 
     public function test_vendedor_disenador_con_servicios_read_puede_ver_tecnicos(): void
     {
-        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor_disenador');
+        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/technicians/internal?fields=options')

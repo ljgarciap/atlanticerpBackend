@@ -102,6 +102,8 @@ final class JwtClaimsBuilder
             'security_level'  => $claims['security_level'],
             'role'            => $claims['role'],
             'role_id'         => $claims['role_id'],
+            // Fase 3: nombre visible del rol (`roles.name`, editable por CRUD); `role` es solo la clave. Dato visual, no viaja en el JWT.
+            'role_name'       => $user->role?->name,
             'permissions'     => $claims['permissions'],
             'modules'         => $claims['modules'],
             'menuVisibility'  => $claims['menuVisibility'],

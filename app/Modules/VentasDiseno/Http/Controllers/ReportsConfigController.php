@@ -39,7 +39,7 @@ final class ReportsConfigController extends Controller
         // enum legado `user_roles` (`role='designer'`), que dejó de reflejar el roster real
         // desde que BusinessRoleUserSeeder migró a roles de negocio (ver ADR-006). Hallazgo
         // real de Pre-QA (2026-07-30, SCRUM-146): con el mecanismo viejo, ninguno de los 9
-        // vendedor_disenador reales aparecía en esta pantalla, solo usuarios demo.
+        // vendedor reales aparecía en esta pantalla, solo usuarios demo.
         $vendors = $this->home->vendors();
 
         return response()->json(['data' => $vendors->map(function (array $vendor) use ($goals) {

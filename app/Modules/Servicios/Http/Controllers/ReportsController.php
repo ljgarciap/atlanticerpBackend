@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Servicios\Models\InternalTechnician;
 use App\Modules\Servicios\Services\CommissionCaptureService;
 use App\Modules\Servicios\Services\ReportsService;
@@ -102,7 +103,7 @@ final class ReportsController extends Controller
         }
 
         $roleKey = $user->role?->key;
-        $esGerencia = $roleKey === 'superadmin' || $roleKey === 'management';
+        $esGerencia = $roleKey === RoleKeys::SUPERADMIN || $roleKey === RoleKeys::MANAGEMENT;
         $esElMismo = $technician->user_id !== null && $technician->user_id === $user->id;
 
         if (! $esGerencia && ! $esElMismo) {

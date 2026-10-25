@@ -13,7 +13,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-748 — cubre el comando one-shot `bodega:seed-uat-projects`. Los 10 vendedores reales
- * (`role_key=vendedor_disenador`) ya existen en la BD de tests vía `BusinessRoleUserSeeder`
+ * (`role_key=vendedor`) ya existen en la BD de tests vía `BusinessRoleUserSeeder`
  * (corre incondicionalmente en `DatabaseSeeder`, incluido `testing` — ver docblock del seeder),
  * así que no hace falta sembrarlos acá.
  */

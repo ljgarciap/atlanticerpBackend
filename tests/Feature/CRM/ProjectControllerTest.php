@@ -295,7 +295,7 @@ class ProjectControllerTest extends FeatureTestCase
     public function test_exportar_reporte_sin_permiso_reports_export_retorna_403(): void
     {
         // readonly@ (nivel 1, sin reports.export) en vez de designer@ -- desde SCRUM-83,
-        // designer@ es un vendedor_disenador real en nivel 4, que sí incluye reports.export.
+        // designer@ es un vendedor real en nivel 4, que sí incluye reports.export.
         $token = $this->createLevel1Token();
 
         $this->withHeaders($this->authHeaders($token))

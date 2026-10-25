@@ -20,6 +20,7 @@ use App\Modules\AdminCont\Models\AdminContPettyCashReport;
 use App\Modules\AdminCont\Services\AdminContPettyCashAttachmentService;
 use App\Modules\AdminCont\Services\AdminContPettyCashReportPdfService;
 use App\Modules\AdminCont\Services\AdminContPettyCashService;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Http\Pagination;
 use App\Shared\Support\CircuitOpenException;
 use Illuminate\Http\JsonResponse;
@@ -403,6 +404,6 @@ class AdminContPettyCashController
         /** @var array{role?: string}|null $payload */
         $payload = $request->attributes->get('jwt');
 
-        return in_array($payload['role'] ?? null, ['superadmin', 'lider_admin_contab', 'asistente_administrativa', 'lider_operaciones'], true);
+        return in_array($payload['role'] ?? null, [RoleKeys::SUPERADMIN, RoleKeys::LIDER_ADMIN_CONTAB, RoleKeys::ASISTENTE_ADMINISTRATIVA, RoleKeys::LIDER_OPERACIONES], true);
     }
 }

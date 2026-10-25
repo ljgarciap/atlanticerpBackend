@@ -271,7 +271,7 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('saldo-favor
 // SCRUM-575→579 (REQ-498→502) — Comisiones Internas, Batch 14 (ver
 // docs/adr/ADR-SCRUM575-579-batch14-comisiones-internas.md). CORREGIDO en Senior Review: la
 // primera versión gateaba /tiers y / con `permission:admin_contab.read` solo — eso exige que
-// vendedor_disenador tenga `admin_contab.read`, que a su vez desbloquea TODO Admin&Cont (mismo
+// vendedor tenga `admin_contab.read`, que a su vez desbloquea TODO Admin&Cont (mismo
 // bug que SCRUM-771 encontró en Compras). Acá el OR es con el permiso angosto
 // `admin_contab.commissions_internal.view` (ver migración
 // `add_admin_contab_commissions_internal_view_permission` + `SpecialPermissionSeeder`), nunca con

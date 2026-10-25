@@ -20,7 +20,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-231→244 (REQ-168→181) — Inventario. `designer@atlantic.test` (role_key
- * vendedor_disenador) naturalmente tiene ventas_diseno.read pero NO compras.read — se usa sin
+ * vendedor) naturalmente tiene ventas_diseno.read pero NO compras.read — se usa sin
  * grantCompras() para probar el modo restringido, y con grantCompras() para el modo completo.
  */
 class InventoryControllerTest extends FeatureTestCase

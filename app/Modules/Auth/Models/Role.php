@@ -29,8 +29,6 @@ class Role extends Model
 {
     use LogsAuditTrail;
 
-    public const KEY_SUPERADMIN = 'superadmin';
-
     /** @var list<string> */
     protected $fillable = ['key', 'name', 'is_superadmin', 'is_system', 'is_active', 'default_security_level_id'];
 

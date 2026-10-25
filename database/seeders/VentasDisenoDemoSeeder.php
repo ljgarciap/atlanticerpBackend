@@ -93,13 +93,13 @@ class VentasDisenoDemoSeeder extends Seeder
     }
 
     /**
-     * Fase 2: por clave de rol real (`roles.key`), no por el enum legado `user_roles`. `designer` (legado) = `vendedor_disenador`.
+     * Fase 2: por clave de rol real (`roles.key`), no por el enum legado `user_roles`. `designer` (legado) = `vendedor`.
      *
      * @param list<string> $roles
      */
     private function userIdByRole(string $slug, array $roles): ?int
     {
-        $keys = array_map(static fn (string $r): string => $r === 'designer' ? 'vendedor_disenador' : $r, $roles);
+        $keys = array_map(static fn (string $r): string => $r === 'designer' ? 'vendedor' : $r, $roles);
         $userId = User::query()->withRoleKey($keys)->orderBy('id')->value('id');
 
         return $userId !== null ? (int) $userId : null;

@@ -232,7 +232,7 @@ class TicketBatch4Test extends FeatureTestCase
         $liderToken = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $ticketId = $this->createTicket($liderToken, $salesProjectId);
 
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($tecnicoToken))
             ->postJson("/api/servicios/tickets/{$ticketId}/attachments", [

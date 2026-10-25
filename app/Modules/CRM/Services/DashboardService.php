@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\CRM\Services;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\CRM\Models\Project;
 use App\Modules\CRM\Models\ProjectReminder;
 use Illuminate\Database\Eloquent\Builder;
@@ -77,7 +78,7 @@ final class DashboardService
             ->get(['id', 'nombre', 'contacto', 'etapa', 'fecha_entrega']);
         $friosProjects = (clone $friosQuery)->get(['id', 'nombre']);
 
-        $managementEmails = User::whereHas('role', fn (Builder $q) => $q->where('key', 'management'))
+        $managementEmails = User::whereHas('role', fn (Builder $q) => $q->where('key', RoleKeys::MANAGEMENT))
             ->whereNotNull('email')
             ->pluck('email')
             ->all();

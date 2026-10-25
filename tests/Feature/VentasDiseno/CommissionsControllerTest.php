@@ -119,7 +119,7 @@ class CommissionsControllerTest extends FeatureTestCase
     public function test_alcance_equipo_incluye_vendedores_reales_de_business_role_user_seeder(): void
     {
         // Pre-QA 2026-07-30 (SCRUM-712) — vendorsInScope() filtraba 'team' por el enum legado
-        // user_roles (role='designer'), que los 10 vendedor_disenador reales (BusinessRoleUserSeeder,
+        // user_roles (role='designer'), que los 10 vendedor reales (BusinessRoleUserSeeder,
         // role_id nuevo, sin fila en user_roles) nunca tuvieron. Gerencia veía $0/"Sin comisiones"
         // en alcance Equipo pese a comisiones reales pendientes por vendedor.
         $this->grantVentasDisenoRead('management@atlantic.test');

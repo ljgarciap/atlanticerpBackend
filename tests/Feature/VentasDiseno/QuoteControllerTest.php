@@ -92,7 +92,7 @@ class QuoteControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-83 — ver docblock equivalente en PipelineControllerTest. Sin grant manual: designer@
-     * debe poder crear una cotización solo con su rol seedeado (vendedor_disenador, nivel 4).
+     * debe poder crear una cotización solo con su rol seedeado (vendedor, nivel 4).
      *
      * SCRUM-912 — un payload vacío ya no persiste (ver test_crear_cotizacion_vacia_no_persiste
      * más abajo), así que este test manda un dato mínimo real para seguir probando lo que le
@@ -341,7 +341,7 @@ class QuoteControllerTest extends FeatureTestCase
     {
         // supervisor@ en vez de designer@ -- ver SCRUM-83. El escenario simula una degradación
         // de permiso (crea con edit, luego se le baja a solo lectura); con designer@ (rol real
-        // vendedor_disenador desde el fix) el bridge rol+nivel seguiría otorgando edit pese al
+        // vendedor desde el fix) el bridge rol+nivel seguiría otorgando edit pese al
         // extra_permissions de solo lectura, invalidando el test.
         $this->grantVentasDisenoEdit('supervisor@atlantic.test');
         $supervisorId = $this->userIdByEmail('supervisor@atlantic.test');

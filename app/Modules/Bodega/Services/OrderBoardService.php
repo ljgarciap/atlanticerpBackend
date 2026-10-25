@@ -132,7 +132,7 @@ final class OrderBoardService
     /**
      * SCRUM-854, rebote de Pre-QA — el selector del filtro seller_ids usaba
      * `ventas_diseno.home.vendors()`, gateado por `ventas_diseno.read`. Los roles reales de
-     * Pedidos (lider_bodega/asistente_bodega/ayudante_general_bodega/transporte) no tienen ese
+     * Pedidos (lider_bodega/asistente_bodega/auxiliar_bodega/transporte) no tienen ese
      * permiso — 403 silencioso, selector permanentemente vacío. Este método vive en el mismo
      * service que ya aplica el filtro (gateado por `bodega.read`, el permiso real de esta
      * pantalla) y devuelve el mismo shape {id, name} que `HomeService::vendors()` para que el

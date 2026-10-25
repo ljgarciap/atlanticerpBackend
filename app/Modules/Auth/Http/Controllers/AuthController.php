@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Auth\Exceptions\MfaDeliveryException;
 use App\Modules\Auth\Http\Requests\UpdateProfileRequest;
 use App\Modules\Auth\Models\RefreshToken;
+use App\Modules\Auth\Models\Role;
 use App\Modules\Auth\Services\ImpersonationService;
 use App\Modules\Auth\Services\MfaService;
 use App\Modules\Auth\Services\PasswordNotifier;
@@ -448,6 +449,7 @@ class AuthController
             'email'       => $payload['email'],
             'role'        => $payload['role'] ?? null,
             'role_id'     => $payload['role_id'] ?? null,
+            'role_name'   => isset($payload['role_id']) ? Role::where('id', (int) $payload['role_id'])->value('name') : null,
             'permissions' => $payload['permissions'],
             'modules'     => $payload['modules'] ?? null,
             'flags'       => $payload['flags'] ?? null,

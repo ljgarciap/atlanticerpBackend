@@ -12,6 +12,7 @@ use App\Modules\AdminCont\Models\CommissionTier;
 use App\Modules\AdminCont\Services\CommissionExportService;
 use App\Modules\AdminCont\Services\CommissionOrderService;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\RoleKeys;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -100,7 +101,7 @@ class AdminContInternalCommissionController
 
     /**
      * GET /api/admin-contab/commissions/internal/vendors — opciones del selector de vendedor
-     * (Contabilidad/Mark/Gerencia, REQ-500). Todo `vendedor_disenador`, tenga o no pedidos en el mes
+     * (Contabilidad/Mark/Gerencia, REQ-500). Todo `vendedor`, tenga o no pedidos en el mes
      * filtrado — un vendedor sin pedidos este mes igual debe poder elegirse para revisar su
      * historial de meses anteriores.
      */
@@ -116,7 +117,7 @@ class AdminContInternalCommissionController
     }
 
     /**
-     * Roster completo del rol `vendedor_disenador` — usado tanto por el selector (REQ-500) como
+     * Roster completo del rol `vendedor` — usado tanto por el selector (REQ-500) como
      * por la construcción de filas de `buildSummary()` (REQ-505, para que un vendedor sin ningún
      * pedido igual tenga una fila que expandir).
      *
@@ -124,7 +125,7 @@ class AdminContInternalCommissionController
      */
     private function vendedorDisenadorIds(): Collection
     {
-        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', RoleKeys::VENDEDOR)->value('id');
 
         return $roleId === null ? collect() : User::where('role_id', $roleId)->pluck('id');
     }
@@ -235,14 +236,14 @@ class AdminContInternalCommissionController
 
         $allOrders = $this->orders->ordersForAllVendors();
 
-        // REQ-505 (Batch 15) — un `vendedor_disenador` sin NINGÚN pedido en toda su historia (ej.
+        // REQ-505 (Batch 15) — un `vendedor` sin NINGÚN pedido en toda su historia (ej.
         // recién asignado, o simplemente sin actividad) sigue siendo seleccionable en el filtro
         // (`vendorOptions()` lista el rol completo), pero antes de este fix no aparecía como fila
         // en ningún mes/filtro — `vendorIds` salía únicamente de `allOrders`, así que ese vendedor
         // nunca tenía una fila que expandir para ver "Sin pedidos registrados todavía." (Escenario
         // 2 de REQ-505). Unimos el roster completo del rol con los ids que ya vienen de
         // `allOrders` (algún pedido puede estar asociado a un `owner_id` que no es
-        // `vendedor_disenador` — dato preexistente de Batch 14, no se retira nada que ya se veía).
+        // `vendedor` — dato preexistente de Batch 14, no se retira nada que ya se veía).
         $vendorIds = $canViewTeam
             ? $allOrders->pluck('vendedor_id')->unique()->merge($this->vendedorDisenadorIds())->unique()->values()
             : collect([$actor->id]);

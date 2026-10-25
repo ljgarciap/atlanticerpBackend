@@ -174,7 +174,7 @@ class InsumoReservaTest extends FeatureTestCase
         $provider = $this->makeLocalProvider();
         $product = $this->makeProduct(['provider_id' => $provider->id]);
 
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/insumos', [
                 'catalog_product_id' => $product->id,
@@ -199,7 +199,7 @@ class InsumoReservaTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $ok->id, 'warehouse_id' => $reservaId, 'quantity' => 10]);
         ProductWarehouseStock::create(['catalog_product_id' => $bajo->id, 'warehouse_id' => $reservaId, 'quantity' => 2]);
 
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/insumos')
             ->assertStatus(200);

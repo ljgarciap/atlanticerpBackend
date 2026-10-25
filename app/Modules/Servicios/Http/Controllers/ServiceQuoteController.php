@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Servicios\Exceptions\ServiceQuoteAccessDeniedException;
 use App\Modules\Servicios\Exceptions\ServiceQuoteActionBlockedException;
 use App\Modules\Servicios\Http\Requests\DecideServiceQuoteRequest;
@@ -252,7 +253,7 @@ final class ServiceQuoteController extends Controller
         $quote            = $this->quotes->current($ticket);
         $canEdit          = $this->userCanEdit($ticket, $user);
         $canViewCosts     = $user->hasPermission(self::COST_BREAKDOWN_PERMISSION);
-        $canDecideRole    = in_array($user->role?->key, ['superadmin', 'lider_servicios'], true);
+        $canDecideRole    = in_array($user->role?->key, [RoleKeys::SUPERADMIN, RoleKeys::LIDER_SERVICIOS], true);
 
         return [
             'ticket_id'               => $ticket->id,

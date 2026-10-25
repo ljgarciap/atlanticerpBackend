@@ -227,9 +227,9 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 
     public function test_comision_interna_pendiente_hace_mas_de_10_dias_genera_alerta(): void
     {
-        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', 'vendedor')->value('id');
         $vendedor = User::where('role_id', $roleId)->first();
-        $this->assertNotNull($vendedor, 'debe existir al menos un vendedor_disenador real sembrado en testing');
+        $this->assertNotNull($vendedor, 'debe existir al menos un vendedor real sembrado en testing');
 
         // Fixture ANTES de la request HTTP — mismo gotcha de Tenant::current() ya documentado en
         // AdminContHomeControllerTest::test_comisiones_internas_suma_todos_los_vendedores_sin_scope_de_actor().
@@ -254,7 +254,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
      *  reales (no medianoche exacta) reproducía "27.607690584572 días" en el texto de la alerta. */
     public function test_comision_interna_pendiente_muestra_dias_como_entero_sin_decimales(): void
     {
-        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', 'vendedor')->value('id');
         $vendedor = User::where('role_id', $roleId)->first();
         $this->assertNotNull($vendedor);
 
@@ -277,7 +277,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 
     public function test_comision_interna_dentro_del_umbral_no_genera_alerta(): void
     {
-        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', 'vendedor')->value('id');
         $vendedor = User::where('role_id', $roleId)->first();
         $this->assertNotNull($vendedor);
 

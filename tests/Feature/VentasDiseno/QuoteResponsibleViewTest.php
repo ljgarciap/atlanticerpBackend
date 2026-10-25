@@ -82,7 +82,7 @@ class QuoteResponsibleViewTest extends FeatureTestCase
 
     private function headersFor(string $email): array
     {
-        return $this->authHeaders($this->loginAs($email, $email, 'vendedor_disenador'));
+        return $this->authHeaders($this->loginAs($email, $email, 'vendedor'));
     }
 
     public function test_el_responsable_ve_la_version_confirmada_de_gerencia(): void

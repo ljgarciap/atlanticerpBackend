@@ -100,7 +100,7 @@ class RoleControllerTest extends FeatureTestCase
     {
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
-        $role  = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $role  = Role::where('key', 'vendedor')->firstOrFail();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin/roles/{$role->id}", ['name' => 'Otro nombre'])
@@ -126,7 +126,7 @@ class RoleControllerTest extends FeatureTestCase
     {
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
-        $role  = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $role  = Role::where('key', 'vendedor')->firstOrFail();
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/admin/roles/{$role->id}")
@@ -169,7 +169,7 @@ class RoleControllerTest extends FeatureTestCase
     {
         $token = $this->loginAs('designer@atlantic.test', 'Password123!');
         $this->activateTenant();
-        $role  = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $role  = Role::where('key', 'vendedor')->firstOrFail();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin/roles/{$role->id}/visibility")
@@ -180,7 +180,7 @@ class RoleControllerTest extends FeatureTestCase
     {
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
-        $role  = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $role  = Role::where('key', 'vendedor')->firstOrFail();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin/roles/{$role->id}/visibility");
