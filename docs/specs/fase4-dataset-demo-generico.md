@@ -1,6 +1,6 @@
 # Spec — Fase 4: dataset demo genérico y datos del cliente fuera del seed por defecto
 
-**Fecha**: 2026-10-25 · **Estado**: BORRADOR — pendiente de aprobación de Luis (no se implementa sin ella).
+**Fecha**: 2026-10-25 · **Estado**: decisiones de §7 RESPONDIDAS por Luis (2026-10-25); pendiente su «adelante» para implementar la entrega 4a.
 **Contexto**: decisión de Luis (2026-10-24, `docs/analisis/aislamiento-nucleo-2026-10-24.md` §9): ERP genérico multi-sector; la Fase 4 reemplaza los datos de ejemplo del cliente
 por un dataset demo genérico («sin iluminación ni personas» en seeders, e2e e i18n). Fases 1-3 ya mezcladas (permisos por permiso, `role_id` único, catálogo de roles genérico).
 
@@ -86,12 +86,12 @@ Integración Lafayette/ICG y Legacy (Fase 5), fiscal Panamá/moneda (Fase 6), ca
 - **4c — Identidades y prompts** (§3.4, §3.5): renombre mecánico.
 Cada entrega: spec aprobada → Senior Review → merge, como en las fases anteriores.
 
-## 7. Decisiones que necesito de Luis
-1. **Datos del cliente (clase B)**: ¿se **borran** ya los seeders (identidad fiscal, bancos, proveedores, familias, UAT, equivalencias ICG) o quedan **sin llamador** hasta la Fase 5? Recomendado: sin llamador + placeholders; se borran con Legacy/Lafayette.
-2. **Historial de git**: RUC, dirección fiscal y cuenta bancaria completa seguirán en la historia de ambos repos. ¿Quieres **purgarla** (reescribir historia y forzar push; destructivo) o **aceptarlo** y solo limpiar desde ahora? Depende de si los repos son privados y de si esos datos son sensibles para ti.
-3. **Identidades**: ¿renombramos las 4 familias derivadas de roles, `designer@` y las 4 cuentas de niveles (§3.4), o solo las 4 familias? Recomendado: todas (es mecánico y deja el vocabulario consistente).
-4. **Prompts de IA**: ¿`business_description` como ajuste editable (recomendado) o texto neutro fijo?
-5. **Entrega**: ¿tres entregas 4a/4b/4c (recomendado) o una sola?
+## 7. Decisiones (respondidas por Luis el 2026-10-25: las recomendadas, salvo la 2)
+1. **Datos del cliente (clase B)**: sin llamador + placeholders; se borran con Legacy/Lafayette en la Fase 5. ✅ recomendado
+2. **Historial de git**: **solo limpiar desde ahora**. RUC, dirección fiscal y la cuenta bancaria completa **seguirán visibles en commits antiguos** de ambos repos; se acepta. (Reabrir si resulta que los repos no son privados o esos datos son sensibles.)
+3. **Identidades**: renombrar todo (4 familias de roles, `designer@`, cuentas de niveles). ✅ recomendado
+4. **Prompts de IA**: ajuste editable `business_description` con valor neutro por defecto. ✅ recomendado
+5. **Entrega**: tres entregas 4a/4b/4c. ✅ recomendado
 
 ## 8. Riesgos
 - Cambiar el dataset demo toca ~25 archivos de test: se mitiga manteniendo la forma (§3.2) y verificando con la suite completa.
