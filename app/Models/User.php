@@ -10,13 +10,13 @@ use App\Modules\Auth\Models\SecurityLevelModulePermission;
 use App\Modules\Auth\Models\UserAdditionalRole;
 use App\Modules\Auth\Models\UserModuleMenuVisibility;
 use App\Modules\Auth\Models\UserModuleVisibility;
-use App\Modules\Auth\Models\UserRole;
 use App\Modules\Auth\Services\UatVisibilityService;
 use App\Modules\Auth\Support\ModuleCatalog;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
 use Carbon\Carbon;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -170,21 +170,47 @@ class User extends Authenticatable
         return $attributes;
     }
 
-    /** @return HasMany<UserRole, $this> */
-    public function userRoles(): HasMany
-    {
-        return $this->hasMany(UserRole::class);
-    }
-
-    /** @return list<string> */
+    /**
+     * Fase 2 (2026-10-24) — Fase E del ADR-006: las claves de rol salen de `role_id` + roles adicionales, ya no del enum legado `user_roles`.
+     *
+     * @return list<string> claves (`roles.key`) del rol base y de los adicionales, sin duplicados
+     */
     public function roles(): array
     {
-        return array_values($this->userRoles()->pluck('role')->map(fn (mixed $r) => (string) $r)->all());
+        $keys = $this->role !== null ? [$this->role->key] : [];
+        foreach ($this->additionalRoles as $additional) {
+            if ($additional->role !== null) {
+                $keys[] = $additional->role->key;
+            }
+        }
+
+        return array_values(array_unique($keys));
     }
 
-    public function hasRole(string $role): bool
+    public function hasRole(string $roleKey): bool
     {
-        return $this->userRoles()->where('role', $role)->exists();
+        return in_array($roleKey, $this->roles(), true);
+    }
+
+    /** Registro público pendiente de aprobación: tiene el rol de sistema `guest` (ver migración 2026_10_24_500000). */
+    public function isGuest(): bool
+    {
+        return $this->role !== null && $this->role->key === Role::KEY_GUEST;
+    }
+
+    /**
+     * Usuarios que tienen alguno de estos roles (clave de `roles.key`) como rol base o adicional.
+     *
+     * @param  Builder<User>  $query
+     * @param  list<string>   $keys
+     * @return Builder<User>
+     */
+    public function scopeWithRoleKey(Builder $query, array $keys): Builder
+    {
+        return $query->where(function (Builder $q) use ($keys): void {
+            $q->whereHas('role', fn (Builder $r) => $r->whereIn('key', $keys))
+                ->orWhereHas('additionalRoles.role', fn (Builder $r) => $r->whereIn('key', $keys));
+        });
     }
 
     /** @return BelongsTo<Department, $this> */
@@ -227,17 +253,7 @@ class User extends Authenticatable
      * mayoría de usuarios tiene exactamente 1 elemento acá — multi-rol es la excepción, no la
      * norma (por eso el gate de superadmin al escribir, ver `UserService`).
      *
-     * Fallback a rol legado (KAN-11, 2026-08-31): un usuario sin `role_id` — el camino real de
-     * `UserService::approve()` (registro público), que todavía solo asigna `user_roles`, nunca
-     * `role_id` (Fase E del ADR sigue pendiente) — antes de la Fase 3 de la auditoría de permisos
-     * seguía teniendo acceso vía el `role:` legado de las rutas (`hasRole()`); al migrar esas
-     * rutas a `permission:` (que se resuelve por acá), esos usuarios perdían el acceso en silencio.
-     * Si no hay `role_id`/roles adicionales, se resuelve el(los) rol(es) legado(s)
-     * (`user_roles.role`, strings) contra `roles.key` — solo 'superadmin'/'management' calzan hoy
-     * (el resto de `User::ROLE_*` son fixtures de demo de `AuthUserSeeder`, sin equivalente real
-     * en el catálogo de 14 roles nuevo, así que no matchean nada y siguen sin acceso, sin cambio
-     * de comportamiento para ellos). No toca `UserService::approve()` ni la tabla `user_roles` —
-     * decisión explícita de Luis de acotar el fix a este método, ver KAN-11.
+     * Sin fallback al enum legado `user_roles` (retirado en la Fase 2): el backfill de `role_id` ya cubrió esos casos.
      *
      * @return list<int>
      */
@@ -250,16 +266,7 @@ class User extends Authenticatable
         $additional = $this->additionalRoles->pluck('role_id')->all();
         $ids = array_values(array_unique(array_merge($ids, $additional)));
 
-        if ($ids !== []) {
-            return $ids;
-        }
-
-        $legacyRoles = $this->roles();
-        if ($legacyRoles === []) {
-            return [];
-        }
-
-        return array_values(Role::whereIn('key', $legacyRoles)->pluck('id')->map(fn (mixed $id) => (int) $id)->all());
+        return $ids;
     }
 
     /** @return list<string> */

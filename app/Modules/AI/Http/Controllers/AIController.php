@@ -146,8 +146,7 @@ final class AIController extends Controller
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $isManagement = in_array($this->activeRole($request), [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
-        if (! $isManagement) {
+        if (! $user->canViewTeamV2('ventas_diseno')) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -266,7 +265,7 @@ final class AIController extends Controller
             return response()->json(['message' => 'Not found.'], 404);
         }
 
-        if (! ProjectAccess::canAccess($this->activeRole($request), $project, $user)) {
+        if (! ProjectAccess::canAccess($project, $user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -275,7 +274,7 @@ final class AIController extends Controller
 
     /**
      * SCRUM-1056 (I-02): el solicitante siempre lee el suyo; si no, rige el acceso a la entidad: proyecto → regla del CRM; informe mensual →
-     * superadmin o management; cualquier otro tipo (análisis de Compras, p. ej. datos bancarios extraídos) → solo superadmin.
+     * quien ve a todo el equipo (Gerencia, superadmin); cualquier otro tipo (análisis de Compras, p. ej. datos bancarios extraídos) → solo superadmin.
      */
     private function canReadAnalysis(Request $request, User $user, AiAnalysis $analysis): bool
     {
@@ -283,20 +282,18 @@ final class AIController extends Controller
             return true;
         }
 
-        $role = $this->activeRole($request);
-
         if ($analysis->entity_type === 'project') {
             /** @var Project|null $project */
             $project = Project::with('assignees')->find((int) $analysis->entity_id);
 
-            return $project !== null && ProjectAccess::canAccess($role, $project, $user);
+            return $project !== null && ProjectAccess::canAccess($project, $user);
         }
 
         if ($analysis->entity_type === 'monthly_report') {
-            return in_array($role, [User::ROLE_SUPERADMIN, User::ROLE_MANAGEMENT], true);
+            return $user->canViewTeamV2('ventas_diseno');
         }
 
-        return $role === User::ROLE_SUPERADMIN;
+        return in_array('superadmin.all', $user->effectivePermissionsV2(), true);
     }
 
     /** @return array{0: User|null, 1: Tenant|null} */
@@ -321,12 +318,5 @@ final class AIController extends Controller
         $user = User::find((int) $payload['sub']);
 
         return [$user, $tenant];
-    }
-
-    private function activeRole(Request $request): string
-    {
-        /** @var array{role?: string}|null $payload */
-        $payload = $request->attributes->get('jwt');
-        return isset($payload['role']) ? (string) $payload['role'] : '';
     }
 }

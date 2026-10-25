@@ -40,7 +40,7 @@ class CoreUserSeeder extends Seeder
         $tenant->makeCurrent();
 
         try {
-            $userRolesTable = "{$tenant->slug}_auth.user_roles";
+            $rolesTable     = "{$tenant->slug}_auth.roles";
             $securityLevels = "{$tenant->slug}_auth.security_levels";
             $fallbackLevelId = (int) (DB::table($securityLevels)->where('level', 5)->value('id') ?? 1);
 
@@ -59,13 +59,10 @@ class CoreUserSeeder extends Seeder
                         'password_hash' => $data['email'],
                         'is_active' => true,
                         'security_level_id' => $levelId,
+                        // Fase 2: `role_id` es el único mecanismo de rol; solo para usuarios nuevos (los existentes gestionan su rol por la UI).
+                        'role_id' => DB::table($rolesTable)->where('key', $data['roles'][0])->value('id'),
                         'extra_permissions' => [],
                     ]);
-
-                    // Seed roles only for new users — existing users manage their own roles via UI
-                    foreach ($data['roles'] as $role) {
-                        DB::table($userRolesTable)->insertOrIgnore(['user_id' => $user->id, 'role' => $role]);
-                    }
                 }
             }
         } finally {

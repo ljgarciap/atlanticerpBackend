@@ -7,7 +7,7 @@ namespace App\Modules\Auth\Listeners;
 use App\Models\User;
 use App\Modules\Auth\Events\SecurityAnomalyDetected;
 use App\Modules\Auth\Mail\SecurityAnomalyMail;
-use Illuminate\Database\Eloquent\Builder;
+use App\Modules\Auth\Models\Role;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -17,9 +17,7 @@ final class NotifySuperadminsOfAnomaly
     {
         $superadmins = User::query()
             ->where('is_active', true)
-            ->whereHas('userRoles', function (Builder $q): void {
-                $q->where('role', User::ROLE_SUPERADMIN);
-            })
+            ->withRoleKey([Role::KEY_SUPERADMIN])
             ->get();
 
         if ($superadmins->isEmpty()) {

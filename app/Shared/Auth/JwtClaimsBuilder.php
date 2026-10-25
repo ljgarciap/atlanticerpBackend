@@ -19,11 +19,7 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
  * + `extra_permissions`), mismo comportamiento que v1 para ese subconjunto (sin acceso a los 7
  * módulos nuevos hasta que un superadmin le asigne un `role_id`, ver ADR-006 Fase D).
  *
- * `role` (el claim string, el que sí sigue leyendo `routes/crm.php` vía `EnforceRole`) cae al
- * rol legado (`user_roles`) cuando no hay `role_id` — encontrado en Senior Review 2026-07-10:
- * `UserService::approve()` (registro público) solo asigna `user_roles`, nunca `role_id`, así que
- * sin este fallback cualquier usuario aprobado con rol `management` a partir de hoy perdía el
- * acceso a `GET /api/crm/reports/team`/`DELETE /api/crm/projects/{id}` que sí tenía con v1.
+ * `role` es la clave del rol base (`roles.key`). Sin fallback al enum legado `user_roles` (retirado en la Fase 2: `role_id` es el único mecanismo).
  */
 final class JwtClaimsBuilder
 {
@@ -34,7 +30,7 @@ final class JwtClaimsBuilder
             'sub'            => $user->id,
             'tenant'         => $tenantSlug,
             'email'          => $user->email,
-            'role'           => $user->role !== null ? $user->role->key : ($user->roles()[0] ?? null),
+            'role'           => $user->role?->key,
             'role_id'        => $user->role_id,
             'permissions'    => $user->effectivePermissionsV2(),
             'modules'        => $user->modulesPayload(),

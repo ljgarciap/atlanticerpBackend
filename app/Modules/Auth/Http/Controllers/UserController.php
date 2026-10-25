@@ -25,19 +25,6 @@ class UserController extends Controller
         private readonly UatVisibilityService $uatVisibility,
     ) {}
 
-    public function catalog(): JsonResponse
-    {
-        return response()->json([
-            'roles' => [
-                User::ROLE_SUPERADMIN,
-                User::ROLE_MANAGEMENT,
-                User::ROLE_DESIGNER,
-                User::ROLE_SUPERVISOR,
-                User::ROLE_ELECTRICIAN,
-            ],
-        ]);
-    }
-
     public function index(Request $request): JsonResponse
     {
         $search  = (string) ($request->query('search', ''));
@@ -236,22 +223,17 @@ class UserController extends Controller
     {
         $user = $this->service->findOrFail($id);
 
-        $validRoles = [
-            User::ROLE_SUPERADMIN,
-            User::ROLE_MANAGEMENT,
-            User::ROLE_DESIGNER,
-            User::ROLE_SUPERVISOR,
-            User::ROLE_ELECTRICIAN,
-        ];
-
         $data = $request->validate([
-            'role'              => ['required', 'string', Rule::in($validRoles)],
+            // Fase 2: el rol es `role_id` (tabla `roles`, activo; el rol de sistema `guest` está inactivo y por eso no es elegible).
+            'role_id'           => ['required', 'integer', Rule::exists('roles', 'id')->where(fn ($q) => $q->where('is_active', true))],
             'security_level_id' => ['required', 'integer', 'min:1'],
         ]);
 
+        [, $actorHasSuperadmin] = $this->actorContext($request);
+
         try {
-            $user = $this->service->approve($user, (string) $data['role'], (int) $data['security_level_id']);
-        } catch (\InvalidArgumentException $e) {
+            $user = $this->service->approve($user, (int) $data['role_id'], (int) $data['security_level_id'], $actorHasSuperadmin);
+        } catch (\InvalidArgumentException|\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 

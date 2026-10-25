@@ -9,7 +9,6 @@ use App\Modules\Auth\Models\RefreshToken;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Models\UserAdditionalRole;
-use App\Modules\Auth\Models\UserRole;
 use App\Modules\Auth\Support\NoLoginAccounts;
 use App\Shared\Services\AuditService;
 use Illuminate\Support\Collection;
@@ -57,7 +56,7 @@ class AdminPasswordResetService
             return false;
         }
 
-        $roleKey = $operator->role !== null ? $operator->role->key : ($operator->roles()[0] ?? null);
+        $roleKey = $operator->role?->key;
 
         return $roleKey === 'superadmin';
     }
@@ -120,8 +119,6 @@ class AdminPasswordResetService
             });
             $query->whereNotIn('id', UserAdditionalRole::query()->whereIn('role_id', $superRoleIds)->select('user_id'));
         }
-
-        $query->whereNotIn('id', UserRole::query()->where('role', 'superadmin')->select('user_id'));
 
         // Security levels de máximo privilegio: nivel 10 o con `superadmin.all` en sus permisos (la tabla tiene ~10 filas).
         $topLevelIds = SecurityLevel::query()->get(['id', 'level', 'permissions'])

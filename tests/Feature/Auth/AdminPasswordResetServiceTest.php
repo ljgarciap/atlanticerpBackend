@@ -58,25 +58,22 @@ class AdminPasswordResetServiceTest extends FeatureTestCase
         $this->assertTrue($at->greaterThanOrEqualTo($antes));
     }
 
-    public function test_resolve_targets_excluye_superadmin_por_rol_base_rol_adicional_y_fila_legacy(): void
+    public function test_resolve_targets_excluye_superadmin_por_rol_base_y_rol_adicional(): void
     {
         $superRoleId = (int) \App\Modules\Auth\Models\Role::where('is_superadmin', true)->value('id');
         $porBase = $this->makeUser();
         $porBase->forceFill(['role_id' => $superRoleId])->save();
         $porAdicional = $this->makeUser();
         \App\Modules\Auth\Models\UserAdditionalRole::create(['user_id' => $porAdicional->id, 'role_id' => $superRoleId]);
-        $porLegacy = $this->makeUser();
-        \Illuminate\Support\Facades\DB::table(Tenant::current()?->slug . '_auth.user_roles')->insert(['user_id' => $porLegacy->id, 'role' => 'superadmin']);
         $normal = $this->makeUser();
 
         $ids = $this->service->resolveTargets()->pluck('id')->all();
         $this->assertContains($normal->id, $ids);
         $this->assertNotContains($porBase->id, $ids);
         $this->assertNotContains($porAdicional->id, $ids);
-        $this->assertNotContains($porLegacy->id, $ids);
 
         $ids = $this->service->resolveTargets([], [], null, true)->pluck('id')->all();
-        foreach ([$normal, $porBase, $porAdicional, $porLegacy] as $u) {
+        foreach ([$normal, $porBase, $porAdicional] as $u) {
             $this->assertContains($u->id, $ids);
         }
     }

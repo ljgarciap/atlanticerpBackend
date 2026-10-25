@@ -131,7 +131,7 @@ class AuthController
                 ! $user
                 || ! $user->is_active
                 || $user->isSecurityBlocked()
-                || $user->hasRole(User::ROLE_GUEST)
+                || $user->isGuest()
                 || ! $passwordOk
             ) {
                 // $user puede ser null (email no existe) — igual se loggea el intento para que

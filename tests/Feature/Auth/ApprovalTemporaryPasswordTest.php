@@ -33,7 +33,7 @@ class ApprovalTemporaryPasswordTest extends FeatureTestCase
         $this->crearCuentaPendiente('Persona', 'Aprobada', self::EMAIL);
 
         $id = (int) DB::table('atlantic_auth.users')->where('email', self::EMAIL)->value('id');
-        $this->postJson("/api/users/{$id}/approve", ['role' => 'designer', 'security_level_id' => 3], $admin)->assertStatus(200);
+        $this->postJson("/api/users/{$id}/approve", ['role_id' => (int) DB::table('atlantic_auth.roles')->where('key', 'vendedor_disenador')->value('id'), 'security_level_id' => 3], $admin)->assertStatus(200);
     }
 
     public function test_la_cuenta_aprobada_queda_con_cambio_obligatorio_y_sin_marca_de_caducidad(): void

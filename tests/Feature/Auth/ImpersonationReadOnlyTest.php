@@ -246,7 +246,6 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
         $this->reMakeCurrent();
         User::where('email', 'superadmin@atlantic.test')->firstOrFail()
             ->forceFill(['role_id' => Role::where('key', 'management')->value('id')])->save();
-        DB::table('atlantic_auth.user_roles')->where('user_id', $this->userId('superadmin@atlantic.test'))->delete();
 
         $this->getJson('/api/auth/me', $headers)->assertStatus(401)->assertJsonPath('code', 'impersonation_ended');
         $this->assertSame('revoked', $this->sessionRow($sessionId)->ended_reason);

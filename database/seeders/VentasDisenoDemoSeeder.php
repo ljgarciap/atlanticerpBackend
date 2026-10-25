@@ -10,6 +10,7 @@ use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -91,18 +92,16 @@ class VentasDisenoDemoSeeder extends Seeder
         }
     }
 
-    /** @param list<string> $roles */
+    /**
+     * Fase 2: por clave de rol real (`roles.key`), no por el enum legado `user_roles`. `designer` (legado) = `vendedor_disenador`.
+     *
+     * @param list<string> $roles
+     */
     private function userIdByRole(string $slug, array $roles): ?int
     {
-        $table = "{$slug}_auth.user_roles";
+        $keys = array_map(static fn (string $r): string => $r === 'designer' ? 'vendedor_disenador' : $r, $roles);
+        $userId = User::query()->withRoleKey($keys)->orderBy('id')->value('id');
 
-        foreach ($roles as $role) {
-            $userId = DB::table($table)->where('role', $role)->value('user_id');
-            if ($userId !== null) {
-                return (int) $userId;
-            }
-        }
-
-        return null;
+        return $userId !== null ? (int) $userId : null;
     }
 }

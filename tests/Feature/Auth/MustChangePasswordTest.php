@@ -65,7 +65,6 @@ class MustChangePasswordTest extends FeatureTestCase
             ['PATCH', '/api/auth/profile'],
             ['GET', '/api/ventas-diseno/pipeline'],
             ['GET', '/api/compras/inventory'],
-            ['GET', '/api/users/catalog'],
         ] as [$method, $url]) {
             $res = $this->json($method, $url, [], $headers);
             $res->assertStatus(403)->assertJsonPath('code', 'password_change_required');

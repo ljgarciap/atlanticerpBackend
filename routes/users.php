@@ -5,11 +5,6 @@ use App\Modules\Auth\Http\Controllers\ImpersonationController;
 use App\Modules\Auth\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-// SCRUM-1012 — administración de usuarios/niveles/departamentos exclusiva de Gerencia (rol base `management`) + superadmin, ADEMÁS del permiso. Un grant individual (extra_permissions/manage_users) sin ese rol ya NO alcanza.
-Route::middleware('permission:platform.management')->group(function () {
-    Route::get('/catalog', [UserController::class, 'catalog']);
-});
-
 // Reset administrativo de contraseñas (docs/runbooks/reset-password.md) — SOLO superadmin, con límite de peticiones POR USUARIO
 // (limitador `password-reset-admin`, config/throttle.php) y re-autenticación del operador dentro del controlador (H3).
 // Rutas estáticas/específicas antes que cualquier `/{id}` genérico.

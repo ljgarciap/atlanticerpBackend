@@ -37,7 +37,7 @@ class AuthUserSeeder extends Seeder
         ['first_name' => 'Designer',   'last_name' => 'Demo', 'email' => 'designer@atlantic.test',   'roles' => ['designer'],                  'level' => 4, 'role_key' => 'vendedor_disenador'],
         ['first_name' => 'Supervisor', 'last_name' => 'Demo', 'email' => 'supervisor@atlantic.test', 'roles' => ['supervisor'],                 'level' => 5, 'role_key' => null],
         ['first_name' => 'Electrician','last_name' => 'Demo', 'email' => 'electrician@atlantic.test','roles' => ['electrician'],                'level' => 2, 'role_key' => null],
-        ['first_name' => 'Multi',      'last_name' => 'Role', 'email' => 'multi@atlantic.test',      'roles' => ['management', 'designer'],    'level' => 8, 'role_key' => null],
+        ['first_name' => 'Multi',      'last_name' => 'Role', 'email' => 'multi@atlantic.test',      'roles' => ['management', 'designer'],    'level' => 8, 'role_key' => 'management'],
         ['first_name' => 'Readonly',   'last_name' => 'Demo', 'email' => 'readonly@atlantic.test',   'roles' => ['electrician'],               'level' => 1, 'role_key' => null],
     ];
 
@@ -63,7 +63,6 @@ class AuthUserSeeder extends Seeder
         $tenant->makeCurrent();
 
         try {
-            $userRolesTable = "{$tenant->slug}_auth.user_roles";
             $securityLevels = "{$tenant->slug}_auth.security_levels";
             $rolesTable     = "{$tenant->slug}_auth.roles";
             $fallbackLevelId = (int) (DB::table($securityLevels)->where('level', 1)->value('id') ?? 1);
@@ -99,13 +98,6 @@ class AuthUserSeeder extends Seeder
                     ]);
                     /** @var User $user */
                     $user = $existing;
-                }
-
-                // Sync roles in pivot (remove old, insert new)
-                DB::table($userRolesTable)->where('user_id', $user->id)->delete();
-
-                foreach ($data['roles'] as $role) {
-                    DB::table($userRolesTable)->insert(['user_id' => $user->id, 'role' => $role]);
                 }
             }
         } finally {

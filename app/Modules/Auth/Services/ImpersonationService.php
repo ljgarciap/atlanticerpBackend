@@ -298,7 +298,7 @@ class ImpersonationService
         if ($target->isSecurityBlocked()) {
             return self::TARGET_SECURITY_BLOCK;
         }
-        if ($target->hasRole(User::ROLE_GUEST)) {
+        if ($target->isGuest()) {
             return self::TARGET_GUEST;
         }
         if ($this->accounts->isTopPrivilege($target)) {

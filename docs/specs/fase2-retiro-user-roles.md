@@ -1,6 +1,6 @@
 # Spec — Fase 2: retirar el enum legado `user_roles` (Fase E del ADR-006)
 
-**Fecha**: 2026-10-24 · **Estado**: BORRADOR — pendiente de aprobación de Luis (no se implementa sin ella).
+**Fecha**: 2026-10-24 · **Estado**: APROBADA por Luis (2026-10-24) con las 4 recomendaciones de §6; se implementa el paso 2.1. El paso 2.2 (`DROP TABLE`) sigue requiriendo su confirmación explícita aparte.
 **Contexto**: Luis autorizó la Fase E «dentro del aislamiento» (análisis `docs/analisis/aislamiento-nucleo-2026-10-24.md`, decisión 6). La parte
 **destructiva** (borrar la tabla) necesita además confirmación explícita aparte (regla del workspace) — ver §4, paso 2.2.
 
@@ -76,7 +76,7 @@ migrados; frontend (`ApproveUserModal`, `usersApi`, `impersonationEligibility`).
 5. El backfill es idempotente y su `down()` restaura `user_roles`; probado en una BD con datos mezclados (con y sin `role_id`).
 6. PHPStan L8 limpio; suite completa del backend y del frontend en verde; Playwright CLI: registro → aprobación → login de la persona aprobada.
 
-## 6. Decisiones que necesito de Luis
+## 6. Decisiones (respondidas por Luis el 2026-10-24: las 4 recomendaciones)
 1. **Registro pendiente = rol de sistema `guest`** (recomendado) vs. columna `registration_status`.
 2. **`designer`/`supervisor`/`electrician` (solo cuentas demo): quedan con `role_id` NULL** (recomendado, igual que hoy) vs. mapearlos a un rol real.
 3. **Dos pasos (2.1 aditivo, 2.2 borrado en PR aparte tras `dev`)** (recomendado) vs. todo en un solo PR.
@@ -86,3 +86,31 @@ migrados; frontend (`ApproveUserModal`, `usersApi`, `impersonationEligibility`).
 - Quien tuviera hoy acceso **solo** por el parche KAN-11 (`superadmin`/`management` legados sin `role_id`) lo conserva gracias al backfill; si el backfill no los encuentra, perderían acceso → criterio 5 y aborto con mensaje.
 - El reset masivo y las alertas de seguridad dependen de identificar superadmins: es el cambio de mayor riesgo; su regresión (criterio 2) es obligatoria antes de mezclar.
 - Orden con la Fase 3: esta fase **antes** de renombrar roles, para no tocar dos veces los mismos archivos.
+
+## 8. Resultado del paso 2.1 (2026-10-24)
+
+Rama backend `fase2/retiro-user-roles`, rama frontend `fase2/retiro-user-roles`. La tabla `user_roles` **se conserva** (sin lectores ni escritores en `app/`, `routes/`, `config/` ni seeders); se borra en el paso 2.2.
+
+**Hecho**
+- Migración `2026_10_24_500000`: rol de sistema `guest` (inactivo, así no aparece en selectores ni es asignable) + backfill a `role_id` (idempotente; `down()` restaura la fila legada de quien se registró después).
+- Migración `2026_10_24_500001`: las reglas de notificación del CRM con destinatario «rol» pasan de `designer` a `vendedor_disenador` (`supervisor`/`electrician` quedan como están, sin equivalente).
+- `User`: `roles()`/`hasRole()` salen de `role_id` + roles adicionales; `isGuest()`; `scopeWithRoleKey()`; `roleIds()` sin el fallback KAN-11. `Role::KEY_GUEST`/`KEY_SUPERADMIN`.
+- `UserService`: `register()` crea con rol `guest`; `approve($user, $roleId, $levelId, $actorHasSuperadmin)` (el gate de superadmin ahora también aplica al aprobar); `reject`/`listPending` por el rol; `create`/`update` ya no escriben `user_roles`; el rol `guest` no es asignable.
+- Superadmins por `roles.key` (no por `user_roles`): `NotifySuperadminsOfAnomaly`, `LegacySyncAlertService`, `AdminPasswordResetService` (+ `operatorIsStillSuperadmin`).
+- `AIController`/`ProjectAccess` por `canViewTeamV2('ventas_diseno')` y `superadmin.all` en vez de la clave de rol del JWT; `JwtClaimsBuilder` sin fallback.
+- API: `POST /users/{id}/approve` recibe `role_id`; se elimina `GET /users/catalog`; `CreateUserRequest` exige `role_id`; se quitó el campo legado `roles` de create/update.
+- Seeders: los 5 que escribían `user_roles` ahora usan `role_id` / `roles.key`. `multi@atlantic.test` pasa a `role_key = management` (antes lo resolvía el fallback KAN-11).
+- Frontend: `ApproveUserModal` con `rolesApi` y `role_id`, `usersApi.catalog` eliminado, reglas de notificación con los roles de la tabla.
+
+**Correcciones a lo que decía la spec**
+1. **La ruta de registro público ya no existe** (se quitó en la sincronización con binax; `RegisterController` solo expone departamentos y `UserService::register()` no tiene llamadores fuera de los tests). El hallazgo §1.1 («el registro público no puede dar un rol real») era **latente**, no un bug activo. El flujo pendiente→aprobado sigue implementado y probado, pero hoy nada crea registros pendientes. Candidato a retirar del todo en la Fase 4.
+2. **Efecto no previsto, corregido**: las reglas de notificación guardaban el rol legado en BD y la UI tenía una lista fija de 5 roles. Se tradujo con la migración `500001` y la UI usa la tabla.
+3. El hallazgo de seguridad (§1.2) **sí era real** en cuanto a las alertas: un superadmin creado solo con `role_id` no las recibía. Cubierto por `Fase2RetiroUserRolesTest`.
+
+**Verificación**: PHPStan 0 errores; `Fase2RetiroUserRolesTest` (7 tests: backfill, `down()`, alertas, reset masivo, scope, reglas); Auth+Users+CRM 1067 tests; frontend `tsc` limpio y 248 archivos / 3115 tests; e2e con Playwright: el pendiente no puede entrar, el modal ofrece los 14 roles reales sin `guest`, y la persona aprobada inicia sesión con su rol.
+
+## 9. Pendiente para el paso 2.2 (requiere confirmación explícita de Luis: borra datos)
+- `DROP TABLE user_roles` (su `down()` la recrea y repuebla desde `role_id`), eliminar `UserRole`, `User::ROLE_*` y las referencias en migraciones históricas (usan las constantes: dejarlas con literales).
+- Quitar `DbAuditLogTriggerTest::test_user_roles_pk_compuesta...` y el trigger de auditoría de esa tabla (`create_db_audit_triggers`).
+- **Decidido por Luis (2026-10-24): `register()` y todo el flujo pendiente (`listPending`, `approve`, `reject`, `ApproveUserModal`, pestaña de pendientes, rol de sistema `guest` y sus tests) se retiran en el 2.2**, porque la ruta pública ya no existe y nada crea registros pendientes. Eso implica también quitar `GET /users/pending`, `POST /users/{id}/approve`, `DELETE /users/{id}/reject` y `ApprovalsPendingService` para `user_approval`.
+- El 2.2 se implementa **solo después** de mezclar el 2.1 y verificarlo en `dev`, y con la confirmación explícita de Luis para el `DROP TABLE` (que no se da por incluida en esta decisión).

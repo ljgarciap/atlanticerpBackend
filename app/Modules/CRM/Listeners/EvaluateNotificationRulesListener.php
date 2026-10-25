@@ -91,9 +91,7 @@ final class EvaluateNotificationRulesListener
 
         /** @var list<int> $ids */
         $ids = User::query()
-            ->whereHas('userRoles', function ($q) use ($roles): void {
-                $q->whereIn('role', $roles);
-            })
+            ->withRoleKey($roles)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->values()
