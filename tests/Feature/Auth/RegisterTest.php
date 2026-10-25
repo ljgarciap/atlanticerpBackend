@@ -2,10 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\User;
 use App\Modules\Auth\Models\SystemSetting;
-use App\Shared\Multitenancy\Tenant;
-use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
 class RegisterTest extends FeatureTestCase
@@ -31,149 +28,6 @@ class RegisterTest extends FeatureTestCase
         ])->assertStatus(404);
 
         $this->assertSame(0, \Illuminate\Support\Facades\DB::table('atlantic_auth.users')->where('email', 'nuevo@atlantic.test')->count());
-    }
-
-    public function test_una_cuenta_pendiente_existente_no_puede_loguearse(): void
-    {
-        $this->crearCuentaPendiente('Roberto', 'Méndez', 'pendiente@atlantic.test');
-
-        // is_active=false se verifica antes que la contraseña.
-        $this->postJson('/api/auth/login', [
-            'email'    => 'pendiente@atlantic.test',
-            'password' => 'pendiente@atlantic.test',
-        ])->assertStatus(401);
-    }
-
-    // ── GET /api/users/pending ────────────────────────────────────────────────
-
-    public function test_pending_lista_registros_en_espera(): void
-    {
-        $deptId = $this->firstDepartmentId();
-        $token  = $this->loginAs();
-
-        $this->crearCuentaPendiente('Pending', 'User', 'pending@atlantic.test');
-
-        $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/users/pending');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure(['data' => [['id', 'first_name', 'email', 'roles', 'is_active']]])
-            ->assertJsonPath('data.0.is_active', false)
-            ->assertJsonPath('data.0.roles', ['guest']);
-    }
-
-    public function test_pending_sin_autenticar_retorna_401(): void
-    {
-        $this->getJson('/api/users/pending')->assertStatus(401);
-    }
-
-    // ── POST /api/users/{id}/approve ──────────────────────────────────────────
-
-    public function test_approve_activa_usuario_con_nuevo_rol(): void
-    {
-        $deptId = $this->firstDepartmentId();
-        $token  = $this->loginAs();
-
-        $this->crearCuentaPendiente('Approve', 'Me', 'approve@atlantic.test');
-
-        $userId = $this->getPendingUserId('approve@atlantic.test');
-
-        $response = $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/users/{$userId}/approve", [
-                'role_id'           => $this->roleIdByKey('vendedor_disenador'),
-                'security_level_id' => 3,
-            ]);
-
-        $response->assertStatus(200)
-            ->assertJsonPath('is_active', true)
-            ->assertJsonPath('roles', ['vendedor_disenador']);
-
-        // Fase 2: el registro público ahora recibe un rol REAL (`role_id`), no una fila del enum legado.
-        $this->assertSame($this->roleIdByKey('vendedor_disenador'), (int) DB::table('atlantic_auth.users')->where('email', 'approve@atlantic.test')->value('role_id'));
-    }
-
-    public function test_un_registro_pendiente_nace_con_el_rol_de_sistema_guest_y_no_puede_iniciar_sesion(): void
-    {
-        $this->crearCuentaPendiente('Pendiente', 'Guest', 'pendiente.guest@atlantic.test');
-
-        $this->assertSame($this->roleIdByKey('guest'), (int) DB::table('atlantic_auth.users')->where('email', 'pendiente.guest@atlantic.test')->value('role_id'));
-        $this->postJson('/api/auth/login', ['email' => 'pendiente.guest@atlantic.test', 'password' => 'pendiente.guest@atlantic.test'])->assertStatus(401);
-    }
-
-    public function test_un_actor_sin_superadmin_no_puede_aprobar_con_el_rol_superadmin(): void
-    {
-        $this->crearCuentaPendiente('Aprobar', 'Super', 'aprobar.super@atlantic.test');
-        $userId = $this->getPendingUserId('aprobar.super@atlantic.test');
-
-        $this->withHeaders($this->authHeaders($this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management')))
-            ->postJson("/api/users/{$userId}/approve", ['role_id' => $this->roleIdByKey('superadmin'), 'security_level_id' => 3])
-            ->assertStatus(422);
-    }
-
-    private function roleIdByKey(string $key): int
-    {
-        return (int) DB::table('atlantic_auth.roles')->where('key', $key)->value('id');
-    }
-
-    public function test_approve_usuario_activo_retorna_422(): void
-    {
-        $token = $this->loginAs();
-
-        // Get an already-active user from the seeded data
-        $activeId = $this->getActiveUserId('designer@atlantic.test');
-
-        $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/users/{$activeId}/approve", [
-                'role_id'           => $this->roleIdByKey('vendedor_disenador'),
-                'security_level_id' => 3,
-            ])->assertStatus(422);
-    }
-
-    public function test_approve_rol_invalido_retorna_422(): void
-    {
-        $deptId = $this->firstDepartmentId();
-        $token  = $this->loginAs();
-
-        $this->crearCuentaPendiente('BadRole', 'User', 'badrole@atlantic.test');
-
-        $userId = $this->getPendingUserId('badrole@atlantic.test');
-
-        $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/users/{$userId}/approve", [
-                'role_id'           => $this->roleIdByKey('guest'), // guest (inactivo) no es un rol de aprobación válido
-                'security_level_id' => 1,
-            ])->assertStatus(422);
-    }
-
-    // ── DELETE /api/users/{id}/reject ─────────────────────────────────────────
-
-    public function test_reject_elimina_usuario_pendiente(): void
-    {
-        $deptId = $this->firstDepartmentId();
-        $token  = $this->loginAs();
-
-        $this->crearCuentaPendiente('Reject', 'Me', 'reject@atlantic.test');
-
-        $userId = $this->getPendingUserId('reject@atlantic.test');
-
-        $this->withHeaders($this->authHeaders($token))
-            ->deleteJson("/api/users/{$userId}/reject")
-            ->assertStatus(204);
-
-        // Verify the user no longer appears in pending list
-        $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/users/pending')
-            ->assertJsonPath('data', []);
-    }
-
-    public function test_reject_usuario_activo_retorna_422(): void
-    {
-        $token    = $this->loginAs();
-        $activeId = $this->getActiveUserId('designer@atlantic.test');
-
-        $this->withHeaders($this->authHeaders($token))
-            ->deleteJson("/api/users/{$activeId}/reject")
-            ->assertStatus(422);
     }
 
     // ── PATCH /api/settings/system — mfa_mode ────────────────────────────────
@@ -262,29 +116,4 @@ class RegisterTest extends FeatureTestCase
         return (int) $response->json('data.0.id');
     }
 
-    private function getPendingUserId(string $email): int
-    {
-        /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
-        $tenant->makeCurrent();
-
-        try {
-            return (int) User::where('email', $email)->value('id');
-        } finally {
-            Tenant::forgetCurrent();
-        }
-    }
-
-    private function getActiveUserId(string $email): int
-    {
-        /** @var Tenant $tenant */
-        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
-        $tenant->makeCurrent();
-
-        try {
-            return (int) User::where('email', $email)->value('id');
-        } finally {
-            Tenant::forgetCurrent();
-        }
-    }
 }

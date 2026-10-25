@@ -135,21 +135,4 @@ abstract class FeatureTestCase extends TestCase
             ['ventas_diseno.select_partner_price', 'ventas_diseno.override_min_margin', 'ventas_diseno.gerencia_scope'],
         ))]);
     }
-
-    /**
-     * SCRUM-1177 — el registro público ya no existe; una cuenta pendiente de aprobación se crea por el mismo servicio que usaba.
-     */
-    protected function crearCuentaPendiente(string $first, string $last, string $email): void
-    {
-        $tenant = \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->firstOrFail();
-        $tenant->makeCurrent();
-        try {
-            app(\App\Modules\Auth\Services\UserService::class)->register([
-                'first_name' => $first, 'last_name' => $last, 'email' => $email,
-                'department_id' => (int) \Illuminate\Support\Facades\DB::table('atlantic_auth.departments')->value('id'),
-            ]);
-        } finally {
-            \App\Shared\Multitenancy\Tenant::forgetCurrent();
-        }
-    }
 }

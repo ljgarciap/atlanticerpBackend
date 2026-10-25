@@ -73,11 +73,6 @@ final class UserService
             return;
         }
 
-        // `guest` es el estado «registro pendiente», no un rol que se le asigne a una persona (Fase 2).
-        if (Role::where('id', $roleId)->where('key', Role::KEY_GUEST)->exists()) {
-            throw new \DomainException('El rol Invitado es solo el estado de un registro pendiente de aprobación.');
-        }
-
         if ($actorHasSuperadmin) {
             return;
         }
@@ -128,6 +123,10 @@ final class UserService
                 'last_name'         => $data['last_name'],
                 'email'             => $data['email'],
                 'password_hash'     => $data['email'],
+                // SCRUM-1034 (H7): la contraseña inicial (= correo, ver WelcomeMail) obliga a cambiarla en el primer ingreso. SIN plazo de caducidad a
+                // propósito (decisión de Luis, 2026-10-05: no se sabe si la persona entrará en 48 h): `password_reset_at` queda nulo. Esta política vivía en
+                // `approve()`; al retirar el flujo de registro pendiente (Fase 2.2) pasa a `create()`, la única vía que queda de alta de usuarios.
+                'must_change_password' => true,
                 'phone'             => $data['phone'] ?? null,
                 // SCRUM-822 (REQ-548) — 3 campos del ticket original nunca implementados.
                 'job_title'         => $data['job_title'] ?? null,
@@ -304,102 +303,6 @@ final class UserService
         $user->save();
 
         return $user;
-    }
-
-    /**
-     * Creates a pending registration (role=guest, is_active=false).
-     *
-     * @param array{first_name: string, last_name: string, email: string, department_id: int} $data
-     */
-    public function register(array $data): User
-    {
-        return DB::transaction(function () use ($data): User {
-            $levelId = SecurityLevel::where('level', 1)->value('id');
-
-            if ($levelId === null) {
-                throw new \RuntimeException('Security level 1 (Read Only) not configured.');
-            }
-
-            $guestRoleId = Role::where('key', Role::KEY_GUEST)->value('id')
-                ?? throw new \RuntimeException('Rol de sistema «guest» no configurado (migración 2026_10_24_500000).');
-
-            /** @var User $user */
-            $user = User::create([
-                'first_name'        => $data['first_name'],
-                'last_name'         => $data['last_name'],
-                'email'             => $data['email'],
-                'password_hash'     => $data['email'],
-                'department_id'     => $data['department_id'],
-                'security_level_id' => $levelId,
-                'role_id'           => $guestRoleId,
-                'is_active'         => false,
-            ]);
-
-            return $user;
-        });
-    }
-
-    /** @return Collection<int, User> */
-    public function listPending(): Collection
-    {
-        return User::with(['role', 'department'])
-            ->where('is_active', false)
-            ->whereHas('role', function (Builder $q): void {
-                $q->where('key', Role::KEY_GUEST);
-            })
-            ->orderBy('created_at', 'asc')
-            ->get();
-    }
-
-    /**
-     * Approves a pending registration: activates user, assigns role + security level.
-     *
-     * @throws \InvalidArgumentException if user is not a pending guest
-     */
-    public function approve(User $user, int $roleId, int $securityLevelId, bool $actorHasSuperadmin = false): User
-    {
-        $this->assertRoleAssignable($roleId, $actorHasSuperadmin);
-
-        $approved = DB::transaction(function () use ($user, $roleId, $securityLevelId): User {
-            if ($user->is_active || ! $user->isGuest()) {
-                throw new \InvalidArgumentException('Only pending guest users can be approved.');
-            }
-
-            $user->is_active         = true;
-            $user->role_id           = $roleId;
-            $user->security_level_id = $securityLevelId;
-            // SCRUM-1034 (H7): la contraseña inicial (= correo, ver WelcomeMail) obliga a cambiarla en el primer ingreso. SIN plazo de
-            // caducidad a propósito (decisión de Luis, 2026-10-05): `password_reset_at` queda nulo, así que la inicial vale hasta que la
-            // persona entre, sea cuando sea; no se puede saber si lo hará en 48 h. (Un reset administrativo sí caduca: es otro caso.)
-            $user->must_change_password = true;
-            $user->save();
-
-            return $user->load(['role', 'additionalRoles.role', 'department', 'securityLevel']);
-        });
-
-        Mail::to($approved->email)->send(new WelcomeMail(
-            firstName:         $approved->first_name,
-            temporaryPassword: $approved->email,
-            loginUrl:          (string) config('app.frontend_url', config('app.url')),
-        ));
-
-        return $approved;
-    }
-
-    /**
-     * Rejects (deletes) a pending registration.
-     *
-     * @throws \InvalidArgumentException if user is not a pending guest
-     */
-    public function reject(User $user): void
-    {
-        if ($user->is_active || ! $user->isGuest()) {
-            throw new \InvalidArgumentException('Only pending guest users can be rejected.');
-        }
-
-        DB::transaction(function () use ($user): void {
-            $user->delete();
-        });
     }
 
     /**

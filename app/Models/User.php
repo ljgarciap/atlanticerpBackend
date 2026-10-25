@@ -60,18 +60,6 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, LogsAuditTrail, Notifiable;
 
-    public const ROLE_SUPERADMIN = 'superadmin';
-
-    public const ROLE_MANAGEMENT = 'management';
-
-    public const ROLE_DESIGNER = 'designer';
-
-    public const ROLE_SUPERVISOR = 'supervisor';
-
-    public const ROLE_ELECTRICIAN = 'electrician';
-
-    public const ROLE_GUEST = 'guest';
-
     /** @var list<string> */
     protected $fillable = [
         'first_name',
@@ -190,12 +178,6 @@ class User extends Authenticatable
     public function hasRole(string $roleKey): bool
     {
         return in_array($roleKey, $this->roles(), true);
-    }
-
-    /** Registro público pendiente de aprobación: tiene el rol de sistema `guest` (ver migración 2026_10_24_500000). */
-    public function isGuest(): bool
-    {
-        return $this->role !== null && $this->role->key === Role::KEY_GUEST;
     }
 
     /**

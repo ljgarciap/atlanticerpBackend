@@ -211,48 +211,6 @@ class UserController extends Controller
         return response()->json($result);
     }
 
-    public function pending(): JsonResponse
-    {
-        $users = $this->service->listPending();
-        return response()->json([
-            'data' => $users->map(fn (User $u) => $this->format($u))->values(),
-        ]);
-    }
-
-    public function approve(Request $request, int $id): JsonResponse
-    {
-        $user = $this->service->findOrFail($id);
-
-        $data = $request->validate([
-            // Fase 2: el rol es `role_id` (tabla `roles`, activo; el rol de sistema `guest` está inactivo y por eso no es elegible).
-            'role_id'           => ['required', 'integer', Rule::exists('roles', 'id')->where(fn ($q) => $q->where('is_active', true))],
-            'security_level_id' => ['required', 'integer', 'min:1'],
-        ]);
-
-        [, $actorHasSuperadmin] = $this->actorContext($request);
-
-        try {
-            $user = $this->service->approve($user, (int) $data['role_id'], (int) $data['security_level_id'], $actorHasSuperadmin);
-        } catch (\InvalidArgumentException|\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($this->format($user));
-    }
-
-    public function reject(int $id): JsonResponse
-    {
-        $user = $this->service->findOrFail($id);
-
-        try {
-            $this->service->reject($user);
-        } catch (\InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json(null, 204);
-    }
-
     /** @return array<string, mixed> */
     private function format(User $user): array
     {

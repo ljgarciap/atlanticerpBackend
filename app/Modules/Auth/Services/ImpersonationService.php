@@ -28,7 +28,6 @@ class ImpersonationService
     private const TARGET_SELF           = 'self';
     private const TARGET_INACTIVE       = 'inactive';
     private const TARGET_SECURITY_BLOCK = 'security_blocked';
-    private const TARGET_GUEST          = 'guest';
     private const TARGET_TOP_PRIVILEGE  = 'top_privilege';
 
     public function __construct(
@@ -297,9 +296,6 @@ class ImpersonationService
         }
         if ($target->isSecurityBlocked()) {
             return self::TARGET_SECURITY_BLOCK;
-        }
-        if ($target->isGuest()) {
-            return self::TARGET_GUEST;
         }
         if ($this->accounts->isTopPrivilege($target)) {
             return self::TARGET_TOP_PRIVILEGE;

@@ -10,7 +10,6 @@ use App\Modules\Auth\Models\RoleModuleVisibility;
 use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Models\SecurityLevelModulePermission;
 use App\Modules\Auth\Models\UserAdditionalRole;
-use App\Modules\Auth\Models\UserRole;
 use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
@@ -59,15 +58,11 @@ class EffectivePermissionsV2Test extends FeatureTestCase
         $this->assertTrue(array_intersect(['ventas_diseno.view', 'ventas_diseno.edit', 'ventas_diseno.approve'], $perms) === []);
     }
 
-    /**
-     * Fase 2 — sin fallback al enum legado (retirado): un usuario sin `role_id` NO resuelve ningún rol aunque tenga una fila legada
-     * `user_roles.role = 'management'` (el backfill de la migración 2026_10_24_500000 ya pasó esos casos a `role_id`).
-     */
-    public function test_usuario_sin_role_id_no_resuelve_roles_aunque_tenga_fila_legada(): void
+    /** Fase 2 — `role_id` es el único mecanismo: un usuario sin `role_id` ni roles adicionales no resuelve ningún rol. */
+    public function test_usuario_sin_role_id_no_resuelve_roles(): void
     {
         $level = SecurityLevel::where('level', 9)->firstOrFail();
         $user = $this->makeUser(null, $level->id);
-        UserRole::create(['user_id' => $user->id, 'role' => 'management']);
         $user = $user->fresh();
 
         $this->assertSame([], $user->roleIds());
@@ -84,7 +79,6 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     {
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = $this->makeUser(null, $level->id, ['ventas_diseno.write']);
-        UserRole::create(['user_id' => $user->id, 'role' => 'designer']);
         $user = $user->fresh();
 
         $this->assertSame([], $user->roleIds());

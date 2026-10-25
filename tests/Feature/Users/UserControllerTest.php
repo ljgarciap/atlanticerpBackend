@@ -549,18 +549,6 @@ class UserControllerTest extends FeatureTestCase
 
     // ── role_id / additional_role_ids — ADR-006, Decisión 1 revisada (2026-07-09) ──────────────
 
-    public function test_crear_usuario_con_el_rol_de_sistema_guest_retorna_422(): void
-    {
-        $token = $this->loginAs();
-
-        $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/users', [
-                'first_name' => 'Rol', 'last_name' => 'Invitado', 'email' => 'rol.invitado@atlantic.test',
-                'role_id'    => $this->roleId('guest'),
-            ])
-            ->assertStatus(422);
-    }
-
     private function roleId(string $key): int
     {
         return (int) DB::table('atlantic_auth.roles')->where('key', $key)->value('id');

@@ -25,7 +25,4 @@ Route::middleware(['permission:platform.management', 'permission:security.users'
     Route::post('/',              [UserController::class, 'store']);
     Route::put('/{id}',           [UserController::class, 'update'])->whereNumber('id');
     Route::patch('/{id}/status',  [UserController::class, 'toggleStatus'])->whereNumber('id');
-    Route::get('/pending',        [UserController::class, 'pending']);
-    Route::post('/{id}/approve',  [UserController::class, 'approve'])->whereNumber('id');
-    Route::delete('/{id}/reject', [UserController::class, 'reject'])->whereNumber('id');
 });

@@ -11,7 +11,6 @@ use App\Modules\AdminCont\Models\AdminContDailyCashCount;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPettyCashReport;
-use App\Modules\Auth\Models\Role;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\RelocationRequest;
@@ -127,8 +126,7 @@ final class ApprovalsPendingService
             ->merge($this->pettyCashReportItems($user, $jwtPermissions))
             ->merge($this->serviceQuoteItems($user, $jwtPermissions))
             ->merge($this->replacementRequestItems($user, $jwtPermissions))
-            ->merge($this->purchaseOrderAmountChangeItems($user, $jwtPermissions))
-            ->merge($this->userApprovalItems($user, $jwtPermissions));
+            ->merge($this->purchaseOrderAmountChangeItems($user, $jwtPermissions));
 
         $delegated = collect($this->gerenciaHome->pendingApprovalsForUser($user->id)['aprobaciones'])
             ->map(fn (array $a): ApprovalPendingItem => new ApprovalPendingItem(
@@ -466,28 +464,6 @@ final class ApprovalsPendingService
     }
 
     // ── Auth ─────────────────────────────────────────────────────────────────────
-
-    /**
-     * @param list<string> $jwtPermissions
-     * @return Collection<int, ApprovalPendingItem>
-     */
-    private function userApprovalItems(User $user, array $jwtPermissions): Collection
-    {
-        if (! in_array('superadmin.all', $jwtPermissions, true) && ! in_array('security.users', $jwtPermissions, true)) {
-            return collect();
-        }
-
-        return User::where('is_active', false)
-            ->whereHas('role', fn ($q) => $q->where('key', Role::KEY_GUEST))
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn (User $u): ApprovalPendingItem => new ApprovalPendingItem(
-                tipo: 'user_approval',
-                label: "Alta de usuario pendiente de aprobación — {$u->first_name} {$u->last_name}",
-                createdAt: $u->created_at,
-                detailRoute: '/security/users',
-            ));
-    }
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
 

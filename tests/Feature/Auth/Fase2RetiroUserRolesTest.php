@@ -17,11 +17,12 @@ use App\Modules\CRM\Models\NotificationRule;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * Fase 2 del aislamiento del núcleo (docs/specs/fase2-retiro-user-roles.md, paso 2.1) — Fase E del ADR-006.
- * Cubre: el backfill reversible de `role_id` desde `user_roles`, y los criterios de seguridad de la spec (§5.2): un superadmin que
+ * Fase 2 del aislamiento del núcleo (docs/specs/fase2-retiro-user-roles.md, pasos 2.1 y 2.2) — Fase E del ADR-006.
+ * Cubre: el borrado de `user_roles` y del rol `guest` (con su salvaguarda y su `down()`), y los criterios de seguridad de la spec (§5.2): un superadmin que
  * solo tiene `role_id` (creado desde la pantalla de usuarios) SÍ recibe las alertas y NO entra en un reset masivo.
  */
 class Fase2RetiroUserRolesTest extends FeatureTestCase
@@ -45,53 +46,79 @@ class Fase2RetiroUserRolesTest extends FeatureTestCase
         return (int) Role::where('key', $key)->value('id');
     }
 
-    // ── backfill ───────────────────────────────────────────────────────────────
+    // ── paso 2.2: borrado de la tabla legada y del rol guest ──────────────────
 
-    public function test_el_backfill_pasa_los_roles_legados_con_equivalente_a_role_id_y_deja_null_los_demas(): void
+    private const MIGRACION_22 = 'migrations/tenant/2026_10_25_100000_drop_user_roles_table_and_guest_role.php';
+
+    /** El entorno de pruebas ya corrió el 2.2 (la tabla no existe): `down()` la recrea para poder ejercitar el `up()`. */
+    private function conTablaLegada(): object
     {
-        $legados = ['superadmin', 'management', 'guest', 'designer'];
-        $usuarios = [];
-        foreach ($legados as $legacy) {
-            $u = $this->makeUser(null);
-            DB::table('atlantic_auth.user_roles')->insert(['user_id' => $u->id, 'role' => $legacy]);
-            $usuarios[$legacy] = $u;
-        }
-        // Varios legados: gana el de más privilegio (superadmin).
-        $multi = $this->makeUser(null);
-        DB::table('atlantic_auth.user_roles')->insert([['user_id' => $multi->id, 'role' => 'management'], ['user_id' => $multi->id, 'role' => 'superadmin']]);
-        // Quien ya tiene role_id NO se toca, aunque la fila legada diga otra cosa.
-        $yaTiene = $this->makeUser($this->roleId('lider_compras'));
-        DB::table('atlantic_auth.user_roles')->insert(['user_id' => $yaTiene->id, 'role' => 'superadmin']);
+        $migracion = require database_path(self::MIGRACION_22);
+        $migracion->down();
+        $this->assertTrue(Schema::hasTable('atlantic_auth.user_roles'));
 
-        $migracion = require database_path('migrations/tenant/2026_10_24_500000_backfill_role_id_from_user_roles.php');
-        $migracion->up();
-        $migracion->up(); // idempotente
-
-        $this->assertSame($this->roleId('superadmin'), $usuarios['superadmin']->fresh()->role_id);
-        $this->assertSame($this->roleId('management'), $usuarios['management']->fresh()->role_id);
-        $this->assertSame($this->roleId('guest'), $usuarios['guest']->fresh()->role_id);
-        $this->assertNull($usuarios['designer']->fresh()->role_id, 'sin equivalente en el catálogo: queda sin rol, igual que hoy');
-        $this->assertSame($this->roleId('superadmin'), $multi->fresh()->role_id);
-        $this->assertSame($this->roleId('lider_compras'), $yaTiene->fresh()->role_id);
-        $this->assertSame(1, Role::where('key', 'guest')->count());
-        $this->assertFalse((bool) Role::where('key', 'guest')->value('is_active'));
+        return $migracion;
     }
 
-    public function test_el_down_del_backfill_restaura_el_estado_pendiente_de_quien_se_registro_despues(): void
+    public function test_en_este_entorno_la_tabla_user_roles_y_el_rol_guest_ya_no_existen(): void
     {
-        $migracion = require database_path('migrations/tenant/2026_10_24_500000_backfill_role_id_from_user_roles.php');
-
-        // Registrado DESPUÉS de la migración: solo role_id = guest, sin fila legada.
-        $pendiente = $this->makeUser($this->roleId('guest'));
-        $this->assertFalse(DB::table('atlantic_auth.user_roles')->where('user_id', $pendiente->id)->exists());
-
-        $migracion->down();
-
-        $this->assertTrue(DB::table('atlantic_auth.user_roles')->where('user_id', $pendiente->id)->where('role', 'guest')->exists());
-        $this->assertNull($pendiente->fresh()->role_id);
+        $this->assertFalse(Schema::hasTable('atlantic_auth.user_roles'));
         $this->assertSame(0, Role::where('key', 'guest')->count());
+        $this->assertSame(14, Role::count());
+    }
 
-        $migracion->up(); // deja el entorno como estaba para el resto de los tests
+    public function test_up_borra_la_tabla_y_el_rol_guest_y_deja_a_los_pendientes_sin_rol_ni_borrarlos(): void
+    {
+        $migracion = $this->conTablaLegada();
+        $pendiente = $this->makeUser($this->roleId('guest'), 'pendiente');
+        $pendiente->forceFill(['is_active' => false])->save();
+        $normal = $this->makeUser($this->roleId('lider_bodega'), 'normal');
+
+        $migracion->up();
+
+        $this->assertFalse(Schema::hasTable('atlantic_auth.user_roles'));
+        $this->assertSame(0, Role::where('key', 'guest')->count());
+        $this->assertNull($pendiente->fresh()->role_id, 'el pendiente queda sin rol');
+        $this->assertFalse((bool) $pendiente->fresh()->is_active, 'y sigue inactivo: nadie se borra ni se activa');
+        $this->assertSame($this->roleId('lider_bodega'), $normal->fresh()->role_id);
+    }
+
+    public function test_up_aborta_si_alguien_con_rol_legado_perderia_el_acceso(): void
+    {
+        $migracion = $this->conTablaLegada();
+        $sinRoleId = $this->makeUser(null, 'sin-role-id');
+        DB::table('atlantic_auth.user_roles')->insert(['user_id' => $sinRoleId->id, 'role' => 'superadmin']);
+
+        try {
+            $migracion->up();
+            $this->fail('debió abortar: ese usuario perdería el acceso');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('perderían el acceso', $e->getMessage());
+        }
+
+        $this->assertTrue(Schema::hasTable('atlantic_auth.user_roles'), 'al abortar no se borra nada');
+        $this->assertSame(1, Role::where('key', 'guest')->count());
+    }
+
+    public function test_down_recrea_tabla_con_restriccion_trigger_y_repuebla_superadmin_y_management(): void
+    {
+        $migracion = $this->conTablaLegada();
+
+        $super = DB::table('atlantic_auth.user_roles')->where('role', 'superadmin')->count();
+        $this->assertSame(User::where('role_id', $this->roleId('superadmin'))->count(), $super);
+        $this->assertSame(User::where('role_id', $this->roleId('management'))->count(), DB::table('atlantic_auth.user_roles')->where('role', 'management')->count());
+
+        // Restricción de valores y trigger de auditoría, como los dejaron las migraciones originales.
+        $this->assertTrue((bool) DB::scalar("SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_audit_user_roles')"));
+        try {
+            // En un savepoint: la violación aborta la transacción de Postgres y el resto del test (el `up()` final) debe poder seguir.
+            DB::transaction(fn () => DB::table('atlantic_auth.user_roles')->insert(['user_id' => User::query()->value('id'), 'role' => 'inventado']));
+            $this->fail('la restricción CHECK debió rechazar un rol fuera del enum');
+        } catch (\Illuminate\Database\QueryException) {
+            $this->assertTrue(true);
+        }
+
+        $migracion->up();
     }
 
     // ── seguridad (criterio 2 de la spec) ──────────────────────────────────────

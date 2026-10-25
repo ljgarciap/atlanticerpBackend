@@ -159,33 +159,6 @@ final class DbAuditLogTriggerTest extends FeatureTestCase
         );
     }
 
-    /**
-     * Pre-QA 2026-09-14 — `user_roles` es la única de las 11 tablas auditadas con PK compuesta
-     * (user_id, role), sin columna `id`. Confirma que la resolución de PK vía catálogo
-     * (pg_index/pg_attribute) arma `row_pk` con ambas columnas, tanto en INSERT como en DELETE.
-     */
-    public function test_user_roles_pk_compuesta_se_resuelve_bien_en_row_pk(): void
-    {
-        $user = User::query()->first();
-        $this->assertNotNull($user);
-
-        DB::table('atlantic_auth.user_roles')->insert(['user_id' => $user->id, 'role' => 'guest']);
-
-        $row = DB::table('atlantic_auth.db_audit_log')
-            ->where('table_name', 'user_roles')->orderByDesc('id')->first();
-        $this->assertNotNull($row);
-        $this->assertSame('INSERT', $row->operation);
-        $this->assertStringContainsString("user_id={$user->id}", $row->row_pk);
-        $this->assertStringContainsString('role=guest', $row->row_pk);
-
-        DB::table('atlantic_auth.user_roles')->where('user_id', $user->id)->where('role', 'guest')->delete();
-        $rowDelete = DB::table('atlantic_auth.db_audit_log')
-            ->where('table_name', 'user_roles')->orderByDesc('id')->first();
-        $this->assertSame('DELETE', $rowDelete->operation);
-        $this->assertStringContainsString("user_id={$user->id}", $rowDelete->row_pk);
-        $this->assertStringContainsString('role=guest', $rowDelete->row_pk);
-    }
-
     /** Ejercita el middleware real, no solo el mecanismo de SET/RESET a mano. */
     private function simulateRequestAs(int $userId, callable $duringRequest): void
     {

@@ -27,19 +27,16 @@ class RolesSeedTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    public function test_se_siembran_14_roles_13_de_negocio_mas_superadmin_y_el_rol_de_sistema_guest(): void
+    public function test_se_siembran_14_roles_13_de_negocio_mas_superadmin(): void
     {
-        // Fase 2: los 14 activos + el rol de sistema `guest` (registro pendiente), inactivo a propósito.
-        $this->assertSame(15, Role::count());
-        $this->assertSame(14, Role::where('is_active', true)->count());
+        $this->assertSame(14, Role::count());
         $this->assertTrue(Role::where('key', 'superadmin')->where('is_superadmin', true)->exists());
     }
 
-    public function test_todos_los_roles_son_is_system_y_estan_activos_salvo_guest(): void
+    public function test_todos_los_roles_son_is_system_y_estan_activos(): void
     {
         $this->assertSame(0, Role::where('is_system', false)->count());
-        // Única excepción: `guest`, el estado «registro pendiente», inactivo para que no aparezca en selectores ni se pueda asignar.
-        $this->assertSame(['guest'], Role::where('is_active', false)->pluck('key')->all());
+        $this->assertSame(0, Role::where('is_active', false)->count());
     }
 
     public function test_default_security_level_id_esta_poblado_para_los_14_roles(): void

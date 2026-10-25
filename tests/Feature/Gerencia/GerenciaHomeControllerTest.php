@@ -152,28 +152,6 @@ class GerenciaHomeControllerTest extends FeatureTestCase
         $this->assertNotEmpty($response->streamedContent());
     }
 
-    // ------------------------------------------------------- SCRUM-908 "Aprobaciones Pendientes" ----
-
-    /**
-     * `user_approval` solo se expone vía la vista consolidada de Gerencia (`approvals-pending-all`)
-     * — Auth/Seguridad no es uno de los 6 módulos con Home propio. Registro real vía
-     * `POST /api/auth/register` (mismo camino que `RegisterTest`) para no adivinar el shape de
-     * `user_roles`/hash de password a mano.
-     */
-    public function test_approvals_pending_all_incluye_alta_de_usuario_pendiente(): void
-    {
-        $deptId = (int) $this->getJson('/api/auth/departments')->json('data.0.id');
-        $this->crearCuentaPendiente('Nuevo', 'Pendiente', 'pendiente-scrum-908@atlantic.test');
-
-        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
-        $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/gerencia/home/approvals-pending-all')
-            ->assertStatus(200);
-
-        $items = collect($response->json('data'));
-        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'user_approval'));
-    }
-
     // SCRUM-1154 — la solicitud de reubicación que Gerencia ve en «Aprobaciones pendientes» lleva a Bodega → Bodegas
     // (bandeja de solicitudes) con el id de ESA solicitud, no a Inventario.
     public function test_aprobacion_pendiente_de_reubicacion_apunta_a_la_bandeja_de_bodegas(): void
