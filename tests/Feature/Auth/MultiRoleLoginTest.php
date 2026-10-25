@@ -61,9 +61,9 @@ class MultiRoleLoginTest extends FeatureTestCase
 
     public function test_login_con_rol_adicional_v2_no_requiere_seleccion_y_las_capacidades_se_unen(): void
     {
-        // Rol base: vendedor_disenador (solo ve ventas_diseno, sin alcance de equipo).
+        // Rol base: vendedor (solo ve ventas_diseno, sin alcance de equipo).
         // Rol adicional (solo superadmin puede asignarlo): management (ve los 7 módulos con equipo).
-        $base       = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $base       = Role::where('key', 'vendedor')->firstOrFail();
         $additional = Role::where('key', 'management')->firstOrFail();
         $level      = SecurityLevel::where('level', 3)->firstOrFail();
 
@@ -80,11 +80,11 @@ class MultiRoleLoginTest extends FeatureTestCase
 
         $response->assertStatus(200);
         $this->assertArrayNotHasKey('requires_role_selection', $response->json());
-        $response->assertJsonPath('user.role', 'vendedor_disenador');
-        // Unión: vendedor_disenador no da view_team en ventas_diseno, pero management sí.
+        $response->assertJsonPath('user.role', 'vendedor');
+        // Unión: vendedor no da view_team en ventas_diseno, pero management sí.
         $response->assertJsonPath('user.modules.ventas_diseno.view_team', true);
         // management ve los 7 módulos — la unión también otorga vista en un módulo que
-        // vendedor_disenador solo no alcanzaba (ej. compras).
+        // vendedor solo no alcanzaba (ej. compras).
         $response->assertJsonPath('user.modules.compras.view', true);
     }
 

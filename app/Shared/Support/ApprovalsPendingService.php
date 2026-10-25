@@ -11,6 +11,7 @@ use App\Modules\AdminCont\Models\AdminContDailyCashCount;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPettyCashReport;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\RelocationRequest;
@@ -448,7 +449,7 @@ final class ApprovalsPendingService
      */
     private function serviceQuoteItems(User $user, array $jwtPermissions): Collection
     {
-        if (! in_array('superadmin.all', $jwtPermissions, true) && $user->role?->key !== 'lider_servicios') {
+        if (! in_array('superadmin.all', $jwtPermissions, true) && $user->role?->key !== RoleKeys::LIDER_SERVICIOS) {
             return collect();
         }
 

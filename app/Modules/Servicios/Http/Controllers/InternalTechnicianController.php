@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Servicios\Http\Requests\StoreCommissionCaptureRequest;
 use App\Modules\Servicios\Http\Requests\StoreInternalTechnicianRequest;
 use App\Modules\Servicios\Http\Requests\UpdateInternalTechnicianRequest;
@@ -146,7 +147,7 @@ final class InternalTechnicianController extends Controller
      * GET /api/servicios/internal-technicians/{id}/commission — REQ-258, tarjeta+detalle de
      * comisión. RN8: exclusivo del propio técnico (Tecnico Servicios) y Gerencia — ni Lider Servicios
      * (`lider_servicios`, que sí puede CAPTURAR vía `commission-capture` sin ver el resultado) ni
-     * otros técnicos. La ruta deja pasar por rol (para que Tecnico Servicios, `tecnico_servicios`, llegue al
+     * otros técnicos. La ruta deja pasar por rol (para que Tecnico Servicios, `tecnico`, llegue al
      * controller); esta verificación de "es este técnico o es Gerencia" es la que de verdad
      * implementa RN8, no reemplazable por `role:` a nivel de ruta.
      */
@@ -166,7 +167,7 @@ final class InternalTechnicianController extends Controller
         }
 
         $roleKey  = $user->role?->key;
-        $esGerencia = $roleKey === 'superadmin' || $roleKey === 'management';
+        $esGerencia = $roleKey === RoleKeys::SUPERADMIN || $roleKey === RoleKeys::MANAGEMENT;
         $esElMismo  = $technician->user_id !== null && $technician->user_id === $user->id;
 
         if (! $esGerencia && ! $esElMismo) {

@@ -70,7 +70,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
 
         $this->getJson('/api/auth/me', $headers)->assertOk()
             ->assertJsonPath('email', 'designer@atlantic.test')
-            ->assertJsonPath('role', 'vendedor_disenador')
+            ->assertJsonPath('role', 'vendedor')
             ->assertJsonPath('impersonation.actor_name', 'Super Admin')
             ->assertJsonPath('impersonation.target_name', 'Designer Demo');
     }

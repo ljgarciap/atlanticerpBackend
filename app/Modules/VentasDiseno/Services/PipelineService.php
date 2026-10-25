@@ -272,7 +272,7 @@ final class PipelineService
 
         // Alcance (REQ-002): Diseñador ve solo lo propio; Gerencia ve "Equipo".
         // ADR-006, Fase C Task 4 — canViewTeamV2('ventas_diseno') reemplaza el supuesto viejo
-        // (hasRole(MANAGEMENT)), ya resuelto por SCRUM-144/145 (rol vendedor_disenador vs gerencia).
+        // (hasRole(MANAGEMENT)), ya resuelto por SCRUM-144/145 (rol vendedor vs gerencia).
         // SCRUM-1128 — `ventas_diseno.pipeline.read_all` (Contabilidad) da el alcance de equipo SOLO para
         // leer; ninguna ruta de escritura lo consulta.
         // SCRUM-1139 — `ventas_diseno.pipeline.edit` (Contabilidad) también da el alcance de equipo: quien edita el Pipeline lo ve completo.

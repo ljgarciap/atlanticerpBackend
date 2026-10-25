@@ -7,6 +7,7 @@ namespace App\Modules\Bodega\Http\Controllers;
 use App\Models\User;
 use App\Modules\Auth\Support\ModuleCatalog;
 use App\Modules\Auth\Services\UatVisibilityService;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Services\OrderDocumentService;
 use App\Modules\Bodega\Services\OrderStatusService;
@@ -34,7 +35,7 @@ final class OrderStatusController extends Controller
      * @var list<string>
      * SCRUM-1139 — `lider_operaciones` espeja a la asistente (mismos grupos `role:` de `routes/admin-contab.php`).
      */
-    private const ADMIN_CONTAB_ROLES = ['lider_admin_contab', 'asistente_administrativa', 'lider_operaciones', 'management'];
+    private const ADMIN_CONTAB_ROLES = [RoleKeys::LIDER_ADMIN_CONTAB, RoleKeys::ASISTENTE_ADMINISTRATIVA, RoleKeys::LIDER_OPERACIONES, RoleKeys::MANAGEMENT];
 
     public function __construct(
         private readonly OrderStatusService $status,

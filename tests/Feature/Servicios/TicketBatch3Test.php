@@ -123,7 +123,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_tecnico_interno_no_puede_cancelar(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/cancelar", ['motivo' => 'Intento no autorizado'])
@@ -154,7 +154,7 @@ class TicketBatch3Test extends FeatureTestCase
     public function test_pdf_se_genera_para_cualquier_rol_que_pueda_ver_el_detalle(): void
     {
         $ticket = $this->makeTicket(['descripcion' => 'Fuga en lámpara de techo']);
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/servicios/tickets/{$ticket->id}/pdf")

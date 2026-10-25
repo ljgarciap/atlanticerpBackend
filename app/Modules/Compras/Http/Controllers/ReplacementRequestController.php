@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Compras\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Compras\Http\Requests\StoreReplacementRequestRequest;
 use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\PurchaseOrder;
@@ -278,7 +279,7 @@ final class ReplacementRequestController extends Controller
      * excluye a los dos de esta acción puntual). Mismo patrón que
      * `BodegaZonaLibreRequestController::COMPRAS_APPROVER_ROLE_KEY`.
      */
-    private const GENERATE_ORDER_ROLE_KEY = 'lider_compras';
+    private const GENERATE_ORDER_ROLE_KEY = RoleKeys::LIDER_COMPRAS;
 
     /**
      * REQ-186 — solo en solicitudes "Rechazadas", genera la orden del producto ORIGINAL

@@ -83,7 +83,7 @@ class PipelineControllerTest extends FeatureTestCase
 
     public function test_listar_pipeline_sin_permiso_retorna_403(): void
     {
-        // designer@atlantic.test (role_id=vendedor_disenador) YA tiene acceso real desde el
+        // designer@atlantic.test (role_id=vendedor) YA tiene acceso real desde el
         // puente de vocabulario (2026-07-10, ver User::effectivePermissionsV2()) sin necesitar
         // extra_permissions -- para probar el 403 real hace falta alguien sin rol mapeado y sin
         // grant individual. supervisor@atlantic.test (role_key=null en AuthUserSeeder) sigue
@@ -317,7 +317,7 @@ class PipelineControllerTest extends FeatureTestCase
     public function test_crear_pipeline_sin_permiso_write_retorna_403(): void
     {
         // supervisor@ (role_key=null) no tiene ningún alcance de rol sobre ventas_diseno -- a
-        // diferencia de designer@ (vendedor_disenador real, nivel 4 desde SCRUM-83), así que un
+        // diferencia de designer@ (vendedor real, nivel 4 desde SCRUM-83), así que un
         // extra_permissions de solo lectura no queda pisado por el bridge rol+nivel.
         $this->grantVentasDisenoRead('supervisor@atlantic.test');
         $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
@@ -334,7 +334,7 @@ class PipelineControllerTest extends FeatureTestCase
      * diferencia de los demás tests de este archivo, que llaman grantVentasDisenoEdit() y por eso
      * nunca ejercitaron el bridge rol+nivel real. Root cause: designer@ estaba seedeado en nivel
      * 3, que no tiene fila en security_level_module_permissions (solo 1/4/8/9 la tienen desde la
-     * corrección de ADR-006) -- corregido a nivel 4, el default real de vendedor_disenador.
+     * corrección de ADR-006) -- corregido a nivel 4, el default real de vendedor.
      */
     public function test_disenador_crea_pipeline_solo_con_su_rol_seedeado_sin_grant_manual(): void
     {

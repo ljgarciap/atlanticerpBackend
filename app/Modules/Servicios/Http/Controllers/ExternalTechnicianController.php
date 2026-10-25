@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Servicios\Exceptions\ExternalTechnicianDeactivationRequiresConfirmationException;
 use App\Modules\Servicios\Http\Requests\StoreExternalTechnicianRequest;
 use App\Modules\Servicios\Models\ExternalTechnician;
@@ -21,7 +22,7 @@ final class ExternalTechnicianController extends Controller
     // REQ-267 RN2 — costo/día y margen visibles únicamente para Lider Servicios/Líder de Servicios y
     // Gerencia (superadmin incluido por consistencia con el resto del módulo). Igual que
     // EnforceRole, se lee del claim `role` del JWT, no de una consulta a BD aparte.
-    private const COST_VISIBILITY_ROLES = ['superadmin', 'lider_servicios', 'management'];
+    private const COST_VISIBILITY_ROLES = [RoleKeys::SUPERADMIN, RoleKeys::LIDER_SERVICIOS, RoleKeys::MANAGEMENT];
 
     public function __construct(private readonly ExternalTechnicianService $technicians) {}
 

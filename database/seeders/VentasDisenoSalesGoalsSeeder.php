@@ -10,7 +10,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * SCRUM-146 — Meta/Meta Plus reales de los vendedor_disenador sembrados por
+ * SCRUM-146 — Meta/Meta Plus reales de los vendedor sembrados por
  * BusinessRoleUserSeeder. Corre en TODOS los entornos (dato de negocio real,
  * mismo criterio que CoreUserSeeder/BusinessRoleUserSeeder) — sin esto, Reportes
  * muestra "Sin Meta configurada todavía" para el roster real (síntoma reportado
@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
  * promedio automático") — este seeder solo siembra el punto de partida, nunca
  * pisa un valor ya ajustado manualmente.
  *
- * "MAURICIO" del ticket original no corresponde a ningún vendedor_disenador real
+ * "MAURICIO" del ticket original no corresponde a ningún vendedor real
  * (BusinessRoleUserSeeder no tiene ese nombre) — decisión de Luis (2026-07-29):
  * esos valores ($812.48/$700,000) son de Vendedor Disenador Test 5 (vendedordisenador5@test.com).
  * Vendedor Disenador "Vendedor Disenador" Vendedor Disenador (vendedordisenador6@test.com) queda sin Meta configurada — el

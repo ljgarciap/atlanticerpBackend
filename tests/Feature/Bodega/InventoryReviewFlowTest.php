@@ -358,7 +358,7 @@ class InventoryReviewFlowTest extends FeatureTestCase
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
         $this->grantBodegaPermissions('ayudantegeneralbodega@test.com');
-        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'ayudante_general_bodega');
+        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'auxiliar_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [

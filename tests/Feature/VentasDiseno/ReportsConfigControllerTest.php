@@ -77,7 +77,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
     public function test_listar_goals_incluye_vendedores_reales_de_business_role_user_seeder(): void
     {
         // Pre-QA 2026-07-30 (SCRUM-146) — goalsIndex() filtraba por el enum legado `user_roles`
-        // (role='designer'), que los 9 vendedor_disenador reales (BusinessRoleUserSeeder, con
+        // (role='designer'), que los 9 vendedor reales (BusinessRoleUserSeeder, con
         // role_id nuevo, sin fila en user_roles) nunca tuvieron. La pantalla "Meta por vendedor"
         // los mostraba a cero — imposible editar su Meta desde la UI.
         $this->grantReportsConfigure('management@atlantic.test');

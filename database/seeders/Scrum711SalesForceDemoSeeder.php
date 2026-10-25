@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * SCRUM-711 §6 — data de demo comercial (pipeline, metas, cotizaciones) para
- * los 10 vendedor_disenador reales sembrados por BusinessRoleUserSeeder.
+ * los 10 vendedor reales sembrados por BusinessRoleUserSeeder.
  * Absorbe y reemplaza el seed ad-hoc de SCRUM-499 (13 tarjetas + 1 meta sobre
  * un usuario "Designer Demo" genérico) — retirado acá antes de sembrar de
  * nuevo sobre los vendedores reales.

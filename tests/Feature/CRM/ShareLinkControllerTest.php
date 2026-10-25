@@ -248,7 +248,7 @@ class ShareLinkControllerTest extends FeatureTestCase
     public function test_revocar_share_link_requiere_crm_delete_no_solo_crm_write(): void
     {
         // electrician@ (nivel 2: crm.read+crm.write, sin crm.delete) en vez de designer@ -- ver
-        // SCRUM-83, designer@ ahora es un vendedor_disenador real en nivel 4 con crm.delete.
+        // SCRUM-83, designer@ ahora es un vendedor real en nivel 4 con crm.delete.
         $mgmtToken     = $this->loginAs();
         $assigneeId    = $this->userId('electrician@atlantic.test');
         $projectId     = $this->createProject($mgmtToken, [$assigneeId]);
@@ -283,7 +283,7 @@ class ShareLinkControllerTest extends FeatureTestCase
                 'first_name'        => 'Outsider',
                 'last_name'         => 'Test',
                 'email'             => $outsiderEmail,
-                'role_id'           => (int) \Illuminate\Support\Facades\DB::table('atlantic_auth.roles')->where('key', 'vendedor_disenador')->value('id'),
+                'role_id'           => (int) \Illuminate\Support\Facades\DB::table('atlantic_auth.roles')->where('key', 'vendedor')->value('id'),
                 'security_level_id' => $this->levelId(3),
                 'extra_permissions' => ['crm.delete'],
             ])->assertStatus(201);

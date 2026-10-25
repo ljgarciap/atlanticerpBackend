@@ -6,6 +6,7 @@ namespace App\Modules\Bodega\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Events\CourierAssigned;
 use App\Modules\Bodega\Events\DeliveryRegistered;
 use App\Modules\Bodega\Events\OrderDelivered;
@@ -480,7 +481,7 @@ final class DeliveryService
     /** REQ-325 — notifica a Administración & Contabilidad para que facture el pedido. */
     private function notifyAdminToInvoice(Order $order, User $actor): void
     {
-        $roleId = Role::where('key', 'lider_admin_contab')->value('id');
+        $roleId = Role::where('key', RoleKeys::LIDER_ADMIN_CONTAB)->value('id');
         /** @var list<int> $audience */
         $audience = $roleId !== null
             ? User::where('role_id', $roleId)->where('is_active', true)->pluck('id')->map(fn ($id) => (int) $id)->values()->all()

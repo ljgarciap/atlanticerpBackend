@@ -6,6 +6,7 @@ namespace App\Modules\Bodega\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Events\OrderCreated;
 use App\Modules\Bodega\Events\OrderSplit;
 use App\Modules\Bodega\Models\Order;
@@ -38,7 +39,7 @@ final class OrderService
      * puntual configurable — cualquiera con este rol recibe la alerta, sin necesidad de un campo
      * de configuración aparte (decisión 2026-07-22, revisión de Luis sobre el batch).
      */
-    private const BODEGA_LEAD_ROLE_KEY = 'lider_bodega';
+    private const BODEGA_LEAD_ROLE_KEY = RoleKeys::LIDER_BODEGA;
 
     public function __construct(
         private readonly OrderFolioService $folioService,

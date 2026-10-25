@@ -79,7 +79,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_team_retorna_lista_vacia_para_picker_sin_alcance_de_equipo(): void
     {
-        $response = $this->withHeaders($this->authHeadersFor('ayudantegeneralbodega@test.com', 'ayudante_general_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('ayudantegeneralbodega@test.com', 'auxiliar_bodega'))
             ->getJson('/api/bodega/home/team')
             ->assertStatus(200);
 
@@ -201,11 +201,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $this->stageHistory($order, null, Order::STAGE_ASIGNADO, Carbon::now());
 
         // Un pedido de otra persona no debería contar para el picker en "team" (que ni debería
-        // aplicarse, ya que ayudante_general_bodega no tiene view_team).
+        // aplicarse, ya que auxiliar_bodega no tiene view_team).
         $otherId = $this->userIdByEmail('asistentebodega2@test.com');
         $this->makeOrder(['assistant_id' => $otherId, 'stage' => Order::STAGE_ASIGNADO]);
 
-        $response = $this->withHeaders($this->authHeadersFor('ayudantegeneralbodega@test.com', 'ayudante_general_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('ayudantegeneralbodega@test.com', 'auxiliar_bodega'))
             ->getJson('/api/bodega/home/summary?scope=team')
             ->assertStatus(200);
 

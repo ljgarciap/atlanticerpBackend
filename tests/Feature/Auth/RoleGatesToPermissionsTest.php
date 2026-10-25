@@ -24,12 +24,12 @@ class RoleGatesToPermissionsTest extends FeatureTestCase
         'lider_operaciones'        => 'lideroperaciones@test.com',
         'lider_bodega'             => 'liderbodega@test.com',
         'asistente_bodega'         => 'asistentebodega@test.com',
-        'ayudante_general_bodega'  => 'ayudantegeneralbodega@test.com',
+        'auxiliar_bodega'  => 'ayudantegeneralbodega@test.com',
         'transporte'               => 'transporte@test.com',
         'lider_servicios'          => 'liderservicios@test.com',
-        'tecnico_servicios'        => 'tecnicoservicios@test.com',
-        'garantias_servicios'      => 'garantiasservicios@test.com',
-        'vendedor_disenador'       => 'vendedordisenador@test.com',
+        'tecnico'        => 'tecnicoservicios@test.com',
+        'tecnico_garantias'      => 'garantiasservicios@test.com',
+        'vendedor'       => 'vendedordisenador@test.com',
     ];
 
     /**

@@ -151,7 +151,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_tecnico_no_asignado_no_puede_generar(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::OTRO_TECNICO, self::OTRO_TECNICO, 'tecnico_servicios');
+        $token = $this->loginAs(self::OTRO_TECNICO, self::OTRO_TECNICO, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -161,7 +161,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_tecnico_asignado_si_puede_generar(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote")
@@ -435,7 +435,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
         // quedara expuesto igual, cualquiera podría recalcular `cost_reference` (tarifa_dia) como
         // unit_price / (1 + margin/100), sorteando el mismo gate que oculta `cost_reference` dos
         // líneas más abajo. Ver ServiceQuoteController::formatItem().
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $tecnicoDetail = $this->withHeaders($this->authHeaders($tecnicoToken))
             ->getJson("/api/servicios/tickets/{$ticket->id}/quote")
             ->assertStatus(200);
@@ -454,7 +454,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_editar_item_subcontratado_sin_margin_percent_preserva_el_valor_guardado(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
 
         $technician = $this->makeExternalTechnician(tarifaDia: 100);
@@ -531,10 +531,10 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
         $this->assertEquals(25.0, $row['costo_dia']);
         $this->assertEquals(30.0, $row['margen_percent']);
 
-        // Tecnico Servicios (tecnico_servicios) no tiene puede_ver_costos: precio_final sigue visible, pero
+        // Tecnico Servicios (tecnico) no tiene puede_ver_costos: precio_final sigue visible, pero
         // costo_dia/margen_percent no viajan en absoluto (ni siquiera en null) — mismo criterio
         // "ausente, no oculto" que margin_percent en ServiceQuoteController::formatItem().
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $fichaCarlos = $this->withHeaders($this->authHeaders($tecnicoToken))
             ->getJson("/api/servicios/external-technicians/{$technician->id}")
             ->assertStatus(200);
@@ -562,7 +562,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
             ->getJson("/api/servicios/external-technicians/{$technician->id}")
             ->assertJsonPath('tarifa_dia', '25.00');
 
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($tecnicoToken))
             ->getJson("/api/servicios/external-technicians/{$technician->id}")
             ->assertJsonPath('tarifa_dia', null)
@@ -582,7 +582,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
         // ExternalTechnicianService en altas/cambios reales de tarifa. Sembrado directo, es fixture.
         $technician->rateHistory()->create(['tarifa_dia' => 25]);
 
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($tecnicoToken))
             ->getJson("/api/servicios/external-technicians/{$technician->id}")
             ->assertStatus(200)
@@ -688,7 +688,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
     public function test_tecnico_no_puede_decidir(): void
     {
         $ticket = $this->makeTicket();
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/servicios/tickets/{$ticket->id}/quote/items", [

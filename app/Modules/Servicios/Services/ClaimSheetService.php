@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Services;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Servicios\Exceptions\ClaimSheetAccessDeniedException;
 use App\Modules\Servicios\Exceptions\ClaimSheetLockedException;
 use App\Modules\Servicios\Models\ClaimSheet;
@@ -30,7 +31,7 @@ final class ClaimSheetService
 
     /**
      * REQ-278 RN — solo Lider Servicios/Líder de Servicios (superadmin) o el técnico interno asignado a ESTE
-     * ticket pueden generar/editar su Hoja de Reclamo. Sin rama `garantias_servicios` a propósito
+     * ticket pueden generar/editar su Hoja de Reclamo. Sin rama `tecnico_garantias` a propósito
      * (excluida del rol de escritura en `routes/servicios.php`, ver docblock ahí) — Reclamos no es
      * un tipo de ticket que atienda el especialista de garantías.
      *
@@ -40,11 +41,11 @@ final class ClaimSheetService
     {
         $roleKey = $user->role?->key;
 
-        if ($roleKey === 'superadmin' || $roleKey === 'lider_servicios') {
+        if ($roleKey === RoleKeys::SUPERADMIN || $roleKey === RoleKeys::LIDER_SERVICIOS) {
             return;
         }
 
-        if ($roleKey === 'tecnico_servicios' && $ticket->internal_technician_id === $user->id) {
+        if ($roleKey === RoleKeys::TECNICO && $ticket->internal_technician_id === $user->id) {
             return;
         }
 

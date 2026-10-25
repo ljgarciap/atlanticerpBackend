@@ -6,6 +6,7 @@ namespace App\Modules\Bodega\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Support\BodegaRoles;
 use App\Modules\Compras\Models\BodegaZonaLibreRequest;
 use App\Modules\Compras\Models\BodegaZonaLibreRequestLine;
@@ -42,7 +43,7 @@ final class BodegaZonaLibreRequestController extends Controller
      * `BusinessRoleUserSeeder`) — mismo criterio que `InventoryReviewService::COMPRAS_LEAD_ROLE_KEY`:
      * es un ROL, no una persona puntual configurable.
      */
-    private const COMPRAS_APPROVER_ROLE_KEY = 'lider_compras';
+    private const COMPRAS_APPROVER_ROLE_KEY = RoleKeys::LIDER_COMPRAS;
 
     /**
      * SCRUM-797 — mismo permiso narrow que gatea aprobar/rechazar en

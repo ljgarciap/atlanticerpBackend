@@ -67,7 +67,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
     /** RN4 (REQ-264) — solo Lider Servicios/Líder de Servicios y Gerencia registran técnicos. */
     public function test_tecnico_interno_no_puede_registrar(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/external-technicians', [
@@ -85,7 +85,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
                 'nombre' => 'Luis Vargas', 'empresa' => 'Vargas SA', 'tarifa_dia' => 30,
             ])->assertStatus(201);
 
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($tecnicoToken))
             ->getJson('/api/servicios/external-technicians')
             ->assertStatus(200);
@@ -93,7 +93,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
 
     /**
      * Hallazgo Pre-QA 2026-08-09 (fix en routes/servicios.php) — RN5 (REQ-263) solo otorga
-     * solo-consulta a Lider Servicios/técnicos internos/Gerencia; vendedor_disenador tiene servicios.read
+     * solo-consulta a Lider Servicios/técnicos internos/Gerencia; vendedor tiene servicios.read
      * por otras razones del módulo (crear/ver tickets) pero la matriz de permisos del Excel marca
      * N/A para Vendedor/Diseñador en las 5 filas de Técnicos Externos — antes del fix, el permiso
      * de módulo compartido le daba acceso real de lectura (incl. tarifa) pese a que el frontend ya
@@ -101,17 +101,17 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
      */
     public function test_vendedor_disenador_no_puede_ver_tecnicos_externos(): void
     {
-        $vendedorToken = $this->loginAs('vendedordisenador@test.com', 'vendedordisenador@test.com', 'vendedor_disenador');
+        $vendedorToken = $this->loginAs('vendedordisenador@test.com', 'vendedordisenador@test.com', 'vendedor');
 
         $this->withHeaders($this->authHeaders($vendedorToken))
             ->getJson('/api/servicios/external-technicians')
             ->assertStatus(403);
     }
 
-    /** RN5 (REQ-263) — garantias_servicios (también técnico interno) conserva el acceso de solo consulta. */
+    /** RN5 (REQ-263) — tecnico_garantias (también técnico interno) conserva el acceso de solo consulta. */
     public function test_garantias_servicios_puede_listar(): void
     {
-        $garantiasToken = $this->loginAs('garantiasservicios@test.com', 'garantiasservicios@test.com', 'garantias_servicios');
+        $garantiasToken = $this->loginAs('garantiasservicios@test.com', 'garantiasservicios@test.com', 'tecnico_garantias');
 
         $this->withHeaders($this->authHeaders($garantiasToken))
             ->getJson('/api/servicios/external-technicians')
@@ -231,7 +231,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
                 'nombre' => 'X', 'empresa' => 'Y', 'tarifa_dia' => 10,
             ])->assertStatus(201)->json('id');
 
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($tecnicoToken))
             ->patchJson("/api/servicios/external-technicians/{$id}/tarifa", ['tarifa_dia' => 99])
             ->assertStatus(403);
@@ -280,7 +280,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
                 'nombre' => 'X', 'empresa' => 'Y', 'tarifa_dia' => 10,
             ])->assertStatus(201)->json('id');
 
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($tecnicoToken))
             ->patchJson("/api/servicios/external-technicians/{$id}/estado", ['estado' => 'inactive'])
             ->assertStatus(403);
@@ -304,7 +304,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
             ->getJson("/api/servicios/external-technicians/{$id}")
             ->assertJsonPath('puede_ver_costos', true);
 
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($tecnicoToken))
             ->getJson("/api/servicios/external-technicians/{$id}")
             ->assertJsonPath('puede_ver_costos', false);
@@ -323,7 +323,7 @@ class ExternalTechnicianBatch5Test extends FeatureTestCase
                 'nombre' => 'Con Tarifa Visible', 'empresa' => 'X', 'tarifa_dia' => 25,
             ])->assertStatus(201);
 
-        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $tecnicoToken = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $response = $this->withHeaders($this->authHeaders($tecnicoToken))
             ->getJson('/api/servicios/external-technicians')
             ->assertStatus(200);

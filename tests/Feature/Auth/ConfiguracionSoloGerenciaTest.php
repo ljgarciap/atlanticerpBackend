@@ -42,11 +42,11 @@ class ConfiguracionSoloGerenciaTest extends FeatureTestCase
     public static function nonManagementRoles(): array
     {
         return [
-            'vendedor_disenador' => ['vendedor_disenador'],
+            'vendedor' => ['vendedor'],
             'lider_compras'      => ['lider_compras'],
             'lider_bodega'       => ['lider_bodega'],
             'lider_servicios'    => ['lider_servicios'],
-            'tecnico_servicios'  => ['tecnico_servicios'],
+            'tecnico'  => ['tecnico'],
         ];
     }
 
@@ -128,7 +128,7 @@ class ConfiguracionSoloGerenciaTest extends FeatureTestCase
     {
         $this->hit($this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin'), 'GET', '/api/admin/global-settings')
             ->assertStatus(200);
-        $this->hit($this->tokenWithRole('vendedor_disenador'), 'GET', '/api/admin/global-settings')->assertStatus(403);
+        $this->hit($this->tokenWithRole('vendedor'), 'GET', '/api/admin/global-settings')->assertStatus(403);
     }
 
     public function test_reset_de_contrasenas_sigue_exclusivo_de_superadmin(): void

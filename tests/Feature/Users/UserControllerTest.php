@@ -54,7 +54,7 @@ class UserControllerTest extends FeatureTestCase
     public function test_filtro_por_role_id_retorna_solo_usuarios_de_ese_rol(): void
     {
         $token   = $this->loginAs();
-        $roleId  = $this->roleId('vendedor_disenador');
+        $roleId  = $this->roleId('vendedor');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/users', [
@@ -80,7 +80,7 @@ class UserControllerTest extends FeatureTestCase
     public function test_filtro_por_role_id_incluye_usuarios_con_ese_rol_como_adicional(): void
     {
         $token         = $this->loginAs();
-        $baseRoleId    = $this->roleId('vendedor_disenador');
+        $baseRoleId    = $this->roleId('vendedor');
         $additionalId  = $this->roleId('lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
@@ -112,7 +112,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Juan',
                 'last_name'         => 'Pérez',
                 'email'             => 'juan.perez@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
 
@@ -120,7 +120,7 @@ class UserControllerTest extends FeatureTestCase
         $response->assertJsonStructure(['id', 'first_name', 'last_name', 'email', 'roles', 'is_active']);
         $response->assertJsonPath('email', 'juan.perez@atlantic.test');
         $response->assertJsonPath('is_active', true);
-        $this->assertContains('vendedor_disenador', $response->json('roles'));
+        $this->assertContains('vendedor', $response->json('roles'));
     }
 
     public function test_crear_usuario_multirol_retorna_201(): void
@@ -133,7 +133,7 @@ class UserControllerTest extends FeatureTestCase
                 'last_name'         => 'Gómez',
                 'email'             => 'ana.gomez@atlantic.test',
                 'role_id'             => $this->roleId('management'),
-                'additional_role_ids' => [$this->roleId('vendedor_disenador')],
+                'additional_role_ids' => [$this->roleId('vendedor')],
                 'security_level_id' => $this->defaultLevelId(),
             ]);
 
@@ -150,7 +150,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name' => 'Duplicado',
                 'last_name'  => 'Test',
                 'email'      => 'management@atlantic.test',
-                'role_id'      => $this->roleId('vendedor_disenador'),
+                'role_id'      => $this->roleId('vendedor'),
             ])
             ->assertStatus(422);
     }
@@ -198,11 +198,11 @@ class UserControllerTest extends FeatureTestCase
                 'last_name'         => 'CampoRoles',
                 'email'             => 'sin.camporoles@atlantic.test',
                 'security_level_id' => $this->defaultLevelId(),
-                'role_id'           => $this->roleId('vendedor_disenador'),
+                'role_id'           => $this->roleId('vendedor'),
             ]);
 
         $response->assertStatus(201)
-            ->assertJsonPath('role_id', $this->roleId('vendedor_disenador'));
+            ->assertJsonPath('role_id', $this->roleId('vendedor'));
     }
 
     public function test_crear_usuario_rol_invalido_retorna_422(): void
@@ -231,7 +231,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Original',
                 'last_name'         => 'Apellido',
                 'email'             => 'original@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
         $createResponse->assertStatus(201);
@@ -259,7 +259,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Para',
                 'last_name'         => 'Desactivar',
                 'email'             => 'para.desactivar@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
         $userId = $createResponse->json('id');
@@ -279,7 +279,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Para',
                 'last_name'         => 'Reactivar',
                 'email'             => 'para.reactivar@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
         $userId = $createResponse->json('id');
@@ -307,7 +307,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Ver',
                 'last_name'         => 'Detalle',
                 'email'             => 'ver.detalle@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
         $userId = $createResponse->json('id');
@@ -357,7 +357,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name' => 'No',
                 'last_name'  => 'Access',
                 'email'      => 'no.access@atlantic.test',
-                'role_id'      => $this->roleId('vendedor_disenador'),
+                'role_id'      => $this->roleId('vendedor'),
             ])
             ->assertStatus(403);
     }
@@ -437,7 +437,7 @@ class UserControllerTest extends FeatureTestCase
         // bug real que se cerró en 2026_08_02_100005 (cualquier usuario, sin importar su rol real,
         // ganaba administración de usuarios solo por caer en un nivel numérico con ese permiso).
         // Nadie lo había explotado hasta que este mismo batch reasignó roles de negocio reales
-        // (vendedor_disenador/tecnico_servicios) a Niveles 5/6, que sí tienen `role_id` y por lo
+        // (vendedor/tecnico) a Niveles 5/6, que sí tienen `role_id` y por lo
         // tanto un rol real no-gerencial. El mecanismo correcto para esto es el flag transversal
         // `manage_users` (ver EffectivePermissionsV2Test::test_manage_users_otorga_el_permiso_real_de_administrar_usuarios)
         // — se lo seteamos acá explícitamente en vez de depender del catálogo legado del nivel,
@@ -465,7 +465,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Perms',
                 'last_name'         => 'Test',
                 'email'             => 'perms.test@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
 
@@ -483,7 +483,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Extra',
                 'last_name'         => 'Perms',
                 'email'             => 'extra.perms@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
                 'extra_permissions' => ['crm.read', 'reports.export'],
             ]);
@@ -502,7 +502,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Sin',
                 'last_name'         => 'ExtraPerms',
                 'email'             => 'sin.extraperms@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
                 'extra_permissions' => ['superadmin.all'],
             ]);
@@ -521,7 +521,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Bad',
                 'last_name'         => 'Perm',
                 'email'             => 'bad.perm@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
                 'extra_permissions' => ['invalid.permission'],
             ])
@@ -564,11 +564,11 @@ class UserControllerTest extends FeatureTestCase
                 'last_name'         => 'Base',
                 'email'             => 'rol.base@atlantic.test',
                 'security_level_id' => $this->defaultLevelId(),
-                'role_id'           => $this->roleId('vendedor_disenador'),
+                'role_id'           => $this->roleId('vendedor'),
             ]);
 
         $response->assertStatus(201)
-            ->assertJsonPath('role_id', $this->roleId('vendedor_disenador'))
+            ->assertJsonPath('role_id', $this->roleId('vendedor'))
             ->assertJsonPath('additional_role_ids', []);
     }
 
@@ -582,12 +582,12 @@ class UserControllerTest extends FeatureTestCase
                 'last_name'           => 'Rol',
                 'email'               => 'multi.rol@atlantic.test',
                 'security_level_id'   => $this->defaultLevelId(),
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'additional_role_ids' => [$this->roleId('lider_servicios')],
             ]);
 
         $response->assertStatus(201)
-            ->assertJsonPath('role_id', $this->roleId('vendedor_disenador'))
+            ->assertJsonPath('role_id', $this->roleId('vendedor'))
             ->assertJsonPath('additional_role_ids', [$this->roleId('lider_servicios')]);
     }
 
@@ -602,13 +602,13 @@ class UserControllerTest extends FeatureTestCase
                 'last_name'           => 'MultiRol',
                 'email'               => 'sin.multirol@atlantic.test',
                 'security_level_id'   => $this->defaultLevelId(),
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'additional_role_ids' => [$this->roleId('lider_servicios')],
             ]);
 
         // Request succeeds (role_id sigue siendo asignable), pero additional_role_ids se ignora
         $response->assertStatus(201)
-            ->assertJsonPath('role_id', $this->roleId('vendedor_disenador'))
+            ->assertJsonPath('role_id', $this->roleId('vendedor'))
             ->assertJsonPath('additional_role_ids', []);
     }
 
@@ -642,7 +642,7 @@ class UserControllerTest extends FeatureTestCase
                 'last_name'         => 'Rol',
                 'email'             => 'reemplazo.rol@atlantic.test',
                 'security_level_id' => $this->defaultLevelId(),
-                'role_id'           => $this->roleId('vendedor_disenador'),
+                'role_id'           => $this->roleId('vendedor'),
             ]);
         $id = $created->json('id');
 
@@ -663,7 +663,7 @@ class UserControllerTest extends FeatureTestCase
                 'last_name'         => 'MultiRol',
                 'email'             => 'editar.multirol@atlantic.test',
                 'security_level_id' => $this->defaultLevelId(),
-                'role_id'           => $this->roleId('vendedor_disenador'),
+                'role_id'           => $this->roleId('vendedor'),
             ]);
         $id = $created->json('id');
 
@@ -689,7 +689,7 @@ class UserControllerTest extends FeatureTestCase
                 'last_name'         => 'Escalado',
                 'email'             => 'editar.escalado@atlantic.test',
                 'security_level_id' => $this->defaultLevelId(),
-                'role_id'           => $this->roleId('vendedor_disenador'),
+                'role_id'           => $this->roleId('vendedor'),
             ]);
         $id = $created->json('id');
 
@@ -702,7 +702,7 @@ class UserControllerTest extends FeatureTestCase
             ->assertJsonPath('message', 'Solo un superadmin puede asignar el rol Superadmin como rol base.');
 
         $this->assertSame(
-            $this->roleId('vendedor_disenador'),
+            $this->roleId('vendedor'),
             (int) DB::table('atlantic_auth.users')->where('id', $id)->value('role_id'),
         );
     }
@@ -718,7 +718,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Flags',
                 'last_name'         => 'Test',
                 'email'             => 'flags.test@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
         $id = $created->json('id');
@@ -743,7 +743,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Flags',
                 'last_name'         => 'Parcial',
                 'email'             => 'flags.parcial@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
         $id = $created->json('id');
@@ -785,7 +785,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Con',
                 'last_name'         => 'Jefe',
                 'email'             => 'con.jefe@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
                 'job_title'         => 'Diseñador Senior',
                 'hire_date'         => '2026-01-15',
@@ -809,7 +809,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Sin',
                 'last_name'         => 'Jefe',
                 'email'             => 'sin.jefe@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
 
@@ -830,7 +830,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Para',
                 'last_name'         => 'Actualizar',
                 'email'             => 'para.actualizar.822@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
         $id = $created->json('id');
@@ -856,7 +856,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Auto',
                 'last_name'         => 'Referencia',
                 'email'             => 'auto.referencia@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ]);
         $id = $created->json('id');
@@ -876,7 +876,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Jefe',
                 'last_name'         => 'Inexistente',
                 'email'             => 'jefe.inexistente@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
                 'manager_id'        => 999999,
             ])
@@ -894,7 +894,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Inactivo',
                 'last_name'         => 'AlCrear',
                 'email'             => 'inactivo.alcrear@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
                 'is_active'         => false,
             ]);
@@ -912,7 +912,7 @@ class UserControllerTest extends FeatureTestCase
                 'first_name'        => 'Activo',
                 'last_name'         => 'PorDefecto',
                 'email'             => 'activo.pordefecto@atlantic.test',
-                'role_id'             => $this->roleId('vendedor_disenador'),
+                'role_id'             => $this->roleId('vendedor'),
                 'security_level_id' => $this->defaultLevelId(),
             ])
             ->assertStatus(201);

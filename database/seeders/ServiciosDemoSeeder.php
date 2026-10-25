@@ -70,10 +70,10 @@ class ServiciosDemoSeeder extends Seeder
 
         $folio = app(TicketFolioService::class);
 
-        // Nivel 1 (`tecnico_servicios`/`garantias_servicios`, ver
+        // Nivel 1 (`tecnico`/`tecnico_garantias`, ver
         // 2026_08_02_100004_grant_servicios_edit_to_technician_roles.php) — mismos usuarios reales
         // que consume `TechnicianController::internal()`, no un fixture propio.
-        $roleIds = Role::whereIn('key', ['tecnico_servicios', 'garantias_servicios'])->pluck('id');
+        $roleIds = Role::whereIn('key', ['tecnico', 'tecnico_garantias'])->pluck('id');
         $technicianIds = User::whereIn('role_id', $roleIds)
             ->where('is_active', true)
             ->orderBy('first_name')

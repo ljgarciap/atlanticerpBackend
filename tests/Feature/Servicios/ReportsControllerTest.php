@@ -463,7 +463,7 @@ class ReportsControllerTest extends FeatureTestCase
 
     public function test_comision_tecnico_el_propio_tecnico_puede_verla(): void
     {
-        $this->withHeaders($this->authHeadersFor(self::TECNICO, 'tecnico_servicios'))
+        $this->withHeaders($this->authHeadersFor(self::TECNICO, 'tecnico'))
             ->getJson('/api/servicios/reportes/comision-tecnico')
             ->assertStatus(200);
     }

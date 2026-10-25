@@ -161,7 +161,7 @@ class ServiciosBatch10Test extends FeatureTestCase
     public function test_carlos_puede_ver_su_propio_resultado(): void
     {
         $id = $this->carlos()->id;
-        $token = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/internal-technicians/{$id}/commission")
@@ -282,7 +282,7 @@ class ServiciosBatch10Test extends FeatureTestCase
     public function test_tecnico_no_asignado_no_puede_completar_informe_movil(): void
     {
         $ticket = $this->makeTicket(); // sin internal_technician_id asignado a Tecnico Servicios
-        $token = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/mobile", [

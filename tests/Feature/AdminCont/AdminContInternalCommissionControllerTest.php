@@ -240,7 +240,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     }
 
     /**
-     * REQ-505 Escenario 2 (Pre-QA/Visual Review Batch 15, 2026-08-25): un `vendedor_disenador`
+     * REQ-505 Escenario 2 (Pre-QA/Visual Review Batch 15, 2026-08-25): un `vendedor`
      * sin NINGÚN pedido en toda su historia (no solo en el mes filtrado) es seleccionable en el
      * filtro (`vendorOptions()` lista el rol completo), pero antes de este fix `vendorIds` en
      * `buildSummary()` salía únicamente de `ordersForAllVendors()->pluck('vendedor_id')` — un
@@ -271,7 +271,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     /**
      * Mismo escenario pero sin filtrar a un vendedor puntual — el roster completo del rol
-     * `vendedor_disenador` debe aparecer siempre (con o sin pedidos), no solo quienes ya tienen
+     * `vendedor` debe aparecer siempre (con o sin pedidos), no solo quienes ya tienen
      * algún pedido en el histórico.
      */
     public function test_summary_sin_filtro_incluye_vendedores_sin_ningun_pedido(): void
@@ -285,7 +285,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
         $vendedores = collect($response->json('vendedores'));
         $row = $vendedores->firstWhere('vendedor_id', $vendorId);
-        $this->assertNotNull($row, 'el roster completo de vendedor_disenador debe listarse aunque no tenga pedidos');
+        $this->assertNotNull($row, 'el roster completo de vendedor debe listarse aunque no tenga pedidos');
         $this->assertSame([], $row['groups']);
     }
 

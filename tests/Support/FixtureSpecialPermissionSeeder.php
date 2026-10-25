@@ -89,7 +89,7 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // SCRUM-1139 — la asistente administrativa (Asistente Administrativa) replica `receptor_fiscal` de Contabilidad (corregir RUC/DV/razón social del receptor).
         // Sus rutas de Admin&Cont las da el ROL (`role:`); este es el único permiso angosto que le faltaba.
         'asistenteadministrativa@test.com' => ['admin_contab.edit.receptor_fiscal', 'admin_contab.edit.client_itbms_exemption'],
-        // Los 10 vendedores/diseñadores reales (rol vendedor_disenador, ver
+        // Los 10 vendedores/diseñadores reales (rol vendedor, ver
         // BusinessRoleUserSeeder) — Batch 14 de Admin&Cont (SCRUM-575→579, REQ-575/577): cada
         // uno consulta la tabla de tramos de comisión y su propio historial en Comisiones
         // Internas, nunca el resto de Admin&Cont. Mismo patrón que compras.limited.view arriba —

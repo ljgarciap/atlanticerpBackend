@@ -52,7 +52,7 @@ Route::prefix('calendar')->group(function (): void {
 // Batch 10 (decisión de Luis 2026-08-11) creó esta ruta con lectura amplia y escritura exclusiva
 // de Gerencia. SCRUM-780 (Gerencia, 2026-08-19) la reemplaza: los valores de Ajustes son
 // parámetros administrativos que ningún perfil operativo debe poder leer, no solo editar — antes
-// lider_servicios/tecnico_servicios/vendedor_disenador/garantias_servicios podían leerlos por API
+// lider_servicios/tecnico/vendedor/tecnico_garantias podían leerlos por API
 // aunque el menú ya estuviera oculto para ellos en el frontend. Mismo gate que la escritura.
 Route::get('/settings', [ServiciosSettingsController::class, 'index'])
     ->middleware('permission:servicios.settings.configure');
@@ -85,7 +85,7 @@ Route::get('/quotes', [ServiceQuoteController::class, 'globalIndex'])
     ->middleware('permission:servicios.read');
 
 // REQ-245 RN4 — quién puede crear un ticket: Lider Servicios/Líder de Servicios, superadmin, Gerencia
-// (`management`) y Vendedor/Diseñador (`vendedor_disenador`) — este último tiene servicios.read
+// (`management`) y Vendedor/Diseñador (`vendedor`) — este último tiene servicios.read
 // pero NO servicios.write (solo lectura general, ver docblock de
 // 2026_08_02_100003_grant_servicios_view_to_vendedor_disenador.php, que dejó esta excepción
 // pendiente a propósito). Permiso angosto `servicios.tickets.create` (Fase 2 de la auditoría de
@@ -183,7 +183,7 @@ Route::prefix('tickets')->group(function (): void {
     // Fase 4 — Servicios, Batch 9 (REQ-278/279). Hoja de Reclamo — contraparte de
     // Informe de Inspección para tickets tipo=claim (REQ-220 RN1). Lectura: mismo permiso que el
     // resto del módulo. Escritura: más angosta que Informe de Inspección a propósito — sin
-    // garantias_servicios, ver docblock de ClaimSheetService::assertCanEdit().
+    // tecnico_garantias, ver docblock de ClaimSheetService::assertCanEdit().
     Route::prefix('/{id}/claim-sheet')->group(function (): void {
         Route::get('/pdf', [ClaimSheetController::class, 'pdf'])->middleware('permission:servicios.read');
         Route::get('/', [ClaimSheetController::class, 'show'])->middleware('permission:servicios.read');
@@ -233,7 +233,7 @@ Route::prefix('tickets')->group(function (): void {
 // Fase 4 — Servicios, Batch 5 (REQ-263→267). Técnicos externos.
 // Lectura: permiso angosto `servicios.external_technicians.view` (Fase 2, 2026-08-30), no el
 // genérico `servicios.read` — RN5 (REQ-263) solo otorga solo-consulta a Lider Servicios/técnicos
-// internos/Gerencia — vendedor_disenador tiene servicios.read por otras razones del módulo
+// internos/Gerencia — vendedor tiene servicios.read por otras razones del módulo
 // (crear/ver tickets), pero el matriz de permisos del Excel marca N/A para Vendedor/Diseñador en
 // las 5 filas de Técnicos Externos (hallazgo Pre-QA 2026-08-09, ver
 // docs/pre-qa/scrum333-337-servicios-batch5-tecnicos-externos-20260809.md). Escritura (alta,
@@ -252,7 +252,7 @@ Route::prefix('external-technicians')->group(function (): void {
 
 // Fase 4 — Servicios, Batch 6 (REQ-255→260). Técnicos internos.
 // Lectura: permission:servicios.read — visible para todos los roles del módulo (REQ-255/256/257
-// RN de permisos), incluye vendedor_disenador (REQ-260 RN5, solo-vista para Agenda equipo, mismo
+// RN de permisos), incluye vendedor (REQ-260 RN5, solo-vista para Agenda equipo, mismo
 // criterio ya usado para Rutas del día en Inicio).
 Route::prefix('internal-technicians')->group(function (): void {
     Route::get('/', [InternalTechnicianController::class, 'index'])->middleware('permission:servicios.read');

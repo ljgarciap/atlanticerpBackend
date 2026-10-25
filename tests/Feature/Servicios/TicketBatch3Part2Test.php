@@ -248,7 +248,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_vendedor_disenador_puede_usar_los_buscadores(): void
     {
         MasterClient::create(['name' => 'Cliente visible']);
-        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor_disenador');
+        $token = $this->loginAs(self::VENDEDOR_DISENADOR, self::VENDEDOR_DISENADOR, 'vendedor');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/lookup/master-clients')
@@ -257,7 +257,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
 
     public function test_tecnico_servicios_no_puede_usar_los_buscadores(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/lookup/master-clients')

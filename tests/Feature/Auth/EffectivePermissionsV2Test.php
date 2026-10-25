@@ -246,7 +246,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
      */
     public function test_rol_con_role_id_en_nivel_5_6_o_7_no_obtiene_security_users_del_catalogo_legado(): void
     {
-        $role = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $role = Role::where('key', 'vendedor')->firstOrFail();
 
         foreach ([5, 6, 7] as $levelNumber) {
             $level = SecurityLevel::where('level', $levelNumber)->firstOrFail();
@@ -304,7 +304,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
 
     public function test_modules_payload_refleja_rol_real_del_seed_vendedor_disenador(): void
     {
-        $role = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $role = Role::where('key', 'vendedor')->firstOrFail();
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = $this->makeUser($role->id, $level->id);
 
@@ -317,7 +317,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     public function test_can_view_team_v2_true_solo_si_el_rol_lo_confirma(): void
     {
         $liderBodega = Role::where('key', 'lider_bodega')->firstOrFail();
-        $vendedor = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $vendedor = Role::where('key', 'vendedor')->firstOrFail();
         $level = SecurityLevel::where('level', 3)->firstOrFail();
 
         $userBodega = $this->makeUser($liderBodega->id, $level->id);
@@ -342,7 +342,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
 
     public function test_union_de_visibilidad_entre_rol_base_y_rol_adicional(): void
     {
-        $vendedor = Role::where('key', 'vendedor_disenador')->firstOrFail(); // ve solo ventas_diseno
+        $vendedor = Role::where('key', 'vendedor')->firstOrFail(); // ve solo ventas_diseno
         $liderBodega = Role::where('key', 'lider_bodega')->firstOrFail();    // ve solo bodega, view_team=true
         $level = SecurityLevel::where('level', 3)->firstOrFail();
 
@@ -358,7 +358,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
 
     public function test_can_view_team_v2_true_si_rol_adicional_lo_da_aunque_el_base_no(): void
     {
-        $vendedor = Role::where('key', 'vendedor_disenador')->firstOrFail(); // ventas_diseno, view_team=false
+        $vendedor = Role::where('key', 'vendedor')->firstOrFail(); // ventas_diseno, view_team=false
         $liderServicios = Role::where('key', 'lider_servicios')->firstOrFail(); // servicios, view_team=true
         $level = SecurityLevel::where('level', 3)->firstOrFail();
 
@@ -372,7 +372,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
 
     public function test_modules_payload_union_de_rol_base_y_adicional(): void
     {
-        $vendedor = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $vendedor = Role::where('key', 'vendedor')->firstOrFail();
         $liderBodega = Role::where('key', 'lider_bodega')->firstOrFail();
         $level = SecurityLevel::where('level', 3)->firstOrFail();
 
@@ -388,7 +388,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
 
     public function test_rol_adicional_superadmin_da_bypass_total(): void
     {
-        $vendedor = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $vendedor = Role::where('key', 'vendedor')->firstOrFail();
         $superadmin = Role::where('key', 'superadmin')->firstOrFail();
         $level = SecurityLevel::where('level', 3)->firstOrFail();
 
@@ -403,7 +403,7 @@ class EffectivePermissionsV2Test extends FeatureTestCase
         // Caso borde: un admin agrega como "adicional" el mismo rol que ya es el base — no debe
         // contarse dos veces (la tabla user_additional_roles no sabe qué es el rol base del
         // usuario, así que la deduplicación vive en roleIds(), no en una constraint de BD).
-        $vendedor = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $vendedor = Role::where('key', 'vendedor')->firstOrFail();
         $level = SecurityLevel::where('level', 3)->firstOrFail();
 
         $user = $this->makeUser($vendedor->id, $level->id);

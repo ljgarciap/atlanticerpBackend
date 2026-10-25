@@ -83,7 +83,7 @@ class InternalTechnicianEditDeleteTest extends FeatureTestCase
     public function test_editar_y_eliminar_exigen_rol_lider_o_superadmin(): void
     {
         $t = $this->nuevoTecnico();
-        $headers = $this->authHeaders($this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios'));
+        $headers = $this->authHeaders($this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico'));
 
         $this->withHeaders($headers)
             ->putJson("/api/servicios/internal-technicians/{$t->id}", [

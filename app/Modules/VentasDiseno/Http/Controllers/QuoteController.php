@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\VentasDiseno\Exceptions\QuoteActionBlockedException;
 use App\Modules\VentasDiseno\Exceptions\QuoteValidationBlockedException;
 use App\Modules\VentasDiseno\Http\Requests\QuoteRequest;
@@ -61,7 +62,7 @@ final class QuoteController extends Controller
      * @var list<string>
      * SCRUM-1139 — `lider_operaciones` espeja a la asistente (mismos grupos `role:` de `routes/admin-contab.php`).
      */
-    private const ADMIN_CONTAB_ROLES = ['lider_admin_contab', 'asistente_administrativa', 'lider_operaciones', 'management'];
+    private const ADMIN_CONTAB_ROLES = [RoleKeys::LIDER_ADMIN_CONTAB, RoleKeys::ASISTENTE_ADMINISTRATIVA, RoleKeys::LIDER_OPERACIONES, RoleKeys::MANAGEMENT];
 
     public function __construct(
         private readonly QuoteService $service,

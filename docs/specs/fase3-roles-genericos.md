@@ -88,3 +88,24 @@ Un PR por repo, backend primero (la migración y `RoleKeys`), frontend después.
 - Un literal de clave olvidado en una ruta rara degrada en silencio una función (p. ej. picking sin picker): lo cubre el test de §5.2 y el equivalente de permisos de §5.1.
 - Si alguien creó roles propios por la UI con claves destino (`tecnico`), la migración aborta: se resuelve a mano antes.
 - Es una fase **mecánica pero ancha** (~150 archivos de test): se hace con el reemplazo exacto de `scripts/upstream-sync` y se verifica con la suite completa, no a ojo.
+
+## 9. Resultado de la implementación (2026-10-25)
+
+Ramas `fase3/roles-genericos` (backend y frontend). Decisiones de §7 aplicadas tal como las respondió Luis (reingreso obligado, sin alias).
+
+**Hecho**
+- Migración `2026_10_25_200000_rename_roles_to_generic_catalog`: renombra por id clave y nombre de los 4 roles y traduce las reglas de notificación por rol (schema `crm`); aborta sin tocar nada si ya existe la clave destino; `down()` revierte. Ningún usuario cambia de rol ni de permisos (test sobre los 43 usuarios del seed).
+- `RoleKeys` (14 claves + `all()`); ~40 literales de código de producción en 27 archivos pasan a usarla. `Role::KEY_SUPERADMIN` desaparece. `BodegaRoles` y las constantes de `TechnicianSpecialtyService` ya no duplican el string.
+- `RoleKeysUsageTest` (sin BD): las 4 claves viejas no pueden aparecer en `app/`, `routes/` ni `config/`; las claves inequívocas solo vía `RoleKeys`; `vendedor`/`tecnico` (que también son claves de arrays de datos) se vigilan solo en contextos de rol.
+- Seeders, tests y comentarios del backend: 78 archivos, 285 reemplazos exactos. Frontend: 54 archivos (`src` y `e2e`), etiquetas i18n es/en nuevas sin las claves legadas, fixture de identidades regenerado.
+- `role_name` (nombre visible desde `roles.name`) en el payload de login y en `/auth/me`; la barra superior lo muestra y cae a i18n. Renombrar un rol por CRUD se refleja en el siguiente login sin deploy.
+- Manual `vendedor-disenador.md` → `vendedor.md`.
+
+**Hallazgos**
+1. **Ninguna** lectura del claim `role` del JWT compara contra las 4 claves renombradas (todas leen el rol de la BD): un token viejo no gana ni pierde acceso. El reingreso solo evita ver la clave sin traducir en la barra superior hasta renovar la sesión. Riesgo real menor que el estimado en §3.3.
+2. Mi renombre mecánico tocó el test de la migración histórica de la Fase 2 (500001), que debe seguir hablando de `vendedor_disenador`: lo cazó la suite completa y quedó corregido.
+3. `multi@atlantic.test` figura con rol `management` y nivel 8 (efecto de la Fase 2.1, no de ésta); se registra como divergencia esperada del test de equivalencia de la 1b.
+
+**Verificación**: PHPStan 0 errores; suite completa del backend 6185 tests con 1 fallo (el de la nota 2, ya corregido) y 2566 tests de las áreas afectadas en verde tras el último cambio; frontend `tsc` limpio, 247 archivos / 3110 tests. Los specs e2e se renombraron pero no se ejecutaron (requieren entorno).
+
+**Pendiente (no es de esta fase)**: emails y nombres de personas demo que derivan de la etiqueta vieja (`vendedordisenador@test.com`, «Tecnico Servicios Test»…): Fase 4.

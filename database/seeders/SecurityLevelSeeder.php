@@ -18,8 +18,8 @@ class SecurityLevelSeeder extends Seeder
      * `security.levels` en su catálogo le otorga acceso real a esas rutas
      * (`permission:security.users` etc. en `routes/users.php`/`settings.php`/`security-levels.php`),
      * SIN pasar por el flag transversal `manage_users` que es el mecanismo real e intencional para
-     * eso (ver `RoleBackfillSeeder`) — pasó con `vendedor_disenador`→Nivel 6 y
-     * `tecnico_servicios`/`garantias_servicios`→Nivel 5 al implementar Batch 1 de Servicios.
+     * eso (ver `RoleBackfillSeeder`) — pasó con `vendedor`→Nivel 6 y
+     * `tecnico`/`tecnico_garantias`→Nivel 5 al implementar Batch 1 de Servicios.
      * Niveles 8-10 SÍ los necesitan de verdad (Gerencia real vía Nivel 9, ver
      * `SecurityLevelControllerTest`) — no tocar esos. Antes de reasignar CUALQUIER Nivel 1-7 a un
      * rol nuevo, revisar su `permissions` acá primero, no solo la matriz de

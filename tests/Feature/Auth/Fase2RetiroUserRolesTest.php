@@ -127,7 +127,7 @@ class Fase2RetiroUserRolesTest extends FeatureTestCase
     {
         Mail::fake();
         $soloRoleId = $this->makeUser($this->roleId('superadmin'), 'super-roleid');
-        $porAdicional = $this->makeUser($this->roleId('vendedor_disenador'), 'super-adicional');
+        $porAdicional = $this->makeUser($this->roleId('vendedor'), 'super-adicional');
         UserAdditionalRole::create(['user_id' => $porAdicional->id, 'role_id' => $this->roleId('superadmin')]);
         $normal = $this->makeUser($this->roleId('gerencia') ?: $this->roleId('management'), 'no-super');
 
@@ -145,7 +145,7 @@ class Fase2RetiroUserRolesTest extends FeatureTestCase
     public function test_un_reset_masivo_excluye_al_superadmin_que_solo_tiene_role_id(): void
     {
         $soloRoleId = $this->makeUser($this->roleId('superadmin'), 'reset-super');
-        $normal = $this->makeUser($this->roleId('vendedor_disenador'), 'reset-normal');
+        $normal = $this->makeUser($this->roleId('vendedor'), 'reset-normal');
 
         $ids = app(AdminPasswordResetService::class)->resolveTargets()->pluck('id')->all();
 
@@ -156,7 +156,7 @@ class Fase2RetiroUserRolesTest extends FeatureTestCase
     public function test_with_role_key_encuentra_por_rol_base_o_adicional_y_no_por_otro(): void
     {
         $base = $this->makeUser($this->roleId('lider_bodega'), 'wrk-base');
-        $adicional = $this->makeUser($this->roleId('vendedor_disenador'), 'wrk-adic');
+        $adicional = $this->makeUser($this->roleId('vendedor'), 'wrk-adic');
         UserAdditionalRole::create(['user_id' => $adicional->id, 'role_id' => $this->roleId('lider_bodega')]);
         $otro = $this->makeUser($this->roleId('lider_compras'), 'wrk-otro');
 
@@ -184,6 +184,7 @@ class Fase2RetiroUserRolesTest extends FeatureTestCase
         $migracion->up();
         $migracion->up(); // idempotente
 
+        // La migración 500001 es HISTÓRICA (Fase 2): traduce al nombre de ese momento; la Fase 3 lo renombra después.
         $this->assertSame(['vendedor_disenador', 'management', 'supervisor'], $regla->fresh()->recipient_value);
         $this->assertSame([1, 2], $porUsuario->fresh()->recipient_value, 'las reglas por usuario no se tocan');
 

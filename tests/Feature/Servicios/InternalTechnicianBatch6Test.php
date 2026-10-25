@@ -139,7 +139,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
 
     public function test_tecnico_interno_puede_ver_vista_equipo(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians')
@@ -376,7 +376,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
 
     public function test_tecnico_interno_no_puede_registrar_otro_tecnico(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/servicios/internal-technicians', [
@@ -432,7 +432,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
     /** RN5 (REQ-260) — Vendedor/Diseñador tiene acceso de solo vista. */
     public function test_vendedor_disenador_puede_ver_agenda_equipo(): void
     {
-        $token = $this->loginAs('vendedordisenador@test.com', 'vendedordisenador@test.com', 'vendedor_disenador');
+        $token = $this->loginAs('vendedordisenador@test.com', 'vendedordisenador@test.com', 'vendedor');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/internal-technicians/agenda')

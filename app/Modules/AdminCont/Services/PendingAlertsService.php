@@ -6,6 +6,7 @@ namespace App\Modules\AdminCont\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\VentasDiseno\Models\Architect;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -115,7 +116,7 @@ final class PendingAlertsService
      */
     private function comisionesInternasPendientes(): array
     {
-        $roleId = Role::where('key', 'vendedor_disenador')->value('id');
+        $roleId = Role::where('key', RoleKeys::VENDEDOR)->value('id');
         if ($roleId === null) {
             return [];
         }

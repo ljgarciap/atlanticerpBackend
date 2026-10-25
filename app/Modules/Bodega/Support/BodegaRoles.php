@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Bodega\Support;
 
+use App\Modules\Auth\Support\RoleKeys;
+
 /**
  * SCRUM-329 Oleada A / Batch A2 — `role_key` reales del catálogo de roles (`roles.key`, ver
  * `BusinessRoleUserSeeder`) que participan del flujo de Pedidos. Centralizado acá en vez de
@@ -13,20 +15,20 @@ namespace App\Modules\Bodega\Support;
  *
  * No hay un modelo de "picker"/"repartidor" nuevo — REQ-313/326 ya hablan de personas reales
  * sembradas por `BusinessRoleUserSeeder` con estos `role_key` (Ayudante General Bodega González =
- * `ayudante_general_bodega`, Transporte Test = `transporte`), confirmado contra Jira y el seeder
+ * `auxiliar_bodega`, Transporte Test = `transporte`), confirmado contra Jira y el seeder
  * antes de escribir código nuevo (regla del proyecto).
  */
 final class BodegaRoles
 {
-    public const LIDER_BODEGA = 'lider_bodega';
+    public const LIDER_BODEGA = RoleKeys::LIDER_BODEGA;
 
-    public const ASISTENTE_BODEGA = 'asistente_bodega';
+    public const ASISTENTE_BODEGA = RoleKeys::ASISTENTE_BODEGA;
 
     /** REQ-313 — el "picker" es un usuario con este rol, no una entidad nueva. */
-    public const PICKER = 'ayudante_general_bodega';
+    public const PICKER = RoleKeys::AUXILIAR_BODEGA;
 
     /** REQ-326 — el "repartidor" es un usuario con este rol, no una entidad nueva. */
-    public const COURIER = 'transporte';
+    public const COURIER = RoleKeys::TRANSPORTE;
 
     /** @var list<string> Roles que pueden asignar picker (REQ-313 RN3) y operar el flujo general de Bodega. */
     public const CAN_OPERATE = [self::LIDER_BODEGA, self::ASISTENTE_BODEGA];

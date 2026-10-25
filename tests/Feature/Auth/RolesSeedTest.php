@@ -52,13 +52,13 @@ class RolesSeedTest extends FeatureTestCase
         // 2026_07_18_100002_reuse_existing_levels_for_role_defaults.php.
         //
         // Fase 4 — Servicios (2026-08-02, 2026_08_02_100003_grant_servicios_view_to_vendedor_disenador.php):
-        // vendedor_disenador se movió de Nivel 4 ("Power User", compartido con lider_servicios/
+        // vendedor se movió de Nivel 4 ("Power User", compartido con lider_servicios/
         // lider_bodega/etc. y con can_edit=true en bloque para los 7 módulos) a un Nivel 6
         // ("Supervisor", sin uso previo) angosto — necesario para poder darle visibilidad de
         // solo-lectura en `servicios` sin heredar el `can_edit=true` en bloque del Nivel 4, que
         // hubiera abierto edición real ahí (ver docblock de esa migración).
         $gerencia = Role::with('defaultSecurityLevel')->where('key', 'management')->firstOrFail();
-        $vendedor = Role::with('defaultSecurityLevel')->where('key', 'vendedor_disenador')->firstOrFail();
+        $vendedor = Role::with('defaultSecurityLevel')->where('key', 'vendedor')->firstOrFail();
         $superadmin = Role::with('defaultSecurityLevel')->where('key', 'superadmin')->firstOrFail();
 
         $this->assertSame(9, $gerencia->defaultSecurityLevel->level);
@@ -84,7 +84,7 @@ class RolesSeedTest extends FeatureTestCase
         // Batch 14 Admin&Cont (2026-08-25): admin_contab en VIEW_READONLY (no VIEW_FULL, a
         // propósito — ver docblock de 2026_08_25_100002_*.php, mismo criterio anti-leak que
         // SCRUM-771 en Compras) — nunca desbloquea `admin_contab.read` como los otros 2.
-        $role = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $role = Role::where('key', 'vendedor')->firstOrFail();
         $rows = RoleModuleVisibility::where('role_id', $role->id)->get();
 
         $this->assertCount(3, $rows);
@@ -101,7 +101,7 @@ class RolesSeedTest extends FeatureTestCase
     {
         $liderBodega = Role::where('key', 'lider_bodega')->firstOrFail();
         $asistenteBodega = Role::where('key', 'asistente_bodega')->firstOrFail();
-        $ayudanteBodega = Role::where('key', 'ayudante_general_bodega')->firstOrFail();
+        $ayudanteBodega = Role::where('key', 'auxiliar_bodega')->firstOrFail();
 
         $this->assertTrue(RoleModuleVisibility::where('role_id', $liderBodega->id)->first()->can_view_team);
         $this->assertTrue(RoleModuleVisibility::where('role_id', $asistenteBodega->id)->first()->can_view_team);
@@ -128,9 +128,9 @@ class RolesSeedTest extends FeatureTestCase
         //
         // +3 filas — Fase 4 Servicios (2026-08-02), niveles angostos con UNA sola fila cada uno
         // (no las 7 del resto, ver docblock de cada migración):
-        //   Nivel 5 "Team Lead" + servicios       (tecnico_servicios/garantias_servicios, can_edit=true)
-        //   Nivel 6 "Supervisor" + ventas_diseno  (vendedor_disenador, can_edit=true, preserva su capacidad actual)
-        //   Nivel 6 "Supervisor" + servicios      (vendedor_disenador, can_edit=false — el punto de crear este nivel)
+        //   Nivel 5 "Team Lead" + servicios       (tecnico/tecnico_garantias, can_edit=true)
+        //   Nivel 6 "Supervisor" + ventas_diseno  (vendedor, can_edit=true, preserva su capacidad actual)
+        //   Nivel 6 "Supervisor" + servicios      (vendedor, can_edit=false — el punto de crear este nivel)
         //
         // +22 filas — Fase 2 de la auditoría de permisos (2026-08-30, ver Atlantic/CLAUDE.md),
         // 4 niveles nuevos para que ningún permiso fino de módulo se filtre a otro rol que
@@ -153,7 +153,7 @@ class RolesSeedTest extends FeatureTestCase
 
     public function test_nivel_3_edita_solo_bodega_resto_solo_lectura(): void
     {
-        // Pre-QA 2026-07-22 (CRÍTICO) — asistente_bodega/ayudante_general_bodega/transporte
+        // Pre-QA 2026-07-22 (CRÍTICO) — asistente_bodega/auxiliar_bodega/transporte
         // estaban en Nivel 1 (solo lectura en TODOS los módulos, incl. bodega), contradiciendo
         // RN3 de SCRUM-383 (los Asistentes también pueden asignar el picking). En vez de subirlos
         // al Nivel 4 (over-grant: can_edit en los 7 módulos), se reusa el Nivel 3 (sin uso previo)
@@ -178,7 +178,7 @@ class RolesSeedTest extends FeatureTestCase
     public function test_asistente_bodega_ayudante_y_transporte_usan_nivel_3(): void
     {
         $asistente = Role::with('defaultSecurityLevel')->where('key', 'asistente_bodega')->firstOrFail();
-        $ayudante = Role::with('defaultSecurityLevel')->where('key', 'ayudante_general_bodega')->firstOrFail();
+        $ayudante = Role::with('defaultSecurityLevel')->where('key', 'auxiliar_bodega')->firstOrFail();
         $transporte = Role::with('defaultSecurityLevel')->where('key', 'transporte')->firstOrFail();
         $liderBodega = Role::with('defaultSecurityLevel')->where('key', 'lider_bodega')->firstOrFail();
 

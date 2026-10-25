@@ -199,7 +199,7 @@ class ToolMovementsEndpointTest extends FeatureTestCase
     // no lo que pedía el ticket.
     public function test_tecnico_interno_n_o_puede_leer_el_kardex_de_herramientas(): void
     {
-        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico_servicios');
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/tools/movements')
             ->assertStatus(403);

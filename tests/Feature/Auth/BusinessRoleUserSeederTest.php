@@ -55,7 +55,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
 
     public function test_apolonio_usa_correo_generico_nombre_apellido(): void
     {
-        $ayudanteBodega = Role::where('key', 'ayudante_general_bodega')->firstOrFail();
+        $ayudanteBodega = Role::where('key', 'auxiliar_bodega')->firstOrFail();
         $apolonio = User::where('email', 'ayudantegeneralbodega@test.com')->first();
 
         $this->assertNotNull($apolonio, 'Ayudante General Bodega debe existir con el correo genérico del rol (ayudantegeneralbodega@test.com).');
@@ -64,7 +64,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
 
     public function test_vendedor_disenador_incluye_a_idmar_el_decimo(): void
     {
-        // Cuenta acotada al roster real (no al total de role_id=vendedor_disenador de la BD):
+        // Cuenta acotada al roster real (no al total de role_id=vendedor de la BD):
         // en local/testing, AuthUserSeeder también le asigna este rol al fixture
         // designer@atlantic.test (Task 4, ver ADR-006), así que un conteo global daría 11,
         // no 10 — no es un bug, es esperado en este entorno.
@@ -75,7 +75,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
             'vendedordisenador@test.com',
         ];
 
-        $vendedor = Role::where('key', 'vendedor_disenador')->firstOrFail();
+        $vendedor = Role::where('key', 'vendedor')->firstOrFail();
         $count = User::where('role_id', $vendedor->id)->whereIn('email', $roster)->count();
 
         // 9 originales de SCRUM-144 + Vendedor Disenador (cargo confirmado en SCRUM-148, aunque no contado
@@ -86,7 +86,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
 
     public function test_vendedor_disenador_usa_el_nivel_default_del_rol(): void
     {
-        // Fase 4 — Servicios (2026-08-02): vendedor_disenador se movió de Nivel 4 ("Power User",
+        // Fase 4 — Servicios (2026-08-02): vendedor se movió de Nivel 4 ("Power User",
         // compartido, can_edit=true en bloque para los 7 módulos) a Nivel 6 ("Supervisor", angosto
         // — can_edit=true solo en ventas_diseno) para poder darle visibilidad de solo lectura en
         // `servicios` sin heredar edición ahí. Ver
@@ -103,7 +103,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
     // SCRUM-1142 — Picker Bodega Test (picker) y Repartidor Test (repartidor) ya tienen cargo.
     public function test_carlos_gonzalez_es_picker_y_joel_somarriba_es_repartidor(): void
     {
-        $picker = Role::where('key', 'ayudante_general_bodega')->firstOrFail();
+        $picker = Role::where('key', 'auxiliar_bodega')->firstOrFail();
         $courier = Role::where('key', 'transporte')->firstOrFail();
 
         $carlos = User::where('email', 'pickerbodega@test.com')->first();

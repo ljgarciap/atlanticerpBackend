@@ -10,6 +10,7 @@ use App\Modules\Auth\Models\Role;
 use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Models\UserAdditionalRole;
 use App\Modules\Auth\Support\NoLoginAccounts;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Services\AuditService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -58,7 +59,7 @@ class AdminPasswordResetService
 
         $roleKey = $operator->role?->key;
 
-        return $roleKey === 'superadmin';
+        return $roleKey === RoleKeys::SUPERADMIN;
     }
 
     /**
