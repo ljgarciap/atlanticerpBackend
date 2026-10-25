@@ -29,6 +29,11 @@ class Role extends Model
 {
     use LogsAuditTrail;
 
+    /** Rol de sistema del registro público pendiente de aprobación (Fase 2, migración 2026_10_24_500000). Inactivo: no aparece en selectores. */
+    public const KEY_GUEST = 'guest';
+
+    public const KEY_SUPERADMIN = 'superadmin';
+
     /** @var list<string> */
     protected $fillable = ['key', 'name', 'is_superadmin', 'is_system', 'is_active', 'default_security_level_id'];
 

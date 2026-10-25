@@ -43,7 +43,6 @@ class RoleGatesToPermissionsTest extends FeatureTestCase
 
         return [
             'usuarios: listado'              => ['/api/users', $gerencia],
-            'usuarios: catálogo'             => ['/api/users/catalog', $gerencia],
             'departamentos'                  => ['/api/departments', $gerencia],
             'niveles de seguridad'           => ['/api/security-levels', $gerencia],
             'catálogo de permisos'           => ['/api/permission-catalog', $gerencia],

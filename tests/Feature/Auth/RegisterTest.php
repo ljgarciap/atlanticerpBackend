@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use App\Modules\Auth\Models\SystemSetting;
 use App\Shared\Multitenancy\Tenant;
+use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
 class RegisterTest extends FeatureTestCase
@@ -79,13 +80,39 @@ class RegisterTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/users/{$userId}/approve", [
-                'role'              => 'designer',
+                'role_id'           => $this->roleIdByKey('vendedor_disenador'),
                 'security_level_id' => 3,
             ]);
 
         $response->assertStatus(200)
             ->assertJsonPath('is_active', true)
-            ->assertJsonPath('roles', ['designer']);
+            ->assertJsonPath('roles', ['vendedor_disenador']);
+
+        // Fase 2: el registro público ahora recibe un rol REAL (`role_id`), no una fila del enum legado.
+        $this->assertSame($this->roleIdByKey('vendedor_disenador'), (int) DB::table('atlantic_auth.users')->where('email', 'approve@atlantic.test')->value('role_id'));
+    }
+
+    public function test_un_registro_pendiente_nace_con_el_rol_de_sistema_guest_y_no_puede_iniciar_sesion(): void
+    {
+        $this->crearCuentaPendiente('Pendiente', 'Guest', 'pendiente.guest@atlantic.test');
+
+        $this->assertSame($this->roleIdByKey('guest'), (int) DB::table('atlantic_auth.users')->where('email', 'pendiente.guest@atlantic.test')->value('role_id'));
+        $this->postJson('/api/auth/login', ['email' => 'pendiente.guest@atlantic.test', 'password' => 'pendiente.guest@atlantic.test'])->assertStatus(401);
+    }
+
+    public function test_un_actor_sin_superadmin_no_puede_aprobar_con_el_rol_superadmin(): void
+    {
+        $this->crearCuentaPendiente('Aprobar', 'Super', 'aprobar.super@atlantic.test');
+        $userId = $this->getPendingUserId('aprobar.super@atlantic.test');
+
+        $this->withHeaders($this->authHeaders($this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management')))
+            ->postJson("/api/users/{$userId}/approve", ['role_id' => $this->roleIdByKey('superadmin'), 'security_level_id' => 3])
+            ->assertStatus(422);
+    }
+
+    private function roleIdByKey(string $key): int
+    {
+        return (int) DB::table('atlantic_auth.roles')->where('key', $key)->value('id');
     }
 
     public function test_approve_usuario_activo_retorna_422(): void
@@ -97,7 +124,7 @@ class RegisterTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/users/{$activeId}/approve", [
-                'role'              => 'designer',
+                'role_id'           => $this->roleIdByKey('vendedor_disenador'),
                 'security_level_id' => 3,
             ])->assertStatus(422);
     }
@@ -113,7 +140,7 @@ class RegisterTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/users/{$userId}/approve", [
-                'role'              => 'guest', // guest is not a valid approval role
+                'role_id'           => $this->roleIdByKey('guest'), // guest (inactivo) no es un rol de aprobación válido
                 'security_level_id' => 1,
             ])->assertStatus(422);
     }

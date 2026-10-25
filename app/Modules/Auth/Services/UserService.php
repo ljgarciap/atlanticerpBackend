@@ -12,7 +12,6 @@ use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Models\UserAdditionalRole;
 use App\Modules\Auth\Models\UserModuleMenuVisibility;
 use App\Modules\Auth\Models\UserModuleVisibility;
-use App\Modules\Auth\Models\UserRole;
 use App\Modules\Auth\Support\ModuleCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -25,7 +24,7 @@ final class UserService
     /** @return LengthAwarePaginator<int, User> */
     public function list(string $search = '', int $perPage = 20, ?bool $active = null, ?int $roleId = null): LengthAwarePaginator
     {
-        $query = User::with(['userRoles', 'additionalRoles', 'department', 'securityLevel'])
+        $query = User::with(['role', 'additionalRoles.role', 'department', 'securityLevel'])
             ->orderBy('first_name')
             ->orderBy('last_name');
 
@@ -57,7 +56,7 @@ final class UserService
 
     public function findOrFail(int $id): User
     {
-        return User::with(['userRoles', 'additionalRoles', 'department', 'securityLevel'])->findOrFail($id);
+        return User::with(['role', 'additionalRoles.role', 'department', 'securityLevel'])->findOrFail($id);
     }
 
     /**
@@ -70,7 +69,16 @@ final class UserService
      */
     private function assertRoleAssignable(?int $roleId, bool $actorHasSuperadmin): void
     {
-        if ($roleId === null || $actorHasSuperadmin) {
+        if ($roleId === null) {
+            return;
+        }
+
+        // `guest` es el estado «registro pendiente», no un rol que se le asigne a una persona (Fase 2).
+        if (Role::where('id', $roleId)->where('key', Role::KEY_GUEST)->exists()) {
+            throw new \DomainException('El rol Invitado es solo el estado de un registro pendiente de aprobación.');
+        }
+
+        if ($actorHasSuperadmin) {
             return;
         }
 
@@ -92,7 +100,6 @@ final class UserService
      *   security_level_id?: int,
      *   extra_permissions?: list<string>,
      *   notes?: string|null,
-     *   roles?: list<string>,
      *   role_id?: int|null,
      *   additional_role_ids?: list<int>,
      *   is_active?: bool,
@@ -140,17 +147,13 @@ final class UserService
                 'is_active'         => $data['is_active'] ?? true,
             ]);
 
-            foreach ($data['roles'] ?? [] as $role) {
-                UserRole::create(['user_id' => $user->id, 'role' => $role]);
-            }
-
             if ($actorHasSuperadmin) {
                 foreach (array_unique($data['additional_role_ids'] ?? []) as $roleId) {
                     UserAdditionalRole::create(['user_id' => $user->id, 'role_id' => $roleId]);
                 }
             }
 
-            return $user->load(['userRoles', 'additionalRoles', 'department', 'securityLevel']);
+            return $user->load(['role', 'additionalRoles.role', 'department', 'securityLevel']);
         });
 
         // SCRUM-822 — sin sentido mandar instrucciones de login a alguien que se creó Inactivo
@@ -180,7 +183,6 @@ final class UserService
      *   security_level_id?: int,
      *   extra_permissions?: list<string>,
      *   notes?: string|null,
-     *   roles?: list<string>,
      *   role_id?: int|null,
      *   additional_role_ids?: list<int>,
      * } $data
@@ -250,13 +252,6 @@ final class UserService
 
             $user->save();
 
-            if (isset($data['roles'])) {
-                $user->userRoles()->delete();
-                foreach ($data['roles'] as $role) {
-                    UserRole::create(['user_id' => $user->id, 'role' => $role]);
-                }
-            }
-
             if (array_key_exists('additional_role_ids', $data) && $actorHasSuperadmin) {
                 $user->additionalRoles()->delete();
                 foreach (array_unique($data['additional_role_ids'] ?? []) as $roleId) {
@@ -264,7 +259,7 @@ final class UserService
                 }
             }
 
-            return $user->load(['userRoles', 'additionalRoles', 'department', 'securityLevel']);
+            return $user->load(['role', 'additionalRoles.role', 'department', 'securityLevel']);
         });
     }
 
@@ -325,6 +320,9 @@ final class UserService
                 throw new \RuntimeException('Security level 1 (Read Only) not configured.');
             }
 
+            $guestRoleId = Role::where('key', Role::KEY_GUEST)->value('id')
+                ?? throw new \RuntimeException('Rol de sistema «guest» no configurado (migración 2026_10_24_500000).');
+
             /** @var User $user */
             $user = User::create([
                 'first_name'        => $data['first_name'],
@@ -333,10 +331,9 @@ final class UserService
                 'password_hash'     => $data['email'],
                 'department_id'     => $data['department_id'],
                 'security_level_id' => $levelId,
+                'role_id'           => $guestRoleId,
                 'is_active'         => false,
             ]);
-
-            UserRole::create(['user_id' => $user->id, 'role' => User::ROLE_GUEST]);
 
             return $user;
         });
@@ -345,10 +342,10 @@ final class UserService
     /** @return Collection<int, User> */
     public function listPending(): Collection
     {
-        return User::with(['userRoles', 'department'])
+        return User::with(['role', 'department'])
             ->where('is_active', false)
-            ->whereHas('userRoles', function (Builder $q): void {
-                $q->where('role', User::ROLE_GUEST);
+            ->whereHas('role', function (Builder $q): void {
+                $q->where('key', Role::KEY_GUEST);
             })
             ->orderBy('created_at', 'asc')
             ->get();
@@ -359,14 +356,17 @@ final class UserService
      *
      * @throws \InvalidArgumentException if user is not a pending guest
      */
-    public function approve(User $user, string $role, int $securityLevelId): User
+    public function approve(User $user, int $roleId, int $securityLevelId, bool $actorHasSuperadmin = false): User
     {
-        $approved = DB::transaction(function () use ($user, $role, $securityLevelId): User {
-            if ($user->is_active || ! $user->hasRole(User::ROLE_GUEST)) {
+        $this->assertRoleAssignable($roleId, $actorHasSuperadmin);
+
+        $approved = DB::transaction(function () use ($user, $roleId, $securityLevelId): User {
+            if ($user->is_active || ! $user->isGuest()) {
                 throw new \InvalidArgumentException('Only pending guest users can be approved.');
             }
 
             $user->is_active         = true;
+            $user->role_id           = $roleId;
             $user->security_level_id = $securityLevelId;
             // SCRUM-1034 (H7): la contraseña inicial (= correo, ver WelcomeMail) obliga a cambiarla en el primer ingreso. SIN plazo de
             // caducidad a propósito (decisión de Luis, 2026-10-05): `password_reset_at` queda nulo, así que la inicial vale hasta que la
@@ -374,10 +374,7 @@ final class UserService
             $user->must_change_password = true;
             $user->save();
 
-            $user->userRoles()->delete();
-            UserRole::create(['user_id' => $user->id, 'role' => $role]);
-
-            return $user->load(['userRoles', 'department', 'securityLevel']);
+            return $user->load(['role', 'additionalRoles.role', 'department', 'securityLevel']);
         });
 
         Mail::to($approved->email)->send(new WelcomeMail(
@@ -396,12 +393,11 @@ final class UserService
      */
     public function reject(User $user): void
     {
-        if ($user->is_active || ! $user->hasRole(User::ROLE_GUEST)) {
+        if ($user->is_active || ! $user->isGuest()) {
             throw new \InvalidArgumentException('Only pending guest users can be rejected.');
         }
 
         DB::transaction(function () use ($user): void {
-            $user->userRoles()->delete();
             $user->delete();
         });
     }

@@ -229,7 +229,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     {
         $mgmtToken = $this->loginAs();
 
-        $this->createRule(['recipient_type' => 'role', 'recipient_value' => ['designer']]);
+        $this->createRule(['recipient_type' => 'role', 'recipient_value' => ['vendedor_disenador']]);
 
         $projectId = $this->createProject($mgmtToken);
         $this->changeStage($mgmtToken, $projectId, 'cerrado');

@@ -19,7 +19,6 @@ class ConfiguracionSoloGerenciaTest extends FeatureTestCase
     public static function restrictedEndpoints(): array
     {
         return [
-            'users catalog'        => ['GET',    '/api/users/catalog'],
             'users index'          => ['GET',    '/api/users'],
             'users pending'        => ['GET',    '/api/users/pending'],
             'users show'           => ['GET',    '/api/users/1'],
@@ -110,7 +109,7 @@ class ConfiguracionSoloGerenciaTest extends FeatureTestCase
             $this->loginAs('management@atlantic.test'),
             $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin'),
         ] as $token) {
-            foreach (['/api/users', '/api/departments', '/api/security-levels', '/api/users/catalog'] as $uri) {
+            foreach (['/api/users', '/api/departments', '/api/security-levels'] as $uri) {
                 $this->hit($token, 'GET', $uri)->assertStatus(200);
             }
         }

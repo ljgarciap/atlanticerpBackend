@@ -60,23 +60,18 @@ class EffectivePermissionsV2Test extends FeatureTestCase
     }
 
     /**
-     * KAN-11 — fallback de `roleIds()` a rol legado: un usuario sin `role_id` pero con
-     * `user_roles.role = 'management'` (el camino real de `UserService::approve()`, que todavía
-     * no asigna `role_id`) debe resolver al mismo `role_id` que el rol `management` real —
-     * 'management'/'superadmin' son los únicos 2 roles legados con `key` idéntica en el catálogo
-     * de roles nuevo.
+     * Fase 2 — sin fallback al enum legado (retirado): un usuario sin `role_id` NO resuelve ningún rol aunque tenga una fila legada
+     * `user_roles.role = 'management'` (el backfill de la migración 2026_10_24_500000 ya pasó esos casos a `role_id`).
      */
-    public function test_usuario_sin_role_id_con_rol_legado_management_resuelve_al_role_id_real(): void
+    public function test_usuario_sin_role_id_no_resuelve_roles_aunque_tenga_fila_legada(): void
     {
         $level = SecurityLevel::where('level', 9)->firstOrFail();
         $user = $this->makeUser(null, $level->id);
         UserRole::create(['user_id' => $user->id, 'role' => 'management']);
         $user = $user->fresh();
 
-        $management = Role::where('key', 'management')->firstOrFail();
-        $this->assertSame([$management->id], $user->roleIds());
-        $this->assertTrue($user->canViewTeamV2('ventas_diseno'));
-        $this->assertContains('ventas_diseno.view_team', $user->effectivePermissionsV2());
+        $this->assertSame([], $user->roleIds());
+        $this->assertFalse($user->canViewTeamV2('ventas_diseno'));
     }
 
     /**

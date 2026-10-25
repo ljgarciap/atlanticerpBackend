@@ -283,7 +283,7 @@ class ShareLinkControllerTest extends FeatureTestCase
                 'first_name'        => 'Outsider',
                 'last_name'         => 'Test',
                 'email'             => $outsiderEmail,
-                'roles'             => ['designer'],
+                'role_id'           => (int) \Illuminate\Support\Facades\DB::table('atlantic_auth.roles')->where('key', 'vendedor_disenador')->value('id'),
                 'security_level_id' => $this->levelId(3),
                 'extra_permissions' => ['crm.delete'],
             ])->assertStatus(201);

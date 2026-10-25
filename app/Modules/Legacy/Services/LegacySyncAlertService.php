@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Legacy\Services;
 
 use App\Models\User;
+use App\Modules\Auth\Models\Role;
 use App\Modules\Legacy\Mail\LegacySyncAlertMail;
 use App\Modules\Legacy\Models\StockSyncSettings;
 use App\Modules\Legacy\Models\SyncRun;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -176,9 +176,7 @@ final class LegacySyncAlertService
         /** @var list<string> $correos */
         $correos = User::query()
             ->where('is_active', true)
-            ->whereHas('userRoles', function (Builder $q): void {
-                $q->where('role', User::ROLE_SUPERADMIN);
-            })
+            ->withRoleKey([Role::KEY_SUPERADMIN])
             ->pluck('email')
             ->map(static fn (mixed $e): string => strtolower(trim((string) $e)))
             ->all();

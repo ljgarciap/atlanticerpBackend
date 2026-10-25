@@ -11,6 +11,7 @@ use App\Modules\AdminCont\Models\AdminContDailyCashCount;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPettyCashReport;
+use App\Modules\Auth\Models\Role;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\RelocationRequest;
@@ -477,7 +478,7 @@ final class ApprovalsPendingService
         }
 
         return User::where('is_active', false)
-            ->whereHas('userRoles', fn ($q) => $q->where('role', User::ROLE_GUEST))
+            ->whereHas('role', fn ($q) => $q->where('key', Role::KEY_GUEST))
             ->orderBy('created_at')
             ->get()
             ->map(fn (User $u): ApprovalPendingItem => new ApprovalPendingItem(

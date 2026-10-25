@@ -5,7 +5,6 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Models\SystemSetting;
-use App\Modules\Auth\Models\UserRole;
 use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
@@ -169,39 +168,32 @@ class LoginTest extends FeatureTestCase
     }
 
     /**
-     * Hallazgo de Senior Review 2026-07-10: UserService::approve() (registro público) solo asigna
-     * `user_roles` (legado), nunca `role_id`. Sin fallback en JwtClaimsBuilder, un usuario en ese
-     * estado (típico de cualquiera aprobado desde el cutover de Fase C en adelante) perdía el
-     * claim `role` del JWT -- y con él, el acceso a rutas de CRM gateadas por
-     * `role:superadmin,management` que sí tenía antes.
+     * Fase 2 (Fase E del ADR-006): `role_id` es el único mecanismo de rol. Un usuario aprobado recibe su rol real y el claim `role` sale de ahí;
+     * uno SIN `role_id` ya no cae al enum legado `user_roles` (retirado): no recibe claim de rol ni acceso a rutas de Gerencia.
      */
-    public function test_login_usuario_sin_role_id_cae_al_rol_legado_de_user_roles(): void
+    public function test_login_usuario_con_role_id_recibe_el_claim_y_sin_role_id_no_tiene_acceso_de_gerencia(): void
     {
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $levelId = SecurityLevel::where('level', 9)->firstOrFail()->id;
-        $user = User::create([
-            'first_name' => 'Aprobado', 'last_name' => 'SinRoleId',
-            'email' => 'aprobado.sin.role.id@atlantic.test', 'password_hash' => 'Password123!',
+        $managementId = \App\Modules\Auth\Models\Role::where('key', 'management')->firstOrFail()->id;
+        User::create([
+            'first_name' => 'Con', 'last_name' => 'RoleId', 'email' => 'con.role.id@atlantic.test', 'password_hash' => 'Password123!',
+            'is_active' => true, 'security_level_id' => $levelId, 'role_id' => $managementId,
+        ]);
+        User::create([
+            'first_name' => 'Sin', 'last_name' => 'RoleId', 'email' => 'sin.role.id@atlantic.test', 'password_hash' => 'Password123!',
             'is_active' => true, 'security_level_id' => $levelId, 'role_id' => null,
         ]);
-        UserRole::create(['user_id' => $user->id, 'role' => 'management']);
 
         Tenant::forgetCurrent();
 
-        $response = $this->postJson('/api/auth/login', [
-            'email' => 'aprobado.sin.role.id@atlantic.test', 'password' => 'Password123!',
-        ]);
+        $con = $this->postJson('/api/auth/login', ['email' => 'con.role.id@atlantic.test', 'password' => 'Password123!']);
+        $con->assertStatus(200)->assertJsonPath('user.role', 'management')->assertJsonPath('user.role_id', $managementId);
+        $this->withHeaders($this->authHeaders((string) $con->json('token')))->getJson('/api/crm/reports/team')->assertStatus(200);
 
-        $response->assertStatus(200);
-        $response->assertJsonPath('user.role', 'management');
-        $response->assertJsonPath('user.role_id', null);
-
-        // Confirma que el fallback realmente restaura el acceso a una ruta de CRM gateada por
-        // role:superadmin,management (routes/crm.php), no solo que el claim se vea bien.
-        $token = (string) $response->json('token');
-        $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/crm/reports/team')
-            ->assertStatus(200);
+        $sin = $this->postJson('/api/auth/login', ['email' => 'sin.role.id@atlantic.test', 'password' => 'Password123!']);
+        $sin->assertStatus(200)->assertJsonPath('user.role', null)->assertJsonPath('user.role_id', null);
+        $this->withHeaders($this->authHeaders((string) $sin->json('token')))->getJson('/api/crm/reports/team')->assertStatus(403);
     }
 }
