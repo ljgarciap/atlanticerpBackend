@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Servicios\Services;
 
+use App\Modules\AdminCont\Support\PdfFooterText;
+use App\Modules\AdminCont\Support\QuotePaymentInstructions;
 use App\Modules\Servicios\Models\ServiceQuote;
 use App\Modules\Servicios\Models\ServiceQuoteItem;
 use App\Modules\Servicios\Models\Ticket;
@@ -63,7 +65,9 @@ final class ServiceQuotePdfService
 
         // SCRUM-824 — bloque final indivisible, pegado al pie de página (mismo mecanismo que
         // SCRUM-801). El estimator no conoce modelos Eloquent, solo el array plano equivalente.
+        $paymentLines = QuotePaymentInstructions::lines();
         $layout = $this->layoutEstimator->estimate([
+            'payment_lines'    => $paymentLines,
             'items'            => $items,
             'observations'     => $quote->observations,
             'conditions_text'  => $conditions,
@@ -72,6 +76,8 @@ final class ServiceQuotePdfService
 
         return [
             'ticket'                  => $ticket,
+            'paymentLines'            => $paymentLines,
+            'footerCompanyText'       => PdfFooterText::forCurrentCompany(),
             'detail'                  => $detail,
             'quote'                   => $quote,
             'items'                   => $items,

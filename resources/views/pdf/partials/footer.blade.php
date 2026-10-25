@@ -21,7 +21,7 @@
 <script type="text/php">
     if (isset($pdf)) {
         $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-        $companyText = "{!! $footerCompanyText ?? 'ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza - Obarrio, Panama - www.atlantic.com.pa' !!}";
+        $companyText = "{!! $footerCompanyText ?? \App\Modules\AdminCont\Support\PdfFooterText::forCurrentCompany() !!}";
         $w1 = $fontMetrics->getTextWidth($companyText, $font, 7);
         $pdf->page_text((612 - $w1) / 2, 762, $companyText, $font, 7, array(0.55, 0.55, 0.55));
 

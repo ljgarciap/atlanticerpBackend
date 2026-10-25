@@ -190,15 +190,17 @@ final class PaymentService
         if ($metodoPago === AdminContPayment::METODO_TARJETA) {
             return AdminContBankAccount::query()
                 ->where('activa', true)
-                ->where('banco', 'Banistmo')
                 ->where('tipo_cuenta', AdminContBankAccount::TIPO_TARJETA_CREDITO)
+                ->orderBy('id')
                 ->first();
         }
 
+        // Fase 4a: antes se elegía por NOMBRE de banco (tarjeta → «Banistmo», el resto → «Banco General», cuentas del cliente anterior). Ahora es la
+        // primera cuenta activa del tipo que corresponde: con una sola cuenta por tipo (el caso real) da el mismo resultado.
         return AdminContBankAccount::query()
             ->where('activa', true)
-            ->where('banco', 'Banco General')
             ->where('tipo_cuenta', AdminContBankAccount::TIPO_CORRIENTE)
+            ->orderBy('id')
             ->first();
     }
 

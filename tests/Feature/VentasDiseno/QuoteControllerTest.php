@@ -2172,7 +2172,7 @@ class QuoteControllerTest extends FeatureTestCase
     public function test_pdf_instrucciones_de_pago_muestra_nombre_legal_y_cuenta_ach(): void
     {
         // SCRUM-801 (3er rebote, 2026-09-01) — Gerencia reportó nombre de empresa incorrecto
-        // ("Atlantic" en vez de "ATLANTIC USA CORP") y el mensaje "consultar con su
+        // ("Atlantic" en vez de la razón social cargada) y el mensaje "consultar con su
         // diseñador" en vez de la cuenta ACH real en Instrucciones de pago.
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $ownerId = $this->userIdByEmail('designer@atlantic.test');
@@ -2184,11 +2184,16 @@ class QuoteControllerTest extends FeatureTestCase
         $user = User::find($ownerId);
         $detail = $reflection->invoke($controller, $data['quote']->fresh(['parts.items']), $user);
 
+        // Fase 4a: las instrucciones de pago salen de los DATOS de la empresa (razón social + cuenta corriente activa), no de la plantilla.
+        \App\Modules\AdminCont\Models\AdminContBankAccount::create([
+            'banco' => 'Banco Demo 1', 'tipo_cuenta' => \App\Modules\AdminCont\Models\AdminContBankAccount::TIPO_CORRIENTE,
+            'ultimos_4_digitos' => '0001', 'numero_cuenta_completo' => '00-00-00-000000-1', 'moneda' => 'USD', 'activa' => true,
+        ]);
         $pdfService = app(QuotePdfService::class);
         $html = view('ventas-diseno.quote-pdf', $pdfService->viewData($detail, external: false))->render();
 
-        $this->assertStringContainsString('Cheque a nombre de: ATLANTIC USA CORP', $html);
-        $this->assertStringContainsString('03-01-01-074455-4', $html);
+        $this->assertStringContainsString('Cheque a nombre de: EMPRESA DEMO S.A.', $html);
+        $this->assertStringContainsString('00-00-00-000000-1', $html);
         $this->assertStringNotContainsString('consultar con su diseñador', $html);
     }
 

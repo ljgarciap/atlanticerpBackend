@@ -97,3 +97,25 @@ Cada entrega: spec aprobada → Senior Review → merge, como en las fases anter
 - Cambiar el dataset demo toca ~25 archivos de test: se mitiga manteniendo la forma (§3.2) y verificando con la suite completa.
 - Quitar la clase B del seed por defecto cambia lo que ve un entorno ya desplegado **solo si se vuelve a sembrar**; los datos ya cargados (en `dev`/`test`) no se tocan.
 - El renombre de emails afecta ~190 archivos de test y ~140 e2e: mecánico, con el mismo método de la Fase 3.
+
+## 9. Resultado de la entrega 4a (2026-10-25)
+
+Ramas `fase4a/seeds-por-niveles` (backend) y `fase4a/datos-cliente-fuera` (frontend). Decisiones de §7 aplicadas.
+
+**Hecho**
+- `DatabaseSeeder` en tres niveles (núcleo siempre / demo solo local-dev-testing / datos del cliente nunca por defecto). Quedan **sin llamador** y con valores de ejemplo: `AdminContFiscalIdentity`, `AdminContBankAccount`,
+  `ZonaLibreProvider`, `LafayetteLightingProvider`, `SharedFamilies`, `CatalogUatTestData`, `AlmacenEquivalencia`. La base de pruebas carga la identidad fiscal de ejemplo y el proveedor de Zona Libre vía `tests/Support/TestDatabaseSeeder`.
+- Borrados 6 seeders de pruebas de tickets Jira (`Scrum171/416420/711/831/845`, `QaTicketsBatch20260725`), el comando `qa:fix-demo-fiscal-data` y sus tests.
+- **PDF de cotizaciones** (Ventas & Diseño y Servicios): el cheque a nombre de la razón social y la cuenta ACH ya no están escritos en las plantillas; salen de los datos de la empresa (`QuotePaymentInstructions`: razón social del perfil fiscal + primera cuenta corriente activa con número
+  completo) y **si no hay datos no se imprime el bloque**. Los estimadores de maquetación usan esas mismas líneas. Pie de página: respaldo neutro («Atlantic») sin dirección ni sitio web; las cotizaciones leen el pie de la empresa vigente.
+- **Cobros**: la cuenta por defecto (`PaymentService`, `ArchitectCommissionService`) ya no se elige por nombre de banco (tarjeta → «Banistmo», resto → «Banco General»), sino por la primera cuenta activa del tipo correcto.
+- Frontend: se quitan de i18n `document.achAccount/companyName/companyFooter` (cuenta, teléfonos, correo y web del cliente; no se usaban); tests y e2e con valores de ejemplo; se elimina un spec pre-QA que afirmaba el pie del cliente.
+- Contratos: `DatabaseSeederTiersTest` (estático + corrida real en entorno `production`; verificado con una mutación), `ClientDataInRepoTest` (backend) y `clientDataInRepo.test.ts` (frontend).
+
+**Verificación**: PHPStan 0 errores; suite completa del backend 6188 tests, 0 fallos (la primera corrida dio 7 errores en `QuotePdfSignatureTotalsRenderTest` por consultar la BD sin tenant; corregido); frontend `tsc` limpio y 248 archivos / 3112 tests.
+
+**Hallazgos (no cambiados)**
+1. **El emisor del sandbox del PAC** (RUC, DV y razón social del cliente) sigue en `SandboxFiscalFixtures`, `infra/scripts/msl-polling-202.php` y 4 tests fiscales: es el emisor registrado en el sandbox y no puede ser un placeholder sin romper esa integración → **Fase 6** (el test de contrato los lista como excepción explícita).
+2. **El núcleo siembra cuentas de usuario por defecto en TODOS los entornos, producción incluida**: `CoreUserSeeder`/`BusinessRoleUserSeeder` crean `superadmin@test.com`, `gerencia@test.com`… con contraseña igual al correo. Un despliegue real necesita un alta inicial de superadmin y no estas cuentas → **propuesta de entrega aparte** (§7 decisión pendiente).
+3. `LafayetteMapearProveedorCommand::PROVEEDOR` fija el proveedor «BK INTERPRISES S.A.» y `SandboxFiscalFixtures`/familias de iluminación siguen en el código → Fase 5.
+4. El RUC, la dirección y la cuenta bancaria completa **siguen en el historial de git** y en `docs/` (reportes históricos de QA): aceptado por Luis («solo limpiar desde ahora»).

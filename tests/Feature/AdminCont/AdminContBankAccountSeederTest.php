@@ -14,7 +14,7 @@ use Tests\Feature\FeatureTestCase;
 /**
  * SCRUM-928 (D-6) — las cuentas bancarias de la empresa se siembran en todos los entornos. CREA solo
  * si la tabla está vacía (prod no tenía ninguna); en un ambiente que ya tiene cuentas (test, dev) solo
- * rellena el número completo de Banco General. NUNCA pisa un número cargado, reactiva una cuenta
+ * rellena el número completo de Banco Demo 1. NUNCA pisa un número cargado, reactiva una cuenta
  * desactivada, ni duplica — ni siquiera si alguien renombra la cuenta desde la pantalla.
  *
  * El seeder NO corre en `testing` desde `DatabaseSeeder` (Senior Review ALTO-1): estos tests lo
@@ -22,10 +22,10 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContBankAccountSeederTest extends FeatureTestCase
 {
-    private const NUMERO = '03-01-01-074455-4';
+    private const NUMERO = '00-00-00-000000-1';
 
     /** Terminaciones de las 4 cuentas sembradas. */
-    private const ULT4 = ['4554', '9034', '4534', '0032'];
+    private const ULT4 = ['0001', '0002', '0003', '0004'];
 
     protected function setUp(): void
     {
@@ -48,7 +48,7 @@ class AdminContBankAccountSeederTest extends FeatureTestCase
         $this->reMakeCurrent();
     }
 
-    private function makeAccount(?string $completo, bool $activa = true, string $banco = 'Banco General', string $tipo = 'corriente', string $ult4 = '4554'): AdminContBankAccount
+    private function makeAccount(?string $completo, bool $activa = true, string $banco = 'Banco Demo 1', string $tipo = 'corriente', string $ult4 = '0001'): AdminContBankAccount
     {
         return AdminContBankAccount::create([
             'banco' => $banco, 'tipo_cuenta' => $tipo, 'ultimos_4_digitos' => $ult4,
@@ -82,26 +82,26 @@ class AdminContBankAccountSeederTest extends FeatureTestCase
 
         $cuentas = $this->all();
         $this->assertCount(4, $cuentas);
-        $this->assertSame(['Banco General', 'Banistmo', 'Bancolombia', 'Davivienda'], $cuentas->pluck('banco')->all(), 'El orden de creación define el id: Banco General primero.');
+        $this->assertSame(['Banco Demo 1', 'Banco Demo 2', 'Banco Demo 3', 'Banco Demo 4'], $cuentas->pluck('banco')->all(), 'El orden de creación define el id: Banco Demo 1 primero.');
         $this->assertSame([true, true, false, false], $cuentas->pluck('activa')->all());
         $this->assertSame(['corriente', 'tarjeta_credito', 'ahorro', 'ahorro'], $cuentas->pluck('tipo_cuenta')->all());
         $this->assertSame(self::NUMERO, $cuentas->first()->numero_cuenta_completo);
-        $this->assertSame([null, null, null], $cuentas->skip(1)->pluck('numero_cuenta_completo')->all(), 'Solo Banco General tiene número completo.');
+        $this->assertSame([null, null, null], $cuentas->skip(1)->pluck('numero_cuenta_completo')->all(), 'Solo Banco Demo 1 tiene número completo.');
     }
 
-    public function test_rellena_solo_el_numero_de_banco_general_en_las_cuentas_existentes_sin_duplicar_ni_tocar_su_actividad(): void
+    public function test_rellena_solo_el_numero_de_banco_demo_1_en_las_cuentas_existentes_sin_duplicar_ni_tocar_su_actividad(): void
     {
         // Caso de `test.atlanticerp.ai`: las 4 ya cargadas a mano, ninguna con número. Otro casing a propósito.
-        $bg = $this->makeAccount(null, banco: 'Banco general');
-        $bs = $this->makeAccount(null, banco: 'Banistmo', tipo: 'tarjeta_credito', ult4: '9034');
-        $bc = $this->makeAccount(null, activa: false, banco: 'Bancolombia', tipo: 'ahorro', ult4: '4534');
-        $dv = $this->makeAccount(null, activa: false, banco: 'Davivienda', tipo: 'ahorro', ult4: '0032');
+        $bg = $this->makeAccount(null, banco: 'Banco demo 1');
+        $bs = $this->makeAccount(null, banco: 'Banco Demo 2', tipo: 'tarjeta_credito', ult4: '0002');
+        $bc = $this->makeAccount(null, activa: false, banco: 'Banco Demo 3', tipo: 'ahorro', ult4: '0003');
+        $dv = $this->makeAccount(null, activa: false, banco: 'Banco Demo 4', tipo: 'ahorro', ult4: '0004');
 
         $this->runSeeder();
 
         $this->assertCount(4, $this->all(), 'No debe crear cuentas nuevas.');
         $this->assertSame(self::NUMERO, $bg->fresh()->numero_cuenta_completo);
-        $this->assertSame('Banco general', $bg->fresh()->banco, 'No renombra la cuenta existente.');
+        $this->assertSame('Banco demo 1', $bg->fresh()->banco, 'No renombra la cuenta existente.');
         foreach ([$bs, $bc, $dv] as $otra) {
             $this->assertNull($otra->fresh()->numero_cuenta_completo);
         }
@@ -123,7 +123,7 @@ class AdminContBankAccountSeederTest extends FeatureTestCase
     {
         // Senior Review MEDIO-2: banco/tipo/terminación son editables y no hay endpoint para borrar; crear otra
         // "porque no la encuentra" dejaría un duplicado activo imposible de eliminar.
-        $renombrada = $this->makeAccount(null, banco: 'Banco General S.A.');
+        $renombrada = $this->makeAccount(null, banco: 'Banco Demo 1 S.A.');
 
         $this->runSeeder();
         $this->runSeeder();
@@ -134,7 +134,7 @@ class AdminContBankAccountSeederTest extends FeatureTestCase
 
     public function test_normaliza_espacios_y_mayusculas_en_el_nombre_del_banco(): void
     {
-        $bg = $this->makeAccount(null, banco: '  BANCO GENERAL ');
+        $bg = $this->makeAccount(null, banco: '  BANCO DEMO 1 ');
 
         $this->runSeeder();
 
@@ -163,8 +163,8 @@ class AdminContBankAccountSeederTest extends FeatureTestCase
 
     public function test_no_reactiva_una_cuenta_desactivada_ni_crea_otra_activa_en_su_lugar(): void
     {
-        // Alguien desactivó Banistmo a propósito: el seeder no puede revertir esa decisión ni duplicarla.
-        $bs = $this->makeAccount(null, activa: false, banco: 'Banistmo', tipo: 'tarjeta_credito', ult4: '9034');
+        // Alguien desactivó Banco Demo 2 a propósito: el seeder no puede revertir esa decisión ni duplicarla.
+        $bs = $this->makeAccount(null, activa: false, banco: 'Banco Demo 2', tipo: 'tarjeta_credito', ult4: '0002');
 
         $this->runSeeder();
 
@@ -184,8 +184,8 @@ class AdminContBankAccountSeederTest extends FeatureTestCase
 
     public function test_misma_terminacion_pero_otro_banco_o_tipo_no_se_confunde_con_la_cuenta_real(): void
     {
-        $otroBanco = $this->makeAccount(null, banco: 'Banistmo');   // 4554 pero otro banco
-        $otroTipo  = $this->makeAccount(null, tipo: 'ahorro');      // 4554 pero ahorro
+        $otroBanco = $this->makeAccount(null, banco: 'Banco Demo 2');   // 0001 pero otro banco
+        $otroTipo  = $this->makeAccount(null, tipo: 'ahorro');      // 0001 pero ahorro
 
         $this->runSeeder();
 
@@ -194,11 +194,11 @@ class AdminContBankAccountSeederTest extends FeatureTestCase
         $this->assertCount(2, $this->all(), 'No se crea nada: la tabla ya tenía cuentas.');
     }
 
-    public function test_banco_general_corriente_con_otra_terminacion_no_recibe_el_numero(): void
+    public function test_banco_demo_1_corriente_con_otra_terminacion_no_recibe_el_numero(): void
     {
         // Senior Review MEDIO-3: sin el filtro por terminación se estamparía el número de la cuenta real en una
         // cuenta ajena, y saldría en las Facturas a clientes.
-        $ajena = $this->makeAccount(null, banco: 'Banco General', tipo: 'corriente', ult4: '1111');
+        $ajena = $this->makeAccount(null, banco: 'Banco Demo 1', tipo: 'corriente', ult4: '1111');
 
         $this->runSeeder();
 
@@ -217,13 +217,13 @@ class AdminContBankAccountSeederTest extends FeatureTestCase
         $this->assertNull($nueva->fresh()->numero_cuenta_completo);
     }
 
-    public function test_con_las_cuentas_sembradas_la_factura_y_el_estado_de_cuenta_muestran_el_numero_de_banco_general(): void
+    public function test_con_las_cuentas_sembradas_la_factura_y_el_estado_de_cuenta_muestran_el_numero_de_banco_demo_1(): void
     {
         $this->runSeeder();
 
-        // La Factura usa la cuenta activa más antigua: tiene que ser Banco General, no Banistmo.
+        // La Factura usa la cuenta activa más antigua: tiene que ser Banco Demo 1, no Banco Demo 2.
         $bloque = InvoiceService::paymentBlock();
-        $this->assertSame('Banco General', $bloque['banco']);
+        $this->assertSame('Banco Demo 1', $bloque['banco']);
         $this->assertSame(self::NUMERO, $bloque['numero_cuenta']);
         $this->assertStringNotContainsString('*', (string) $bloque['cuenta_pago']);
     }

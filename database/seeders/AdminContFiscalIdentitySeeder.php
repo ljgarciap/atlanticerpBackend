@@ -30,16 +30,15 @@ class AdminContFiscalIdentitySeeder extends Seeder
 
     /** @var array<string, string> nombre_comercial/razon_social/ruc/dv/direccion_fiscal */
     private const IDENTITY = [
-        'razon_social'     => 'ATLANTIC USA CORP',
-        'nombre_comercial' => 'ATLANTIC USA CORP',
-        'ruc'              => '1838853-1-711641',
-        // SCRUM-928 — DV del RUC, aportado por Contabilidad (2026-09-18). Antes vacío en todos los
-        // entornos → el PDF de la Factura imprimía el RUC sin DV.
-        'dv'               => '81',
+        'razon_social'     => 'EMPRESA DEMO S.A.',
+        'nombre_comercial' => 'EMPRESA DEMO S.A.',
+        'ruc'              => '0000000-0-000000',
+        // Fase 4a: valores de EJEMPLO. Este seeder ya NO lo llama `DatabaseSeeder` (un tenant nuevo nace sin identidad fiscal; se carga por la pantalla de Perfil de empresa).
+        'dv'               => '00',
         // Sin acento a propósito — string idéntico al footer ya hardcodeado y aprobado en
         // quote-pdf.blade.php / PdfFooterText::DEFAULT_FOOTER, para que el pie de página con datos
         // fiscales cargados sea idéntico al fallback (SCRUM-857 pide consistencia con cotizaciones).
-        'direccion_fiscal' => 'Calle 57 Este, Times Square Plaza - Obarrio, Panama',
+        'direccion_fiscal' => 'Calle Ejemplo 123, Ciudad Ejemplo',
     ];
 
     public function run(): void

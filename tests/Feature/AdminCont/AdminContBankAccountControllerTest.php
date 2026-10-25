@@ -132,11 +132,11 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
                 'banco' => 'Banco General', 'ultimos_4_digitos' => '4455',
-                'numero_cuenta_completo' => '03-01-01-074455-4',
+                'numero_cuenta_completo' => '00-00-00-000000-1',
             ])
             ->assertStatus(201);
 
-        $response->assertJsonFragment(['numero_cuenta_completo' => '03-01-01-074455-4']);
+        $response->assertJsonFragment(['numero_cuenta_completo' => '00-00-00-000000-1']);
     }
 
     // ── update (nueva — antes solo existía deactivate/reactivate) ───────────────
@@ -148,11 +148,11 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-accounts/{$account->id}", [
-                'numero_cuenta_completo' => '03-01-01-074455-4',
+                'numero_cuenta_completo' => '00-00-00-000000-1',
             ])
             ->assertStatus(200);
 
-        $response->assertJsonFragment(['numero_cuenta_completo' => '03-01-01-074455-4', 'banco' => 'Banco General']);
+        $response->assertJsonFragment(['numero_cuenta_completo' => '00-00-00-000000-1', 'banco' => 'Banco General']);
     }
 
     public function test_update_parcial_no_pisa_el_resto_de_los_campos(): void
@@ -163,7 +163,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
         $token = $this->loginAsFelix();
 
         $this->withHeaders($this->authHeaders($token))
-            ->putJson("/api/admin-contab/bank-accounts/{$account->id}", ['numero_cuenta_completo' => '03-01-01-074455-4'])
+            ->putJson("/api/admin-contab/bank-accounts/{$account->id}", ['numero_cuenta_completo' => '00-00-00-000000-1'])
             ->assertStatus(200);
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();

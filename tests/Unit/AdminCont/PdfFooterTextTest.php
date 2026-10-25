@@ -63,7 +63,8 @@ class PdfFooterTextTest extends TestCase
         // Mismo texto exacto que quote-pdf.blade.php/service-quote-pdf.blade.php — es el estado
         // real hoy en dev/test/prod, no un fixture artificial.
         $this->assertSame(
-            'ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza - Obarrio, Panama - www.atlantic.com.pa',
+            // Fase 4a: sin datos fiscales el pie es solo el nombre de marca (ya no la dirección y el sitio web del cliente anterior).
+            'Atlantic',
             PdfFooterText::forFiscal($this->fiscal('', ''))
         );
     }
@@ -71,7 +72,7 @@ class PdfFooterTextTest extends TestCase
     public function test_forFiscal_usa_el_dato_real_una_vez_cargado(): void
     {
         $this->assertSame(
-            'Atlantic USA Corp - Calle 57 Este, Panama - www.atlantic.com.pa',
+            'Atlantic USA Corp - Calle 57 Este, Panama',
             PdfFooterText::forFiscal($this->fiscal('Atlantic USA Corp', 'Calle 57 Este, Panama'))
         );
     }
@@ -79,7 +80,7 @@ class PdfFooterTextTest extends TestCase
     public function test_forFiscal_omite_el_guion_colgante_si_solo_hay_nombre(): void
     {
         $this->assertSame(
-            'Atlantic USA Corp - www.atlantic.com.pa',
+            'Atlantic USA Corp',
             PdfFooterText::forFiscal($this->fiscal('Atlantic USA Corp', ''))
         );
     }
@@ -90,14 +91,14 @@ class PdfFooterTextTest extends TestCase
         // "..." — un backslash ahí quedaría como carácter literal VISIBLE en el PDF ("Corp\'s").
         $result = PdfFooterText::forFiscal($this->fiscal("Atlantic USA Corp's", ''));
 
-        $this->assertSame("Atlantic USA Corp's - www.atlantic.com.pa", $result);
+        $this->assertSame("Atlantic USA Corp's", $result);
     }
 
     public function test_forFiscal_escapa_comilla_doble_y_backslash_para_el_contexto_de_script_php_de_dompdf(): void
     {
         $result = PdfFooterText::forFiscal($this->fiscal('Atlantic\\Corp', 'Calle "5", Panama'));
 
-        $this->assertSame('Atlantic\\\\Corp - Calle \\"5\\", Panama - www.atlantic.com.pa', $result);
+        $this->assertSame('Atlantic\\\\Corp - Calle \\"5\\", Panama', $result);
         $this->assertStringNotContainsString('&#039;', $result);
         $this->assertStringNotContainsString('&quot;', $result);
     }

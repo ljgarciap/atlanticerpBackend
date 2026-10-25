@@ -33,11 +33,11 @@ class AdminContFiscalIdentitySeederTest extends FeatureTestCase
         $contabilidad    = User::where('email', self::CONTABILIDAD_EMAIL)->firstOrFail();
         $settings = AdminContFiscalSettings::current();
 
-        $this->assertSame('ATLANTIC USA CORP', $settings->nombre_comercial);
-        $this->assertSame('ATLANTIC USA CORP', $settings->razon_social);
-        $this->assertSame('1838853-1-711641', $settings->ruc);
-        $this->assertSame('81', $settings->dv, 'SCRUM-928 — DV del RUC de Atlantic');
-        $this->assertSame('Calle 57 Este, Times Square Plaza - Obarrio, Panama', $settings->direccion_fiscal);
+        $this->assertSame('EMPRESA DEMO S.A.', $settings->nombre_comercial);
+        $this->assertSame('EMPRESA DEMO S.A.', $settings->razon_social);
+        $this->assertSame('0000000-0-000000', $settings->ruc);
+        $this->assertSame('00', $settings->dv, 'SCRUM-928 — DV del RUC de Atlantic');
+        $this->assertSame('Calle Ejemplo 123, Ciudad Ejemplo', $settings->direccion_fiscal);
         $this->assertSame($contabilidad->id, $settings->responsable_administracion_user_id);
     }
 
@@ -55,8 +55,8 @@ class AdminContFiscalIdentitySeederTest extends FeatureTestCase
         $this->reMakeCurrent();
 
         $settings = AdminContFiscalSettings::current();
-        $this->assertSame('ATLANTIC USA CORP', $settings->nombre_comercial);
-        $this->assertSame('1838853-1-711641', $settings->ruc);
+        $this->assertSame('EMPRESA DEMO S.A.', $settings->nombre_comercial);
+        $this->assertSame('0000000-0-000000', $settings->ruc);
         $this->assertNotNull($settings->responsable_administracion_user_id);
     }
 
@@ -77,7 +77,7 @@ class AdminContFiscalIdentitySeederTest extends FeatureTestCase
         $this->assertSame('999-999-999', $settings->ruc);
         $this->assertSame($otro->id, $settings->responsable_administracion_user_id);
         // Un campo que sí estaba vacío se rellena igual (fusión por campo, no todo-o-nada).
-        $this->assertSame('Calle 57 Este, Times Square Plaza - Obarrio, Panama', $settings->direccion_fiscal);
+        $this->assertSame('Calle Ejemplo 123, Ciudad Ejemplo', $settings->direccion_fiscal);
     }
 
     public function test_el_seeder_tambien_corre_en_produccion(): void
@@ -94,7 +94,7 @@ class AdminContFiscalIdentitySeederTest extends FeatureTestCase
         $this->reMakeCurrent();
 
         $settings = AdminContFiscalSettings::current();
-        $this->assertSame('ATLANTIC USA CORP', $settings->nombre_comercial);
+        $this->assertSame('EMPRESA DEMO S.A.', $settings->nombre_comercial);
         $this->assertNotNull($settings->responsable_administracion_user_id);
     }
 
@@ -103,7 +103,7 @@ class AdminContFiscalIdentitySeederTest extends FeatureTestCase
         AdminContFiscalSettings::current()->update(['dv' => '']);
         (new AdminContFiscalIdentitySeeder)->run();
         $this->reMakeCurrent();
-        $this->assertSame('81', AdminContFiscalSettings::current()->dv);
+        $this->assertSame('00', AdminContFiscalSettings::current()->dv);
 
         AdminContFiscalSettings::current()->update(['dv' => '55']);
         (new AdminContFiscalIdentitySeeder)->run();

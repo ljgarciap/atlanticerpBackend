@@ -413,6 +413,11 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
             ->assertStatus(201);
 
         $this->makeCurrentTenant();
+        // Fase 4a: las instrucciones de pago salen de los DATOS de la empresa (razón social + cuenta corriente activa), no de las plantillas.
+        \App\Modules\AdminCont\Models\AdminContBankAccount::create([
+            'banco' => 'Banco Demo 1', 'tipo_cuenta' => \App\Modules\AdminCont\Models\AdminContBankAccount::TIPO_CORRIENTE,
+            'ultimos_4_digitos' => '0001', 'numero_cuenta_completo' => '00-00-00-000000-1', 'moneda' => 'USD', 'activa' => true,
+        ]);
         $quote = ServiceQuote::where('ticket_id', $ticket->id)->firstOrFail();
         $quote->update(['subtotal' => 1000, 'discount_percent' => 10]);
 
@@ -424,7 +429,7 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
         $this->assertStringContainsString('Cheque a nombre de', $html);
         $this->assertStringNotContainsString('Designe', $html);
         $this->assertStringNotContainsString('Atlantic · Panamá', $html);
-        $this->assertStringContainsString('ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza', $html);
+        $this->assertStringContainsString('EMPRESA DEMO S.A. - Calle Ejemplo 123, Ciudad Ejemplo', $html);
         $this->assertStringContainsString('-$100.00', $html);
     }
 
@@ -443,15 +448,34 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
             ->assertStatus(201);
 
         $this->makeCurrentTenant();
+        // Fase 4a: las instrucciones de pago salen de los DATOS de la empresa (razón social + cuenta corriente activa), no de las plantillas.
+        \App\Modules\AdminCont\Models\AdminContBankAccount::create([
+            'banco' => 'Banco Demo 1', 'tipo_cuenta' => \App\Modules\AdminCont\Models\AdminContBankAccount::TIPO_CORRIENTE,
+            'ultimos_4_digitos' => '0001', 'numero_cuenta_completo' => '00-00-00-000000-1', 'moneda' => 'USD', 'activa' => true,
+        ]);
         $quote = ServiceQuote::where('ticket_id', $ticket->id)->firstOrFail();
 
         $ticketService = app(TicketService::class);
         $pdfService = app(ServiceQuotePdfService::class);
         $html = view('servicios.service-quote-pdf', $pdfService->viewData($quote, $ticket, $ticketService->detail($ticket)))->render();
 
-        $this->assertStringContainsString('Cheque a nombre de: ATLANTIC USA CORP', $html);
-        $this->assertStringContainsString('03-01-01-074455-4', $html);
+        $this->assertStringContainsString('Cheque a nombre de: EMPRESA DEMO S.A.', $html);
+        $this->assertStringContainsString('00-00-00-000000-1', $html);
         $this->assertStringNotContainsString('consultar con Servicios', $html);
+    }
+
+    public function test_sin_cuenta_bancaria_cargada_no_se_inventa_el_numero_de_pago(): void
+    {
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
+        $this->withHeaders($this->authHeaders($token))->postJson("/api/servicios/tickets/{$ticket->id}/quote")->assertStatus(201);
+
+        $this->makeCurrentTenant();
+        $quote = ServiceQuote::where('ticket_id', $ticket->id)->firstOrFail();
+        $html = view('servicios.service-quote-pdf', app(ServiceQuotePdfService::class)->viewData($quote, $ticket, app(TicketService::class)->detail($ticket)))->render();
+
+        $this->assertStringContainsString('Cheque a nombre de: EMPRESA DEMO S.A.', $html);
+        $this->assertStringNotContainsString('Pagos ACH', $html);
     }
 
     /**
