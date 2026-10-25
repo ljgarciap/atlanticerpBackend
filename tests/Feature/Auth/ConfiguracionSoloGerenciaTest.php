@@ -20,13 +20,10 @@ class ConfiguracionSoloGerenciaTest extends FeatureTestCase
     {
         return [
             'users index'          => ['GET',    '/api/users'],
-            'users pending'        => ['GET',    '/api/users/pending'],
             'users show'           => ['GET',    '/api/users/1'],
             'users store'          => ['POST',   '/api/users'],
             'users update'         => ['PUT',    '/api/users/1'],
             'users status'         => ['PATCH',  '/api/users/1/status'],
-            'users approve'        => ['POST',   '/api/users/1/approve'],
-            'users reject'         => ['DELETE', '/api/users/1/reject'],
             'users flags'          => ['PATCH',  '/api/admin/users/1/flags'],
             'departments index'    => ['GET',    '/api/departments'],
             'departments store'    => ['POST',   '/api/departments'],
@@ -53,7 +50,7 @@ class ConfiguracionSoloGerenciaTest extends FeatureTestCase
         ];
     }
 
-    /** Loguea a designer@ (un solo rol en user_roles) con el role_key de negocio indicado. */
+    /** Loguea a designer@  con el role_key de negocio indicado. */
     private function tokenWithRole(string $roleKey, array $extraPermissions = []): string
     {
         $slug   = (string) Tenant::where('slug', 'atlantic')->value('slug');

@@ -114,3 +114,27 @@ Rama backend `fase2/retiro-user-roles`, rama frontend `fase2/retiro-user-roles`.
 - Quitar `DbAuditLogTriggerTest::test_user_roles_pk_compuesta...` y el trigger de auditoría de esa tabla (`create_db_audit_triggers`).
 - **Decidido por Luis (2026-10-24): `register()` y todo el flujo pendiente (`listPending`, `approve`, `reject`, `ApproveUserModal`, pestaña de pendientes, rol de sistema `guest` y sus tests) se retiran en el 2.2**, porque la ruta pública ya no existe y nada crea registros pendientes. Eso implica también quitar `GET /users/pending`, `POST /users/{id}/approve`, `DELETE /users/{id}/reject` y `ApprovalsPendingService` para `user_approval`.
 - El 2.2 se implementa **solo después** de mezclar el 2.1 y verificarlo en `dev`, y con la confirmación explícita de Luis para el `DROP TABLE` (que no se da por incluida en esta decisión).
+
+## 10. Resultado del paso 2.2 (2026-10-25) — confirmado por Luis, incluido el `DROP TABLE`
+
+Ramas `fase2/22-drop-user-roles` (backend y frontend).
+
+**Hecho**
+- Migración `2026_10_25_100000_drop_user_roles_table_and_guest_role`: ABORTA si alguien con rol legado `superadmin`/`management` no tiene `role_id` (perdería el acceso);
+  los pendientes (`guest`) quedan con `role_id = NULL` e inactivos (no se borra a nadie); elimina el rol `guest` y la tabla `user_roles` (su trigger de auditoría cae con ella).
+  `down()` recrea tabla (PK compuesta, `CHECK`, trigger `trg_audit_user_roles`) y rol `guest`, y repuebla `user_roles` desde `role_id` para `superadmin`/`management`.
+  **No puede restaurar** quién estaba pendiente ni los roles legados sin equivalente (`designer`/`supervisor`/`electrician`).
+- Backend: se eliminan `UserRole`, `User::ROLE_*`, `User::isGuest()`, `Role::KEY_GUEST`, `UserService::register/listPending/approve/reject`, `UserController::pending/approve/reject`,
+  las rutas `GET /users/pending`, `POST /users/{id}/approve`, `DELETE /users/{id}/reject`, el bloqueo de login por invitado, el bloqueo de impersonación por invitado y el ítem
+  `user_approval` de las aprobaciones pendientes. Seeders con `role_key` (sin el campo legado `roles`).
+- Frontend: se eliminan `ApproveUserModal`, la pestaña «Pendientes», `usePendingUsers/useApproveUser/useRejectUser`, `usersApi.listPending/approve/reject`, el bloqueo «invitado» de
+  la impersonación y las claves i18n correspondientes.
+
+**Hallazgo corregido de paso (seguridad)**: la política «la contraseña inicial (= correo, ver `WelcomeMail`) obliga a cambiarla en el primer ingreso y no caduca» (SCRUM-1034 H7)
+solo estaba en `approve()`. `create()` dejaba `must_change_password = false`, o sea que un usuario creado por un administrador conservaba su contraseña inicial (su correo) indefinidamente.
+Al retirar `approve()` la política pasa a `create()` (`must_change_password = true`, sin caducidad); `ApprovalTemporaryPasswordTest` se reescribe como `CreatedUserTemporaryPasswordTest`.
+
+**Verificación**: PHPStan 0 errores; tests de la migración (borrado, salvaguarda, `down()`) en `Fase2RetiroUserRolesTest`; Auth+Users+CRM+Gerencia+Integrations 1161 tests; frontend `tsc` limpio
+y 247 archivos / 3110 tests; en vivo contra el stack local: tabla borrada, 14 roles, Usuarios sin pestaña «Pendientes», `GET /api/users/pending` → 404.
+
+**Quedan** menciones históricas en migraciones antiguas y comentarios (inmutables) y los `User::ROLE_*` ya no existen en código.

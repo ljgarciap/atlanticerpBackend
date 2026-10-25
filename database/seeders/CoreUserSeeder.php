@@ -13,18 +13,18 @@ class CoreUserSeeder extends Seeder
      * Core users that must exist in every environment.
      * Password default = email. Never overwritten if the user already changed it.
      *
-     * @var list<array{first_name: string, last_name: string, email: string, roles: list<string>, level: int}>
+     * @var list<array{first_name: string, last_name: string, email: string, role_key: string, level: int}>
      */
     private const USERS = [
         // Owners / Super Admins — level 10
-        ['first_name' => 'Superadmin',   'last_name' => 'Test',      'email' => 'superadmin@test.com', 'roles' => ['superadmin'], 'level' => 10],
-        ['first_name' => 'Superadmin',     'last_name' => 'Test 2',   'email' => 'superadmin2@test.com', 'roles' => ['superadmin'], 'level' => 10],
-        ['first_name' => 'Superadmin',   'last_name' => 'Test 3', 'email' => 'superadmin3@test.com',          'roles' => ['superadmin'], 'level' => 10],
+        ['first_name' => 'Superadmin',   'last_name' => 'Test',      'email' => 'superadmin@test.com', 'role_key' => 'superadmin', 'level' => 10],
+        ['first_name' => 'Superadmin',     'last_name' => 'Test 2',   'email' => 'superadmin2@test.com', 'role_key' => 'superadmin', 'level' => 10],
+        ['first_name' => 'Superadmin',   'last_name' => 'Test 3', 'email' => 'superadmin3@test.com',          'role_key' => 'superadmin', 'level' => 10],
         // Managers — level 9
-        ['first_name' => 'Gerencia',  'last_name' => 'Test',    'email' => 'gerencia@test.com',    'roles' => ['management'], 'level' => 9],
-        ['first_name' => 'Gerencia',    'last_name' => 'Test 2',  'email' => 'gerencia2@test.com',        'roles' => ['management'], 'level' => 9],
-        ['first_name' => 'Gerencia',     'last_name' => 'Test 3',   'email' => 'gerencia3@test.com',    'roles' => ['management'], 'level' => 9],
-        ['first_name' => 'Gerencia',    'last_name' => 'Test 4',   'email' => 'gerencia4@test.com', 'roles' => ['management'], 'level' => 9],
+        ['first_name' => 'Gerencia',  'last_name' => 'Test',    'email' => 'gerencia@test.com',    'role_key' => 'management', 'level' => 9],
+        ['first_name' => 'Gerencia',    'last_name' => 'Test 2',  'email' => 'gerencia2@test.com',        'role_key' => 'management', 'level' => 9],
+        ['first_name' => 'Gerencia',     'last_name' => 'Test 3',   'email' => 'gerencia3@test.com',    'role_key' => 'management', 'level' => 9],
+        ['first_name' => 'Gerencia',    'last_name' => 'Test 4',   'email' => 'gerencia4@test.com', 'role_key' => 'management', 'level' => 9],
     ];
 
     public function run(): void
@@ -60,7 +60,7 @@ class CoreUserSeeder extends Seeder
                         'is_active' => true,
                         'security_level_id' => $levelId,
                         // Fase 2: `role_id` es el único mecanismo de rol; solo para usuarios nuevos (los existentes gestionan su rol por la UI).
-                        'role_id' => DB::table($rolesTable)->where('key', $data['roles'][0])->value('id'),
+                        'role_id' => DB::table($rolesTable)->where('key', $data['role_key'])->value('id'),
                         'extra_permissions' => [],
                     ]);
                 }

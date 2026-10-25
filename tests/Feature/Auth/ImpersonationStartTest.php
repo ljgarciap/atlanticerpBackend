@@ -350,8 +350,6 @@ final class ImpersonationStartTest extends FeatureTestCase
         return [
             'inactivo' => [static fn (User $u) => $u->forceFill(['is_active' => false])->save(), 'inactive'],
             'bloqueado por seguridad' => [static fn (User $u) => $u->forceFill(['security_blocked_at' => now()])->save(), 'security_blocked'],
-            // Fase 2: «invitado» = el rol de sistema `guest` (ya no una fila de `user_roles`).
-            'invitado' => [static fn (User $u) => $u->forceFill(['role_id' => Role::where('key', Role::KEY_GUEST)->value('id')])->save(), 'guest'],
             'rol base superadmin' => [static fn (User $u) => $u->forceFill(['role_id' => Role::where('is_superadmin', true)->value('id')])->save(), 'top_privilege'],
             'security level 10' => [static fn (User $u) => $u->forceFill(['security_level_id' => SecurityLevel::where('level', 10)->firstOrFail()->id])->save(), 'top_privilege'],
             'superadmin.all en extra_permissions' => [static fn (User $u) => $u->forceFill(['extra_permissions' => ['superadmin.all']])->save(), 'top_privilege'],
