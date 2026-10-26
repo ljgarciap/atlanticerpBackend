@@ -1,6 +1,6 @@
 # Spec — Fase 5b: eliminar Legacy (ICG) e Integrations/Lafayette del repo
 
-**Estado**: 5b-1 IMPLEMENTADA (§7), pendiente de merge. 5b-2 (`DROP` + retiro de columnas y de la bodega Zona Libre) pendiente.
+**Estado**: 5b-1 MEZCLADA (§7). 5b-2 IMPLEMENTADA (§8), pendiente de merge.
 **Origen**: Fase 5a (mezclada) dejó ambos módulos apagados por defecto. Esta fase borra el código dormido.
 
 ## 1. Hechos verificados (2026-10-26)
@@ -55,3 +55,17 @@ Solo la 5b-2 borra datos (`DROP TABLE`). Antes de escribirla se necesita el «s�
 - **Frontend**: borradas las páginas/componentes/hooks/api/tipos de ICG (Migración, Vista ICG, Pagos ICG, Historial ICG, StockSyncPanel), el catálogo de Zona Libre, `lib/modules` y 7 specs e2e; claves i18n retiradas; la bodega de solo consulta muestra un aviso.
 - **Verificación**: backend 5104 tests en la corrida completa con 3 fallos esperados (dependían del catálogo/TTL borrados), corregidos y re-corridos (684 de Bodega/Auth/VentasDiseno en verde); PHPStan 0 errores. Frontend 234 archivos / 2951 tests, `tsc` y build limpios.
 - Informe del Senior Review: `docs/reviews/fase5b1-eliminar-codigo-2026-10-26.md` (0 bloqueantes).
+
+## 8. Resultado de la 5b-2 (2026-10-26) — el alcance completo que Luis confirmó
+- **Migración** `2026_10_26_200000_retire_legacy_and_lafayette_schema` (IRREVERSIBLE: `down()` lanza error y pide restaurar un respaldo): quita el trigger/función de solo consulta, la bodega «Zona Libre» de consulta externa,
+  `warehouses.solo_consulta`/`mostrar_sin_stock`, los campos «gemelo ICG» de `orders` (`origin`, `icg_*`, `quote_id`, `sub_client_id`, índices y CHECK), `quotes.origin`, `catalog_products.external_*`, `lafayette_productos`, `lafayette_sync_runs`,
+  las 32 tablas de `{tenant}_legacy` y el ajuste `lafayette_guarda_min_ratio`. **El schema `{tenant}_legacy` queda VACÍO**: `Tenant::schemas()`, `GrantAppRoleCommand` y las migraciones históricas aún lo usan; se retira cuando se aplanen las migraciones.
+  `catalog_products.search_text` se CONSERVA (lo usa la búsqueda del catálogo de Compras).
+- **Guardas**: en cualquier entorno aborta si algo referencia la bodega de consulta (stock, movimientos, ubicaciones, pedidos…); fuera de local/dev/testing aborta además si alguna tabla de Legacy/Lafayette tiene filas, si hay pedidos/cotizaciones gemelas
+  o productos con `external_source`. Tu base local tenía 0 filas en todo eso.
+- **Código**: fuera el concepto `solo_consulta` (scopes `operativas`/`enBodegaOperativa`, guard y excepción, ramas de `WarehouseController`/`WarehouseLocationController`/`WarehouseSaleRulesController`); `Warehouse::operativaRule()` pasó a `existsRule()`;
+  fuera el reporte «Pedidos gemelos» de Admin&Cont (2 endpoints, servicios, resource), `IcgLegacyOriginScope`, `Quote::withIcgLegacy()`, `Order` sin campos gemelos, `OrderService::createIcgTwinForDispatch`, `ReceptorFiscalGuard::evaluarGemelo` y las ramas de gemelo de
+  `InvoiceService`/`InvoiceBillingPlanner`. Un filtro SQL crudo `q.origin = 'comercial'` de `ArchitectCommissionService` lo detectó la suite.
+- **Tests**: 7 archivos borrados (gemelos, solo consulta, filas residuales) y 6 adaptados; el test de «8 bodegas» pasó a 7.
+- **Frontend**: `BodegasPage` sin vista de solo consulta, fuera `lib/warehouses`, `PhysicalWarehouse.solo_consulta`, `quote.origin` y las claves i18n; 234 archivos / 2944 tests, `tsc` y build limpios.
+- Informe del Senior Review: `docs/reviews/fase5b2-drop-esquema-2026-10-26.md`.
