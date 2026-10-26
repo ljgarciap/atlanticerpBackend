@@ -164,11 +164,10 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->withHeaders($headers)->postJson('/api/ventas-diseno/master-clients', [])->assertStatus(422);
         $this->withHeaders($headers)->postJson('/api/ventas-diseno/sub-clients', [])->assertStatus(422);
 
-        // Todo lo demás de clientes sigue cerrado: pantalla Clientes, contactos, historial ICG, categoría.
+        // Todo lo demás de clientes sigue cerrado: pantalla Clientes, contactos, categoría.
         $this->withHeaders($headers)->getJson('/api/ventas-diseno/clients')->assertStatus(403);
         $this->withHeaders($headers)->postJson('/api/ventas-diseno/clients', [])->assertStatus(403);
         $this->withHeaders($headers)->getJson('/api/ventas-diseno/sub-clients/1/contacts')->assertStatus(403);
-        $this->withHeaders($headers)->getJson('/api/ventas-diseno/sub-clients/1/legacy-history')->assertStatus(403);
         $this->withHeaders($headers)->patchJson('/api/ventas-diseno/clients/sub-clients/1/category', [])->assertStatus(403);
     }
 

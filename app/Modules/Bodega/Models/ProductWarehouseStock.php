@@ -53,25 +53,27 @@ class ProductWarehouseStock extends Model
 
     /**
      * Ids de las bodegas `solo_consulta`, en memoria por PROCESO y por tenant, con TTL corto
-     * (`config('lafayette.cache_bodegas_solo_consulta_segundos')`). Antes el `saving` hacía UNA consulta por fila guardada (conteos
+     * (30 s). Antes el `saving` hacía UNA consulta por fila guardada (conteos
      * generales, recepciones con muchas líneas, `updateOrCreate` en bucles). Invalidación segura: (a) cualquier guardado o borrado de un
      * `Warehouse` la descarta (`Warehouse::booted()`); (b) el TTL acota la antigüedad cuando el cambio llega por SQL directo o desde otro
-     * proceso (un worker de Horizon es de larga vida); (c) con TTL 0 consulta siempre. Es solo la red de seguridad de aplicación: el
+     * proceso (un worker de Horizon es de larga vida); Es solo la red de seguridad de aplicación: el
      * trigger de BD sigue siendo la barrera definitiva y no depende de esta caché.
      *
      * @var array<string, array{0: int, 1: array<int, true>}> slug del tenant => [expira (unix), ids]
      */
     private static array $soloConsultaCache = [];
 
+    private const SOLO_CONSULTA_CACHE_SEGUNDOS = 30;
+
     /** @return array<int, true> */
     public static function bodegasSoloConsulta(): array
     {
         $slug = Tenant::current()->slug ?? '';
-        $ttl = max(0, (int) config('lafayette.cache_bodegas_solo_consulta_segundos', 30));
+        $ttl = self::SOLO_CONSULTA_CACHE_SEGUNDOS;
         $now = time();
 
         $hit = self::$soloConsultaCache[$slug] ?? null;
-        if ($ttl > 0 && $hit !== null && $hit[0] > $now) {
+        if ($hit !== null && $hit[0] > $now) {
             return $hit[1];
         }
 

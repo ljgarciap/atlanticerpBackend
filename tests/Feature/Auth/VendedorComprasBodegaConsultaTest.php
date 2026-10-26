@@ -124,9 +124,6 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
 
         $zonaLibre = (int) collect($lista->json('data'))->firstWhere('name', 'Bodega Zona Libre')['id'];
         $this->withHeaders($h)->getJson("/api/bodega/warehouses/{$zonaLibre}")->assertStatus(200);
-
-        $catalogo = $this->withHeaders($h)->getJson('/api/bodega/zona-libre/productos')->assertStatus(200);
-        $this->assertFalse($catalogo->json('meta.puede_ver_precio') ?? $catalogo->json('puede_ver_precio') ?? false, 'El vendedor no ve el precio de Zona Libre.');
     }
 
     public function test_vendedor_no_puede_modificar_ni_reubicar_inventario_de_bodega(): void

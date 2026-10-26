@@ -41,14 +41,6 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(\App\Modules\CRM\Services\CrmSettingsService::class);
         $this->app->scoped(\App\Modules\Compras\Services\ComprasThresholds::class);
 
-        // Fase 5a — módulos fuera del núcleo, apagados por defecto (config/modules.php).
-        if (config('modules.legacy_icg.enabled')) {
-            $this->app->register(\App\Modules\Legacy\LegacyServiceProvider::class);
-        }
-        if (config('modules.lafayette.enabled')) {
-            $this->app->register(\App\Modules\Integrations\Lafayette\LafayetteServiceProvider::class);
-        }
-
     }
 
     public function boot(): void
@@ -110,7 +102,7 @@ class AppServiceProvider extends ServiceProvider
         // detrás del NAT de la oficina compartirían un solo cupo. Se decodifica el bearer y se limita por usuario
         // (IP solo como respaldo si el token es inválido). nginx llega a PHP por fastcgi, así que la IP de respaldo
         // ya es la del cliente real (no hace falta trustProxies).
-        // SCRUM-990 — `zona-libre-lectura` (catálogo Lafayette, ~25.800 filas con precio_5) usa el mismo limitador por usuario.
+        // SCRUM-990 — `zona-libre-lectura` (catálogo externo) usa el mismo limitador por usuario.
         // SCRUM-1127 — generar la versión en inglés de una orden de compra llama a la IA (de pago): tope por usuario y minuto, configurable en
         // `config/compras.php`. Mismo patrón por usuario que los limitadores de arriba.
         RateLimiter::for('oc-traduccion', static function (Request $request): Limit {
@@ -120,15 +112,6 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(max(1, (int) config('compras.translation_per_minute', 6)))
                 ->by('oc-traduccion:'.($sub !== null ? 'u'.$sub : 'ip'.$request->ip()));
         });
-
-        foreach (['zona-libre-lectura' => 60] as $name => $perMinute) {
-            RateLimiter::for($name, static function (Request $request) use ($name, $perMinute): Limit {
-                $token = $request->bearerToken();
-                $sub   = $token !== null ? app(JwtService::class)->decode($token)['sub'] ?? null : null;
-
-                return Limit::perMinute($perMinute)->by($name.':'.($sub !== null ? 'u'.$sub : 'ip'.$request->ip()));
-            });
-        }
 
         Event::listen(ProjectCreated::class, LogProjectCreated::class);
         Event::listen(ProjectStageChanged::class, LogProjectStageChanged::class);

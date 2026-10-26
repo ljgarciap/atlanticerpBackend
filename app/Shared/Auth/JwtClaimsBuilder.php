@@ -43,10 +43,6 @@ final class JwtClaimsBuilder
                 'mark_approver'         => $this->isPrimaryApprover($user),
                 // SCRUM-1168 — ¿tiene este entorno el concepto nuevo de cobros? Solo para que el menú ofrezca «Compensaciones»; dato visual.
                 'cobros_v2'             => $this->cobrosV2Activo(),
-                // Fase 5a — módulos fuera del núcleo (config/modules.php). Solo visual: el menú y Ajustes ocultan lo que está apagado; el
-                // backend ya no registra sus rutas.
-                'legacy_icg'            => (bool) config('modules.legacy_icg.enabled'),
-                'lafayette'             => (bool) config('modules.lafayette.enabled'),
             ],
             'security_level' => $user->securityLevel?->level,
         ];

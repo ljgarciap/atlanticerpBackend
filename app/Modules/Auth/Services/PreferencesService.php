@@ -6,7 +6,6 @@ namespace App\Modules\Auth\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Models\SystemSetting;
-use App\Modules\Integrations\Lafayette\Services\LafayetteSettings;
 use App\Shared\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 
@@ -135,8 +134,6 @@ class PreferencesService
             // Modo Demo (docs/specs/demo-mode.md) — gate GLOBAL, default apagado. Mientras esté en
             // false, el toggle personal de cada usuario se ignora (ver scopeVisibleForDemoMode()).
             'demo_mode_enabled' => (bool) ($rows->get('demo_mode_enabled') !== null ? $rows->get('demo_mode_enabled')->value : false),
-            // SCRUM-990 — umbral de la guarda del sincronizador de Lafayette (0,5..1,0, defecto 0,9). Fase 5a: solo con el módulo encendido.
-            ...(config('modules.lafayette.enabled') ? ['lafayette_guarda_min_ratio' => app(LafayetteSettings::class)->guardaMinRatio()] : []),
         ];
     }
 
@@ -220,28 +217,6 @@ class PreferencesService
                     entityId:     'demo_mode_enabled',
                     oldValues:    ['demo_mode_enabled' => $oldValue],
                     newValues:    ['demo_mode_enabled' => $newValue],
-                    actingUserId: $updatedBy->id,
-                );
-            }
-        }
-
-        if (config('modules.lafayette.enabled') && isset($data['lafayette_guarda_min_ratio'])) {
-            $newRatio = round((float) $data['lafayette_guarda_min_ratio'], 4);
-            $oldRatio = app(LafayetteSettings::class)->guardaMinRatio();
-
-            SystemSetting::updateOrCreate(['key' => LafayetteSettings::GUARDA_MIN_RATIO], [
-                'value'      => $newRatio,
-                'updated_by' => $updatedBy->id,
-                'updated_at' => $now,
-            ]);
-
-            if ($newRatio !== $oldRatio) {
-                app(AuditService::class)->log(
-                    action:       AuditService::SETTINGS_UPDATED,
-                    entityType:   'system_setting',
-                    entityId:     LafayetteSettings::GUARDA_MIN_RATIO,
-                    oldValues:    [LafayetteSettings::GUARDA_MIN_RATIO => $oldRatio],
-                    newValues:    [LafayetteSettings::GUARDA_MIN_RATIO => $newRatio],
                     actingUserId: $updatedBy->id,
                 );
             }

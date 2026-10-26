@@ -20,7 +20,7 @@ class AdminContLocationController
 {
     public function index(): JsonResponse
     {
-        // SCRUM-990: Zona Libre (solo consulta, catálogo de Lafayette) no es una ubicación de Atlantic.
+        // SCRUM-990: Zona Libre (solo consulta) no es una ubicación de Atlantic.
         $warehouses = Warehouse::operativas()
             ->orderBy('id')
             ->get()

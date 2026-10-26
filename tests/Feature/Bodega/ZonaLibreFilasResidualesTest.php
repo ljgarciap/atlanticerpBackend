@@ -160,22 +160,4 @@ final class ZonaLibreFilasResidualesTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $merma->id, 'quantity' => 1]);
         $this->assertSame(1, ProductWarehouseStock::query()->where('warehouse_id', $merma->id)->count(), 'al reabrirla, vuelve a admitir stock');
     }
-
-    public function test_con_ttl_cero_el_guard_consulta_siempre(): void
-    {
-        config(['lafayette.cache_bodegas_solo_consulta_segundos' => 0]);
-        $product = $this->makeCatalogProduct();
-        $central = (int) Warehouse::query()->where('name', 'Bodega Central')->value('id');
-        $row = ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central, 'quantity' => 1]);
-
-        // Cambio por SQL directo (sin eventos del modelo): con TTL 0 se ve en el siguiente guardado.
-        DB::table((new Warehouse())->getTable())->where('id', $central)->update(['solo_consulta' => true]);
-        try {
-            $this->expectException(WarehouseSoloConsultaException::class);
-            $row->update(['quantity' => 2]);
-        } finally {
-            DB::table((new Warehouse())->getTable())->where('id', $central)->update(['solo_consulta' => false]);
-            ProductWarehouseStock::olvidarBodegasSoloConsulta();
-        }
-    }
 }
