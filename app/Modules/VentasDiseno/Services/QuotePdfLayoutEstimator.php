@@ -204,15 +204,14 @@ final class QuotePdfLayoutEstimator extends AbstractQuotePdfLayoutEstimator
         $obsLines = $this->wrappedLineCount((string) ($quote['observations_preview'] ?? ''), 10, $this->contentWidthPt() / self::PX_TO_PT);
         $h += max(1, $obsLines) * (13 * self::PX_TO_PT);
 
-        // Instrucciones de pago — 2 líneas fijas, pero la 2da (cuenta ACH) puede envolver.
-        $h += $this->blockTitleHeight(firstChild: false);
-        $h += 1 * (13 * self::PX_TO_PT); // "Cheque a nombre de: ATLANTIC USA CORP"
-        $achLines = $this->wrappedLineCount(
-            'Pagos ACH: Cuenta 03-01-01-074455-4, cuenta corriente, Banco General',
-            10,
-            $this->contentWidthPt() / self::PX_TO_PT,
-        );
-        $h += max(1, $achLines) * (13 * self::PX_TO_PT);
+        // Instrucciones de pago — las líneas salen de los datos de la empresa (QuotePaymentInstructions); sin datos no hay bloque.
+        $paymentLines = $quote['payment_lines'] ?? [];
+        if ($paymentLines !== []) {
+            $h += $this->blockTitleHeight(firstChild: false);
+            foreach ($paymentLines as $line) {
+                $h += max(1, $this->wrappedLineCount((string) $line, 10, $this->contentWidthPt() / self::PX_TO_PT)) * (13 * self::PX_TO_PT);
+            }
+        }
 
         // .bottom-condiciones-row { margin-top: 12px; } — columna Condiciones al 50% - padding-right
         $h += 12 * self::PX_TO_PT;

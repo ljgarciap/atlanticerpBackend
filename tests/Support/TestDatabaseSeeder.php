@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use Database\Seeders\AdminContFiscalIdentitySeeder;
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\ZonaLibreProviderSeeder;
 use Illuminate\Database\Seeder;
 
 /**
@@ -18,6 +20,8 @@ final class TestDatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call([DatabaseSeeder::class, FixtureSpecialPermissionSeeder::class]);
+        // Fase 4a: estos dos seeders de «datos del cliente» ya no cuelgan de `DatabaseSeeder`; la suite los sigue necesitando (identidad fiscal de ejemplo
+        // para los PDF y el proveedor fijo de Zona Libre), así que los carga acá, en el mismo estado que antes.
+        $this->call([DatabaseSeeder::class, AdminContFiscalIdentitySeeder::class, ZonaLibreProviderSeeder::class, FixtureSpecialPermissionSeeder::class]);
     }
 }

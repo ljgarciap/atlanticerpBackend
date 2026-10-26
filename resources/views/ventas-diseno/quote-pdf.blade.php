@@ -266,8 +266,10 @@
                 <div class="block-title">Observaciones</div>
                 <div class="block-value">{{ $quote['observations_preview'] ?: '—' }}</div>
 
+                @if(!empty($paymentLines))
                 <div class="block-title">Instrucciones de pago</div>
-                <div class="block-value">Cheque a nombre de: ATLANTIC USA CORP<br>Pagos ACH: Cuenta 03-01-01-074455-4, cuenta corriente, Banco General</div>
+                <div class="block-value">{!! implode('<br>', array_map('e', $paymentLines)) !!}</div>
+                @endif
             </div>
             <div class="bottom-condiciones-row">
                 <div class="conditions-col">
@@ -283,7 +285,7 @@
     <script type="text/php">
         if (isset($pdf)) {
             $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $companyText = "ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza - Obarrio, Panama - www.atlantic.com.pa";
+            $companyText = "{!! $footerCompanyText ?? \App\Modules\AdminCont\Support\PdfFooterText::defaultFooter() !!}";
             $w1 = $fontMetrics->getTextWidth($companyText, $font, 7);
             $pdf->page_text((612 - $w1) / 2, 762, $companyText, $font, 7, array(0.55, 0.55, 0.55));
 

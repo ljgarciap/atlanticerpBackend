@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Support;
 
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
+use App\Shared\Multitenancy\Tenant;
 
 /**
  * SCRUM-857/858 — texto del pie de página real (`page_text()` de dompdf, único mecanismo con
@@ -28,17 +29,28 @@ final class PdfFooterText
      * `AdminContFiscalSettings` siga vacío (nombre_comercial Y direccion_fiscal, el estado real
      * hoy en dev/test/prod), el footer de Estado de Cuenta/Recibo de Cobro mostraba solo
      * "Atlantic" — sin dirección ni sitio web — incumpliendo el criterio literal del ticket
-     * ("el pie de página muestra: ATLANTIC USA CORP - Calle 57 Este...") y la consistencia
+     * ("el pie de página muestra: <razón social> - <dirección>...") y la consistencia
      * visual pedida contra cotizaciones. No es un dato de negocio nuevo: es el mismo texto público
      * ya aprobado y usado en los otros 2 documentos, solo replicado acá como fallback hasta que
      * Gerencia cargue los datos fiscales reales (que sí toman prioridad, ver abajo).
      */
-    /** El sitio web NO tiene columna propia en fiscal_settings — es una constante de marca, igual
-     *  que en quote-pdf.blade.php. Se agrega siempre al pie (con datos fiscales o con el fallback)
-     *  para que el footer sea idéntico en ambos casos (SCRUM-858 AC #4). */
-    public const DEFAULT_WEBSITE = 'www.atlantic.com.pa';
+    // Fase 4a: ya no hay sitio web ni dirección de un cliente por defecto — sin datos fiscales cargados, el pie muestra solo el nombre de marca.
+    public const DEFAULT_FOOTER = self::DEFAULT_COMPANY_NAME;
 
-    public const DEFAULT_FOOTER = 'ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza - Obarrio, Panama - '.self::DEFAULT_WEBSITE;
+    /** Respaldo ESTÁTICO (sin BD) para las vistas que no reciben `footerCompanyText`: solo el nombre de marca, ya escapado. */
+    public static function defaultFooter(): string
+    {
+        return self::escapeForDoubleQuotedPhpString(self::DEFAULT_FOOTER);
+    }
+
+    /** Pie para los PDF que no reciben `footerCompanyText` (cotizaciones, guías…): lee la empresa vigente; sin fila fiscal, el respaldo neutro. */
+    public static function forCurrentCompany(): string
+    {
+        // Sin tenant activo no hay datos de empresa que leer: respaldo neutro.
+        $fiscal = Tenant::current() === null ? null : AdminContFiscalSettings::find(1);
+
+        return $fiscal === null ? self::escapeForDoubleQuotedPhpString(self::DEFAULT_FOOTER) : self::forFiscal($fiscal);
+    }
 
     public static function forFiscal(AdminContFiscalSettings $fiscal): string
     {
@@ -50,7 +62,6 @@ final class PdfFooterText
         $text = trim($fiscal->direccion_fiscal) === ''
             ? $name
             : "{$name} - {$fiscal->direccion_fiscal}";
-        $text .= ' - '.self::DEFAULT_WEBSITE;
 
         // Este valor se interpola dentro de un string PHP DOBLE-COMILLADO
         // (`$companyText = "..."`) en el bloque <script type="text/php"> de dompdf — sin escapar,

@@ -1105,7 +1105,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         // apóstrofe visible como cualquier otro texto HTML).
         $this->assertStringContainsString('<script type="text/php">', $html);
         $footerScript = substr($html, (int) strpos($html, '<script type="text/php">'));
-        $this->assertStringContainsString('$companyText = "Atlantic USA Corp\'s - Calle 57 Este, Panama - www.atlantic.com.pa";', $footerScript);
+        $this->assertStringContainsString('$companyText = "Atlantic USA Corp\'s - Calle 57 Este, Panama";', $footerScript);
         $this->assertStringNotContainsString('&#039;', $footerScript);
     }
 
@@ -1120,7 +1120,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     // no necesita el modelo persistido, solo su forma.
     // Pre-QA (2026-09-09) — el pie de página con AdminContFiscalSettings vacío (el estado real
     // hoy en dev/test/prod) debe mostrar el mismo texto estándar completo ya hardcodeado en
-    // quote-pdf.blade.php/service-quote-pdf.blade.php ("ATLANTIC USA CORP - Calle 57
+    // quote-pdf.blade.php/service-quote-pdf.blade.php ("<razón social> - <dirección>
     // Este..."), no solo "Atlantic" a secas — eso incumplía el criterio literal del ticket
     // (SCRUM-858 AC #4) y la consistencia visual pedida contra cotizaciones (AC #6). El nombre de
     // marca en el encabezado (companyName(), usado en la línea "empresa-nombre" del header, no en
@@ -1132,7 +1132,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
         $this->assertSame('Atlantic', PdfFooterText::companyName($fiscal));
         $this->assertSame(
-            'ATLANTIC USA CORP - Calle 57 Este, Times Square Plaza - Obarrio, Panama - www.atlantic.com.pa',
+            'Atlantic', // Fase 4a: respaldo neutro (solo la marca)
             PdfFooterText::forFiscal($fiscal)
         );
     }

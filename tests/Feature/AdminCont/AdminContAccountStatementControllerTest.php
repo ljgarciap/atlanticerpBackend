@@ -294,7 +294,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::CONTABILIDAD_EMAIL)]);
         AdminContBankAccount::create([
             'banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4455',
-            'numero_cuenta_completo' => '03-01-01-074455-4', 'moneda' => 'USD', 'activa' => true,
+            'numero_cuenta_completo' => '00-00-00-000000-1', 'moneda' => 'USD', 'activa' => true,
         ]);
         $token = $this->loginAsFelix();
 
@@ -302,10 +302,10 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
             ->assertStatus(200);
 
-        $this->assertSame('03-01-01-074455-4', $response->json('numero_cuenta'));
+        $this->assertSame('00-00-00-000000-1', $response->json('numero_cuenta'));
         $this->assertSame('Banco General', $response->json('banco'));
         $this->assertSame('corriente', $response->json('tipo_cuenta'));
-        $this->assertStringContainsString('03-01-01-074455-4', (string) $response->json('cuenta_pago'));
+        $this->assertStringContainsString('00-00-00-000000-1', (string) $response->json('cuenta_pago'));
         $this->assertStringNotContainsString('****', (string) $response->json('cuenta_pago'));
     }
 
@@ -401,7 +401,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         // en AdminContPaymentControllerTest.
         $this->assertStringContainsString('<script type="text/php">', $html);
         $footerScript = substr($html, (int) strpos($html, '<script type="text/php">'));
-        $this->assertStringContainsString('$companyText = "Atlantic USA Corp\'s - Calle 57 Este, Panama - www.atlantic.com.pa";', $footerScript);
+        $this->assertStringContainsString('$companyText = "Atlantic USA Corp\'s - Calle 57 Este, Panama";', $footerScript);
         $this->assertStringNotContainsString('&#039;', $footerScript);
     }
 

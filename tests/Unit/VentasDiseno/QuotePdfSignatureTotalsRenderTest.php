@@ -37,11 +37,24 @@ class QuotePdfSignatureTotalsRenderTest extends TestCase
         ];
     }
 
-    private function html(array $detail, bool $external = false): string
+    /**
+     * @param list<string>|null $paymentLines Fase 4a: las instrucciones de pago salen de los datos de la empresa (sin tenant no hay), así que el test de ORDEN
+     *                                        de bloques las inyecta; `[]` verifica que sin datos no se imprime el bloque.
+     */
+    private function html(array $detail, bool $external = false, ?array $paymentLines = null): string
     {
         $data = app(QuotePdfService::class)->viewData($detail, $external);
+        $data['paymentLines'] = $paymentLines ?? ['Cheque a nombre de: EMPRESA DEMO S.A.', 'Pagos ACH: Cuenta 00-00-00-000000-1, cuenta corriente, Banco Demo 1'];
 
         return view('ventas-diseno.quote-pdf', $data)->render();
+    }
+
+    public function test_sin_datos_de_pago_no_se_imprime_el_bloque_de_instrucciones(): void
+    {
+        $body = $this->body($this->html($this->detail(signed: true), paymentLines: []));
+
+        $this->assertStringNotContainsString('Instrucciones de pago', $body);
+        $this->assertStringNotContainsString('Cheque a nombre de', $body);
     }
 
     /** Parte del HTML correspondiente al cuerpo (sin el <style>, que menciona las mismas clases). */

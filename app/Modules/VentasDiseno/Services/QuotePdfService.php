@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Services;
 
+use App\Modules\AdminCont\Support\PdfFooterText;
+use App\Modules\AdminCont\Support\QuotePaymentInstructions;
 use App\Shared\Support\PdfLogo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as PdfDocument;
@@ -54,10 +56,13 @@ final class QuotePdfService
     {
         // SCRUM-801 (3er rebote) — bloque final (Observaciones→Firma) pegado al pie de página y
         // sin partirse entre páginas. Ver docblock de QuotePdfLayoutEstimator para el diseño.
-        $bottomBlockLayout = $this->layoutEstimator->estimate($detail, $external);
+        $paymentLines = QuotePaymentInstructions::lines();
+        $bottomBlockLayout = $this->layoutEstimator->estimate($detail + ['payment_lines' => $paymentLines], $external);
 
         return [
             'quote'              => $detail,
+            'paymentLines'       => $paymentLines,
+            'footerCompanyText'  => PdfFooterText::forCurrentCompany(),
             'external'           => $external,
             'signed'             => $detail['document_status'] === 'approved',
             'signerName'         => $detail['contacts'][0]['name'] ?? $detail['sub_client']['business_name'] ?? '',
