@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Fase 4a (docs/specs/fase4-dataset-demo-generico.md) — TRES niveles:
-        //   Núcleo neutro (este bloque): corre en TODOS los entornos; nada con nombre de empresa, persona ni sector.
+        //   Núcleo neutro (este bloque): corre en TODOS los entornos; nada con nombre de empresa, persona ni sector, y ningún usuario (Fase 4d).
         //   Demo genérico (bloque de abajo): solo local/dev/testing.
         //   Datos del cliente anterior: YA NO se siembran por defecto (un tenant nuevo nace sin identidad fiscal, cuentas bancarias, proveedores ni
         //   catálogo ajenos). Sus seeders quedan SIN LLAMADOR y con valores de ejemplo, hasta borrarse con Legacy/Lafayette en la Fase 5:
@@ -25,25 +25,28 @@ class DatabaseSeeder extends Seeder
         $this->call(TenantSeeder::class);
         $this->call(SecurityLevelSeeder::class);
         $this->call(DepartmentSeeder::class);
-        $this->call(CoreUserSeeder::class);
-        $this->call(PrimaryApproverBackfillSeeder::class);
-        $this->call(AdminContPrimaryApproverBackfillSeeder::class);
-        $this->call(RoleBackfillSeeder::class);
-        $this->call(BusinessRoleUserSeeder::class);
-        $this->call(VentasDisenoSalesGoalsSeeder::class);
         $this->call(SpecialPermissionSeeder::class);
-        // SCRUM-1139 — override de visibilidad de módulo por persona (líder de operaciones ve Admin&Cont como Contabilidad).
-        $this->call(UserModuleVisibilityGrantSeeder::class);
         // SCRUM-881 — corrección de rol (no de persona puntual, por eso va separado de
         // SpecialPermissionSeeder): asistente_administrativa necesita can_view_team en admin_contab.
         $this->call(AdminContRoleVisibilityBackfillSeeder::class);
-        $this->call(InternalTechnicianSeeder::class);
-        $this->call(WarehouseAssistantMappingSeeder::class);
         $this->call(GlobalSettingsSeeder::class);
         $this->call(AiModelPricingSeeder::class);
         // Tipo B + C — datos demo: máquina local (local), CI (testing) y dev.atlanticerp.ai (dev).
         // Nunca en test.atlanticerp.ai (qa) ni en prod (production).
         if (app()->environment(['local', 'dev', 'testing'])) {
+            // Fase 4d (docs/specs/fase4d-superadmin-inicial.md) — las identidades `*@test.com` (contraseña = correo) y todo seeder que las busca por correo
+            // son DEMO: ya no nacen en `qa` ni `production`. El primer superadmin real se da de alta con `php artisan tenant:create-superadmin`.
+            // Orden: usuarios primero, luego lo que los referencia.
+            $this->call(CoreUserSeeder::class);
+            $this->call(PrimaryApproverBackfillSeeder::class);
+            $this->call(AdminContPrimaryApproverBackfillSeeder::class);
+            $this->call(RoleBackfillSeeder::class);
+            $this->call(BusinessRoleUserSeeder::class);
+            $this->call(VentasDisenoSalesGoalsSeeder::class);
+            // SCRUM-1139 — override de visibilidad de módulo por persona (líder de operaciones ve Admin&Cont como Contabilidad).
+            $this->call(UserModuleVisibilityGrantSeeder::class);
+            $this->call(InternalTechnicianSeeder::class);
+            $this->call(WarehouseAssistantMappingSeeder::class);
             $this->call(AuthUserSeeder::class);
             $this->call(CrmDemoSeeder::class);
             $this->call(VentasDisenoDemoSeeder::class);

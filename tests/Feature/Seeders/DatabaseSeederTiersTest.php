@@ -27,6 +27,9 @@ class DatabaseSeederTiersTest extends FeatureTestCase
     private const DEMO = [
         'AuthUserSeeder', 'CrmDemoSeeder', 'VentasDisenoDemoSeeder', 'ServiciosDemoSeeder', 'CatalogProductSeeder', 'CatalogProductFamilySeeder',
         'DemoProviderAssignmentSeeder', 'DemoReplacementRequestSeeder', 'ProductWarehouseStockBackfillSeeder',
+        // Fase 4d: identidades `*@test.com` (contraseña = correo) y todo lo que las busca por correo.
+        'CoreUserSeeder', 'BusinessRoleUserSeeder', 'PrimaryApproverBackfillSeeder', 'AdminContPrimaryApproverBackfillSeeder', 'RoleBackfillSeeder',
+        'VentasDisenoSalesGoalsSeeder', 'UserModuleVisibilityGrantSeeder', 'InternalTechnicianSeeder', 'WarehouseAssistantMappingSeeder',
     ];
 
     private function source(): string
@@ -78,5 +81,38 @@ class DatabaseSeederTiersTest extends FeatureTestCase
         $this->assertSame('', (string) AdminContFiscalSettings::query()->where('id', 1)->value('ruc'));
         $this->assertSame(0, DB::table('atlantic_compras.providers')->where('name', 'Lafayette Lighting')->count(), 'no debe crear proveedores ajenos');
         $this->assertSame(0, DB::table('atlantic_ventas_diseno.catalog_products')->where('reference', 'like', 'UAT-%')->count(), 'no debe crear el catálogo UAT');
+    }
+
+    public function test_ningun_seeder_fuera_de_demo_fija_una_contrasena_igual_al_correo(): void
+    {
+        // Los únicos que crean usuarios con contraseña = correo son de demo (ver DEMO); cualquier otro que asigne `password_hash` es una regresión.
+        $demoUserSeeders = ['AuthUserSeeder', 'CoreUserSeeder', 'BusinessRoleUserSeeder'];
+        foreach (glob(database_path('seeders/*.php')) ?: [] as $file) {
+            $name = basename($file, '.php');
+            if (in_array($name, $demoUserSeeders, true)) {
+                continue;
+            }
+            $this->assertStringNotContainsString('password_hash', (string) file_get_contents($file), "{$name} no debe asignar contraseñas");
+        }
+    }
+
+    public function test_en_produccion_no_se_vuelven_a_crear_las_cuentas_demo(): void
+    {
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        // Quita las cuentas demo de la base de pruebas dentro de la transacción del test (savepoint por si alguna tiene filas dependientes).
+        $emails = ['superadmin3@test.com', 'gerencia4@test.com'];
+        DB::transaction(fn () => DB::table('atlantic_auth.users')->whereIn('email', $emails)->delete());
+        Tenant::forgetCurrent();
+
+        $original = $this->app->environment();
+        $this->app->detectEnvironment(fn () => 'production');
+        try {
+            $this->artisan('db:seed', ['--class' => DatabaseSeeder::class, '--force' => true])->assertExitCode(0);
+        } finally {
+            $this->app->detectEnvironment(fn () => $original);
+        }
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame(0, DB::table('atlantic_auth.users')->whereIn('email', $emails)->count(), 'producción no debe sembrar cuentas demo');
     }
 }

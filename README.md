@@ -83,6 +83,12 @@ php artisan migrate
 # y corre las migrations del módulo tenant sobre ese tenant
 php artisan tenant:create {slug} {nombre} [--domain=]
 
+# Alta de un entorno nuevo (producción/qa no siembran ningún usuario):
+#   1) tenant:create  2) db:seed  3) el primer superadmin, con contraseña aleatoria mostrada UNA sola vez
+#   (el primer ingreso obliga a cambiarla; nunca pisa un usuario existente):
+php artisan tenant:create-superadmin {slug} {correo} [--first-name=] [--last-name=] [--password=]
+# Las cuentas demo `*@test.com` (contraseña = correo) solo se siembran en local, dev y testing.
+
 # Ejecutar un comando Artisan sobre uno o varios tenants
 php artisan tenants:artisan {comando} --tenant={id}
 
