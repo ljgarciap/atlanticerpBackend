@@ -1,6 +1,6 @@
 # Spec — Fase 6: fiscal por país (Panamá como el primer paquete)
 
-**Estado**: decisiones de Luis registradas (§6); pendiente su «adelante» para implementar la 6a.
+**Estado**: 6a IMPLEMENTADA (§7), pendiente de merge. 6b, 6c y 6d pendientes (cada una con su «adelante»).
 **Origen**: decisión 2 del análisis de aislamiento (multi-país: «el fiscal de Panamá pasa a ser un paquete más sobre `PacProviderContract`») y paso 6 del plan de 8 fases.
 
 ## 1. Hechos verificados (2026-10-26)
@@ -59,3 +59,15 @@ etiquetas visibles (rápido, sin tocar esquema); (ii) **renombrar esquema y cód
 3. **Vocabulario**: se conserva «ITBMS» como el nombre del impuesto de Panamá (opción i). Las tasas siguen en `itbms_rates` como tabla de tasas de impuesto; el núcleo dice «impuesto» solo en etiquetas visibles. Colombia (IVA) y EE. UU. (sales tax) reutilizan esa tabla con su propia etiqueta.
 4. **Configuración por empresa**: país, moneda, zona horaria y locale por tenant (default PA / USD / America/Panama). **`digifact` se cablea** en la fábrica junto a `msl`, arreglando la inconsistencia actual.
 5. **Entrega**: una sub-fase por vez, 2 PR por repo; orden 6a (contexto regional) → 6b (registro de proveedores y «sin FE») → 6c (validador de identificación por país: PA RUC+DV, CO NIT+DV, US EIN) → 6d solo etiquetas.
+
+## 7. Resultado de la 6a — contexto regional por tenant (2026-10-26)
+- **Backend**: migración landlord `2026_10_26_300000` añade `tenants.country/currency/timezone/locale` (default PA / USD / America/Panama / es-PA: cero cambio para los tenants existentes); catálogo `config/regions.php` (PA, CO, US);
+  `TenantRegion` (lectura del contexto del tenant activo) y `RegionOptions`; `SwitchTenantRegionTask` alinea la zona de PHP (`date_default_timezone_set` + `config('app.timezone')`) y la de la sesión de Postgres al activar el tenant y la restaura al soltarlo.
+  Comandos: `tenant:create --country/--currency/--timezone/--locale` y `tenant:set-region`. Las 7 constantes `BUSINESS_TIMEZONE` y los literales `'America/Panama'` de Servicios/Auth pasaron a `TenantRegion::timezone()`.
+  `/auth/me` y el login devuelven `region`. **El perfil de empresa** (`/admin-contab/company-profile`) ahora lee y escribe país/moneda/zona/locale en el tenant (zona: cualquier IANA válida; antes solo America/Panama) y expone el catálogo `paises`.
+- **Frontend**: `lib/region` (contexto por omisión de Panamá) alimentado por el store desde `user.region`; ~40 formateadores de moneda duplicados (`es-PA`/`USD`), las funciones de `utils/dates` y 4 formateadores de fecha dejaron de fijar Panamá;
+  la sección «Regional» de Datos de la Empresa permite elegir país (propone moneda/zona/locale) y afinarlos.
+- **Tests**: backend 5064 + 11 nuevos (`TenantRegionTest`, perfil de empresa) con la restauración del tenant en `FeatureTestCase::tearDown` (la conexión `landlord` no entra en la transacción de RefreshDatabase); frontend 235 archivos / 2950 tests; PHPStan 0; `tsc` y build limpios.
+- **Cuidado**: las columnas de fecha del sistema guardan **hora local** (`timestamp without time zone`): cambiar la zona de un tenant CON datos reinterpreta lo ya guardado. Fijarla al crear el tenant (`tenant:create --country`); `tenant:set-region` avisa cuando cambia la zona.
+- **No cambia**: `formatMoney` sigue sin símbolo (estándar `en-US` pedido por el cliente); ITBMS, RUC, PAC y la facturación siguen igual (6b/6c).
+- Informe del Senior Review: `docs/reviews/fase6a-contexto-regional-2026-10-26.md`.
