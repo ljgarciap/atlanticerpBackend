@@ -238,7 +238,8 @@ jobs:
   deploy-dev:
     name: CD — Deploy dev.atlanticerp.ai
     runs-on: ubuntu-22.04
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    # Fase 5a — desactivado hasta tener infraestructura real (sin EC2/dominio ni secretos, el job solo falla). Reactivar: quitar `false && `.
+    if: false && github.event_name == 'push' && github.ref == 'refs/heads/dev'
     concurrency:
       group: backend-deploy-dev
       cancel-in-progress: false
@@ -382,7 +383,8 @@ jobs:
   deploy-test:
     name: CD — Deploy test.atlanticerp.ai
     runs-on: ubuntu-22.04
-    if: github.event_name == 'push' && github.ref == 'refs/heads/test'
+    # Fase 5a — desactivado hasta tener infraestructura real (sin EC2/dominio ni secretos, el job solo falla). Reactivar: quitar `false && `.
+    if: false && github.event_name == 'push' && github.ref == 'refs/heads/test'
     concurrency:
       group: backend-deploy-test
       cancel-in-progress: false
@@ -508,7 +510,8 @@ jobs:
     name: CD — Deploy atlanticerp.ai (PRODUCCIÓN)
     needs: ci
     runs-on: ubuntu-22.04
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # Fase 5a — desactivado hasta tener infraestructura real (sin EC2/dominio ni secretos, el job solo falla). Reactivar: quitar `false && `.
+    if: false && github.event_name == 'push' && github.ref == 'refs/heads/master'
     concurrency:
       group: backend-deploy-prod
       cancel-in-progress: false
