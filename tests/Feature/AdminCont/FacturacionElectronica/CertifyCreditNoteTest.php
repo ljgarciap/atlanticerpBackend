@@ -202,10 +202,10 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         $this->assertNull($note->fe_estado);
     }
 
-    /** pac_provider default 'digifact' (no wireado) — el registro de la nota nunca debe fallar por esto. */
+    /** pac_provider que no existe en el registro — el registro de la nota nunca debe fallar por esto. */
     public function test_un_fallo_de_certificacion_nunca_bloquea_el_registro_de_la_nota(): void
     {
-        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'digifact'])->save();
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'proveedor-inexistente'])->save();
         Http::fake();
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($ownerId, 500);

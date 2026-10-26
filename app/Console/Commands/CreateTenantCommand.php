@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Modules\AdminCont\FacturacionElectronica\Services\AlignFiscalProviderWithCountry;
 use App\Shared\Multitenancy\RegionOptions;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
@@ -53,6 +54,11 @@ class CreateTenantCommand extends Command
             'artisanCommand' => 'migrate --force --path=database/migrations/tenant',
             '--tenant' => $tenant->getKey(),
         ]);
+
+        $ajuste = app(AlignFiscalProviderWithCountry::class)->handle($tenant);
+        if ($ajuste !== null) {
+            $this->line("Proveedor fiscal: '{$ajuste['anterior']}' no sirve en {$tenant->country} → '{$ajuste['nuevo']}' (sin facturación electrónica si es 'none').");
+        }
 
         $this->info("Tenant [{$slug}] creado ({$tenant->country} / {$tenant->currency} / {$tenant->timezone}): schemas ".implode(', ', $tenant->schemas()));
         $this->line("Siguiente paso: `php artisan db:seed` y luego `php artisan tenant:create-superadmin {$slug} <correo>` para dar de alta el primer superadmin.");

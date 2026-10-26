@@ -61,10 +61,11 @@ final class FiscalDocumentPreviewService
 
     private function ambienteMostrado(): string
     {
-        return match (AdminContFiscalSettings::current()->pac_ambiente) {
-            'apagado' => 'sin envío',
-            'production' => 'produccion',
-            default => 'pruebas',
-        };
+        $settings = AdminContFiscalSettings::current();
+        if ($settings->sinFacturacionElectronica()) {
+            return 'sin envío';
+        }
+
+        return $settings->pac_ambiente === 'production' ? 'produccion' : 'pruebas';
     }
 }

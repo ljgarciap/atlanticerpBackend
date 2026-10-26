@@ -36,9 +36,9 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $response->assertJsonPath('regimen_tributario', 'general');
-        $response->assertJsonPath('pac_provider', 'digifact');
-        // SCRUM-943 (2026-09-25) — 'digifact' nunca está wireado, así que nunca hay credenciales
-        // reales que chequear: 'desconectado' es el default honesto, ya no un 'conectado' fijo.
+        $response->assertJsonPath('pac_provider', 'none'); // la base de pruebas arranca sin proveedor fiscal (Fase 6b)
+        // SCRUM-943 (2026-09-25) — sin credenciales reales del proveedor activo: 'desconectado' es el default honesto, ya no un
+        // 'conectado' fijo (Fase 6b: 'digifact' ya está wireado, pero sin credenciales sigue desconectado).
         $response->assertJsonPath('pac_connection_status', 'desconectado');
         $response->assertJsonPath('pac_ambiente', 'testing');
         $response->assertJsonPath('pac_doc_factura_habilitado', true);

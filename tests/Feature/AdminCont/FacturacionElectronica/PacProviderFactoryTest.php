@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont\FacturacionElectronica;
 
+use App\Modules\AdminCont\FacturacionElectronica\Adapters\DigifactPacAdapter;
 use App\Modules\AdminCont\FacturacionElectronica\Adapters\Msl\MslPacAdapter;
 use App\Modules\AdminCont\FacturacionElectronica\Exceptions\PacAmbienteNoPermitidoException;
+use App\Modules\AdminCont\FacturacionElectronica\Exceptions\SinFacturacionElectronicaException;
 use App\Modules\AdminCont\FacturacionElectronica\Services\PacProviderFactory;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Shared\Multitenancy\Tenant;
@@ -82,13 +84,48 @@ final class PacProviderFactoryTest extends FeatureTestCase
         (new PacProviderFactory())->make();
     }
 
-    /** Default de la migración — 'digifact' nunca se wirea (SCRUM-941: cliente eligió MSL). */
+    /** Un `pac_provider` que no existe en el registro es un error de configuración explícito (Fase 6b: `digifact` ya SÍ está wireado). */
     public function test_rechaza_un_pac_provider_no_wireado(): void
     {
-        $this->actualizarFiscalSettings('digifact', 'testing');
+        $this->actualizarFiscalSettings('proveedor-inexistente', 'testing');
 
         $this->expectException(\RuntimeException::class);
 
         (new PacProviderFactory())->make();
+    }
+
+    /** Fase 6b — `digifact` (Panamá) ya está wireado: la fábrica arma su adaptador según el ambiente. */
+    public function test_resuelve_digifact_en_pruebas_y_exige_app_env_production_para_produccion(): void
+    {
+        $this->actualizarFiscalSettings('digifact', 'testing');
+        $adapter = (new PacProviderFactory())->make();
+        $this->assertInstanceOf(DigifactPacAdapter::class, $adapter);
+        $this->assertSame('digifact', $adapter->providerName());
+
+        $this->actualizarFiscalSettings('digifact', 'production');
+        $this->expectException(PacAmbienteNoPermitidoException::class);
+        (new PacProviderFactory())->make();
+    }
+
+    /** Fase 6b — sin facturación electrónica (`none`) no se construye ningún adaptador: falla fuerte, no envía a un PAC que no corresponde. */
+    public function test_pac_provider_none_no_construye_adaptador(): void
+    {
+        $this->actualizarFiscalSettings('none', 'testing');
+
+        $this->assertTrue(AdminContFiscalSettings::current()->sinFacturacionElectronica());
+        $this->assertFalse((new PacProviderFactory())->tieneCredencialesReales());
+
+        $this->expectException(SinFacturacionElectronicaException::class);
+        (new PacProviderFactory())->make();
+    }
+
+    public function test_credenciales_reales_de_digifact_requieren_ruc_usuario_y_clave(): void
+    {
+        $this->actualizarFiscalSettings('digifact', 'testing');
+        config(['services.digifact.ruc' => '155-1-1', 'services.digifact.username' => 'u', 'services.digifact.password' => '']);
+        $this->assertFalse((new PacProviderFactory())->tieneCredencialesReales());
+
+        config(['services.digifact.password' => 'p']);
+        $this->assertTrue((new PacProviderFactory())->tieneCredencialesReales());
     }
 }

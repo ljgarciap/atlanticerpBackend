@@ -110,6 +110,15 @@ class AdminContFiscalSettings extends Model
         return $jwt !== null && isset($jwt['sub']) && $primaryApproverId !== null && (int) $jwt['sub'] === $primaryApproverId;
     }
 
+    /**
+     * Fase 6b — ¿la empresa NO envía documentos a ninguna autoridad fiscal? Es así con el ambiente «apagado» (interruptor de Gerencia) o con el
+     * proveedor `none` (país sin paquete fiscal): AtlanticERP genera el documento igual, como documento interno, y nunca llama a un PAC.
+     */
+    public function sinFacturacionElectronica(): bool
+    {
+        return $this->pac_provider === 'none' || $this->pac_ambiente === 'apagado';
+    }
+
     public static function current(): self
     {
         /** @var self $settings */

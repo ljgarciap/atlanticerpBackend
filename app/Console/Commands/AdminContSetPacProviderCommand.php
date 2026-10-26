@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Modules\AdminCont\FacturacionElectronica\Services\FiscalProviderRegistry;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
@@ -18,7 +19,7 @@ final class AdminContSetPacProviderCommand extends Command
 {
     /** @var string */
     protected $signature = 'admin-contab:set-pac-provider
-        {provider : msl | digifact}
+        {provider : msl | digifact | none (ver config/fiscal.php; solo los válidos para el país del tenant)}
         {--tenant=atlantic : Slug del tenant}';
 
     /** @var string */
@@ -27,8 +28,9 @@ final class AdminContSetPacProviderCommand extends Command
     public function handle(): int
     {
         $provider = (string) $this->argument('provider');
-        if (! in_array($provider, ['msl', 'digifact'], true)) {
-            $this->error("Provider '{$provider}' inválido — usar 'msl' o 'digifact'.");
+        $registro = app(FiscalProviderRegistry::class);
+        if (! in_array($provider, $registro->claves(), true)) {
+            $this->error("Provider '{$provider}' inválido — usar: ".implode(', ', $registro->claves()).'.');
 
             return self::FAILURE;
         }
@@ -37,6 +39,13 @@ final class AdminContSetPacProviderCommand extends Command
         $tenant     = Tenant::where('slug', $tenantSlug)->first();
         if ($tenant === null) {
             $this->error("Tenant '{$tenantSlug}' no existe.");
+
+            return self::FAILURE;
+        }
+
+        $pais = $tenant->region()['country'];
+        if (! $registro->permitido($provider, $pais)) {
+            $this->error("Provider '{$provider}' no sirve en el país {$pais} del tenant — disponibles: ".implode(', ', array_keys($registro->paraPais($pais))).'.');
 
             return self::FAILURE;
         }

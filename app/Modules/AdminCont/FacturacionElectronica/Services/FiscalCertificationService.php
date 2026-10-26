@@ -625,7 +625,7 @@ final class FiscalCertificationService
 
     private function debeCertificar(AdminContFiscalSettings $settings, bool $habilitadoParaEsteTipo): bool
     {
-        return $settings->pac_ambiente !== 'apagado' && $habilitadoParaEsteTipo;
+        return ! $settings->sinFacturacionElectronica() && $habilitadoParaEsteTipo;
     }
 
     private function certificar(

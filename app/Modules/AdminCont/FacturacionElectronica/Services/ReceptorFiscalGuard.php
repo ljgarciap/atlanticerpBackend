@@ -85,7 +85,7 @@ class ReceptorFiscalGuard
 
         if ($taxId === '') {
             // Con el PAC apagado nada viaja a la DGI/MSL: igual que cualquier otra falta de validación, deja pasar con aviso.
-            if (AdminContFiscalSettings::current()->pac_ambiente === 'apagado') {
+            if (AdminContFiscalSettings::current()->sinFacturacionElectronica()) {
                 return $this->resultado(self::NO_VALIDADO, false, 'La facturación electrónica está apagada: el cliente no tiene RUC y no se validó contra la DGI.', $subClient, $taxId, $dv, $nombre);
             }
 
@@ -95,9 +95,7 @@ class ReceptorFiscalGuard
         $dgi = $this->consultarDgi($taxId);
 
         if (! $dgi['disponible']) {
-            $ambiente = AdminContFiscalSettings::current()->pac_ambiente;
-
-            if ($dgi['codigo'] === TaxIdValidationService::CODIGO_APAGADO || $ambiente === 'apagado') {
+            if ($dgi['codigo'] === TaxIdValidationService::CODIGO_APAGADO || AdminContFiscalSettings::current()->sinFacturacionElectronica()) {
                 return $this->resultado(self::NO_VALIDADO, false, 'La facturación electrónica está apagada: el RUC no se validó contra la DGI.', $subClient, $taxId, $dv, $nombre);
             }
 
