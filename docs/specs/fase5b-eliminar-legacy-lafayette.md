@@ -1,6 +1,6 @@
 # Spec — Fase 5b: eliminar Legacy (ICG) e Integrations/Lafayette del repo
 
-**Estado**: decisiones de Luis registradas (§6, incluido el `DROP`); pendiente su «adelante» para implementar.
+**Estado**: 5b-1 IMPLEMENTADA (§7), pendiente de merge. 5b-2 (`DROP` + retiro de columnas y de la bodega Zona Libre) pendiente.
 **Origen**: Fase 5a (mezclada) dejó ambos módulos apagados por defecto. Esta fase borra el código dormido.
 
 ## 1. Hechos verificados (2026-10-26)
@@ -45,3 +45,13 @@ Solo la 5b-2 borra datos (`DROP TABLE`). Antes de escribirla se necesita el «s�
    frontend (`BodegasPage`, `warehouses.ts`, badge y aviso). El flujo de **solicitudes** de Zona Libre (Compras/Bodega, proveedor fijo) NO se toca: es del núcleo (decisión de la 5a).
 3. **Esquema de tenants nuevos**: se acepta crear y luego borrar las tablas (sin aplanar migraciones).
 4. **`DROP` autorizado** (5b-2) y entrega en **2 PR por repo**: 5b-1 (código) primero, luego 5b-2 (migración destructiva).
+
+## 7. Resultado de la 5b-1 (2026-10-26)
+- **Backend** (rama `fase5b1/eliminar-codigo`): borrados `app/Modules/Legacy` y `Integrations/Lafayette` (240 archivos), 136 tests, 53 comandos, `config/{legacy,lafayette,modules}.php`, conexiones `legacy_icg`/`lafayette_lighting`, `routes/legacy.php`,
+  `legacy-history`, catálogo externo de Zona Libre (servicio, controlador, ruta, limitador), `lafayette_guarda_min_ratio`, constantes de auditoría de Legacy/Lafayette, banderas `flags.legacy_icg/lafayette`, certificado, 2 seeders huérfanos,
+  `infra/legacy-sync*.sh`, y los drivers `sqlsrv`/`pdo_mysql` del Dockerfile (la imagen construye). Outlook (`Integrations/Outlook`) se conserva.
+- **Se conserva a propósito hasta la 5b-2**: el concepto `solo_consulta` (columna, scopes, guard, excepción, trigger), la constante de auditoría `LEGACY_CARGAR_PEDIDOS_GEMELOS` y los campos «gemelo ICG» (los lee el reporte de gemelos de Admin&Cont),
+  `origin = 'icg_legacy'`, y todas las migraciones históricas. `WarehouseController::show()` de una bodega de solo consulta devuelve KPIs en cero.
+- **Frontend**: borradas las páginas/componentes/hooks/api/tipos de ICG (Migración, Vista ICG, Pagos ICG, Historial ICG, StockSyncPanel), el catálogo de Zona Libre, `lib/modules` y 7 specs e2e; claves i18n retiradas; la bodega de solo consulta muestra un aviso.
+- **Verificación**: backend 5104 tests en la corrida completa con 3 fallos esperados (dependían del catálogo/TTL borrados), corregidos y re-corridos (684 de Bodega/Auth/VentasDiseno en verde); PHPStan 0 errores. Frontend 234 archivos / 2951 tests, `tsc` y build limpios.
+- Informe del Senior Review: `docs/reviews/fase5b1-eliminar-codigo-2026-10-26.md` (0 bloqueantes).
