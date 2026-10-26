@@ -1,6 +1,6 @@
 # Spec — Fase 5: aislar Legacy (ICG) e Integrations/Lafayette del núcleo
 
-**Estado**: decisiones de Luis registradas (§6); pendiente su «adelante» para implementar.
+**Estado**: 5a IMPLEMENTADA (§7), pendiente de merge. 5b no se ejecuta: se decide después (§6-1).
 **Origen**: decisión 5 del análisis de aislamiento (`erp/docs/analisis/aislamiento-nucleo-2026-10-24.md`) y sugerencia del Senior Review de la sync:
 `LAFAYETTE_DB_HOST` apunta por defecto a `app.grupolafayette.com`.
 
@@ -62,3 +62,10 @@ extraer a un paquete Composer (`packages/`) con su provider, y las migraciones v
 3. **Zona Libre**: queda en el núcleo, con proveedor configurable por pantalla (resuelve el hallazgo de `zona_libre_provider_id`) y sin catálogo externo. Entra en el alcance de la 5a:
    pantalla/ajuste para elegir el proveedor, y el catálogo Lafayette deja de ser requisito del flujo.
 4. **Entrega**: 2 PR por repo (backend + frontend) e incluye la mini-entrega de CI: `if: false` en los jobs `deploy-dev/test/prod` de ambos workflows hasta tener infraestructura.
+
+## 7. Resultado de la 5a (2026-10-26)
+- **Backend** (rama `fase5a/apagable-por-configuracion`): `config/modules.php`; `LegacyServiceProvider` y `LafayetteServiceProvider` (solo se registran con su bandera); 53 comandos movidos a los módulos; rutas,
+  `legacy-history`, catálogo externo de Zona Libre y schedules condicionados; `flags.legacy_icg/lafayette` en los claims; `zona_libre_provider_id` editable (API + pantalla); defaults neutros en `config/database.php` y
+  `.env.example`; `if: false &&` en los jobs de deploy. Tests: `OptionalModulesTest` + 2 de `ComprasSettingsControllerTest`; suite completa 6203 tests / 0 fallos; PHPStan 0 errores.
+- **Frontend** (misma rama): `lib/modules.ts` (`useModuleEnabled`), `RequireModule` en las rutas `/migracion/*`, menú, Historial ICG, catálogo de Zona Libre, umbral de Lafayette en Ajustes, selector de proveedor de Zona Libre. 3119 tests, `tsc` limpio.
+- Informe del Senior Review: `docs/reviews/fase5a-modulos-opcionales-2026-10-26.md` (0 bloqueantes).
