@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\DB;
  *    idempotente por resultado, no por upsert de columna única.
  *
  * Requiere tenant activo (`Tenant::current()`, ver `getTable()` de cada modelo) — el llamador
- * (`App\Console\Commands\LegacySyncAlbaranesCommand`) es responsable de `makeCurrent()` antes de
+ * (`App\Modules\Legacy\Console\Commands\LegacySyncAlbaranesCommand`) es responsable de `makeCurrent()` antes de
  * invocar `load()`/`loadPaginated()`.
  *
  * `loadPaginated()` agregado 2026-08-27 (mismo hallazgo real que `CotizacionStagingLoader` el

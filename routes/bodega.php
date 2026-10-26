@@ -184,9 +184,12 @@ Route::prefix('warehouse-assistant-mapping')->group(function (): void {
 // bodega.write, pueda llegar al endpoint) — el gate angosto real (Líder de Bodega o Líder de
 // Compras puntual, más el guard de estado `pendiente`) vive dentro de `update()`.
 Route::prefix('zona-libre')->group(function (): void {
-    // SCRUM-990 — catálogo de Lafayette de SOLO CONSULTA (tabla propia `lafayette_productos`). Lectura únicamente: no hay POST/PUT/PATCH/DELETE
-    // sobre `/productos` (lo afirma un test de rutas). Las demás rutas de este grupo son las de "Solicitudes Zona Libre" (SCRUM-440).
-    Route::get('/productos', [ZonaLibreCatalogoController::class, 'productos'])->middleware(['throttle:zona-libre-lectura', 'permission:bodega.read,bodega.warehouses.view']);
+    // Fase 5a — el catálogo externo solo existe con `modules.lafayette.enabled`; las solicitudes de Zona Libre (abajo) son del núcleo.
+    if (config('modules.lafayette.enabled')) {
+        // SCRUM-990 — catálogo de Lafayette de SOLO CONSULTA (tabla propia `lafayette_productos`). Lectura únicamente: no hay POST/PUT/PATCH/DELETE
+        // sobre `/productos` (lo afirma un test de rutas). Las demás rutas de este grupo son las de "Solicitudes Zona Libre" (SCRUM-440).
+        Route::get('/productos', [ZonaLibreCatalogoController::class, 'productos'])->middleware(['throttle:zona-libre-lectura', 'permission:bodega.read,bodega.warehouses.view']);
+    }
     // Bodega no tiene `compras.read` (GET /compras/settings) — sin esto, 3C no puede resolver
     // qué `provider_id` pasarle a GET /compras/products para el buscador de productos.
     Route::get('/provider', [BodegaZonaLibreRequestController::class, 'provider'])->middleware('permission:bodega.read');

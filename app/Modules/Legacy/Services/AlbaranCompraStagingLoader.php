@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
  *  - `legacy.albaran_compra_items`: delete-then-insert scoped a las cabeceras de ESTA corrida
  *    (ALBCOMPRALIN no declara llave natural propia).
  *
- * Requiere tenant activo — el llamador (`App\Console\Commands\LegacySyncAlbaranesCompraCommand`)
+ * Requiere tenant activo — el llamador (`App\Modules\Legacy\Console\Commands\LegacySyncAlbaranesCompraCommand`)
  * es responsable de `makeCurrent()` antes de invocar `loadPaginated()`.
  */
 final class AlbaranCompraStagingLoader

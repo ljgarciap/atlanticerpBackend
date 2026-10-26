@@ -74,7 +74,10 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')->prefix('api/notifications')->group(base_path('routes/notifications.php'));
             Route::middleware('api')->prefix('api/admin-contab')->group(base_path('routes/admin-contab.php'));
             Route::middleware('api')->prefix('api/gerencia')->group(base_path('routes/gerencia.php'));
-            Route::middleware('api')->prefix('api/legacy')->group(base_path('routes/legacy.php'));
+            // Fase 5a — migración desde ICG: solo con `modules.legacy_icg.enabled` (config/modules.php, apagado por defecto).
+            if (config('modules.legacy_icg.enabled')) {
+                Route::middleware('api')->prefix('api/legacy')->group(base_path('routes/legacy.php'));
+            }
 
             // Catálogo de permisos — acceso restringido a superadmin y management
             Route::middleware(['api', 'permission:platform.management'])

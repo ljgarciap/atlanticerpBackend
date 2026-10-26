@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Legacy;
 
-use App\Console\Commands\LegacySyncClientesRawCommand;
+use App\Modules\Legacy\Console\Commands\LegacySyncClientesRawCommand;
 use App\Modules\Legacy\Extractors\ClienteRawExtractor;
 use App\Modules\Legacy\Extractors\ClienteRawVerificationExtractor;
 use App\Modules\Legacy\Extractors\ContactoClienteRawExtractor;

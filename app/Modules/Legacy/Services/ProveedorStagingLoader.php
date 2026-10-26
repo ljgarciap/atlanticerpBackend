@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  * la migración): el pipeline de esta entidad termina acá.
  *
  * Requiere tenant activo (`Tenant::current()`, ver `getTable()` de `Proveedor`) — el llamador
- * (`App\Console\Commands\LegacySyncProveedoresCommand`) es responsable de `makeCurrent()` antes de
+ * (`App\Modules\Legacy\Console\Commands\LegacySyncProveedoresCommand`) es responsable de `makeCurrent()` antes de
  * invocar `load()`.
  */
 final class ProveedorStagingLoader

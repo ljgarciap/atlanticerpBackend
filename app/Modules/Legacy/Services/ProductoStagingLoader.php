@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  *  - `legacy.producto_precios`/`producto_costos`: upsert por su UNIQUE compuesto respectivo.
  *
  * Requiere tenant activo (`Tenant::current()`, ver `getTable()` de cada modelo) — el llamador
- * (`App\Console\Commands\LegacySyncProductosCommand`) es responsable de `makeCurrent()` antes de
+ * (`App\Modules\Legacy\Console\Commands\LegacySyncProductosCommand`) es responsable de `makeCurrent()` antes de
  * invocar `load()`.
  */
 final class ProductoStagingLoader

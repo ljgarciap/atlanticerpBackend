@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  * un único `upsertFacturas()`, sin el patrón delete-then-insert de items.
  *
  * Requiere tenant activo (`Tenant::current()`, ver `getTable()` de `Factura`) — el llamador
- * (`App\Console\Commands\LegacySyncFacturasCommand`) es responsable de `makeCurrent()` antes de
+ * (`App\Modules\Legacy\Console\Commands\LegacySyncFacturasCommand`) es responsable de `makeCurrent()` antes de
  * invocar `load()`.
  */
 final class FacturaStagingLoader

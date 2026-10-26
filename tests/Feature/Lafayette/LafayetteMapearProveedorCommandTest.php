@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Lafayette;
 
-use App\Console\Commands\LafayetteMapearProveedorCommand;
+use App\Modules\Integrations\Lafayette\Console\Commands\LafayetteMapearProveedorCommand;
 use App\Modules\Auth\Models\AuditLog;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Integrations\Lafayette\Models\LafayetteProducto;

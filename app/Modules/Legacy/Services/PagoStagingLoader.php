@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  * mismo patrón que `ProveedorStagingLoader`): el pipeline de esta entidad termina acá.
  *
  * Requiere tenant activo (`Tenant::current()`, ver `getTable()` de `Pago`) — el llamador
- * (`App\Console\Commands\LegacySyncPagosCommand`) es responsable de `makeCurrent()` antes de
+ * (`App\Modules\Legacy\Console\Commands\LegacySyncPagosCommand`) es responsable de `makeCurrent()` antes de
  * invocar `load()`/`loadPaginated()`.
  *
  * `loadPaginated()` agregado 2026-08-27 (hallazgo real: 2 OOM kills confirmados en dev.atlanticerp.ai,
