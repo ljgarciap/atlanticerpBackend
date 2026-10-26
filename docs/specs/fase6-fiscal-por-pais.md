@@ -1,6 +1,6 @@
 # Spec — Fase 6: fiscal por país (Panamá como el primer paquete)
 
-**Estado**: BORRADOR — pendiente de las decisiones de Luis (§5) y de su «adelante». No se implementa nada antes.
+**Estado**: decisiones de Luis registradas (§6); pendiente su «adelante» para implementar la 6a.
 **Origen**: decisión 2 del análisis de aislamiento (multi-país: «el fiscal de Panamá pasa a ser un paquete más sobre `PacProviderContract`») y paso 6 del plan de 8 fases.
 
 ## 1. Hechos verificados (2026-10-26)
@@ -49,3 +49,13 @@ etiquetas visibles (rápido, sin tocar esquema); (ii) **renombrar esquema y cód
 4. **Zona horaria/moneda por tenant** (6a): ¿se configuran por empresa (recomendado) o es una sola por instalación?
 5. **`digifact`**: ¿se cablea en la fábrica (se mantienen los dos PAC de Panamá) o se elimina el adaptador por no estar en uso?
 6. **Entrega**: ¿una sub-fase por vez, 2 PR por repo (recomendado)?
+
+## 6. Decisiones de Luis (2026-10-26)
+1. **Países**: Panamá (ya) + **Colombia** + **Estados Unidos**. La Fase 6 prepara el enchufe pensando en ellos:
+   - **Colombia**: NIT + dígito de verificación (módulo 11), impuesto IVA (19 % / 5 % / 0 %) y retenciones, moneda COP, zona `America/Bogota`; la factura electrónica va por la DIAN a través de un proveedor tecnológico.
+   - **Estados Unidos**: sin factura electrónica fiscal nacional (cae en «documento interno», decisión 2), EIN/Tax ID sin dígito, impuesto = *sales tax* por estado (tasa configurable como dato), moneda USD, zona por empresa.
+   - **Punto a confirmar con Luis antes de la 6b**: el adaptador real de la DIAN (elegir proveedor tecnológico, certificados, habilitación) NO entra en la Fase 6 salvo que él lo pida; la fase deja el registro por país y el paquete de configuración de CO y US (validador de identificación, tasas, zona horaria, moneda).
+2. **Sin facturación electrónica**: un tenant sin paquete fiscal opera con documentos internos no fiscales (sin error ni bloqueo).
+3. **Vocabulario**: se conserva «ITBMS» como el nombre del impuesto de Panamá (opción i). Las tasas siguen en `itbms_rates` como tabla de tasas de impuesto; el núcleo dice «impuesto» solo en etiquetas visibles. Colombia (IVA) y EE. UU. (sales tax) reutilizan esa tabla con su propia etiqueta.
+4. **Configuración por empresa**: país, moneda, zona horaria y locale por tenant (default PA / USD / America/Panama). **`digifact` se cablea** en la fábrica junto a `msl`, arreglando la inconsistencia actual.
+5. **Entrega**: una sub-fase por vez, 2 PR por repo; orden 6a (contexto regional) → 6b (registro de proveedores y «sin FE») → 6c (validador de identificación por país: PA RUC+DV, CO NIT+DV, US EIN) → 6d solo etiquetas.
