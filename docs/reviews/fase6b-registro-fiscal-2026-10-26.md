@@ -15,6 +15,6 @@
 - Frontend: 235 archivos / 2952 tests, `tsc` y build limpios.
 
 ## Hallazgos (sin bloqueantes)
-1. **Default de la columna**: `fiscal_settings.pac_provider` sigue con default `digifact` en la migración histórica (los tenants nuevos de Panamá salen con `digifact` hasta que alguien ejecute `admin-contab:set-pac-provider msl`). Antes la fábrica lo rechazaba (fallo seguro); ahora lo construye. Conviene una migración que cambie el default a `none` o aplicar el valor del registro (`msl`) al crear el tenant — no se hizo para no cambiar el comportamiento de los tenants nuevos de Panamá sin decisión de negocio. **Pendiente de decisión de Luis.**
+1. **Default de la columna**: `fiscal_settings.pac_provider` tenía default `digifact` (histórico). Con `digifact` ya cableado, un tenant nuevo habría intentado certificar sin credenciales. Decisión de Luis: el default pasa a `none` (migración `2026_10_26_400000`: cambia el default y pasa a `none` las filas que seguían en `digifact` —nunca estuvo operativo—; los tenants con `msl` no se tocan). Un tenant nuevo no transmite nada hasta elegir proveedor con `admin-contab:set-pac-provider`.
 2. `digifact` solo se probó con respuestas simuladas; no usarlo en producción sin validarlo con credenciales reales.
 3. Colombia y EE. UU. quedan en `none` hasta tener su adaptador (la DIAN es una fase aparte, por decisión de Luis).
