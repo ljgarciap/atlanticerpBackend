@@ -8,6 +8,8 @@ use App\Modules\AdminCont\Http\Requests\UpdateCompanyProfileRequest;
 use App\Modules\AdminCont\Http\Requests\UploadCompanyLogoRequest;
 use App\Modules\AdminCont\Models\AdminContCompanyProfile;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
+use App\Shared\Multitenancy\Tenant;
+use App\Shared\Multitenancy\TenantRegion;
 use App\Shared\Support\CircuitBreaker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
@@ -32,7 +34,20 @@ class AdminContCompanyProfileController
     public function update(UpdateCompanyProfileRequest $request): JsonResponse
     {
         $profile = AdminContCompanyProfile::current();
-        $profile->update($request->validated());
+        $validated = $request->validated();
+
+        // Fase 6a — país/moneda/zona/locale son del tenant (fuente de verdad); la zona horaria se refleja también en el perfil por compatibilidad.
+        $region = array_filter([
+            'country' => $validated['pais'] ?? null,
+            'currency' => $validated['moneda'] ?? null,
+            'timezone' => $validated['zona_horaria'] ?? null,
+            'locale' => $validated['locale'] ?? null,
+        ], static fn ($v): bool => $v !== null);
+        if ($region !== []) {
+            Tenant::current()?->update($region);
+        }
+
+        $profile->update(array_diff_key($validated, array_flip(['pais', 'moneda', 'locale'])));
 
         return response()->json($this->format($profile->refresh()));
     }
@@ -88,9 +103,16 @@ class AdminContCompanyProfileController
             'descripcion_corta' => $profile->descripcion_corta,
             'sitio_web' => $profile->sitio_web,
             'redes_sociales' => $profile->redes_sociales ?? [],
-            'moneda' => $profile->moneda,
+            'pais' => TenantRegion::country(),
+            'moneda' => TenantRegion::currency(),
             'anio_fiscal' => $profile->anio_fiscal,
-            'zona_horaria' => $profile->zona_horaria,
+            'zona_horaria' => TenantRegion::timezone(),
+            'locale' => TenantRegion::locale(),
+            // Catálogo de países con su contexto regional por omisión (config/regions.php): el frontend lo usa para proponer moneda/zona/locale.
+            'paises' => collect((array) config('regions.countries'))
+                ->map(fn (array $c, string $code): array => ['code' => $code, ...array_intersect_key($c, array_flip(['name', 'currency', 'timezone', 'locale']))])
+                ->values()
+                ->all(),
         ];
     }
 }

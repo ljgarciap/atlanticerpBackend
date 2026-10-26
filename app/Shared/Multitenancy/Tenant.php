@@ -9,11 +9,26 @@ class Tenant extends SpatieTenant
     /**
      * @var list<string>
      */
-    protected $fillable = ['name', 'slug', 'domain', 'is_active'];
+    protected $fillable = ['name', 'slug', 'domain', 'is_active', 'country', 'currency', 'timezone', 'locale'];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    /**
+     * Fase 6a — contexto regional de la empresa. Los valores por omisión (Panamá) los pone la migración de `tenants`.
+     *
+     * @return array{country: string, currency: string, timezone: string, locale: string}
+     */
+    public function region(): array
+    {
+        return [
+            'country' => (string) ($this->country ?? 'PA'),
+            'currency' => (string) ($this->currency ?? 'USD'),
+            'timezone' => (string) ($this->timezone ?? 'America/Panama'),
+            'locale' => (string) ($this->locale ?? 'es-PA'),
+        ];
+    }
 
     /**
      * Schemas-per-tenant: cada tenant tiene un schema Postgres por módulo,

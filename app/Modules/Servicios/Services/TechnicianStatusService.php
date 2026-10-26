@@ -29,7 +29,11 @@ final class TechnicianStatusService
 
     public const OFF = 'off';
 
-    private const BUSINESS_TIMEZONE = 'America/Panama';
+    /** Zona horaria del negocio: la del tenant activo (Fase 6a, `TenantRegion`). */
+    private static function businessTimezone(): string
+    {
+        return \App\Shared\Multitenancy\TenantRegion::timezone();
+    }
 
     // RN2 — "empieza dentro de la próxima hora".
     private const EN_ROUTE_WINDOW_MINUTES = 60;
@@ -60,7 +64,7 @@ final class TechnicianStatusService
         // comportamiento que un técnico real sin agenda, consistente con RN4 y sin necesitar un
         // caso especial. La limitación real (no es seleccionable para agendar sin `user_id`, ver
         // docblock de la migración) sigue intacta — es un límite de agendamiento, no de estado.
-        $now = Carbon::now(self::BUSINESS_TIMEZONE);
+        $now = Carbon::now(self::businessTimezone());
 
         foreach ($todaysTickets as $ticket) {
             [$start, $end] = $this->visitWindow($ticket);
@@ -70,7 +74,7 @@ final class TechnicianStatusService
         }
 
         foreach ($todaysTickets as $ticket) {
-            $start = $this->scheduledAt($ticket)->timezone(self::BUSINESS_TIMEZONE);
+            $start = $this->scheduledAt($ticket)->timezone(self::businessTimezone());
             if ($now->lessThan($start) && $now->diffInMinutes($start, false) <= self::EN_ROUTE_WINDOW_MINUTES) {
                 return self::EN_ROUTE;
             }
@@ -81,7 +85,7 @@ final class TechnicianStatusService
         }
 
         $hasMoreToday = $todaysTickets->contains(
-            fn (Ticket $t): bool => $this->scheduledAt($t)->timezone(self::BUSINESS_TIMEZONE)->greaterThan($now),
+            fn (Ticket $t): bool => $this->scheduledAt($t)->timezone(self::businessTimezone())->greaterThan($now),
         );
 
         // RN4 — sin más visitas hoy también es "Fuera", no "Disponible" (Disponible implica que
@@ -96,9 +100,9 @@ final class TechnicianStatusService
     /** @return array{0: Carbon, 1: Carbon} */
     private function visitWindow(Ticket $ticket): array
     {
-        $start = $this->scheduledAt($ticket)->timezone(self::BUSINESS_TIMEZONE);
+        $start = $this->scheduledAt($ticket)->timezone(self::businessTimezone());
         $end   = $ticket->scheduled_ends_at !== null
-            ? $ticket->scheduled_ends_at->copy()->timezone(self::BUSINESS_TIMEZONE)
+            ? $ticket->scheduled_ends_at->copy()->timezone(self::businessTimezone())
             : $start->copy()->addMinutes(self::DEFAULT_VISIT_DURATION_MINUTES);
 
         return [$start, $end];

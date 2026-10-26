@@ -13,7 +13,11 @@ use Illuminate\Database\UniqueConstraintViolationException;
 /** Fase 4 — Servicios, Batch 7 (REQ-292). Ver docblock de CommissionCalculationService. */
 final class CommissionCaptureService
 {
-    private const BUSINESS_TIMEZONE = 'America/Panama';
+    /** Zona horaria del negocio: la del tenant activo (Fase 6a, `TenantRegion`). */
+    private static function businessTimezone(): string
+    {
+        return \App\Shared\Multitenancy\TenantRegion::timezone();
+    }
 
     public function __construct(private readonly CommissionCalculationService $calc) {}
 
@@ -25,7 +29,7 @@ final class CommissionCaptureService
      */
     public function forPeriod(InternalTechnician $technician, ?int $year = null, ?int $month = null): ?array
     {
-        $now   = Carbon::now(self::BUSINESS_TIMEZONE);
+        $now   = Carbon::now(self::businessTimezone());
         $year  ??= $now->year;
         $month ??= $now->month;
 
@@ -111,7 +115,7 @@ final class CommissionCaptureService
      */
     public function commissionForTechnician(InternalTechnician $technician, ?int $year = null, ?int $month = null): ?array
     {
-        $now   = Carbon::now(self::BUSINESS_TIMEZONE);
+        $now   = Carbon::now(self::businessTimezone());
         $year  ??= $now->year;
         $month ??= $now->month;
 

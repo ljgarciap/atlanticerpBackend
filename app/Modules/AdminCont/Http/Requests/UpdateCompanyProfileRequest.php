@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * `razon_social`, `nombre_comercial`, `moneda`, `anio_fiscal` a propósito NO están en las reglas
@@ -27,7 +28,11 @@ class UpdateCompanyProfileRequest extends FormRequest
             'redes_sociales' => ['sometimes', 'array'],
             'redes_sociales.*.plataforma' => ['required_with:redes_sociales', 'string', 'max:100'],
             'redes_sociales.*.url' => ['required_with:redes_sociales', 'string', 'max:255', 'url'],
-            'zona_horaria' => ['sometimes', 'in:America/Panama'],
+            // Fase 6a — contexto regional de la empresa (vive en el tenant, ver `TenantRegion`). La zona acepta cualquier zona IANA válida.
+            'pais' => ['sometimes', 'string', Rule::in(array_keys((array) config('regions.countries')))],
+            'moneda' => ['sometimes', 'string', 'regex:/^[A-Z]{3}$/'],
+            'zona_horaria' => ['sometimes', 'timezone:all'],
+            'locale' => ['sometimes', 'string', 'regex:/^[a-z]{2}(-[A-Z]{2})?$/'],
         ];
     }
 }

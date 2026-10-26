@@ -2,13 +2,14 @@
 
 namespace App\Console\Commands;
 
+use App\Shared\Multitenancy\RegionOptions;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 class CreateTenantCommand extends Command
 {
-    protected $signature = 'tenant:create {slug} {name} {--domain=}';
+    protected $signature = 'tenant:create {slug} {name} {--domain=} {--country= : País ISO-3166 del catálogo config/regions.php (por omisión PA)} {--currency=} {--timezone=} {--locale=}';
 
     protected $description = 'Crea un tenant nuevo: sus schemas Postgres, el registro landlord y corre sus migrations';
 
@@ -23,11 +24,24 @@ class CreateTenantCommand extends Command
             return self::FAILURE;
         }
 
+        $region = RegionOptions::resolve(
+            $this->option('country'),
+            $this->option('currency'),
+            $this->option('timezone'),
+            $this->option('locale'),
+        );
+        if (is_string($region)) {
+            $this->error($region);
+
+            return self::FAILURE;
+        }
+
         $tenant = new Tenant([
             'name' => $name,
             'slug' => $slug,
             'domain' => $this->option('domain'),
             'is_active' => true,
+            ...$region,
         ]);
         $tenant->save();
 
@@ -40,7 +54,7 @@ class CreateTenantCommand extends Command
             '--tenant' => $tenant->getKey(),
         ]);
 
-        $this->info("Tenant [{$slug}] creado: schemas ".implode(', ', $tenant->schemas()));
+        $this->info("Tenant [{$slug}] creado ({$tenant->country} / {$tenant->currency} / {$tenant->timezone}): schemas ".implode(', ', $tenant->schemas()));
         $this->line("Siguiente paso: `php artisan db:seed` y luego `php artisan tenant:create-superadmin {$slug} <correo>` para dar de alta el primer superadmin.");
 
         return self::SUCCESS;

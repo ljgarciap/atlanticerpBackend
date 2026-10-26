@@ -69,11 +69,11 @@ final class CommissionCalculationService
      * configurado por tipo de ticket (`ServiciosSettingsService::slaDiasByTipo()`). Un ticket
      * "cumple" si `scheduled_ends_at` (o `updated_at` si no hay agenda) está dentro de los N días
      * hábiles desde `created_at` — mismo criterio de "días hábiles" que el resto del módulo
-     * (`TechnicianStatusService`, zona horaria America/Panama).
+     * (`TechnicianStatusService`, zona horaria del tenant).
      */
     public function convertSla(InternalTechnician $technician, int $year, int $month): int
     {
-        $start = new CarbonImmutable(sprintf('%04d-%02d-01', $year, $month), 'America/Panama');
+        $start = new CarbonImmutable(sprintf('%04d-%02d-01', $year, $month), \App\Shared\Multitenancy\TenantRegion::timezone());
         $end   = $start->endOfMonth();
 
         $tickets = Ticket::query()
