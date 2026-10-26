@@ -42,7 +42,7 @@ final class TaxIdValidationService
             return $this->noDisponible(self::CODIGO_NO_DISPONIBLE); // nada que consultar (SCRUM-1019)
         }
 
-        if (AdminContFiscalSettings::current()->pac_ambiente === 'apagado') {
+        if (AdminContFiscalSettings::current()->sinFacturacionElectronica()) {
             return $this->noDisponible(self::CODIGO_APAGADO);
         }
 

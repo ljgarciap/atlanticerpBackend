@@ -36,6 +36,8 @@ final class FiscalDocumentPreviewTest extends FeatureTestCase
         ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
+        // La factura se crea sin proveedor fiscal (base de pruebas en `none`); la vista previa se pide ya con MSL en pruebas.
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl', 'pac_ambiente' => 'testing'])->save();
 
         $response = $this->api($this->token(), 'GET', "/api/admin-contab/invoices/{$root->id}/fe-preview")
             ->assertStatus(200);
@@ -56,6 +58,8 @@ final class FiscalDocumentPreviewTest extends FeatureTestCase
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
 
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl'])->save();
+
         foreach (['apagado' => 'sin envío', 'testing' => 'pruebas', 'production' => 'produccion'] as $pacAmbiente => $esperado) {
             AdminContFiscalSettings::current()->forceFill(['pac_ambiente' => $pacAmbiente])->save();
 
@@ -63,6 +67,22 @@ final class FiscalDocumentPreviewTest extends FeatureTestCase
                 ->assertStatus(200)
                 ->assertJsonPath('payload.ambiente', $esperado);
         }
+
+        Http::assertNothingSent();
+    }
+
+    /** Fase 6b — sin proveedor fiscal (`none`) el documento es interno: la vista previa lo dice con «sin envío». */
+    public function test_preview_sin_proveedor_fiscal_dice_sin_envio(): void
+    {
+        Http::fake();
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
+        $this->reTenant();
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'none', 'pac_ambiente' => 'production'])->save();
+
+        $this->api($this->token(), 'GET', "/api/admin-contab/invoices/{$root->id}/fe-preview")
+            ->assertStatus(200)
+            ->assertJsonPath('payload.ambiente', 'sin envío');
 
         Http::assertNothingSent();
     }

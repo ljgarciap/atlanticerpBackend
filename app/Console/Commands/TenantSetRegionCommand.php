@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Modules\AdminCont\FacturacionElectronica\Services\AlignFiscalProviderWithCountry;
 use App\Shared\Multitenancy\RegionOptions;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
@@ -43,7 +44,11 @@ class TenantSetRegionCommand extends Command
         }
 
         $tenant->update($region);
+        $ajuste = app(AlignFiscalProviderWithCountry::class)->handle($tenant->refresh());
         $this->info("Tenant [{$tenant->slug}]: {$region['country']} / {$region['currency']} / {$region['timezone']} / {$region['locale']}.");
+        if ($ajuste !== null) {
+            $this->line("Proveedor fiscal: '{$ajuste['anterior']}' no sirve en {$region['country']} → '{$ajuste['nuevo']}' (sin facturación electrónica si es 'none').");
+        }
         if ($region['timezone'] !== $actual['timezone']) {
             $this->warn('La zona horaria cambió: las fechas ya guardadas se interpretan como hora local de la zona NUEVA. Hacelo solo si el tenant aún no tiene datos.');
         }

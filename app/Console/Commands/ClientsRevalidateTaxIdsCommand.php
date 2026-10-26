@@ -71,8 +71,8 @@ final class ClientsRevalidateTaxIdsCommand extends Command
         Tenant::forgetCurrent();
         $tenant->makeCurrent();
 
-        if (AdminContFiscalSettings::current()->pac_ambiente === 'apagado') {
-            $this->warn('La facturación electrónica está APAGADA: no se llama a MSL, no se generó reporte. Cambia el ambiente en Configuración Fiscal para revalidar.');
+        if (AdminContFiscalSettings::current()->sinFacturacionElectronica()) {
+            $this->warn('La facturación electrónica está APAGADA o no aplica (sin proveedor): no se llama a MSL, no se generó reporte. Cambia el ambiente en Configuración Fiscal para revalidar.');
 
             return self::FAILURE;
         }

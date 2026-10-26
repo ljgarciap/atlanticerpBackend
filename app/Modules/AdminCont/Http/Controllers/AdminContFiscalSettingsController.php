@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Controllers;
 
+use App\Modules\AdminCont\FacturacionElectronica\Services\FiscalProviderRegistry;
 use App\Modules\AdminCont\FacturacionElectronica\Services\PacProviderFactory;
+use App\Shared\Multitenancy\TenantRegion;
 use App\Modules\AdminCont\Http\Requests\UpdateFiscalSettingsRequest;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use Illuminate\Http\JsonResponse;
@@ -12,7 +14,10 @@ use Illuminate\Http\JsonResponse;
 /** SCRUM-632/633/634/637 (REQ-555/556/557/560) — Configuración Fiscal, gateada por EnsureIsPrimaryApprover sobre toda la ruta. */
 class AdminContFiscalSettingsController
 {
-    public function __construct(private readonly PacProviderFactory $pacProviderFactory) {}
+    public function __construct(
+        private readonly PacProviderFactory $pacProviderFactory,
+        private readonly FiscalProviderRegistry $registro,
+    ) {}
 
     public function show(): JsonResponse
     {
@@ -38,6 +43,15 @@ class AdminContFiscalSettingsController
     {
         $data = $settings->toArray();
         $data['pac_connection_status'] = $this->pacProviderFactory->tieneCredencialesReales() ? 'conectado' : 'desconectado';
+
+        // Fase 6b — ¿esta empresa emite documentos fiscales a una autoridad, o solo documentos internos? (proveedor `none` o ambiente apagado).
+        $data['facturacion_electronica_activa'] = ! $settings->sinFacturacionElectronica();
+        $data['pac_provider_label'] = $this->registro->etiqueta($settings->pac_provider);
+        $data['pais'] = TenantRegion::country();
+        $data['pac_providers_disponibles'] = collect($this->registro->paraPais(TenantRegion::country()))
+            ->map(fn (string $label, string $key): array => ['key' => $key, 'label' => $label])
+            ->values()
+            ->all();
 
         return $data;
     }

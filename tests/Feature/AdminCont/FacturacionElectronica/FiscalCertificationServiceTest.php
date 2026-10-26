@@ -61,6 +61,19 @@ final class FiscalCertificationServiceTest extends FeatureTestCase
         return AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
     }
 
+    /** Fase 6b — un país sin paquete fiscal (`pac_provider = none`) emite documentos internos: nada viaja a ningún PAC. */
+    public function test_proveedor_none_no_llama_a_ningun_pac_y_marca_no_aplica(): void
+    {
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'none', 'pac_ambiente' => 'testing'])->save();
+        Http::fake();
+        $factura = $this->facturaSimple();
+
+        $this->service()->certificarFactura($factura);
+
+        Http::assertNothingSent();
+        $this->assertSame('no_aplica', $factura->fresh()->fe_estado);
+    }
+
     public function test_ambiente_apagado_no_llama_a_msl_y_marca_no_aplica(): void
     {
         $this->habilitarMsl('testing');
@@ -292,10 +305,10 @@ final class FiscalCertificationServiceTest extends FeatureTestCase
         $this->assertNotSame('rechazado', $factura->fe_estado);
     }
 
-    /** pac_provider por default es 'digifact' (nunca wireado) — PacProviderFactory lanza, se atrapa acá. */
+    /** Un pac_provider que no existe en el registro — PacProviderFactory lanza, se atrapa acá. */
     public function test_provider_no_wireado_nunca_rompe_persiste_error_configuracion(): void
     {
-        // Default de la migración, sin llamar habilitarMsl().
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'proveedor-inexistente'])->save();
         Http::fake();
         $factura = $this->facturaSimple();
 

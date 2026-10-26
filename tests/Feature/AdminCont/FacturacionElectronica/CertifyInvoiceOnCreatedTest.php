@@ -54,8 +54,9 @@ final class CertifyInvoiceOnCreatedTest extends FeatureTestCase
     /** El bug/config rota de facturación electrónica nunca revierte ni bloquea la creación de la factura. */
     public function test_un_fallo_de_certificacion_nunca_bloquea_la_creacion_de_la_factura(): void
     {
-        // pac_provider por default es 'digifact' (no wireado) — certificación falla internamente,
+        // Un pac_provider que no existe en el registro — la certificación falla internamente,
         // la factura debe seguir creándose con 201 igual.
+        AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'proveedor-inexistente'])->save();
         Http::fake();
 
         ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);

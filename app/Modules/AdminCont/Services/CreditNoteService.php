@@ -1324,7 +1324,7 @@ final class CreditNoteService
         //  · la FE está activa para facturas pero DESHABILITADA para notas de crédito: la NC de anulación quedaría
         //    `no_aplica`, la original seguiría vigente ante la DGI y el reemplazo sí se certificaría (doble factura).
         $settings = AdminContFiscalSettings::current();
-        if ($settings->pac_ambiente !== 'apagado') {
+        if (! $settings->sinFacturacionElectronica()) {
             if ($facturaOrigen->fe_estado === 'pendiente') {
                 throw new CreditNoteStateException("La factura {$facturaOrigen->numero} todavía está pendiente de certificación ante la DGI — espera a que se resuelva antes de corregirla.");
             }

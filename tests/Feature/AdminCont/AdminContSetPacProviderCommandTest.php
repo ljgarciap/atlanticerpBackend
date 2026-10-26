@@ -19,7 +19,7 @@ final class AdminContSetPacProviderCommandTest extends FeatureTestCase
 
     public function test_activa_msl_para_el_tenant(): void
     {
-        $this->assertSame('digifact', AdminContFiscalSettings::current()->pac_provider);
+        $this->assertSame('none', AdminContFiscalSettings::current()->pac_provider);
 
         $this->artisan('admin-contab:set-pac-provider', ['provider' => 'msl', '--tenant' => 'atlantic'])
             ->assertExitCode(0);

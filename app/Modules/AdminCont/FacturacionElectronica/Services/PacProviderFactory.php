@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\FacturacionElectronica\Services;
 
+use App\Modules\AdminCont\FacturacionElectronica\Adapters\DigifactPacAdapter;
 use App\Modules\AdminCont\FacturacionElectronica\Adapters\Msl\MslPacAdapter;
 use App\Modules\AdminCont\FacturacionElectronica\Contracts\PacProviderContract;
 use App\Modules\AdminCont\FacturacionElectronica\Exceptions\PacAmbienteNoPermitidoException;
+use App\Modules\AdminCont\FacturacionElectronica\Exceptions\SinFacturacionElectronicaException;
+use App\Modules\AdminCont\FacturacionElectronica\Mappers\NucJsonMapper;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 
 /**
@@ -16,9 +19,11 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
  * que `FiscalDocumentItemsBuilder`: el resto de la capa `FacturacionElectronica` (DTOs, mappers,
  * adapters) no conoce `AdminContFiscalSettings` a propósito — este factory es la única costura.
  *
- * `DigifactPacAdapter` queda sin usar a propósito (SCRUM-941: "cliente eligió MSL") — solo
- * `pac_provider = 'msl'` está wireado; cualquier otro valor es un error de configuración explícito,
- * no un fallback silencioso a un provider no probado en este flujo.
+ * Fase 6b — los proveedores válidos por país viven en `FiscalProviderRegistry` (`config/fiscal.php`). `msl` y `digifact` (Panamá) están
+ * wireados; `none` (país sin paquete fiscal) NO construye adaptador: lanza `SinFacturacionElectronicaException` (quien llama debe
+ * comprobar `AdminContFiscalSettings::sinFacturacionElectronica()` antes). Cualquier otro valor sigue siendo un error de configuración
+ * explícito, no un fallback silencioso a un provider no probado. OJO: el adaptador `digifact` se probó solo contra la documentación
+ * pública y el sandbox (ver `DigifactPacAdapter`: `normalizeEstado()` es lo menos confirmado); validarlo con credenciales reales antes de producción.
  */
 final class PacProviderFactory
 {
@@ -28,8 +33,10 @@ final class PacProviderFactory
 
         return match ($settings->pac_provider) {
             'msl' => $this->makeMsl($settings->pac_ambiente),
+            'digifact' => $this->makeDigifact($settings->pac_ambiente),
+            FiscalProviderRegistry::NINGUNO => throw new SinFacturacionElectronicaException(),
             default => throw new \RuntimeException(
-                "pac_provider '{$settings->pac_provider}' no está wireado — solo 'msl' está implementado (SCRUM-941)."
+                "pac_provider '{$settings->pac_provider}' no está wireado — implementados: msl, digifact (y 'none' = sin facturación electrónica)."
             ),
         };
     }
@@ -46,13 +53,40 @@ final class PacProviderFactory
     public function tieneCredencialesReales(): bool
     {
         $settings = AdminContFiscalSettings::current();
-        if ($settings->pac_provider !== 'msl' || $settings->pac_ambiente === 'apagado') {
+        if ($settings->sinFacturacionElectronica()) {
+            return false;
+        }
+
+        if ($settings->pac_provider === 'digifact') {
+            foreach (['ruc', 'username', 'password'] as $campo) {
+                if (trim((string) config("services.digifact.{$campo}")) === '') {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if ($settings->pac_provider !== 'msl') {
             return false;
         }
 
         $credenciales = config('services.msl_fe.'.($settings->pac_ambiente === 'production' ? 'production' : 'sandbox'));
 
         return trim((string) ($credenciales['api_key'] ?? '')) !== '';
+    }
+
+    private function makeDigifact(string $pacAmbiente): DigifactPacAdapter
+    {
+        if ($pacAmbiente === 'production') {
+            $this->guardAmbienteProduccion();
+        }
+
+        return new DigifactPacAdapter(
+            new NucJsonMapper(config('services.digifact.branch_code') !== null ? (string) config('services.digifact.branch_code') : null),
+            new DigifactTokenService(),
+            $pacAmbiente === 'production' ? 'produccion' : 'pruebas',
+        );
     }
 
     private function makeMsl(string $pacAmbiente): MslPacAdapter

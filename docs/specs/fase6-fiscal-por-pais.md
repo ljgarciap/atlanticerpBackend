@@ -1,6 +1,6 @@
 # Spec — Fase 6: fiscal por país (Panamá como el primer paquete)
 
-**Estado**: 6a IMPLEMENTADA (§7), pendiente de merge. 6b, 6c y 6d pendientes (cada una con su «adelante»).
+**Estado**: 6a MEZCLADA (§7). 6b IMPLEMENTADA (§8), pendiente de merge. 6c y 6d pendientes (cada una con su «adelante»).
 **Origen**: decisión 2 del análisis de aislamiento (multi-país: «el fiscal de Panamá pasa a ser un paquete más sobre `PacProviderContract`») y paso 6 del plan de 8 fases.
 
 ## 1. Hechos verificados (2026-10-26)
@@ -71,3 +71,16 @@ etiquetas visibles (rápido, sin tocar esquema); (ii) **renombrar esquema y cód
 - **Cuidado**: las columnas de fecha del sistema guardan **hora local** (`timestamp without time zone`): cambiar la zona de un tenant CON datos reinterpreta lo ya guardado. Fijarla al crear el tenant (`tenant:create --country`); `tenant:set-region` avisa cuando cambia la zona.
 - **No cambia**: `formatMoney` sigue sin símbolo (estándar `en-US` pedido por el cliente); ITBMS, RUC, PAC y la facturación siguen igual (6b/6c).
 - Informe del Senior Review: `docs/reviews/fase6a-contexto-regional-2026-10-26.md`.
+
+## 8. Resultado de la 6b — registro de proveedores fiscales por país (2026-10-26)
+- **Registro** (`config/fiscal.php` + `FiscalProviderRegistry`): proveedores con su etiqueta y los países en que sirven — `msl` y `digifact` (Panamá) y `none` (todos). `default_by_country`: PA → `msl`; cualquier otro país → `none`. Agregar el paquete de un país = su adaptador
+  + una fila + su construcción en `PacProviderFactory`.
+- **`digifact` cableado** en `PacProviderFactory` (ambiente de pruebas / producción con el mismo guard de `APP_ENV` que `msl`; `tieneCredencialesReales` exige RUC, usuario y clave). **Aviso**: el adaptador se escribió contra la documentación pública y se probó con respuestas simuladas;
+  `normalizeEstado()` es lo menos confirmado. Validarlo con credenciales reales del PAC antes de producción. `msl` sigue siendo el único usado en producción.
+- **«Sin facturación electrónica»**: `pac_provider = none` (o el ambiente `apagado` de siempre) → `AdminContFiscalSettings::sinFacturacionElectronica()`. La empresa genera documentos internos y nada viaja a un PAC: no certifica (`no_aplica`), no valida el RUC contra la DGI, la vista previa dice «sin envío» y
+  los reemplazos de notas de crédito no esperan al PAC. La fábrica lanza `SinFacturacionElectronicaException` si algún camino la pide para `none`. Se reemplazaron las 7 comprobaciones sueltas de `pac_ambiente = 'apagado'` por ese helper.
+- **Coherencia con el país**: `tenant:create` y `tenant:set-region` dejan el proveedor coherente (`AlignFiscalProviderWithCountry`): si el guardado no sirve en el país nuevo (p. ej. `digifact` en Colombia) pasa a `none`; no pisa uno que sí sirve. `admin-contab:set-pac-provider` valida contra el registro y el país del tenant (acepta `none`).
+- **API/UI**: la configuración fiscal devuelve `facturacion_electronica_activa`, `pac_provider_label`, `pais` y `pac_providers_disponibles`; la pantalla muestra el nombre del proveedor y, sin proveedor, explica que los documentos son internos y oculta ambiente, conexión y tipos de documento. El proveedor sigue sin editarse desde la UI (decisión de Cybersecurity de SCRUM-943).
+- **Tests**: 12 nuevos (registro, fábrica con `digifact`/`none`, certificación sin proveedor, comandos, API) + 2 de frontend. **Decisión de Luis: el default de `fiscal_settings.pac_provider` pasa a `none`** (migración `2026_10_26_400000`: cambia el default de la columna y pasa a `none` las filas que seguían en `digifact`, que nunca estuvo operativo; los tenants con `msl` no se tocan): un tenant nuevo no transmite nada hasta elegir proveedor. Por eso la base de pruebas arranca en `none`
+  y los tests de FE eligen su proveedor explícitamente (los 5 que usaban un proveedor «no wireado» usan ahora `proveedor-inexistente`).
+- Informe del Senior Review: `docs/reviews/fase6b-registro-fiscal-2026-10-26.md`.
