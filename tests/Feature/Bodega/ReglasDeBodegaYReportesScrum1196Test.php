@@ -108,17 +108,6 @@ class ReglasDeBodegaYReportesScrum1196Test extends FeatureTestCase
         $this->assertTrue(Warehouse::find($central)->permite_venta);
     }
 
-    public function test_una_bodega_de_solo_consulta_no_admite_reglas(): void
-    {
-        $headers = $this->superadmin();
-        $zl = Warehouse::where('solo_consulta', true)->first();
-        if ($zl === null) {
-            $this->markTestSkipped('no hay bodega de solo consulta sembrada');
-        }
-
-        $this->withHeaders($headers)->putJson("/api/bodega/settings/warehouses/{$zl->id}", ['permite_venta' => true])->assertStatus(422);
-    }
-
     // ── «Ver bodegas» y stock de showroom ───────────────────────────────────────────────────────────────────────────
 
     public function test_ver_bodegas_muestra_tambien_las_negativas_y_su_suma_coincide_con_el_stock_total(): void

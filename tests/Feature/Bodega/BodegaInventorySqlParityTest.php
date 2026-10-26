@@ -314,7 +314,7 @@ class BodegaInventorySqlParityTest extends FeatureTestCase
         $kpis = $this->bodega->kpis();
         // SCRUM-991 — `with_stock` es un KPI nuevo, sin equivalente en el cálculo PHP original que sirve de oráculo:
         // se verifica aparte, contra su propia definición (productos ACTIVOS distintos con unidades en bodega operativa).
-        $conStockEsperado = ProductWarehouseStock::query()->enBodegaOperativa()->where('quantity', '>', 0)
+        $conStockEsperado = ProductWarehouseStock::query()->where('quantity', '>', 0)
             ->whereHas('catalogProduct', fn ($q) => $q->where('is_active', true))
             ->pluck('catalog_product_id')->unique()->count();
         $this->assertSame($conStockEsperado, $kpis['with_stock']);

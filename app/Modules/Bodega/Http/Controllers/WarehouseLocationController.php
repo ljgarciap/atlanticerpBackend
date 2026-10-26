@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 /**
  * SCRUM-454 (REQ-384) — CRUD del catálogo de ubicaciones físicas de una bodega, base del chip
@@ -42,7 +41,6 @@ final class WarehouseLocationController extends Controller
         if ($warehouse === null) {
             return response()->json(['message' => 'Not found'], 404);
         }
-        $this->rechazarSiSoloConsulta($warehouse);
 
         $validated = $request->validate([
             'codigo' => [
@@ -69,7 +67,6 @@ final class WarehouseLocationController extends Controller
         if ($location === null) {
             return response()->json(['message' => 'Not found'], 404);
         }
-        $this->rechazarSiSoloConsulta(Warehouse::find($warehouseId));
 
         $validated = $request->validate([
             'codigo'    => [
@@ -84,18 +81,5 @@ final class WarehouseLocationController extends Controller
         return response()->json([
             'id' => $location->id, 'codigo' => $location->codigo, 'is_active' => $location->is_active,
         ]);
-    }
-
-    /**
-     * SCRUM-990 (M2) — una bodega de solo consulta (Zona Libre) no admite escrituras de ubicaciones. No hay borrado (se desactiva con PATCH)
-     * ni otra ruta que escriba ubicaciones o responsables por bodega en este controlador.
-     *
-     * @throws ValidationException
-     */
-    private function rechazarSiSoloConsulta(?Warehouse $warehouse): void
-    {
-        if ($warehouse !== null && $warehouse->solo_consulta) {
-            throw ValidationException::withMessages(['warehouse_id' => trans('bodega.warehouse_solo_consulta_ubicaciones')]);
-        }
     }
 }

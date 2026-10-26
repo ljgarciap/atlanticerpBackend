@@ -115,7 +115,7 @@ final class FiscalDocumentItemsBuilder
     /** @return list<array{codigo: string, descripcion: string, cantidad: float, subtotal: float, tasaCode: string, bp: int}> */
     private function crudasDeCotizacion(AdminContInvoice $invoice): array
     {
-        $quote = $invoice->quote_id !== null ? Quote::withIcgLegacy()->with('parts.items')->find($invoice->quote_id) : null;
+        $quote = $invoice->quote_id !== null ? Quote::query()->with('parts.items')->find($invoice->quote_id) : null;
         $quote ??= BodegaOrder::find($invoice->order_id)?->linkedQuote()?->loadMissing('parts.items');
         if ($quote === null) {
             throw new \RuntimeException("La factura {$invoice->numero} no tiene una cotización vinculada — no se pueden armar sus ítems fiscales.");

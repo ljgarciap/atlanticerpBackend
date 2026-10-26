@@ -558,12 +558,12 @@ final class GerenciaHomeService
                 ->whereNotNull('committed_delivery_date')
                 ->whereDate('committed_delivery_date', '<', $hoyDate)
                 ->count(),
-            'despachado_a_tiempo' => BodegaOrder::sinGemelosDeIcg()->where('stage', BodegaOrder::STAGE_ENTREGADO)
+            'despachado_a_tiempo' => BodegaOrder::query()->where('stage', BodegaOrder::STAGE_ENTREGADO)
                 ->whereBetween('updated_at', [$inicioMes, $finMes])
                 ->whereNotNull('committed_delivery_date')
                 ->whereRaw('DATE(updated_at) <= committed_delivery_date')
                 ->count(),
-            'completados_hoy' => BodegaOrder::sinGemelosDeIcg()->where('stage', BodegaOrder::STAGE_ENTREGADO)
+            'completados_hoy' => BodegaOrder::query()->where('stage', BodegaOrder::STAGE_ENTREGADO)
                 ->whereDate('updated_at', $hoyDate)
                 ->count(),
         ];

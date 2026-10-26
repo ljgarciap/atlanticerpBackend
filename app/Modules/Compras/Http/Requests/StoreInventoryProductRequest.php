@@ -84,7 +84,7 @@ class StoreInventoryProductRequest extends FormRequest
             'category' => ['required', 'string', Rule::in(CatalogProduct::CATEGORIES)],
             'rotation' => ['required', 'string', Rule::in(CatalogProduct::ROTATIONS)],
             'initial_stock' => ['nullable', 'array'],
-            'initial_stock.*.warehouse_id' => ['required', 'integer', 'min:1', Warehouse::operativaRule()],
+            'initial_stock.*.warehouse_id' => ['required', 'integer', 'min:1', Warehouse::existsRule()],
             'initial_stock.*.quantity' => ['required', 'integer', 'min:0'],
             // SCRUM-426 — mismas reglas que StoreInventoryProductTechnicalSheetRequest (Caso A/B:
             // archivo O link, nunca ambos ni ninguno).

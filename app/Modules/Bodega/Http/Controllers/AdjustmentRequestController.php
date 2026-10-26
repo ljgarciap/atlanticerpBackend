@@ -169,7 +169,7 @@ final class AdjustmentRequestController extends Controller
             // Hallazgo de Pre-QA 2026-07-21: el backend lo aceptaba vía API directa (la UI ya
             // lo impedía sacando la bodega del selector, pero el server-side no lo exigía).
             'lines' => ['required', 'array', 'min:1'],
-            'lines.*.warehouse_id' => ['required', 'integer', Warehouse::operativaRule(), 'distinct'],
+            'lines.*.warehouse_id' => ['required', 'integer', Warehouse::existsRule(), 'distinct'],
             'lines.*.tipo' => ['required', 'string', 'in:Sumar,Restar'],
             'lines.*.cantidad' => ['required', 'integer', 'min:1'],
             // SCRUM-428 (rebote de Gerencia Test 2026-08-13) — Motivo pasa de texto libre a un

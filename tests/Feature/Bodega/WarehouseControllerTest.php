@@ -49,11 +49,10 @@ class WarehouseControllerTest extends FeatureTestCase
     }
 
     /**
-     * 8 bodegas desde Grupo D parte 2 (REQ-291, SCRUM-361, migración
-     * `2026_08_13_100000_add_reserva_servicios_warehouse_to_bodega_warehouses_table.php`) — las 7
-     * físicas originales (SCRUM-451) más "Reserva Servicios".
+     * 7 bodegas físicas: las 6 originales de SCRUM-451 (sin la de consulta externa «Zona Libre», retirada en la Fase 5b-2) más
+     * "Reserva Servicios" (Grupo D parte 2, REQ-291, SCRUM-361).
      */
-    public function test_index_lista_las_8_bodegas_fisicas(): void
+    public function test_index_lista_las_7_bodegas_fisicas(): void
     {
         $this->grantBodega('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -61,8 +60,9 @@ class WarehouseControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/warehouses');
 
         $response->assertStatus(200);
-        $response->assertJsonCount(8, 'data');
+        $response->assertJsonCount(7, 'data');
         $response->assertJsonPath('data.0.name', 'Bodega Central');
+        $this->assertNotContains('Bodega Zona Libre', collect($response->json('data'))->pluck('name')->all());
         $this->assertContains('Reserva Servicios', collect($response->json('data'))->pluck('name')->all());
     }
 
@@ -130,8 +130,7 @@ class WarehouseControllerTest extends FeatureTestCase
 
     public function test_modo_pendiente_no_expone_ubicacion_inventada(): void
     {
-        // SCRUM-990: "Bodega Zona Libre" (modo pendiente) ahora es de SOLO CONSULTA y no admite filas de stock, así que este
-        // caso (una bodega OPERATIVA sin ubicación física confirmada) se prueba con una bodega pendiente propia.
+        // Una bodega sin ubicación física confirmada (modo pendiente) se prueba con una bodega propia.
         $pendiente = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         $product = $this->makeProduct();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $pendiente->id, 'ubicacion' => null, 'quantity' => 5]);
@@ -167,7 +166,7 @@ class WarehouseControllerTest extends FeatureTestCase
 
     public function test_capacidad_pct_nula_se_expone_como_null_no_como_cero(): void
     {
-        $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
+        $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
 
         $this->grantBodega('designer@atlantic.test');
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -267,7 +266,7 @@ class WarehouseControllerTest extends FeatureTestCase
     /** REQ-384 — el chip solo aplica a bodegas con ubicación física individual. */
     public function test_chip_espacio_libre_vacio_en_modo_pendiente(): void
     {
-        $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
+        $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         WarehouseLocation::create(['warehouse_id' => $zonaLibre->id, 'codigo' => 'X-1', 'is_active' => true]);
 
         $this->grantBodega('designer@atlantic.test');

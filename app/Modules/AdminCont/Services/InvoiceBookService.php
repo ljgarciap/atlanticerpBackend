@@ -84,7 +84,7 @@ final class InvoiceBookService
         // SCRUM-1175 — vendedores responsables de todas las tarjetas, en una sola consulta.
         $vendedoresUsers = InvoiceSellers::usersFor($orders->map(fn (Order $o) => $o->pipelineCard));
         // Solo las facturas SIN líneas (legadas) necesitan la cotización para su base/ITBMS.
-        $quotes = Quote::withIcgLegacy()->whereIn('id', $invoices->filter(fn (AdminContInvoice $i): bool => $i->lines->isEmpty())->pluck('quote_id')->filter()->unique())
+        $quotes = Quote::query()->whereIn('id', $invoices->filter(fn (AdminContInvoice $i): bool => $i->lines->isEmpty())->pluck('quote_id')->filter()->unique())
             ->with('parts.items')
             ->get()->keyBy('id');
 

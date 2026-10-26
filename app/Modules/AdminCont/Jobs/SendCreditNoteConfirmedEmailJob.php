@@ -59,7 +59,7 @@ final class SendCreditNoteConfirmedEmailJob implements ShouldQueue
 
         $facturaOrigen = $note->facturaOrigen;
         $quote = $facturaOrigen?->quote_id !== null
-            ? Quote::withIcgLegacy()->with(['contacts', 'owner'])->find($facturaOrigen->quote_id)
+            ? Quote::query()->with(['contacts', 'owner'])->find($facturaOrigen->quote_id)
             : null;
 
         if ($facturaOrigen === null || $quote === null || $facturaOrigen->master_client_id === null) {

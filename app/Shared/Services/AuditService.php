@@ -69,9 +69,6 @@ final class AuditService
     public const SECURITY_LEVEL_DELETED     = 'security.level.deleted';
 
     // ── Settings ─────────────────────────────────────────────────────────────
-    // Resumen histórico de la carga de pedidos gemelos de ICG (módulo eliminado en la 5b-1). Lo sigue leyendo el reporte de validación de gemelos
-    // de Admin&Cont hasta que la 5b-2 retire los campos «gemelo ICG».
-    public const LEGACY_CARGAR_PEDIDOS_GEMELOS = 'legacy.cargar_pedidos_gemelos';
     public const SETTINGS_UPDATED = 'settings.updated';
 
     // ── Security — Epic 11, Seguridad Agéntica ──────────────────────────────

@@ -1351,7 +1351,7 @@ final class CreditNoteService
         // SCRUM-929 (B3a) — una factura con líneas se corrige desde SUS líneas (la cotización solo se usa
         // para mostrar); se prefiere la cotización con la que se emitió (`quote_id`) a la vigente hoy.
         $quote = $facturaOrigen->lines->isNotEmpty() && $facturaOrigen->quote_id !== null
-            ? (Quote::withIcgLegacy()->with('parts.items')->find($facturaOrigen->quote_id) ?? $order->linkedQuote())
+            ? (Quote::query()->with('parts.items')->find($facturaOrigen->quote_id) ?? $order->linkedQuote())
             : $order->linkedQuote();
         if ($quote === null) {
             throw new \RuntimeException("La factura {$facturaOrigen->numero} no tiene una cotización vinculada — no se puede armar la factura de corrección.");

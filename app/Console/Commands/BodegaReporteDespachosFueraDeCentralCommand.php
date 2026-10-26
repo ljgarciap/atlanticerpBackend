@@ -65,10 +65,10 @@ final class BodegaReporteDespachosFueraDeCentralCommand extends Command
 
         // B — productos con alguna bodega en negativo
         $b = [];
-        $negatives = ProductWarehouseStock::query()->enBodegaOperativa()->where('quantity', '<', 0)->with('catalogProduct')->orderBy('catalog_product_id')->get();
+        $negatives = ProductWarehouseStock::query()->where('quantity', '<', 0)->with('catalogProduct')->orderBy('catalog_product_id')->get();
         foreach ($negatives->groupBy('catalog_product_id') as $productId => $rows) {
             $product = $rows->first()?->catalogProduct;
-            $all = ProductWarehouseStock::query()->enBodegaOperativa()->where('catalog_product_id', $productId)->get();
+            $all = ProductWarehouseStock::query()->where('catalog_product_id', $productId)->get();
             $detalle = $all->map(fn (ProductWarehouseStock $r): string => ($names[$r->warehouse_id] ?? $r->warehouse_id).': '.$r->quantity)->implode(' | ');
             $b[] = [$product->reference ?? ('#'.$productId), (int) ($product->stock_quantity ?? 0), (int) $all->sum('quantity'), $detalle];
         }

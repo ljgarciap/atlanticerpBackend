@@ -31,7 +31,7 @@ final class AssociateLinkController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $quote = Quote::find($quoteId); // el filtro global esconde las gemelas de ICG: 404
+        $quote = Quote::find($quoteId);
         if ($quote === null) {
             return response()->json(['message' => 'Not found'], 404);
         }

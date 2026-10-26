@@ -30,7 +30,7 @@ final class WarehouseSaleRulesController extends Controller
     /** GET /api/bodega/settings/warehouses */
     public function index(): JsonResponse
     {
-        return response()->json(['data' => Warehouse::operativas()->orderBy('id')->get()->map(fn (Warehouse $w): array => $this->format($w))->values()->all()]);
+        return response()->json(['data' => Warehouse::query()->orderBy('id')->get()->map(fn (Warehouse $w): array => $this->format($w))->values()->all()]);
     }
 
     /** PUT /api/bodega/settings/warehouses/{id} */
@@ -69,9 +69,6 @@ final class WarehouseSaleRulesController extends Controller
             $warehouse = Warehouse::query()->lockForUpdate()->find($id);
             if ($warehouse === null) {
                 return response()->json(['message' => 'Bodega no encontrada.'], 404);
-            }
-            if ($warehouse->solo_consulta) {
-                return $this->invalid('Una bodega de solo consulta no admite estas reglas.');
             }
 
             $permiteVenta = array_key_exists('permite_venta', $validated) ? (bool) $validated['permite_venta'] : $warehouse->permite_venta;

@@ -70,34 +70,6 @@ class ReceptorFiscalGuard
     }
 
     /**
-     * Pedido gemelo de ICG: la guarda es más dura que la de un pedido normal (fe-panama C3). Sin cliente fiscal, sin RUC/cédula o
-     * como Consumidor Final se bloquea siempre (también con el PAC apagado: un gemelo nunca sale a Consumidor Final por omisión).
-     * El DV no se exige aparte: lo decide la validación contra la DGI de siempre. Si la DGI informa un DV y el cliente no lo tiene,
-     * bloquea; si la DGI no informa DV (persona natural con cédula), deja facturar.
-     *
-     * @return array<string, mixed>
-     */
-    public function evaluarGemelo(?SubClient $subClient): array
-    {
-        if ($subClient === null) {
-            return $this->resultado(self::SIN_RUC, true, 'El pedido de ICG no tiene cliente fiscal asociado. Vincúlelo para poder facturar.', null);
-        }
-
-        $tipo = (string) ($subClient->receptor_tipo ?? ReceptorTipo::CONTRIBUYENTE);
-        $taxId = trim((string) $subClient->tax_id);
-        $nombre = (string) $subClient->business_name;
-
-        if ($tipo === ReceptorTipo::CONSUMIDOR_FINAL) {
-            return $this->resultado(self::SIN_RUC, true, 'Un pedido de ICG no se factura a Consumidor Final: el cliente debe ser contribuyente con RUC.', $subClient, $taxId, null, $nombre);
-        }
-        if ($taxId === '') {
-            return $this->resultado(self::SIN_RUC, true, 'El cliente no tiene RUC o cédula. Ingréselo para poder facturar el pedido de ICG.', $subClient, $taxId, null, $nombre);
-        }
-
-        return $this->evaluar($subClient);
-    }
-
-    /**
      * Evalúa datos candidatos de un SubCliente (el modal de corrección) sin guardarlos.
      *
      * @return array<string, mixed>

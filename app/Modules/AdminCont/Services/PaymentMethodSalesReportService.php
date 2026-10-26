@@ -76,7 +76,7 @@ final class PaymentMethodSalesReportService
         // `itbms()`, nunca una división paralela (monto/(1+tasa)) que puede desviarse por redondeo
         // acumulado y, más importante acá, mostrar una base/ITBMS distinta a la que ya ve la misma
         // factura en Libro de Facturas.
-        $quotes = Quote::withIcgLegacy()->whereIn('id', $cobradas->filter(fn (AdminContInvoice $i): bool => $i->lines->isEmpty())->pluck('quote_id')->filter()->unique())
+        $quotes = Quote::query()->whereIn('id', $cobradas->filter(fn (AdminContInvoice $i): bool => $i->lines->isEmpty())->pluck('quote_id')->filter()->unique())
             ->with('parts.items')->get()->keyBy('id');
 
         $filas = $cobradas->sortBy('created_at')->map(function (AdminContInvoice $invoice) use ($metodoPorFactura, $quotes): array {

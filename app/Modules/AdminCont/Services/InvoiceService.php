@@ -998,11 +998,8 @@ final class InvoiceService
     private function evaluarReceptor(Order $order, array &$cache): array
     {
         $subClient = $this->receptorDe($order);
-        $gemelo    = $order->familyRoot()->isIcgLegacy();
-        // Clave negativa para gemelos: la misma persona se evalúa con otra guarda (ver `evaluarGemelo()`).
-        $clave = $gemelo ? -1 - (int) $subClient?->id : (int) $subClient?->id;
 
-        return $cache[$clave] ??= $gemelo ? $this->receptorGuard->evaluarGemelo($subClient) : $this->receptorGuard->evaluar($subClient);
+        return $cache[(int) $subClient?->id] ??= $this->receptorGuard->evaluar($subClient);
     }
 
     /**
@@ -1032,7 +1029,7 @@ final class InvoiceService
 
             $evaluacion = $this->evaluarReceptor($order, $cache);
 
-            if (in_array($orderId, $consumidorFinalIds, true) && ! $order->familyRoot()->isIcgLegacy()) {
+            if (in_array($orderId, $consumidorFinalIds, true)) {
                 $receptores[$orderId] = ReceptorFiscalSnapshot::consumidorFinal();
                 $auditoria[$orderId]  = [
                     'cliente'           => $this->receptorDe($order)?->business_name,
@@ -1826,7 +1823,7 @@ final class InvoiceService
 
     /**
      * RN2 de REQ-441 — cotización, monto>0 y cliente completos. También defiende server-side que
-     * la entrega haya llegado a una etapa facturable de Bodega (`InvoiceBillingPlanner::etapaFacturable()`; un gemelo de ICG siempre lo es) — la UI nunca
+     * la entrega haya llegado a una etapa facturable de Bodega (`InvoiceBillingPlanner::etapaFacturable()`) — la UI nunca
      * ofrece "Generar factura" antes de eso, pero un `order_id` de un pedido todavía en picking no
      * debe poder facturarse vía API directa (hallazgo de Pre-QA, corregido en el mismo batch).
      *
@@ -1848,17 +1845,6 @@ final class InvoiceService
         }
         if ($quote === null || $quote->folio === null) {
             $missing[] = 'N° de Cotización';
-        }
-        if ($ctx->root->isIcgLegacy()) {
-            // Gemelo de ICG: sin tarjeta; el monto sale de su cotización gemela y el cliente es su SubCliente fiscal.
-            if ($ctx->total <= 0) {
-                $missing[] = 'Monto';
-            }
-            if ($ctx->root->sub_client_id === null) {
-                $missing[] = 'Cliente';
-            }
-
-            return $missing;
         }
         if (($card->amount ?? 0) <= 0) {
             $missing[] = 'Monto';

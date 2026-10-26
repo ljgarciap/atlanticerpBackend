@@ -164,7 +164,6 @@ final class ArchitectCommissionService
                 DB::raw("(
                     select q.architect_id from {$quoteTable} q
                     where q.sales_project_id = pc.sales_project_id and q.architect_id is not null
-                      and q.origin = 'comercial'
                     order by q.created_at desc limit 1
                 ) as architect_id"),
                 // Último cobro CONFIRMADO de CUALQUIER factura activa de la familia (antes: solo de

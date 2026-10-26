@@ -687,7 +687,7 @@ final class BodegaHomeService
      */
     private function scopedOrdersQuery(?array $targetIds): Builder
     {
-        $query = Order::query()->whereIn('stage', Order::STAGE_ORDER)->sinGemelosEntregados();
+        $query = Order::query()->whereIn('stage', Order::STAGE_ORDER);
 
         if ($targetIds !== null) {
             $query->where(function (Builder $q) use ($targetIds): void {

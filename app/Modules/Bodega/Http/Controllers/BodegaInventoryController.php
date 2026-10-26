@@ -471,7 +471,6 @@ final class BodegaInventoryController extends Controller
     private function warehouseRows(int $productId): array
     {
         $rows = ProductWarehouseStock::with('warehouse')
-            ->enBodegaOperativa()
             ->where('catalog_product_id', $productId)
             ->where('quantity', '<>', 0) // SCRUM-1196: también los saldos negativos
             ->get();
@@ -493,7 +492,7 @@ final class BodegaInventoryController extends Controller
             return [];
         }
 
-        return ProductWarehouseStock::enBodegaOperativa()
+        return ProductWarehouseStock::query()
             ->whereIn('catalog_product_id', $productIds)
             ->where('quantity', '<>', 0) // SCRUM-1196: cuenta también las bodegas en negativo
             ->get()
