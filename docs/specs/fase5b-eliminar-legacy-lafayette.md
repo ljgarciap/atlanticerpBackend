@@ -1,6 +1,6 @@
 # Spec — Fase 5b: eliminar Legacy (ICG) e Integrations/Lafayette del repo
 
-**Estado**: BORRADOR — decisión de destino ya tomada por Luis (2026-10-26: «eliminar del repo»); faltan las decisiones de §4 y la confirmación explícita del `DROP` (§3).
+**Estado**: decisiones de Luis registradas (§6, incluido el `DROP`); pendiente su «adelante» para implementar.
 **Origen**: Fase 5a (mezclada) dejó ambos módulos apagados por defecto. Esta fase borra el código dormido.
 
 ## 1. Hechos verificados (2026-10-26)
@@ -37,3 +37,11 @@ Solo la 5b-2 borra datos (`DROP TABLE`). Antes de escribirla se necesita el «s�
 2. Suite backend y frontend verdes, PHPStan nivel 8 limpio; `artisan list` sin `legacy:`/`lafayette:`.
 3. Un tenant nuevo (`tenant:create`) migra y siembra sin errores.
 4. La pantalla de Bodegas con la bodega de Zona Libre sigue abriendo (según §4-2).
+
+## 6. Decisiones de Luis (2026-10-26)
+1. **Columnas del núcleo: se RETIRAN en la 5b-2** (`catalog_products.external_*`/`search_text` de origen externo, campos «gemelo ICG» de `bodega_orders`, `warehouses.solo_consulta` y su trigger/función). La migración nueva las quita con
+   verificación previa (aborta si alguna tiene datos en un entorno distinto de local/dev/testing).
+2. **Bodega «Zona Libre» de consulta externa: se ELIMINA** (tiene nombre propio y nace de la consulta externa; afecta el diseño). Se borra su fila de `warehouses` en la 5b-2 (aborta si algo la referencia) y desaparece del
+   frontend (`BodegasPage`, `warehouses.ts`, badge y aviso). El flujo de **solicitudes** de Zona Libre (Compras/Bodega, proveedor fijo) NO se toca: es del núcleo (decisión de la 5a).
+3. **Esquema de tenants nuevos**: se acepta crear y luego borrar las tablas (sin aplanar migraciones).
+4. **`DROP` autorizado** (5b-2) y entrega en **2 PR por repo**: 5b-1 (código) primero, luego 5b-2 (migración destructiva).
