@@ -24,3 +24,8 @@ app()->instance(
     config('multitenancy.current_tenant_container_key') ?? 'currentTenant',
     $tenant
 );
+
+// Fase 5a — Legacy y Lafayette se registran solo con sus banderas (config/modules.php, apagadas por defecto). El análisis estático los
+// necesita registrados para resolver la firma de sus comandos (`option()`/`argument()`), así que se registran aquí explícitamente.
+app()->register(App\Modules\Legacy\LegacyServiceProvider::class);
+app()->register(App\Modules\Integrations\Lafayette\LafayetteServiceProvider::class);

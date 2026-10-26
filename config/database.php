@@ -151,7 +151,7 @@ return [
             'driver' => 'sqlsrv',
             'host' => env('LEGACY_ICG_DB_HOST'),
             'port' => env('LEGACY_ICG_DB_PORT', '1433'),
-            'database' => env('LEGACY_ICG_DB_DATABASE', 'ILLUMINATION'),
+            'database' => env('LEGACY_ICG_DB_DATABASE'),
             'username' => env('LEGACY_ICG_DB_USERNAME'),
             'password' => env('LEGACY_ICG_DB_PASSWORD'),
             'charset' => env('DB_CHARSET', 'utf8'),
@@ -189,9 +189,9 @@ return [
         // re-extraerla con el mismo comando (documentado en SCRUM-969/970) y reemplazar el archivo.
         'lafayette_lighting' => [
             'driver' => 'mysql',
-            'host' => env('LAFAYETTE_DB_HOST', 'app.grupolafayette.com'),
+            'host' => env('LAFAYETTE_DB_HOST'),
             'port' => env('LAFAYETTE_DB_PORT', '3306'),
-            'database' => env('LAFAYETTE_DB_DATABASE', 'app_lafayette'),
+            'database' => env('LAFAYETTE_DB_DATABASE'),
             'username' => env('LAFAYETTE_DB_USERNAME'),
             'password' => env('LAFAYETTE_DB_PASSWORD'),
             'charset' => 'utf8mb4',

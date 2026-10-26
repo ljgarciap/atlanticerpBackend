@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\DB;
  *    silenciosamente (tolerante a huérfanos, ver docblock de la migración de `contactos_cliente`).
  *
  * Requiere tenant activo (`Tenant::current()`, ver `getTable()` de cada modelo) — el llamador
- * (`App\Console\Commands\LegacySyncClientesCommand`) es responsable de `makeCurrent()` antes de
+ * (`App\Modules\Legacy\Console\Commands\LegacySyncClientesCommand`) es responsable de `makeCurrent()` antes de
  * invocar `load()`.
  */
 final class ClienteStagingLoader

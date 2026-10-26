@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Legacy;
 
-use App\Console\Commands\LegacyBackfillStockBodegaCentralCommand;
+use App\Modules\Legacy\Console\Commands\LegacyBackfillStockBodegaCentralCommand;
 use App\Modules\Auth\Models\AuditLog;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;

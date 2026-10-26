@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Integrations\Lafayette;
 
-use App\Console\Commands\LafayetteAislarCatalogoCommand;
+use App\Modules\Integrations\Lafayette\Console\Commands\LafayetteAislarCatalogoCommand;
 use App\Modules\Auth\Models\AuditLog;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderItem;

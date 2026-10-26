@@ -24,35 +24,6 @@ use App\Modules\CRM\Listeners\LogProjectStageChanged;
 use App\Modules\CRM\Notifications\NotifiableModel;
 use App\Modules\CRM\Observers\NotificationRuleObserver;
 use App\Modules\Compras\Events\PurchaseOrderReceived;
-use App\Modules\Integrations\Lafayette\Contracts\ProductoExtractorContract as LafayetteProductoExtractorContract;
-use App\Modules\Integrations\Lafayette\Extractors\ProductoExtractor as LafayetteProductoExtractor;
-use App\Modules\Legacy\Contracts\AlbaranCompraExtractorContract;
-use App\Modules\Legacy\Contracts\AlbaranExtractorContract;
-use App\Modules\Legacy\Contracts\ArticuloFotoExtractorContract;
-use App\Modules\Legacy\Contracts\ClienteExtractorContract;
-use App\Modules\Legacy\Contracts\CotizacionExtractorContract;
-use App\Modules\Legacy\Contracts\FacturaExtractorContract;
-use App\Modules\Legacy\Contracts\PagoExtractorContract;
-use App\Modules\Legacy\Contracts\PedidoExtractorContract;
-use App\Modules\Legacy\Contracts\DescatalogadoStockIcgExtractorContract;
-use App\Modules\Legacy\Contracts\ProductoDescatalogadoExtractorContract;
-use App\Modules\Legacy\Contracts\ProductoExtractorContract;
-use App\Modules\Legacy\Contracts\StockAl4ExtractorContract;
-use App\Modules\Legacy\Contracts\ProveedorExtractorContract;
-use App\Modules\Legacy\Extractors\AlbaranCompraExtractor;
-use App\Modules\Legacy\Extractors\AlbaranExtractor;
-use App\Modules\Legacy\Extractors\ArticuloFotoExtractor;
-use App\Modules\Legacy\Extractors\ClienteExtractor;
-use App\Modules\Legacy\Extractors\CotizacionExtractor;
-use App\Modules\Legacy\Extractors\FacturaExtractor;
-use App\Modules\Legacy\Extractors\PagoExtractor;
-use App\Modules\Legacy\Extractors\PedidoExtractor;
-use App\Modules\Legacy\Extractors\DescatalogadoStockIcgExtractor;
-use App\Modules\Legacy\Extractors\ProductoDescatalogadoExtractor;
-use App\Modules\Legacy\Extractors\ProductoExtractor;
-use App\Modules\Legacy\Extractors\StockAl4Extractor;
-use App\Modules\Legacy\Extractors\ProveedorExtractor;
-use App\Modules\Legacy\Observers\SubClientObserver;
 use App\Modules\Servicios\Listeners\SyncInsumoReservationOnPurchaseOrderReceived;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\Quote;
@@ -70,85 +41,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(\App\Modules\CRM\Services\CrmSettingsService::class);
         $this->app->scoped(\App\Modules\Compras\Services\ComprasThresholds::class);
 
-        // SCRUM-750 — implementación real de producción (conexión legacy_icg, SQL Server). Los
-        // Feature tests de App\Console\Commands\LegacySyncProductosCommand sobreescriben este
-        // bind con `$this->app->instance(ProductoExtractorContract::class, $fake)` para no
-        // requerir SQL Server real.
-        $this->app->bind(ProductoExtractorContract::class, ProductoExtractor::class);
-        // SCRUM-1136 F5 — extractor aparte de descatalogados con stock (los tests bindean un fake).
-        $this->app->bind(ProductoDescatalogadoExtractorContract::class, ProductoDescatalogadoExtractor::class);
-        $this->app->bind(DescatalogadoStockIcgExtractorContract::class, DescatalogadoStockIcgExtractor::class);
-        // SCRUM-1114 — mismo criterio: los tests bindean un fake con `$this->app->instance(...)`.
-        $this->app->bind(StockAl4ExtractorContract::class, StockAl4Extractor::class);
+        // Fase 5a — módulos fuera del núcleo, apagados por defecto (config/modules.php).
+        if (config('modules.legacy_icg.enabled')) {
+            $this->app->register(\App\Modules\Legacy\LegacyServiceProvider::class);
+        }
+        if (config('modules.lafayette.enabled')) {
+            $this->app->register(\App\Modules\Integrations\Lafayette\LafayetteServiceProvider::class);
+        }
 
-        // SCRUM-971 (épica SCRUM-969) — mismo criterio: implementación real de producción
-        // (conexión lafayette_lighting, MariaDB externa), sobreescrita con un fake en los Feature
-        // tests de App\Console\Commands\LafayetteSyncProductosCommand.
-        $this->app->bind(LafayetteProductoExtractorContract::class, LafayetteProductoExtractor::class);
-
-        // SCRUM-751 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Modules\Legacy\Jobs\SyncProductoFotoJob / App\Console\Commands\LegacySyncProductosFotosCommand.
-        $this->app->bind(ArticuloFotoExtractorContract::class, ArticuloFotoExtractor::class);
-
-        // SCRUM-755 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Console\Commands\LegacySyncClientesCommand.
-        $this->app->bind(ClienteExtractorContract::class, ClienteExtractor::class);
-
-        // SCRUM-756 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Console\Commands\LegacySyncProveedoresCommand.
-        $this->app->bind(ProveedorExtractorContract::class, ProveedorExtractor::class);
-
-        // SCRUM-757 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Console\Commands\LegacySyncCotizacionesCommand.
-        $this->app->bind(CotizacionExtractorContract::class, CotizacionExtractor::class);
-
-        // SCRUM-758 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Console\Commands\LegacySyncPedidosCommand.
-        $this->app->bind(PedidoExtractorContract::class, PedidoExtractor::class);
-
-        // SCRUM-759 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Console\Commands\LegacySyncAlbaranesCommand.
-        $this->app->bind(AlbaranExtractorContract::class, AlbaranExtractor::class);
-
-        // SCRUM-760 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Console\Commands\LegacySyncFacturasCommand.
-        $this->app->bind(FacturaExtractorContract::class, FacturaExtractor::class);
-
-        // SCRUM-761 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Console\Commands\LegacySyncPagosCommand.
-        $this->app->bind(PagoExtractorContract::class, PagoExtractor::class);
-
-        // SCRUM-1136 F1 — staging de almacenes/stock/costos/traspasos/inventarios de ICG
-        // (App\Console\Commands\LegacySyncAlmacenesCommand / LegacyVerifyAlmacenesCommand).
-        $this->app->bind(\App\Modules\Legacy\Contracts\AlmacenExtractorContract::class, \App\Modules\Legacy\Extractors\AlmacenExtractor::class);
-        $this->app->bind(\App\Modules\Legacy\Contracts\StockAlmacenExtractorContract::class, \App\Modules\Legacy\Extractors\StockAlmacenExtractor::class);
-        $this->app->bind(\App\Modules\Legacy\Contracts\CostoAlmacenExtractorContract::class, \App\Modules\Legacy\Extractors\CostoAlmacenExtractor::class);
-        $this->app->bind(\App\Modules\Legacy\Contracts\TraspasoCabExtractorContract::class, \App\Modules\Legacy\Extractors\TraspasoCabExtractor::class);
-        $this->app->bind(\App\Modules\Legacy\Contracts\InventarioCabExtractorContract::class, \App\Modules\Legacy\Extractors\InventarioCabExtractor::class);
-        $this->app->bind(\App\Modules\Legacy\Contracts\AlmacenVerificationExtractorContract::class, \App\Modules\Legacy\Extractors\AlmacenVerificationExtractor::class);
-
-        // SCRUM-1136 F2 — carga única reanudable de MOVIMENTS (legacy:sync-movimientos / legacy:verify-movimientos).
-        $this->app->bind(\App\Modules\Legacy\Contracts\MovimientoExtractorContract::class, \App\Modules\Legacy\Extractors\MovimientoExtractor::class);
-        $this->app->bind(\App\Modules\Legacy\Contracts\MovimientoVerificationExtractorContract::class, \App\Modules\Legacy\Extractors\MovimientoVerificationExtractor::class);
-
-        // SCRUM-1137 F1 — copia cruda de CLIENTES/CONTACTOSCLIENTES de ICG
-        // (App\Console\Commands\LegacySyncClientesRawCommand / LegacyVerifyClientesRawCommand).
-        $this->app->bind(\App\Modules\Legacy\Contracts\ClienteRawExtractorContract::class, \App\Modules\Legacy\Extractors\ClienteRawExtractor::class);
-        $this->app->bind(\App\Modules\Legacy\Contracts\ContactoClienteRawExtractorContract::class, \App\Modules\Legacy\Extractors\ContactoClienteRawExtractor::class);
-        $this->app->bind(\App\Modules\Legacy\Contracts\ClienteRawVerificationExtractorContract::class, \App\Modules\Legacy\Extractors\ClienteRawVerificationExtractor::class);
-
-        // SCRUM-840 — mismo criterio: implementación real de producción (conexión legacy_icg,
-        // SQL Server), sobreescrita con un fake en los Feature tests de
-        // App\Console\Commands\LegacySyncAlbaranesCompraCommand.
-        $this->app->bind(AlbaranCompraExtractorContract::class, AlbaranCompraExtractor::class);
     }
 
     public function boot(): void
@@ -252,10 +152,5 @@ class AppServiceProvider extends ServiceProvider
         foreach (NotifiableModel::REGISTRY as $config) {
             $config['class']::observe(NotificationRuleObserver::class);
         }
-
-        // SCRUM-763 — mantiene legacy.clientes.match_status consistente cuando se borra el
-        // SubClient vinculado, sin esperar a la próxima corrida semanal de legacy:sync-clientes.
-        SubClient::observe(SubClientObserver::class);
-
     }
 }

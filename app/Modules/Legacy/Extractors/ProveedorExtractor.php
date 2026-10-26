@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
  * Sin gotcha NDBOOLEANF — a diferencia de `ClienteExtractor`/`ProductoExtractor`, ninguna de las
  * columnas del subconjunto documentado de PROVEEDORES (§2/§4) es booleana. Si al confirmar el
  * shape completo contra ICG real (fuera de alcance de este batch, ver docblock de
- * `App\Console\Commands\LegacySyncProveedoresCommand`) aparece una columna de ese tipo, verificar
+ * `App\Modules\Legacy\Console\Commands\LegacySyncProveedoresCommand`) aparece una columna de ese tipo, verificar
  * su tipo real antes de mapearla — nunca asumir uniformidad entre tablas (mismo criterio que el
  * resto del módulo).
  *

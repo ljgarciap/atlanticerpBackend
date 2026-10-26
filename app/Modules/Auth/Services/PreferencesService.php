@@ -135,8 +135,8 @@ class PreferencesService
             // Modo Demo (docs/specs/demo-mode.md) — gate GLOBAL, default apagado. Mientras esté en
             // false, el toggle personal de cada usuario se ignora (ver scopeVisibleForDemoMode()).
             'demo_mode_enabled' => (bool) ($rows->get('demo_mode_enabled') !== null ? $rows->get('demo_mode_enabled')->value : false),
-            // SCRUM-990 — umbral de la guarda del sincronizador de Lafayette (0,5..1,0, defecto 0,9).
-            'lafayette_guarda_min_ratio' => app(LafayetteSettings::class)->guardaMinRatio(),
+            // SCRUM-990 — umbral de la guarda del sincronizador de Lafayette (0,5..1,0, defecto 0,9). Fase 5a: solo con el módulo encendido.
+            ...(config('modules.lafayette.enabled') ? ['lafayette_guarda_min_ratio' => app(LafayetteSettings::class)->guardaMinRatio()] : []),
         ];
     }
 
@@ -225,7 +225,7 @@ class PreferencesService
             }
         }
 
-        if (isset($data['lafayette_guarda_min_ratio'])) {
+        if (config('modules.lafayette.enabled') && isset($data['lafayette_guarda_min_ratio'])) {
             $newRatio = round((float) $data['lafayette_guarda_min_ratio'], 4);
             $oldRatio = app(LafayetteSettings::class)->guardaMinRatio();
 

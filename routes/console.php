@@ -46,19 +46,21 @@ Schedule::command('cobros:verificar-libro')->dailyAt('03:50');
 // distintos para no coincidir). Sin `->timezone()` explícito, igual que el resto de este archivo:
 // config('app.timezone') ya es America/Panama (SCRUM-910). `withoutOverlapping()` protege contra
 // una corrida que se solape consigo misma — el proveedor limita a 3-5 conexiones simultáneas.
-Schedule::command('lafayette:sync-productos')
-    ->dailyAt('12:00')
-    ->environments(['production'])
-    ->withoutOverlapping();
-Schedule::command('lafayette:sync-productos')
-    ->dailyAt('22:00')
-    ->environments(['production'])
-    ->withoutOverlapping();
-Schedule::command('lafayette:sync-productos')
-    ->weeklyOn(6, '22:00') // sábado
-    ->environments(['dev'])
-    ->withoutOverlapping();
-Schedule::command('lafayette:sync-productos')
-    ->weeklyOn(0, '22:00') // domingo
-    ->environments(['qa']) // "qa" = test.atlanticerp.ai, ver ../../CLAUDE.md tabla de entornos
-    ->withoutOverlapping();
+if (config('modules.lafayette.enabled')) {
+    Schedule::command('lafayette:sync-productos')
+        ->dailyAt('12:00')
+        ->environments(['production'])
+        ->withoutOverlapping();
+    Schedule::command('lafayette:sync-productos')
+        ->dailyAt('22:00')
+        ->environments(['production'])
+        ->withoutOverlapping();
+    Schedule::command('lafayette:sync-productos')
+        ->weeklyOn(6, '22:00') // sábado
+        ->environments(['dev'])
+        ->withoutOverlapping();
+    Schedule::command('lafayette:sync-productos')
+        ->weeklyOn(0, '22:00') // domingo
+        ->environments(['qa']) // "qa" = test.atlanticerp.ai, ver ../../CLAUDE.md tabla de entornos
+        ->withoutOverlapping();
+}
