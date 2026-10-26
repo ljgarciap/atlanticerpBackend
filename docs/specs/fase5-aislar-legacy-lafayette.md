@@ -1,6 +1,6 @@
 # Spec — Fase 5: aislar Legacy (ICG) e Integrations/Lafayette del núcleo
 
-**Estado**: BORRADOR — pendiente de las decisiones de Luis (§5) y de su «adelante». No se implementa nada antes.
+**Estado**: decisiones de Luis registradas (§6); pendiente su «adelante» para implementar.
 **Origen**: decisión 5 del análisis de aislamiento (`erp/docs/analisis/aislamiento-nucleo-2026-10-24.md`) y sugerencia del Senior Review de la sync:
 `LAFAYETTE_DB_HOST` apunta por defecto a `app.grupolafayette.com`.
 
@@ -55,3 +55,10 @@ extraer a un paquete Composer (`packages/`) con su provider, y las migraciones v
 3. **Zona Libre**: el catálogo Lafayette es hoy la fuente del flujo de Zona Libre. ¿Zona Libre queda en el núcleo sin catálogo externo (proveedor configurable por pantalla; ver hallazgo `zona_libre_provider_id`),
    o se trata como variante por país junto con el fiscal (Fase 6)?
 4. **Entrega**: ¿2 PR por repo (5a backend + 5a frontend, luego 5b) como las fases anteriores?
+
+## 6. Decisiones de Luis (2026-10-26)
+1. **Destino**: solo apagado (5a). Eliminar o empaquetar (5b) se decide después, con la 5a verificada.
+2. **Datos**: no hay datos reales en `legacy_*` / `lafayette_*`; solo demo local. No condiciona un `DROP` futuro.
+3. **Zona Libre**: queda en el núcleo, con proveedor configurable por pantalla (resuelve el hallazgo de `zona_libre_provider_id`) y sin catálogo externo. Entra en el alcance de la 5a:
+   pantalla/ajuste para elegir el proveedor, y el catálogo Lafayette deja de ser requisito del flujo.
+4. **Entrega**: 2 PR por repo (backend + frontend) e incluye la mini-entrega de CI: `if: false` en los jobs `deploy-dev/test/prod` de ambos workflows hasta tener infraestructura.
