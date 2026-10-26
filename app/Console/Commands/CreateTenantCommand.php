@@ -41,6 +41,7 @@ class CreateTenantCommand extends Command
         ]);
 
         $this->info("Tenant [{$slug}] creado: schemas ".implode(', ', $tenant->schemas()));
+        $this->line("Siguiente paso: `php artisan db:seed` y luego `php artisan tenant:create-superadmin {$slug} <correo>` para dar de alta el primer superadmin.");
 
         return self::SUCCESS;
     }

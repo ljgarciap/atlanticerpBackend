@@ -40,3 +40,14 @@ un acceso público con credenciales adivinables, incluido nivel 10 (`superadmin@
 1. **Comando aparte**: `tenant:create-superadmin`; `tenant:create` solo imprime la instrucción.
 2. **Contraseña aleatoria mostrada una sola vez**, cambio obligatorio al primer ingreso; `--password` disponible para scripts.
 3. **`qa` también sin usuarios**: solo `local`, `dev` y `testing` reciben usuarios demo; `qa` y `production` se dan de alta con el comando.
+
+## 6. Resultado de la implementación (2026-10-25)
+- `DatabaseSeeder`: `CoreUserSeeder`, `BusinessRoleUserSeeder` y los 7 seeders que buscan usuarios por correo (`PrimaryApproverBackfill`, `AdminContPrimaryApproverBackfill`,
+  `RoleBackfill`, `VentasDisenoSalesGoals`, `UserModuleVisibilityGrant`, `InternalTechnician`, `WarehouseAssistantMapping`) pasaron al bloque demo (`local`/`dev`/`testing`), usuarios primero.
+  El núcleo (`production` y `qa`) ya no crea ningún usuario.
+- `tenant:create-superadmin {slug} {email}` (`CreateSuperadminCommand`): rol `superadmin`, nivel 10, `must_change_password = true`, contraseña de 24 caracteres mostrada una sola vez
+  (o `--password`, mínimo 12, que no se imprime); rechaza tenant inexistente, correo inválido, contraseña corta y usuario existente; exige `db:seed` previo (rol y nivel). Opciones
+  `--first-name`/`--last-name` en vez de `--name`. `tenant:create` imprime el siguiente paso, no crea usuarios.
+- Tests: `CreateSuperadminCommandTest` (6) y 2 nuevos en `DatabaseSeederTiersTest` (ningún seeder fuera de demo asigna `password_hash`; el seed bajo `production` no recrea cuentas demo).
+  Mutación verificada: con el `DatabaseSeeder` anterior fallan 2 de 5.
+- **Efecto a conocer**: sin usuarios sembrados, `primary_approver_user_id` queda en NULL hasta que el superadmin lo configure en Ajustes (los umbrales altos quedan bloqueados mientras tanto).
