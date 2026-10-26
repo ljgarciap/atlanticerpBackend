@@ -165,7 +165,7 @@ final class ReportsController extends Controller
      */
     private function resolveMonthPeriod(Request $request): array
     {
-        $now = Carbon::now('America/Panama');
+        $now = Carbon::now(\App\Shared\Multitenancy\TenantRegion::timezone());
 
         // `validate()` NUNCA castea query params a int (llegan como string desde $_GET, la regla
         // "integer" solo valida el formato) — con `declare(strict_types=1)` en este archivo, pasar
@@ -184,7 +184,7 @@ final class ReportsController extends Controller
     /** Mismo criterio que `resolveMonthPeriod()`, sin `month` — usado solo por `completadosAnio()`. */
     private function resolveYearPeriod(Request $request): int
     {
-        $now = Carbon::now('America/Panama');
+        $now = Carbon::now(\App\Shared\Multitenancy\TenantRegion::timezone());
 
         $validated = $request->validate([
             'year' => ['sometimes', 'integer', 'min:'.self::MIN_YEAR, 'max:'.($now->year + 1)],

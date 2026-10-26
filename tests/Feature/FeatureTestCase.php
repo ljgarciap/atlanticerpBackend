@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\Support\TestDatabaseSeeder;
@@ -67,6 +68,22 @@ abstract class FeatureTestCase extends TestCase
         // rompiendo cualquier aserción sobre mensajes de trans(). Tests que
         // necesiten otro idioma pueden sobreescribirlo con su propio withHeaders().
         $this->withHeaders(['Accept-Language' => 'es']);
+    }
+
+    /**
+     * Fase 6a — la fila de `tenants` vive en la conexión `landlord`, que NO entra en la transacción de RefreshDatabase: un test que cambie el
+     * contexto regional (país, moneda, zona) lo dejaría cambiado para los siguientes. Se restaura aquí, junto con la zona de PHP (global al proceso).
+     */
+    protected function tearDown(): void
+    {
+        DB::connection('landlord')->table('tenants')
+            ->where('slug', 'atlantic')
+            ->where(fn ($q) => $q->where('country', '<>', 'PA')->orWhere('currency', '<>', 'USD')->orWhere('timezone', '<>', 'America/Panama')->orWhere('locale', '<>', 'es-PA'))
+            ->update(['country' => 'PA', 'currency' => 'USD', 'timezone' => 'America/Panama', 'locale' => 'es-PA']);
+        date_default_timezone_set('America/Panama');
+        config(['app.timezone' => 'America/Panama']);
+
+        parent::tearDown();
     }
 
     protected function loginAs(

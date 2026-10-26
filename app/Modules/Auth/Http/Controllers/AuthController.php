@@ -454,6 +454,8 @@ class AuthController
             'modules'     => $payload['modules'] ?? null,
             'flags'       => $payload['flags'] ?? null,
             'tenant'      => $payload['tenant'],
+            // Fase 6a — contexto regional del tenant (zona horaria, moneda, país, locale). Dato visual; no viaja en el JWT.
+            'region'      => \App\Shared\Multitenancy\Tenant::current()?->region(),
             'must_change_password' => $mustChangePassword,
             // SCRUM-1158 — con una sesión «Ver como usuario» viva, el frontend (tras recargar) recupera de acá el banner. Null si el token es normal.
             'impersonation' => isset($payload['act']) ? app(ImpersonationService::class)->describe($payload) : null,

@@ -44,7 +44,11 @@ final class SecurityAnalysisJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     private const MODEL              = 'claude-sonnet-5';
-    private const BUSINESS_TIMEZONE  = 'America/Panama';
+    /** Zona horaria del negocio: la del tenant activo (Fase 6a, `TenantRegion`). */
+    private static function businessTimezone(): string
+    {
+        return \App\Shared\Multitenancy\TenantRegion::timezone();
+    }
     private const BUSINESS_START_HOUR = 7;
     private const BUSINESS_END_HOUR   = 21;
 
@@ -127,7 +131,7 @@ final class SecurityAnalysisJob implements ShouldQueue
                         'end'   => $rangeEnd->toIso8601String(),
                     ],
                     'business_hours' => [
-                        'timezone' => self::BUSINESS_TIMEZONE,
+                        'timezone' => self::businessTimezone(),
                         'days'     => 'Mon-Fri',
                         'start'    => sprintf('%02d:00', self::BUSINESS_START_HOUR),
                         'end'      => sprintf('%02d:00', self::BUSINESS_END_HOUR),
@@ -222,7 +226,7 @@ final class SecurityAnalysisJob implements ShouldQueue
 
     private function isOffHours(Carbon $timestamp): bool
     {
-        $local = $timestamp->copy()->timezone(self::BUSINESS_TIMEZONE);
+        $local = $timestamp->copy()->timezone(self::businessTimezone());
 
         return $local->isWeekend()
             || $local->hour < self::BUSINESS_START_HOUR
@@ -424,7 +428,7 @@ final class SecurityAnalysisJob implements ShouldQueue
         $adjustments = AdjustmentRequest::query()->whereBetween('created_at', [$start, $end])->get();
 
         foreach ($adjustments as $adjustment) {
-            $local = $adjustment->created_at->copy()->timezone(self::BUSINESS_TIMEZONE);
+            $local = $adjustment->created_at->copy()->timezone(self::businessTimezone());
             if ($local->hour >= $finHora) {
                 continue;
             }
@@ -451,7 +455,7 @@ final class SecurityAnalysisJob implements ShouldQueue
         $relocations = RelocationRequest::query()->whereBetween('created_at', [$start, $end])->get();
 
         foreach ($relocations as $relocation) {
-            $local = $relocation->created_at->copy()->timezone(self::BUSINESS_TIMEZONE);
+            $local = $relocation->created_at->copy()->timezone(self::businessTimezone());
             if ($local->hour >= $finHora) {
                 continue;
             }

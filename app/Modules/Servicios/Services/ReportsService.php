@@ -60,7 +60,11 @@ final class ReportsService
         Ticket::TIPO_RETROFIT     => '#8b5cf6',
     ];
 
-    private const BUSINESS_TIMEZONE = 'America/Panama';
+    /** Zona horaria del negocio: la del tenant activo (Fase 6a, `TenantRegion`). */
+    private static function businessTimezone(): string
+    {
+        return \App\Shared\Multitenancy\TenantRegion::timezone();
+    }
 
     public function __construct(
         private readonly TicketService $tickets,
@@ -215,7 +219,7 @@ final class ReportsService
      */
     public function completadosAnio(?int $year = null): array
     {
-        $now         = Carbon::now(self::BUSINESS_TIMEZONE);
+        $now         = Carbon::now(self::businessTimezone());
         $targetYear  = $year ?? (int) $now->year;
         $lastMonth   = $targetYear === (int) $now->year ? (int) $now->month : 12;
 
@@ -315,8 +319,8 @@ final class ReportsService
      */
     private function monthBounds(?int $year, ?int $month): array
     {
-        $now    = Carbon::now(self::BUSINESS_TIMEZONE);
-        $target = Carbon::create($year ?? $now->year, $month ?? $now->month, 1, 0, 0, 0, self::BUSINESS_TIMEZONE)
+        $now    = Carbon::now(self::businessTimezone());
+        $target = Carbon::create($year ?? $now->year, $month ?? $now->month, 1, 0, 0, 0, self::businessTimezone())
             ?? $now;
 
         return [$target->copy()->startOfMonth(), $target->copy()->endOfMonth()];

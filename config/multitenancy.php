@@ -11,6 +11,7 @@ use Spatie\Multitenancy\Actions\ForgetCurrentTenantAction;
 use Spatie\Multitenancy\Actions\MakeQueueTenantAwareAction;
 use Spatie\Multitenancy\Actions\MakeTenantCurrentAction;
 use Spatie\Multitenancy\Actions\MigrateTenantAction;
+use App\Shared\Multitenancy\SwitchTenantRegionTask;
 use App\Shared\Multitenancy\SwitchTenantSchemaTask;
 use App\Shared\Multitenancy\Tenant;
 
@@ -44,6 +45,7 @@ return [
      */
     'switch_tenant_tasks' => [
         SwitchTenantSchemaTask::class,
+        SwitchTenantRegionTask::class,
     ],
 
     /*

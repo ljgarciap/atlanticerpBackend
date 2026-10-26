@@ -78,7 +78,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
         $response->assertJsonPath('redes_sociales.0.plataforma', 'Instagram');
     }
 
-    public function test_update_ignora_razon_social_nombre_comercial_moneda_anio_fiscal_del_body(): void
+    public function test_update_ignora_razon_social_nombre_comercial_y_anio_fiscal_del_body(): void
     {
         AdminContFiscalSettings::current()->update(['razon_social' => 'Original S.A.', 'nombre_comercial' => 'Original']);
 
@@ -88,7 +88,6 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
             ->putJson('/api/admin-contab/company-profile', [
                 'razon_social' => 'Otra Cosa S.A.',
                 'nombre_comercial' => 'Otra Cosa',
-                'moneda' => 'PAB',
                 'anio_fiscal' => 'Abril-Marzo',
                 'descripcion_corta' => 'Cambio real',
             ])
@@ -101,13 +100,54 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
         $response->assertJsonPath('descripcion_corta', 'Cambio real');
     }
 
-    public function test_update_rechaza_zona_horaria_distinta_a_america_panama(): void
+    public function test_show_expone_el_catalogo_de_paises_y_el_contexto_regional(): void
+    {
+        $token = $this->loginAsMark();
+
+        $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/company-profile')->assertOk();
+
+        $response->assertJsonPath('pais', 'PA')->assertJsonPath('moneda', 'USD')->assertJsonPath('zona_horaria', 'America/Panama')->assertJsonPath('locale', 'es-PA');
+        $this->assertSame(['PA', 'CO', 'US'], collect($response->json('paises'))->pluck('code')->all());
+        $this->assertSame(
+            ['code' => 'CO', 'name' => 'Colombia', 'currency' => 'COP', 'timezone' => 'America/Bogota', 'locale' => 'es-CO'],
+            collect($response->json('paises'))->firstWhere('code', 'CO'),
+        );
+    }
+
+    public function test_update_rechaza_una_zona_horaria_que_no_es_iana(): void
     {
         $token = $this->loginAsMark();
 
         $this->withHeaders($this->authHeaders($token))
-            ->putJson('/api/admin-contab/company-profile', ['zona_horaria' => 'America/New_York'])
+            ->putJson('/api/admin-contab/company-profile', ['zona_horaria' => 'Marte/Olimpo'])
             ->assertStatus(422);
+    }
+
+    /** Fase 6a — país, moneda, zona y locale viven en el tenant; el perfil los lee y los escribe ahí. */
+    public function test_update_cambia_el_contexto_regional_del_tenant(): void
+    {
+        $token = $this->loginAsMark();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson('/api/admin-contab/company-profile', ['pais' => 'CO', 'moneda' => 'COP', 'zona_horaria' => 'America/Bogota', 'locale' => 'es-CO'])
+            ->assertOk()
+            ->assertJsonPath('pais', 'CO')
+            ->assertJsonPath('moneda', 'COP')
+            ->assertJsonPath('zona_horaria', 'America/Bogota')
+            ->assertJsonPath('locale', 'es-CO');
+
+        $this->assertSame(
+            ['country' => 'CO', 'currency' => 'COP', 'timezone' => 'America/Bogota', 'locale' => 'es-CO'],
+            \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->firstOrFail()->region(),
+        );
+    }
+
+    public function test_update_rechaza_un_pais_fuera_del_catalogo_y_una_moneda_invalida(): void
+    {
+        $token = $this->loginAsMark();
+
+        $this->withHeaders($this->authHeaders($token))->putJson('/api/admin-contab/company-profile', ['pais' => 'ZZ'])->assertStatus(422);
+        $this->withHeaders($this->authHeaders($token))->putJson('/api/admin-contab/company-profile', ['moneda' => 'dolar'])->assertStatus(422);
     }
 
     public function test_upload_logo_acepta_png_y_devuelve_url_publica(): void

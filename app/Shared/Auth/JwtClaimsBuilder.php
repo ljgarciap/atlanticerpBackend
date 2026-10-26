@@ -108,6 +108,8 @@ final class JwtClaimsBuilder
             'modules'         => $claims['modules'],
             'menuVisibility'  => $claims['menuVisibility'],
             'flags'           => $claims['flags'],
+            // Fase 6a — contexto regional del tenant (zona horaria, moneda, país, locale). Dato visual; no viaja en el JWT.
+            'region'          => \App\Shared\Multitenancy\Tenant::current()?->region(),
             // Reset administrativo de contraseña: el frontend fuerza la pantalla de cambio mientras sea true.
             'must_change_password' => $user->must_change_password === true,
         ];

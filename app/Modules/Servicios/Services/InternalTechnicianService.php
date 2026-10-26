@@ -23,7 +23,11 @@ final class InternalTechnicianService
         '#F59E0B', '#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F97316', '#6366F1', '#14B8A6',
     ];
 
-    private const BUSINESS_TIMEZONE = 'America/Panama';
+    /** Zona horaria del negocio: la del tenant activo (Fase 6a, `TenantRegion`). */
+    private static function businessTimezone(): string
+    {
+        return \App\Shared\Multitenancy\TenantRegion::timezone();
+    }
 
     public function __construct(private readonly TechnicianStatusService $status) {}
 
@@ -252,8 +256,8 @@ final class InternalTechnicianService
     private function rangeForView(string $view, ?string $referenceDate): array
     {
         $reference = $referenceDate !== null
-            ? Carbon::parse($referenceDate, self::BUSINESS_TIMEZONE)
-            : Carbon::now(self::BUSINESS_TIMEZONE);
+            ? Carbon::parse($referenceDate, self::businessTimezone())
+            : Carbon::now(self::businessTimezone());
 
         $start = match ($view) {
             'week' => $reference->copy()->startOfWeek(Carbon::SUNDAY)->startOfDay(),
@@ -316,7 +320,7 @@ final class InternalTechnicianService
             '_sort' => $ticket->scheduled_at?->toIso8601String() ?? '',
             'ticket_id' => $ticket->id,
             'numero' => $ticket->numero,
-            'hora' => $ticket->scheduled_at?->copy()->timezone(self::BUSINESS_TIMEZONE)->format('H:i'),
+            'hora' => $ticket->scheduled_at?->copy()->timezone(self::businessTimezone())->format('H:i'),
             'tipo' => $ticket->tipo,
             'cliente' => $ticket->cliente,
             'descripcion' => $ticket->descripcion,
@@ -338,8 +342,8 @@ final class InternalTechnicianService
      */
     private function todaysTicketsByUser(EloquentCollection $technicians): Collection
     {
-        $todayStart = Carbon::now(self::BUSINESS_TIMEZONE)->startOfDay()->utc();
-        $todayEnd = Carbon::now(self::BUSINESS_TIMEZONE)->endOfDay()->utc();
+        $todayStart = Carbon::now(self::businessTimezone())->startOfDay()->utc();
+        $todayEnd = Carbon::now(self::businessTimezone())->endOfDay()->utc();
 
         return $this->ticketsByUserInRange($technicians, $todayStart, $todayEnd);
     }
@@ -371,8 +375,8 @@ final class InternalTechnicianService
     /** @return Collection<int, Ticket> */
     private function ticketsToday(int $userId): Collection
     {
-        $todayStart = Carbon::now(self::BUSINESS_TIMEZONE)->startOfDay()->utc();
-        $todayEnd = Carbon::now(self::BUSINESS_TIMEZONE)->endOfDay()->utc();
+        $todayStart = Carbon::now(self::businessTimezone())->startOfDay()->utc();
+        $todayEnd = Carbon::now(self::businessTimezone())->endOfDay()->utc();
 
         return Ticket::query()
             ->where('internal_technician_id', $userId)
@@ -390,8 +394,8 @@ final class InternalTechnicianService
             'numero' => $ticket->numero,
             // SCRUM-803 — 'fecha' nuevo (antes solo 'hora', suficiente cuando la agenda era
             // siempre "hoy"); en vistas Semana/Mes las visitas caen en días distintos.
-            'fecha' => $ticket->scheduled_at?->copy()->timezone(self::BUSINESS_TIMEZONE)->format('Y-m-d'),
-            'hora' => $ticket->scheduled_at?->copy()->timezone(self::BUSINESS_TIMEZONE)->format('H:i'),
+            'fecha' => $ticket->scheduled_at?->copy()->timezone(self::businessTimezone())->format('Y-m-d'),
+            'hora' => $ticket->scheduled_at?->copy()->timezone(self::businessTimezone())->format('H:i'),
             'cliente' => $ticket->cliente,
             'descripcion' => $ticket->descripcion,
         ];
