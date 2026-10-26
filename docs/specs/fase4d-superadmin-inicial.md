@@ -1,6 +1,6 @@
 # Spec — Fase 4d: alta inicial de superadmin (sin cuentas sembradas con contraseña = correo)
 
-**Estado**: BORRADOR — pendiente de las decisiones de Luis (§5) y de su «adelante».
+**Estado**: decisiones de Luis registradas (§5); pendiente su «adelante» para implementar.
 **Origen**: hallazgo abierto de la 4a. `DatabaseSeeder` corre `CoreUserSeeder` y `BusinessRoleUserSeeder` en TODOS los entornos (bloque «núcleo»).
 Siembran ~39 cuentas `*@test.com` con **contraseña = correo** (`password_hash => $data['email']`, `must_change_password` en falso). En producción eso es
 un acceso público con credenciales adivinables, incluido nivel 10 (`superadmin@test.com`).
@@ -36,7 +36,7 @@ un acceso público con credenciales adivinables, incluido nivel 10 (`superadmin@
 3. En `local/dev/testing` el comportamiento actual no cambia (misma suite verde, sin tocar tests existentes salvo los que fijaban el bloque del seeder).
 4. Ningún lugar del código versionado fija una contraseña igual al correo fuera del bloque demo (test de contrato).
 
-## 5. Decisiones abiertas (Luis)
-1. ¿`tenant:create` crea el superadmin en el mismo paso (pidiendo el correo) o queda como comando aparte?
-2. Contraseña inicial: ¿aleatoria mostrada una vez (recomendado) o la define quien opera el comando (`--password`)?
-3. ¿Los usuarios demo de `qa`/`test.atlanticerp.ai` se conservan (hoy `qa` no los recibe en el bloque demo) o `qa` también queda sin usuarios?
+## 5. Decisiones de Luis (2026-10-25)
+1. **Comando aparte**: `tenant:create-superadmin`; `tenant:create` solo imprime la instrucción.
+2. **Contraseña aleatoria mostrada una sola vez**, cambio obligatorio al primer ingreso; `--password` disponible para scripts.
+3. **`qa` también sin usuarios**: solo `local`, `dev` y `testing` reciben usuarios demo; `qa` y `production` se dan de alta con el comando.
