@@ -37,30 +37,4 @@ Schedule::command('cobros:verificar-libro')->dailyAt('03:50');
 // fuente de verdad. La cadena `legacy:sync-incremental-all` (SCRUM-838; prod diario 21:00, qa domingo 01:00,
 // dev domingo 05:00) reescribía nombre, marca, precio y costo de los productos que creó el pipeline, y
 // `legacy:check-sync-health` (SCRUM-839) alertaría por falta de corridas, por eso salen las dos entradas.
-// Los comandos `legacy:*` siguen disponibles para correrlos a mano. Para reactivarla, restaurar las entradas
-// desde el historial de git de este archivo (commit anterior a este cambio).
-
-// SCRUM-971 (épica SCRUM-969 — integración Lafayette Lighting, Bodega Zona Libre). Cadencia por
-// ambiente, ajustada 2026-09-27 a pedido de Luis — mismo criterio que legacy:sync-incremental-all
-// (SCRUM-838): producción necesita el dato fresco 2x/día, dev/test alcanza con 1x/semana (en días
-// distintos para no coincidir). Sin `->timezone()` explícito, igual que el resto de este archivo:
-// config('app.timezone') ya es America/Panama (SCRUM-910). `withoutOverlapping()` protege contra
-// una corrida que se solape consigo misma — el proveedor limita a 3-5 conexiones simultáneas.
-if (config('modules.lafayette.enabled')) {
-    Schedule::command('lafayette:sync-productos')
-        ->dailyAt('12:00')
-        ->environments(['production'])
-        ->withoutOverlapping();
-    Schedule::command('lafayette:sync-productos')
-        ->dailyAt('22:00')
-        ->environments(['production'])
-        ->withoutOverlapping();
-    Schedule::command('lafayette:sync-productos')
-        ->weeklyOn(6, '22:00') // sábado
-        ->environments(['dev'])
-        ->withoutOverlapping();
-    Schedule::command('lafayette:sync-productos')
-        ->weeklyOn(0, '22:00') // domingo
-        ->environments(['qa']) // "qa" = test.atlanticerp.ai, ver ../../CLAUDE.md tabla de entornos
-        ->withoutOverlapping();
-}
+// Fase 5b: el módulo Legacy (ICG) y sus comandos `legacy:*` se eliminaron del repositorio; sigue en el historial de git.

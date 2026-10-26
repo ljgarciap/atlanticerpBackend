@@ -69,6 +69,9 @@ final class AuditService
     public const SECURITY_LEVEL_DELETED     = 'security.level.deleted';
 
     // ── Settings ─────────────────────────────────────────────────────────────
+    // Resumen histórico de la carga de pedidos gemelos de ICG (módulo eliminado en la 5b-1). Lo sigue leyendo el reporte de validación de gemelos
+    // de Admin&Cont hasta que la 5b-2 retire los campos «gemelo ICG».
+    public const LEGACY_CARGAR_PEDIDOS_GEMELOS = 'legacy.cargar_pedidos_gemelos';
     public const SETTINGS_UPDATED = 'settings.updated';
 
     // ── Security — Epic 11, Seguridad Agéntica ──────────────────────────────
@@ -148,35 +151,6 @@ final class AuditService
     // libre) y BodegaInventoryController::show() documenta explícitamente "sin precio/costo".
     public const BODEGA_ADJUSTMENT_WAREHOUSE_STOCK_VIEWED = 'bodega.adjustment_request.warehouse_stock_viewed';
 
-    // SCRUM-971 (épica SCRUM-969) — corrida real (no --dry-run) de lafayette:sync-productos.
-    public const BODEGA_LAFAYETTE_SYNC_COMPLETED = 'bodega.lafayette_sync.completed';
-    // SCRUM-990 — resumen de la limpieza única `lafayette:aislar-catalogo` (un solo evento, no uno por fila).
-    public const BODEGA_LAFAYETTE_CATALOG_ISOLATED = 'bodega.lafayette_catalog.isolated';
-    // SCRUM-1113 — resumen de `legacy:relink-clientes-promovidos` (un solo evento; trae el valor anterior de cada fila tocada, para revertir).
-    public const LEGACY_RELINK_CLIENTES_PROMOVIDOS = 'legacy.relink_clientes_promovidos';
-    // SCRUM-1137 F3 — resumen de `legacy:fix-clientes-ruc` (aplicar o revertir); el detalle por sub_client va en ventas_diseno.sub_client.updated.
-    public const LEGACY_FIX_CLIENTES_RUC = 'legacy.fix_clientes_ruc';
-    // SCRUM-1016 — resumen de `legacy:backfill-stock-bodega-central` (un solo evento, no uno por fila).
-    public const LEGACY_BACKFILL_STOCK_BODEGA_CENTRAL = 'legacy.backfill_stock_bodega_central';
-    public const LEGACY_BACKFILL_COSTO_PROVEEDOR = 'legacy.backfill_costo_proveedor';
-    // SCRUM-1136 F5 — resumen de `legacy:crear-descatalogados-inactivos --apply` (un solo evento; trae los ids creados para poder revertir).
-    public const LEGACY_CREAR_DESCATALOGADOS_INACTIVOS = 'legacy.crear_descatalogados_inactivos';
-    // Resumen de `legacy:vincular-productos-proveedores` (un solo evento por corrida, con id → proveedores aplicados para revertir).
-    public const LEGACY_VINCULAR_PRODUCTOS_PROVEEDORES = 'legacy.vincular_productos_proveedores';
-    /** SCRUM-1151 — `lafayette:mapear-proveedor --apply`: asocia BK INTERPRISES S.A. a los productos de AtlanticERP que coinciden con Lafayette. */
-    public const LAFAYETTE_MAPEAR_PROVEEDOR = 'lafayette.mapear_proveedor';
-    // Resumen de `legacy:load-pedidos-gemelos --apply` (un evento por corrida: huella, conteos por hoja, omitidos con su motivo). Lo lee la vista de validación de gemelos.
-    public const LEGACY_CARGAR_PEDIDOS_GEMELOS = 'legacy.cargar_pedidos_gemelos';
-    // SCRUM-1114 — un evento resumen por corrida de `legacy:sync-incremental-stock` (aplicada o retenida)
-    // y uno por `legacy:init-stock-baseline --apply` (no uno por producto: los movimientos de kardex
-    // ya dejan el rastro fila por fila).
-    public const LEGACY_SYNC_STOCK_DELTA = 'legacy.sync_stock_delta';
-    public const LEGACY_INIT_STOCK_BASELINE = 'legacy.init_stock_baseline';
-    public const LEGACY_REVERT_STOCK_SYNC = 'legacy.revert_stock_sync';
-    // SCRUM-1136 F6 — resumen por almacén de `legacy:cargar-stock-bodegas --apply`, de `legacy:revertir-stock-bodegas --apply` y de `legacy:crear-articulos-sin-catalogo --apply`.
-    public const LEGACY_CARGAR_STOCK_BODEGAS = 'legacy.cargar_stock_bodegas';
-    public const LEGACY_REVERTIR_STOCK_BODEGAS = 'legacy.revertir_stock_bodegas';
-    public const LEGACY_CREAR_ARTICULOS_SIN_CATALOGO = 'legacy.crear_articulos_sin_catalogo';
 
     // ── Admin&Cont — SCRUM-808, Epic SCRUM-788 (Logs y Telemetría) ───────────
     // Prefijo 'admin_cont.' (no 'admin_contab.') a propósito — consistente con el prefijo que ya

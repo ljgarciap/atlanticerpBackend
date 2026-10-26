@@ -7,7 +7,6 @@ namespace App\Modules\Bodega\Http\Controllers;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Bodega\Models\WarehouseLocation;
-use App\Modules\Bodega\Services\ZonaLibreCatalogoService;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
@@ -39,7 +38,6 @@ final class WarehouseController extends Controller
 {
     public function __construct(
         private readonly InventoryKpiService $inventoryKpis,
-        private readonly ZonaLibreCatalogoService $zonaLibre,
     ) {}
 
     /** SCRUM-451 (REQ-381) — pestañas del selector. */
@@ -59,9 +57,8 @@ final class WarehouseController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        // SCRUM-990 — bodega de SOLO CONSULTA (Zona Libre / Lafayette): no hay stock propio que listar. Se devuelve el mismo shape
-        // de nivel superior (`warehouse`/`kpis`/`ubicaciones`/`data`/`meta`) con `data` vacío y KPIs del catálogo externo; el listado
-        // real está en `GET /bodega/zona-libre/productos`. No consulta `product_warehouse_stock` (era lo que agotaba memoria).
+        // SCRUM-990 — bodega de SOLO CONSULTA: no hay stock propio que listar. Se devuelve el mismo shape de nivel superior
+        // (`warehouse`/`kpis`/`ubicaciones`/`data`/`meta`) con `data` vacío y KPIs en cero (Fase 5b: ya no hay catálogo externo; el concepto se retira en la 5b-2).
         if ($warehouse->solo_consulta) {
             return response()->json($this->buildSoloConsultaResponse($warehouse, $request));
         }
@@ -192,24 +189,22 @@ final class WarehouseController extends Controller
 
     /**
      * SCRUM-990 — respuesta de `show()` para una bodega de solo consulta. Mismo shape que la rama normal para que el selector y las
-     * tarjetas reusen el hook: `kpis.total_products` = productos vigentes de Lafayette, `kpis.total_units` = suma de su `disponible`
-     * (NO es inventario de Atlantic), `kpis.last_synced_at` = última corrida exitosa; `data` vacío (el listado es el endpoint dedicado).
+     * tarjetas reusen el hook: `kpis` en cero y sin última sincronización (Fase 5b: ya no hay catálogo externo); `data` vacío.
      *
      * @return array<string, mixed>
      */
     private function buildSoloConsultaResponse(Warehouse $warehouse, Request $request): array
     {
-        $resumen = $this->zonaLibre->resumen();
         $pagination = Pagination::params($request, [], 'id');
 
         return [
             'warehouse' => $this->formatWarehouse($warehouse),
             'kpis' => [
                 'responsable' => $warehouse->responsable,
-                'total_products' => $resumen['total_catalogo'],
-                'total_units' => $resumen['total_unidades'],
+                'total_products' => 0,
+                'total_units' => 0,
                 'capacidad_pct' => $warehouse->capacidad_pct,
-                'last_synced_at' => $this->zonaLibre->ultimaSincronizacion(),
+                'last_synced_at' => null,
             ],
             'ubicaciones' => [],
             'data' => [],

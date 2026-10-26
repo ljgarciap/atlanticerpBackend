@@ -80,15 +80,7 @@ class SettingsController extends Controller
             'share_links_expiration_days' => 'sometimes|integer|min:1|max:365',
             'session_inactivity_hours'    => 'sometimes|integer|min:1|max:720',
             'demo_mode_enabled'           => 'sometimes|boolean',
-            // SCRUM-990 — umbral de la guarda del sincronizador de Lafayette. Rango 0,5..1,0: por debajo de 0,5 la guarda dejaría de proteger el catálogo.
-            'lafayette_guarda_min_ratio'  => 'sometimes|numeric|min:0.5|max:1',
         ]);
-
-        // `/settings/system` exige settings.global, pero este umbral es solo de superadmin (afecta qué productos de Zona Libre se ocultan).
-        $permissions = (array) ($request->attributes->get('jwt')['permissions'] ?? []);
-        if (array_key_exists('lafayette_guarda_min_ratio', $data) && ! in_array('superadmin.all', $permissions, true)) {
-            return response()->json(['message' => trans('auth.unauthorized')], 403);
-        }
 
         return response()->json($this->service->updateSystemSettings($user, $data));
     }

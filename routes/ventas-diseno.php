@@ -34,7 +34,6 @@ use App\Modules\VentasDiseno\Http\Controllers\ReportsConfigController;
 use App\Modules\VentasDiseno\Http\Controllers\ReportsController;
 use App\Modules\VentasDiseno\Http\Controllers\SalesProjectController;
 use App\Modules\VentasDiseno\Http\Controllers\SubClientContactController;
-use App\Modules\Legacy\Http\Controllers\SubClientHistoryController;
 use Illuminate\Support\Facades\Route;
 
 // Grupo 1a/1b del plan de PM — ver memory/project_backlog_ventas_diseno_req.md.
@@ -81,7 +80,7 @@ Route::prefix('projects')->group(function (): void {
 
 // REQ-010: buscar/crear Cliente Master y Subcliente desde el flujo de vinculación de Pipeline.
 // SCRUM-1139 — `ventas_diseno.pipeline.edit` (Contabilidad) abre SOLO estas 4 rutas del flujo mínimo de vinculación («Nuevo proyecto»);
-// la pantalla Clientes completa (`/clients`, contactos, historial ICG, datos fiscales) sigue exigiendo `ventas_diseno.read/.write/.edit`.
+// la pantalla Clientes completa (`/clients`, contactos, datos fiscales) sigue exigiendo `ventas_diseno.read/.write/.edit`.
 Route::prefix('master-clients')->group(function (): void {
     Route::get('/', [ClientController::class, 'masterClients'])->middleware('permission:ventas_diseno.read,ventas_diseno.pipeline.edit');
     Route::post('/', [ClientController::class, 'storeMasterClient'])->middleware('permission:ventas_diseno.write,ventas_diseno.pipeline.edit');
@@ -100,20 +99,6 @@ Route::prefix('sub-clients')->group(function (): void {
         Route::put('/{contactId}', [SubClientContactController::class, 'update'])->middleware('permission:ventas_diseno.edit');
         Route::delete('/{contactId}', [SubClientContactController::class, 'destroy'])->middleware('permission:ventas_diseno.edit');
     });
-
-    // Fase 5a — el historial de ICG solo existe con `modules.legacy_icg.enabled`.
-    if (config('modules.legacy_icg.enabled')) {
-        // SCRUM-762 (épica SCRUM-749) — pestaña "Historial ICG", solo lectura. Ver docblock de
-        // SubClientHistoryController para el porqué de 4 entidades (Cotizaciones/Pedidos/Albaranes/
-        // Facturas) y no 5 — Pagos no referencia cliente en absoluto en legacy.*.
-        Route::get('/{subClientId}/legacy-history', [SubClientHistoryController::class, 'index'])->middleware('permission:ventas_diseno.read');
-
-        // Vista "gemela" tipo documento (cabecera + líneas), a pedido de Luis 2026-09-02 — antes el
-        // Historial ICG solo mostraba la fila resumen de arriba, sin exponer nunca las líneas que ya
-        // están en legacy.*_items. Facturas nunca trae `items` (FACTURASVENTA no tiene tabla de
-        // detalle en el origen, ver docblock de Factura).
-        Route::get('/{subClientId}/legacy-history/{entidad}/{id}', [SubClientHistoryController::class, 'show'])->middleware('permission:ventas_diseno.read');
-    }
 });
 
 // Grupo 2 del plan de PM — pantalla Clientes completa (REQ-063 a REQ-070). Distinto

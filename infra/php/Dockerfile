@@ -13,19 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # mlocati/docker-php-extension-installer para las extensiones que NO dependen de pecl.php.net —
 # resuelve los paquetes de sistema de cada una automáticamente (ej. libpng/libjpeg/libfreetype
 # para gd), sin necesitar docker-php-ext-configure a mano.
-#
-# sqlsrv/pdo_sqlsrv agregados 2026-08-12 (SCRUM-750, migración ICG→AtlanticERP, Tarea 6) — conexión
-# `legacy_icg` en config/database.php necesita el driver PDO sqlsrv de Microsoft para hablar con
-# el SQL Server 2016 de ICG a través del gateway VPN. El instalador baja msodbcsql/unixODBC
-# automáticamente al detectar estas extensiones — requiere ACCEPT_EULA=Y (licencia de Microsoft),
-# nunca instalarlo sin ese ack explícito.
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
-ENV ACCEPT_EULA=Y
-# pdo_mysql agregado 2026-09-26 (SCRUM-972, integración Lafayette Lighting) — conexión
-# `lafayette_lighting` en config/database.php necesita el driver PDO mysql para hablar con la
-# MariaDB externa del proveedor. Sin licencia/EULA especial, a diferencia de sqlsrv.
 RUN chmod +x /usr/local/bin/install-php-extensions \
-    && install-php-extensions pdo_pgsql pcntl zip sodium gd sqlsrv pdo_sqlsrv pdo_mysql
+    && install-php-extensions pdo_pgsql pcntl zip sodium gd
 
 # redis compilado desde el tarball de GitHub, NO vía pecl.php.net ni el instalador de arriba (que
 # también usa pecl.php.net para redis específicamente) — pecl.php.net tuvo una caída sostenida

@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
  * - SIMULACIÓN por defecto: lista a quiénes alcanzaría y no cambia nada.
  * - `--apply` exige `--operador` (queda en la auditoría) y escribir exactamente `RESETEAR <ENTORNO> <N>`, con
  *   ENTORNO = APP_ENV en mayúsculas y `PRODUCCION` en producción. Sin TTY (ssh) la confirmación se entrega por stdin con
- *   SHELL_INTERACTIVE=1, igual que `lafayette:aislar-catalogo`.
+ *   SHELL_INTERACTIVE=1.
  * - `--yes` (omite la confirmación) SOLO en local y testing.
  * - Nunca imprime contraseñas ni hashes: solo cantidades y correos.
  */
