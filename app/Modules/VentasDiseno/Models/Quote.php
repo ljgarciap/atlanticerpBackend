@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Models;
 
-use App\Modules\VentasDiseno\Models\Scopes\IcgLegacyOriginScope;
 use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use App\Models\User;
 use App\Modules\AdminCont\Services\ItbmsRateResolver;
@@ -22,7 +21,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * en Cotización-B/C/D, ver memory/project_backlog_ventas_diseno_req.md.
  *
  * @property int                                    $id
- * @property string                                 $origin  'comercial' | 'icg_legacy'
  * @property int|null                                $master_client_id
  * @property int|null                                $sub_client_id
  * @property int|null                                $sales_project_id
@@ -58,15 +56,8 @@ class Quote extends Model
 {
     use LogsAuditTrail;
 
-    /** Origen de la cotización: el flujo comercial de siempre o la gemela de un pedido de ICG. */
-    public const ORIGIN_COMERCIAL = 'comercial';
-    /** Cotización gemela de un pedido de ICG (ver `IcgLegacyOriginScope`): oculta por defecto, solo facturación la lee. */
-    public const ORIGIN_ICG_LEGACY = 'icg_legacy';
-
     protected static function booted(): void
     {
-        static::addGlobalScope(new IcgLegacyOriginScope());
-
         // SCRUM-1166 — la cotización sigue al cliente fiscal mientras no esté confirmada: al crearla, o si cambia de cliente, copia su exención de
         // ITBMS. Una cotización confirmada queda fija (ni cambiar la marca del cliente ni nada posterior la mueve); el cambio de marca de un cliente
         // actualiza sus borradores desde `ItbmsExemptionService`.
@@ -78,22 +69,6 @@ class Quote extends Model
             $quote->itbms_exento = $quote->sub_client_id !== null
                 && (bool) SubClient::query()->whereKey($quote->sub_client_id)->value('itbms_exento');
         });
-    }
-
-    /**
-     * Consulta que SÍ incluye las cotizaciones gemelas de ICG. Solo para los caminos de facturación/cobro que parten de
-     * `invoice.quote_id` o de `Order::linkedQuote()`; cualquier otro uso es un error.
-     *
-     * @return \Illuminate\Database\Eloquent\Builder<Quote>
-     */
-    public static function withIcgLegacy(): \Illuminate\Database\Eloquent\Builder
-    {
-        return static::withoutGlobalScope(IcgLegacyOriginScope::class);
-    }
-
-    public function isIcgLegacy(): bool
-    {
-        return $this->origin === self::ORIGIN_ICG_LEGACY;
     }
 
     /**
@@ -116,7 +91,7 @@ class Quote extends Model
         'owner_id', 'architect_id', 'delivery_type', 'status', 'folio', 'generated_at', 'confirmed_at',
         'price_type', 'discount_mode', 'global_discount_percent',
         'observations', 'includes_installation', 'discount_totals_type', 'discount_totals_value',
-        'conditions_text', 'origin',
+        'conditions_text',
     ];
 
     /** @return array<string, string> */

@@ -240,7 +240,7 @@ final class GoodsReceiptController extends Controller
             'lines.*.catalog_product_id' => ['required', 'integer'],
             'lines.*.quantity'       => ['required', 'integer', 'min:1'],
             'lines.*.unit_cost'      => ['required', 'numeric', 'min:0'],
-            'lines.*.warehouse_id'   => ['required', 'integer', Warehouse::operativaRule()],
+            'lines.*.warehouse_id'   => ['required', 'integer', Warehouse::existsRule()],
             'import_cost_total'      => ['nullable', 'numeric', 'min:0'],
             'freight_total'          => ['nullable', 'numeric', 'min:0'],
             'handling_total'         => ['nullable', 'numeric', 'min:0'],

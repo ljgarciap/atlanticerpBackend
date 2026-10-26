@@ -45,7 +45,7 @@ final class WarehouseStockService
         $porServirMap = $this->inventoryKpis->porServirMap($productIds);
 
         /** @var Collection<int, Warehouse> $warehouses */
-        $warehouses = Warehouse::operativas()->orderBy('id')->get();
+        $warehouses = Warehouse::query()->orderBy('id')->get();
 
         /** @var Collection<int, Collection<int, ProductWarehouseStock>> $stockByProduct */
         $stockByProduct = ProductWarehouseStock::whereIn('catalog_product_id', $productIds)
@@ -74,7 +74,7 @@ final class WarehouseStockService
     /** @return list<array{warehouse_id: int, name: string, quantity: int}> */
     private function emptyWarehouseRows(): array
     {
-        return array_values(Warehouse::operativas()->orderBy('id')->get()->map(fn (Warehouse $w) => [
+        return array_values(Warehouse::query()->orderBy('id')->get()->map(fn (Warehouse $w) => [
             'warehouse_id' => $w->id,
             'name'         => $w->name,
             'quantity'     => 0,

@@ -207,38 +207,6 @@ final class OrderService
     }
 
     /**
-     * Pedido gemelo de ICG que Bodega todavía debe despachar (los de la hoja «Completo»: nada entregado en ICG): entra como un
-     * pedido normal en «Asignado» — historial de etapa y `OrderCreated` para avisar al asistente — pero sin tarjeta del pipeline.
-     * La reserva de stock ocurre, como siempre, al iniciar el picking. Los ítems ya vienen resueltos (`quote_item_id` de la
-     * cotización gemela), no se derivan de una cotización aprobada.
-     *
-     * @param  array<string, mixed>  $attrs
-     * @param  list<array<string, mixed>>  $items
-     */
-    public function createIcgTwinForDispatch(array $attrs, array $items, \DateTimeInterface $fecha): Order
-    {
-        $order = Order::create($attrs);
-        $order->forceFill(['created_at' => $fecha, 'updated_at' => $fecha])->saveQuietly();
-
-        foreach ($items as $item) {
-            $order->items()->create($item);
-        }
-
-        OrderStageHistory::create([
-            'order_id' => $order->id, 'from_stage' => null, 'to_stage' => Order::STAGE_ASIGNADO, 'changed_by' => null, 'created_at' => $fecha,
-        ]);
-
-        event(new OrderCreated(
-            orderId: $order->id,
-            orderNumber: $order->order_number,
-            assistantId: $order->assistant_id,
-            tenant: $this->requiredTenantSlug(),
-        ));
-
-        return $order;
-    }
-
-    /**
      * Una tarjeta de Pedido: `Order` + ítems desde la cotización + fila inicial de historial de
      * etapa + evento `OrderCreated`. Extraído de `createFromApprovedQuote()` para reusarlo tanto en
      * el pedido de entrega única como en cada miembro de una familia de entregas parciales

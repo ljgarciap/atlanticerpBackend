@@ -112,18 +112,17 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
 
     // ── Bodega → Bodegas: lo único nuevo de Bodega (SCRUM-1021) ─────────────────────────────
 
-    public function test_vendedor_ve_bodegas_y_zona_libre_en_consulta(): void
+    public function test_vendedor_ve_bodegas_en_consulta(): void
     {
         $this->conceder(['bodega.warehouses.view']);
         $h = $this->vendedor();
 
         $lista = $this->withHeaders($h)->getJson('/api/bodega/warehouses')->assertStatus(200);
         $nombres = collect($lista->json('data'))->pluck('name')->all();
-        $this->assertContains('Bodega Zona Libre', $nombres);
         $this->assertContains('Bodega Central', $nombres);
 
-        $zonaLibre = (int) collect($lista->json('data'))->firstWhere('name', 'Bodega Zona Libre')['id'];
-        $this->withHeaders($h)->getJson("/api/bodega/warehouses/{$zonaLibre}")->assertStatus(200);
+        $central = (int) collect($lista->json('data'))->firstWhere('name', 'Bodega Central')['id'];
+        $this->withHeaders($h)->getJson("/api/bodega/warehouses/{$central}")->assertStatus(200);
     }
 
     public function test_vendedor_no_puede_modificar_ni_reubicar_inventario_de_bodega(): void

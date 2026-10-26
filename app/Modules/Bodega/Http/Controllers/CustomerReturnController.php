@@ -221,7 +221,7 @@ final class CustomerReturnController extends Controller
         }
 
         $validated = $request->validate([
-            'destination_warehouse_id'          => ['required', 'integer', Warehouse::operativaRule()],
+            'destination_warehouse_id'          => ['required', 'integer', Warehouse::existsRule()],
             'lines'                              => ['required', 'array', 'min:1'],
             'lines.*.customer_return_line_id'   => ['required', 'integer'],
             'lines.*.qty_received'               => ['required', 'integer', 'min:0'],

@@ -107,7 +107,6 @@ final class InventoryKpiService
     public function conStock(): int
     {
         return ProductWarehouseStock::query()
-            ->enBodegaOperativa()
             ->where('quantity', '>', 0)
             ->whereIn('catalog_product_id', CatalogProduct::query()->select('id')->where('is_active', true))
             ->distinct()
@@ -369,7 +368,7 @@ final class InventoryKpiService
 
         return ProductWarehouseStock::query()
             ->whereIn('catalog_product_id', $productIds)
-            ->whereHas('warehouse', fn ($q) => $q->where('permite_venta', true)->where('excluye_disponible', true)->where('solo_consulta', false))
+            ->whereHas('warehouse', fn ($q) => $q->where('permite_venta', true)->where('excluye_disponible', true))
             ->selectRaw('catalog_product_id, SUM(quantity) as total')
             ->groupBy('catalog_product_id')
             ->pluck('total', 'catalog_product_id')
@@ -465,7 +464,6 @@ final class InventoryKpiService
         }
 
         $rows = ProductWarehouseStock::with('warehouse')
-            ->enBodegaOperativa()
             ->whereIn('catalog_product_id', $productIds)
             ->where('quantity', '<>', 0) // SCRUM-1196: también los saldos negativos, para que la suma de «Ver bodegas» coincida con el Stock total
             ->get();

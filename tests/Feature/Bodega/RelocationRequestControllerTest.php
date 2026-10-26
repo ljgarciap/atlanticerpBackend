@@ -96,7 +96,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
     public function test_store_desde_bodega_modo_pendiente_retorna_422(): void
     {
         $product = $this->makeProduct();
-        $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
+        $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         $merma = Warehouse::where('name', 'Merma')->first();
 
         $this->grantBodega('designer@atlantic.test');
@@ -116,7 +116,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
     {
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $zonaLibre = Warehouse::where('name', 'Bodega Zona Libre')->first();
+        $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
         $this->grantBodega('designer@atlantic.test');

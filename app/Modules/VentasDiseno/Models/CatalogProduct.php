@@ -77,8 +77,6 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  * @property int|null $stock_quantity
  * @property int|null $reorder_point
  * @property int|null $provider_id
- * @property string|null $external_source SCRUM-970 — origen de sync externo (ej. 'lafayette_lighting'), null si no viene de ninguna integración
- * @property Carbon|null $external_synced_at SCRUM-970 — timestamp de la FUENTE externa (`cache_updated_at`), no de AtlanticERP
  * @property bool $is_active
  * @property string|null $rotation
  * @property string|null $category
@@ -138,7 +136,6 @@ class CatalogProduct extends Model
         'stock_quantity', 'reorder_point', 'provider_id', 'is_active', 'rotation', 'category',
         'technical_sheet_key', 'technical_sheet_filename', 'technical_sheet_uploaded_at', 'barcode',
         'photo_key', 'photo_thumbnail_key', 'photo_filename', 'photo_uploaded_at',
-        'external_source', 'external_synced_at',
     ];
 
     /** @return array<string, string> */
@@ -157,7 +154,6 @@ class CatalogProduct extends Model
             'is_active' => 'boolean',
             'technical_sheet_uploaded_at' => 'datetime',
             'photo_uploaded_at' => 'datetime',
-            'external_synced_at' => 'datetime',
         ];
     }
 

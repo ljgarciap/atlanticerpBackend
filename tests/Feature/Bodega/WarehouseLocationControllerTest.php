@@ -149,42 +149,6 @@ class WarehouseLocationControllerTest extends FeatureTestCase
             ->assertStatus(404);
     }
 
-    // ── SCRUM-990 (M2): Zona Libre es de solo consulta ───────────────────────────────────────────────────────
-
-    public function test_crear_ubicacion_en_una_bodega_de_solo_consulta_responde_422_y_no_escribe_nada(): void
-    {
-        $zl = Warehouse::where('name', 'Bodega Zona Libre')->firstOrFail();
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-
-        $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/bodega/warehouses/{$zl->id}/locations", ['codigo' => 'ZL-1'])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['warehouse_id'])
-            ->assertJsonPath('errors.warehouse_id.0', trans('bodega.warehouse_solo_consulta_ubicaciones'));
-
-        $this->reMakeCurrent();
-        $this->assertSame(0, WarehouseLocation::where('warehouse_id', $zl->id)->count());
-    }
-
-    public function test_editar_ubicacion_de_una_bodega_de_solo_consulta_responde_422_y_no_cambia_nada(): void
-    {
-        $zl = Warehouse::where('name', 'Bodega Zona Libre')->firstOrFail();
-        $loc = WarehouseLocation::create(['warehouse_id' => $zl->id, 'codigo' => 'ZL-RESIDUAL', 'is_active' => true]);
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
-
-        $this->withHeaders($this->authHeaders($token))
-            ->patchJson("/api/bodega/warehouses/{$zl->id}/locations/{$loc->id}", ['codigo' => 'ZL-X', 'is_active' => false])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['warehouse_id']);
-
-        $this->reMakeCurrent();
-        $fresh = WarehouseLocation::findOrFail($loc->id);
-        $this->assertSame('ZL-RESIDUAL', $fresh->codigo);
-        $this->assertTrue($fresh->is_active);
-    }
-
     public function test_no_existe_ninguna_ruta_de_borrado_de_ubicaciones(): void
     {
         $metodos = collect(Route::getRoutes()->getRoutes())

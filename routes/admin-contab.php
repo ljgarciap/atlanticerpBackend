@@ -27,7 +27,6 @@ use App\Modules\AdminCont\Http\Controllers\AdminContItbmsRateController;
 use App\Modules\AdminCont\Http\Controllers\AdminContLocationController;
 use App\Modules\AdminCont\Http\Controllers\AdminContPaymentController;
 use App\Modules\AdminCont\Http\Controllers\AdminContPaymentMethodSalesController;
-use App\Modules\AdminCont\Http\Controllers\AdminContPedidosGemelosController;
 use App\Modules\AdminCont\Http\Controllers\AdminContPettyCashController;
 use App\Modules\AdminCont\Http\Controllers\AdminContReportsController;
 use App\Modules\AdminCont\Http\Controllers\AdminContReversalController;
@@ -504,9 +503,6 @@ Route::middleware('permission:admin_contab.records.manage')
         Route::get('/libro-facturas/excel', [AdminContInvoiceBookController::class, 'excel']);
         Route::get('/ventas-medio-pago', [AdminContPaymentMethodSalesController::class, 'index']);
         Route::get('/ventas-medio-pago/excel', [AdminContPaymentMethodSalesController::class, 'excel']);
-        // Vista de validación de los pedidos gemelos de ICG (solo lectura; facturar el saldo va por /invoices).
-        Route::get('/pedidos-gemelos', [AdminContPedidosGemelosController::class, 'index']);
-        Route::get('/pedidos-gemelos/excel', [AdminContPedidosGemelosController::class, 'excel']);
     });
 
 // Batch final de Admin&Cont — "Inicio" (SCRUM-503→512, REQ-426→435), Grupo 1 (SCRUM-504→508,

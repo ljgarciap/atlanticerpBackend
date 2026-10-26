@@ -247,7 +247,6 @@ final class OrderBoardService
     {
         return Order::query()
             ->whereIn('stage', Order::STAGE_ORDER)
-            ->sinGemelosEntregados()
             ->with(['assistant', 'picker', 'courier', 'pipelineCard.owner', 'pipelineCard.salesProject']);
     }
 

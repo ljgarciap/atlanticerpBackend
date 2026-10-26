@@ -870,7 +870,6 @@ final class QuoteController extends Controller
 
         return [
             'id'               => $quote->id,
-            'origin'           => $quote->origin,
             'status'           => $quote->status,
             'folio'            => $quote->folio,
             'generated_at'     => $quote->generated_at?->toIso8601String(),

@@ -44,9 +44,7 @@ final class WarehouseController extends Controller
     public function index(): JsonResponse
     {
         return response()->json([
-            // SCRUM-990 — `solo_consulta` identifica explícitamente las bodegas de solo consulta (Zona Libre): el frontend ya no lo
-            // infiere por `modo_detalle`. Siguen apareciendo aquí (Vista Bodegas las lista), pero sin sumar a ningún total.
-            'data' => Warehouse::orderBy('id')->get(['id', 'name', 'responsable', 'capacidad_pct', 'modo_detalle', 'solo_consulta']),
+            'data' => Warehouse::orderBy('id')->get(['id', 'name', 'responsable', 'capacidad_pct', 'modo_detalle']),
         ]);
     }
 
@@ -55,12 +53,6 @@ final class WarehouseController extends Controller
         $warehouse = Warehouse::find($id);
         if ($warehouse === null) {
             return response()->json(['message' => 'Not found'], 404);
-        }
-
-        // SCRUM-990 — bodega de SOLO CONSULTA: no hay stock propio que listar. Se devuelve el mismo shape de nivel superior
-        // (`warehouse`/`kpis`/`ubicaciones`/`data`/`meta`) con `data` vacío y KPIs en cero (Fase 5b: ya no hay catálogo externo; el concepto se retira en la 5b-2).
-        if ($warehouse->solo_consulta) {
-            return response()->json($this->buildSoloConsultaResponse($warehouse, $request));
         }
 
         $chip = (string) $request->query('chip', 'todos');
@@ -188,31 +180,6 @@ final class WarehouseController extends Controller
     }
 
     /**
-     * SCRUM-990 — respuesta de `show()` para una bodega de solo consulta. Mismo shape que la rama normal para que el selector y las
-     * tarjetas reusen el hook: `kpis` en cero y sin última sincronización (Fase 5b: ya no hay catálogo externo); `data` vacío.
-     *
-     * @return array<string, mixed>
-     */
-    private function buildSoloConsultaResponse(Warehouse $warehouse, Request $request): array
-    {
-        $pagination = Pagination::params($request, [], 'id');
-
-        return [
-            'warehouse' => $this->formatWarehouse($warehouse),
-            'kpis' => [
-                'responsable' => $warehouse->responsable,
-                'total_products' => 0,
-                'total_units' => 0,
-                'capacidad_pct' => $warehouse->capacidad_pct,
-                'last_synced_at' => null,
-            ],
-            'ubicaciones' => [],
-            'data' => [],
-            'meta' => Pagination::meta(Pagination::ofArray([], $pagination['per_page'], 1)),
-        ];
-    }
-
-    /**
      * SCRUM-454 (REQ-384) — chip "Espacio libre". Mismo shape de nivel superior que la rama
      * normal de `show()` (`warehouse`/`kpis`/`ubicaciones`/`data`) — no repetir el bug de
      * Pre-QA 2026-07-21 (un shape distinto rompía `data.kpis.responsable` en el frontend). Las
@@ -317,7 +284,6 @@ final class WarehouseController extends Controller
             'responsable' => $warehouse->responsable,
             'capacidad_pct' => $warehouse->capacidad_pct,
             'modo_detalle' => $warehouse->modo_detalle,
-            'solo_consulta' => $warehouse->solo_consulta,
         ];
     }
 

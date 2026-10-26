@@ -34,15 +34,10 @@ final class InvoiceBillingPlanner
      *  pedido sigue armándose y no debe poder facturarse aunque tenga cotización/monto/cliente. */
     public const FACTURABLE_STAGES = [Order::STAGE_POR_DESPACHAR, Order::STAGE_DESPACHADO, Order::STAGE_ENTREGADO];
 
-    /**
-     * ¿La entrega está en una etapa desde la que se puede facturar? Un pedido gemelo de ICG siempre lo está (decisión de Luis
-     * 2026-10-15): su etapa de Bodega no refleja lo pendiente de ICG (los parciales nacen `entregado` por tener albarán, los completos
-     * `asignado` por despachar) y lo que se factura es el saldo de la cotización gemela. Los pedidos normales siguen exigiendo
-     * `FACTURABLE_STAGES`.
-     */
+    /** ¿La entrega está en una etapa desde la que se puede facturar? Exige `FACTURABLE_STAGES`. */
     public static function etapaFacturable(Order $order): bool
     {
-        return $order->isIcgLegacy() || in_array($order->stage, self::FACTURABLE_STAGES, true);
+        return in_array($order->stage, self::FACTURABLE_STAGES, true);
     }
 
     /**
@@ -54,7 +49,7 @@ final class InvoiceBillingPlanner
      */
     public static function whereEtapaFacturable($query)
     {
-        return $query->where(fn ($q) => $q->whereIn('stage', self::FACTURABLE_STAGES)->orWhere('origin', Order::ORIGIN_ICG_LEGACY));
+        return $query->whereIn('stage', self::FACTURABLE_STAGES);
     }
 
     /** Épsilon numérico (NO un umbral de negocio): medio centavo, la mitad de la resolución de los
@@ -117,17 +112,9 @@ final class InvoiceBillingPlanner
         );
     }
 
-    /**
-     * Total facturable del pedido antes de los ajustes de ITBMS. Pedido normal: monto de la tarjeta del pipeline. Pedido gemelo
-     * de ICG (sin tarjeta): total con ITBMS de su cotización gemela, que lleva solo las líneas pendientes (decisión L1) — de
-     * ahí que "lo facturado en ICG" no se reste otra vez.
-     */
+    /** Total facturable del pedido antes de los ajustes de ITBMS: monto de la tarjeta del pipeline. */
     private function totalBase(Order $root, ?Quote $quote): float
     {
-        if ($root->isIcgLegacy()) {
-            return $quote === null ? 0.0 : $quote->grandTotal();
-        }
-
         return (float) ($root->pipelineCard->amount ?? 0);
     }
 
