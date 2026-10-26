@@ -52,6 +52,7 @@ final class ComprasSettingsController extends Controller
         return [
             'low_rating_threshold' => $settings->low_rating_threshold,
             'primary_approver_user_id' => $settings->primary_approver_user_id,
+            'zona_libre_provider_id' => $settings->zona_libre_provider_id,
             'claim_attention_days' => $settings->claim_attention_days,
             'critical_days_por_aprobar' => $settings->critical_days_por_aprobar,
             'replacement_margin_threshold' => $settings->replacement_margin_threshold,
