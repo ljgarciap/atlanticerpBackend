@@ -108,4 +108,18 @@ final class TaxIdByCountryTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))->getJson('/api/auth/me')->assertOk()->assertJsonPath('fiscal_id', $esperado);
         $this->assertSame($esperado, $this->postJson('/api/auth/login', ['email' => 'designer@atlantic.test', 'password' => 'Password123!'])->assertOk()->json('user.fiscal_id'));
     }
+
+    /** Fase 6d — el nombre visible del impuesto sale del país: ITBMS (PA), IVA (CO), Sales tax (US). */
+    public function test_el_nombre_visible_del_impuesto_depende_del_pais(): void
+    {
+        foreach (['PA' => 'ITBMS', 'CO' => 'IVA', 'US' => 'Sales tax'] as $pais => $etiqueta) {
+            $this->ponerPais($pais);
+            $this->assertSame($etiqueta, \App\Shared\Multitenancy\TenantRegion::taxLabel());
+
+            $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+            $this->withHeaders($this->authHeaders($token))->getJson('/api/auth/me')->assertOk()->assertJsonPath('tax_label', $etiqueta);
+        }
+
+        $this->assertSame('Impuesto', \App\Shared\Multitenancy\TenantRegion::taxLabel('XX'));
+    }
 }

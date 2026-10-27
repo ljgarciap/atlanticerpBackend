@@ -1,6 +1,6 @@
 # Spec — Fase 6: fiscal por país (Panamá como el primer paquete)
 
-**Estado**: 6a y 6b MEZCLADAS (§7-§8). 6c IMPLEMENTADA (§9), pendiente de merge. 6d pendiente (con su «adelante»).
+**Estado**: 6a y 6b MEZCLADAS (§7-§8). 6c MEZCLADA (§9). 6d IMPLEMENTADA (§10), pendiente de merge.
 **Origen**: decisión 2 del análisis de aislamiento (multi-país: «el fiscal de Panamá pasa a ser un paquete más sobre `PacProviderContract`») y paso 6 del plan de 8 fases.
 
 ## 1. Hechos verificados (2026-10-26)
@@ -93,3 +93,13 @@ etiquetas visibles (rápido, sin tocar esquema); (ii) **renombrar esquema y cód
 - **Frontend**: `useFiscalId` + `fiscalIdText`; los formularios de cliente (alta y edición de datos fiscales) y de proveedor muestran «NIT» o «EIN / Tax ID» en lugar de «RUC» y ocultan el DV donde no aplica; en Panamá los textos no cambian. La guarda del receptor al facturar sigue siendo la de la DGI (solo corre con el PAC activo).
 - **Tests**: backend 5093 (+16: reglas por país con NIT reales de la DIAN —Universidad Nacional 899999063-3 y DIAN 800197268-4—, validación por país del tenant, clientes, proveedores local/exterior y payload); frontend 236 archivos / 2959 tests (+ hook y modal de edición por país).
 - Informe del Senior Review: `docs/reviews/fase6c-validador-identificacion-2026-10-26.md`.
+
+## 10. Resultado de la 6d — etiquetas visibles del impuesto por país (2026-10-26)
+- **Alcance (decisión de Luis, §6 punto 3, opción i)**: solo cambia el TEXTO que ve el usuario. El modelo interno sigue llamándose «ITBMS» (tablas, columnas, rutas, permisos, DTO del PAC): cero migraciones, cero cambio de API salvo el campo nuevo `tax_label`.
+- **Backend**: `config/fiscal.php` `tax_labels` (PA «ITBMS», CO «IVA», US «Sales tax», `default` «Impuesto»), `TenantRegion::taxLabel()`, `tax_label` en login y `/auth/me`. Se usa en los 5 PDF (cotización de ventas y de servicios, nota de crédito, totales de factura, caja menuda),
+  los encabezados de Excel (libro de facturas, ventas por método de pago), el régimen del estado de cuenta (PDF y Excel), el motivo de corrección de notas de crédito, la etiqueta del ajuste de cotización de Servicios y 3 mensajes de error visibles.
+- **Frontend**: `lib/region` (`getTaxLabel`/`setTaxLabel`, «ITBMS» por omisión) publicado por el store; los textos de i18n (es/en, 9 archivos, ~80 cadenas) llevan `{{tax}}`, resuelto por `interpolation.defaultVariables` (getter, se lee en cada traducción).
+- **Panamá no cambia**: el valor por omisión es «ITBMS», así que ningún texto ni PDF actual cambia.
+- **Fuera de alcance / avisos**: (1) el **7 %** que aparece en 2 textos y en `ITBMS_RATE_LOCAL_PREVIEW` de la recepción de mercancía es la tasa de Panamá; en otro país la tasa real sale de las tasas configuradas (revisar con la Fase 7). (2) Mensajes internos del PAC panameño
+  (`UnmappableItbmsRateException`, `FiscalDocumentItemsBuilder`) conservan «ITBMS»: solo corren con proveedor fiscal de Panamá. (3) Los textos van sin concordancia de género («Cuota Sales tax»): aceptable por ser etiquetas.
+- **Tests**: backend +1 (etiqueta por país en `/auth/me`), frontend +2 (`i18n/taxLabel.test.ts`).

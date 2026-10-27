@@ -22,6 +22,15 @@ return [
 
     'fallback' => 'none',
 
+    // Fase 6d — nombre VISIBLE del impuesto sobre ventas por país (etiquetas de pantallas, PDF y exportes). Solo cambia el texto: el modelo
+    // interno sigue llamándose «ITBMS» (tablas, columnas, API). Un país sin entrada usa 'default'.
+    'tax_labels' => [
+        'PA'      => 'ITBMS',
+        'CO'      => 'IVA',
+        'US'      => 'Sales tax',
+        'default' => 'Impuesto',
+    ],
+
     // Fase 6c — reglas de la identificación fiscal por país (RUC, NIT, EIN…); un país sin entrada usa GenericTaxIdRules.
     'tax_id_rules' => [
         'PA' => \App\Shared\Fiscal\TaxId\PanamaTaxIdRules::class,

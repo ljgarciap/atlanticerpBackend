@@ -52,7 +52,7 @@ class ItbmsRateResolver
             ->first();
 
         if ($rate === null) {
-            throw new \DomainException('Falta la tasa base «0% — Exento» activa en Configuración Fiscal: no se puede cotizar ni facturar a un cliente exento de ITBMS.');
+            throw new \DomainException('Falta la tasa base «0% — Exento» activa en Configuración Fiscal: no se puede cotizar ni facturar a un cliente exento de '.\App\Shared\Multitenancy\TenantRegion::taxLabel().'.');
         }
 
         return $rate;

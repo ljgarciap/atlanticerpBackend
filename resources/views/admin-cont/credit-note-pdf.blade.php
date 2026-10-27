@@ -120,7 +120,7 @@
 
     <div class="totales">
         <div class="fila"><div class="label">Subtotal</div><div class="valor">{{ $moneda }} {{ number_format($detail['subtotal'] ?? 0, 2) }}</div></div>
-        <div class="fila"><div class="label">ITBMS</div><div class="valor">{{ $moneda }} {{ number_format($detail['itbms'] ?? 0, 2) }}</div></div>
+        <div class="fila"><div class="label">{{ \App\Shared\Multitenancy\TenantRegion::taxLabel() }}</div><div class="valor">{{ $moneda }} {{ number_format($detail['itbms'] ?? 0, 2) }}</div></div>
         <div class="fila total-final"><div class="label">Total</div><div class="valor">{{ $moneda }} {{ number_format($detail['monto'] ?? 0, 2) }}</div></div>
     </div>
 

@@ -24,7 +24,7 @@ final class InvoiceBookExportService
         $sheet       = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Libro de facturas');
 
-        $headers = ['Fecha', 'RUC', 'Cliente', 'Tipo', 'Motivo', 'N° Documento', 'Base Imponible', '%', 'Cuota ITBMS', 'Total', 'Vendedor'];
+        $headers = ['Fecha', 'RUC', 'Cliente', 'Tipo', 'Motivo', 'N° Documento', 'Base Imponible', '%', 'Cuota '.\App\Shared\Multitenancy\TenantRegion::taxLabel(), 'Total', 'Vendedor'];
         $sheet->fromArray($headers, null, 'A1');
         $sheet->getStyle('A1:K1')->getFont()->setBold(true);
 

@@ -29,7 +29,7 @@ final class PaymentMethodSalesExportService
         // SCRUM-880 — orden propio del reporte (Yappy/Link antes de Tarjeta/Depósito), no el de
         // AdminContPayment::METODOS.
         $metodoHeaders = array_map(fn (string $m) => AdminContPayment::METODO_LABELS[$m], PaymentMethodSalesReportService::COLUMNAS_METODO_ORDEN);
-        $headers       = ['Fecha', 'Cliente', 'N° Documento', 'Base Imponible', 'ITBMS', 'Total', ...$metodoHeaders];
+        $headers       = ['Fecha', 'Cliente', 'N° Documento', 'Base Imponible', \App\Shared\Multitenancy\TenantRegion::taxLabel(), 'Total', ...$metodoHeaders];
         $sheet->fromArray($headers, null, 'A1');
         $sheet->getStyle('A1:'.Coordinate::stringFromColumnIndex(count($headers)).'1')->getFont()->setBold(true);
 
