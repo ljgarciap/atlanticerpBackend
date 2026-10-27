@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Modules\Compras\Models\Provider;
+use App\Modules\Servicios\Models\Ticket;
 use App\Modules\VentasDiseno\Models\Architect;
 
 /*
@@ -23,6 +24,18 @@ return [
             'label' => 'Tipos de arquitecto / prescriptor',
             'usage' => [Architect::class, 'type'],
             'props' => [],
+        ],
+        // Fase 7b — tipos de ticket de Servicios. La lógica pregunta por `comportamiento` (qué flujo hereda), no por la clave.
+        'ticket_type' => [
+            'label' => 'Tipos de ticket (Servicios)',
+            'usage' => [Ticket::class, 'tipo'],
+            'props' => [
+                'comportamiento' => ['type' => 'enum', 'values' => ['instalacion', 'garantia', 'reclamo', 'retrofit', 'generico'], 'default' => 'generico'],
+                'prefijo' => ['type' => 'string', 'max' => 5, 'default' => 'TCK'],
+                'sla_dias' => ['type' => 'int', 'min' => 1, 'max' => 365, 'default' => 7],
+                'color' => ['type' => 'string', 'max' => 30, 'default' => null],
+                'subtipos' => ['type' => 'list', 'max' => 20, 'default' => []],
+            ],
         ],
     ],
 ];
