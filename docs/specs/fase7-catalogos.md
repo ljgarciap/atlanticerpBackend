@@ -1,6 +1,6 @@
 # Fase 7 — Catálogos de vocabulario configurables (2026-10-26)
 
-**Estado**: diseño aprobado por Luis (2026-10-26). 7a IMPLEMENTADA (§7), pendiente de merge; 7b y 7c pendientes (cada una con su «adelante»). Origen: análisis `erp/docs/analisis/aislamiento-nucleo-2026-10-24.md` (fase 7) y aviso de la 6d.
+**Estado**: diseño aprobado por Luis (2026-10-26). 7a IMPLEMENTADA (§7), pendiente de merge; 7b IMPLEMENTADA (§8), 7c pendiente (con su «adelante»). Origen: análisis `erp/docs/analisis/aislamiento-nucleo-2026-10-24.md` (fase 7) y aviso de la 6d.
 
 ## 1. Objetivo
 Que el vocabulario del negocio (tipos de ticket, categorías, tasa de impuesto visible) sea DATOS por empresa y no constantes del código, para que el ERP sirva a otros sectores y países sin tocar PHP.
@@ -47,3 +47,10 @@ Panamá/ILUMINACIÓN sin cambio visible con los datos por defecto; migración ad
 - **Limitación conocida**: la etiqueta de una entrada es un solo texto (el idioma de la empresa); las traducciones es/en solo rigen como respaldo. Los tipos de asociado todavía no se muestran desde el catálogo en el frontend (siguen con su texto traducido; el backend ya acepta los nuevos): pendiente de 7b junto con el resto del vocabulario.
 - **Tests**: backend +5 (`CatalogEntriesTest`: siembra, lectura/permisos, categoría nueva con comportamiento, inactivas/inexistentes, protección de entradas de sistema y en uso); suites Compras/VentasDiseno/Servicios/Auth/Shared 2713 tests verdes, PHPStan 0. Frontend +8 (`CatalogsPanel`, `useCatalog`), 239 archivos / 2967 tests.
 - Informe: `docs/reviews/fase7a-infra-catalogos-2026-10-26.md`.
+
+## 8. Resultado de la 7b — tipos de ticket (2026-10-27)
+- **Dominio `ticket_type`** (`config/catalogs.php`): `comportamiento` (instalacion|garantia|reclamo|retrofit|generico), `prefijo` (`^[A-Z0-9]{1,5}$`), `sla_dias` (1–365), `color` (hex) y `subtipos` (lista). El esquema de propiedades admite ahora `string`, `int` y `list` (con `pattern`/límites). Migraciones `2026_10_27_200000` (siembra los 4 tipos; el SLA sembrado es el vigente de cada empresa) y `…200001` (colores).
+- **Fachada** `App\Modules\Servicios\Services\TicketTypes` (`is`, `comportamiento`, `keysWith`, `prefijo`, `slaDias`, `subtipos`, `label`, `color`, `exists`). Migrados folio, validación de tipo/subtipo, hoja de reclamo, informe de inspección (plantillas por comportamiento), especialidad del técnico, nota de cotización, meta de instalaciones, estados iniciales, Inicio, Reportes y 2 PDF. El SLA vive en `sla_dias`; `PATCH sla-settings` acepta cualquier tipo activo. Retiradas `Ticket::TIPOS`, `PREFIX_BY_TIPO` y `SUBTIPOS_BY_TIPO`.
+- **Frontend**: hook `useTicketTypes` (respaldo a los 4 de sistema), `TicketType` pasa a clave de texto, 14 componentes migrados, 3 mapas de colores eliminados, `CatalogsPanel` edita string/int/list.
+- **F3 (tipos de asociado) sin alcance real**: ningún componente del frontend usa los textos `associates.types.*`; no hay nada que migrar (la 7a lo daba por pendiente).
+- Informe: `docs/reviews/fase7b-tipos-ticket-2026-10-27.md`.

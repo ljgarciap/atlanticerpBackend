@@ -127,7 +127,8 @@ final class CatalogService
             $ok = $def !== null && match ($def['type']) {
                 'bool' => is_bool($value),
                 'enum' => in_array($value, $def['values'], true),
-                'string' => is_string($value) && $value !== '' && mb_strlen($value) <= ($def['max'] ?? 120),
+                'string' => is_string($value) && $value !== '' && mb_strlen($value) <= ($def['max'] ?? 120)
+                    && (! isset($def['pattern']) || preg_match($def['pattern'], $value) === 1),
                 'int' => is_int($value) && $value >= ($def['min'] ?? PHP_INT_MIN) && $value <= ($def['max'] ?? PHP_INT_MAX),
                 'list' => is_array($value) && array_is_list($value) && count($value) <= ($def['max'] ?? 50)
                     && array_filter($value, static fn ($v): bool => ! is_string($v) || $v === '' || mb_strlen($v) > 60) === [],

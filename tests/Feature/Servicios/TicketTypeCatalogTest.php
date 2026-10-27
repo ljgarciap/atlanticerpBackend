@@ -97,6 +97,9 @@ final class TicketTypeCatalogTest extends FeatureTestCase
             'SLA cero' => [['sla_dias' => 0]],
             'prefijo vacío' => [['prefijo' => '']],
             'prefijo demasiado largo' => [['prefijo' => 'ABCDEF']],
+            'prefijo en minúsculas o con símbolos' => [['prefijo' => 'mn-t']],
+            'color que no es hex' => [['color' => 'url(http://x)']],
+            'color hex corto' => [['color' => '#fff']],
             'subtipos con un número' => [['subtipos' => ['ok', 5]]],
             'propiedad desconocida' => [['inventada' => true]],
         ];
