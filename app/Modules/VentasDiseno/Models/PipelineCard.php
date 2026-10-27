@@ -6,6 +6,7 @@ namespace App\Modules\VentasDiseno\Models;
 
 use App\Models\User;
 use App\Modules\Bodega\Models\Order;
+use App\Modules\VentasDiseno\Services\PipelineStages;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Collection;
@@ -49,10 +50,6 @@ class PipelineCard extends Model
     use LogsAuditTrail;
 
 
-    public const NON_EDITABLE_STAGE = 'lost';
-
-    public const RESTRICTED_EDIT_STAGE = 'approved';
-
     public const RESTRICTED_EDIT_PERMISSION = 'ventas_diseno.edit.approved';
 
     /** Permiso de ruta de las escrituras del Pipeline (routes/ventas-diseno.php). */
@@ -84,19 +81,16 @@ class PipelineCard extends Model
         'approval_proof' => 'del comprobante de aprobación',
     ];
 
-    /** @var list<string> Orden lineal del flujo — usado para bloquear saltos de etapa. */
-    private const STAGE_ORDER = ['lead', 'design', 'quote', 'proposal', 'approved'];
-
     /**
-     * Accesor público de solo lectura de STAGE_ORDER — lo usa
-     * QuoteService::confirm() (Cotización-D, REQ-048/SCRUM-723) para saber si mover
-     * la tarjeta hacia adelante sin duplicar el orden de etapas.
+     * Orden lineal del flujo (Fase 7c: sale del catálogo `pipeline_stage`, ya no es una constante) — usado para bloquear saltos de
+     * etapa y por QuoteService::confirm() (Cotización-D, REQ-048/SCRUM-723) para saber si mover la tarjeta hacia adelante sin
+     * duplicar el orden de etapas.
      *
      * @return list<string>
      */
     public static function stageOrder(): array
     {
-        return self::STAGE_ORDER;
+        return PipelineStages::linear();
     }
 
     /**
@@ -285,7 +279,7 @@ class PipelineCard extends Model
 
     public function isEditableBy(User $user): bool
     {
-        if ($this->stage === self::NON_EDITABLE_STAGE) {
+        if (PipelineStages::isLost($this->stage)) {
             return false;
         }
 
@@ -302,7 +296,7 @@ class PipelineCard extends Model
             return false;
         }
 
-        if ($this->stage === self::RESTRICTED_EDIT_STAGE) {
+        if (PipelineStages::isWon($this->stage)) {
             return $user->hasPermission(self::RESTRICTED_EDIT_PERMISSION);
         }
 
@@ -315,18 +309,18 @@ class PipelineCard extends Model
      */
     public function validationErrorForTransitionTo(string $targetStage): ?string
     {
-        if ($this->stage === self::NON_EDITABLE_STAGE) {
-            return $targetStage === 'lead'
+        if (PipelineStages::isLost($this->stage)) {
+            return $targetStage === PipelineStages::LEAD
                 ? null
                 : 'No se puede mover una tarjeta desde Perdido, salvo reactivarla a Lead.';
         }
 
-        if ($targetStage === self::NON_EDITABLE_STAGE) {
+        if (PipelineStages::isLost($targetStage)) {
             // REQ-603 RN2 / REQ-597 RN3 (Epic CRM Batch B) — Aprobado es una etapa terminal, sin
             // ningún botón de movimiento, ni siquiera "Marcar como Perdido". Sin este check, un
             // usuario con RESTRICTED_EDIT_PERMISSION (ej. Gerencia) podía mover una tarjeta Aprobada
             // a Perdido, ya que isEditableBy() la trata como editable para ese permiso.
-            if ($this->stage === self::RESTRICTED_EDIT_STAGE) {
+            if (PipelineStages::isWon($this->stage)) {
                 return 'Una tarjeta en Aprobado no puede marcarse como Perdido — es una etapa final.';
             }
 
@@ -340,13 +334,15 @@ class PipelineCard extends Model
         // El flujo Lead→Diseño→Cotización→Propuesta→Aprobado es lineal — no se pueden
         // saltear etapas (ej. Lead directo a Aprobado) aunque los datos del gate
         // específico de una etapa intermedia ya estén completos.
-        $currentIndex = array_search($this->stage, self::STAGE_ORDER, true);
-        $targetIndex  = array_search($targetStage, self::STAGE_ORDER, true);
+        $order        = PipelineStages::linear();
+        $currentIndex = array_search($this->stage, $order, true);
+        $targetIndex  = array_search($targetStage, $order, true);
         if ($currentIndex === false || $targetIndex !== $currentIndex + 1) {
             return 'No se puede saltear etapas — solo se puede avanzar a la siguiente etapa del flujo.';
         }
 
-        if ($this->stage === 'lead' && $targetStage !== 'lead') {
+        // Salir de Lead (hacia la etapa que siga, de sistema o propia) exige contacto + cliente master + subcliente.
+        if ($this->stage === PipelineStages::LEAD) {
             if ($this->contacts->isEmpty()) {
                 return 'Falta al menos 1 contacto antes de mover esta tarjeta desde Lead.';
             }
@@ -358,7 +354,9 @@ class PipelineCard extends Model
             }
         }
 
-        if ($this->stage === 'design' && $targetStage === 'quote') {
+        // Las compuertas cuelgan de la etapa de DESTINO (Fase 7c): así una etapa propia intercalada antes de Cotización, Propuesta o
+        // Aprobado hereda la compuerta correcta en vez de saltársela. Con las 6 etapas de sistema es idéntico a los pares de antes.
+        if ($targetStage === PipelineStages::QUOTE) {
             // RN5 (SCRUM-677/680) — la única vía de Diseño a Cotización es generar una
             // cotización real ("Crear cotización"), que avanza la tarjeta a través de
             // QuoteService::advanceCardToQuoteStage() y a propósito NO pasa por este método
@@ -369,7 +367,7 @@ class PipelineCard extends Model
             return 'La transición a Cotización solo ocurre generando una cotización real desde "Crear cotización".';
         }
 
-        if ($this->stage === 'quote' && $targetStage === 'proposal') {
+        if ($targetStage === PipelineStages::PROPOSAL) {
             if ($this->worked_area_m2 === null) {
                 return 'Falta la superficie trabajada (m²) antes de mover a Propuesta.';
             }
@@ -378,7 +376,7 @@ class PipelineCard extends Model
             // cliente recibió la propuesta, no al momento de generarla.
         }
 
-        if ($this->stage === 'proposal' && $targetStage === 'approved') {
+        if ($targetStage === PipelineStages::APPROVED) {
             if ($this->deliveryDates->isEmpty()) {
                 return 'Falta al menos 1 fecha de entrega antes de aprobar.';
             }

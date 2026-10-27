@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
+use App\Modules\VentasDiseno\Services\PipelineStages;
 use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContCommissionAdjustment;
@@ -136,7 +137,7 @@ final class CommissionOrderService
                 '=',
                 'o.id',
             )
-            ->where('pc.stage', 'approved')
+            ->whereIn('pc.stage', PipelineStages::won())
             ->select([
                 'pc.id as pedido_id',
                 'pc.owner_id as owner_id',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
+use App\Modules\VentasDiseno\Services\PipelineStages;
 use App\Modules\AdminCont\Exceptions\ArchitectCommissionStateException;
 use App\Modules\AdminCont\Jobs\SendArchitectReminderEmailJob;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
@@ -138,7 +139,7 @@ final class ArchitectCommissionService
             ->leftJoin("{$architectCommissionTable} as ac", 'ac.pipeline_card_id', '=', 'pc.id')
             // SCRUM-866 punto 2 — columna "Proyecto" faltante en la tabla del desplegable del arquitecto.
             ->leftJoin("{$salesProjectTable} as sp", 'sp.id', '=', 'pc.sales_project_id')
-            ->where('pc.stage', 'approved')
+            ->whereIn('pc.stage', PipelineStages::won())
             ->select([
                 'pc.id as pipeline_card_id',
                 'pc.amount as monto_proyecto',

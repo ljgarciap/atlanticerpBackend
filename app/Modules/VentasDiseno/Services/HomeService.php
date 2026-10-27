@@ -22,7 +22,6 @@ use Illuminate\Support\Collection;
  */
 final class HomeService
 {
-    private const ACTIVE_STAGES = ['lead', 'design', 'quote', 'proposal'];
 
     /**
      * REQ-059: umbral propio, más corto que el de "estancado" (15 días, REQ-004) —
@@ -76,7 +75,7 @@ final class HomeService
         $cards = $this->pipeline->list($user, $filters);
         $cards->load('contacts');
 
-        $activeCards = $cards->whereIn('stage', self::ACTIVE_STAGES);
+        $activeCards = $cards->whereIn('stage', PipelineStages::open());
 
         return [
             'final_stage'         => $this->finalStage($cards),
@@ -140,7 +139,7 @@ final class HomeService
      */
     private function finalStage(Collection $cards): array
     {
-        return array_values($cards->where('stage', 'proposal')->map(fn (PipelineCard $c) => [
+        return array_values($cards->whereIn('stage', PipelineStages::openAtOrAfter(PipelineStages::PROPOSAL))->map(fn (PipelineCard $c) => [
             'id'             => $c->id,
             'project_name'   => $c->salesProject->name,
             'client_name'    => $c->subClient->business_name ?? $c->masterClient->name ?? null,

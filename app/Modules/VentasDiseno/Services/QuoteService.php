@@ -190,7 +190,7 @@ final class QuoteService
 
             return PipelineCard::create([
                 'sales_project_id' => $quote->sales_project_id,
-                'stage'            => 'quote',
+                'stage'            => PipelineStages::QUOTE,
                 'master_client_id' => $project?->subClient?->master_client_id,
                 'sub_client_id'    => $project?->sub_client_id,
                 'owner_id'         => $quote->owner_id,
@@ -202,14 +202,14 @@ final class QuoteService
             ]);
         }
 
-        if (in_array($card->stage, ['proposal', 'approved'], true)) {
+        if (PipelineStages::isAtOrAfter($card->stage, PipelineStages::PROPOSAL)) {
             throw new QuoteActionBlockedException(
                 'Este proyecto ya avanzó más allá de Cotización — no se pueden confirmar nuevas versiones. '
                 . 'Una vez en Propuesta o Aprobado, la última cotización confirmada queda congelada.',
             );
         }
 
-        if ($card->stage === 'lost') {
+        if (PipelineStages::isLost($card->stage)) {
             throw new QuoteActionBlockedException(
                 'Este proyecto está marcado como Perdido — reactívelo a Lead antes de confirmar una cotización nueva.',
             );
@@ -478,12 +478,12 @@ final class QuoteService
                 'Solo se puede crear una versión nueva de una cotización con un proyecto en el Pipeline.',
             );
         }
-        if ($card->stage === 'lost') {
+        if (PipelineStages::isLost($card->stage)) {
             throw new QuoteActionBlockedException(
                 'Este proyecto está marcado como Perdido — reactívelo a Lead antes de crear una versión nueva.',
             );
         }
-        if (! in_array($card->stage, ['lead', 'design', 'quote'], true)) {
+        if (! PipelineStages::isBefore($card->stage, PipelineStages::PROPOSAL)) {
             throw new QuoteActionBlockedException(
                 'Este proyecto ya avanzó más allá de Cotización — la última cotización confirmada quedó congelada '
                 . 'y no admite versiones nuevas.',
@@ -588,12 +588,8 @@ final class QuoteService
         $card->update(['amount' => $quote->grandTotal()]);
         $this->transferDeliveryToCard($card, $quote);
 
-        $stageOrder   = PipelineCard::stageOrder();
-        $currentIndex = array_search($card->stage, $stageOrder, true);
-        $quoteIndex   = array_search('quote', $stageOrder, true);
-
-        if ($currentIndex !== false && $quoteIndex !== false && $currentIndex < $quoteIndex) {
-            $card = $this->pipelineService->changeStage($card, 'quote');
+        if (PipelineStages::isBefore($card->stage, PipelineStages::QUOTE)) {
+            $card = $this->pipelineService->changeStage($card, PipelineStages::QUOTE);
         }
 
         /** @var PipelineCard $fresh */

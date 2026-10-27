@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Models;
 
+use App\Modules\VentasDiseno\Services\PipelineStages;
 use App\Modules\VentasDiseno\Support\ReceptorTipo;
 use App\Models\User;
 use App\Modules\AdminCont\Services\ItbmsRateResolver;
@@ -496,7 +497,7 @@ class Quote extends Model
 
         $card = func_num_args() > 0 ? $preloadedCard : $this->linkedPipelineCard();
 
-        if ($card !== null && in_array($card->stage, ['proposal', 'approved'], true)) {
+        if ($card !== null && PipelineStages::isAtOrAfter($card->stage, PipelineStages::PROPOSAL)) {
             return 'approved';
         }
 
