@@ -33,12 +33,12 @@ final class TicketTypeCatalogTest extends FeatureTestCase
 
     public function test_la_siembra_reproduce_las_constantes_de_ticket(): void
     {
-        $this->assertEqualsCanonicalizing(Ticket::TIPOS, TicketTypes::keys());
+        $this->assertEqualsCanonicalizing(['installation', 'warranty', 'claim', 'retrofit'], TicketTypes::keys());
 
-        foreach (Ticket::PREFIX_BY_TIPO as $tipo => $prefijo) {
+        foreach (['installation' => 'INS', 'warranty' => 'GAR', 'claim' => 'REC', 'retrofit' => 'RET'] as $tipo => $prefijo) {
             $this->assertSame($prefijo, TicketTypes::prefijo($tipo), "prefijo de {$tipo}");
         }
-        foreach (Ticket::SUBTIPOS_BY_TIPO as $tipo => $subtipos) {
+        foreach (['installation' => ['installation', 'inspection'], 'warranty' => ['warranty_generic', 'replacement_inspection']] as $tipo => $subtipos) {
             $this->assertSame($subtipos, TicketTypes::subtipos($tipo), "subtipos de {$tipo}");
         }
         $this->assertSame([], TicketTypes::subtipos(Ticket::TIPO_CLAIM));
@@ -49,7 +49,7 @@ final class TicketTypeCatalogTest extends FeatureTestCase
     {
         $settings = app(ServiciosSettingsService::class);
 
-        foreach (Ticket::TIPOS as $tipo) {
+        foreach (['installation', 'warranty', 'claim', 'retrofit'] as $tipo) {
             $this->assertSame($settings->slaDiasByTipo($tipo), TicketTypes::slaDias($tipo), "SLA de {$tipo}");
         }
     }

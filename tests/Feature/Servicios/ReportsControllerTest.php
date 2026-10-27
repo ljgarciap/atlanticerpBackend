@@ -10,6 +10,7 @@ use App\Modules\Servicios\Models\InspectionReport;
 use App\Modules\Servicios\Models\InternalTechnician;
 use App\Modules\Servicios\Models\ServiceQuote;
 use App\Modules\Servicios\Models\Ticket;
+use App\Modules\Servicios\Services\TicketTypes;
 use App\Modules\Servicios\Services\TicketService;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
@@ -76,7 +77,7 @@ class ReportsControllerTest extends FeatureTestCase
         unset($overrides['created_at'], $overrides['closed_at']);
 
         $ticket = Ticket::create([
-            'numero' => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
+            'numero' => TicketTypes::prefijo($overrides['tipo'] ?? Ticket::TIPO_INSTALLATION).'-2026-'.static::uniqueTestNumber(),
             'tipo' => Ticket::TIPO_INSTALLATION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,
             'descripcion' => 'Ticket de prueba',
