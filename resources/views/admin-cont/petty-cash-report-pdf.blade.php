@@ -74,7 +74,7 @@
 
     <table class="lineas">
         <thead>
-            <tr><th>Fecha</th><th>Proveedor</th><th>Descripción</th><th class="num">M. Bruto</th><th class="num">ITBMS</th><th class="num">Total</th></tr>
+            <tr><th>Fecha</th><th>Proveedor</th><th>Descripción</th><th class="num">M. Bruto</th><th class="num">{{ \App\Shared\Multitenancy\TenantRegion::taxLabel() }}</th><th class="num">Total</th></tr>
         </thead>
         <tbody>
         @foreach ($grupos as $grupo)

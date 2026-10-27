@@ -456,6 +456,7 @@ class AuthController
             'tenant'      => $payload['tenant'],
             // Fase 6a — contexto regional del tenant (zona horaria, moneda, país, locale). Dato visual; no viaja en el JWT.
             'region'      => \App\Shared\Multitenancy\Tenant::current()?->region(),
+            'tax_label'   => \App\Shared\Multitenancy\TenantRegion::taxLabel(),
             'fiscal_id'   => \App\Shared\Fiscal\TaxId\TaxIdRulesRegistry::forCountry(\App\Shared\Multitenancy\TenantRegion::country())->describe(),
             'must_change_password' => $mustChangePassword,
             // SCRUM-1158 — con una sesión «Ver como usuario» viva, el frontend (tras recargar) recupera de acá el banner. Null si el token es normal.

@@ -5,7 +5,7 @@
         @if (($detail['descuentos'] ?? 0) > 0)
             <div class="fila"><div class="label">Descuentos</div><div class="valor">-{{ $moneda }} {{ number_format($detail['descuentos'], 2) }}</div></div>
         @endif
-        <div class="fila"><div class="label">ITBMS{{ ($detail['itbms_exento'] ?? false) ? ' (Exento)' : '' }}</div><div class="valor">{{ $moneda }} {{ number_format($detail['itbms'] ?? 0, 2) }}</div></div>
+        <div class="fila"><div class="label">{{ \App\Shared\Multitenancy\TenantRegion::taxLabel() }}{{ ($detail['itbms_exento'] ?? false) ? ' (Exento)' : '' }}</div><div class="valor">{{ $moneda }} {{ number_format($detail['itbms'] ?? 0, 2) }}</div></div>
 
         @if (($detail['saldo_aplicado'] ?? 0) > 0)
             <div class="fila total-factura tachado"><div class="label">Total factura</div><div class="valor">{{ $moneda }} {{ number_format($detail['total'] ?? $detail['monto'], 2) }}</div></div>

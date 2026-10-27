@@ -416,7 +416,7 @@ final class ServiciosSettingsService
             ['key' => self::KEY_ADJUNTOS_MAX_ARCHIVOS, 'group' => 'operacion', 'label' => 'Máximo de adjuntos por ticket', 'type' => 'int', 'default' => self::DEFAULT_ADJUNTOS_MAX_ARCHIVOS],
             ['key' => self::KEY_ADJUNTOS_MAX_SIZE_MB, 'group' => 'operacion', 'label' => 'Tamaño máximo por adjunto (MB)', 'type' => 'int', 'default' => self::DEFAULT_ADJUNTOS_MAX_SIZE_MB],
             ['key' => self::KEY_SIN_RESPONDER_UMBRAL_DIAS, 'group' => 'operacion', 'label' => 'Inicio — Días sin responder (umbral panel "Servicios sin responder")', 'type' => 'int', 'default' => self::DEFAULT_SIN_RESPONDER_UMBRAL_DIAS],
-            ['key' => self::KEY_ITBMS_PERCENT, 'group' => 'cotizacion', 'label' => 'Cotización — ITBMS (%)', 'type' => 'int', 'default' => self::DEFAULT_ITBMS_PERCENT],
+            ['key' => self::KEY_ITBMS_PERCENT, 'group' => 'cotizacion', 'label' => 'Cotización — '.\App\Shared\Multitenancy\TenantRegion::taxLabel().' (%)', 'type' => 'int', 'default' => self::DEFAULT_ITBMS_PERCENT],
             ['key' => self::KEY_CONDICIONES_COTIZACION_SERVICIOS, 'group' => 'cotizacion', 'label' => 'Cotización — Condiciones del servicio (texto)', 'type' => 'text', 'default' => self::DEFAULT_CONDICIONES_COTIZACION_SERVICIOS],
             ['key' => self::KEY_SLA_DIAS_CLAIM, 'group' => 'sla', 'label' => 'SLA — Reclamos (días hábiles)', 'type' => 'int', 'default' => self::DEFAULT_SLA_DIAS_CLAIM],
             ['key' => self::KEY_SLA_DIAS_WARRANTY, 'group' => 'sla', 'label' => 'SLA — Garantías (días hábiles)', 'type' => 'int', 'default' => self::DEFAULT_SLA_DIAS_WARRANTY],

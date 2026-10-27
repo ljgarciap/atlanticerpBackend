@@ -46,11 +46,15 @@ final class CreditNoteService
     /** Labels de `previewCorreccion()` (tarjeta "Corrección aplicada") — ver docblock ahí. */
     public const MSG_FACTURA_NO_CORREGIBLE = 'La factura ya fue anulada o no existe: no se puede corregir.';
 
-    private const MOTIVO_CORRECCION_LABELS = [
-        AdminContCreditNote::MOTIVO_CORRECCION_ITBMS => 'Tratamiento de ITBMS incorrecto',
-        AdminContCreditNote::MOTIVO_CORRECCION_FECHA => 'Fecha de facturación incorrecta',
-        AdminContCreditNote::MOTIVO_CORRECCION_AMBOS => 'Ambos',
-    ];
+    /** @return array<string, string> Fase 6d: el nombre del impuesto sale del país de la empresa. */
+    private static function motivoCorreccionLabels(): array
+    {
+        return [
+            AdminContCreditNote::MOTIVO_CORRECCION_ITBMS => 'Tratamiento de '.\App\Shared\Multitenancy\TenantRegion::taxLabel().' incorrecto',
+            AdminContCreditNote::MOTIVO_CORRECCION_FECHA => 'Fecha de facturación incorrecta',
+            AdminContCreditNote::MOTIVO_CORRECCION_AMBOS => 'Ambos',
+        ];
+    }
 
     public function __construct(
         private readonly AdminContCreditNoteFolioService $folio,
@@ -1091,7 +1095,7 @@ final class CreditNoteService
                 ],
                 'motivo' => $data['motivo'],
                 'correccion_aplicada' => [
-                    'motivo_correccion' => self::MOTIVO_CORRECCION_LABELS[$data['motivo_correccion']] ?? $data['motivo_correccion'],
+                    'motivo_correccion' => self::motivoCorreccionLabels()[$data['motivo_correccion']] ?? $data['motivo_correccion'],
                     'nuevo_tratamiento_itbms' => $data['motivo_correccion'] !== AdminContCreditNote::MOTIVO_CORRECCION_FECHA
                         ? "{$rate->nombre} ({$rate->porcentaje}%)"
                         : null,

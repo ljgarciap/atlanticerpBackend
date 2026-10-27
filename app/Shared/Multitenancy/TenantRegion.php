@@ -33,6 +33,14 @@ final class TenantRegion
         return Tenant::current()?->region()['locale'] ?? 'es-PA';
     }
 
+    /** Fase 6d — nombre visible del impuesto sobre ventas del país del tenant (ITBMS en Panamá, IVA en Colombia, Sales tax en EE. UU.). */
+    public static function taxLabel(?string $country = null): string
+    {
+        $labels = (array) config('fiscal.tax_labels', []);
+
+        return (string) ($labels[$country ?? self::country()] ?? $labels['default'] ?? 'ITBMS');
+    }
+
     /** ¿Es una zona horaria IANA válida? */
     public static function isValidTimezone(string $timezone): bool
     {

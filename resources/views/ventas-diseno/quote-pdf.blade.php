@@ -244,7 +244,7 @@
                             </tr>
                         @endif
                         <tr>
-                            <td>ITBMS{{ ($quote['itbms_exento'] ?? false) ? ' (Exento)' : '' }}</td>
+                            <td>{{ \App\Shared\Multitenancy\TenantRegion::taxLabel() }}{{ ($quote['itbms_exento'] ?? false) ? ' (Exento)' : '' }}</td>
                             <td class="numeric">${{ number_format($quote['itbms'], 2) }}</td>
                         </tr>
                         <tr class="grand-total">

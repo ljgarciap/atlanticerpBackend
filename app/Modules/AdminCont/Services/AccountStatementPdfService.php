@@ -24,10 +24,14 @@ final class AccountStatementPdfService
 {
     /** Mismo catálogo que `AccountStatementExportService` (Excel) — duplicado a propósito, mismo
      *  criterio ya establecido ahí (sin acceso a i18n del frontend desde acá). */
-    private const REGIMEN_LABELS = [
-        'con_itbms' => 'Con ITBMS',
-        'sin_itbms' => 'Sin ITBMS',
-    ];
+    /** @return array<string, string> Fase 6d: el nombre del impuesto sale del país de la empresa. */
+    private static function regimenLabels(): array
+    {
+        return [
+            'con_itbms' => 'Con '.\App\Shared\Multitenancy\TenantRegion::taxLabel(),
+            'sin_itbms' => 'Sin '.\App\Shared\Multitenancy\TenantRegion::taxLabel(),
+        ];
+    }
 
     private const TARIFA_LABELS = [
         'public'  => 'Precio Público',
@@ -71,7 +75,7 @@ final class AccountStatementPdfService
             'logoDataUri'       => PdfLogo::dataUri(),
             'generatedAt'       => now(),
             'tarifaLabel'       => self::TARIFA_LABELS[$detail['tarifa'] ?? ''] ?? null,
-            'regimenLabel'      => self::REGIMEN_LABELS[$detail['regimen_fiscal']] ?? (string) $detail['regimen_fiscal'],
+            'regimenLabel'      => self::regimenLabels()[$detail['regimen_fiscal']] ?? (string) $detail['regimen_fiscal'],
             'tipoCuentaLabel'   => self::TIPO_CUENTA_LABELS[$detail['tipo_cuenta'] ?? ''] ?? null,
             'footerCompanyText' => $footerCompanyText,
         ];

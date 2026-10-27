@@ -22,10 +22,14 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  */
 final class AccountStatementExportService
 {
-    private const REGIMEN_LABELS = [
-        'con_itbms' => 'Con ITBMS',
-        'sin_itbms' => 'Sin ITBMS',
-    ];
+    /** @return array<string, string> Fase 6d: el nombre del impuesto sale del país de la empresa. */
+    private static function regimenLabels(): array
+    {
+        return [
+            'con_itbms' => 'Con '.\App\Shared\Multitenancy\TenantRegion::taxLabel(),
+            'sin_itbms' => 'Sin '.\App\Shared\Multitenancy\TenantRegion::taxLabel(),
+        ];
+    }
 
     private const TARIFA_LABELS = [
         'public' => 'Precio Público',
@@ -53,7 +57,7 @@ final class AccountStatementExportService
             ['Cliente', (string) $detail['cliente']],
             ['Proyecto', $detail['proyecto'] !== null ? (string) $detail['proyecto'] : 'Todos los proyectos'],
             ['Tarifa', self::TARIFA_LABELS[$detail['tarifa']] ?? (string) ($detail['tarifa'] ?? '—')],
-            ['Régimen fiscal', self::REGIMEN_LABELS[$detail['regimen_fiscal']] ?? (string) $detail['regimen_fiscal']],
+            ['Régimen fiscal', self::regimenLabels()[$detail['regimen_fiscal']] ?? (string) $detail['regimen_fiscal']],
             ['Términos de pago', (string) $detail['terminos_pago']],
         ];
         $saldoRow = null;

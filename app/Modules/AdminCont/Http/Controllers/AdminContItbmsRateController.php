@@ -54,8 +54,10 @@ class AdminContItbmsRateController
         if ($rate->es_base && (float) $rate->porcentaje === 0.0 && ! (bool) $request->validated('activa')) {
             $exentos = SubClient::query()->where('itbms_exento', true)->count();
             if ($exentos > 0) {
+                $impuesto = \App\Shared\Multitenancy\TenantRegion::taxLabel();
+
                 return response()->json([
-                    'message' => "No se puede desactivar la tasa «{$rate->nombre}»: hay {$exentos} cliente(s) exento(s) de ITBMS que la usan. Quita primero su exención en Datos fiscales de clientes.",
+                    'message' => "No se puede desactivar la tasa «{$rate->nombre}»: hay {$exentos} cliente(s) exento(s) de {$impuesto} que la usan. Quita primero su exención en Datos fiscales de clientes.",
                 ], 422);
             }
         }

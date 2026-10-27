@@ -161,7 +161,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td>ITBMS</td>
+                            <td>{{ \App\Shared\Multitenancy\TenantRegion::taxLabel() }}</td>
                             <td class="numeric">${{ number_format($quote->itbms, 2) }}</td>
                         </tr>
                         <tr class="grand-total">

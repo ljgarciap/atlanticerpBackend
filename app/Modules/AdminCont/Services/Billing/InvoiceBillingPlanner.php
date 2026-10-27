@@ -453,7 +453,7 @@ final class InvoiceBillingPlanner
             // (p. ej. una factura hecha a mano): no se puede repartir por separado, todo el ajuste va a la base.
             $dBase  = round($monto - $sumBase - $sumItbms, 2);
             $dItbms = 0.0;
-            $advertencias[] = 'Hay facturas previas de este pedido sin detalle de líneas: el desglose de base e ITBMS de esta factura no se pudo cuadrar contra la cotización.';
+            $advertencias[] = 'Hay facturas previas de este pedido sin detalle de líneas: el desglose de base e '.\App\Shared\Multitenancy\TenantRegion::taxLabel().' de esta factura no se pudo cuadrar contra la cotización.';
         } else {
             // SCRUM-929 (B3b Punto 4) — el objetivo de ITBMS también se ajusta por `ajusteItbms`: sin
             // esto, una corrección de tasa sobre una parcial (que YA cambió `prevItbms`) se veía como
@@ -467,7 +467,7 @@ final class InvoiceBillingPlanner
             $ruido = self::EPSILON * (count($lines) + $prevLineas + 1);
             if (abs($dBase) > $ruido || abs($dItbms) > $ruido) {
                 $advertencias[] = sprintf(
-                    'La base o el ITBMS de esta factura difieren del cálculo de la cotización en más de lo que explica el redondeo (base %s, ITBMS %s).',
+                    'La base o el impuesto de esta factura difieren del cálculo de la cotización en más de lo que explica el redondeo (base %s, impuesto %s).',
                     number_format($dBase, 2),
                     number_format($dItbms, 2),
                 );
@@ -484,7 +484,7 @@ final class InvoiceBillingPlanner
         $drift = round($monto - (float) array_sum(array_column($lines, 'total')), 2);
         if (abs($drift) >= self::EPSILON) {
             $advertencias[] = sprintf(
-                'El total del pedido (%s) no coincide con la cotización recalculada hoy; la diferencia de %s se absorbió en la base de las líneas. Revisar la tasa de ITBMS y los precios configurados.',
+                'El total del pedido (%s) no coincide con la cotización recalculada hoy; la diferencia de %s se absorbió en la base de las líneas. Revisar la tasa de impuesto y los precios configurados.',
                 number_format($ctx->total, 2),
                 number_format($drift, 2),
             );
