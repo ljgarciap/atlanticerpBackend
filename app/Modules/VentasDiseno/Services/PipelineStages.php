@@ -150,7 +150,7 @@ final class PipelineStages
     /** Etiqueta de la etapa, también de una desactivada; sin entrada, la propia clave. */
     public static function label(string $stage): string
     {
-        return CatalogEntry::query()->where('domain', self::DOMAIN)->where('key', $stage)->value('label') ?? $stage;
+        return self::labels()[$stage] ?? $stage;
     }
 
     /**

@@ -58,7 +58,7 @@ final class TicketTypes
     /** Etiqueta del tipo, también de uno desactivado (los tickets viejos lo conservan); sin entrada, la propia clave. */
     public static function label(string $tipo): string
     {
-        return CatalogEntry::query()->where('domain', self::DOMAIN)->where('key', $tipo)->value('label') ?? $tipo;
+        return (string) (CatalogService::entries(self::DOMAIN, onlyActive: false)->firstWhere('key', $tipo)->label ?? $tipo);
     }
 
     public static function color(?string $tipo): string

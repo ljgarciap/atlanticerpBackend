@@ -1,6 +1,6 @@
 # Fase 7c — Etapas del pipeline de Ventas como catálogo (2026-10-27)
 
-**Estado**: DISEÑO APROBADO por Luis (2026-10-27, decisiones en §5). Pendiente solo su «adelante» para arrancar la 7c-1; no se implementa antes. Continúa `fase7-catalogos.md` (§6, 7c).
+**Estado**: diseño aprobado por Luis (2026-10-27, §5). **7c-1 (backend) IMPLEMENTADA (§8)**; 7c-2 (frontend) pendiente de su «adelante». Continúa `fase7-catalogos.md` (§6, 7c).
 
 ## 1. Objetivo
 Que las etapas del embudo de Ventas & Diseño dejen de ser constantes repetidas en el código para que cada empresa pueda llamarlas, ordenarlas y colorearlas a su negocio (y, según la opción elegida, añadir etapas propias).
@@ -34,3 +34,10 @@ Panamá sin cambio visible con los datos por defecto; migración aditiva y rever
 - Las comisiones (AdminCont) y «pasar a pedido» dependen de `approved`: deben leer `categoria = ganada` y no permitir que una etapa propia se marque «ganada» sin definir qué compuertas exige (decisión de negocio → Luis).
 - `lost` no editable y `approved` con edición restringida son reglas por clave: se conservan como categorías de sistema.
 - 90 tests del backend asumen las claves: se adaptan, no se borran.
+
+## 8. Resultado de la 7c-1 — backend (2026-10-28)
+- **Dominio `pipeline_stage`** (`config/catalogs.php`): props `categoria` (`abierta|ganada|perdida`; `ganada` y `perdida` son `system_only`) y `color`; `locked_when_system` = `sort_order` y `categoria`; reglas propias `PipelineStageRules` (una etapa propia va entre Lead y Aprobado, sin pisar el orden de una de sistema; por defecto justo después de Propuesta). `CatalogService` gana `system_only`, `locked_when_system` y reglas de dominio (`CatalogDomainRules`).
+- **Migraciones** `2026_10_28_100000` (libera el CHECK de `pipeline_cards.stage`) y `…100001` (siembra las 6 etapas en pasos de 100: lead 100, design 200, quote 300, proposal 400, approved 500, lost 900).
+- **Fachada** `PipelineStages` (`linear`, `open`, `won`, `lost`, `isWon`, `isLost`, `isAtOrAfter`, `isBefore`, `openAtOrAfter`, `anchorOf`, `label`, `labels`). Compuertas del modelo colgadas de la etapa de DESTINO. ~20 archivos migrados (Pipeline, Quote, Dashboard, Reports, Clients, Commission, Home, Orders, SalesTotals, ProjectsList, AdminCont ×2, Gerencia). Retiradas `PipelineCard::NON_EDITABLE_STAGE`/`RESTRICTED_EDIT_STAGE`.
+- **`CatalogCache`** (memo `scoped` por petición/job) para que preguntar por una etapa o un tipo dentro de un bucle no consulte la BD.
+- Informe: `docs/reviews/fase7c1-etapas-pipeline-2026-10-28.md`. Pendiente: **7c-2 (frontend)**, con su «adelante».
