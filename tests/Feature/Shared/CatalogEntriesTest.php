@@ -47,6 +47,16 @@ final class CatalogEntriesTest extends FeatureTestCase
         $this->assertSame('internacional', Provider::deriveOrigin('inexistente'));
     }
 
+    public function test_la_lista_de_dominios_informa_que_no_puede_cambiar_una_entrada_de_sistema(): void
+    {
+        $h = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        $dominios = collect($this->withHeaders($h)->getJson('/api/catalogs/domains')->assertOk()->json())->keyBy('domain');
+
+        $this->assertSame(['sort_order', 'categoria'], $dominios['pipeline_stage']['locked_when_system']);
+        $this->assertSame([], $dominios['architect_type']['locked_when_system']);
+        $this->assertSame(['ganada', 'perdida'], $dominios['pipeline_stage']['props']['categoria']['system_only']);
+    }
+
     public function test_cualquier_autenticado_lee_las_entradas_activas_y_la_administracion_es_de_superadmin(): void
     {
         $this->getJson('/api/catalogs/provider_category')->assertStatus(401);
