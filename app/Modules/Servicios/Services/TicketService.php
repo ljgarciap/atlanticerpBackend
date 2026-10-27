@@ -612,13 +612,13 @@ final class TicketService
     private function deriveInitialStatuses(string $tipo, ?string $subtipo): array
     {
         // Instalación (subtipo "Instalación", venta previa) — ambos No aplica.
-        if ($tipo === Ticket::TIPO_INSTALLATION && $subtipo === Ticket::SUBTIPO_INSTALLATION) {
+        if (TicketTypes::is($tipo, TicketTypes::INSTALACION) && $subtipo === Ticket::SUBTIPO_INSTALLATION) {
             return [Ticket::QUOTE_STATUS_NOT_APPLICABLE, Ticket::INSPECTION_STATUS_NOT_APPLICABLE];
         }
 
         // Reclamos — informe No aplica (usa su propio indicador de Hoja de Reclamo, otro batch),
         // cotización pendiente de generar.
-        if ($tipo === Ticket::TIPO_CLAIM) {
+        if (TicketTypes::is($tipo, TicketTypes::RECLAMO)) {
             return [Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_NOT_APPLICABLE];
         }
 

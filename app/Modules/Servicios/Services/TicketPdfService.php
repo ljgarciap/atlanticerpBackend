@@ -22,16 +22,6 @@ use Barryvdh\DomPDF\PDF as PdfDocument;
  */
 final class TicketPdfService
 {
-    /** Mismas etiquetas en español usadas en el frontend (`i18n/locales/es/servicios.json`,
-     *  `tickets.tipo.*`) — el backend no tiene infraestructura de i18n de dominio, mismo patrón
-     *  que `CatalogPdfService::SPEC_LABELS`. */
-    private const TIPO_LABELS = [
-        Ticket::TIPO_INSTALLATION => 'Instalación',
-        Ticket::TIPO_WARRANTY     => 'Garantía',
-        Ticket::TIPO_CLAIM        => 'Reclamo',
-        Ticket::TIPO_RETROFIT     => 'Retrofit',
-    ];
-
     /** Mismas etiquetas que `i18n/locales/es/servicios.json`, `tickets.subtypes.*`. */
     private const SUBTIPO_LABELS = [
         Ticket::SUBTIPO_INSTALLATION          => 'Instalación',
@@ -52,7 +42,7 @@ final class TicketPdfService
         return Pdf::setOption('isPhpEnabled', true)
             ->loadView('servicios.ticket-pdf', [
                 'ticket'        => $ticket,
-                'tipoLabel'     => self::TIPO_LABELS[$ticket->tipo] ?? $ticket->tipo,
+                'tipoLabel'     => TicketTypes::label($ticket->tipo),
                 'subtipoLabel'  => $ticket->subtipo === null ? null : (self::SUBTIPO_LABELS[$ticket->subtipo] ?? $ticket->subtipo),
                 'detail'        => $detail,
                 'horario'       => $this->formatHorario($ticket),

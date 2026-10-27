@@ -26,7 +26,7 @@ final class ClaimSheetService
      *  de `InspectionReportService::isApplicable()`). */
     public function isApplicable(Ticket $ticket): bool
     {
-        return $ticket->tipo === Ticket::TIPO_CLAIM;
+        return TicketTypes::is($ticket->tipo, TicketTypes::RECLAMO);
     }
 
     /**

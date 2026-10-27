@@ -94,7 +94,7 @@ final class InstallationGoalService
 
     private function completedInstallations(Carbon $start, Carbon $end): int
     {
-        return Ticket::where('tipo', Ticket::TIPO_INSTALLATION)
+        return Ticket::whereIn('tipo', TicketTypes::keysWith(TicketTypes::INSTALACION))
             ->whereIn('estado', Ticket::ESTADOS_REQUIRING_CLOSE_GATE)
             ->whereBetween('closed_at', [$start, $end])
             ->count();

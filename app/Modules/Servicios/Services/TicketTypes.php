@@ -26,6 +26,8 @@ final class TicketTypes
 
     public const GENERICO = 'generico';
 
+    private const DEFAULT_COLOR = '#6b7280';
+
     /** @return list<string> claves activas (para reglas `in:`) */
     public static function keys(): array
     {
@@ -38,6 +40,11 @@ final class TicketTypes
         return CatalogService::entries(self::DOMAIN)->pluck('label', 'key')->map(strval(...))->all();
     }
 
+    public static function exists(string $tipo): bool
+    {
+        return in_array($tipo, self::keys(), true);
+    }
+
     public static function comportamiento(?string $tipo): string
     {
         return (string) CatalogService::prop(self::DOMAIN, $tipo, 'comportamiento');
@@ -48,14 +55,25 @@ final class TicketTypes
         return self::comportamiento($tipo) === $comportamiento;
     }
 
-    /** @return list<string> claves activas cuyo comportamiento es `$comportamiento` (un comportamiento puede tener varios tipos) */
-    public static function keysWith(string $comportamiento): array
+    /** Etiqueta del tipo, también de uno desactivado (los tickets viejos lo conservan); sin entrada, la propia clave. */
+    public static function label(string $tipo): string
+    {
+        return CatalogEntry::query()->where('domain', self::DOMAIN)->where('key', $tipo)->value('label') ?? $tipo;
+    }
+
+    public static function color(?string $tipo): string
+    {
+        return (string) (CatalogService::prop(self::DOMAIN, $tipo, 'color') ?? self::DEFAULT_COLOR);
+    }
+
+    /** @return list<string> claves activas cuyo comportamiento es alguno de los dados (un comportamiento puede tener varios tipos) */
+    public static function keysWith(string ...$comportamientos): array
     {
         return array_values(array_map(
             static fn (CatalogEntry $e): string => $e->key,
             array_filter(
                 CatalogService::entries(self::DOMAIN)->all(),
-                static fn (CatalogEntry $e): bool => ($e->props['comportamiento'] ?? 'generico') === $comportamiento,
+                static fn (CatalogEntry $e): bool => in_array($e->props['comportamiento'] ?? self::GENERICO, $comportamientos, true),
             ),
         ));
     }

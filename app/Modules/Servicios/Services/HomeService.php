@@ -33,15 +33,6 @@ final class HomeService
 {
     private const DEFAULT_ROUTES_LIMIT = 5;
 
-    /** Mismas etiquetas en español que `TicketPdfService::TIPO_LABELS` — duplicado a propósito,
-     *  mismo criterio documentado ahí (el backend no tiene infraestructura de i18n de dominio). */
-    private const TIPO_LABELS = [
-        Ticket::TIPO_INSTALLATION => 'Instalación',
-        Ticket::TIPO_WARRANTY     => 'Garantía',
-        Ticket::TIPO_CLAIM        => 'Reclamo',
-        Ticket::TIPO_RETROFIT     => 'Retrofit',
-    ];
-
     public function __construct(
         private readonly InternalTechnicianService $technicians,
         private readonly ServiciosSettingsService $settings,
@@ -148,7 +139,7 @@ final class HomeService
             'cliente'     => $ticket->cliente,
             'descripcion' => $ticket->descripcion,
             'tipo'        => $ticket->tipo,
-            'tipo_label'  => self::TIPO_LABELS[$ticket->tipo] ?? $ticket->tipo,
+            'tipo_label'  => TicketTypes::label($ticket->tipo),
             'dias'        => (int) $ticket->created_at->diffInDays(now()),
         ]);
 
@@ -241,7 +232,7 @@ final class HomeService
         $monthStart = $now->copy()->startOfMonth();
         $monthEnd   = $now->copy()->endOfMonth();
 
-        $instalacionesCompletadas = Ticket::where('tipo', Ticket::TIPO_INSTALLATION)
+        $instalacionesCompletadas = Ticket::whereIn('tipo', TicketTypes::keysWith(TicketTypes::INSTALACION))
             ->whereIn('estado', Ticket::ESTADOS_REQUIRING_CLOSE_GATE)
             ->whereBetween('closed_at', [$monthStart, $monthEnd])
             ->count();
@@ -279,7 +270,7 @@ final class HomeService
     {
         return (float) ServiceQuote::where('estado', ServiceQuote::ESTADO_APPROVED)
             ->whereHas('ticket', function ($query) use ($monthStart, $monthEnd): void {
-                $query->where('tipo', Ticket::TIPO_INSTALLATION)
+                $query->whereIn('tipo', TicketTypes::keysWith(TicketTypes::INSTALACION))
                     ->whereIn('estado', Ticket::ESTADOS_REQUIRING_CLOSE_GATE)
                     ->whereBetween('closed_at', [$monthStart, $monthEnd]);
             })
@@ -294,7 +285,7 @@ final class HomeService
      */
     public function resueltoPrimeraVisitaPct(Carbon $monthStart, Carbon $monthEnd): ?float
     {
-        $cerrados = Ticket::whereIn('tipo', [Ticket::TIPO_WARRANTY, Ticket::TIPO_CLAIM])
+        $cerrados = Ticket::whereIn('tipo', TicketTypes::keysWith(TicketTypes::GARANTIA, TicketTypes::RECLAMO))
             ->whereIn('estado', Ticket::ESTADOS_REQUIRING_CLOSE_GATE)
             ->whereBetween('closed_at', [$monthStart, $monthEnd])
             ->get();
@@ -311,7 +302,7 @@ final class HomeService
     /** REQ-211 RN4 — promedio de días entre reporte (created_at) y cierre (closed_at), SOLO Garantías. */
     private function tiempoPromedioResolucionGarantiasDias(Carbon $monthStart, Carbon $monthEnd): ?float
     {
-        $cerrados = Ticket::where('tipo', Ticket::TIPO_WARRANTY)
+        $cerrados = Ticket::whereIn('tipo', TicketTypes::keysWith(TicketTypes::GARANTIA))
             ->whereIn('estado', Ticket::ESTADOS_REQUIRING_CLOSE_GATE)
             ->whereBetween('closed_at', [$monthStart, $monthEnd])
             ->get();

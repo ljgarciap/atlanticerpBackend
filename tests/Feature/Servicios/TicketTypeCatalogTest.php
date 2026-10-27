@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Servicios;
 
 use App\Modules\Servicios\Models\Ticket;
+use App\Modules\Servicios\Services\ClaimSheetService;
+use App\Modules\Servicios\Services\InspectionReportService;
 use App\Modules\Servicios\Services\ServiciosSettingsService;
 use App\Modules\Servicios\Services\TicketTypes;
+use App\Modules\VentasDiseno\Models\MasterClient;
+use App\Modules\VentasDiseno\Models\SalesProject;
+use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Catalogs\CatalogEntry;
 use App\Shared\Catalogs\CatalogService;
 use App\Shared\Multitenancy\Tenant;
@@ -106,6 +111,63 @@ final class TicketTypeCatalogTest extends FeatureTestCase
         $this->expectException(ValidationException::class);
 
         (new CatalogService)->create(TicketTypes::DOMAIN, ['key' => 'x', 'label' => 'X', 'props' => $props]);
+    }
+
+    private function proyecto(): int
+    {
+        $unique = uniqid();
+        $master = MasterClient::create(['name' => "Cliente {$unique}"]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => "Cliente {$unique} SA", 'tax_id' => $unique]);
+
+        return SalesProject::create(['sub_client_id' => $sub->id, 'name' => "Proyecto {$unique}"])->id;
+    }
+
+    /** Orden: fixtures Eloquent ANTES de loginAs() (cada request HTTP olvida el tenant actual). */
+    public function test_un_tipo_nuevo_recorre_el_flujo_completo_por_la_api(): void
+    {
+        (new CatalogService)->create(TicketTypes::DOMAIN, [
+            'key' => 'mantenimiento', 'label' => 'Mantenimiento',
+            'props' => ['comportamiento' => 'reclamo', 'prefijo' => 'MNT', 'sla_dias' => 4, 'subtipos' => ['preventivo', 'correctivo']],
+        ]);
+        $proyecto = $this->proyecto();
+        $token = $this->loginAs('liderservicios@test.com', 'liderservicios@test.com', 'lider_servicios');
+        $h = $this->authHeaders($token);
+        $base = ['tipo' => 'mantenimiento', 'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL, 'descripcion' => 'Revisión', 'sales_project_id' => $proyecto];
+
+        // El tipo exige un subtipo del catálogo; uno ajeno se rechaza.
+        $this->withHeaders($h)->postJson('/api/servicios/tickets', $base)->assertStatus(422)->assertJsonValidationErrors('subtipo');
+        $this->withHeaders($h)->postJson('/api/servicios/tickets', $base + ['subtipo' => 'inspection'])->assertStatus(422);
+
+        $r = $this->withHeaders($h)->postJson('/api/servicios/tickets', $base + ['subtipo' => 'preventivo'])->assertStatus(201);
+        $this->assertStringStartsWith('MNT-', (string) $r->json('numero'));
+        // Hereda el flujo de «reclamo»: cotización pendiente, sin informe de inspección.
+        $r->assertJsonPath('quote_status', Ticket::QUOTE_STATUS_PENDING)->assertJsonPath('inspection_report_status', Ticket::INSPECTION_STATUS_NOT_APPLICABLE);
+
+        // Un tipo inexistente o desactivado no se puede crear.
+        $this->withHeaders($h)->postJson('/api/servicios/tickets', ['tipo' => 'inexistente'] + $base)->assertStatus(422)->assertJsonValidationErrors('tipo');
+
+        // El SLA de un tipo nuevo se ajusta por la misma API que los 4 históricos y se refleja en el catálogo.
+        $gerencia = $this->authHeaders($this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management'));
+        $this->withHeaders($gerencia)->patchJson('/api/servicios/internal-technicians/sla-settings', ['mantenimiento' => 6])
+            ->assertOk()->assertJsonPath('data.mantenimiento', 6);
+        $this->activarTenant();
+        $this->assertSame(6, TicketTypes::slaDias('mantenimiento'));
+    }
+
+    public function test_el_comportamiento_decide_hoja_de_reclamo_e_informe_de_inspeccion(): void
+    {
+        (new CatalogService)->create(TicketTypes::DOMAIN, ['key' => 'mantenimiento', 'label' => 'Mantenimiento', 'props' => ['comportamiento' => 'reclamo']]);
+        $tipo = new Ticket(['tipo' => 'mantenimiento']);
+
+        $this->assertTrue(app(ClaimSheetService::class)->isApplicable($tipo));
+        $this->assertFalse(app(InspectionReportService::class)->isApplicable($tipo));
+        $this->assertFalse(app(ClaimSheetService::class)->isApplicable(new Ticket(['tipo' => Ticket::TIPO_WARRANTY])));
+        $this->assertTrue(app(InspectionReportService::class)->isApplicable(new Ticket(['tipo' => Ticket::TIPO_WARRANTY])));
+    }
+
+    private function activarTenant(): void
+    {
+        Tenant::where('slug', 'atlantic')->firstOrFail()->makeCurrent();
     }
 
     public function test_los_tipos_de_sistema_no_se_borran_ni_se_desactivan(): void

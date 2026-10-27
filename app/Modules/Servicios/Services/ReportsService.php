@@ -45,21 +45,6 @@ use Illuminate\Support\Collection;
  */
 final class ReportsService
 {
-    /**
-     * REQ-282 — mismos colores que las etiquetas de tipo de ticket en el resto del módulo
-     * (`atlanticerp-frontend/src/components/servicios/TicketBoard.tsx`, const `TYPE_COLORS`) — el
-     * backend no puede importar ese archivo TS, así que el valor se duplica acá a propósito; si
-     * el color de un tipo cambia en el frontend, este mapa debe actualizarse en el mismo commit.
-     *
-     * @var array<string, string>
-     */
-    private const TYPE_COLORS = [
-        Ticket::TIPO_INSTALLATION => '#5BA5A0',
-        Ticket::TIPO_WARRANTY     => '#9fc54d',
-        Ticket::TIPO_CLAIM        => '#ef4444',
-        Ticket::TIPO_RETROFIT     => '#8b5cf6',
-    ];
-
     /** Zona horaria del negocio: la del tenant activo (Fase 6a, `TenantRegion`). */
     private static function businessTimezone(): string
     {
@@ -128,12 +113,12 @@ final class ReportsService
 
         $cotizadas = ServiceQuote::whereBetween('created_at', [$monthStart, $monthEnd])
             ->whereHas('ticket', function (Builder $query): void {
-                $query->where('tipo', Ticket::TIPO_INSTALLATION)
+                $query->whereIn('tipo', TicketTypes::keysWith(TicketTypes::INSTALACION))
                     ->where('subtipo', Ticket::SUBTIPO_INSPECTION);
             })
             ->get(['id', 'total']);
 
-        $realizadasTicketIds = Ticket::where('tipo', Ticket::TIPO_INSTALLATION)
+        $realizadasTicketIds = Ticket::whereIn('tipo', TicketTypes::keysWith(TicketTypes::INSTALACION))
             ->whereIn('estado', Ticket::ESTADOS_REQUIRING_CLOSE_GATE)
             ->whereBetween('closed_at', [$monthStart, $monthEnd])
             ->pluck('id');
@@ -171,10 +156,10 @@ final class ReportsService
             ->groupBy('tipo')
             ->pluck('total', 'tipo');
 
-        return array_values(collect(Ticket::TIPOS)->map(fn (string $tipo): array => [
+        return array_values(collect(TicketTypes::keys())->map(fn (string $tipo): array => [
             'tipo'  => $tipo,
             'count' => (int) ($counts[$tipo] ?? 0),
-            'color' => self::TYPE_COLORS[$tipo],
+            'color' => TicketTypes::color($tipo),
         ])->all());
     }
 
@@ -241,7 +226,7 @@ final class ReportsService
         for ($m = 1; $m <= $lastMonth; $m++) {
             $porTipo = [];
             $total   = 0;
-            foreach (Ticket::TIPOS as $tipo) {
+            foreach (TicketTypes::keys() as $tipo) {
                 $count           = $byMonthType[$m][$tipo] ?? 0;
                 $porTipo[$tipo]  = $count;
                 $total          += $count;

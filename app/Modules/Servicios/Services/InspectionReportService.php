@@ -54,31 +54,32 @@ final class InspectionReportService
      * inferido del texto del label (los 3 nombres distintos que usa RN3 son justo el problema que
      * este flag resuelve).
      *
-     * Claves: "{tipo}" o "{tipo}:{subtipo}" — se busca primero por tipo:subtipo, luego por tipo solo.
+     * Claves: "{comportamiento}" o "{comportamiento}:{subtipo}" (Fase 7b: el comportamiento del tipo de ticket, no su clave) — se busca
+     * primero por comportamiento:subtipo, luego por comportamiento solo.
      *
      * @var array<string, list<array{key: string, label: string, type: string, options: list<string>|null, quote_recommendation: bool}>>
      */
     private const STATIC_FIELDS_BY_TIPO = [
-        Ticket::TIPO_INSTALLATION.':'.Ticket::SUBTIPO_INSPECTION => [
+        TicketTypes::INSTALACION.':'.Ticket::SUBTIPO_INSPECTION => [
             ['key' => 'checklist_tecnico', 'label' => 'Checklist técnico', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => false],
             ['key' => 'recomendacion_cotizacion', 'label' => 'Recomendación para cotización', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => true],
         ],
-        Ticket::TIPO_INSTALLATION => [
+        TicketTypes::INSTALACION => [
             ['key' => 'checklist_instalacion', 'label' => 'Checklist de instalación', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => false],
             ['key' => 'observaciones_cierre', 'label' => 'Observaciones de cierre', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => false],
         ],
-        Ticket::TIPO_WARRANTY.':'.Ticket::SUBTIPO_REPLACEMENT_INSPECTION => [
+        TicketTypes::GARANTIA.':'.Ticket::SUBTIPO_REPLACEMENT_INSPECTION => [
             ['key' => 'evaluacion_desgaste', 'label' => 'Evaluación de desgaste', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => false],
             ['key' => 'evidencia_vida_util', 'label' => 'Evidencia de vida útil cumplida', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => false],
             ['key' => 'recomendacion', 'label' => 'Recomendación', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => true],
         ],
-        Ticket::TIPO_WARRANTY => [
+        TicketTypes::GARANTIA => [
             ['key' => 'descripcion_falla', 'label' => 'Descripción de la falla', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => false],
             ['key' => 'diagnostico', 'label' => 'Diagnóstico', 'type' => 'select', 'options' => ['Defecto de fábrica', 'Mal uso / desgaste', 'Sin hallazgo'], 'quote_recommendation' => false],
             ['key' => 'aplica_garantia', 'label' => '¿Aplica garantía?', 'type' => 'select', 'options' => ['Sí', 'No'], 'quote_recommendation' => false],
             ['key' => 'accion_recomendada', 'label' => 'Acción recomendada', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => true],
         ],
-        Ticket::TIPO_RETROFIT => [
+        TicketTypes::RETROFIT => [
             ['key' => 'hallazgos_inspeccion', 'label' => 'Hallazgos de la inspección', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => false],
             ['key' => 'detalle_productos_cambiar', 'label' => 'Detalle de productos a cambiar', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => false],
             ['key' => 'recomendacion_cotizacion_retrofit', 'label' => 'Recomendación para cotización', 'type' => 'textarea', 'options' => null, 'quote_recommendation' => true],
@@ -95,7 +96,7 @@ final class InspectionReportService
     /** REQ-238 UBICACION — solo tickets Instalación/Garantías/Retrofit generan informe; Reclamos usan Hoja de Reclamo (REQ-278). */
     public function isApplicable(Ticket $ticket): bool
     {
-        return $ticket->tipo !== Ticket::TIPO_CLAIM;
+        return ! TicketTypes::is($ticket->tipo, TicketTypes::RECLAMO);
     }
 
     /**
@@ -109,7 +110,7 @@ final class InspectionReportService
         $products = $ticket->ticketProducts()->get();
 
         if ($products->isNotEmpty()) {
-            $template = $ticket->tipo === Ticket::TIPO_RETROFIT ? self::RETROFIT_PRODUCT_FIELDS : self::NON_RETROFIT_PRODUCT_FIELDS;
+            $template = TicketTypes::is($ticket->tipo, TicketTypes::RETROFIT) ? self::RETROFIT_PRODUCT_FIELDS : self::NON_RETROFIT_PRODUCT_FIELDS;
 
             $fields = [];
             foreach ($products as $product) {
@@ -121,8 +122,9 @@ final class InspectionReportService
             return $fields;
         }
 
-        $byTipoSubtipo = $ticket->subtipo !== null ? self::STATIC_FIELDS_BY_TIPO["{$ticket->tipo}:{$ticket->subtipo}"] ?? null : null;
-        $template       = $byTipoSubtipo ?? self::STATIC_FIELDS_BY_TIPO[$ticket->tipo] ?? [];
+        $comportamiento = TicketTypes::comportamiento($ticket->tipo);
+        $byTipoSubtipo = $ticket->subtipo !== null ? self::STATIC_FIELDS_BY_TIPO["{$comportamiento}:{$ticket->subtipo}"] ?? null : null;
+        $template       = $byTipoSubtipo ?? self::STATIC_FIELDS_BY_TIPO[$comportamiento] ?? [];
 
         return array_values(array_map(static fn (array $f): array => $f + ['ticket_product_id' => null], $template));
     }

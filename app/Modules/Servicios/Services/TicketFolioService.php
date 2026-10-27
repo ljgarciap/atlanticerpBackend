@@ -25,7 +25,7 @@ final class TicketFolioService
 {
     public function next(string $tipo): string
     {
-        $prefijo = Ticket::PREFIX_BY_TIPO[$tipo] ?? null;
+        $prefijo = TicketTypes::exists($tipo) ? TicketTypes::prefijo($tipo) : null;
         if ($prefijo === null) {
             throw new \InvalidArgumentException("Tipo de ticket desconocido [{$tipo}] — no tiene prefijo de numeración.");
         }
