@@ -64,6 +64,13 @@ final class TicketTypeCatalogTest extends FeatureTestCase
         $this->assertSame([Ticket::TIPO_CLAIM], TicketTypes::keysWith(TicketTypes::RECLAMO));
     }
 
+    public function test_una_entrada_nueva_sin_orden_va_al_final_del_catalogo(): void
+    {
+        (new CatalogService)->create(TicketTypes::DOMAIN, ['key' => 'mantenimiento', 'label' => 'Mantenimiento', 'props' => ['comportamiento' => 'generico']]);
+
+        $this->assertSame(['installation', 'warranty', 'claim', 'retrofit', 'mantenimiento'], TicketTypes::keys());
+    }
+
     public function test_un_tipo_desconocido_se_trata_como_generico(): void
     {
         $this->assertSame(TicketTypes::GENERICO, TicketTypes::comportamiento('inexistente'));

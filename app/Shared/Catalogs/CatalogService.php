@@ -58,7 +58,7 @@ final class CatalogService
     public function create(string $domain, array $data): CatalogEntry
     {
         return CatalogEntry::create([
-            'domain' => $domain, 'key' => $data['key'], 'label' => $data['label'], 'sort_order' => $data['sort_order'] ?? 0,
+            'domain' => $domain, 'key' => $data['key'], 'label' => $data['label'], 'sort_order' => $data['sort_order'] ?? ((int) CatalogEntry::query()->where('domain', $domain)->max('sort_order') + 1),
             'is_active' => true, 'is_system' => false, 'props' => $this->cleanProps($domain, $data['props'] ?? []),
         ]);
     }
