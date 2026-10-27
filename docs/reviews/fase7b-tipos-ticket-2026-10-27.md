@@ -22,4 +22,8 @@
 ## Verificación
 - Backend: PHPStan L8 0 errores; suite completa 5114 tests, 0 fallos (antes de retirar las constantes y del endurecimiento del esquema); tras ambos, Servicios + Shared 422/422 y catálogos 23/23.
 - Frontend: `tsc` limpio; 241 archivos / 2973 tests.
-- Pendiente: verificación visual con Playwright CLI (requiere resetear la BD local de desarrollo).
+- **Verificación visual (Playwright CLI, BD local reseteada con `down -v` + `tenant:create` + `db:seed`, 2026-10-27)**:
+  - Antes (build de `master`) y después (build de la 7b), con los datos por defecto, sobre Tickets, Inicio, Nuevo ticket y Reportes, con Líder de Servicios y Gerencia: **idénticos**, sin errores de consola. La primera tanda mostró una diferencia real (los chips de Inicio pasaban de plural a singular); se corrigió para que los 4 tipos de sistema conserven su texto.
+  - Tipo propio creado desde Configuración global → Catálogos (comportamiento «reclamo», prefijo MNT, SLA 4, color, subtipos `preventivo, correctivo`): aparece en el filtro de Tickets, en el modal de Nuevo ticket (con sus subtipos propios) y en los chips de Inicio. Se creó además un defecto menor de la 7a: una entrada nueva se ordenaba antes que las existentes (orden 0); ahora va al final. La entrada de prueba se borró.
+  - No se creó un ticket del tipo nuevo desde la interfaz (la creación con tipo nuevo está cubierta por `TicketTypeCatalogTest` vía API).
+  - Nota de entorno: el plugin de Vite escribe `dist/version.json` en una ruta fija; con `--outDir` + `rsync --delete` se borra y la app pide un `/version.json` que da 404 (no es regresión de la 7b).
