@@ -21,4 +21,11 @@ return [
     ],
 
     'fallback' => 'none',
+
+    // Fase 6c — reglas de la identificación fiscal por país (RUC, NIT, EIN…); un país sin entrada usa GenericTaxIdRules.
+    'tax_id_rules' => [
+        'PA' => \App\Shared\Fiscal\TaxId\PanamaTaxIdRules::class,
+        'CO' => \App\Shared\Fiscal\TaxId\ColombiaTaxIdRules::class,
+        'US' => \App\Shared\Fiscal\TaxId\UnitedStatesTaxIdRules::class,
+    ],
 ];

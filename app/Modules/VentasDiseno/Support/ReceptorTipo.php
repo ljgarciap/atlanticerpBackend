@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Support;
 
+use App\Shared\Fiscal\TaxId\ValidTaxId;
 use Illuminate\Validation\Rule;
 
 /**
@@ -44,7 +45,8 @@ final class ReceptorTipo
     {
         return [
             'receptor_tipo' => ['sometimes', 'nullable', 'string', Rule::in(self::permitidos())],
-            'tax_id'        => ['required_unless:receptor_tipo,'.self::CONSUMIDOR_FINAL, 'nullable', 'string', 'max:100'],
+            // Fase 6c: formato de la identificación y DV según el país de la empresa (RUC en Panamá, NIT en Colombia, EIN en EE. UU.).
+            'tax_id'        => ['required_unless:receptor_tipo,'.self::CONSUMIDOR_FINAL, 'nullable', 'string', 'max:100', new ValidTaxId()],
             // SCRUM-1140: el DV ya no es obligatorio al capturar — una cédula puede no tenerlo. Lo exige la guarda al facturar,
             // y solo si el validador de la DGI devuelve uno (antes SCRUM-928: `required_unless` Consumidor Final).
             'tax_id_dv'     => ['nullable', 'string', 'regex:/^\d{1,2}$/'],

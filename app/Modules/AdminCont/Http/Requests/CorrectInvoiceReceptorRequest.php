@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Shared\Fiscal\TaxId\ValidTaxId;
 
 /**
  * Corrección del receptor desde la vista previa de "Crear factura" (docs/specs/guarda-validacion-ruc-al-facturar.md).
@@ -32,7 +33,7 @@ class CorrectInvoiceReceptorRequest extends FormRequest
             // SCRUM-1140 (Senior Review M2): acá solo se descartan `<`, `>` y caracteres de control; la regex estricta de
             // `NOMBRE_REGEX` la aplica el controller salvo que el nombre sea exactamente el que devolvió la DGI.
             'business_name' => ['required', 'string', 'max:255', 'regex:/^[^<>\\x00-\\x1F\\x7F]+$/u'],
-            'tax_id'        => ['required', 'string', 'max:100'],
+            'tax_id'        => ['required', 'string', 'max:100', new ValidTaxId()],
             // SCRUM-1140: el DV es opcional (una cédula puede no tenerlo); la guarda lo exige solo si la DGI lo trae.
             'tax_id_dv'     => ['nullable', 'string', 'regex:/^\d{1,2}$/'],
         ];

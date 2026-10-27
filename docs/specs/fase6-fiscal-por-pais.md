@@ -1,6 +1,6 @@
 # Spec — Fase 6: fiscal por país (Panamá como el primer paquete)
 
-**Estado**: 6a MEZCLADA (§7). 6b IMPLEMENTADA (§8), pendiente de merge. 6c y 6d pendientes (cada una con su «adelante»).
+**Estado**: 6a y 6b MEZCLADAS (§7-§8). 6c IMPLEMENTADA (§9), pendiente de merge. 6d pendiente (con su «adelante»).
 **Origen**: decisión 2 del análisis de aislamiento (multi-país: «el fiscal de Panamá pasa a ser un paquete más sobre `PacProviderContract`») y paso 6 del plan de 8 fases.
 
 ## 1. Hechos verificados (2026-10-26)
@@ -84,3 +84,12 @@ etiquetas visibles (rápido, sin tocar esquema); (ii) **renombrar esquema y cód
 - **Tests**: 12 nuevos (registro, fábrica con `digifact`/`none`, certificación sin proveedor, comandos, API) + 2 de frontend. **Decisión de Luis: el default de `fiscal_settings.pac_provider` pasa a `none`** (migración `2026_10_26_400000`: cambia el default de la columna y pasa a `none` las filas que seguían en `digifact`, que nunca estuvo operativo; los tenants con `msl` no se tocan): un tenant nuevo no transmite nada hasta elegir proveedor. Por eso la base de pruebas arranca en `none`
   y los tests de FE eligen su proveedor explícitamente (los 5 que usaban un proveedor «no wireado» usan ahora `proveedor-inexistente`).
 - Informe del Senior Review: `docs/reviews/fase6b-registro-fiscal-2026-10-26.md`.
+
+## 9. Resultado de la 6c — validador de identificación fiscal por país (2026-10-26)
+- **Backend** (`App\Shared\Fiscal\TaxId`): interfaz `TaxIdCountryRules` (nombre, si lleva DV, validación local) con `PanamaTaxIdRules` (RUC + DV de 1-2 dígitos; formato libre, **cero cambio** respecto a antes), `ColombiaTaxIdRules` (NIT de 6-10 dígitos y DV de 1 dígito por **módulo 11 de la DIAN**:
+  pesos 3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71; el DV es opcional al capturar pero, si viene, debe corresponder), `UnitedStatesTaxIdRules` (EIN `NN-NNNNNNN` o SSN/ITIN, 9 dígitos, sin DV) y `GenericTaxIdRules` (país sin reglas: alfanumérico de 3-100). `TaxIdRulesRegistry` las resuelve por país (`config/fiscal.php` → `tax_id_rules`).
+- **Dónde se aplica** (`ValidTaxId`, regla de validación con el DV como dato asociado): alta/edición de clientes y subclientes (`ReceptorTipo::reglas()`), corrección del receptor de una factura y proveedores **locales** (categoría `locales`); un proveedor del exterior trae su propio identificador y no se somete a las reglas del país de la empresa.
+- **API**: `/auth/me` y el login devuelven `fiscal_id` (`label`, `uses_dv`, `dv_max_length`) del país de la empresa.
+- **Frontend**: `useFiscalId` + `fiscalIdText`; los formularios de cliente (alta y edición de datos fiscales) y de proveedor muestran «NIT» o «EIN / Tax ID» en lugar de «RUC» y ocultan el DV donde no aplica; en Panamá los textos no cambian. La guarda del receptor al facturar sigue siendo la de la DGI (solo corre con el PAC activo).
+- **Tests**: backend 5093 (+16: reglas por país con NIT reales de la DIAN —Universidad Nacional 899999063-3 y DIAN 800197268-4—, validación por país del tenant, clientes, proveedores local/exterior y payload); frontend 236 archivos / 2959 tests (+ hook y modal de edición por país).
+- Informe del Senior Review: `docs/reviews/fase6c-validador-identificacion-2026-10-26.md`.
