@@ -36,7 +36,7 @@ class CatalogProductControllerTest extends FeatureTestCase
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'LAMP-001', 'name' => 'Lámpara colgante LED', 'description' => 'Lámpara colgante LED', 'brand' => 'Atlantic Home',
+            'reference' => 'ITEM-001', 'name' => 'Producto colgante XL', 'description' => 'Producto colgante XL', 'brand' => 'Marca Demo A',
             'price_full' => 150.00, 'cost' => 80.00, 'stock_quantity' => 10, 'is_active' => true,
             ...$overrides,
         ]);
@@ -79,7 +79,7 @@ class CatalogProductControllerTest extends FeatureTestCase
         $this->assertArrayNotHasKey('cost', $response->json('data.0'));
         $response->assertJsonPath('data.0.price_full', 150);
         $response->assertJsonPath('data.0.stock_quantity', 10);
-        $response->assertJsonPath('data.0.brand', 'Atlantic Home');
+        $response->assertJsonPath('data.0.brand', 'Marca Demo A');
     }
 
     /**
@@ -116,8 +116,8 @@ class CatalogProductControllerTest extends FeatureTestCase
     public function test_busqueda_exacta_por_referencia(): void
     {
         $this->grantVentasDisenoRead('designer@atlantic.test');
-        $this->makeProduct(['reference' => 'SPOT-010', 'name' => 'Spot LED empotrable', 'description' => 'Spot LED empotrable']);
-        $this->makeProduct(['reference' => 'CAND-099', 'name' => 'Candelabro de cristal', 'description' => 'Candelabro de cristal']);
+        $this->makeProduct(['reference' => 'SPOT-010', 'name' => 'Spot XL empotrable', 'description' => 'Spot XL empotrable']);
+        $this->makeProduct(['reference' => 'CAND-099', 'name' => 'Modelo de cristal', 'description' => 'Modelo de cristal']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -138,7 +138,7 @@ class CatalogProductControllerTest extends FeatureTestCase
     public function test_busqueda_sin_coincidencia_exacta_ni_parcial_no_trae_resultados_por_similitud(): void
     {
         $this->grantVentasDisenoRead('designer@atlantic.test');
-        $this->makeProduct(['reference' => 'LAMP-001', 'name' => 'Lámpara colgante industrial', 'description' => 'Lámpara colgante industrial']);
+        $this->makeProduct(['reference' => 'ITEM-001', 'name' => 'Producto colgante industrial', 'description' => 'Producto colgante industrial']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         // Error de tipeo: "colgante" -> "colgnate" — no es substring de ningún campo.
@@ -154,8 +154,8 @@ class CatalogProductControllerTest extends FeatureTestCase
     public function test_busqueda_parcial_por_substring_de_nombre(): void
     {
         $this->grantVentasDisenoRead('designer@atlantic.test');
-        $this->makeProduct(['reference' => 'LAMP-001', 'name' => 'Lámpara colgante industrial', 'description' => 'Lámpara colgante industrial']);
-        $this->makeProduct(['reference' => 'CAND-099', 'name' => 'Candelabro de cristal', 'description' => 'Candelabro de cristal']);
+        $this->makeProduct(['reference' => 'ITEM-001', 'name' => 'Producto colgante industrial', 'description' => 'Producto colgante industrial']);
+        $this->makeProduct(['reference' => 'CAND-099', 'name' => 'Modelo de cristal', 'description' => 'Modelo de cristal']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -164,7 +164,7 @@ class CatalogProductControllerTest extends FeatureTestCase
 
         $response->assertJsonPath('fuzzy', false);
         $refs = collect($response->json('data'))->pluck('reference');
-        $this->assertContains('LAMP-001', $refs);
+        $this->assertContains('ITEM-001', $refs);
         $this->assertNotContains('CAND-099', $refs);
     }
 
@@ -193,12 +193,12 @@ class CatalogProductControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoRead('designer@atlantic.test');
         for ($i = 1; $i <= 8; $i++) {
-            $this->makeProduct(['reference' => "LAMP-00{$i}", 'name' => 'Lámpara colgante LED', 'description' => 'Lámpara colgante LED']);
+            $this->makeProduct(['reference' => "ITEM-00{$i}", 'name' => 'Producto colgante XL', 'description' => 'Producto colgante XL']);
         }
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/ventas-diseno/catalog-products?search=LAMP')
+            ->getJson('/api/ventas-diseno/catalog-products?search=ITEM')
             ->assertStatus(200);
 
         $response->assertJsonPath('fuzzy', false);
@@ -216,7 +216,7 @@ class CatalogProductControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->assertArrayNotHasKey('cost', $response->json());
-        $response->assertJsonPath('reference', 'LAMP-001');
+        $response->assertJsonPath('reference', 'ITEM-001');
     }
 
     public function test_show_producto_inactivo_retorna_404(): void

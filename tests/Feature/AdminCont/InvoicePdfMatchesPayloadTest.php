@@ -40,8 +40,8 @@ final class InvoicePdfMatchesPayloadTest extends FeatureTestCase
     private function facturaCertificadaConDescuentos(array $quoteOverrides = []): array
     {
         ['root' => $root] = $this->makePedido([
-            ['desc' => 'Panel LED con 10 % de línea', 'qty' => 9, 'price' => 100.00, 'discount' => 10.0],
-            ['desc' => 'Luminaria sin descuento', 'qty' => 2, 'price' => 55.55],
+            ['desc' => 'Panel XL con 10 % de línea', 'qty' => 9, 'price' => 100.00, 'discount' => 10.0],
+            ['desc' => 'Producto sin descuento', 'qty' => 2, 'price' => 55.55],
             ['desc' => 'Riel con 25 % de línea', 'qty' => 3, 'price' => 33.33, 'discount' => 25.0],
         ], [[9, 2, 3]], $quoteOverrides);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);

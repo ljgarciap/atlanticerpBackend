@@ -162,15 +162,15 @@ class TicketBatch2Test extends FeatureTestCase
 
     public function test_detalle_sin_sales_project_colapsa_cliente_master_y_subcliente_al_mismo_valor(): void
     {
-        $ticket = $this->makeTicket(['cliente' => 'Torre Business Park', 'sales_project_id' => null, 'telefono' => '+507 6000-1111']);
+        $ticket = $this->makeTicket(['cliente' => 'Sitio Demo 01', 'sales_project_id' => null, 'telefono' => '+507 6000-1111']);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/tickets/{$ticket->id}")
             ->assertStatus(200);
 
-        $this->assertSame('Torre Business Park', $response->json('cliente_master'));
-        $this->assertSame('Torre Business Park', $response->json('subcliente'));
+        $this->assertSame('Sitio Demo 01', $response->json('cliente_master'));
+        $this->assertSame('Sitio Demo 01', $response->json('subcliente'));
         $this->assertSame([], $response->json('productos'));
         $this->assertSame([], $response->json('adjuntos'));
         // Visual Review 2026-08-03 — el mockup muestra teléfono junto al contacto.
@@ -306,7 +306,7 @@ class TicketBatch2Test extends FeatureTestCase
     public function test_agregar_producto_a_ticket_existente(): void
     {
         $ticket = $this->makeTicket();
-        $product = $this->makeCatalogProduct(['reference' => 'LUM-COL-014', 'name' => 'Colgante LED', 'brand' => 'Atlantic']);
+        $product = $this->makeCatalogProduct(['reference' => 'LUM-COL-014', 'name' => 'Colgante XL', 'brand' => 'Atlantic']);
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -316,7 +316,7 @@ class TicketBatch2Test extends FeatureTestCase
             ->assertStatus(201);
 
         $response->assertJsonPath('productos.0.referencia', 'LUM-COL-014');
-        $response->assertJsonPath('productos.0.descripcion', 'Colgante LED');
+        $response->assertJsonPath('productos.0.descripcion', 'Colgante XL');
         $response->assertJsonPath('productos.0.cantidad_reclamada', 3);
         $response->assertJsonPath('productos.0.cantidad_pendiente', 3);
     }

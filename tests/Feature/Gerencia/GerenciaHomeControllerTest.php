@@ -157,7 +157,7 @@ class GerenciaHomeControllerTest extends FeatureTestCase
     public function test_aprobacion_pendiente_de_reubicacion_apunta_a_la_bandeja_de_bodegas(): void
     {
         $product = CatalogProduct::create([
-            'reference' => 'REF-1154', 'name' => 'Reflector LED', 'description' => 'Reflector LED',
+            'reference' => 'REF-1154', 'name' => 'Reflector XL', 'description' => 'Reflector XL',
             'price_full' => 80, 'cost' => 40, 'stock_quantity' => 10, 'is_active' => true,
         ]);
         $solicitante = User::where('email', 'designer@atlantic.test')->firstOrFail();

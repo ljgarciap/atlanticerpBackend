@@ -88,7 +88,7 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
         $now = now()->toDateTimeString();
         foreach (array_chunk(range(1, $n), 500) as $chunk) {
             DB::table($table)->insert(array_map(fn (int $i): array => [
-                'reference' => 'BULK996-' . uniqid() . "-{$i}", 'name' => "Bulk lampara {$i}", 'description' => "Bulk {$i}",
+                'reference' => 'BULK996-' . uniqid() . "-{$i}", 'name' => "Bulk vastago {$i}", 'description' => "Bulk {$i}",
                 'price_full' => 10, 'cost' => 5, 'stock_quantity' => $i % 4 === 0 ? 0 : $i % 7, 'reorder_point' => 3,
                 'rotation' => 'alta', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
             ], $chunk));
@@ -110,7 +110,7 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
     public function test_a_search_products_ordena_por_relevancia_y_tope_de_10(): void
     {
         for ($i = 1; $i <= 12; $i++) {
-            $this->product(['reference' => "ZETA-LAMP-{$i}", 'name' => "Lampara zeta {$i}"]);
+            $this->product(['reference' => "ZETA-ITEM-{$i}", 'name' => "Vastago zeta {$i}"]);
         }
         $exact = $this->product(['reference' => 'ZETA', 'name' => 'Otro producto']);
 
@@ -125,11 +125,11 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
 
     public function test_a_search_products_ignora_acentos_y_mayusculas_y_excluye_inactivos(): void
     {
-        $this->product(['reference' => 'ACENTO-1', 'name' => 'Lámpara colgante']);
-        $this->product(['reference' => 'ACENTO-2', 'name' => 'Lámpara inactiva', 'is_active' => false]);
+        $this->product(['reference' => 'ACENTO-1', 'name' => 'Vástago colgante']);
+        $this->product(['reference' => 'ACENTO-2', 'name' => 'Vástago inactiva', 'is_active' => false]);
 
         $response = $this->withHeaders($this->headers())
-            ->getJson('/api/bodega/adjustment-requests/products/search?search=LAMPARA%20COLGANTE')
+            ->getJson('/api/bodega/adjustment-requests/products/search?search=VASTAGO%20COLGANTE')
             ->assertStatus(200);
 
         $this->assertSame(['ACENTO-1'], array_column($response->json('data'), 'reference'));
@@ -142,13 +142,13 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
 
     public function test_a_search_products_tolera_un_typo_solo_si_no_hay_coincidencia_parcial(): void
     {
-        $this->product(['reference' => 'CANDELABRO-1', 'name' => 'Candelabro cristal imperial']);
+        $this->product(['reference' => 'MODELO-1', 'name' => 'Modelo cristal imperial']);
 
         $response = $this->withHeaders($this->headers())
             ->getJson('/api/bodega/adjustment-requests/products/search?search=cristl')
             ->assertStatus(200);
 
-        $this->assertSame(['CANDELABRO-1'], array_column($response->json('data'), 'reference'));
+        $this->assertSame(['MODELO-1'], array_column($response->json('data'), 'reference'));
     }
 
     public function test_a_search_products_con_parametros_hostiles_no_da_5xx(): void
@@ -169,7 +169,7 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
         $before = memory_get_peak_usage(false);
         $response = null;
         $hydrated = $this->countRetrieved(function () use (&$response, $headers): void {
-            $response = $this->withHeaders($headers)->getJson('/api/bodega/adjustment-requests/products/search?search=lampara');
+            $response = $this->withHeaders($headers)->getJson('/api/bodega/adjustment-requests/products/search?search=vastago');
         });
         $peakMb = (memory_get_peak_usage(false) - $before) / 1048576;
 
@@ -214,8 +214,8 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
     public function test_g_kpis_y_meta_reflejan_el_filtro_de_texto(): void
     {
         $central = $this->warehouse();
-        $a = $this->product(['reference' => 'KPI-A', 'name' => 'Kpi lampara uno']);
-        $b = $this->product(['reference' => 'KPI-B', 'name' => 'Kpi lampara dos']);
+        $a = $this->product(['reference' => 'KPI-A', 'name' => 'Kpi vastago uno']);
+        $b = $this->product(['reference' => 'KPI-B', 'name' => 'Kpi vastago dos']);
         $c = $this->product(['reference' => 'OTRO-C', 'name' => 'Sin relacion']);
         $this->stock($a, $central, 4, 'K-1');
         $this->stock($b, $central, 6, 'K-2');
@@ -231,12 +231,12 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
     public function test_g_varias_palabras_pueden_repartirse_entre_producto_y_ubicacion(): void
     {
         $central = $this->warehouse();
-        $p = $this->product(['reference' => 'MULTI-1', 'name' => 'Candelabro imperial']);
-        $q = $this->product(['reference' => 'MULTI-2', 'name' => 'Candelabro moderno']);
+        $p = $this->product(['reference' => 'MULTI-1', 'name' => 'Modelo imperial']);
+        $q = $this->product(['reference' => 'MULTI-2', 'name' => 'Modelo moderno']);
         $this->stock($p, $central, 3, 'X-5-05');
         $this->stock($q, $central, 3, 'Y-6-06');
 
-        $r = $this->warehouseSearch($central->id, 'search=' . rawurlencode('candelabro x-5-05'))->assertStatus(200);
+        $r = $this->warehouseSearch($central->id, 'search=' . rawurlencode('modelo x-5-05'))->assertStatus(200);
 
         $this->assertSame(1, $r->json('meta.total'), 'palabra del producto + palabra de la ubicación, en cualquier orden');
     }
@@ -245,7 +245,7 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
     {
         $central = $this->warehouse();
         for ($i = 1; $i <= 12; $i++) {
-            $this->stock($this->product(['reference' => "REL-LAMP-{$i}", 'name' => "Lampara relevante {$i}"]), $central, 2, "R-{$i}");
+            $this->stock($this->product(['reference' => "REL-ITEM-{$i}", 'name' => "Vastago relevante {$i}"]), $central, 2, "R-{$i}");
         }
         $exact = $this->product(['reference' => 'REL', 'name' => 'Otro']);
         $this->stock($exact, $central, 2, 'R-99');
@@ -268,8 +268,8 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
     {
         $central = $this->warehouse();
         $otra = $this->warehouse('Merma');
-        $mine = $this->product(['reference' => 'TYPO-1', 'name' => 'Candelabro cristal imperial']);
-        $other = $this->product(['reference' => 'TYPO-2', 'name' => 'Candelabro cristal barroco']);
+        $mine = $this->product(['reference' => 'TYPO-1', 'name' => 'Modelo cristal imperial']);
+        $other = $this->product(['reference' => 'TYPO-2', 'name' => 'Modelo cristal barroco']);
         $this->stock($mine, $central, 3, 'T-1');
         $this->stock($other, $otra, 3, 'T-2');
 
@@ -300,7 +300,7 @@ class Scrum996CatalogSqlTest extends FeatureTestCase
         $this->bulkProducts(5000, withStock: true, warehouse: $central);
         $headers = $this->headers();
 
-        foreach (['search=lampara', 'search=zzzqqq', 'search=lampara&per_page=100'] as $q) {
+        foreach (['search=vastago', 'search=zzzqqq', 'search=vastago&per_page=100'] as $q) {
             memory_reset_peak_usage();
             $before = memory_get_peak_usage(false);
             $response = null;

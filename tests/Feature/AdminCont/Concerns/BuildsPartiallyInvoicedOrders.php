@@ -196,9 +196,9 @@ trait BuildsPartiallyInvoicedOrders
     {
         return $this->makePedido(
             [
-                ['desc' => 'Lámpara A', 'qty' => 10, 'price' => 33.33, 'discount' => 5],
-                ['desc' => 'Lámpara B', 'qty' => 7, 'price' => 12.49],
-                ['desc' => 'Lámpara C', 'qty' => 3, 'price' => 99.99, 'discount' => 12.5],
+                ['desc' => 'Producto A', 'qty' => 10, 'price' => 33.33, 'discount' => 5],
+                ['desc' => 'Producto B', 'qty' => 7, 'price' => 12.49],
+                ['desc' => 'Producto C', 'qty' => 3, 'price' => 99.99, 'discount' => 12.5],
             ],
             [[4, 2, 1], [3, 2, 1], [3, 3, 1]],
             ['discount_totals_type' => 'percent', 'discount_totals_value' => 3.5],

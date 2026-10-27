@@ -47,14 +47,14 @@ class ComprasHomeControllerTest extends FeatureTestCase
     /** @param array<string, mixed> $overrides */
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     /** @param array<string, mixed> $overrides */
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo E27', 'description' => 'Bombillo E27',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo E27', 'description' => 'Artículo E27',
             'price_full' => 20, 'cost' => 12, 'stock_quantity' => 10, 'is_active' => true,
             ...$overrides,
         ]);

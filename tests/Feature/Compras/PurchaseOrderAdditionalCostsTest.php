@@ -40,9 +40,9 @@ class PurchaseOrderAdditionalCostsTest extends FeatureTestCase
     /** @return array{provider: Provider, product: CatalogProduct} */
     private function fixture(): array
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara', 'price_full' => 20, 'cost' => 100,
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto', 'price_full' => 20, 'cost' => 100,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 

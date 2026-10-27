@@ -48,12 +48,12 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
 
     public function test_busqueda_ignora_acentos_y_mayusculas(): void
     {
-        $this->product('AC-1', 'Lámpara Colgante Iluminación');
+        $this->product('AC-1', 'Vástago Colgante Catalogación');
 
-        $this->assertSame(['AC-1'], $this->refs('lampara'));
-        $this->assertSame(['AC-1'], $this->refs('ILUMINACION'));
-        $this->assertSame(['AC-1'], $this->refs('Lámpara'));
-        $this->assertSame(['AC-1'], $this->refs('iluminación colgante'));
+        $this->assertSame(['AC-1'], $this->refs('vastago'));
+        $this->assertSame(['AC-1'], $this->refs('CATALOGACION'));
+        $this->assertSame(['AC-1'], $this->refs('Vástago'));
+        $this->assertSame(['AC-1'], $this->refs('catalogación colgante'));
     }
 
     public function test_busca_en_referencia_referencia_de_fabrica_nombre_y_marca(): void
@@ -67,18 +67,18 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
 
     public function test_todas_las_palabras_deben_aparecer_en_cualquier_orden(): void
     {
-        $this->product('W-1', 'Lámpara colgante negra');
-        $this->product('W-2', 'Lámpara de mesa');
+        $this->product('W-1', 'Vástago colgante negra');
+        $this->product('W-2', 'Vástago de mesa');
 
-        $this->assertSame(['W-1'], $this->refs('negra lampara'));
-        $this->assertSame(['W-1', 'W-2'], $this->refs('lampara'));
-        $this->assertSame([], $this->refs('lampara azul'));
+        $this->assertSame(['W-1'], $this->refs('negra vastago'));
+        $this->assertSame(['W-1', 'W-2'], $this->refs('vastago'));
+        $this->assertSame([], $this->refs('vastago azul'));
     }
 
     public function test_los_comodines_del_termino_se_escapan(): void
     {
-        $this->product('P-1', 'Panel 100% LED');
-        $this->product('P-2', 'Panel 1000 LED');
+        $this->product('P-1', 'Panel 100% XL');
+        $this->product('P-2', 'Panel 1000 XL');
 
         $this->assertSame(['P-1'], $this->refs('100%'));
         $this->assertSame([], $this->refs('%%%'));
@@ -86,11 +86,11 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
 
     public function test_termino_corto_degrada_a_prefijo_de_palabra(): void
     {
-        $this->product('S-1', 'Panel LED');
-        $this->product('S-2', 'Lampara');
+        $this->product('S-1', 'Panel XL');
+        $this->product('S-2', 'Vastago');
         $this->product('S-3', 'Par 30');
 
-        // "pa" = prefijo de "Panel" y "Par", pero NO está al inicio de ninguna palabra de "Lampara".
+        // "pa" = prefijo de "Panel" y "Par", pero NO está al inicio de ninguna palabra de "Vastago".
         $this->assertSame(['S-1', 'S-3'], $this->refs('pa'));
     }
 
@@ -105,62 +105,62 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
 
     public function test_respaldo_tolerante_a_typos_solo_cuando_la_parcial_da_cero(): void
     {
-        $this->product('F-1', 'Iluminación exterior');
+        $this->product('F-1', 'Catalogación exterior');
 
         // Parcial con resultados: nunca usa el respaldo, aunque se pida.
-        $this->assertSame(['F-1'], $this->refs('ilumin', true, $used));
+        $this->assertSame(['F-1'], $this->refs('catalo', true, $used));
         $this->assertFalse($used);
 
         // Typo: la parcial da 0 -> con respaldo lo encuentra y avisa; sin respaldo, vacío.
-        $this->assertSame(['F-1'], $this->refs('iluminacon', true, $used));
+        $this->assertSame(['F-1'], $this->refs('catalogacon', true, $used));
         $this->assertTrue($used);
 
-        $this->assertSame([], $this->refs('iluminacon', false, $used));
+        $this->assertSame([], $this->refs('catalogacon', false, $used));
         $this->assertFalse($used);
     }
 
     public function test_respaldo_no_devuelve_productos_sin_relacion(): void
     {
-        $this->product('N-1', 'Iluminación exterior');
+        $this->product('N-1', 'Catalogación exterior');
 
         $this->assertSame([], $this->refs('zzqqxx', true));
     }
 
     public function test_orden_de_relevancia_exacta_luego_prefijo_luego_resto(): void
     {
-        $this->product('LED-100', 'Reflector');
-        $this->product('AAA-1', 'Panel LED-10 grande');
-        $this->product('LED-10', 'Panel');
-        $this->product('LED-10B', 'Otro');
+        $this->product('XL-100', 'Reflector');
+        $this->product('AAA-1', 'Panel XL-10 grande');
+        $this->product('XL-10', 'Panel');
+        $this->product('XL-10B', 'Otro');
 
         $q = CatalogProduct::query();
-        CatalogProduct::applySearch($q, 'led-10');
-        CatalogProduct::orderByRelevance($q, 'led-10');
+        CatalogProduct::applySearch($q, 'xl-10');
+        CatalogProduct::orderByRelevance($q, 'xl-10');
         $refs = $q->orderBy('name')->orderBy('id')->pluck('reference')->all();
 
-        $this->assertSame('LED-10', $refs[0], 'coincidencia exacta primero');
-        $this->assertSame(['LED-10B', 'LED-100'], array_slice($refs, 1, 2), 'luego prefijo de referencia');
+        $this->assertSame('XL-10', $refs[0], 'coincidencia exacta primero');
+        $this->assertSame(['XL-10B', 'XL-100'], array_slice($refs, 1, 2), 'luego prefijo de referencia');
         $this->assertSame('AAA-1', $refs[3], 'resto al final');
     }
 
     public function test_scope_search_encadena_con_limit(): void
     {
         foreach (range(1, 8) as $i) {
-            $this->product("L-{$i}", 'Lámpara mesa');
+            $this->product("L-{$i}", 'Vástago mesa');
         }
 
-        $this->assertCount(3, CatalogProduct::query()->search('lampara')->limit(3)->get());
+        $this->assertCount(3, CatalogProduct::query()->search('vastago')->limit(3)->get());
     }
 
     public function test_search_text_se_mantiene_sola_al_insertar_y_editar(): void
     {
-        $p = $this->product('MNT-1', 'Lámpara', ['brand' => 'Ñandú']);
-        $this->assertSame('mnt-1  lampara nandu', $this->searchText($p->id));
+        $p = $this->product('MNT-1', 'Vástago', ['brand' => 'Ñandú']);
+        $this->assertSame('mnt-1  vastago nandu', $this->searchText($p->id));
 
         $p->update(['name' => 'Aplique Cálido', 'factory_reference' => 'FÁB-2']);
         $this->assertSame('mnt-1 fab-2 aplique calido nandu', $this->searchText($p->id));
         $this->assertSame(['MNT-1'], $this->refs('aplique calido'));
-        $this->assertSame([], $this->refs('lampara'));
+        $this->assertSame([], $this->refs('vastago'));
     }
 
     public function test_el_indice_trigram_se_usa_con_un_catalogo_de_30k(): void
@@ -169,7 +169,7 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
         $table = "{$slug}_ventas_diseno.catalog_products";
         DB::statement("
             INSERT INTO {$table} (reference, name, description, price_full, is_active, created_at, updated_at)
-            SELECT 'SYN-' || g, 'Producto sintético ' || (g % 977) || ' Lámpara', 'x', 10, true, now(), now()
+            SELECT 'SYN-' || g, 'Producto sintético ' || (g % 977) || ' Vástago', 'x', 10, true, now(), now()
             FROM generate_series(1, 30000) g
         ");
         DB::statement("ANALYZE {$table}");
@@ -197,12 +197,12 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
         $this->assertSame([], CatalogProduct::fuzzyWords('___'));
         $this->assertSame([], CatalogProduct::fuzzyWords('  -.-  '));
         $this->assertSame([], CatalogProduct::fuzzyWords('de'));
-        $this->assertSame(['lampra'], CatalogProduct::fuzzyWords('lampra de'));
-        $this->assertSame(['lampra', 'colgnte'], CatalogProduct::fuzzyWords('lampra% colgnte'));
+        $this->assertSame(['vastgo'], CatalogProduct::fuzzyWords('vastgo de'));
+        $this->assertSame(['vastgo', 'colgnte'], CatalogProduct::fuzzyWords('vastgo% colgnte'));
         $this->assertSame(['ab12', 'zzzz'], CatalogProduct::fuzzyWords('ab12-zzzz'));
         // una palabra de más de 30 caracteres es ruido: sin respaldo
         $this->assertSame([], CatalogProduct::fuzzyWords(str_repeat('a', 39)));
-        $this->assertSame([], CatalogProduct::fuzzyWords('lampara ' . str_repeat('a', 31)));
+        $this->assertSame([], CatalogProduct::fuzzyWords('vastago ' . str_repeat('a', 31)));
         $this->assertCount(5, CatalogProduct::fuzzyWords('uno1 dos2 tres3 cuat4 cinc5 seis6 siet7'));
     }
 
@@ -233,11 +233,11 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
 
     public function test_el_respaldo_sigue_encontrando_typos_reales(): void
     {
-        $this->product('COL-1', 'Lámpara colgante nórdica');
+        $this->product('COL-1', 'Vástago colgante nórdica');
         $this->product('COL-2', 'Aplique de pared');
 
         $used = null;
-        $this->assertSame(['COL-1'], $this->fallbackRefs('lampra colgnte', $used));
+        $this->assertSame(['COL-1'], $this->fallbackRefs('vastgo colgnte', $used));
         $this->assertTrue($used);
 
         // la coincidencia parcial sigue mandando: con resultados parciales no hay respaldo
@@ -249,11 +249,11 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
     public function test_el_respaldo_acota_los_candidatos(): void
     {
         foreach (range(1, CatalogProduct::SEARCH_FUZZY_MAX_CANDIDATES + 60) as $i) {
-            $this->product(sprintf('CAN-%04d', $i), "Luminaria cilindrica modelo {$i}");
+            $this->product(sprintf('CAN-%04d', $i), "Artefacto cilindrica modelo {$i}");
         }
 
         $q = CatalogProduct::query();
-        $used = CatalogProduct::applySearch($q, 'lumnaria cilindrca', true);
+        $used = CatalogProduct::applySearch($q, 'artefcto cilindrca', true);
 
         $this->assertTrue($used);
         $this->assertSame(CatalogProduct::SEARCH_FUZZY_MAX_CANDIDATES, $q->count());
@@ -261,18 +261,18 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
 
     public function test_el_respaldo_respeta_las_restricciones_del_llamador(): void
     {
-        $this->product('RES-1', 'Lámpara colgante nórdica', ['is_active' => false]);
-        $this->product('RES-2', 'Lámpara colgante minimal');
+        $this->product('RES-1', 'Vástago colgante nórdica', ['is_active' => false]);
+        $this->product('RES-2', 'Vástago colgante minimal');
 
         $q = CatalogProduct::query()->where('is_active', true);
-        $used = CatalogProduct::applySearch($q, 'lampra colgnte', true);
+        $used = CatalogProduct::applySearch($q, 'vastgo colgnte', true);
 
         $this->assertTrue($used);
         $this->assertSame(['RES-2'], $q->pluck('reference')->all());
 
         // sin candidatos dentro de las restricciones: 0 filas y fuzzy=false
         $q2 = CatalogProduct::query()->where('reference', 'NO-EXISTE');
-        $this->assertFalse(CatalogProduct::applySearch($q2, 'lampra colgnte', true));
+        $this->assertFalse(CatalogProduct::applySearch($q2, 'vastgo colgnte', true));
         $this->assertSame(0, $q2->count());
     }
 
@@ -281,16 +281,16 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
     private function seedFuzzyDataset(): void
     {
         foreach ([
-            'Lámpara colgante nórdica', 'Pendiente cristal', 'Candelabro dorado', 'Plafón redondo blanco',
-            'Panel LED cuadrado', 'Riel direccionable', 'Aplique de pared', 'Spot empotrable', 'Farola exterior',
+            'Vástago colgante nórdica', 'Pendiente cristal', 'Modelo dorado', 'Plafón redondo blanco',
+            'Panel XL cuadrado', 'Riel direccionable', 'Aplique de pared', 'Spot empotrable', 'Farola exterior',
         ] as $i => $name) {
             $this->product("FZ-{$i}", $name);
         }
-        // >200 productos parecidos a "iluminacion": ejercita el tope de candidatos (200) y su desempate.
+        // >200 productos parecidos a "catalogación": ejercita el tope de candidatos (200) y su desempate.
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::statement("
             INSERT INTO {$slug}_ventas_diseno.catalog_products (reference, name, description, price_full, is_active, created_at, updated_at)
-            SELECT 'ILU-' || lpad(g::text, 4, '0'), 'Iluminación nórdica ' || g, 'x', 10, true, now(), now()
+            SELECT 'ILU-' || lpad(g::text, 4, '0'), 'Catalogación nórdica ' || g, 'x', 10, true, now(), now()
             FROM generate_series(1, 260) g
         ");
     }
@@ -317,18 +317,18 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
     public static function fuzzyParityTerms(): array
     {
         return [
-            'ilumnacion (tope de 200)' => ['ilumnacion'],
-            'lampra colgnte'           => ['lampra colgnte'],
+            'catalgacion (tope de 200)' => ['catalgacion'],
+            'vastgo colgnte'           => ['vastgo colgnte'],
             'pendnte'                  => ['pendnte'],
-            'candelbro'                => ['candelbro'],
+            'artefcto'                => ['artefcto'],
             'plafn'                    => ['plafn'],
-            'pnel led'                 => ['pnel led'],
-            'ilumnacion led'           => ['ilumnacion led'],
-            'con acento y typo'        => ['ilumnación'],
+            'pnel xl'                 => ['pnel xl'],
+            'catalgacion xl'           => ['catalgacion xl'],
+            'con acento y typo'        => ['catalgación'],
             'porcentaje'               => ['100%'],
             'x%y'                      => ['x%y'],
             'palabra corta'            => ['de'],
-            'palabra de 31 letras'     => ['iluminacioniluminacioniluminac'],
+            'palabra de 31 letras'     => ['catalogacioncatalogacioncatalo'],
             '6 palabras'               => ['uno dos tres cuatro cinco seis'],
             'solo símbolos'            => ['%%% ___ ---'],
         ];
@@ -373,7 +373,7 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
 
         // También tras una búsqueda real con respaldo…
         $q = CatalogProduct::query();
-        $this->assertTrue(CatalogProduct::applySearch($q, 'ilumnacion', true));
+        $this->assertTrue(CatalogProduct::applySearch($q, 'catalgacion', true));
         $this->assertSame($before, [$threshold(), $pageCost()]);
 
         // …y tras un error dentro de la consulta (savepoint revertido).
@@ -395,8 +395,8 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
         DB::statement("
             INSERT INTO {$table} (reference, name, description, price_full, is_active, created_at, updated_at)
             SELECT 'SYN-' || g,
-                   (ARRAY['Iluminación','Lámpara','Pendiente','Candelabro','Riel','Spot','Aplique','Empotrable','Exterior','Bombillo'])[1 + g % 10]
-                   || ' ' || (ARRAY['LED','Nordic','Cálido','Frío','Negro','Blanco'])[1 + (g / 10) % 6] || ' ' || (g % 977) || 'W',
+                   (ARRAY['Catalogación','Vástago','Pendiente','Modelo','Riel','Spot','Aplique','Empotrable','Exterior','Cilindro'])[1 + g % 10]
+                   || ' ' || (ARRAY['XL','Nordic','Cálido','Frío','Negro','Blanco'])[1 + (g / 10) % 6] || ' ' || (g % 977) || 'W',
                    'x', 10, true, now(), now()
             FROM generate_series(1, 30000) g
         ");
@@ -410,7 +410,7 @@ class CatalogProductSearchScopeTest extends FeatureTestCase
             }
         });
         $q = CatalogProduct::query();
-        $this->assertTrue(CatalogProduct::applySearch($q, 'ilumnacion', true));
+        $this->assertTrue(CatalogProduct::applySearch($q, 'catalgacion', true));
         $this->assertNotNull($captured, 'applySearch debe usar el operador <% en la consulta de candidatos');
 
         // Sin tocar enable_seqscan: el plan por defecto + los ajustes del respaldo deben elegir el índice.

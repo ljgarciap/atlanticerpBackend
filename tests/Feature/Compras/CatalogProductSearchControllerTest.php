@@ -32,7 +32,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     public function test_sin_autenticar_retorna_401(): void
@@ -46,7 +46,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'NORDIC-40', 'factory_reference' => 'LMP-001',
-            'name' => 'Lámpara colgante Nordic 40cm', 'description' => 'Lámpara colgante Nordic 40cm', 'price_full' => 150, 'cost' => 100,
+            'name' => 'Vástago colgante Nordic 40cm', 'description' => 'Vástago colgante Nordic 40cm', 'price_full' => 150, 'cost' => 100,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
@@ -63,20 +63,20 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     {
         // REQ-130 Escenario 1.
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $lightCorp = $this->makeProvider(['name' => 'LightCorp']);
-        $iluminex = $this->makeProvider(['name' => 'Iluminex SA']);
+        $proveedorA = $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $proveedorB = $this->makeProvider(['name' => 'Proveedor Demo B SA']);
         CatalogProduct::create([
-            'reference' => 'A1', 'name' => 'Producto LightCorp', 'description' => 'Producto LightCorp', 'price_full' => 10, 'cost' => 5,
-            'provider_id' => $lightCorp->id, 'is_active' => true,
+            'reference' => 'A1', 'name' => 'Producto Proveedor Demo A', 'description' => 'Producto Proveedor Demo A', 'price_full' => 10, 'cost' => 5,
+            'provider_id' => $proveedorA->id, 'is_active' => true,
         ]);
         CatalogProduct::create([
-            'reference' => 'A2', 'name' => 'Producto Iluminex', 'description' => 'Producto Iluminex', 'price_full' => 10, 'cost' => 5,
-            'provider_id' => $iluminex->id, 'is_active' => true,
+            'reference' => 'A2', 'name' => 'Producto Proveedor Demo B', 'description' => 'Producto Proveedor Demo B', 'price_full' => 10, 'cost' => 5,
+            'provider_id' => $proveedorB->id, 'is_active' => true,
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson("/api/compras/products?provider_id={$lightCorp->id}")
+            ->getJson("/api/compras/products?provider_id={$proveedorA->id}")
             ->assertStatus(200);
 
         $refs = collect($response->json('data'))->pluck('reference');
@@ -94,25 +94,25 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
-            'reference' => 'ORIG-01', 'name' => 'Bombillo LED E27 blanco cálido', 'description' => 'Bombillo LED 9W',
-            'category' => 'Iluminación LED Básica', 'price_full' => 80, 'cost' => 48, // margen 40%
+            'reference' => 'ORIG-01', 'name' => 'Cilindro XL E27 blanco cálido', 'description' => 'Cilindro XL 9W',
+            'category' => 'Catalogación XL Básica', 'price_full' => 80, 'cost' => 48, // margen 40%
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
         CatalogProduct::create([
-            'reference' => 'CAND-01', 'name' => 'Bombillo LED E27 blanco cálido', 'description' => 'Bombillo LED 9W',
-            'category' => 'Iluminación LED Básica', 'price_full' => 85, 'cost' => 52.7, // margen ~38%, texto idéntico
+            'reference' => 'CAND-01', 'name' => 'Cilindro XL E27 blanco cálido', 'description' => 'Cilindro XL 9W',
+            'category' => 'Catalogación XL Básica', 'price_full' => 85, 'cost' => 52.7, // margen ~38%, texto idéntico
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson("/api/compras/products?search=Bombillo&original_catalog_product_id={$original->id}")
+            ->getJson("/api/compras/products?search=Cilindro&original_catalog_product_id={$original->id}")
             ->assertStatus(200);
 
         $data = $response->json('data');
         $this->assertCount(1, $data, 'el producto original nunca debe aparecer como su propio candidato.');
         $this->assertSame('CAND-01', $data[0]['reference']);
-        $this->assertSame('Bombillo LED E27 blanco cálido', $data[0]['name']);
+        $this->assertSame('Cilindro XL E27 blanco cálido', $data[0]['name']);
         $this->assertGreaterThan(85, $data[0]['similarity_percent'], 'texto idéntico + precio/margen muy cercanos debe dar similitud alta.');
     }
 
@@ -121,22 +121,22 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
-            'reference' => 'ORIG-02', 'name' => 'Bombillo LED E27 blanco cálido', 'description' => 'Bombillo LED 9W',
-            'category' => 'Iluminación LED Básica', 'price_full' => 80, 'cost' => 48,
+            'reference' => 'ORIG-02', 'name' => 'Cilindro XL E27 blanco cálido', 'description' => 'Cilindro XL 9W',
+            'category' => 'Catalogación XL Básica', 'price_full' => 80, 'cost' => 48,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
         CatalogProduct::create([
-            'reference' => 'CAND-02', 'name' => 'Bombillo LED E27 blanco cálido', 'description' => 'Bombillo LED 9W',
+            'reference' => 'CAND-02', 'name' => 'Cilindro XL E27 blanco cálido', 'description' => 'Cilindro XL 9W',
             'category' => 'Colgantes de Diseño', 'price_full' => 80, 'cost' => 48,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $withoutOriginal = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/products?search=Bombillo')
+            ->getJson('/api/compras/products?search=Cilindro')
             ->assertStatus(200);
         $withOriginal = $this->withHeaders($this->authHeaders($token))
-            ->getJson("/api/compras/products?search=Bombillo&original_catalog_product_id={$original->id}")
+            ->getJson("/api/compras/products?search=Cilindro&original_catalog_product_id={$original->id}")
             ->assertStatus(200);
 
         // Sin original: comportamiento de REQ-130 intacto, similarity_percent siempre null.
@@ -157,7 +157,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['ventas_diseno.edit']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
-            'reference' => 'VD-01', 'name' => 'Bombillo para vendedor', 'description' => 'Bombillo para vendedor',
+            'reference' => 'VD-01', 'name' => 'Cilindro para vendedor', 'description' => 'Cilindro para vendedor',
             'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
@@ -177,7 +177,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['ventas_diseno.edit']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
-            'reference' => 'VD-02', 'name' => 'Bombillo sin costo para vendedor', 'description' => 'Bombillo sin costo para vendedor',
+            'reference' => 'VD-02', 'name' => 'Cilindro sin costo para vendedor', 'description' => 'Cilindro sin costo para vendedor',
             'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
@@ -198,7 +198,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.read', 'ventas_diseno.edit']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
-            'reference' => 'VD-03', 'name' => 'Bombillo con costo', 'description' => 'Bombillo con costo',
+            'reference' => 'VD-03', 'name' => 'Cilindro con costo', 'description' => 'Cilindro con costo',
             'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
@@ -216,14 +216,14 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
-            'reference' => 'ORIG-03', 'name' => 'Bombillo LED E27 blanco cálido', 'description' => 'Bombillo LED 9W',
-            'category' => 'Iluminación LED Básica', 'price_full' => 80, 'cost' => 48,
+            'reference' => 'ORIG-03', 'name' => 'Cilindro XL E27 blanco cálido', 'description' => 'Cilindro XL 9W',
+            'category' => 'Catalogación XL Básica', 'price_full' => 80, 'cost' => 48,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
         CatalogProduct::create([
             // Ningún parecido de texto, precio muy lejano, margen muy distinto — similitud < 25%.
             'reference' => 'CAND-03', 'name' => 'Poste ornamental de jardín 2m', 'description' => 'Poste exterior forjado',
-            'category' => 'Iluminación LED Básica', 'price_full' => 900, 'cost' => 850,
+            'category' => 'Catalogación XL Básica', 'price_full' => 900, 'cost' => 850,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
@@ -241,16 +241,16 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
-            'reference' => 'NEW-1', 'name' => 'Lámpara colgante Nordic', 'description' => 'x', 'price_full' => 10,
+            'reference' => 'NEW-1', 'name' => 'Vástago colgante Nordic', 'description' => 'x', 'price_full' => 10,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
-        $ok = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products?search=LAMPARA nordic')->assertStatus(200);
+        $ok = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products?search=VASTAGO nordic')->assertStatus(200);
         $this->assertSame(['NEW-1'], collect($ok->json('data'))->pluck('reference')->all());
         $this->assertFalse($ok->json('fuzzy'));
 
-        $typo = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products?search=lampra colgnte')->assertStatus(200);
+        $typo = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products?search=vastgo colgnte')->assertStatus(200);
         $this->assertSame(['NEW-1'], collect($typo->json('data'))->pluck('reference')->all());
         $this->assertTrue($typo->json('fuzzy'));
     }

@@ -83,8 +83,8 @@ class CatalogListSqlTest extends FeatureTestCase
 
         $this->make('p01', 'Alfa colgante', ['brand' => 'Acme', 'description' => 'techo alto', 'category' => 'candelabros_colgantes', 'stock_quantity' => 10]);
         $this->make('p02', 'Beta pared', ['factory_reference' => 'FR-XYZ', 'stock_quantity' => 0]);
-        $this->make('p03', 'Gamma techo', ['category' => 'lamparas', 'stock_quantity' => 5]);       // comprometido 5 -> 0
-        $this->make('p04', 'Delta piso', ['category' => 'lamparas', 'stock_quantity' => 8]);        // 8 en bodega excluida -> 0
+        $this->make('p03', 'Gamma techo', ['category' => 'vastagos', 'stock_quantity' => 5]);       // comprometido 5 -> 0
+        $this->make('p04', 'Delta piso', ['category' => 'vastagos', 'stock_quantity' => 8]);        // 8 en bodega excluida -> 0
         $this->make('p05', 'Epsilon riel', ['stock_quantity' => 20]);                                // pedido despachado: no cuenta
         $this->make('p06', 'Zeta inactivo', ['is_active' => false, 'stock_quantity' => 50]);
         $this->make('p07', 'Eta sin stock declarado', ['stock_quantity' => null]);
@@ -228,16 +228,16 @@ class CatalogListSqlTest extends FeatureTestCase
             'texto que no existe'               => [['search' => 'nadaquesea']],
             'texto con porcentaje'              => [['search' => '100%']],
             'texto con guion bajo'              => [['search' => 'guion_bajo']],
-            'categoría'                         => [['category' => 'lamparas']],
+            'categoría'                         => [['category' => 'vastagos']],
             'categoría inexistente'             => [['category' => 'nada']],
             'familia'                           => [['family_id' => 'FAM_A']],
             'familia sin productos activos'     => [['family_id' => 'FAM_EMPTY']],
             'stock con'                         => [['stock' => 'con']],
             'stock sin'                         => [['stock' => 'sin']],
             'stock con + texto'                 => [['stock' => 'con', 'search' => 'a']],
-            'stock sin + categoría'             => [['stock' => 'sin', 'category' => 'lamparas']],
+            'stock sin + categoría'             => [['stock' => 'sin', 'category' => 'vastagos']],
             'familia + stock con'               => [['family_id' => 'FAM_A', 'stock' => 'con']],
-            'todos combinados'                  => [['search' => 'a', 'category' => 'lamparas', 'stock' => 'sin']],
+            'todos combinados'                  => [['search' => 'a', 'category' => 'vastagos', 'stock' => 'sin']],
             'stock inválido = sin filtro'       => [['stock' => 'xx']],
         ];
     }
@@ -296,7 +296,7 @@ class CatalogListSqlTest extends FeatureTestCase
     public function test_dropdowns_de_categorias_y_familias_como_antes(): void
     {
         [$cats, $fams] = $this->legacyDropdowns();
-        $res = $this->catalog(['search' => 'techo', 'category' => 'lamparas']); // los filtros no encogen los dropdowns
+        $res = $this->catalog(['search' => 'techo', 'category' => 'vastagos']); // los filtros no encogen los dropdowns
 
         $this->assertSame($cats, $res->json('categories'));
         $this->assertSame($fams, $res->json('families'));
@@ -384,7 +384,7 @@ class CatalogListSqlTest extends FeatureTestCase
         sort($refs);
 
         $this->assertSame($esperadas, $refs, "search='{$search}' no debe traer productos solo por tener categoría");
-        // Los dos productos con categoría 'lamparas' (P03, P04) NO tienen ningún símbolo: nunca deben aparecer.
+        // Los dos productos con categoría 'vastagos' (P03, P04) NO tienen ningún símbolo: nunca deben aparecer.
         $this->assertNotContains('P03', $refs);
         $this->assertNotContains('P04', $refs);
     }
@@ -409,14 +409,14 @@ class CatalogListSqlTest extends FeatureTestCase
     public static function palabraConSimboloYLetrasCases(): array
     {
         return [
-            'letras + grado'        => ['lampara°'],
+            'letras + grado'        => ['vastago°'],
             'una letra + grado'     => ['l°'],
             'a + grado'             => ['a°'],
             'ordinal femenino'      => ['ª'],
             'colgante + grado'      => ['colgante°'],
             'grado + letra'         => ['°C'],
-            'categoría sin símbolo' => ['lamparas'],
-            'categoría con acento'  => ['LÁMPARAS'],
+            'categoría sin símbolo' => ['vastagos'],
+            'categoría con acento'  => ['VÁSTAGOS'],
             'dos palabras'          => ['candelabros colgantes'],
             'multiplicación'        => ['×'],
         ];
@@ -474,7 +474,7 @@ class CatalogListSqlTest extends FeatureTestCase
     {
         $this->make('q1', 'Spot 30° cálido');
 
-        foreach (['l°', 'lampara°', 'colgante°'] as $search) {
+        foreach (['l°', 'vastago°', 'colgante°'] as $search) {
             $refs = array_column($this->catalog(['search' => $search, 'per_page' => 'all'])->json('data'), 'reference');
             $this->assertSame([], $refs, "'{$search}' no aparece en ningún texto: no debe traer P01/P03/P04 solo por su categoría");
         }
@@ -604,7 +604,7 @@ class CatalogListSqlTest extends FeatureTestCase
             $retrieved++;
         });
 
-        foreach ([[], ['search' => 'hidratacion'], ['stock' => 'con'], ['category' => 'lamparas']] as $q) {
+        foreach ([[], ['search' => 'hidratacion'], ['stock' => 'con'], ['category' => 'vastagos']] as $q) {
             $retrieved = 0;
             $this->withHeaders($this->authHeaders($token))
                 ->getJson('/api/ventas-diseno/catalog?' . http_build_query($q + ['per_page' => 10]))

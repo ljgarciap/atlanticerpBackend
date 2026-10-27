@@ -53,7 +53,7 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
     /** Pedido de 3 entregas de 3 unidades (9 × 100.00 + ITBMS = 963.00), todas en Por Despachar. */
     private function familia(): array
     {
-        return $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[3], [3], [3]]);
+        return $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[3], [3], [3]]);
     }
 
     private function bodegaHeaders(): array
@@ -856,7 +856,7 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
         $this->assertNotNull($filaAbierta['proyecto']);
 
         // Registrar el cobro completo de esa factura.
-        $bankAccount = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '9310']);
+        $bankAccount = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '9310']);
         $payment = $this->api($token, 'POST', '/api/admin-contab/payments', [
             'master_client_id' => $card->master_client_id, 'invoice_ids' => [$parcial->id],
             'metodo_pago' => 'efectivo', 'bank_account_id' => $bankAccount->id,
@@ -988,7 +988,7 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
     {
         $architect = $this->makeArchitect();
         ['root' => $root, 'entregas' => $entregas, 'card' => $card] = $this->makePedido(
-            [['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[3], [3], [3]],
+            [['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[3], [3], [3]],
             ['architect_id' => $architect->id],
         );
         $token = $this->token();

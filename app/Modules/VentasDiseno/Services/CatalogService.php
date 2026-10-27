@@ -470,7 +470,7 @@ final class CatalogService
      * producto) costaba ~90 ms por consulta con 30K productos, dos veces (conteo + página).
      *
      * Mismas 8 etiquetas que `compras:newProduct.categories.*` en el frontend: acá solo importa el
-     * matching (REQ-617 RN1 Escenario 1: "Candelabros" matchea aunque el slug persistido sea
+     * matching (REQ-617 RN1 Escenario 1: "Modelos" matchea aunque el slug persistido sea
      * `candelabros_colgantes`), la etiqueta que ve el usuario la resuelve el frontend vía i18n.
      *
      * @param \Illuminate\Database\Eloquent\Builder<CatalogProduct> $query

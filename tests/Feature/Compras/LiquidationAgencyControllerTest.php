@@ -95,7 +95,7 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
         // ticket) — una orden solo EN "en_aduana" (sin llegar a recibido todavía) sigue
         // por_liquidar, ver test_orden_de_proveedor_local_cuenta_liquidada_al_llegar_a_recibido.
         $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write', 'compras.edit', 'compras.approve']);
-        $provider = \App\Modules\Compras\Models\Provider::create(['name' => 'LightCorp', 'origin' => 'internacional']);
+        $provider = \App\Modules\Compras\Models\Provider::create(['name' => 'Proveedor Demo A', 'origin' => 'internacional']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
         \App\Modules\Compras\Models\PurchaseOrder::create([

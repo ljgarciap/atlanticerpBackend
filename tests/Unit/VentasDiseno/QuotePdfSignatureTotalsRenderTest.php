@@ -21,7 +21,7 @@ class QuotePdfSignatureTotalsRenderTest extends TestCase
         $p = [];
         for ($a = 1; $a <= $parts; $a++) {
             $p[] = ['name' => "Partida {$a}", 'subtotal' => 21, 'items' => [[
-                'reference' => "REF-{$a}", 'description' => "Lampara {$a}", 'photo_url' => null,
+                'reference' => "REF-{$a}", 'description' => "Producto {$a}", 'photo_url' => null,
                 'quantity' => 2, 'effective_unit_price' => 10.5, 'discount_percent' => 0, 'line_total' => 21,
             ]]];
         }

@@ -64,7 +64,7 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
 
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     private function makeOrder(int $providerId, array $overrides = []): PurchaseOrder

@@ -41,7 +41,7 @@ class WarehouseControllerTest extends FeatureTestCase
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Candelabro Cristal Imperial', 'description' => 'Candelabro Cristal Imperial',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Modelo Cristal Imperial', 'description' => 'Modelo Cristal Imperial',
             'price_full' => 100, 'cost' => 60, 'stock_quantity' => 10, 'reorder_point' => 5,
             'is_active' => true,
             ...$overrides,
@@ -180,7 +180,7 @@ class WarehouseControllerTest extends FeatureTestCase
     public function test_filtro_por_categoria(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $family = CatalogProductFamily::create(['name' => 'Candelabros y Colgantes', 'is_active' => true]);
+        $family = CatalogProductFamily::create(['name' => 'Modelos y Colgantes', 'is_active' => true]);
         $matching = $this->makeProduct();
         $matching->families()->attach($family->id);
         $other = $this->makeProduct(['reference' => 'REF-'.uniqid()]);

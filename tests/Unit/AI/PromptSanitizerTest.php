@@ -76,7 +76,7 @@ class PromptSanitizerTest extends TestCase
     public function test_looks_like_injection_no_marca_nota_sobre_sistema_electrico(): void
     {
         $this->assertFalse(PromptSanitizer::looksLikeInjection(
-            'El sistema de iluminación requiere actualizar el circuito antes de la instalación.'
+            'El sistema de catalogación requiere actualizar el circuito antes de la instalación.'
         ));
     }
 

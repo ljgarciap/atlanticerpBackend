@@ -44,7 +44,7 @@ final class DigifactPacAdapterTest extends TestCase
             fechaEmision: new DateTimeImmutable('2026-09-17T10:00:00-05:00'),
             emisor: new FiscalParty(tipo: '01', ruc: '155704849-2-2021', dv: '32', nombre: 'ILLUMINATION S.A.'),
             receptor: FiscalParty::consumidorFinal(),
-            items: [new FiscalDocumentItem(codigo: 'P1', descripcion: 'Lámpara LED', cantidad: 1, precioUnitario: 18.50, tasaItbmsCode: '01')],
+            items: [new FiscalDocumentItem(codigo: 'P1', descripcion: 'Producto XL', cantidad: 1, precioUnitario: 18.50, tasaItbmsCode: '01')],
             pagos: [new FiscalPayment(metodoPagoInterno: 'efectivo', monto: 19.80)],
         );
     }

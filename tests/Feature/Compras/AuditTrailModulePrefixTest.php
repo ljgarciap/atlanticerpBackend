@@ -38,7 +38,7 @@ class AuditTrailModulePrefixTest extends FeatureTestCase
     public function test_provider_logea_con_prefijo_compras_no_ventas_diseno(): void
     {
         $this->actingForAudit();
-        $provider = Provider::create(['name' => 'LightCorp Audit Test', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A Audit Test', 'currency' => 'USD']);
 
         $correcto = DB::table('atlantic_auth.audit_logs')
             ->where('action', 'compras.provider.created')

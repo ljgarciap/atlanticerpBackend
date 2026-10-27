@@ -69,10 +69,10 @@ class ApprovedProjectControllerTest extends FeatureTestCase
 
     private function makeCatalogProduct(): CatalogProduct
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
 
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo LED', 'description' => 'Bombillo LED',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo XL', 'description' => 'Artículo XL',
             'price_full' => 20, 'cost' => 12, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
     }

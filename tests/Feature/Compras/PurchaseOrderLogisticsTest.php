@@ -43,7 +43,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     private function makeOrder(int $providerId, array $overrides = []): PurchaseOrder
@@ -58,7 +58,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo E27', 'description' => 'Bombillo E27',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo E27', 'description' => 'Artículo E27',
             'price_full' => 20, 'cost' => 12, 'stock_quantity' => 0, 'is_active' => true,
             ...$overrides,
         ]);

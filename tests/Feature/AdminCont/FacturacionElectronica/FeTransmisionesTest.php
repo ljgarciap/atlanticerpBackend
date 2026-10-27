@@ -53,7 +53,7 @@ final class FeTransmisionesTest extends FeatureTestCase
         $ambiente = AdminContFiscalSettings::current()->pac_ambiente;
         AdminContFiscalSettings::current()->forceFill(['pac_ambiente' => 'apagado'])->save();
 
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
 

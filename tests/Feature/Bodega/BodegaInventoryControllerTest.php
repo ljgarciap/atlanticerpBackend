@@ -170,13 +170,13 @@ class BodegaInventoryControllerTest extends FeatureTestCase
      */
     public function test_index_expone_proveedores_y_marcas_distintos_del_catalogo_activo(): void
     {
-        $providerA = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $providerA = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $providerB = Provider::create(['name' => 'QA Prov Gamma', 'currency' => 'USD']);
 
-        $this->makeCatalogProduct(['brand' => 'Atlantic Home', 'provider_id' => $providerA->id]);
-        $this->makeCatalogProduct(['brand' => 'LuxTech', 'provider_id' => $providerB->id]);
+        $this->makeCatalogProduct(['brand' => 'Marca Demo A', 'provider_id' => $providerA->id]);
+        $this->makeCatalogProduct(['brand' => 'Marca Demo B', 'provider_id' => $providerB->id]);
         // Mismo proveedor/marca repetido en un segundo producto — no debe duplicarse en la faceta.
-        $this->makeCatalogProduct(['brand' => 'LuxTech', 'provider_id' => $providerB->id]);
+        $this->makeCatalogProduct(['brand' => 'Marca Demo B', 'provider_id' => $providerB->id]);
         // Producto inactivo — no cuenta para el universo "activo" de la faceta.
         $this->makeCatalogProduct(['brand' => 'Descontinuada SA', 'provider_id' => $providerA->id, 'is_active' => false]);
 
@@ -190,15 +190,15 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         // filtro real (`provider_id`) es por id, un selector solo-nombre no podía armarlo.
         $providerNames = array_column($providers, 'name');
         $this->assertCount(2, $providers);
-        $this->assertContains('LightCorp', $providerNames);
+        $this->assertContains('Proveedor Demo A', $providerNames);
         $this->assertContains('QA Prov Gamma', $providerNames);
         $this->assertNotContains('Descontinuada SA', $providerNames);
         $this->assertContains($providerA->id, array_column($providers, 'id'));
         $this->assertContains($providerB->id, array_column($providers, 'id'));
 
         $this->assertCount(2, $brands);
-        $this->assertContains('Atlantic Home', $brands);
-        $this->assertContains('LuxTech', $brands);
+        $this->assertContains('Marca Demo A', $brands);
+        $this->assertContains('Marca Demo B', $brands);
     }
 
     /**
@@ -208,7 +208,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
      */
     public function test_filtro_provider_id_usa_el_id_expuesto_por_la_faceta_de_proveedores(): void
     {
-        $providerA = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $providerA = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $providerB = Provider::create(['name' => 'QA Prov Gamma', 'currency' => 'USD']);
 
         $this->makeCatalogProduct(['provider_id' => $providerA->id]);
@@ -230,15 +230,15 @@ class BodegaInventoryControllerTest extends FeatureTestCase
      */
     public function test_index_facetas_no_se_encogen_al_combinar_con_otros_filtros(): void
     {
-        $providerA = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
-        $providerB = Provider::create(['name' => 'Iluminex SA', 'currency' => 'USD']);
+        $providerA = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
+        $providerB = Provider::create(['name' => 'Proveedor Demo B SA', 'currency' => 'USD']);
 
         $this->makeCatalogProduct([
-            'brand' => 'Atlantic Home', 'provider_id' => $providerA->id,
+            'brand' => 'Marca Demo A', 'provider_id' => $providerA->id,
             'rotation' => CatalogProduct::ROTATION_ALTA,
         ]);
         $this->makeCatalogProduct([
-            'brand' => 'LuxTech', 'provider_id' => $providerB->id,
+            'brand' => 'Marca Demo B', 'provider_id' => $providerB->id,
             'rotation' => CatalogProduct::ROTATION_BAJA,
         ]);
 
@@ -370,16 +370,16 @@ class BodegaInventoryControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
 
-        $matching = $this->makeCatalogProduct(['description' => 'Bombillo LED']);
+        $matching = $this->makeCatalogProduct(['description' => 'Cilindro XL']);
         $family->products()->attach($matching->id);
         ProductWarehouseStock::create(['catalog_product_id' => $matching->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
 
         // Misma familia, pero SIN stock en Bodega Central — RN2 REQ-349 debe excluirlo.
-        $wrongWarehouse = $this->makeCatalogProduct(['description' => 'Bombillo LED 2']);
+        $wrongWarehouse = $this->makeCatalogProduct(['description' => 'Cilindro XL 2']);
         $family->products()->attach($wrongWarehouse->id);
 
         // Stock en Bodega Central, pero OTRA familia — debe excluirlo del filtro combinado.
-        $wrongFamily = $this->makeCatalogProduct(['description' => 'Candelabro']);
+        $wrongFamily = $this->makeCatalogProduct(['description' => 'Modelo']);
         ProductWarehouseStock::create(['catalog_product_id' => $wrongFamily->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
 
         $response = $this->withHeaders($this->readerHeaders())
@@ -508,7 +508,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
     private function makePendingReceiptLine(CatalogProduct $product, int $quantity): PurchaseOrderReceiptLine
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD',
             'status' => PurchaseOrder::STATUS_ORDENADO, 'status_changed_at' => now(), 'total_amount' => 0,
@@ -750,32 +750,32 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     /** SCRUM-992 — búsqueda en SQL: sin acentos/mayúsculas y también por nombre de proveedor. */
     public function test_busqueda_sin_acentos_y_por_nombre_de_proveedor(): void
     {
-        $prov = Provider::create(['name' => 'Ilumínica Panamá', 'currency' => 'USD']);
+        $prov = Provider::create(['name' => 'Catálica Panamá', 'currency' => 'USD']);
         CatalogProduct::create([
             'reference' => 'BSQ-1', 'name' => 'Reflector', 'description' => 'Reflector', 'price_full' => 10,
             'provider_id' => $prov->id, 'is_active' => true,
         ]);
         CatalogProduct::create([
-            'reference' => 'BSQ-2', 'name' => 'Lámpara colgante', 'description' => 'Lámpara colgante', 'price_full' => 10, 'is_active' => true,
+            'reference' => 'BSQ-2', 'name' => 'Vástago colgante', 'description' => 'Vástago colgante', 'price_full' => 10, 'is_active' => true,
         ]);
         $headers = $this->readerHeaders();
 
-        $byName = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=LAMPARA')->assertStatus(200);
+        $byName = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=VASTAGO')->assertStatus(200);
         $this->assertSame(['BSQ-2'], collect($byName->json('data'))->pluck('reference')->all());
         $this->assertFalse($byName->json('fuzzy'));
 
-        $byProvider = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=ilumin panama')->assertStatus(200);
+        $byProvider = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=catalic panama')->assertStatus(200);
         $this->assertSame(['BSQ-1'], collect($byProvider->json('data'))->pluck('reference')->all());
     }
 
     public function test_busqueda_con_typo_usa_el_respaldo_y_marca_fuzzy(): void
     {
         CatalogProduct::create([
-            'reference' => 'BSQ-3', 'name' => 'Iluminación exterior', 'description' => 'x', 'price_full' => 10, 'is_active' => true,
+            'reference' => 'BSQ-3', 'name' => 'Catalogación exterior', 'description' => 'x', 'price_full' => 10, 'is_active' => true,
         ]);
         $headers = $this->readerHeaders();
 
-        $response = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=iluminacon')->assertStatus(200);
+        $response = $this->withHeaders($headers)->getJson('/api/bodega/inventory?search=catalogacon')->assertStatus(200);
         $this->assertSame(['BSQ-3'], collect($response->json('data'))->pluck('reference')->all());
         $this->assertTrue($response->json('fuzzy'));
     }

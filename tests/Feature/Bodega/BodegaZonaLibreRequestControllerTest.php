@@ -51,7 +51,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $providerId = (int) ComprasSettings::current()->zona_libre_provider_id;
 
         return CatalogProduct::create([
-            'reference' => 'ZL-'.uniqid(), 'name' => 'Bombillo LED Zona Libre', 'description' => 'Bombillo LED Zona Libre',
+            'reference' => 'ZL-'.uniqid(), 'name' => 'Artículo XL Zona Libre', 'description' => 'Artículo XL Zona Libre',
             'price_full' => 50, 'cost' => 30, 'provider_id' => $providerId, 'is_active' => true,
             ...$overrides,
         ]);

@@ -190,10 +190,10 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     // ── REQ-466 — auto-selección de cuenta bancaria ──────────────────────────────────────────
 
-    public function test_default_bank_account_tarjeta_usa_banistmo_tarjeta_credito(): void
+    public function test_default_bank_account_tarjeta_usa_banco_demo_b_tarjeta_credito(): void
     {
-        AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $tarjeta = AdminContBankAccount::create(['banco' => 'Banistmo', 'tipo_cuenta' => AdminContBankAccount::TIPO_TARJETA_CREDITO, 'ultimos_4_digitos' => '2222']);
+        AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $tarjeta = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'tipo_cuenta' => AdminContBankAccount::TIPO_TARJETA_CREDITO, 'ultimos_4_digitos' => '2222']);
 
         $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
             ->getJson('/api/admin-contab/payments/default-bank-account?metodo_pago=tarjeta')
@@ -204,7 +204,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     public function test_default_bank_account_efectivo_y_transferencia_usan_banco_general_corriente(): void
     {
-        $corriente = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $corriente = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         foreach (['efectivo', 'transferencia', 'yappy'] as $metodo) {
             $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
@@ -216,7 +216,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     public function test_default_bank_account_retencion_y_ajuste_devuelven_null(): void
     {
-        AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         foreach (['retencion_impuestos', 'ajuste_cuenta'] as $metodo) {
             $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
@@ -231,7 +231,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_register_cobro_simple_cubre_factura_y_crea_movimiento_bancario(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         // Efectivo (REQ-469 RN3) — confirma de inmediato, así que este caso "simple" sigue
         // verificando el efecto inmediato de saldo/ledger. `transferencia` ahora arranca
@@ -260,7 +260,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     /** SCRUM-902 §4.4 — reemplaza `AdminContCustomerCreditBalance` (retirado) por un Abono nivel Cliente confirmado. */
     private function makeAbonoNivelCliente(int $masterClientId, float $monto): AdminContAbono
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '9999']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '9999']);
 
         return AdminContAbono::create([
             'master_client_id' => $masterClientId,
@@ -280,7 +280,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
         $this->makeAbonoNivelCliente($master->id, 500);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         // Efectivo (confirma de inmediato, REQ-469 RN3) — `transferencia` ya no consume el saldo a
         // favor al registrar, ver bloque REQ-469 (RN5 diferido hasta la confirmación, Batch 7).
@@ -321,7 +321,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
         $this->makeAbonoNivelCliente($master->id, 400);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '2222']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '2222']);
 
         $this->withHeaders($this->authHeaders($this->loginAsFelix()))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
@@ -369,7 +369,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_register_link_pago_arranca_esperando_confirmacion_y_no_cuenta_en_summary(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(500);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
@@ -400,7 +400,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'numero' => 'F-SEG', 'order_id' => random_int(1, 999999), 'master_client_id' => $master->id,
             'cliente' => $master->name, 'monto' => 100,
         ]);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $r1 = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -418,7 +418,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     public function test_register_metodos_bancarios_arrancan_esperando_confirmacion(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $metodos = ['transferencia', 'cheque', 'deposito', 'tarjeta', 'yappy', 'link_pago'];
 
         // Fixtures ANTES de loginAs()/cualquier round-trip HTTP — spatie/laravel-multitenancy
@@ -446,7 +446,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     public function test_register_efectivo_retencion_y_ajuste_confirman_de_inmediato(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $metodos = ['efectivo', 'retencion_impuestos', 'ajuste_cuenta'];
 
         $fixtures = [];
@@ -483,7 +483,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         Storage::fake('s3-private');
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $file = UploadedFile::fake()->create('comprobante.pdf', 100, 'application/pdf');
 
         $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))->post('/api/admin-contab/payments', [
@@ -502,7 +502,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_register_sin_comprobante_lo_permite_igual(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         $this->withHeaders($this->authHeaders($this->loginAsFelix()))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
@@ -514,7 +514,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
 
     public function test_historial_filtra_por_metodo_y_estado_combinados(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         // Ambos fixtures ANTES de loginAs() — ver nota en el bloque de arriba.
         ['master' => $m1, 'invoice' => $i1] = $this->makeClientWithInvoice(100);
@@ -545,7 +545,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_historial_busqueda_de_texto_libre_por_recibo(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -576,7 +576,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'numero' => 'F-SEG', 'order_id' => random_int(1, 999999), 'master_client_id' => $master->id,
             'cliente' => $master->name, 'monto' => 2200,
         ]);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -610,7 +610,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'numero' => 'F-B', 'order_id' => random_int(1, 999999), 'master_client_id' => $master->id,
             'cliente' => $master->name, 'monto' => 2200,
         ]);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         $this->withHeaders($this->authHeaders($this->loginAsFelix()))->postJson('/api/admin-contab/payments', [
             'master_client_id' => $master->id, 'invoice_ids' => [$invoiceA->id, $invoiceB->id],
@@ -629,7 +629,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         // saldo_aplicado === monto → factura 100% cubierta, mismo criterio de `puede_registrar_cobro`.
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(500, 500);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -651,7 +651,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         // saldo_aplicado (200) < monto (500) → todavía pendiente, no debe verse afectado por el
         // guard nuevo (no regresión del camino ya cubierto por otros tests de este bloque).
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(500, 200);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -672,7 +672,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'numero' => 'F-PAID2', 'order_id' => self::uniqueTestNumber(), 'master_client_id' => $master->id,
             'cliente' => $master->name, 'monto' => 300, 'saldo_aplicado' => 300,
         ]);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -690,7 +690,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $m1, 'invoice' => $i1] = $this->makeClientWithInvoice(4000);
         ['master' => $m2, 'invoice' => $i2] = $this->makeClientWithInvoice(4000);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         // `retencion_impuestos` confirma de inmediato igual que `efectivo` (REQ-469 RN3) — usado
@@ -721,7 +721,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_attachment_devuelve_null_cuando_el_cobro_no_tiene_comprobante(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -740,7 +740,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         Storage::fake('s3-private');
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $file = UploadedFile::fake()->create('comprobante.pdf', 100, 'application/pdf');
         $token = $this->loginAsFelix();
 
@@ -764,7 +764,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_pdf_del_recibo_devuelve_un_pdf_valido(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -796,7 +796,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_pdf_del_recibo_no_se_rompe_con_cuenta_sin_numero_completo_cargado(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -813,7 +813,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
         $account = AdminContBankAccount::create([
-            'banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE,
+            'banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE,
             'ultimos_4_digitos' => '1111', 'numero_cuenta_completo' => '04-72-99-123456-1',
         ]);
         $token = $this->loginAsFelix();
@@ -839,14 +839,14 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             app(PaymentReceiptPdfService::class)->viewData($detail),
         )->render();
 
-        $this->assertStringContainsString('Cuenta destino: Banco General — corriente 04-72-99-123456-1', $html);
+        $this->assertStringContainsString('Cuenta destino: Banco Demo A — corriente 04-72-99-123456-1', $html);
         $this->assertStringNotContainsString('****', $html);
     }
 
     public function test_pdf_del_recibo_muestra_guion_cuando_no_hay_numero_de_cuenta_completo(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -866,19 +866,19 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             app(PaymentReceiptPdfService::class)->viewData($detail),
         )->render();
 
-        $this->assertStringContainsString('Cuenta destino: Banco General — corriente -', $html);
+        $this->assertStringContainsString('Cuenta destino: Banco Demo A — corriente -', $html);
         $this->assertStringNotContainsString('****', $html);
     }
 
     public function test_label_sigue_enmascarado_para_selectores_internos(): void
     {
         $account = AdminContBankAccount::create([
-            'banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE,
+            'banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE,
             'ultimos_4_digitos' => '4554', 'numero_cuenta_completo' => '04-72-99-123456-1',
         ]);
 
-        $this->assertSame('Banco General — corriente ****4554', $account->label());
-        $this->assertSame('Banco General — corriente 04-72-99-123456-1', $account->receiptLabel());
+        $this->assertSame('Banco Demo A — corriente ****4554', $account->label());
+        $this->assertSame('Banco Demo A — corriente 04-72-99-123456-1', $account->receiptLabel());
     }
 
     // Rebote de QA (SCRUM-858, marly.rangel 2026-09-08) — sin RUC cargado en Configuración Fiscal,
@@ -887,7 +887,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_pdf_del_recibo_no_se_rompe_sin_ruc_cargado(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         AdminContFiscalSettings::current()->update(['ruc' => '', 'dv' => '']);
         $token = $this->loginAsFelix();
 
@@ -907,7 +907,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_pdf_del_recibo_muestra_ruc_y_contacto_de_la_empresa(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         AdminContFiscalSettings::current()->update([
             'ruc' => '155646789-2-2019', 'dv' => '44',
             'telefono_contacto' => '+507 6000-9999', 'correo_contacto' => 'facturacion@atlantic.com.pa',
@@ -937,7 +937,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_pdf_del_recibo_omite_bloque_de_saldo_a_favor_cuando_no_aplica(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -963,7 +963,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
         $this->makeAbonoNivelCliente($master->id, 500);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         // Efectivo confirma de inmediato (RN3) — no hace falta el paso de confirm() para este caso.
@@ -995,7 +995,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_pdf_del_recibo_nunca_muestra_la_linea_de_confirmacion(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -1031,7 +1031,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_pdf_del_recibo_esperando_confirmacion_muestra_estado_visible_no_confirmado(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -1073,7 +1073,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_pdf_del_recibo_no_duplica_el_escape_de_comillas_en_el_pie_de_pagina(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         AdminContFiscalSettings::current()->update([
             'nombre_comercial' => "Atlantic USA Corp's",
             'direccion_fiscal' => 'Calle 57 Este, Panama',
@@ -1143,7 +1143,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
         $abono = $this->makeAbonoNivelCliente($master->id, 500);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -1179,7 +1179,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_confirm_sobre_cobro_ya_confirmado_falla_422(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         // Efectivo confirma de inmediato (RN3) — nunca pasa por "esperando_confirmacion".
@@ -1196,7 +1196,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_confirm_no_puede_correrse_dos_veces(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
@@ -1221,7 +1221,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     public function test_detalle_incluye_cliente_y_metodo_pago_label(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [

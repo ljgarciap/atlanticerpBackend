@@ -54,7 +54,7 @@ class ProviderControllerTest extends FeatureTestCase
 
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     public function test_listado_sin_autenticar_retorna_401(): void
@@ -207,12 +207,12 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_editar_proveedor_actualiza_ruc_y_dv(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
-        $provider = $this->makeProvider(['name' => 'LightCorp', 'tax_id' => 'VIEJO-1', 'tax_id_dv' => '1']);
+        $provider = $this->makeProvider(['name' => 'Proveedor Demo A', 'tax_id' => 'VIEJO-1', 'tax_id_dv' => '1']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$provider->id}", [
-                'name' => 'LightCorp', 'tax_id' => 'NUEVO-2', 'tax_id_dv' => '07',
+                'name' => 'Proveedor Demo A', 'tax_id' => 'NUEVO-2', 'tax_id_dv' => '07',
             ])
             ->assertStatus(200)
             ->assertJsonPath('tax_id', 'NUEVO-2')
@@ -242,11 +242,11 @@ class ProviderControllerTest extends FeatureTestCase
     {
         // REQ-125 Escenario 1.
         $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
-        $provider = $this->makeProvider(['name' => 'LightCorp']);
+        $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
-            ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'LightCorp', 'phone' => '6000-0000'])
+            ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'Proveedor Demo A', 'phone' => '6000-0000'])
             ->assertStatus(200)
             ->assertJsonPath('phone', '6000-0000');
 
@@ -331,9 +331,9 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_kpis_expone_lista_de_categorias_reales(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $this->makeProvider(['name' => 'A', 'category' => 'Iluminación']);
+        $this->makeProvider(['name' => 'A', 'category' => 'Catalogación']);
         $this->makeProvider(['name' => 'B', 'category' => 'Cableado']);
-        $this->makeProvider(['name' => 'C', 'category' => 'Iluminación']);
+        $this->makeProvider(['name' => 'C', 'category' => 'Catalogación']);
         $this->makeProvider(['name' => 'D', 'category' => null]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -344,13 +344,13 @@ class ProviderControllerTest extends FeatureTestCase
         // + 'zona_libre': ZonaLibreProviderSeeder (sembrado en TODOS los entornos, incl. testing)
         // le asigna esa categoría desde el 2026-07-30 (SCRUM-189), consistente con
         // Provider::deriveOrigin().
-        $this->assertEqualsCanonicalizing(['Cableado', 'Iluminación', 'zona_libre'], $response->json('kpis.categories'));
+        $this->assertEqualsCanonicalizing(['Cableado', 'Catalogación', 'zona_libre'], $response->json('kpis.categories'));
     }
 
     public function test_filtro_por_categoria(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $this->makeProvider(['name' => 'A', 'category' => 'Iluminación']);
+        $this->makeProvider(['name' => 'A', 'category' => 'Catalogación']);
         $this->makeProvider(['name' => 'B', 'category' => 'Cableado']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -366,17 +366,17 @@ class ProviderControllerTest extends FeatureTestCase
     {
         // REQ-122.
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $this->makeProvider(['name' => 'LightCorp']);
-        $this->makeProvider(['name' => 'Iluminex SA']);
+        $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $this->makeProvider(['name' => 'Proveedor Demo B SA']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/providers?search=LightCorp')
+            ->getJson('/api/compras/providers?search=Proveedor Demo A')
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
         $this->assertCount(1, $names);
-        $this->assertContains('LightCorp', $names);
+        $this->assertContains('Proveedor Demo A', $names);
     }
 
     public function test_default_muestra_20_por_pagina(): void
@@ -444,11 +444,11 @@ class ProviderControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
-                'name' => 'LightCorp Asia', 'category' => 'china',
+                'name' => 'Proveedor Demo A Asia', 'category' => 'china',
                 'contact_name' => 'Wei Chen', 'whatsapp' => '+86 138-0000-0000', 'phone' => '+86 21-0000-0000',
-                'email' => 'wei@lightcorp.cn', 'address' => 'Nanshan District', 'country' => 'China',
+                'email' => 'wei@proveedor-demo-a.cn', 'address' => 'Nanshan District', 'country' => 'China',
                 'bank_name' => 'Bank of China', 'bank_account_number' => 'CN00 0000 0000',
-                'bank_swift' => 'BKCHCNBJ', 'bank_beneficiary' => 'LightCorp Asia Ltd',
+                'bank_swift' => 'BKCHCNBJ', 'bank_beneficiary' => 'Proveedor Demo A Asia Ltd',
                 // origin enviado explícitamente por el cliente: se ignora, no lo acepta la validación.
                 'origin' => 'local',
             ])
@@ -460,7 +460,7 @@ class ProviderControllerTest extends FeatureTestCase
         $response->assertJsonPath('address', 'Nanshan District');
         $response->assertJsonPath('country', 'China');
         $response->assertJsonPath('bank_swift', 'BKCHCNBJ');
-        $response->assertJsonPath('bank_beneficiary', 'LightCorp Asia Ltd');
+        $response->assertJsonPath('bank_beneficiary', 'Proveedor Demo A Asia Ltd');
     }
 
     public function test_crear_proveedor_categoria_locales_deriva_origin_local(): void
@@ -484,7 +484,7 @@ class ProviderControllerTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/compras/providers', ['name' => 'X', 'category' => 'iluminacion'])
+            ->postJson('/api/compras/providers', ['name' => 'X', 'category' => 'catalogación'])
             ->assertStatus(422);
     }
 
@@ -492,33 +492,33 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_crear_proveedor_con_nombre_duplicado_retorna_422(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $this->makeProvider(['name' => 'LightCorp']);
+        $this->makeProvider(['name' => 'Proveedor Demo A']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/compras/providers', ['name' => 'LightCorp'])
+            ->postJson('/api/compras/providers', ['name' => 'Proveedor Demo A'])
             ->assertStatus(422);
     }
 
     public function test_crear_proveedor_con_nombre_duplicado_case_insensitive_retorna_422(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $this->makeProvider(['name' => 'LightCorp']);
+        $this->makeProvider(['name' => 'Proveedor Demo A']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/compras/providers', ['name' => 'lightcorp'])
+            ->postJson('/api/compras/providers', ['name' => 'proveedor demo a'])
             ->assertStatus(422);
     }
 
     public function test_editar_proveedor_sin_cambiar_nombre_no_se_bloquea_a_si_mismo(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit']);
-        $provider = $this->makeProvider(['name' => 'LightCorp']);
+        $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'LightCorp', 'category' => 'europa'])
+            ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'Proveedor Demo A', 'category' => 'europa'])
             ->assertStatus(200)
             ->assertJsonPath('origin', 'internacional');
     }
@@ -544,12 +544,12 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_editar_proveedor_con_nombre_de_otro_proveedor_retorna_422(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit']);
-        $this->makeProvider(['name' => 'LightCorp']);
-        $otro = $this->makeProvider(['name' => 'Iluminex SA']);
+        $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $otro = $this->makeProvider(['name' => 'Proveedor Demo B SA']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->putJson("/api/compras/providers/{$otro->id}", ['name' => 'LightCorp'])
+            ->putJson("/api/compras/providers/{$otro->id}", ['name' => 'Proveedor Demo A'])
             ->assertStatus(422);
     }
 
@@ -593,7 +593,7 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_subir_imagen_bancaria_no_modifica_los_campos_bank_existentes(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit']);
-        $provider = $this->makeProvider(['bank_name' => 'Banco General', 'bank_account_number' => '123456']);
+        $provider = $this->makeProvider(['bank_name' => 'Banco Demo A', 'bank_account_number' => '123456']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -602,7 +602,7 @@ class ProviderControllerTest extends FeatureTestCase
             ])
             ->assertStatus(200);
 
-        $response->assertJsonPath('bank_name', 'Banco General');
+        $response->assertJsonPath('bank_name', 'Banco Demo A');
         $response->assertJsonPath('bank_account_number', '123456');
     }
 
@@ -722,7 +722,7 @@ class ProviderControllerTest extends FeatureTestCase
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
-            ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'LightCorp', 'category' => 'latinoamerica'])
+            ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'Proveedor Demo A', 'category' => 'latinoamerica'])
             ->assertStatus(200)
             ->assertJsonPath('category', 'latinoamerica');
     }

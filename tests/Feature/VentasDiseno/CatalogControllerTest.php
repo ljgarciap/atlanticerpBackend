@@ -39,7 +39,7 @@ class CatalogControllerTest extends FeatureTestCase
     {
         return CatalogProduct::create([
             'reference'      => 'IL-DEC-1410A',
-            'name'    => 'Lámpara colgante LED, 18W, 3000K', 'description'    => 'Lámpara colgante LED, 18W, 3000K',
+            'name'    => 'Producto colgante XL, 18W, 3000K', 'description'    => 'Producto colgante XL, 18W, 3000K',
             'brand'          => '770 Lights',
             'price_full'     => 522.00,
             'cost'           => 300.00,
@@ -165,7 +165,7 @@ class CatalogControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $family = CatalogProductFamily::create(['name' => 'Kit Exterior Premium', 'is_active' => true]);
-        $product = $this->makeProduct(['reference' => 'EXT-01', 'name' => 'Reflector LED', 'description' => 'Reflector LED']);
+        $product = $this->makeProduct(['reference' => 'EXT-01', 'name' => 'Reflector XL', 'description' => 'Reflector XL']);
         $product->families()->attach($family->id);
         $this->makeProduct(['reference' => 'OTHER-01', 'name' => 'Spot interior', 'description' => 'Spot interior']);
 

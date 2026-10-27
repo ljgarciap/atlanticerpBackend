@@ -41,7 +41,7 @@ final class CertifyInvoiceOnCreatedTest extends FeatureTestCase
             'qr' => 'https://dgi-fep-test.mef.gob.pa/qr', 'xmlFirmado' => base64_encode('<xml/>'),
         ], 200)]);
 
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
 
@@ -59,7 +59,7 @@ final class CertifyInvoiceOnCreatedTest extends FeatureTestCase
         AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'proveedor-inexistente'])->save();
         Http::fake();
 
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
 

@@ -40,7 +40,7 @@ final class PollMslDocumentEstadoJobTest extends FeatureTestCase
 
     private function facturaPendiente(): AdminContInvoice
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();

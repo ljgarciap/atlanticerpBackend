@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Database\Seeders\Support\DemoDataset;
 
 /**
  * Datos demo para el Grupo 1a (tablero base de Pipeline) del módulo Ventas & Diseño.
@@ -58,25 +59,25 @@ class VentasDisenoDemoSeeder extends Seeder
             return;
         }
 
-        $masterA = MasterClient::create(['name' => self::DEMO_MARKER . ' Grupo Constructor Delta', 'default_price_type' => 'project']);
-        $masterB = MasterClient::create(['name' => self::DEMO_MARKER . ' Inversiones Costa Bella', 'default_price_type' => 'special']);
+        $masterA = MasterClient::create(['name' => DemoDataset::clienteMaestro('A'), 'default_price_type' => 'project']);
+        $masterB = MasterClient::create(['name' => DemoDataset::clienteMaestro('B'), 'default_price_type' => 'special']);
 
         $subA = SubClient::create([
             'master_client_id' => $masterA->id,
-            'business_name'    => self::DEMO_MARKER . ' Delta Residencial S.A.',
+            'business_name'    => DemoDataset::subcliente('A'),
             'tax_id'            => '155-1234-1-2026',
             'category'          => 'b_architect_designer',
         ]);
         $subB = SubClient::create([
             'master_client_id' => $masterB->id,
-            'business_name'    => self::DEMO_MARKER . ' Costa Bella Torres S.A.',
+            'business_name'    => DemoDataset::subcliente('B'),
             'tax_id'            => '155-5678-1-2026',
             'category'          => 'c_bidding',
         ]);
 
-        $projectA = SalesProject::create(['sub_client_id' => $subA->id, 'name' => self::DEMO_MARKER . ' Torre Delta Fase 1', 'tag' => 'both']);
-        $projectB = SalesProject::create(['sub_client_id' => $subB->id, 'name' => self::DEMO_MARKER . ' Lobby Costa Bella', 'tag' => 'design']);
-        $projectC = SalesProject::create(['sub_client_id' => $subA->id, 'name' => self::DEMO_MARKER . ' Amenidades Delta', 'tag' => null]);
+        $projectA = SalesProject::create(['sub_client_id' => $subA->id, 'name' => DemoDataset::proyectoVenta('Alfa'), 'tag' => 'both']);
+        $projectB = SalesProject::create(['sub_client_id' => $subB->id, 'name' => DemoDataset::proyectoVenta('Beta'), 'tag' => 'design']);
+        $projectC = SalesProject::create(['sub_client_id' => $subA->id, 'name' => DemoDataset::proyectoVenta('Gamma'), 'tag' => null]);
 
         $cards = [
             ['sales_project_id' => $projectA->id, 'stage' => 'lead',     'master_client_id' => $masterA->id, 'sub_client_id' => $subA->id, 'owner_id' => $designerId, 'amount' => null,    'stage_changed_at' => Carbon::now()->subDays(2)],

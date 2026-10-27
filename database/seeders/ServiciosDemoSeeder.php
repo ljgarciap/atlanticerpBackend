@@ -8,6 +8,7 @@ use App\Modules\Servicios\Models\Ticket;
 use App\Modules\Servicios\Services\TicketFolioService;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Support\DemoDataset;
 
 /**
  * SCRUM-721 — datos de prueba para QA del módulo Servicios/Tickets (SCRUM-279→284/312/359):
@@ -92,53 +93,53 @@ class ServiciosDemoSeeder extends Seeder
         $rows = [
             [Ticket::TIPO_INSTALLATION, Ticket::SUBTIPO_INSTALLATION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_REPORTED, Ticket::QUOTE_STATUS_NOT_APPLICABLE, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
-                null, 'Torre Business Park'],
+                null, DemoDataset::sitio(1)],
             [Ticket::TIPO_INSTALLATION, Ticket::SUBTIPO_INSPECTION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_SCHEDULED, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                $carlos, 'Residencial Costa del Este'],
+                $carlos, DemoDataset::sitio(2)],
             // GATE CASE — on_site, informe todavía pendiente: intentar mover a "Resuelto" debe
             // bloquear con el mensaje de informe (REQ-218 RN1a/RN4).
             [Ticket::TIPO_INSTALLATION, Ticket::SUBTIPO_INSPECTION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_ON_SITE, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                $pedro, 'Clínica Paitilla'],
+                $pedro, DemoDataset::sitio(3)],
             [Ticket::TIPO_INSTALLATION, Ticket::SUBTIPO_INSTALLATION, Ticket::TIPO_INSTALACION_SUBCONTRACTED,
                 Ticket::ESTADO_RESOLVED, Ticket::QUOTE_STATUS_APPROVED, Ticket::INSPECTION_STATUS_COMPLETED,
-                null, 'Centro Comercial Multiplaza'],
+                null, DemoDataset::sitio(4)],
 
             [Ticket::TIPO_WARRANTY, Ticket::SUBTIPO_WARRANTY_GENERIC, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_REPORTED, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                null, 'Edificio Ocean View'],
+                null, DemoDataset::sitio(5)],
             [Ticket::TIPO_WARRANTY, Ticket::SUBTIPO_REPLACEMENT_INSPECTION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_SCHEDULED, Ticket::QUOTE_STATUS_DRAFT, Ticket::INSPECTION_STATUS_PENDING,
-                $agustin, 'Hotel Riu Plaza'],
+                $agustin, DemoDataset::sitio(6)],
             // GATE CASE — informe completo pero cotización solo "Enviada" (no Aprobada): intentar
             // cerrar debe bloquear con el mensaje de cotización (REQ-218 RN1b/RN4).
             [Ticket::TIPO_WARRANTY, Ticket::SUBTIPO_WARRANTY_GENERIC, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_ON_SITE, Ticket::QUOTE_STATUS_SENT, Ticket::INSPECTION_STATUS_COMPLETED,
-                $miguel, 'Oficinas Grupo Melo'],
+                $miguel, DemoDataset::sitio(7)],
             [Ticket::TIPO_WARRANTY, Ticket::SUBTIPO_REPLACEMENT_INSPECTION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_CLOSED, Ticket::QUOTE_STATUS_APPROVED, Ticket::INSPECTION_STATUS_COMPLETED,
-                $carlos, 'Condado del Rey'],
+                $carlos, DemoDataset::sitio(8)],
 
             [Ticket::TIPO_CLAIM, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_REPORTED, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
-                null, 'Farmacias Transporte — Vía España'],
+                null, DemoDataset::sitio(9)],
             [Ticket::TIPO_CLAIM, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_SCHEDULED, Ticket::QUOTE_STATUS_DRAFT, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
-                $pedro, 'Automotriz Rey'],
+                $pedro, DemoDataset::sitio(10)],
             [Ticket::TIPO_CLAIM, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_CANCELLED, Ticket::QUOTE_STATUS_REJECTED, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
-                null, 'Super 99 — Costa Verde'],
+                null, DemoDataset::sitio(11)],
 
             [Ticket::TIPO_RETROFIT, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_REPORTED, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                null, 'Banco General — Sede Principal'],
+                null, DemoDataset::sitio(12)],
             [Ticket::TIPO_RETROFIT, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_ON_SITE, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                $agustin, 'Universidad Latina — Campus Gerencia'],
+                $agustin, DemoDataset::sitio(13)],
             [Ticket::TIPO_RETROFIT, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_RESOLVED, Ticket::QUOTE_STATUS_APPROVED, Ticket::INSPECTION_STATUS_COMPLETED,
-                $miguel, 'Aeropuerto Marcos A. Gelabert'],
+                $miguel, DemoDataset::sitio(14)],
         ];
 
         foreach ($rows as [$tipo, $subtipo, $tipoInstalacion, $estado, $quoteStatus, $inspectionStatus, $technicianId, $cliente]) {

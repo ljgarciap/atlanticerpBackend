@@ -56,7 +56,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_crear_ticket_con_requerimientos_y_productos(): void
     {
         $hierarchy = $this->makeClientHierarchy();
-        $product = $this->makeCatalogProduct('LUM-COL-014', 'Colgante LED', 'Atlantic');
+        $product = $this->makeCatalogProduct('LUM-COL-014', 'Colgante XL', 'Atlantic');
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -114,7 +114,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_crear_ticket_con_producto_duplicado_retorna_422(): void
     {
         $hierarchy = $this->makeClientHierarchy();
-        $product = $this->makeCatalogProduct('LUM-COL-020', 'Colgante LED 2');
+        $product = $this->makeCatalogProduct('LUM-COL-020', 'Colgante XL 2');
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
@@ -152,7 +152,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
     public function test_buscar_master_clients_filtra_por_nombre(): void
     {
         MasterClient::create(['name' => 'Inmobiliaria Pacífico']);
-        MasterClient::create(['name' => 'Torre Business Park']);
+        MasterClient::create(['name' => 'Sitio Demo 01']);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
@@ -162,7 +162,7 @@ class TicketBatch3Part2Test extends FeatureTestCase
 
         $names = collect($response->json('data'))->pluck('name')->all();
         $this->assertContains('Inmobiliaria Pacífico', $names);
-        $this->assertNotContains('Torre Business Park', $names);
+        $this->assertNotContains('Sitio Demo 01', $names);
     }
 
     /**

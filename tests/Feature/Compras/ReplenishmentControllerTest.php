@@ -123,7 +123,7 @@ class ReplenishmentControllerTest extends FeatureTestCase
 
     public function test_consolida_un_producto_que_esperan_varios_pedidos_con_cantidad_sumada_y_pedidos_afectados(): void
     {
-        $provider = $this->makeProvider('LightCorp');
+        $provider = $this->makeProvider('Proveedor Demo A');
         $product  = $this->makeProduct(['provider_id' => $provider->id, 'stock_quantity' => 2, 'cost' => 12, 'freight_cost' => 1.5]);
         $first    = $this->makeOrder();
         $second   = $this->makeOrder();

@@ -43,7 +43,7 @@ class GeneralCountControllerTest extends FeatureTestCase
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Candelabro de prueba', 'description' => 'Candelabro de prueba',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Modelo de prueba', 'description' => 'Modelo de prueba',
             'price_full' => 100, 'cost' => 60, 'stock_quantity' => 0, 'is_active' => true,
             ...$overrides,
         ]);

@@ -34,7 +34,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
 
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     private function makeOrder(int $providerId, array $overrides = []): PurchaseOrder
@@ -51,7 +51,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
     {
         $order = $this->makeOrder($providerId);
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo', 'description' => 'Bombillo', 'price_full' => 20,
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo', 'description' => 'Artículo', 'price_full' => 20,
             'cost' => 10, 'provider_id' => $providerId, 'is_active' => true,
         ]);
         PurchaseOrderLine::create([
@@ -252,7 +252,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo', 'description' => 'Bombillo', 'price_full' => 20,
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo', 'description' => 'Artículo', 'price_full' => 20,
             'cost' => 10, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
         // Orden vieja (fuera del período actual), reclamo presentado AHORA (dentro del período).
@@ -284,7 +284,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo', 'description' => 'Bombillo', 'price_full' => 20,
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo', 'description' => 'Artículo', 'price_full' => 20,
             'cost' => 10, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
         $order1 = $this->makeOrder($provider->id);

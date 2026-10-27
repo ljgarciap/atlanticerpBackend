@@ -627,7 +627,7 @@ final class QuoteItemController extends Controller
      * REQ-038: un producto de catálogo duplicado se valida por PARTIDA (no en
      * toda la cotización, a diferencia de la referencia personalizada de
      * arriba) — mismo producto en dos partidas distintas es un caso de uso
-     * real (ej. la misma lámpara en "Sala" y en "Cocina"), no un error.
+     * real (ej. el mismo producto en "Sala" y en "Cocina"), no un error.
      */
     private function catalogProductExistsInPart(int $partId, int $catalogProductId, ?int $excludeItemId = null): bool
     {

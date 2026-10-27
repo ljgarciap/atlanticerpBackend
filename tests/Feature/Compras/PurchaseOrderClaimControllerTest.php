@@ -38,9 +38,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     /** @return array{order: PurchaseOrder, line: PurchaseOrderLine} */
     private function makeOrderWithLine(int $quantity = 5): array
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo decorativo E27 Ámbar', 'description' => 'Bombillo decorativo E27 Ámbar',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo decorativo E27 Ámbar', 'description' => 'Artículo decorativo E27 Ámbar',
             'price_full' => 20, 'cost' => 10, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
         $order = PurchaseOrder::create([
@@ -534,7 +534,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $row = collect($response->json('data'))->firstWhere('id', $claimId);
-        $this->assertSame('Bombillo decorativo E27 Ámbar', $row['product']);
+        $this->assertSame('Artículo decorativo E27 Ámbar', $row['product']);
         $this->assertNull($row['service_ticket']);
     }
 }

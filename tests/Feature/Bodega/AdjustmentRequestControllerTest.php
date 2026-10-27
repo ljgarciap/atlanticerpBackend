@@ -50,7 +50,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Candelabro de prueba', 'description' => 'Candelabro de prueba',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Modelo de prueba', 'description' => 'Modelo de prueba',
             'price_full' => 100, 'cost' => 60, 'stock_quantity' => 0, 'is_active' => true,
             ...$overrides,
         ]);
@@ -604,7 +604,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     public function test_product_warehouse_stock_expone_por_servir(): void
     {
         $product = $this->makeProduct();
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $salesProject = SalesProject::create(['name' => 'Proyecto Demo']);
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD',

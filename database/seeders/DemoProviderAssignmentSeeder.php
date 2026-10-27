@@ -8,6 +8,7 @@ use App\Modules\Compras\Models\Provider;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Support\DemoDataset;
 
 /**
  * SCRUM-243 (REQ-180) — hallazgo repetido de QA (2026-07-18→20): el escenario de aceptación
@@ -46,13 +47,13 @@ class DemoProviderAssignmentSeeder extends Seeder
 
     private function seed(): void
     {
-        $providerA = Provider::firstOrCreate(['name' => 'LightCorp'], ['currency' => 'USD']);
-        $providerB = Provider::firstOrCreate(['name' => 'Iluminex SA'], ['currency' => 'USD']);
+        $providerA = Provider::firstOrCreate(['name' => DemoDataset::proveedor('A')], ['currency' => 'USD']);
+        $providerB = Provider::firstOrCreate(['name' => DemoDataset::proveedor('B')], ['currency' => 'USD']);
 
         $assignments = [
-            'CAND-SAL-005'  => $providerA->id,
-            'PISO-LAMP-030' => $providerB->id,
-            'MESA-LAMP-015' => $providerA->id,
+            DemoDataset::productoRef(7) => $providerA->id,
+            DemoDataset::productoRef(9) => $providerB->id,
+            DemoDataset::productoRef(10) => $providerA->id,
         ];
 
         foreach ($assignments as $reference => $providerId) {

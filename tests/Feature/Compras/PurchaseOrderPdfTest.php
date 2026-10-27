@@ -37,14 +37,14 @@ class PurchaseOrderPdfTest extends FeatureTestCase
 
     private function makeOrderWithLine(array $providerOverrides = []): PurchaseOrder
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$providerOverrides]);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$providerOverrides]);
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD',
             'status' => PurchaseOrder::STATUS_ORDENADO, 'status_changed_at' => now(),
             'total_amount' => 60,
         ]);
         $product = CatalogProduct::create([
-            'reference' => 'REF-1', 'name' => 'Lámpara colgante', 'description' => 'Lámpara colgante', 'price_full' => 100, 'cost' => 30,
+            'reference' => 'REF-1', 'name' => 'Producto colgante', 'description' => 'Producto colgante', 'price_full' => 100, 'cost' => 30,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
         PurchaseOrderLine::create([
@@ -93,7 +93,7 @@ class PurchaseOrderPdfTest extends FeatureTestCase
         // aserción real de REQ-136 Escenario 1 es "ningún monto en dólares", no "el carácter $ no
         // aparece en ningún lado del HTML".
         $this->assertDoesNotMatchRegularExpression('/\$[\d,]/', $html);
-        $this->assertStringContainsString('Lámpara colgante', $html);
+        $this->assertStringContainsString('Producto colgante', $html);
     }
 
     public function test_vista_con_costo_incluye_total(): void
@@ -165,7 +165,7 @@ class PurchaseOrderPdfTest extends FeatureTestCase
     {
         // QUEUE_CONNECTION=sync en testing (.env.testing) — el job corre en el mismo request.
         $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $order = $this->makeOrderWithLine(['email' => 'proveedor@lightcorp.test']);
+        $order = $this->makeOrderWithLine(['email' => 'proveedor@proveedor-demo-a.test']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
@@ -174,14 +174,14 @@ class PurchaseOrderPdfTest extends FeatureTestCase
 
         Mail::assertSent(PurchaseOrderMail::class, function (PurchaseOrderMail $mail) use ($order) {
             return $mail->orderId === $order->id
-                && $mail->hasTo('proveedor@lightcorp.test');
+                && $mail->hasTo('proveedor@proveedor-demo-a.test');
         });
     }
 
     public function test_enviar_correo_sin_permiso_retorna_403(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $order = $this->makeOrderWithLine(['email' => 'proveedor@lightcorp.test']);
+        $order = $this->makeOrderWithLine(['email' => 'proveedor@proveedor-demo-a.test']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))

@@ -713,7 +713,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
-        $product = $this->makeCatalogProduct(['reference' => 'LAMP-050', 'name' => 'Lámpara colgante LED']);
+        $product = $this->makeCatalogProduct(['reference' => 'ITEM-050', 'name' => 'Producto colgante XL']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -723,8 +723,8 @@ class QuoteItemControllerTest extends FeatureTestCase
             ->assertStatus(201);
 
         // REQ-035: reference/description se autocompletan desde el catálogo.
-        $response->assertJsonPath('reference', 'LAMP-050');
-        $response->assertJsonPath('description', 'Lámpara colgante LED');
+        $response->assertJsonPath('reference', 'ITEM-050');
+        $response->assertJsonPath('description', 'Producto colgante XL');
         $response->assertJsonPath('unit_price', 200);
         $response->assertJsonPath('is_custom', false);
         $response->assertJsonPath('catalog_product_id', $product->id);
@@ -833,7 +833,7 @@ class QuoteItemControllerTest extends FeatureTestCase
     public function test_mismo_producto_de_catalogo_en_otra_partida_no_choca(): void
     {
         // REQ-038: el producto de catálogo se valida por PARTIDA (desde SCRUM-1146 la
-        // referencia personalizada también) — la misma lámpara en "Sala" y en "Cocina"
+        // referencia personalizada también) — la misma producto en "Sala" y en "Cocina"
         // es un caso real, no un error.
         $this->grantVentasDisenoEdit('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
@@ -1247,7 +1247,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $item = $fixture['part']->items()->create([
-            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto sin catálogo',
             'quantity' => 1, 'unit_price' => 100,
         ]);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -1283,7 +1283,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $item = $fixture['part']->items()->create([
-            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto sin catálogo',
             'quantity' => 1, 'unit_price' => 100,
         ]);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -1332,7 +1332,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $item = $fixture['part']->items()->create([
-            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto sin catálogo',
             'quantity' => 1, 'unit_price' => 100,
         ]);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -1359,7 +1359,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $item = $fixture['part']->items()->create([
-            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto sin catálogo',
             'quantity' => 1, 'unit_price' => 100,
         ]);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -1392,7 +1392,7 @@ class QuoteItemControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('designer@atlantic.test');
         $fixture = $this->makeQuoteWithPart($designerId);
         $item = $fixture['part']->items()->create([
-            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara sin catálogo',
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto sin catálogo',
             'quantity' => 1, 'unit_price' => 100,
         ]);
         $fixture['quote']->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);

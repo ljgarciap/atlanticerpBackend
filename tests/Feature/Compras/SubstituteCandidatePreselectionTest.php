@@ -55,8 +55,8 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
     private function product(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'SUB-' . uniqid(), 'name' => 'Lámpara colgante LED 12W 3000K', 'description' => 'Lámpara colgante LED 12W 3000K',
-            'price_full' => 100, 'cost' => 40, 'category' => 'LAMPARAS', 'provider_id' => $this->provider->id, 'is_active' => true,
+            'reference' => 'SUB-' . uniqid(), 'name' => 'Vástago colgante XL 12W 3000K', 'description' => 'Vástago colgante XL 12W 3000K',
+            'price_full' => 100, 'cost' => 40, 'category' => 'VASTAGOS', 'provider_id' => $this->provider->id, 'is_active' => true,
             ...$overrides,
         ]);
     }
@@ -100,12 +100,12 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
         // 700 candidatos "de relleno" (más que el tope de 500) con nombres, precios y márgenes dispares…
         $this->bulk(700, 'RELL', fn (int $i): array => [
             'name' => "Perfil de aluminio genérico {$i} " . ['negro', 'blanco', 'gris', 'plata'][$i % 4], 'description' => 'Accesorio de instalación ' . ($i % 13),
-            'price_full' => 20 + ($i % 97) * 7, 'cost' => 5 + ($i % 31), 'category' => 'LAMPARAS',
+            'price_full' => 20 + ($i % 97) * 7, 'cost' => 5 + ($i % 31), 'category' => 'VASTAGOS',
         ]);
         // …y 8 sustitutos genuinos repartidos entre ellos (nombre casi igual, precio y margen cercanos).
         $good = [];
         foreach ([[100, 40, ''], [98, 39, ' B'], [103, 41, ' C'], [95, 38, ' D'], [110, 45, ' E'], [90, 36, ' F'], [105, 42, ' G'], [99, 40, ' H']] as [$price, $cost, $suffix]) {
-            $good[] = $this->product(['name' => "Lámpara colgante LED 12W 3000K{$suffix}", 'description' => 'Lámpara colgante LED 12W 3000K', 'price_full' => $price, 'cost' => $cost])->id;
+            $good[] = $this->product(['name' => "Vástago colgante XL 12W 3000K{$suffix}", 'description' => 'Vástago colgante XL 12W 3000K', 'price_full' => $price, 'cost' => $cost])->id;
         }
 
         [, $ids] = $this->search($original);
@@ -123,11 +123,11 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
         // 4.500 candidatos de relleno (más que POOL_BY_PRICE_MARGIN): precios muy lejos del original, así que el generador de precio/margen recorta de verdad.
         $this->bulk(4500, 'BIG', fn (int $i): array => [
             'name' => "Accesorio de montaje número {$i}", 'description' => 'Pieza ' . ($i % 50),
-            'price_full' => 400 + ($i % 700), 'cost' => 300 + ($i % 90), 'category' => 'LAMPARAS',
+            'price_full' => 400 + ($i % 700), 'cost' => 300 + ($i % 90), 'category' => 'VASTAGOS',
         ]);
         $good = [];
         foreach ([[100, 40], [97, 39], [104, 42], [93, 37], [108, 44], [101, 41]] as $k => [$price, $cost]) {
-            $good[] = $this->product(['name' => 'Lámpara colgante LED 12W 3000K' . str_repeat('!', $k % 2), 'price_full' => $price, 'cost' => $cost])->id;
+            $good[] = $this->product(['name' => 'Vástago colgante XL 12W 3000K' . str_repeat('!', $k % 2), 'price_full' => $price, 'cost' => $cost])->id;
         }
 
         [, $ids] = $this->search($original);
@@ -147,9 +147,9 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
         $original = $this->product(['reference' => 'ORIG-9', 'price_full' => 100, 'cost' => 40]);
         $this->bulk(3500, 'TXT', fn (int $i): array => [
             'name' => "Accesorio de montaje número {$i}", 'description' => 'Pieza ' . ($i % 20),
-            'price_full' => 130 + ($i % 5), 'cost' => 26 + ($i % 3), 'category' => 'LAMPARAS',
+            'price_full' => 130 + ($i % 5), 'cost' => 26 + ($i % 3), 'category' => 'VASTAGOS',
         ]);
-        $near = $this->product(['reference' => 'CASI-1', 'name' => 'Lámpara colgante LED 12W 3000K', 'price_full' => 900, 'cost' => 300])->id;
+        $near = $this->product(['reference' => 'CASI-1', 'name' => 'Vástago colgante XL 12W 3000K', 'price_full' => 900, 'cost' => 300])->id;
 
         [, $ids] = $this->search($original);
 
@@ -162,9 +162,9 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
 
     public function test_respeta_la_regla_de_categoria_misma_categoria_si_hay(): void
     {
-        $original = $this->product(['reference' => 'ORIG-3', 'category' => 'LAMPARAS']);
-        $mismaCategoria = $this->product(['name' => 'Lámpara colgante LED 12W 3000K B', 'category' => 'LAMPARAS'])->id;
-        $otraCategoria = $this->product(['name' => 'Lámpara colgante LED 12W 3000K C', 'category' => 'DRIVERS'])->id;
+        $original = $this->product(['reference' => 'ORIG-3', 'category' => 'VASTAGOS']);
+        $mismaCategoria = $this->product(['name' => 'Vástago colgante XL 12W 3000K B', 'category' => 'VASTAGOS'])->id;
+        $otraCategoria = $this->product(['name' => 'Vástago colgante XL 12W 3000K C', 'category' => 'DRIVERS'])->id;
 
         [, $ids] = $this->search($original);
 
@@ -186,7 +186,7 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
     public function test_original_sin_precio_ni_categoria_no_rompe(): void
     {
         $original = $this->product(['reference' => 'ORIG-5', 'category' => null, 'price_full' => 0, 'cost' => null]);
-        $this->product(['name' => 'Lámpara colgante LED 12W 3000K B', 'category' => 'LAMPARAS', 'price_full' => 100, 'cost' => 40]);
+        $this->product(['name' => 'Vástago colgante XL 12W 3000K B', 'category' => 'VASTAGOS', 'price_full' => 100, 'cost' => 40]);
 
         [$json] = $this->search($original);
 
@@ -198,10 +198,10 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
     {
         $original = $this->product(['reference' => 'ORIG-6', 'price_full' => 100, 'cost' => 40]);
         $this->bulk(30, 'PESO', fn (int $i): array => [
-            'name' => 'Lámpara colgante LED 12W 3000K ' . $i, 'description' => 'x', 'price_full' => 200 + $i * 10, 'cost' => 80, 'category' => 'LAMPARAS',
+            'name' => 'Vástago colgante XL 12W 3000K ' . $i, 'description' => 'x', 'price_full' => 200 + $i * 10, 'cost' => 80, 'category' => 'VASTAGOS',
         ]);
         // El más parecido en TEXTO tiene un precio lejano; el más cercano en PRECIO tiene un nombre sin relación.
-        $texto = $this->product(['name' => 'Lámpara colgante LED 12W 3000K', 'price_full' => 900, 'cost' => 300])->id;
+        $texto = $this->product(['name' => 'Vástago colgante XL 12W 3000K', 'price_full' => 900, 'cost' => 300])->id;
         $precio = $this->product(['name' => 'Zócalo de porcelana E27', 'description' => 'zzz', 'price_full' => 101, 'cost' => 40])->id;
         ComprasSettings::current()->forceFill(['similarity_weight_text' => 0, 'similarity_weight_price' => 100, 'similarity_weight_margin' => 0, 'similarity_min_threshold' => 0])->save();
 
@@ -221,7 +221,7 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
     public function test_con_texto_de_busqueda_el_camino_no_cambia(): void
     {
         $original = $this->product(['reference' => 'ORIG-7']);
-        $match = $this->product(['name' => 'Lámpara colgante LED 12W 3000K clon', 'reference' => 'CLON-1'])->id;
+        $match = $this->product(['name' => 'Vástago colgante XL 12W 3000K clon', 'reference' => 'CLON-1'])->id;
         $this->product(['name' => 'Otro producto sin relación', 'reference' => 'OTRO-1']);
 
         [$json, $ids] = $this->search($original, '&search=clon');
@@ -232,7 +232,7 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
 
     public function test_sin_sustituto_sigue_acotado_a_100_y_sin_similarity_percent(): void
     {
-        $this->bulk(130, 'SIN', fn (int $i): array => ['name' => "Producto {$i}", 'description' => 'x', 'price_full' => 10, 'cost' => 5, 'category' => 'LAMPARAS']);
+        $this->bulk(130, 'SIN', fn (int $i): array => ['name' => "Producto {$i}", 'description' => 'x', 'price_full' => 10, 'cost' => 5, 'category' => 'VASTAGOS']);
 
         $response = $this->withHeaders($this->headers())
             ->getJson("/api/compras/products?provider_id={$this->provider->id}")
@@ -248,7 +248,7 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
     {
         $original = $this->product(['reference' => 'ORIG-8']);
         $this->bulk(6000, 'HYD', fn (int $i): array => [
-            'name' => "Luminaria de prueba modelo {$i}", 'description' => 'Descripción ' . ($i % 40), 'price_full' => 30 + ($i % 300), 'cost' => 10 + ($i % 60), 'category' => 'LAMPARAS',
+            'name' => "Pieza de prueba modelo {$i}", 'description' => 'Descripción ' . ($i % 40), 'price_full' => 30 + ($i % 300), 'cost' => 10 + ($i % 60), 'category' => 'VASTAGOS',
         ]);
         $headers = $this->headers();
         $hydrated = 0;

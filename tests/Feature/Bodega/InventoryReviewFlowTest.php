@@ -251,7 +251,7 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeOrder(
             ['order_type' => Order::ORDER_TYPE_REVISION_INVENTARIO, 'stage' => Order::STAGE_PICKING_PENDIENTE],
-            ['qty_requested' => 5, 'reference_snapshot' => '   ', 'description_snapshot' => 'Lámpara especial a medida'],   // referencia de solo espacios = sin referencia
+            ['qty_requested' => 5, 'reference_snapshot' => '   ', 'description_snapshot' => 'Producto especial a medida'],   // referencia de solo espacios = sin referencia
         );
         $this->grantBodegaPermissions('liderbodega@test.com');
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
@@ -268,7 +268,7 @@ class InventoryReviewFlowTest extends FeatureTestCase
             ->get()->first(fn (NotificationSend $n): bool => in_array($yirenaId, $n->audience, true));
 
         $this->assertNotNull($send);
-        $this->assertStringContainsString('Lámpara especial a medida (x5)', $send->content['body']);
+        $this->assertStringContainsString('Producto especial a medida (x5)', $send->content['body']);
         $this->assertStringNotContainsString('Faltan: —', $send->content['body'], 'Antes decía «Faltan: — (x5)».');
         $this->assertArrayNotHasKey('cta_url', $send->content, 'Un producto personalizado no existe en Inventario: no hay a dónde enlazar.');
     }

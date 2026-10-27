@@ -34,7 +34,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
     public function test_index_visible_para_contabilidad(): void
     {
         AdminContBankAccount::create([
-            'banco' => 'Banistmo', 'ultimos_4_digitos' => '9034',
+            'banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034',
         ]);
 
         $token = $this->loginAsFelix();
@@ -42,7 +42,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/bank-accounts')
             ->assertStatus(200)
-            ->assertJsonFragment(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034', 'activa' => true]);
+            ->assertJsonFragment(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034', 'activa' => true]);
     }
 
     public function test_index_rechaza_a_un_rol_sin_visibilidad_del_modulo(): void
@@ -60,12 +60,12 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
-                'banco' => 'Banco General', 'ultimos_4_digitos' => '1234',
+                'banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1234',
             ])
             ->assertStatus(201);
 
         $response->assertJsonFragment([
-            'banco' => 'Banco General', 'ultimos_4_digitos' => '1234',
+            'banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1234',
             'tipo_cuenta' => 'corriente', 'moneda' => 'USD', 'activa' => true,
         ]);
     }
@@ -87,7 +87,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
-                'banco' => 'Banistmo', 'ultimos_4_digitos' => '1111',
+                'banco' => 'Banco Demo B', 'ultimos_4_digitos' => '1111',
             ])
             ->assertStatus(403);
     }
@@ -97,11 +97,11 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
         $token = $this->loginAsFelix();
 
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/admin-contab/bank-accounts', ['banco' => 'Banistmo', 'ultimos_4_digitos' => '123'])
+            ->postJson('/api/admin-contab/bank-accounts', ['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '123'])
             ->assertStatus(422);
 
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/admin-contab/bank-accounts', ['banco' => 'Banistmo'])
+            ->postJson('/api/admin-contab/bank-accounts', ['banco' => 'Banco Demo B'])
             ->assertStatus(422);
     }
 
@@ -111,7 +111,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
-                'banco' => 'Banistmo', 'ultimos_4_digitos' => '9034',
+                'banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034',
                 'numero_completo' => '0000111122229034',
             ])
             ->assertStatus(201);
@@ -131,7 +131,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
-                'banco' => 'Banco General', 'ultimos_4_digitos' => '4455',
+                'banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4455',
                 'numero_cuenta_completo' => '00-00-00-000000-1',
             ])
             ->assertStatus(201);
@@ -143,7 +143,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_update_completa_el_numero_de_cuenta_completo_de_una_cuenta_ya_creada(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '4455']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4455']);
         $token = $this->loginAsFelix();
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -152,13 +152,13 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
             ])
             ->assertStatus(200);
 
-        $response->assertJsonFragment(['numero_cuenta_completo' => '00-00-00-000000-1', 'banco' => 'Banco General']);
+        $response->assertJsonFragment(['numero_cuenta_completo' => '00-00-00-000000-1', 'banco' => 'Banco Demo A']);
     }
 
     public function test_update_parcial_no_pisa_el_resto_de_los_campos(): void
     {
         $account = AdminContBankAccount::create([
-            'banco' => 'Banco General', 'ultimos_4_digitos' => '4455', 'moneda' => 'USD',
+            'banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4455', 'moneda' => 'USD',
         ]);
         $token = $this->loginAsFelix();
 
@@ -168,14 +168,14 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $fresh = $account->fresh();
-        $this->assertSame('Banco General', $fresh->banco);
+        $this->assertSame('Banco Demo A', $fresh->banco);
         $this->assertSame('4455', $fresh->ultimos_4_digitos);
         $this->assertSame('USD', $fresh->moneda);
     }
 
     public function test_update_rechaza_a_un_rol_no_autorizado(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
@@ -194,7 +194,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_deactivate_y_reactivate(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         $token = $this->loginAsFelix();
 
         $this->withHeaders($this->authHeaders($token))

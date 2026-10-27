@@ -47,7 +47,7 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
 
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     /** @param array<string, mixed> $input */
@@ -81,10 +81,10 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
-            'bank_name'           => 'Banco General',
+            'bank_name'           => 'Banco Demo A',
             'bank_account_number' => '04-01-01-000000-1',
             'bank_swift'          => 'BAGEPAPA',
-            'bank_beneficiary'    => 'LightCorp SA',
+            'bank_beneficiary'    => 'Proveedor Demo A SA',
             'fields_found'        => ['bank_name', 'bank_account_number', 'bank_swift', 'bank_beneficiary'],
             'confidence'          => 'alta',
         ]);
@@ -96,7 +96,7 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
             ->assertStatus(200);
 
         $poll->assertJsonPath('status', 'completed');
-        $poll->assertJsonPath('result.bank_name', 'Banco General');
+        $poll->assertJsonPath('result.bank_name', 'Banco Demo A');
         $poll->assertJsonPath('result.bank_account_number', '04-01-01-000000-1');
         $poll->assertJsonPath('result.confidence', 'alta');
         $this->assertCount(4, $poll->json('result.fields_found'));
@@ -115,7 +115,7 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
-            'bank_name'           => 'Banco General',
+            'bank_name'           => 'Banco Demo A',
             'bank_account_number' => null,
             'bank_swift'          => null,
             'bank_beneficiary'    => null,
@@ -177,7 +177,7 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
 
         $this->fakeToolUseResponse([
             'fields_found' => ['bank_name', 'campo_inventado'],
-            'bank_name'    => 'Banco General',
+            'bank_name'    => 'Banco Demo A',
             'confidence'   => 'alta',
         ]);
 

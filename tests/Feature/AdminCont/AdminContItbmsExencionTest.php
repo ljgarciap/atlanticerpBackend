@@ -80,7 +80,7 @@ class AdminContItbmsExencionTest extends FeatureTestCase
         $parte = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
         $item  = $parte->items()->create([
             'catalog_product_id' => null, 'is_custom' => true, 'reference' => 'REF-'.self::uniqueTestNumber(),
-            'description' => 'Luminaria', 'quantity' => 2, 'unit_price' => 100.0, 'discount_percent' => 0, 'cost' => null,
+            'description' => 'Producto', 'quantity' => 2, 'unit_price' => 100.0, 'discount_percent' => 0, 'cost' => null,
         ]);
 
         $quote = Quote::with('parts.items')->findOrFail($quote->id);
@@ -92,7 +92,7 @@ class AdminContItbmsExencionTest extends FeatureTestCase
             'order_number' => 'PED-2026-'.self::uniqueTestNumber(), 'pipeline_card_id' => $card->id, 'order_type' => Order::ORDER_TYPE_PEDIDO,
             'stage' => Order::STAGE_POR_DESPACHAR, 'customer_name' => $sub->business_name,
         ]);
-        $order->items()->create(['quote_item_id' => $item->id, 'description_snapshot' => 'Luminaria', 'qty_requested' => 2, 'qty_picked' => 2, 'qty_delivered' => 2]);
+        $order->items()->create(['quote_item_id' => $item->id, 'description_snapshot' => 'Producto', 'qty_requested' => 2, 'qty_picked' => 2, 'qty_delivered' => 2]);
 
         return ['quote' => $quote, 'card' => $card, 'order' => $order->fresh() ?? $order, 'project' => $project];
     }

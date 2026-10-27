@@ -9,6 +9,7 @@ use App\Modules\Compras\Models\ReplacementRequest;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Support\DemoDataset;
 
 /**
  * SCRUM-246→249 — hallazgo repetido de QA (5 revisiones entre 2026-07-18 y 2026-07-20): en
@@ -51,12 +52,12 @@ class DemoReplacementRequestSeeder extends Seeder
 
     private function seed(): void
     {
-        $provider = Provider::firstOrCreate(['name' => 'LightCorp'], ['currency' => 'USD']);
+        $provider = Provider::firstOrCreate(['name' => DemoDataset::proveedor('A')], ['currency' => 'USD']);
 
         $original = CatalogProduct::firstOrCreate(
-            ['reference' => 'SUST-ORIG-001'],
+            ['reference' => DemoDataset::productoRef(47)],
             [
-                'name'           => 'Bombillo decorativo E27 Ámbar (demo sustitutos — original)',
+                'name'           => DemoDataset::productoDescripcion(47) . ' (demo sustitutos — original)',
                 'brand'          => 'Demo',
                 'price_full'     => 24.00,
                 'cost'           => 12.00,
@@ -70,9 +71,9 @@ class DemoReplacementRequestSeeder extends Seeder
 
         // Margen 60% — sobre el umbral (15% default): la solicitud nace "Pendiente" sin escalar.
         $goodMargin = CatalogProduct::firstOrCreate(
-            ['reference' => 'SUST-CAND-002'],
+            ['reference' => DemoDataset::productoRef(48)],
             [
-                'name'           => 'Bombillo LED E27 Blanco cálido (demo sustitutos — margen alto)',
+                'name'           => DemoDataset::productoDescripcion(48) . ' (demo sustitutos — margen alto)',
                 'brand'          => 'Demo',
                 'price_full'     => 25.00,
                 'cost'           => 10.00,
@@ -83,9 +84,9 @@ class DemoReplacementRequestSeeder extends Seeder
 
         // Margen 12% — bajo el umbral: la solicitud debe nacer "Pendiente Gerencia" (SCRUM-247).
         $lowMargin = CatalogProduct::firstOrCreate(
-            ['reference' => 'SUST-CAND-003'],
+            ['reference' => DemoDataset::productoRef(49)],
             [
-                'name'           => 'Bombillo halógeno E27 Regulable (demo sustitutos — margen bajo)',
+                'name'           => DemoDataset::productoDescripcion(49) . ' (demo sustitutos — margen bajo)',
                 'brand'          => 'Demo',
                 'price_full'     => 25.00,
                 'cost'           => 22.00,

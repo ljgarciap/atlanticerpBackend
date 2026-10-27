@@ -369,7 +369,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
         $masterClientId = $order->pipelineCard->master_client_id;
         $salesProjectId = $order->pipelineCard->sales_project_id;
-        $bankAccount = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $bankAccount = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         $abono = AdminContAbono::create([
             'master_client_id' => $masterClientId,
@@ -493,7 +493,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     {
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4321', 'numero_cuenta_completo' => '03-01-01-074321-4', 'moneda' => 'USD', 'activa' => true]);
+        AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4321', 'numero_cuenta_completo' => '03-01-01-074321-4', 'moneda' => 'USD', 'activa' => true]);
         $token = $this->loginAsFelix();
 
         $this->withHeaders($this->authHeaders($token))
@@ -965,7 +965,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     public function test_928_pdf_de_factura_no_enmascara_la_cuenta_sin_numero_completo(): void
     {
         AdminContBankAccount::create([
-            'banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4554', 'activa' => true,
+            'banco' => 'Banco Demo A', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4554', 'activa' => true,
         ]);
         $pago = InvoiceService::paymentBlock();
         $this->assertNull($pago['cuenta_pago']);
@@ -982,7 +982,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     public function test_928_pdf_de_factura_muestra_la_cuenta_completa_cuando_esta_cargada(): void
     {
         AdminContBankAccount::create([
-            'banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4554',
+            'banco' => 'Banco Demo A', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4554',
             'numero_cuenta_completo' => '03-01-01-074554-4', 'activa' => true,
         ]);
         $pago = InvoiceService::paymentBlock();
@@ -991,7 +991,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
             ->viewData(['es_anulada' => false, 'cliente' => 'Cliente Test', 'monto' => 100, 'cuenta_pago' => $pago['cuenta_pago']]);
         $html = view('admin-cont.invoice-pdf', $data)->render();
 
-        $this->assertStringContainsString('Cuenta número: Banco General 03-01-01-074554-4', $html);
+        $this->assertStringContainsString('Cuenta número: Banco Demo A 03-01-01-074554-4', $html);
     }
 
     /** REQ-449 — documento fiscal real, 200 + content-type PDF tanto vigente como anulada. */
@@ -1359,7 +1359,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     private function makeAbono(array $attrs): AdminContAbono
     {
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $bank = AdminContBankAccount::first() ?? AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $bank = AdminContBankAccount::first() ?? AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
         return AdminContAbono::create([
             'monto_usado' => 0, 'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $bank->id,

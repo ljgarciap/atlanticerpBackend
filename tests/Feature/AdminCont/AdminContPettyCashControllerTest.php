@@ -93,7 +93,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
                 'lineas' => [
                     $this->lineaPayload($felixId, 'Cafetería Manolo', 18.50, 1.30),
                     $this->lineaPayload($felixId, 'Farmacia Transporte', 32.00, 2.24),
-                    $this->lineaPayload($markId, 'Estacionamiento Multiplaza', 8.00, 0),
+                    $this->lineaPayload($markId, 'Estacionamiento Demo', 8.00, 0),
                 ],
             ]);
 
@@ -573,7 +573,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
         $tokenFelix = $this->loginAsFelix();
         $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Copias El Rey');
+        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Copias Demo');
         $reporte = $this->crearReporteConLineas($tokenFelix, [$id]);
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $id)->update(['intentos_rechazo' => 2]);
 
@@ -594,7 +594,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
         $tokenFelix = $this->loginAsFelix();
         $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Estacionamiento Multiplaza');
+        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Estacionamiento Demo');
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $id)->update(['intentos_rechazo' => 2]);
 
         $tokenYaneth = $this->loginAsYaneth();
@@ -716,7 +716,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
         $this->assertTrue($detallePendiente['editable']);
         $this->assertFalse($detallePendiente['puede_rechazar']);
 
-        $idEnReporte = $this->crearGastoPendiente($tokenFelix, $felixId, 'Estacionamiento Multiplaza');
+        $idEnReporte = $this->crearGastoPendiente($tokenFelix, $felixId, 'Estacionamiento Demo');
         $this->crearReporteConLineas($tokenFelix, [$idEnReporte]);
         $tokenMark = $this->loginAsMark();
         $detalleEnReporte = $this->withHeaders($this->authHeaders($tokenMark))

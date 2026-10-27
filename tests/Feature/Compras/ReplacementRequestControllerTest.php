@@ -38,10 +38,10 @@ class ReplacementRequestControllerTest extends FeatureTestCase
 
     private function makeProduct(array $overrides = []): CatalogProduct
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
 
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo decorativo E27 Ámbar', 'description' => 'Bombillo decorativo E27 Ámbar',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo decorativo E27 Ámbar', 'description' => 'Artículo decorativo E27 Ámbar',
             'price_full' => 20, 'cost' => 12, 'provider_id' => $provider->id, 'is_active' => true,
             ...$overrides,
         ]);
@@ -89,8 +89,8 @@ class ReplacementRequestControllerTest extends FeatureTestCase
         // REQ-186 Escenario 1. SCRUM-818 (CA13/CA14) — Generar Orden es exclusivo de Líder de
         // Compras por role_key, no alcanza con compras.write — se loguea como Lider Compras (real
         // lider_compras) en vez de designer@ con permisos ad-hoc.
-        $original = $this->makeProduct(['description' => 'Bombillo decorativo E27 Ámbar', 'cost' => 12]);
-        $substitute = $this->makeProduct(['description' => 'Bombillo genérico E27', 'cost' => 8]);
+        $original = $this->makeProduct(['description' => 'Artículo decorativo E27 Ámbar', 'cost' => 12]);
+        $substitute = $this->makeProduct(['description' => 'Artículo genérico E27', 'cost' => 8]);
         $request = ReplacementRequest::create([
             'original_catalog_product_id' => $original->id,
             'proposed_catalog_product_id' => $substitute->id,

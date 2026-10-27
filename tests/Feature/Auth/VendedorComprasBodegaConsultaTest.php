@@ -161,7 +161,7 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
     {
         $orden = $this->orden();
         $producto = \App\Modules\VentasDiseno\Models\CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo', 'description' => 'Bombillo',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo', 'description' => 'Artículo',
             'price_full' => 20, 'cost' => 55.5, 'stock_quantity' => 1, 'is_active' => true,
         ]);
         \App\Modules\Compras\Models\PurchaseOrderLine::create([
@@ -211,7 +211,7 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
     public function test_el_inventario_restringido_no_devuelve_el_valor_total_en_los_kpis(): void
     {
         \App\Modules\VentasDiseno\Models\CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo', 'description' => 'Bombillo',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo', 'description' => 'Artículo',
             'price_full' => 20, 'cost' => 12, 'stock_quantity' => 10, 'is_active' => true,
         ]);
         $this->conceder(['compras.logistica.view']);

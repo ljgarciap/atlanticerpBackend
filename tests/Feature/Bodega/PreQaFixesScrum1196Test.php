@@ -162,7 +162,7 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto 1196']);
         $quote = Quote::create(['owner_id' => $managerId, 'master_client_id' => $master->id, 'sub_client_id' => $sub->id, 'sales_project_id' => $project->id]);
         $quote->parts()->create(['name' => 'Partida 1'])->items()->create([
-            'catalog_product_id' => $product->id, 'reference' => $product->reference, 'description' => 'Lámpara', 'quantity' => 25, 'unit_price' => 100,
+            'catalog_product_id' => $product->id, 'reference' => $product->reference, 'description' => 'Producto', 'quantity' => 25, 'unit_price' => 100,
         ]);
         $h = $this->superadminHeaders();
 

@@ -45,7 +45,7 @@ class SalesProjectControllerTest extends FeatureTestCase
         $master = MasterClient::create(['name' => 'Cliente Test']);
         $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $other  = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Otro Sub', 'tax_id' => '155-1111-1-2026']);
-        SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Torre Delta']);
+        SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa']);
         SalesProject::create(['sub_client_id' => $other->id, 'name' => 'Otro Proyecto']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -55,7 +55,7 @@ class SalesProjectControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
-        $this->assertTrue($names->contains('Torre Delta'));
+        $this->assertTrue($names->contains('Proyecto Alfa'));
         $this->assertFalse($names->contains('Otro Proyecto'));
     }
 
@@ -139,12 +139,12 @@ class SalesProjectControllerTest extends FeatureTestCase
             ->where('email', 'designer@atlantic.test')->value('id');
         $master  = MasterClient::create(['name' => 'Cliente Test']);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
-        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Torre Delta']);
+        $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa']);
         Quote::create(['owner_id' => $designerId, 'sales_project_id' => $project->id, 'description' => 'Borrador']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/sales-projects', ['sub_client_id' => $sub->id, 'name' => 'Torre Delta'])
+            ->postJson('/api/ventas-diseno/sales-projects', ['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa'])
             ->assertStatus(422);
 
         $this->assertStringContainsString('Ya existe una cotización para este proyecto', (string) $response->json('message'));
@@ -155,11 +155,11 @@ class SalesProjectControllerTest extends FeatureTestCase
         $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
         $master  = MasterClient::create(['name' => 'Cliente Test']);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
-        SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Torre Delta']); // sin ninguna Quote
+        SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa']); // sin ninguna Quote
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/ventas-diseno/sales-projects', ['sub_client_id' => $sub->id, 'name' => 'Torre Delta'])
+            ->postJson('/api/ventas-diseno/sales-projects', ['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa'])
             ->assertStatus(201);
     }
 }

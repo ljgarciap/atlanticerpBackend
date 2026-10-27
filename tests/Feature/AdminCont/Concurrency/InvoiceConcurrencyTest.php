@@ -151,7 +151,7 @@ class InvoiceConcurrencyTest extends FeatureTestCase
         $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
         $item = $part->items()->create([
             'catalog_product_id' => null, 'is_custom' => true, 'reference' => 'REF-CONC-929',
-            'description' => 'Panel LED (concurrencia 929)', 'quantity' => 9, 'unit_price' => 100.00, 'discount_percent' => 0,
+            'description' => 'Panel XL (concurrencia 929)', 'quantity' => 9, 'unit_price' => 100.00, 'discount_percent' => 0,
         ]);
         $quote = Quote::with('parts.items')->findOrFail($quote->id);
 

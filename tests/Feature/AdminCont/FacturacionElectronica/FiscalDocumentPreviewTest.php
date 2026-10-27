@@ -33,7 +33,7 @@ final class FiscalDocumentPreviewTest extends FeatureTestCase
 
     public function test_preview_de_factura_devuelve_el_payload_msl_sin_llamar_a_nadie(): void
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
         // La factura se crea sin proveedor fiscal (base de pruebas en `none`); la vista previa se pide ya con MSL en pruebas.
@@ -54,7 +54,7 @@ final class FiscalDocumentPreviewTest extends FeatureTestCase
     public function test_preview_muestra_el_ambiente_segun_pac_ambiente(): void
     {
         Http::fake();
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
 
@@ -75,7 +75,7 @@ final class FiscalDocumentPreviewTest extends FeatureTestCase
     public function test_preview_sin_proveedor_fiscal_dice_sin_envio(): void
     {
         Http::fake();
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
         AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'none', 'pac_ambiente' => 'production'])->save();
@@ -96,7 +96,7 @@ final class FiscalDocumentPreviewTest extends FeatureTestCase
     public function test_preview_de_nota_de_credito_sin_factura_de_origen_certificada_devuelve_error_explicito(): void
     {
         $ownerId = $this->ownerId();
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
@@ -120,7 +120,7 @@ final class FiscalDocumentPreviewTest extends FeatureTestCase
     public function test_preview_de_nota_de_credito_con_factura_certificada_devuelve_el_payload(): void
     {
         $ownerId = $this->ownerId();
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();

@@ -540,7 +540,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
     public function test_por_recibir_expone_ordenes_en_transito_con_distintivo_zona_libre(): void
     {
         $product = CatalogProduct::create([
-            'reference' => 'REF-POR-RECIBIR', 'factory_reference' => 'FAB-777', 'name' => 'Lámpara colgante', 'description' => 'Lámpara colgante',
+            'reference' => 'REF-POR-RECIBIR', 'factory_reference' => 'FAB-777', 'name' => 'Producto colgante', 'description' => 'Producto colgante',
             'price_full' => 200, 'cost' => 120, 'stock_quantity' => 0, 'is_active' => true,
         ]);
         $provider = Provider::create(['name' => 'ZonaLibreCorp', 'currency' => 'USD']);
@@ -712,7 +712,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
     public function test_approvals_pending_incluye_reubicacion_pendiente_para_aprobador_via_regla(): void
     {
         $product = CatalogProduct::create([
-            'reference' => 'REF-APROB-908', 'name' => 'Reflector LED', 'description' => 'Reflector LED',
+            'reference' => 'REF-APROB-908', 'name' => 'Reflector XL', 'description' => 'Reflector XL',
             'price_full' => 80, 'cost' => 40, 'stock_quantity' => 10, 'is_active' => true,
         ]);
         $central = Warehouse::where('name', 'Bodega Central')->first();
@@ -769,7 +769,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
     {
         $this->makeBodegaMark();
         $product = CatalogProduct::create([
-            'reference' => 'REF-ADJ-908', 'name' => 'Bombillo LED', 'description' => 'Bombillo LED',
+            'reference' => 'REF-ADJ-908', 'name' => 'Artículo XL', 'description' => 'Artículo XL',
             'price_full' => 20, 'cost' => 10, 'stock_quantity' => 10, 'is_active' => true,
         ]);
         $central = Warehouse::where('name', 'Bodega Central')->first();

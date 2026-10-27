@@ -44,7 +44,7 @@ class ProviderConfirmationValidationTest extends FeatureTestCase
 
     private function makeOrderWithLine(): PurchaseOrder
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD',
             'status' => PurchaseOrder::STATUS_EN_ADUANA, 'status_changed_at' => now(),

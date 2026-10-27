@@ -154,11 +154,11 @@ class AdminContInvoiceFamilyRootTest extends FeatureTestCase
         $invoice = $this->makeInvoice($root->id, ['monto' => 321.00]);
 
         $invoice->lines()->create([
-            'quote_item_id' => self::uniqueTestNumber(), 'descripcion' => 'Lámpara A', 'cantidad' => 2.5,
+            'quote_item_id' => self::uniqueTestNumber(), 'descripcion' => 'Producto A', 'cantidad' => 2.5,
             'precio_unitario' => 100.00, 'subtotal' => 250.00, 'itbms' => 17.50, 'total' => 267.50,
         ]);
         $invoice->lines()->create([
-            'quote_item_id' => self::uniqueTestNumber(), 'descripcion' => 'Lámpara B', 'cantidad' => 1,
+            'quote_item_id' => self::uniqueTestNumber(), 'descripcion' => 'Producto B', 'cantidad' => 1,
             'precio_unitario' => 50.00, 'subtotal' => 50.00, 'itbms' => 3.50, 'total' => 53.50,
         ]);
 

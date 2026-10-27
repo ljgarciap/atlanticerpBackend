@@ -33,45 +33,45 @@ class TranslationGuardTest extends TestCase
     public function test_rechaza_si_la_ia_omite_un_dato_tecnico(): void
     {
         $this->expectException(\UnexpectedValueException::class);
-        TranslationGuard::assertValid('DOWNLIGHT LED 12W 60X60', 'LED DOWNLIGHT 12W', 3, 120);
+        TranslationGuard::assertValid('ARTICULO XL 12W 60X60', 'XL ARTICULO 12W', 3, 120);
     }
 
     public function test_la_puntuacion_pegada_al_dato_tecnico_no_cuenta_como_alteracion(): void
     {
-        TranslationGuard::assertValid('PANEL LED (60X60), 40W.', 'LED PANEL (60X60), 40W.', 3, 120);
+        TranslationGuard::assertValid('PANEL XL (60X60), 40W.', 'XL PANEL (60X60), 40W.', 3, 120);
         $this->addToAssertionCount(1);
     }
 
     public function test_rechaza_una_traduccion_desproporcionada(): void
     {
         $this->expectException(\UnexpectedValueException::class);
-        TranslationGuard::assertValid('LAMPARA', str_repeat('x', 500), 3, 120);
+        TranslationGuard::assertValid('PRODUCTO', str_repeat('x', 500), 3, 120);
     }
 
     public function test_rechaza_caracteres_de_control(): void
     {
         $this->expectException(\UnexpectedValueException::class);
-        TranslationGuard::assertValid('LAMPARA', "LAMP\x07", 3, 120);
+        TranslationGuard::assertValid('PRODUCTO', "ITEM\x07", 3, 120);
     }
 
     public function test_parsea_json_aun_con_texto_o_vallas_alrededor(): void
     {
         $this->assertSame(
-            ['1' => 'LAMP', '2' => 'PANEL'],
-            TranslationGuard::parseResponse("```json\n{\"1\": \"LAMP\", \"2\": \" PANEL \"}\n```", ['1', '2']),
+            ['1' => 'ITEM', '2' => 'PANEL'],
+            TranslationGuard::parseResponse("```json\n{\"1\": \"ITEM\", \"2\": \" PANEL \"}\n```", ['1', '2']),
         );
     }
 
     public function test_rechaza_si_falta_o_sobra_un_item(): void
     {
         $this->expectException(\UnexpectedValueException::class);
-        TranslationGuard::parseResponse('{"1": "LAMP"}', ['1', '2']);
+        TranslationGuard::parseResponse('{"1": "ITEM"}', ['1', '2']);
     }
 
     public function test_rechaza_un_item_extra_que_no_se_pidio(): void
     {
         $this->expectException(\UnexpectedValueException::class);
-        TranslationGuard::parseResponse('{"1": "LAMP", "9": "otro"}', ['1']);
+        TranslationGuard::parseResponse('{"1": "ITEM", "9": "otro"}', ['1']);
     }
 
     public function test_rechaza_valores_que_no_son_texto_o_estan_vacios(): void
