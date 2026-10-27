@@ -1,6 +1,6 @@
 # Spec — Fase 4b: dataset demo genérico (2026-10-28)
 
-**Estado**: decisiones de §6 RESPONDIDAS por Luis (2026-10-28); pendiente su «adelante» para implementar. Alcance ampliado respecto a la recomendación (ver §6).
+**Estado**: IMPLEMENTADA (§8, 2026-10-28). Decisiones de §6 respondidas por Luis; alcance ampliado respecto a la recomendación.
 **Continúa** `fase4-dataset-demo-generico.md` (§3.2 y §6). Esa spec se escribió el 2026-10-25, **antes** de las fases 4d, 5, 6 y 7; aquí se re-mide y se corrigen sus supuestos (§2).
 
 ## 1. Objetivo
@@ -67,3 +67,8 @@ Todo lo demás (seeders, tests, mocks, e2e, i18n que no sea del modelo, comentar
 - Que algún test dependa en silencio del demo sembrado (conteos, orden, un nombre). Mitigación: forma idéntica + suite completa antes del PR; si falla, se corrige el seeder, no el test.
 - El prefijo `[DEMO]` y los nombres cortos pueden afectar búsquedas/orden alfabético que los tests asumen: por eso se conserva la forma, incluido el orden relativo.
 - Un cliente que ya tenga el demo viejo sembrado no cambia solo (hay que resembrar); no se migra ningún dato.
+
+## 8. Resultado de la 4b (2026-10-28)
+- `DemoDataset` + 11 seeders demo neutros (misma forma); ~115 archivos de test del backend y 118 del frontend neutralizados; categoría huérfana `LAMPARAS` retirada; 3 contratos (`DemoDatasetNeutralidadTest`, `NeutralidadDelRepoTest`, `neutralidadDelRepo.test.ts`) con la lista única `Tests\Support\TerminosDelClienteAnterior`.
+- Verificado: PHPStan 0, backend 5150 tests, frontend 242 archivos / 2978 tests, Playwright con el demo reseteado (25 pantallas, 0 coincidencias). Informe: `docs/reviews/fase4b-dataset-demo-2026-10-28.md`.
+- **Fases nuevas que el contrato necesita para llegar al 100% (registradas en el plan)**: «catálogo de productos genérico» (claves y etiquetas de categoría, `dialux`) y «almacenes configurables» (`showroom`, «Obarrio», la migración que crea el catálogo de almacenes). La 4c retira además los prompts de IA y la plantilla PDF de la lista de pendientes.
