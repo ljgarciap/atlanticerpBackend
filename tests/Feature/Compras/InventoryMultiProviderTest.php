@@ -49,7 +49,7 @@ class InventoryMultiProviderTest extends FeatureTestCase
     private function product(array $o = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo', 'description' => 'Bombillo',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo', 'description' => 'Artículo',
             'price_full' => 20, 'cost' => 12, 'stock_quantity' => 10, 'is_active' => true, ...$o,
         ]);
     }

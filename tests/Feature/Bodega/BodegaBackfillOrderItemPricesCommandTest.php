@@ -81,7 +81,7 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara de prueba', 'description' => 'Lámpara de prueba',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto de prueba', 'description' => 'Producto de prueba',
             'price_full' => 200, 'cost' => 120, 'stock_quantity' => 0, 'is_active' => true,
         ]);
         $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
@@ -118,7 +118,7 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara ambigua', 'description' => 'Lámpara ambigua',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto ambigua', 'description' => 'Producto ambigua',
             'price_full' => 200, 'cost' => 120, 'stock_quantity' => 0, 'is_active' => true,
         ]);
         // Mismo catalog_product_id en 2 partidas distintas — emparejamiento imposible sin FK real.
@@ -152,7 +152,7 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara dry-run', 'description' => 'Lámpara dry-run',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto dry-run', 'description' => 'Producto dry-run',
             'price_full' => 90, 'cost' => 50, 'stock_quantity' => 0, 'is_active' => true,
         ]);
         $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);

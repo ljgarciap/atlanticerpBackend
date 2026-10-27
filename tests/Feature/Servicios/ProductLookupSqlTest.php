@@ -65,7 +65,7 @@ class ProductLookupSqlTest extends FeatureTestCase
 
     public function test_busca_sin_distinguir_acentos_ni_mayusculas_y_da_prioridad_a_la_coincidencia_exacta(): void
     {
-        $this->makeCatalogProduct(['reference' => 'LUZ-COL-1', 'name' => 'Lámpara colgante luz']);
+        $this->makeCatalogProduct(['reference' => 'LUZ-COL-1', 'name' => 'Producto colgante luz']);
         $exact = $this->makeCatalogProduct(['reference' => 'LUZ', 'name' => 'Otro producto']);
         $this->makeCatalogProduct(['reference' => 'SIN-RELACION', 'name' => 'Riel magnético']);
 
@@ -75,13 +75,13 @@ class ProductLookupSqlTest extends FeatureTestCase
         $this->assertContains('LUZ-COL-1', $refs);
         $this->assertNotContains('SIN-RELACION', $refs);
 
-        $this->assertContains('LUZ-COL-1', $this->refs('search=' . rawurlencode('LÁMPARA COLGANTE')));
+        $this->assertContains('LUZ-COL-1', $this->refs('search=' . rawurlencode('PRODUCTO COLGANTE')));
     }
 
     public function test_busca_por_marca_y_tolera_un_typo_solo_si_no_hay_coincidencia_parcial(): void
     {
         $this->makeCatalogProduct(['reference' => 'MARCA-1', 'name' => 'Spot', 'brand' => 'Philips']);
-        $this->makeCatalogProduct(['reference' => 'TYPO-1', 'name' => 'Candelabro cristal imperial']);
+        $this->makeCatalogProduct(['reference' => 'TYPO-1', 'name' => 'Modelo cristal imperial']);
 
         $this->assertContains('MARCA-1', $this->refs('search=philips'));
         $this->assertContains('TYPO-1', $this->refs('search=cristl'));
@@ -131,13 +131,13 @@ class ProductLookupSqlTest extends FeatureTestCase
         $now = now()->toDateTimeString();
         foreach (array_chunk(range(1, 5000), 500) as $chunk) {
             DB::table($table)->insert(array_map(fn (int $i): array => [
-                'reference' => 'BULK996S-' . uniqid() . "-{$i}", 'name' => "Bulk lampara {$i}", 'description' => "Bulk {$i}",
+                'reference' => 'BULK996S-' . uniqid() . "-{$i}", 'name' => "Bulk producto {$i}", 'description' => "Bulk {$i}",
                 'price_full' => 10, 'cost' => 5, 'stock_quantity' => 1, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
             ], $chunk));
         }
         $headers = $this->headers();
 
-        foreach (['', 'search=lampara', 'search=zzzqqq'] as $q) {
+        foreach (['', 'search=producto', 'search=zzzqqq'] as $q) {
             memory_reset_peak_usage();
             $before = memory_get_peak_usage(false);
             $response = null;

@@ -41,13 +41,13 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     private function makeCatalogProduct(int $providerId, array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo decorativo E27 Ámbar',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo decorativo E27 Ámbar',
             'price_full' => 20, 'cost' => 12, 'provider_id' => $providerId, 'is_active' => true,
             ...$overrides,
         ]);
@@ -203,7 +203,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
                 'lines' => [[
                     'new_product' => [
                         'reference' => 'NORDIC-40', 'factory_reference' => 'LMP-001',
-                        'name' => 'Lámpara colgante Nordic 40cm', 'price_full' => 150, 'cost' => 100,
+                        'name' => 'Producto colgante Nordic 40cm', 'price_full' => 150, 'cost' => 100,
                     ],
                     'quantity' => 2,
                 ]],
@@ -248,18 +248,18 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     {
         // REQ-131 Escenario 2.
         $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $lightCorp = $this->makeProvider(['name' => 'LightCorp']);
-        $iluminex = $this->makeProvider(['name' => 'Iluminex SA']);
-        $this->makeCatalogProduct($lightCorp->id, ['factory_reference' => 'LMP-001']);
+        $proveedorA = $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $proveedorB = $this->makeProvider(['name' => 'Proveedor Demo B SA']);
+        $this->makeCatalogProduct($proveedorA->id, ['factory_reference' => 'LMP-001']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/orders', [
-                'provider_id' => $iluminex->id,
+                'provider_id' => $proveedorB->id,
                 'lines' => [[
                     'new_product' => [
                         'reference' => 'OTRA-REF-2', 'factory_reference' => 'LMP-001',
-                        'name' => 'Producto de Iluminex', 'price_full' => 50, 'cost' => 30,
+                        'name' => 'Producto de Proveedor Demo B', 'price_full' => 50, 'cost' => 30,
                     ],
                     'quantity' => 1,
                 ]],
@@ -361,7 +361,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
                 'provider_id' => $provider->id,
                 'lines' => [[
                     'new_product' => [
-                        'reference' => 'CAT-001', 'name' => 'Bombillo LED', 'price_full' => 20, 'cost' => 10,
+                        'reference' => 'CAT-001', 'name' => 'Artículo XL', 'price_full' => 20, 'cost' => 10,
                         'category' => 'bombillos', 'rotation' => 'unica',
                     ],
                     'quantity' => 1,
@@ -388,7 +388,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
                 'lines' => [[
                     'new_product' => [
                         'reference' => 'CAT-002', 'name' => 'X', 'price_full' => 20, 'cost' => 10,
-                        'category' => 'iluminacion',
+                        'category' => 'catalogación',
                     ],
                     'quantity' => 1,
                 ]],

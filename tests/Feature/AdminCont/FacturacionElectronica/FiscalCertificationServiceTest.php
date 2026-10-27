@@ -54,7 +54,7 @@ final class FiscalCertificationServiceTest extends FeatureTestCase
 
     private function facturaSimple(): AdminContInvoice
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $this->reTenant();
 

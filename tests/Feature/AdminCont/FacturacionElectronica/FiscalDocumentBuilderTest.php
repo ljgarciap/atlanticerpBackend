@@ -40,7 +40,7 @@ final class FiscalDocumentBuilderTest extends FeatureTestCase
 
     private function facturaSimple(): AdminContInvoice
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
 
         return AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
@@ -64,7 +64,7 @@ final class FiscalDocumentBuilderTest extends FeatureTestCase
 
     public function test_receptor_usa_datos_reales_del_subclient(): void
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $subClient = $root->pipelineCard->subClient;
         $subClient->update(['tax_id_dv' => '7', 'receptor_tipo' => '01']);
 
@@ -81,7 +81,7 @@ final class FiscalDocumentBuilderTest extends FeatureTestCase
 
     public function test_receptor_sin_tax_id_cae_a_consumidor_final(): void
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $root->pipelineCard->subClient->update(['tax_id' => '']);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
@@ -95,7 +95,7 @@ final class FiscalDocumentBuilderTest extends FeatureTestCase
     /** SCRUM-1003 — selector explícito: `02` es Consumidor Final aunque el subcliente conserve un RUC guardado. */
     public function test_receptor_tipo_02_sale_como_consumidor_final_sin_ruc_ni_dv_aunque_haya_tax_id(): void
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $root->pipelineCard->subClient->update(['receptor_tipo' => '02', 'tax_id_dv' => '81']); // el tax_id del fixture sigue guardado
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
@@ -111,7 +111,7 @@ final class FiscalDocumentBuilderTest extends FeatureTestCase
     /** SCRUM-1003 — regresión: una fila anterior a la captura (NULL) y una `01` explícita salen igual que siempre. */
     public function test_receptor_tipo_null_y_01_no_cambian_el_payload_de_contribuyente(): void
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $sub = $root->pipelineCard->subClient;
         $sub->update(['tax_id_dv' => '7']);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);

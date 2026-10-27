@@ -44,7 +44,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
     private function cuenta(): AdminContBankAccount
     {
         return AdminContBankAccount::create([
-            'banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => (string) random_int(1000, 9999),
+            'banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => (string) random_int(1000, 9999),
         ]);
     }
 

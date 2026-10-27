@@ -99,7 +99,7 @@ class CobroConfirmacionConcurrencyTest extends FeatureTestCase
         $actor  = User::where('email', 'contabilidad@test.com')->firstOrFail();
         $master = MasterClient::create(['name' => 'Cliente Concurrencia 1168 '.uniqid()]);
         $this->masterId = $master->id;
-        $cuenta = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '4242']);
+        $cuenta = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '4242']);
         $this->accountId = $cuenta->id;
         $factura = AdminContInvoice::create([
             'numero' => 'F-CONC-1168-'.random_int(1000, 999999), 'order_id' => random_int(100000, 999999),

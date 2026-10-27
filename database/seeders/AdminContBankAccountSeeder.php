@@ -20,9 +20,9 @@ use Illuminate\Database\Seeder;
  * sembrar las 4 de `test` (2026-09-18), con la misma actividad que tienen ahí.
  *
  * ORDEN: importa. `InvoiceService::paymentBlock()` usa la cuenta ACTIVA MÁS ANTIGUA (menor id), así
- * que Banco General va primero para ser la de la Factura y el Estado de Cuenta, igual que en `test`.
+ * que Banco Demo A va primero para ser la de la Factura y el Estado de Cuenta, igual que en `test`.
  *
- * Solo Banco General tiene número completo (el que aportó Luis); de las demás no se conoce y no se
+ * Solo Banco Demo A tiene número completo (el que aportó Luis); de las demás no se conoce y no se
  * inventa: quedan sin número, que es exactamente como están en `test`.
  *
  * Idempotente y conservador (Senior Review MEDIO-2/3):

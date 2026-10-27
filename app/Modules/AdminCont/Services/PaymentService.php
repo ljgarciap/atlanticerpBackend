@@ -195,7 +195,7 @@ final class PaymentService
                 ->first();
         }
 
-        // Fase 4a: antes se elegía por NOMBRE de banco (tarjeta → «Banistmo», el resto → «Banco General», cuentas del cliente anterior). Ahora es la
+        // Fase 4a: antes se elegía por NOMBRE de banco (tarjeta → un banco fijo, el resto → otro, cuentas del cliente anterior). Ahora es la
         // primera cuenta activa del tipo que corresponde: con una sola cuenta por tipo (el caso real) da el mismo resultado.
         return AdminContBankAccount::query()
             ->where('activa', true)

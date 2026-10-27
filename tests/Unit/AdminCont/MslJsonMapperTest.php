@@ -29,7 +29,7 @@ final class MslJsonMapperTest extends TestCase
             fechaEmision: new DateTimeImmutable('2026-09-17T10:00:00-05:00'),
             emisor: new FiscalParty(tipo: '01', ruc: '155704849-2-2021', dv: '32', nombre: 'ILUMINATIONS S.A.'),
             receptor: FiscalParty::consumidorFinal(),
-            items: [new FiscalDocumentItem(codigo: 'P1', descripcion: 'Lámpara LED', cantidad: 2, precioUnitario: 18.50, tasaItbmsCode: '01')],
+            items: [new FiscalDocumentItem(codigo: 'P1', descripcion: 'Producto XL', cantidad: 2, precioUnitario: 18.50, tasaItbmsCode: '01')],
             pagos: [new FiscalPayment(metodoPagoInterno: 'efectivo', monto: 39.59)],
         );
     }
@@ -55,7 +55,7 @@ final class MslJsonMapperTest extends TestCase
             emisor: new FiscalParty(tipo: '01', ruc: '155704849-2-2021', dv: '32', nombre: 'ILUMINATIONS S.A.'), receptor: FiscalParty::consumidorFinal(),
             items: [
                 new FiscalDocumentItem(codigo: "AEREO'_SVHYATT", descripcion: "SALA D'ANGELO \u{2019}VIP\u{2018} IN&OUT 36˚35*61mm", cantidad: 1, precioUnitario: 75.0, tasaItbmsCode: '01'),
-                new FiscalDocumentItem(codigo: 'GE-06040-9230', descripcion: 'CINTA LED', cantidad: 3, precioUnitario: 28.0, tasaItbmsCode: '01'),
+                new FiscalDocumentItem(codigo: 'GE-06040-9230', descripcion: 'CINTA XL', cantidad: 3, precioUnitario: 28.0, tasaItbmsCode: '01'),
             ],
             pagos: [new FiscalPayment(metodoPagoInterno: 'efectivo', monto: 80.25)],
         );
@@ -65,7 +65,7 @@ final class MslJsonMapperTest extends TestCase
         $this->assertSame('AEREO_SVHYATT', $payload['items'][0]['codigo']);
         $this->assertSame('SALA DANGELO VIP IN&OUT 36˚35*61mm', $payload['items'][0]['descripcion']);
         $this->assertSame('GE-06040-9230', $payload['items'][1]['codigo']);
-        $this->assertSame('CINTA LED', $payload['items'][1]['descripcion']);
+        $this->assertSame('CINTA XL', $payload['items'][1]['descripcion']);
     }
 
     public function test_incluye_referencia_para_nota_de_credito(): void

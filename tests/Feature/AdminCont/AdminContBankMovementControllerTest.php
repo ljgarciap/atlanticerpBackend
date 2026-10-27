@@ -41,7 +41,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     public function test_index_devuelve_direccion_entrada_para_cobro_y_salida_para_comision_y_devolucion(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro F-100', 'monto' => 500]);
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'devolucion', 'concepto' => 'NC-1', 'monto' => 50]);
         AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión Vendedor X', 'monto' => 270]);
@@ -62,8 +62,8 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     public function test_filtro_por_bank_account_id(): void
     {
-        $account1 = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
-        $account2 = AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '1234']);
+        $account1 = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
+        $account2 = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1234']);
         AdminContBankMovement::create(['bank_account_id' => $account1->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'A', 'monto' => 100]);
         AdminContBankMovement::create(['bank_account_id' => $account2->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'B', 'monto' => 200]);
 
@@ -81,7 +81,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     public function test_index_pagina_20_por_defecto_y_expone_meta(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         for ($i = 0; $i < 25; $i++) {
             AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => "Mov {$i}", 'monto' => 10]);
         }
@@ -97,7 +97,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     public function test_assign_account_asistente_puede_asignar_cuenta_a_comision_sin_cuenta(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
 
         $token = $this->loginAsYaneth();
@@ -110,7 +110,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     public function test_assign_account_rechaza_a_aprobador_gerencia_no_incluido_en_req534(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
 
         $token = $this->loginAsMark();
@@ -122,7 +122,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     public function test_assign_account_rechaza_cuenta_inactiva(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034', 'activa' => false]);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034', 'activa' => false]);
         $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
 
         $token = $this->loginAsFelix();
@@ -134,7 +134,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     public function test_assign_account_rechaza_sobre_cobro_o_devolucion(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         $cobro = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 100]);
 
         $token = $this->loginAsFelix();
@@ -146,8 +146,8 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
     public function test_assign_account_rechaza_comision_que_ya_tiene_cuenta(): void
     {
-        $account1 = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
-        $account2 = AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '1234']);
+        $account1 = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
+        $account2 = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1234']);
         $movement = AdminContBankMovement::create(['bank_account_id' => $account1->id, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
 
         $token = $this->loginAsFelix();

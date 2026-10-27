@@ -10,6 +10,7 @@ use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Database\Seeders\Support\DemoDataset;
 
 class CrmDemoSeeder extends Seeder
 {
@@ -88,222 +89,222 @@ class CrmDemoSeeder extends Seeder
     {
         $data = [
             // ── Lead ──────────────────────────────────────────────────────────
-            'torre_pacifica' => [
-                'nombre'        => '[DEMO] Torre Pacífica',
-                'contacto'      => 'Tecnico Servicios Mendez',
-                'email'         => 'c.mendez@grupopacifico.com',
+            'proyecto_01' => [
+                'nombre'        => DemoDataset::proyectoCrm(1),
+                'contacto'      => DemoDataset::contacto(1),
+                'email'         => DemoDataset::email(1),
                 'celular'       => '6615-2244',
-                'developer'     => 'Grupo Pacífico',
+                'developer'     => DemoDataset::desarrolladora(1),
                 'tipo'          => 'diseno',
                 'dialux'        => false,
                 'area'          => null,
-                'ubicacion'     => 'Punta Pacífica, Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(1),
                 'despacho'      => null,
                 'etapa'         => 'lead',
                 'fecha_entrega' => null,
                 'valor'         => 45000,
-                'notas'         => 'Edificio residencial de lujo, 42 pisos. Cliente contactó por referido.',
+                'notas'         => DemoDataset::notas(1),
                 'created_by'    => $createdBy,
             ],
-            'westland_mall' => [
-                'nombre'        => '[DEMO] Centro Comercial Westland',
-                'contacto'      => 'Ana Rodríguez',
-                'email'         => 'ana.rodriguez@westland.com.pa',
+            'proyecto_02' => [
+                'nombre'        => DemoDataset::proyectoCrm(2),
+                'contacto'      => DemoDataset::contacto(2),
+                'email'         => DemoDataset::email(2),
                 'celular'       => '6623-8811',
-                'developer'     => 'Inversiones Westland S.A.',
+                'developer'     => DemoDataset::desarrolladora(2),
                 'tipo'          => 'cotizacion',
                 'dialux'        => false,
                 'area'          => 'Retail',
-                'ubicacion'     => 'Albrook, Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(2),
                 'despacho'      => null,
                 'etapa'         => 'lead',
                 'fecha_entrega' => $today->copy()->addDays(60)->toDateString(),
                 'valor'         => 120000,
-                'notas'         => 'Retail 15,000 m². Esperan propuesta antes de fin de mes.',
+                'notas'         => DemoDataset::notas(2),
                 'created_by'    => $createdBy,
             ],
 
             // ── Diseño ────────────────────────────────────────────────────────
-            'hotel_decameron' => [
-                'nombre'        => '[DEMO] Hotel Decameron Farallon',
-                'contacto'      => 'Garantias Servicios Torres',
-                'email'         => 'm.torres@decameron.com',
+            'proyecto_03' => [
+                'nombre'        => DemoDataset::proyectoCrm(3),
+                'contacto'      => DemoDataset::contacto(3),
+                'email'         => DemoDataset::email(3),
                 'celular'       => '6644-9900',
-                'developer'     => 'Decameron Hotels',
-                'arquitecto'    => 'Arq. Sandra Mora',
+                'developer'     => DemoDataset::desarrolladora(3),
+                'arquitecto'    => DemoDataset::arquitecto(3),
                 'tipo'          => 'ambos',
                 'dialux'        => true,
                 'area'          => 'Hotelero',
-                'ubicacion'     => 'Farallon, Coclé',
-                'despacho'      => 'Depot Antón',
+                'ubicacion'     => DemoDataset::ubicacion(3),
+                'despacho'      => DemoDataset::despacho(),
                 'etapa'         => 'diseno',
                 'fecha_entrega' => $today->copy()->addDays(28)->toDateString(),
                 'valor'         => 85000,
-                'notas'         => 'Remodelación de zonas comunes + habitaciones. DIALux requerido por norma hotelera.',
+                'notas'         => DemoDataset::notas(3),
                 'created_by'    => $createdBy,
             ],
-            'clinica_san_fernando' => [
-                'nombre'        => '[DEMO] Clínica San Fernando',
-                'contacto'      => 'Dra. Laura Sánchez',
-                'email'         => 'l.sanchez@clinicasf.com',
+            'proyecto_04' => [
+                'nombre'        => DemoDataset::proyectoCrm(4),
+                'contacto'      => DemoDataset::contacto(4),
+                'email'         => DemoDataset::email(4),
                 'celular'       => '6671-3355',
-                'encargado'     => 'Ing. Tecnico Servicios Garantias Servicios',
-                'arquitecto'    => 'Arq. Vendedor Disenador Ríos',
+                'encargado'     => DemoDataset::encargado(4),
+                'arquitecto'    => DemoDataset::arquitecto(4),
                 'tipo'          => 'diseno',
                 'dialux'        => true,
                 'area'          => 'Salud',
-                'ubicacion'     => 'San Francisco, Panamá',
-                'despacho'      => 'Deposito Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(4),
+                'despacho'      => DemoDataset::despacho(),
                 'etapa'         => 'diseno',
                 'fecha_entrega' => $today->copy()->addDays(2)->toDateString(), // proximo
                 'valor'         => 32000,
-                'notas'         => 'Iluminación quirúrgica y hospitalaria. Normativa NFPA 99 aplicable.',
+                'notas'         => DemoDataset::notas(4),
                 'created_by'    => $createdBy,
             ],
-            'supermercado_el_rey' => [
-                'nombre'        => '[DEMO] Supermercado El Rey Bethania',
-                'contacto'      => 'Roberto Vargas',
-                'email'         => 'r.vargas@elrey.com.pa',
+            'proyecto_05' => [
+                'nombre'        => DemoDataset::proyectoCrm(5),
+                'contacto'      => DemoDataset::contacto(5),
+                'email'         => DemoDataset::email(5),
                 'celular'       => '6638-7722',
-                'encargado'     => 'Javier Núñez',
+                'encargado'     => DemoDataset::encargado(5),
                 'tipo'          => 'diseno',
                 'dialux'        => true,
                 'area'          => 'Retail',
-                'ubicacion'     => 'Bethania, Panamá',
-                'despacho'      => 'Depot Bethania',
+                'ubicacion'     => DemoDataset::ubicacion(5),
+                'despacho'      => DemoDataset::despacho(),
                 'etapa'         => 'diseno',
                 'fecha_entrega' => $today->copy()->subDays(5)->toDateString(), // vencido
                 'valor'         => 42000,
-                'notas'         => 'Remodelación de luminarias en toda la tienda. Fecha apretada.',
+                'notas'         => DemoDataset::notas(5),
                 'created_by'    => $createdBy,
             ],
 
             // ── Cotización ────────────────────────────────────────────────────
-            'parque_tocumen' => [
-                'nombre'        => '[DEMO] Parque Industrial Tocumen',
-                'contacto'      => 'Gerardo Espinosa',
-                'email'         => 'g.espinosa@pitsa.com.pa',
+            'proyecto_06' => [
+                'nombre'        => DemoDataset::proyectoCrm(6),
+                'contacto'      => DemoDataset::contacto(6),
+                'email'         => DemoDataset::email(6),
                 'celular'       => '6601-5577',
-                'developer'     => 'PITSA Desarrollos',
+                'developer'     => DemoDataset::desarrolladora(6),
                 'tipo'          => 'cotizacion',
                 'dialux'        => false,
                 'area'          => 'Industrial',
-                'ubicacion'     => 'Tocumen, Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(6),
                 'despacho'      => null,
                 'etapa'         => 'cotizacion',
                 'fecha_entrega' => $today->copy()->addDays(45)->toDateString(),
                 'valor'         => 210000,
-                'notas'         => 'Iluminación exterior + naves industriales. 3 fases de entrega.',
+                'notas'         => DemoDataset::notas(6),
                 'created_by'    => $createdBy,
             ],
-            'universidad_latina' => [
-                'nombre'        => '[DEMO] Universidad Latina — Campus Central',
-                'contacto'      => 'Ernesto Fonseca',
-                'email'         => 'rector@ulatina.ac.pa',
+            'proyecto_07' => [
+                'nombre'        => DemoDataset::proyectoCrm(7),
+                'contacto'      => DemoDataset::contacto(7),
+                'email'         => DemoDataset::email(7),
                 'celular'       => '6690-1122',
-                'encargado'     => 'Arq. Diego Morales',
-                'arquitecto'    => 'Arq. Diego Morales',
+                'encargado'     => DemoDataset::encargado(7),
+                'arquitecto'    => DemoDataset::arquitecto(7),
                 'tipo'          => 'ambos',
                 'dialux'        => true,
                 'area'          => 'Educativo',
-                'ubicacion'     => 'La Chorrera, Panamá Oeste',
-                'despacho'      => 'Depot La Chorrera',
+                'ubicacion'     => DemoDataset::ubicacion(7),
+                'despacho'      => DemoDataset::despacho(),
                 'etapa'         => 'cotizacion',
                 'fecha_entrega' => $today->copy()->addDays(2)->toDateString(), // urgente
                 'valor'         => 68000,
-                'notas'         => 'Aulas, biblioteca y áreas comunes. Licitación pública — entrega urgente.',
+                'notas'         => DemoDataset::notas(7),
                 'created_by'    => $designerId ?? $createdBy,
             ],
 
             // ── Propuesta ─────────────────────────────────────────────────────
-            'aeropuerto_albrook' => [
-                'nombre'        => '[DEMO] Terminal Albrook — Expansión',
-                'contacto'      => 'Lic. Mariela Ureña',
-                'email'         => 'm.urena@aeropuertospa.gob.pa',
+            'proyecto_08' => [
+                'nombre'        => DemoDataset::proyectoCrm(8),
+                'contacto'      => DemoDataset::contacto(8),
+                'email'         => DemoDataset::email(8),
                 'celular'       => '6655-0099',
-                'encargado'     => 'Ing. Felipe Ríos',
+                'encargado'     => DemoDataset::encargado(8),
                 'tipo'          => 'ambos',
                 'dialux'        => true,
                 'area'          => 'Espacio Público',
-                'ubicacion'     => 'Albrook, Panamá',
-                'despacho'      => 'Deposito Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(8),
+                'despacho'      => DemoDataset::despacho(),
                 'etapa'         => 'propuesta',
                 'fecha_entrega' => $today->copy()->addDays(75)->toDateString(),
                 'valor'         => 350000,
-                'notas'         => 'Expansión del terminal doméstico. Proyecto bandera del cliente.',
+                'notas'         => DemoDataset::notas(8),
                 'created_by'    => $createdBy,
             ],
-            'residencial_los_altos' => [
-                'nombre'        => '[DEMO] Residencial Los Altos — Fase 2',
-                'contacto'      => 'María Cedeño',
-                'email'         => 'm.cedeno@constructoramc.com',
+            'proyecto_09' => [
+                'nombre'        => DemoDataset::proyectoCrm(9),
+                'contacto'      => DemoDataset::contacto(9),
+                'email'         => DemoDataset::email(9),
                 'celular'       => '6628-4433',
-                'developer'     => 'Constructora MC',
+                'developer'     => DemoDataset::desarrolladora(9),
                 'tipo'          => 'diseno',
                 'dialux'        => false,
                 'area'          => 'Residencial',
-                'ubicacion'     => 'Las Cumbres, Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(9),
                 'despacho'      => null,
                 'etapa'         => 'propuesta',
                 'fecha_entrega' => $today->copy()->addDays(30)->toDateString(),
                 'valor'         => 28000,
-                'notas'         => 'Conjunto de 24 casas. Proyecto similar al Fase 1 ya ejecutado.',
+                'notas'         => DemoDataset::notas(9),
                 'created_by'    => $designerId ?? $createdBy,
             ],
 
             // ── Cerrado ───────────────────────────────────────────────────────
-            'torre_ff' => [
-                'nombre'        => '[DEMO] Torre F&F — Oficinas Premium',
-                'contacto'      => 'Lic. Rodrigo Fábrega',
-                'email'         => 'r.fabrega@ff-inversiones.com',
+            'proyecto_10' => [
+                'nombre'        => DemoDataset::proyectoCrm(10),
+                'contacto'      => DemoDataset::contacto(10),
+                'email'         => DemoDataset::email(10),
                 'celular'       => '6612-0011',
-                'developer'     => 'F&F Inversiones',
-                'arquitecto'    => 'Arq. Luis Benedetti',
+                'developer'     => DemoDataset::desarrolladora(10),
+                'arquitecto'    => DemoDataset::arquitecto(10),
                 'tipo'          => 'ambos',
                 'dialux'        => true,
                 'area'          => 'Corporativo',
-                'ubicacion'     => 'Costa del Este, Panamá',
-                'despacho'      => 'Deposito Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(10),
+                'despacho'      => DemoDataset::despacho(),
                 'etapa'         => 'cerrado',
                 'fecha_entrega' => $today->copy()->subDays(20)->toDateString(),
                 'valor'         => 95000,
-                'notas'         => 'Proyecto entregado. Cliente muy satisfecho. Potencial referido.',
+                'notas'         => DemoDataset::notas(10),
                 'created_by'    => $createdBy,
             ],
-            'ministerio_salud' => [
-                'nombre'        => '[DEMO] Ministerio de Salud — Edificio Central',
-                'contacto'      => 'Ing. Teresa Moreno',
-                'email'         => 't.moreno@minsa.gob.pa',
+            'proyecto_11' => [
+                'nombre'        => DemoDataset::proyectoCrm(11),
+                'contacto'      => DemoDataset::contacto(11),
+                'email'         => DemoDataset::email(11),
                 'celular'       => '6677-3344',
-                'encargado'     => 'Depto. Infraestructura MINSA',
+                'encargado'     => DemoDataset::encargado(11),
                 'tipo'          => 'cotizacion',
                 'dialux'        => false,
                 'area'          => 'Salud',
-                'ubicacion'     => 'Ancón, Panamá',
-                'despacho'      => 'Deposito Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(11),
+                'despacho'      => DemoDataset::despacho(),
                 'etapa'         => 'cerrado',
                 'fecha_entrega' => $today->copy()->subDays(45)->toDateString(),
                 'valor'         => 180000,
-                'notas'         => 'Licitación gubernamental. Factura emitida, pendiente cobro segunda cuota.',
+                'notas'         => DemoDataset::notas(11),
                 'created_by'    => $createdBy,
             ],
 
             // ── Perdido ───────────────────────────────────────────────────────
-            'plaza_tocumen_mall' => [
-                'nombre'        => '[DEMO] Plaza Tocumen Mall',
-                'contacto'      => 'Ing. Samuel Quirós',
-                'email'         => 's.quiros@plazatocumen.com',
+            'proyecto_12' => [
+                'nombre'        => DemoDataset::proyectoCrm(12),
+                'contacto'      => DemoDataset::contacto(12),
+                'email'         => DemoDataset::email(12),
                 'celular'       => '6644-2288',
-                'developer'     => 'Grupo Atlapa',
+                'developer'     => DemoDataset::desarrolladora(12),
                 'tipo'          => 'cotizacion',
                 'dialux'        => false,
                 'area'          => 'Comercial',
-                'ubicacion'     => 'Tocumen, Panamá',
+                'ubicacion'     => DemoDataset::ubicacion(12),
                 'despacho'      => null,
                 'etapa'         => 'perdido',
                 'fecha_entrega' => $today->copy()->subDays(10)->toDateString(),
                 'valor'         => 450000,
-                'notas'         => 'Cliente eligió proveedor importador directo por precio. Diferencia ~18%.',
+                'notas'         => DemoDataset::notas(12),
                 'created_by'    => $createdBy,
             ],
         ];
@@ -328,122 +329,122 @@ class CrmDemoSeeder extends Seeder
         $did = $designerId ?? $uid;
 
         $acts = [
-            // westland_mall — 1 actividad reciente
-            ['project' => 'westland_mall', 'tipo' => 'llamada',
+            // proyecto_02 — 1 actividad reciente
+            ['project' => 'proyecto_02', 'tipo' => 'llamada',
              'fecha' => $today->copy()->subDays(3)->toDateString(),
-             'notas' => 'Llamada inicial con Ana Rodríguez. Confirmó interés en cotización LED para toda la planta.',
+             'notas' => DemoDataset::actividad('llamada', 2),
              'siguiente' => $today->copy()->addDays(7)->toDateString(), 'user_id' => $uid],
 
-            // hotel_decameron — 2 actividades
-            ['project' => 'hotel_decameron', 'tipo' => 'reunion',
+            // proyecto_03 — 2 actividades
+            ['project' => 'proyecto_03', 'tipo' => 'reunion',
              'fecha' => $today->copy()->subDays(14)->toDateString(),
-             'notas' => 'Reunión on-site con equipo de construcción. Se tomaron medidas y se acordó DIALux completo.',
+             'notas' => DemoDataset::actividad('reunion', 3),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'hotel_decameron', 'tipo' => 'email',
+            ['project' => 'proyecto_03', 'tipo' => 'email',
              'fecha' => $today->copy()->subDays(4)->toDateString(),
-             'notas' => 'Enviamos primera versión del diseño DIALux al arquitecto. Esperamos comentarios.',
+             'notas' => DemoDataset::actividad('email', 3),
              'siguiente' => $today->copy()->addDays(3)->toDateString(), 'user_id' => $did],
 
-            // clinica_san_fernando — 1 actividad
-            ['project' => 'clinica_san_fernando', 'tipo' => 'visita',
+            // proyecto_04 — 1 actividad
+            ['project' => 'proyecto_04', 'tipo' => 'visita',
              'fecha' => $today->copy()->subDays(7)->toDateString(),
-             'notas' => 'Visita técnica para levantamiento. Confirmado uso de luminarias clase hospitalaria Cat. 2.',
+             'notas' => DemoDataset::actividad('visita', 4),
              'siguiente' => null, 'user_id' => $did],
 
-            // supermercado_el_rey — 1 actividad (vencido)
-            ['project' => 'supermercado_el_rey', 'tipo' => 'llamada',
+            // proyecto_05 — 1 actividad (vencido)
+            ['project' => 'proyecto_05', 'tipo' => 'llamada',
              'fecha' => $today->copy()->subDays(10)->toDateString(),
-             'notas' => 'Cliente recordó urgencia por renovación de tienda. Necesitan avanzar esta semana.',
+             'notas' => DemoDataset::actividad('llamada', 5),
              'siguiente' => $today->copy()->subDays(5)->toDateString(), 'user_id' => $uid],
 
-            // parque_tocumen — 2 actividades
-            ['project' => 'parque_tocumen', 'tipo' => 'reunion',
+            // proyecto_06 — 2 actividades
+            ['project' => 'proyecto_06', 'tipo' => 'reunion',
              'fecha' => $today->copy()->subDays(21)->toDateString(),
-             'notas' => 'Reunión en oficinas de PITSA. Confirmaron scope: 5 naves industriales + perímetro.',
+             'notas' => DemoDataset::actividad('reunion', 6),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'parque_tocumen', 'tipo' => 'whatsapp',
+            ['project' => 'proyecto_06', 'tipo' => 'whatsapp',
              'fecha' => $today->copy()->subDays(8)->toDateString(),
-             'notas' => 'Cliente preguntó por avance de cotización. Le informamos que estará lista en 5 días.',
+             'notas' => DemoDataset::actividad('whatsapp', 6),
              'siguiente' => $today->copy()->addDays(3)->toDateString(), 'user_id' => $uid],
 
-            // universidad_latina — 3 actividades
-            ['project' => 'universidad_latina', 'tipo' => 'reunion',
+            // proyecto_07 — 3 actividades
+            ['project' => 'proyecto_07', 'tipo' => 'reunion',
              'fecha' => $today->copy()->subDays(12)->toDateString(),
-             'notas' => 'Reunión con rector y jefe de infraestructura. Presentamos portafolio hotelero y hospitalario.',
+             'notas' => DemoDataset::actividad('reunion', 7),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'universidad_latina', 'tipo' => 'email',
+            ['project' => 'proyecto_07', 'tipo' => 'email',
              'fecha' => $today->copy()->subDays(6)->toDateString(),
-             'notas' => 'Enviamos memoria técnica y certificaciones. Solicitan aclaración sobre garantía de lámpara.',
+             'notas' => DemoDataset::actividad('email', 7),
              'siguiente' => null, 'user_id' => $did],
-            ['project' => 'universidad_latina', 'tipo' => 'llamada',
+            ['project' => 'proyecto_07', 'tipo' => 'llamada',
              'fecha' => $today->copy()->subDays(1)->toDateString(),
-             'notas' => 'Recordatorio: propuesta vence mañana. Cliente pide descuento por volumen.',
+             'notas' => DemoDataset::actividad('llamada', 7),
              'siguiente' => $today->copy()->addDays(1)->toDateString(), 'user_id' => $uid],
 
-            // aeropuerto_albrook — 3 actividades
-            ['project' => 'aeropuerto_albrook', 'tipo' => 'reunion',
+            // proyecto_08 — 3 actividades
+            ['project' => 'proyecto_08', 'tipo' => 'reunion',
              'fecha' => $today->copy()->subDays(30)->toDateString(),
-             'notas' => 'Primera reunión con Autoridad Aeronáutica. Confirmaron FAA lighting standards requeridos.',
+             'notas' => DemoDataset::actividad('reunion', 8),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'aeropuerto_albrook', 'tipo' => 'visita',
+            ['project' => 'proyecto_08', 'tipo' => 'visita',
              'fecha' => $today->copy()->subDays(15)->toDateString(),
-             'notas' => 'Recorrido por la terminal existente con el jefe de obras. Identificamos 3 áreas críticas.',
+             'notas' => DemoDataset::actividad('visita', 8),
              'siguiente' => null, 'user_id' => $did],
-            ['project' => 'aeropuerto_albrook', 'tipo' => 'email',
+            ['project' => 'proyecto_08', 'tipo' => 'email',
              'fecha' => $today->copy()->subDays(2)->toDateString(),
-             'notas' => 'Presentamos propuesta técnica completa con DIALux y certificaciones UL/ETL.',
+             'notas' => DemoDataset::actividad('email', 8),
              'siguiente' => $today->copy()->addDays(5)->toDateString(), 'user_id' => $uid],
 
-            // residencial_los_altos — 2 actividades
-            ['project' => 'residencial_los_altos', 'tipo' => 'whatsapp',
+            // proyecto_09 — 2 actividades
+            ['project' => 'proyecto_09', 'tipo' => 'whatsapp',
              'fecha' => $today->copy()->subDays(18)->toDateString(),
-             'notas' => 'María Cedeño confirmó que siguen adelante con Fase 2. Muy contentos con la Fase 1.',
+             'notas' => DemoDataset::actividad('whatsapp', 9),
              'siguiente' => null, 'user_id' => $did],
-            ['project' => 'residencial_los_altos', 'tipo' => 'reunion',
+            ['project' => 'proyecto_09', 'tipo' => 'reunion',
              'fecha' => $today->copy()->subDays(5)->toDateString(),
-             'notas' => 'Reunión técnica para definir especificaciones. Mismas luminarias que Fase 1.',
+             'notas' => DemoDataset::actividad('reunion', 9),
              'siguiente' => $today->copy()->addDays(7)->toDateString(), 'user_id' => $did],
 
-            // torre_ff — 4 actividades (cerrado)
-            ['project' => 'torre_ff', 'tipo' => 'reunion',
+            // proyecto_10 — 4 actividades (cerrado)
+            ['project' => 'proyecto_10', 'tipo' => 'reunion',
              'fecha' => $today->copy()->subDays(90)->toDateString(),
-             'notas' => 'Kick-off con equipo de F&F. Alcance confirmado: pisos 3-28, zonas comunes y lobby.',
+             'notas' => DemoDataset::actividad('reunion', 10),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'torre_ff', 'tipo' => 'visita',
+            ['project' => 'proyecto_10', 'tipo' => 'visita',
              'fecha' => $today->copy()->subDays(60)->toDateString(),
-             'notas' => 'Inicio de instalación. Sin contratiempos. Equipo de electricistas coordinado.',
+             'notas' => DemoDataset::actividad('visita', 10),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'torre_ff', 'tipo' => 'visita',
+            ['project' => 'proyecto_10', 'tipo' => 'visita',
              'fecha' => $today->copy()->subDays(30)->toDateString(),
-             'notas' => 'Inspección de avance. 70% completado. Sin observaciones.',
+             'notas' => DemoDataset::actividad('visita', 10),
              'siguiente' => null, 'user_id' => $did],
-            ['project' => 'torre_ff', 'tipo' => 'reunion',
+            ['project' => 'proyecto_10', 'tipo' => 'reunion',
              'fecha' => $today->copy()->subDays(20)->toDateString(),
-             'notas' => 'Entrega final y punch list. Cliente firmó acta de recepción. Proyecto cerrado.',
+             'notas' => DemoDataset::actividad('reunion', 10),
              'siguiente' => null, 'user_id' => $uid],
 
-            // ministerio_salud — 3 actividades (cerrado)
-            ['project' => 'ministerio_salud', 'tipo' => 'email',
+            // proyecto_11 — 3 actividades (cerrado)
+            ['project' => 'proyecto_11', 'tipo' => 'email',
              'fecha' => $today->copy()->subDays(75)->toDateString(),
-             'notas' => 'Enviamos cotización formal al departamento de compras del MINSA.',
+             'notas' => DemoDataset::actividad('email', 11),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'ministerio_salud', 'tipo' => 'llamada',
+            ['project' => 'proyecto_11', 'tipo' => 'llamada',
              'fecha' => $today->copy()->subDays(50)->toDateString(),
-             'notas' => 'Confirmaron adjudicación de la licitación. Orden de compra en proceso.',
+             'notas' => DemoDataset::actividad('llamada', 11),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'ministerio_salud', 'tipo' => 'visita',
+            ['project' => 'proyecto_11', 'tipo' => 'visita',
              'fecha' => $today->copy()->subDays(45)->toDateString(),
-             'notas' => 'Entrega completada. Pendiente segunda cuota de pago (30 días según contrato).',
+             'notas' => DemoDataset::actividad('visita', 11),
              'siguiente' => null, 'user_id' => $uid],
 
-            // plaza_tocumen_mall — 2 actividades (perdido)
-            ['project' => 'plaza_tocumen_mall', 'tipo' => 'reunion',
+            // proyecto_12 — 2 actividades (perdido)
+            ['project' => 'proyecto_12', 'tipo' => 'reunion',
              'fecha' => $today->copy()->subDays(30)->toDateString(),
-             'notas' => 'Presentamos propuesta técnica y económica. Grupo Atlapa evaluó 3 proveedores.',
+             'notas' => DemoDataset::actividad('reunion', 12),
              'siguiente' => null, 'user_id' => $uid],
-            ['project' => 'plaza_tocumen_mall', 'tipo' => 'llamada',
+            ['project' => 'proyecto_12', 'tipo' => 'llamada',
              'fecha' => $today->copy()->subDays(10)->toDateString(),
-             'notas' => 'Ing. Quirós informó que eligieron proveedor importador directo. Diferencia de precio ~18%.',
+             'notas' => DemoDataset::actividad('llamada', 12),
              'siguiente' => null, 'user_id' => $uid],
         ];
 
@@ -468,46 +469,46 @@ class CrmDemoSeeder extends Seeder
     private function createReminders(array $projects, Carbon $today): void
     {
         $reminders = [
-            // universidad_latina — urgente, cotización vence mañana
-            ['project' => 'universidad_latina', 'tipo' => 'llamada',
+            // proyecto_07 — urgente, cotización vence mañana
+            ['project' => 'proyecto_07', 'tipo' => 'llamada',
              'fecha' => $today->copy()->addDays(1)->toDateString(),
-             'nota' => 'Confirmar propuesta final con rector. Licitación cierra mañana. Revisar si aplica descuento por volumen.',
+             'nota' => DemoDataset::recordatorio('llamada', 7),
              'completado' => false],
 
-            // aeropuerto_albrook — seguimiento propuesta
-            ['project' => 'aeropuerto_albrook', 'tipo' => 'email',
+            // proyecto_08 — seguimiento propuesta
+            ['project' => 'proyecto_08', 'tipo' => 'email',
              'fecha' => $today->copy()->addDays(5)->toDateString(),
-             'nota' => 'Hacer seguimiento si no tienen respuesta a la propuesta técnica enviada.',
+             'nota' => DemoDataset::recordatorio('email', 8),
              'completado' => false],
 
-            // westland_mall — llamada de seguimiento
-            ['project' => 'westland_mall', 'tipo' => 'llamada',
+            // proyecto_02 — llamada de seguimiento
+            ['project' => 'proyecto_02', 'tipo' => 'llamada',
              'fecha' => $today->copy()->addDays(7)->toDateString(),
-             'nota' => 'Llamar a Ana Rodríguez para confirmar avance de cotización y resolver dudas técnicas.',
+             'nota' => DemoDataset::recordatorio('llamada', 2),
              'completado' => false],
 
-            // clinica_san_fernando — URGENTE, entrega en 2 días
-            ['project' => 'clinica_san_fernando', 'tipo' => 'reunion',
+            // proyecto_04 — URGENTE, entrega en 2 días
+            ['project' => 'proyecto_04', 'tipo' => 'reunion',
              'fecha' => $today->copy()->addDays(2)->toDateString(),
-             'nota' => 'Presentar diseño final al cliente. Fecha de entrega apretada — tener DIALux listo.',
+             'nota' => DemoDataset::recordatorio('reunion', 4),
              'completado' => false],
 
-            // ministerio_salud — cobro segunda cuota
-            ['project' => 'ministerio_salud', 'tipo' => 'llamada',
+            // proyecto_11 — cobro segunda cuota
+            ['project' => 'proyecto_11', 'tipo' => 'llamada',
              'fecha' => $today->copy()->addDays(3)->toDateString(),
-             'nota' => 'Confirmar estado de segunda cuota de pago con departamento de finanzas del MINSA.',
+             'nota' => DemoDataset::recordatorio('llamada', 11),
              'completado' => false],
 
-            // supermercado_el_rey — VENCIDO (el proyecto ya está vencido)
-            ['project' => 'supermercado_el_rey', 'tipo' => 'llamada',
+            // proyecto_05 — VENCIDO (el proyecto ya está vencido)
+            ['project' => 'proyecto_05', 'tipo' => 'llamada',
              'fecha' => $today->copy()->subDays(3)->toDateString(),
-             'nota' => 'Llamar urgente al cliente — fecha de entrega ya venció. Coordinar próximos pasos.',
+             'nota' => DemoDataset::recordatorio('llamada', 5),
              'completado' => false],
 
-            // torre_ff — completado (para mostrar uno en estado completado)
-            ['project' => 'torre_ff', 'tipo' => 'email',
+            // proyecto_10 — completado (para mostrar uno en estado completado)
+            ['project' => 'proyecto_10', 'tipo' => 'email',
              'fecha' => $today->copy()->subDays(19)->toDateString(),
-             'nota' => 'Enviar acta de recepción firmada y manual de mantenimiento al cliente.',
+             'nota' => DemoDataset::recordatorio('email', 10),
              'completado' => true],
         ];
 
@@ -533,18 +534,18 @@ class CrmDemoSeeder extends Seeder
         $pivot = "{$slug}_crm.project_assignees";
 
         $assignments = [
-            'torre_pacifica'        => [$designerId],
-            'westland_mall'         => [$managerId, $designerId],
-            'hotel_decameron'       => [$designerId],
-            'clinica_san_fernando'  => [$designerId],
-            'supermercado_el_rey'   => [$designerId],
-            'parque_tocumen'        => [$managerId],
-            'universidad_latina'    => [$managerId, $designerId],
-            'aeropuerto_albrook'    => [$managerId, $designerId],
-            'residencial_los_altos' => [$designerId],
-            'torre_ff'              => [$managerId, $designerId],
-            'ministerio_salud'      => [$managerId],
-            // plaza_tocumen_mall: sin asignados (perdido)
+            'proyecto_01'        => [$designerId],
+            'proyecto_02'         => [$managerId, $designerId],
+            'proyecto_03'       => [$designerId],
+            'proyecto_04'  => [$designerId],
+            'proyecto_05'   => [$designerId],
+            'proyecto_06'        => [$managerId],
+            'proyecto_07'    => [$managerId, $designerId],
+            'proyecto_08'    => [$managerId, $designerId],
+            'proyecto_09' => [$designerId],
+            'proyecto_10'              => [$managerId, $designerId],
+            'proyecto_11'      => [$managerId],
+            // proyecto_12: sin asignados (perdido)
         ];
 
         foreach ($assignments as $key => $userIds) {

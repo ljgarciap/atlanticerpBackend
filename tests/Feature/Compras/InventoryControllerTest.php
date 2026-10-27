@@ -51,14 +51,14 @@ class InventoryControllerTest extends FeatureTestCase
     /** @param array<string, mixed> $overrides */
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     /** @param array<string, mixed> $overrides */
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo E27', 'description' => 'Bombillo E27',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Cilindro E27', 'description' => 'Cilindro E27',
             'price_full' => 20, 'cost' => 12, 'stock_quantity' => 10, 'is_active' => true,
             ...$overrides,
         ]);
@@ -233,7 +233,7 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_show_expone_bodega_confirmation_pendiente_y_luego_confirmada(): void
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $product = $this->makeProduct(['stock_quantity' => 0]);
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD',
@@ -1122,10 +1122,10 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_detalle_de_familia_expone_las_mismas_columnas_que_la_tabla_de_productos(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $provider = $this->makeProvider(['name' => 'LightCorp']);
+        $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
         $warehouse = Warehouse::firstOrCreate(['name' => 'Bodega Central']);
         $product = $this->makeProduct([
-            'reference' => 'FAM-COLUMNS', 'category' => 'Iluminación LED Básica', 'rotation' => 'alta',
+            'reference' => 'FAM-COLUMNS', 'category' => 'Catalogación XL Básica', 'rotation' => 'alta',
             'reorder_point' => 5, 'provider_id' => $provider->id, 'stock_quantity' => 14,
         ]);
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'quantity' => 14]);
@@ -1137,9 +1137,9 @@ class InventoryControllerTest extends FeatureTestCase
             ->getJson("/api/compras/families/{$family->id}")
             ->assertStatus(200);
 
-        $response->assertJsonPath('products.0.category', 'Iluminación LED Básica');
+        $response->assertJsonPath('products.0.category', 'Catalogación XL Básica');
         $response->assertJsonPath('products.0.rotation', 'alta');
-        $response->assertJsonPath('products.0.provider_name', 'LightCorp');
+        $response->assertJsonPath('products.0.provider_name', 'Proveedor Demo A');
         $response->assertJsonPath('products.0.disponible', 14);
         $response->assertJsonPath('products.0.estado', 'disponible');
         $response->assertJsonPath('products.0.warehouses.0.warehouse_name', 'Bodega Central');
@@ -1169,8 +1169,8 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_generar_compra_de_familia_crea_una_orden_por_proveedor(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
-        $providerA = $this->makeProvider(['name' => 'LightCorp']);
-        $providerB = $this->makeProvider(['name' => 'Iluminex SA']);
+        $providerA = $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $providerB = $this->makeProvider(['name' => 'Proveedor Demo B SA']);
         $productA = $this->makeProduct(['reference' => 'FAM-A', 'provider_id' => $providerA->id, 'stock_quantity' => 2, 'reorder_point' => 10]);
         $productB = $this->makeProduct(['reference' => 'FAM-B', 'provider_id' => $providerB->id, 'stock_quantity' => 5, 'reorder_point' => 8]);
 
@@ -1509,8 +1509,8 @@ class InventoryControllerTest extends FeatureTestCase
         // AC8 — la selección de bodegas se combina (AND) con el resto de filtros activos, acá
         // búsqueda de texto: solo el producto que matchea AMBOS criterios debe aparecer.
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $matchInCentral = $this->makeProduct(['reference' => 'SEARCH-MATCH', 'name' => 'Bombillo especial LED']);
-        $matchInMerma = $this->makeProduct(['reference' => 'OTHER-MATCH', 'name' => 'Bombillo especial LED']);
+        $matchInCentral = $this->makeProduct(['reference' => 'SEARCH-MATCH', 'name' => 'Cilindro especial XL']);
+        $matchInMerma = $this->makeProduct(['reference' => 'OTHER-MATCH', 'name' => 'Cilindro especial XL']);
         $noMatchInCentral = $this->makeProduct(['reference' => 'NOMATCH', 'name' => 'Apliqu de pared distinto']);
         $this->makeStock($matchInCentral, 'Bodega Central', 5);
         $this->makeStock($matchInMerma, 'Merma', 5);
@@ -1519,7 +1519,7 @@ class InventoryControllerTest extends FeatureTestCase
         $centralId = $this->warehouseId('Bodega Central');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson("/api/compras/inventory?warehouse_ids[]={$centralId}&search=Bombillo especial LED")
+            ->getJson("/api/compras/inventory?warehouse_ids[]={$centralId}&search=Cilindro especial XL")
             ->assertStatus(200);
 
         $references = collect($response->json('data'))->pluck('reference');
@@ -1599,12 +1599,12 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_busqueda_ignora_acentos_y_mayusculas(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $this->makeProduct(['reference' => 'ACC-1', 'name' => 'Lámpara colgante Iluminación']);
+        $this->makeProduct(['reference' => 'ACC-1', 'name' => 'Vástago colgante Catalogación']);
         $this->makeProduct(['reference' => 'ACC-2', 'name' => 'Aplique de pared']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/inventory?search=LAMPARA iluminacion')
+            ->getJson('/api/compras/inventory?search=VASTAGO catalogación')
             ->assertStatus(200);
 
         $this->assertSame(['ACC-1'], collect($response->json('data'))->pluck('reference')->all());
@@ -1616,11 +1616,11 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_busqueda_con_typo_usa_el_respaldo_y_marca_fuzzy(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $this->makeProduct(['reference' => 'TYP-1', 'name' => 'Iluminación exterior']);
+        $this->makeProduct(['reference' => 'TYP-1', 'name' => 'Catalogación exterior']);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/inventory?search=iluminacon')
+            ->getJson('/api/compras/inventory?search=catalogacon')
             ->assertStatus(200);
 
         $this->assertSame(['TYP-1'], collect($response->json('data'))->pluck('reference')->all());
@@ -1728,9 +1728,9 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_family_id_se_combina_con_la_busqueda_de_texto(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $match = $this->makeProduct(['reference' => 'FAM-TXT-1', 'name' => 'Bombillo especial LED']);
+        $match = $this->makeProduct(['reference' => 'FAM-TXT-1', 'name' => 'Cilindro especial XL']);
         $sameFamilyOtherText = $this->makeProduct(['reference' => 'FAM-TXT-2', 'name' => 'Apliqu de pared distinto']);
-        $matchOtherFamily = $this->makeProduct(['reference' => 'FAM-TXT-3', 'name' => 'Bombillo especial LED']);
+        $matchOtherFamily = $this->makeProduct(['reference' => 'FAM-TXT-3', 'name' => 'Cilindro especial XL']);
         $family = $this->makeFamily('Familia texto', $match, $sameFamilyOtherText);
         $this->makeFamily('Otra familia texto', $matchOtherFamily);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -1738,7 +1738,7 @@ class InventoryControllerTest extends FeatureTestCase
         // Solo el producto que está en la familia Y matchea el texto (AND, no unión).
         $this->assertSame(
             ['FAM-TXT-1'],
-            $this->inventoryReferences($token, "?family_id={$family->id}&search=Bombillo especial LED"),
+            $this->inventoryReferences($token, "?family_id={$family->id}&search=Cilindro especial XL"),
         );
     }
 

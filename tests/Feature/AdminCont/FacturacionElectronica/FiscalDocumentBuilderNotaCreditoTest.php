@@ -41,7 +41,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
 
     private function facturaCertificada(): AdminContInvoice
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
         $factura->forceFill(['cufe' => 'FE0120000155704849-2-2021-fake', 'fe_estado' => 'certificado'])->save();
@@ -155,7 +155,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
 
     public function test_falla_si_la_factura_de_origen_nunca_fue_certificada(): void
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
         // Sin cufe — nunca certificada.
@@ -192,7 +192,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
     public function test_resultado_devuelto_con_cuenta_bancaria_declara_transferencia(): void
     {
         $factura = $this->facturaCertificada();
-        $cuenta  = AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '1234']);
+        $cuenta  = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1234']);
         $nc      = $this->notaCredito($factura, [
             'resultado' => AdminContCreditNote::RESULTADO_DEVUELTO,
             'cuenta_bancaria_salida_id' => $cuenta->id,
@@ -248,7 +248,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
     public function test_nc_de_un_consumidor_final_sale_con_receptor_02_sin_identificacion(): void
     {
         // SCRUM-1140 — el receptor se congela al facturar: el cliente ya es Consumidor Final cuando se crea la factura.
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $root->pipelineCard->subClient->update(['receptor_tipo' => '02', 'tax_id' => '', 'tax_id_dv' => null]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
@@ -284,7 +284,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
     /** @return array{0: AdminContInvoice, 1: CustomerReturn} factura certificada de 9 × 100 y una devolución finalizada */
     private function facturaYDevolucion(array $lineas): array
     {
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         $this->facturar($this->token(), [$root->id], 'completo')->assertStatus(201);
         $factura = AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
         $factura->forceFill(['cufe' => 'FE0120000155704849-2-2021-fake', 'fe_estado' => 'certificado'])->save();
@@ -307,7 +307,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
 
     public function test_devolucion_de_bodega_viaja_con_las_lineas_realmente_devueltas(): void
     {
-        [$factura, $devolucion] = $this->facturaYDevolucion([['ref' => 'ML-28012ABK', 'desc' => 'LAMP/RIEL MAGN', 'price' => 241.98, 'qty' => 2]]);
+        [$factura, $devolucion] = $this->facturaYDevolucion([['ref' => 'ML-28012ABK', 'desc' => 'ITEM/RIEL MAGN', 'price' => 241.98, 'qty' => 2]]);
         $nc = $this->notaCredito($factura, [
             'monto' => 517.84, 'subtotal' => 483.96, 'itbms' => 33.88,
             'resultado' => AdminContCreditNote::RESULTADO_APLICADO_SALDO, 'devolucion_bodega_id' => $devolucion->id,
@@ -317,7 +317,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
 
         $this->assertCount(1, $documento->items);
         $this->assertSame('ML-28012ABK', $documento->items[0]->codigo);
-        $this->assertSame('LAMP/RIEL MAGN', $documento->items[0]->descripcion);
+        $this->assertSame('ITEM/RIEL MAGN', $documento->items[0]->descripcion);
         $this->assertSame(2.0, $documento->items[0]->cantidad);
         $this->assertEqualsWithDelta(241.98, $documento->items[0]->precioUnitario, 0.001);
         $this->assertSame('01', $documento->items[0]->tasaItbmsCode);
@@ -353,7 +353,7 @@ final class FiscalDocumentBuilderNotaCreditoTest extends FeatureTestCase
 
         $documento = $this->builder()->paraNotaCredito($nc);
 
-        $this->assertSame('Panel LED', $documento->items[0]->descripcion);
+        $this->assertSame('Panel XL', $documento->items[0]->descripcion);
         $this->assertSame(9.0, $documento->items[0]->cantidad);
         $this->assertEqualsWithDelta(100.00, $documento->items[0]->precioUnitario, 0.001);
     }

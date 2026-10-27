@@ -47,10 +47,10 @@ class SubstituteSearchTest extends FeatureTestCase
     /** @param array<string, mixed> $overrides */
     private function makeProduct(array $overrides = []): CatalogProduct
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
 
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Bombillo decorativo E27 Ámbar', 'description' => 'Bombillo decorativo E27 Ámbar',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo decorativo E27 Ámbar', 'description' => 'Artículo decorativo E27 Ámbar',
             'price_full' => 20, 'cost' => 12, 'provider_id' => $provider->id, 'is_active' => true,
             'photo_url' => 'https://cdn.test/photo-'.uniqid().'.jpg',
             ...$overrides,
@@ -75,8 +75,8 @@ class SubstituteSearchTest extends FeatureTestCase
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
-        $candidate = $this->makeProduct(['name' => 'Bombillo genérico E27', 'stock_quantity' => 7, 'category' => 'bombillos']);
-        $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
+        $candidate = $this->makeProduct(['name' => 'Artículo genérico E27', 'stock_quantity' => 7, 'category' => 'bombillos']);
+        $family = CatalogProductFamily::create(['name' => 'Artículos', 'is_active' => true]);
         $family->products()->attach([$candidate->id]);
 
         $this->fakeAnthropicRanking([
@@ -106,7 +106,7 @@ class SubstituteSearchTest extends FeatureTestCase
         $poll->assertJsonPath('results.0.cost', 12);
         // SCRUM-246 (rebote de Gerencia Test) — Categoría, ausente hasta ahora en la tabla.
         $poll->assertJsonPath('results.0.category', 'bombillos');
-        $poll->assertJsonPath('results.0.name', 'Bombillo genérico E27');
+        $poll->assertJsonPath('results.0.name', 'Artículo genérico E27');
 
         $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::AI_SUBSTITUTE_COMPARISON_COMPLETED)
@@ -162,7 +162,7 @@ class SubstituteSearchTest extends FeatureTestCase
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
-        $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
+        $family = CatalogProductFamily::create(['name' => 'Artículos', 'is_active' => true]);
         $family->products()->attach([$this->makeProduct()->id]);
 
         Http::fake(); // cualquier llamada a Anthropic acá sería un bug.
@@ -200,7 +200,7 @@ class SubstituteSearchTest extends FeatureTestCase
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
-        $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
+        $family = CatalogProductFamily::create(['name' => 'Artículos', 'is_active' => true]);
         $family->products()->attach([$this->makeProduct()->id]);
 
         $this->fakeAnthropicRanking([]);
@@ -229,7 +229,7 @@ class SubstituteSearchTest extends FeatureTestCase
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
         $original = $this->makeProduct();
-        $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
+        $family = CatalogProductFamily::create(['name' => 'Artículos', 'is_active' => true]);
         $family->products()->attach([$this->makeProduct()->id]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -250,7 +250,7 @@ class SubstituteSearchTest extends FeatureTestCase
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
         $candidate = $this->makeProduct();
-        $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
+        $family = CatalogProductFamily::create(['name' => 'Artículos', 'is_active' => true]);
         $family->products()->attach([$candidate->id]);
 
         $this->fakeAnthropicRanking([

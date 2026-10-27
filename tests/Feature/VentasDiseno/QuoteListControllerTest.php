@@ -437,12 +437,12 @@ class QuoteListControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
-        $quote = $this->makeQuote($designerId, ['folio' => 'COT-2026-0060', 'master' => 'Torre Delta Constructora']);
+        $quote = $this->makeQuote($designerId, ['folio' => 'COT-2026-0060', 'master' => 'Proyecto Alfa Constructora']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         // Error de tipeo de una sola palabra: "Delta" -> "Delto".
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/ventas-diseno/quotes?search=Delto')
+            ->getJson('/api/ventas-diseno/quotes?search=Alfo')
             ->assertStatus(200);
 
         $response->assertJsonPath('fuzzy', true);
@@ -461,11 +461,11 @@ class QuoteListControllerTest extends FeatureTestCase
         // match esperado.
         $this->grantVentasDisenoRead('designer@atlantic.test');
         $designerId = $this->userIdByEmail('designer@atlantic.test');
-        $quote = $this->makeQuote($designerId, ['folio' => 'COT-2026-0061', 'master' => 'Torre Delta Constructora']);
+        $quote = $this->makeQuote($designerId, ['folio' => 'COT-2026-0061', 'master' => 'Proyecto Alfa Constructora']);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/ventas-diseno/quotes?search=Torre Delto')
+            ->getJson('/api/ventas-diseno/quotes?search=Proyecto Alfo')
             ->assertStatus(200);
 
         $response->assertJsonPath('fuzzy', true);

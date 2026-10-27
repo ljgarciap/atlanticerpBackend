@@ -154,7 +154,7 @@ class TicketBatch3Test extends FeatureTestCase
 
     public function test_pdf_se_genera_para_cualquier_rol_que_pueda_ver_el_detalle(): void
     {
-        $ticket = $this->makeTicket(['descripcion' => 'Fuga en lámpara de techo']);
+        $ticket = $this->makeTicket(['descripcion' => 'Fuga en producto de techo']);
         $token = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
 
         $response = $this->withHeaders($this->authHeaders($token))

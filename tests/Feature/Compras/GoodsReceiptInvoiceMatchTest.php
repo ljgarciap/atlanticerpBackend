@@ -45,9 +45,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
     }
 
     /** @return array{order: PurchaseOrder, product: CatalogProduct} */
-    private function makeEligibleOrderWithProduct(string $reference = 'LMP-100', string $description = 'Lampara LED 12W', int $quantity = 10, float $unitCost = 5.0): array
+    private function makeEligibleOrderWithProduct(string $reference = 'LMP-100', string $description = 'Producto XL 12W', int $quantity = 10, float $unitCost = 5.0): array
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD', 'origin' => Provider::ORIGIN_INTERNACIONAL]);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', 'origin' => Provider::ORIGIN_INTERNACIONAL]);
         $product  = CatalogProduct::create([
             'reference' => $reference, 'name' => $description, 'description' => $description,
             'price_full' => $unitCost * 2, 'cost' => $unitCost, 'stock_quantity' => 0,
@@ -88,9 +88,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => (string) $order->id,
-            'detected_provider_name'   => 'LightCorp',
+            'detected_provider_name'   => 'Proveedor Demo A',
             'line_items' => [
-                ['reference' => 'LMP-100', 'description' => 'Lampara LED 12W', 'quantity' => 10, 'unit_cost' => 5.0],
+                ['reference' => 'LMP-100', 'description' => 'Producto XL 12W', 'quantity' => 10, 'unit_cost' => 5.0],
             ],
             'confidence' => 'alta',
         ]);
@@ -130,14 +130,14 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => (string) $order->id,
-            'detected_provider_name'   => 'LightCorp',
+            'detected_provider_name'   => 'Proveedor Demo A',
             'line_items' => [
-                ['reference' => 'LMP-100', 'description' => 'Lampara LED 12W', 'quantity' => 10, 'unit_cost' => 5.0],
+                ['reference' => 'LMP-100', 'description' => 'Producto XL 12W', 'quantity' => 10, 'unit_cost' => 5.0],
             ],
             'confidence' => 'media',
         ]);
 
-        $csv = "Referencia,Descripcion,Cantidad,Costo\nLMP-100,Lampara LED 12W,10,5.00\n";
+        $csv = "Referencia,Descripcion,Cantidad,Costo\nLMP-100,Producto XL 12W,10,5.00\n";
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts/invoice', [
@@ -157,13 +157,13 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
     public function test_factura_con_un_solo_producto_reconocible_deja_el_otro_sin_detectar(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $productA = CatalogProduct::create([
-            'reference' => 'LMP-100', 'name' => 'Lampara LED 12W', 'description' => 'Lampara LED 12W',
+            'reference' => 'LMP-100', 'name' => 'Producto XL 12W', 'description' => 'Producto XL 12W',
             'price_full' => 10, 'cost' => 5, 'stock_quantity' => 0, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
         $productB = CatalogProduct::create([
-            'reference' => 'LMP-200', 'name' => 'Panel LED 24W', 'description' => 'Panel LED 24W',
+            'reference' => 'LMP-200', 'name' => 'Panel XL 24W', 'description' => 'Panel XL 24W',
             'price_full' => 20, 'cost' => 10, 'stock_quantity' => 0, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
         $order = PurchaseOrder::create([
@@ -176,9 +176,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => (string) $order->id,
-            'detected_provider_name'   => 'LightCorp',
+            'detected_provider_name'   => 'Proveedor Demo A',
             'line_items' => [
-                ['reference' => 'LMP-100', 'description' => 'Lampara LED 12W', 'quantity' => 5, 'unit_cost' => 5.0],
+                ['reference' => 'LMP-100', 'description' => 'Producto XL 12W', 'quantity' => 5, 'unit_cost' => 5.0],
                 ['reference' => null, 'description' => 'Producto ilegible xyz123', 'quantity' => 1, 'unit_cost' => null],
             ],
             'confidence' => 'baja',
@@ -236,9 +236,9 @@ class GoodsReceiptInvoiceMatchTest extends FeatureTestCase
 
         $this->fakeToolUseResponse([
             'detected_order_reference' => (string) $order->id,
-            'detected_provider_name'   => 'LightCorp',
+            'detected_provider_name'   => 'Proveedor Demo A',
             'line_items' => [
-                ['reference' => 'LMP-100', 'description' => 'Lampara LED 12W', 'quantity' => 10, 'unit_cost' => 5.0],
+                ['reference' => 'LMP-100', 'description' => 'Producto XL 12W', 'quantity' => 10, 'unit_cost' => 5.0],
             ],
             'confidence' => 'alta',
         ]);

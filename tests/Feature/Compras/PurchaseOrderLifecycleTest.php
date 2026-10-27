@@ -40,7 +40,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
     private function makeProvider(array $overrides = []): Provider
     {
-        return Provider::create(['name' => 'LightCorp', 'currency' => 'USD', ...$overrides]);
+        return Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD', ...$overrides]);
     }
 
     private function makeOrder(int $providerId, array $overrides = []): PurchaseOrder
@@ -545,15 +545,15 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     {
         // REQ-138 Escenario 1.
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $lightCorp = $this->makeProvider(['name' => 'LightCorp']);
+        $proveedorA = $this->makeProvider(['name' => 'Proveedor Demo A']);
         $other = $this->makeProvider(['name' => 'Otro']);
-        $this->makeOrder($lightCorp->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
-        $this->makeOrder($lightCorp->id, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
+        $this->makeOrder($proveedorA->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
+        $this->makeOrder($proveedorA->id, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
         $this->makeOrder($other->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson("/api/compras/orders?provider_id={$lightCorp->id}&status=".PurchaseOrder::STATUS_EN_TRANSITO)
+            ->getJson("/api/compras/orders?provider_id={$proveedorA->id}&status=".PurchaseOrder::STATUS_EN_TRANSITO)
             ->assertStatus(200);
 
         $this->assertCount(1, $response->json('data'));
@@ -563,15 +563,15 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     public function test_busqueda_por_numero_de_orden_o_proveedor(): void
     {
         $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $lightCorp = $this->makeProvider(['name' => 'LightCorp']);
+        $proveedorA = $this->makeProvider(['name' => 'Proveedor Demo A']);
         $other = $this->makeProvider(['name' => 'Otro']);
-        $order1 = $this->makeOrder($lightCorp->id);
+        $order1 = $this->makeOrder($proveedorA->id);
         $this->makeOrder($other->id);
 
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
 
         $byName = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/orders?search=LightCorp')
+            ->getJson('/api/compras/orders?search=Proveedor Demo A')
             ->assertStatus(200);
         $this->assertCount(1, $byName->json('data'));
 

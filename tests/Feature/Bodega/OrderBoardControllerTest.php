@@ -408,7 +408,7 @@ class OrderBoardControllerTest extends FeatureTestCase
             'reference' => 'REF-ETA', 'name' => 'Producto en falta', 'description' => 'Producto en falta', 'price_full' => 100,
             'cost' => 60, 'stock_quantity' => 0, 'is_active' => true,
         ]);
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
         $purchaseOrder = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD',
             'status' => PurchaseOrder::STATUS_ORDENADO, 'status_changed_at' => now(),
@@ -448,7 +448,7 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_eta_proveedor_no_escala_en_queries_con_mas_pedidos_sin_stock(): void
     {
-        $provider = Provider::create(['name' => 'LightCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'Proveedor Demo A', 'currency' => 'USD']);
 
         for ($i = 1; $i <= 3; $i++) {
             $product = CatalogProduct::create([

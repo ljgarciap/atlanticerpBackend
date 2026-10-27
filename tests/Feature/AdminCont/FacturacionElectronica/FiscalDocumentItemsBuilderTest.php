@@ -40,7 +40,7 @@ final class FiscalDocumentItemsBuilderTest extends FeatureTestCase
     /** Pedido de 3 entregas de 3 unidades (9 × 100.00 + ITBMS = 963.00), todas en Por Despachar. */
     private function familia(): array
     {
-        return $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[3], [3], [3]]);
+        return $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[3], [3], [3]]);
     }
 
     private function parcialDe(Order $root, Order $entrega): AdminContInvoice
@@ -73,7 +73,7 @@ final class FiscalDocumentItemsBuilderTest extends FeatureTestCase
     {
         // 7 unidades de 33.33 con 5% de descuento de línea -> subtotal no divide exacto entre 7.
         ['root' => $root] = $this->makePedido(
-            [['desc' => 'Lámpara con descuento', 'qty' => 7, 'price' => 33.33, 'discount' => 5]],
+            [['desc' => 'Producto con descuento', 'qty' => 7, 'price' => 33.33, 'discount' => 5]],
             [[7]],
         );
         $token = $this->token();
@@ -153,7 +153,7 @@ final class FiscalDocumentItemsBuilderTest extends FeatureTestCase
     public function test_los_items_construidos_cuadran_con_nucjsonmapper(): void
     {
         ['root' => $root] = $this->makePedido(
-            [['desc' => 'Lámpara con descuento', 'qty' => 7, 'price' => 33.33, 'discount' => 5]],
+            [['desc' => 'Producto con descuento', 'qty' => 7, 'price' => 33.33, 'discount' => 5]],
             [[7]],
         );
         $token = $this->token();

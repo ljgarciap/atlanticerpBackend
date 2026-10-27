@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use Database\Seeders\Support\DemoDataset;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
@@ -20,7 +21,7 @@ use Illuminate\Database\Seeder;
  * contra Postgres local: `atlantic_bodega.product_warehouse_stock` tenía CERO filas — nunca
  * hubo un seeder que distribuyera el `stock_quantity` de `CatalogProductSeeder` entre las bodegas
  * físicas reales (`WarehouseAssistantMappingSeeder`/Tipo A crea las 7 bodegas, pero ningún Tipo B
- * las llenaba). El caso "SPOT-EMP-010 repartido en 2 bodegas" que Pre-QA validó en vivo el
+ * las llenaba). El caso "producto demo 05 repartido en 2 bodegas" que Pre-QA validó en vivo el
  * 2026-07-23 se sembró a mano por tinker en esa sesión — no sobrevivió a un reseed posterior del
  * entorno (mismo patrón de "verificado en navegador ≠ persistente" ya documentado en memoria del
  * proyecto).
@@ -71,22 +72,22 @@ class ProductWarehouseStockBackfillSeeder extends Seeder
     {
         // reference => [warehouse_name => quantity, ...]. Suma siempre igual a
         // `catalog_products.stock_quantity` del producto — nunca inventa cantidades que no
-        // existan en el dato maestro. SPOT-EMP-010 queda repartido en 2 bodegas a propósito, para
+        // existan en el dato maestro. El producto demo 05 queda repartido en 2 bodegas a propósito, para
         // preservar el escenario de aceptación (RN1/Escenario 1: "producto con stock repartido en
         // 2 bodegas") que Pre-QA ya validó en vivo el 2026-07-23. Solo lista acá los productos que
         // necesitan MÁS de una bodega o una bodega distinta del default — cualquier otro producto
         // con stock lo resuelve el paso 2 (backfill genérico) sin tener que enumerarlo.
         $distribution = [
-            'LAMP-COL-001' => ['Bodega Central' => 24],
-            'LAMP-COL-002' => ['Bodega Central' => 15],
-            'SPOT-EMP-010' => ['Bodega Central' => 200, 'Showroom Obarrio' => 100],
-            'SPOT-EMP-011' => ['Bodega Central' => 210],
-            'RIEL-TRK-050' => ['Bodega Central' => 40],
-            'APLQ-PAR-020' => ['Bodega Central' => 60],
-            'CAND-SAL-005' => ['Bodega Central' => 3],
-            'CINT-LED-100' => ['Bodega Central' => 150],
-            'PISO-LAMP-030' => ['Bodega Central' => 8],
-            'MESA-LAMP-015' => ['Bodega Central' => 45],
+            DemoDataset::productoRef(1) => ['Bodega Central' => 24],
+            DemoDataset::productoRef(2) => ['Bodega Central' => 15],
+            DemoDataset::productoRef(3) => ['Bodega Central' => 200, 'Showroom Obarrio' => 100],
+            DemoDataset::productoRef(4) => ['Bodega Central' => 210],
+            DemoDataset::productoRef(5) => ['Bodega Central' => 40],
+            DemoDataset::productoRef(6) => ['Bodega Central' => 60],
+            DemoDataset::productoRef(7) => ['Bodega Central' => 3],
+            DemoDataset::productoRef(8) => ['Bodega Central' => 150],
+            DemoDataset::productoRef(9) => ['Bodega Central' => 8],
+            DemoDataset::productoRef(10) => ['Bodega Central' => 45],
         ];
 
         /** @var array<string, int> $warehouseIdByName */

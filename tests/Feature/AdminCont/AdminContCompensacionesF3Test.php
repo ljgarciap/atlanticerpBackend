@@ -52,7 +52,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
 
     private function cuenta(): AdminContBankAccount
     {
-        return AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => (string) random_int(1000, 9999)]);
+        return AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => (string) random_int(1000, 9999)]);
     }
 
     private function factura(MasterClient $master, float $monto, float $saldoAplicado = 0.0, ?int $diasAtras = null): AdminContInvoice

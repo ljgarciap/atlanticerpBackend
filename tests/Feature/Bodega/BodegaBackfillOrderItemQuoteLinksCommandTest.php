@@ -86,7 +86,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     public function test_vincula_el_order_item_y_rellena_unit_price_nulo_cuando_el_match_es_unico(): void
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
-        $product = $this->makeProduct('Lámpara vínculo');
+        $product = $this->makeProduct('Producto vínculo');
         $part    = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
         $qi      = $part->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,
@@ -109,7 +109,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     public function test_vincula_y_no_toca_un_unit_price_que_ya_existe_y_coincide_con_la_cotizacion(): void
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
-        $product = $this->makeProduct('Lámpara precio propio');
+        $product = $this->makeProduct('Producto precio propio');
         $part    = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
         $qi      = $part->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,
@@ -133,7 +133,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     public function test_omite_si_el_unit_price_ya_snapshoteado_no_coincide_con_la_cotizacion(): void
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
-        $product = $this->makeProduct('Lámpara precio distinto');
+        $product = $this->makeProduct('Producto precio distinto');
         $part    = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
         $part->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,
@@ -156,7 +156,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     public function test_omite_si_la_cantidad_pedida_supera_la_cotizada(): void
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
-        $product = $this->makeProduct('Lámpara cantidad');
+        $product = $this->makeProduct('Producto cantidad');
         $part    = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
         $part->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,
@@ -185,7 +185,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     {
         ['card' => $card, 'quote' => $v1] = $this->makeCardWithGeneratedQuote();
         $v1->update(['generated_at' => now()->subDay()]);
-        $product = $this->makeProduct('Lámpara versionada');
+        $product = $this->makeProduct('Producto versionada');
 
         $itemV1 = QuotePart::create(['quote_id' => $v1->id, 'name' => 'Partida v1', 'position' => 1])->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,
@@ -223,7 +223,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
         $quote->update(['generated_at' => now()->addDay()]); // "generada" en el futuro respecto del pedido
-        $product = $this->makeProduct('Lámpara sin cotización vigente');
+        $product = $this->makeProduct('Producto sin cotización vigente');
         QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1])->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,
             'description' => $product->description, 'quantity' => 1, 'unit_price' => 200,
@@ -249,7 +249,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     {
         ['card' => $card, 'quote' => $v1] = $this->makeCardWithGeneratedQuote();
         $v1->update(['generated_at' => now()->subDays(2)]);
-        $product = $this->makeProduct('Lámpara faltante');
+        $product = $this->makeProduct('Producto faltante');
         $itemV1  = QuotePart::create(['quote_id' => $v1->id, 'name' => 'Partida v1', 'position' => 1])->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,
             'description' => $product->description, 'quantity' => 4, 'unit_price' => 200,
@@ -312,7 +312,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     public function test_omite_el_item_cuando_hay_2_quote_items_candidatos_del_mismo_producto(): void
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
-        $product = $this->makeProduct('Lámpara ambigua');
+        $product = $this->makeProduct('Producto ambigua');
         foreach ([['A', 1, 2, 200], ['B', 2, 3, 180]] as [$name, $pos, $qty, $price]) {
             QuotePart::create(['quote_id' => $quote->id, 'name' => "Partida {$name}", 'position' => $pos])
                 ->items()->create([
@@ -352,7 +352,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     public function test_no_reprocesa_items_ya_vinculados(): void
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
-        $product = $this->makeProduct('Lámpara ya vinculada');
+        $product = $this->makeProduct('Producto ya vinculada');
         $part    = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
         $part->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,
@@ -375,7 +375,7 @@ class BodegaBackfillOrderItemQuoteLinksCommandTest extends FeatureTestCase
     public function test_dry_run_no_escribe_nada(): void
     {
         ['card' => $card, 'quote' => $quote] = $this->makeCardWithGeneratedQuote();
-        $product = $this->makeProduct('Lámpara dry-run');
+        $product = $this->makeProduct('Producto dry-run');
         $part    = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida 1', 'position' => 1]);
         $part->items()->create([
             'catalog_product_id' => $product->id, 'is_custom' => false, 'reference' => $product->reference,

@@ -107,7 +107,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
     private function makeGeneratedQuoteForCard(PipelineCard $card): Quote
     {
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara colgante de prueba', 'description' => 'Lámpara colgante de prueba',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto colgante de prueba', 'description' => 'Producto colgante de prueba',
             'price_full' => 250, 'cost' => 150, 'stock_quantity' => 0, 'is_active' => true,
         ]);
 
@@ -170,7 +170,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
         $this->assertSame(2, $order->items()->count());
         $catalogItem = $order->items()->whereNotNull('catalog_product_id')->first();
         $this->assertSame(3, $catalogItem->qty_requested);
-        $this->assertSame('Lámpara colgante de prueba', $catalogItem->description_snapshot);
+        $this->assertSame('Producto colgante de prueba', $catalogItem->description_snapshot);
         // SCRUM-786 — price_type/discount_mode/global_discount_percent por defecto de la
         // cotización (public/line/0%) hacen que unit_price quede igual al unit_price tecleado en
         // el QuoteItem (250) — ver test aparte para el caso con descuento/tarifa real aplicados.
@@ -211,7 +211,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
         $card = $this->makeCardInProposal($sellerId);
 
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Riel de iluminación de prueba', 'description' => 'Riel de iluminación de prueba',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Riel de catalogación de prueba', 'description' => 'Riel de catalogación de prueba',
             'price_full' => 250, 'cost' => 150, 'stock_quantity' => 0, 'is_active' => true,
         ]);
         $quote = Quote::create([
@@ -521,7 +521,7 @@ class OrderCreationFromApprovedQuoteTest extends FeatureTestCase
 
         $card = $this->makeCardInProposal($sellerId);
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara repetida', 'description' => 'Lámpara repetida',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto repetida', 'description' => 'Producto repetida',
             'price_full' => 100, 'cost' => 60, 'stock_quantity' => 0, 'is_active' => true,
         ]);
         $quote = Quote::create([

@@ -67,13 +67,13 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/company-profile', [
-                'descripcion_corta' => 'Diseño y suministro de iluminación en Panamá.',
+                'descripcion_corta' => 'Diseño y suministro de catalogación en Panamá.',
                 'sitio_web' => 'https://atlantic.com.pa',
                 'redes_sociales' => [['plataforma' => 'Instagram', 'url' => 'https://instagram.com/atlantic']],
             ])
             ->assertStatus(200);
 
-        $response->assertJsonPath('descripcion_corta', 'Diseño y suministro de iluminación en Panamá.');
+        $response->assertJsonPath('descripcion_corta', 'Diseño y suministro de catalogación en Panamá.');
         $response->assertJsonPath('sitio_web', 'https://atlantic.com.pa');
         $response->assertJsonPath('redes_sociales.0.plataforma', 'Instagram');
     }

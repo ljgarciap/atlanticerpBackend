@@ -38,7 +38,7 @@ final class MslPacAdapterTest extends TestCase
             items: [
                 new FiscalDocumentItem(
                     codigo: 'P1',
-                    descripcion: 'Lámpara LED',
+                    descripcion: 'Producto XL',
                     cantidad: 2,
                     precioUnitario: 18.50,
                     tasaItbmsCode: '01',

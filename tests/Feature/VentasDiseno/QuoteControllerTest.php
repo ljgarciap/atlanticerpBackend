@@ -2149,7 +2149,7 @@ class QuoteControllerTest extends FeatureTestCase
         $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'P1', 'position' => 1]);
         $item = QuoteItem::create([
             'quote_part_id' => $part->id, 'is_custom' => true,
-            'reference' => 'REF-ADHOC', 'description' => 'Lámpara personalizada', 'quantity' => 1, 'unit_price' => 80,
+            'reference' => 'REF-ADHOC', 'description' => 'Producto personalizada', 'quantity' => 1, 'unit_price' => 80,
         ]);
         app(QuoteItemPhotoService::class)
             ->uploadPhoto($item, UploadedFile::fake()->image('foto.jpg', 400, 400));

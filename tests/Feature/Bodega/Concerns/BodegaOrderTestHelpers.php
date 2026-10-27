@@ -51,7 +51,7 @@ trait BodegaOrderTestHelpers
     protected function makeCatalogProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara de prueba',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto de prueba',
             'price_full' => 200, 'cost' => 120, 'stock_quantity' => 0, 'is_active' => true,
             ...$overrides,
         ]);

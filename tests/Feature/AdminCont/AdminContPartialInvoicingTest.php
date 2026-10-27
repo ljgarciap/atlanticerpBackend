@@ -305,7 +305,7 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
     public function test_929_el_tope_por_item_rechaza_aunque_el_monto_alcance_y_por_ese_motivo(): void
     {
         ['root' => $root, 'entregas' => $entregas] = $this->makePedido(
-            [['desc' => 'Lámpara A', 'qty' => 5, 'price' => 100.00], ['desc' => 'Lámpara B', 'qty' => 5, 'price' => 100.00]],
+            [['desc' => 'Producto A', 'qty' => 5, 'price' => 100.00], ['desc' => 'Producto B', 'qty' => 5, 'price' => 100.00]],
             [[5, 0], [2, 3]],
         );
         $token = $this->token();
@@ -314,7 +314,7 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
         $r = $this->facturar($token, [$entregas[1]->id], 'entrega')->assertStatus(422);
 
         $mensaje = $r->json('errors.0.missing.0');
-        $this->assertStringContainsString('El ítem "Lámpara A" excedería lo cotizado', $mensaje);
+        $this->assertStringContainsString('El ítem "Producto A" excedería lo cotizado', $mensaje);
         $this->assertStringContainsString('7 de 5', $mensaje);
         $this->assertStringNotContainsString('saldo', $mensaje, 'Rechazo por el tope del ítem, no por saldo.');
         $this->assertCount(1, $this->activas($root));
@@ -327,7 +327,7 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
     public function test_929_el_monto_que_supera_el_saldo_se_rechaza_con_su_propio_mensaje(): void
     {
         ['root' => $root, 'entregas' => $entregas, 'card' => $card] = $this->makePedido(
-            [['desc' => 'Lámpara A', 'qty' => 6, 'price' => 100.00], ['desc' => 'Lámpara B', 'qty' => 5, 'price' => 80.00]],
+            [['desc' => 'Producto A', 'qty' => 6, 'price' => 100.00], ['desc' => 'Producto B', 'qty' => 5, 'price' => 80.00]],
             [[6, 0], [0, 4]],
         );
         $this->assertEqualsWithDelta(1070.0, (float) $card->amount, 0.001, 'Fixture: 1000 + 7 % ITBMS.');
@@ -553,8 +553,8 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
     {
         ['root' => $root, 'entregas' => $entregas, 'card' => $card, 'items' => $items] = $this->makePedido(
             [
-                ['desc' => 'Luminaria X', 'qty' => 4, 'price' => 50.00, 'part' => 1, 'custom' => false],
-                ['desc' => 'Luminaria X', 'qty' => 6, 'price' => 70.00, 'part' => 2, 'custom' => false],
+                ['desc' => 'Producto X', 'qty' => 4, 'price' => 50.00, 'part' => 1, 'custom' => false],
+                ['desc' => 'Producto X', 'qty' => 6, 'price' => 70.00, 'part' => 2, 'custom' => false],
                 ['desc' => 'Pieza a medida', 'qty' => 2, 'price' => 200.00, 'part' => 2, 'custom' => true],
             ],
             [[4, 2, 2], [0, 4, 0]],
@@ -565,7 +565,7 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
         $this->facturar($token, [$entregas[1]->id], 'entrega')->assertStatus(201);
 
         $lineas = \App\Modules\AdminCont\Models\AdminContInvoiceLine::whereIn('invoice_id', collect($this->activas($root))->pluck('id'))->get();
-        // Cada línea contra SU ítem: la de 50.00 y la de 70.00 de "Luminaria X" no se suman entre sí.
+        // Cada línea contra SU ítem: la de 50.00 y la de 70.00 de "Producto X" no se suman entre sí.
         $porItem = $lineas->groupBy('quote_item_id');
         $this->assertCount(3, $porItem);
         $x1 = $porItem[$items[0]->id];
@@ -845,7 +845,7 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
     public function test_929_el_pdf_de_una_factura_con_lineas_se_renderiza_desde_lo_facturado(): void
     {
         ['root' => $root, 'entregas' => $entregas] = $this->makePedido(
-            [['desc' => 'Panel LED 60x60', 'qty' => 10, 'price' => 100.00], ['desc' => 'Driver 40W', 'qty' => 4, 'price' => 25.00]],
+            [['desc' => 'Panel XL 60x60', 'qty' => 10, 'price' => 100.00], ['desc' => 'Driver 40W', 'qty' => 4, 'price' => 25.00]],
             [[4, 0], [6, 4]],
         );
         $token = $this->token();
@@ -857,7 +857,7 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
 
         $this->assertStringContainsString($factura->numero, $html);
         $this->assertStringContainsString('Entrega 1 de 2', $html);
-        $this->assertStringContainsString('Panel LED 60x60', $html);
+        $this->assertStringContainsString('Panel XL 60x60', $html);
         $this->assertStringNotContainsString('Driver 40W', $html, 'Solo lo facturado en ESTA factura, no toda la cotización.');
         $this->assertStringContainsString(number_format($factura->monto, 2), $html);
     }
@@ -904,8 +904,8 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
 
         // El HTML de una factura legada lista TODA la cotización y no lleva ningún "concepto" nuevo.
         $html = view('admin-cont.invoice-pdf', app(\App\Modules\AdminCont\Services\InvoicePdfService::class)->viewData($detail))->render();
-        $this->assertStringContainsString('Lámpara A', $html);
-        $this->assertStringContainsString('Lámpara C', $html);
+        $this->assertStringContainsString('Producto A', $html);
+        $this->assertStringContainsString('Producto C', $html);
         $this->assertStringNotContainsString('Pedido completo', $html);
         $this->assertStringNotContainsString('Entrega 1 de', $html);
     }

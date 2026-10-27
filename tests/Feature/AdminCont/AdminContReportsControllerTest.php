@@ -333,7 +333,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_flujo_caja_saldo_proyectado_30_dias_es_saldo_hoy_mas_neto_proyectado(): void
     {
-        $cuenta = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $cuenta = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         AdminContBankMovement::create(['bank_account_id' => $cuenta->id, 'fecha' => now(), 'tipo' => AdminContBankMovement::TIPO_COBRO, 'concepto' => 'Cobro', 'monto' => 1000]);
 
         $token = $this->loginAsFelix();
@@ -354,7 +354,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_flujo_caja_hoy_calcula_neto_de_movimientos_bancarios_del_dia(): void
     {
-        $cuenta = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $cuenta = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         AdminContBankMovement::create(['bank_account_id' => $cuenta->id, 'fecha' => now(), 'tipo' => AdminContBankMovement::TIPO_COBRO, 'concepto' => 'Cobro', 'monto' => 2200]);
         AdminContBankMovement::create(['bank_account_id' => $cuenta->id, 'fecha' => now(), 'tipo' => AdminContBankMovement::TIPO_COMISION, 'concepto' => 'Comisión', 'monto' => 1500]);
 

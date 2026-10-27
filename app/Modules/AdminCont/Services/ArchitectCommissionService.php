@@ -518,7 +518,7 @@ final class ArchitectCommissionService
     {
         $montos = $this->montoFor((float) $p['monto_proyecto'], $regimenFiscal, $p['porcentaje_aprobado']);
         // REQ-517 RN1 — todo proyecto SIN cuenta explícita todavía muestra el default resuelto
-        // ("Banco General — Cuenta Corriente"), nunca "—" — la fila `architect_commissions` solo
+        // ("<banco> — Cuenta Corriente"), nunca "—" — la fila `architect_commissions` solo
         // se crea al primer archivo subido (Batch 16), así que la mayoría de los proyectos llegan
         // acá sin `bank_account_id` propio.
         $bankAccount = $p['bank_account_id'] !== null ? $bankAccounts->get($p['bank_account_id']) : $defaultBankAccount;

@@ -42,7 +42,7 @@ class InventarioConsistenteEntrePantallasTest extends FeatureTestCase
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara '.uniqid(), 'description' => 'Lámpara',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto '.uniqid(), 'description' => 'Producto',
             'price_full' => 100, 'cost' => 60, 'stock_quantity' => 10, 'reorder_point' => 5,
             'is_active' => true,
             ...$overrides,

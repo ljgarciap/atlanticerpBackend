@@ -91,7 +91,7 @@ final class PreQa1186Round2Test extends FeatureTestCase
         $this->app['env'] = 'production';
         $dest = (int) User::where('email', 'designer@atlantic.test')->value('id');
         AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl', 'pac_ambiente' => 'production', 'fe_rechazo_notificar_user_ids' => [$dest]])->save();
-        ['root' => $root] = $this->makePedido([['desc' => 'Panel LED', 'qty' => 9, 'price' => 100.00]], [[9]]);
+        ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         Http::fake(['prod.msl.test/*' => Http::sequence()
             ->push(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE01-x', 'qr' => 'https://qr', 'xmlFirmado' => base64_encode('<x/>')], 200)
             ->push(['ok' => false, 'estado' => 'RECHAZADO', 'error' => 'Falla RUC 8-123-4567 DV 12 x-api-key: prod-secret-key-123', 'detalles' => ['Falla RUC 8-123-4567 DV 12']], 422)]);

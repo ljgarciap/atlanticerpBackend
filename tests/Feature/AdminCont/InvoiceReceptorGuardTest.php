@@ -82,7 +82,7 @@ final class InvoiceReceptorGuardTest extends FeatureTestCase
     /** @return array{pedido: array<string, mixed>, sub: SubClient} */
     private function pedidoConReceptor(string $nombre = 'CONSTRUCTORA GRUPO V, SA', string $ruc = '1689571-1-684168', ?string $dv = '33'): array
     {
-        $pedido = $this->makePedido([['desc' => 'Lámpara', 'qty' => 2, 'price' => 100.0]], [[2]]);
+        $pedido = $this->makePedido([['desc' => 'Producto', 'qty' => 2, 'price' => 100.0]], [[2]]);
         $sub    = SubClient::findOrFail($pedido['card']->sub_client_id);
         $sub->forceFill(['business_name' => $nombre, 'tax_id' => $ruc, 'tax_id_dv' => $dv])->save();
 
@@ -739,7 +739,7 @@ final class InvoiceReceptorGuardTest extends FeatureTestCase
     public function test_consumidor_final_por_entrega_en_modo_entrega(): void
     {
         $this->dgiValida('CONSTRUCTORA GRUPO V S A', '33');
-        $p = $this->makePedido([['desc' => 'Lámpara', 'qty' => 4, 'price' => 100.0]], [[2], [2]]);
+        $p = $this->makePedido([['desc' => 'Producto', 'qty' => 4, 'price' => 100.0]], [[2], [2]]);
         $sub = SubClient::findOrFail($p['card']->sub_client_id);
         $sub->forceFill(['business_name' => 'CONSTRUCTORA GRUPO V, SA', 'tax_id' => '1689571-1-684168', 'tax_id_dv' => '33'])->save();
         $entrega = $p['entregas'][0];

@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Shared\Multitenancy\Tenant;
+use Database\Seeders\Support\DemoDataset;
 use Illuminate\Database\Seeder;
 
 /**
@@ -54,38 +55,38 @@ class CatalogProductFamilySeeder extends Seeder
         }
 
         $families = [
-            'Riel Direccionable' => [
-                'RIEL-TRK-050', 'SPOT-EMP-010', 'SPOT-EMP-011',
-                'RIEL-TRK-051', 'RIEL-TRK-052', 'SPOT-TRK-012', 'SPOT-TRK-013', 'CONE-TRK-060',
+            DemoDataset::familia(1) => [
+                DemoDataset::productoRef(5), DemoDataset::productoRef(3), DemoDataset::productoRef(4),
+                DemoDataset::productoRef(11), DemoDataset::productoRef(12), DemoDataset::productoRef(13), DemoDataset::productoRef(14), DemoDataset::productoRef(15),
             ],
-            'Sala Elegante' => [
-                'CAND-SAL-005', 'PISO-LAMP-030', 'MESA-LAMP-015',
-                'CAND-SAL-006', 'PISO-LAMP-031', 'MESA-LAMP-016',
+            DemoDataset::familia(2) => [
+                DemoDataset::productoRef(7), DemoDataset::productoRef(9), DemoDataset::productoRef(10),
+                DemoDataset::productoRef(16), DemoDataset::productoRef(17), DemoDataset::productoRef(18),
             ],
-            'Iluminación LED Básica' => [
-                'SPOT-EMP-010', 'CINT-LED-100', 'APLQ-PAR-020',
-                'PANEL-LED-070', 'TIRA-LED-101', 'BOMB-LED-200',
+            DemoDataset::familia(3) => [
+                DemoDataset::productoRef(3), DemoDataset::productoRef(8), DemoDataset::productoRef(6),
+                DemoDataset::productoRef(19), DemoDataset::productoRef(20), DemoDataset::productoRef(21),
             ],
-            'Iluminación Exterior' => [
-                'FARO-EXT-300', 'REFL-EXT-301', 'POSTE-EXT-302', 'CINT-EXT-303', 'APLQ-EXT-304',
+            DemoDataset::familia(4) => [
+                DemoDataset::productoRef(22), DemoDataset::productoRef(23), DemoDataset::productoRef(24), DemoDataset::productoRef(25), DemoDataset::productoRef(26),
             ],
-            'Colgantes de Diseño' => [
-                'LAMP-COL-001', 'LAMP-COL-002', 'LAMP-COL-003', 'LAMP-COL-004', 'LAMP-COL-005', 'LAMP-COL-006',
+            DemoDataset::familia(5) => [
+                DemoDataset::productoRef(1), DemoDataset::productoRef(2), DemoDataset::productoRef(27), DemoDataset::productoRef(28), DemoDataset::productoRef(29), DemoDataset::productoRef(30),
             ],
-            'Empotrables & Downlights' => [
-                'SPOT-EMP-010', 'SPOT-EMP-011', 'DOWN-EMP-400', 'DOWN-EMP-401', 'DOWN-EMP-402', 'OJOBUEY-EMP-403',
+            DemoDataset::familia(6) => [
+                DemoDataset::productoRef(3), DemoDataset::productoRef(4), DemoDataset::productoRef(31), DemoDataset::productoRef(32), DemoDataset::productoRef(33), DemoDataset::productoRef(34),
             ],
-            'Baño & Espejo' => [
-                'ESP-BAN-500', 'APLQ-BAN-501', 'TECHO-BAN-502',
+            DemoDataset::familia(7) => [
+                DemoDataset::productoRef(35), DemoDataset::productoRef(36), DemoDataset::productoRef(37),
             ],
-            'Cocina & Bajo Alacena' => [
-                'BARRA-COC-600', 'BARRA-COC-601', 'COLG-COC-602',
+            DemoDataset::familia(8) => [
+                DemoDataset::productoRef(38), DemoDataset::productoRef(39), DemoDataset::productoRef(40),
             ],
-            'Oficina & Comercial' => [
-                'PANEL-OFI-700', 'RIEL-OFI-701', 'SPOT-OFI-702',
+            DemoDataset::familia(9) => [
+                DemoDataset::productoRef(41), DemoDataset::productoRef(42), DemoDataset::productoRef(43),
             ],
-            'Decorativo Vintage/Industrial' => [
-                'BOMB-VIN-800', 'LAMP-VIN-801', 'APLQ-VIN-802',
+            DemoDataset::familia(10) => [
+                DemoDataset::productoRef(44), DemoDataset::productoRef(45), DemoDataset::productoRef(46),
             ],
         ];
 

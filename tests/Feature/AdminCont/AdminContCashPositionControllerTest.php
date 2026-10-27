@@ -69,8 +69,8 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_header_suma_bancos_activos_mas_caja_menuda_e_ignora_cuenta_inactiva(): void
     {
-        $activa = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
-        $inactiva = AdminContBankAccount::create(['banco' => 'Global Bank', 'ultimos_4_digitos' => '1111', 'activa' => false]);
+        $activa = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
+        $inactiva = AdminContBankAccount::create(['banco' => 'Banco Demo C', 'ultimos_4_digitos' => '1111', 'activa' => false]);
 
         AdminContBankMovement::create(['bank_account_id' => $activa->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 500]);
         AdminContBankMovement::create(['bank_account_id' => $activa->id, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 100]);
@@ -92,7 +92,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_879_comision_sin_cuenta_asignada_cuenta_en_saldo_de_bancos_y_vista_real(): void
     {
-        $activa = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $activa = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         AdminContBankMovement::create(['bank_account_id' => $activa->id, 'fecha' => now()->subDays(3), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 1000]);
         // Comisión pagada SIN cuenta asignada — igual es salida real de dinero (E-3).
         AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now()->subDays(2), 'tipo' => 'comision', 'concepto' => 'Comisión interna pagada — Vendedor X (jun 2026)', 'monto' => 250, 'source_type' => 'internal_commission', 'source_id' => 1]);
@@ -214,7 +214,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_real_calcula_saldo_acumulado_cronologico_y_respeta_la_ventana(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9034']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
 
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now()->subDays(40), 'tipo' => 'cobro', 'concepto' => 'Fuera de ventana', 'monto' => 9999]);
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now()->subDays(10), 'tipo' => 'cobro', 'concepto' => 'Cobro viejo', 'monto' => 500]);
@@ -298,7 +298,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_939_excel_real_escribe_entrada_salida_y_saldo_como_celdas_numericas(): void
     {
-        $account = AdminContBankAccount::create(['banco' => 'Banistmo', 'ultimos_4_digitos' => '9036']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9036']);
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 300]);
 
         $token = $this->loginAsFelix();

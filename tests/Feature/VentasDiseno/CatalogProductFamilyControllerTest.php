@@ -33,7 +33,7 @@ class CatalogProductFamilyControllerTest extends FeatureTestCase
     private function makeProduct(array $overrides = []): CatalogProduct
     {
         return CatalogProduct::create([
-            'reference' => 'LAMP-001', 'name' => 'Lámpara colgante LED', 'description' => 'Lámpara colgante LED', 'brand' => 'Atlantic Home',
+            'reference' => 'ITEM-001', 'name' => 'Producto colgante XL', 'description' => 'Producto colgante XL', 'brand' => 'Marca Demo A',
             'price_full' => 150.00, 'cost' => 80.00, 'stock_quantity' => 10, 'is_active' => true,
             ...$overrides,
         ]);

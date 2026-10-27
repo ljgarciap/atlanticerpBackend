@@ -66,14 +66,14 @@ class CatalogUatTestDataSeeder extends Seeder
     ];
 
     private const CATEGORY_LABELS = [
-        'candelabros_colgantes' => 'Candelabro/Colgante',
+        'candelabros_colgantes' => 'Modelo/Colgante',
         'iluminacion_techo'     => 'Iluminación de Techo',
         'apliques_pared'        => 'Aplique de Pared',
         'iluminacion_bano'      => 'Iluminación de Baño',
         'iluminacion_exterior'  => 'Iluminación Exterior',
-        'lamparas_piso_mesa'    => 'Lámpara de Piso/Mesa',
+        'lamparas_piso_mesa'    => 'Producto de Piso/Mesa',
         'iluminacion_empotrada' => 'Iluminación Empotrada',
-        'bombillos'             => 'Bombillo',
+        'bombillos'             => 'Artículo',
     ];
 
     public function run(): void
@@ -178,7 +178,7 @@ class CatalogUatTestDataSeeder extends Seeder
                 array_slice($productsByCategory['lamparas_piso_mesa'] ?? [], 0, 2),
             ),
             self::FAMILY_PREFIX . 'Familia Exterior' => $productsByCategory['iluminacion_exterior'] ?? [],
-            self::FAMILY_PREFIX . 'Familia Empotrados y Bombillos' => array_merge(
+            self::FAMILY_PREFIX . 'Familia Empotrados y Artículos' => array_merge(
                 array_slice($productsByCategory['iluminacion_empotrada'] ?? [], 0, 3),
                 array_slice($productsByCategory['bombillos'] ?? [], 0, 2),
             ),

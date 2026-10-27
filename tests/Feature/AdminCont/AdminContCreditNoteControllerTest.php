@@ -135,7 +135,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         $item = $order->items()->create([
             'qty_requested' => 5, 'qty_delivered' => 5, 'unit_price' => 45.5,
-            'reference_snapshot' => 'LED-100', 'description_snapshot' => 'Luminaria LED',
+            'reference_snapshot' => 'XL-100', 'description_snapshot' => 'Producto XL',
         ]);
 
         $customerReturn = CustomerReturn::create([
@@ -256,7 +256,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         ]);
         $item = $order->items()->create([
             'qty_requested' => 2, 'qty_delivered' => 2, 'unit_price' => 45.5,
-            'reference_snapshot' => 'LED-100', 'description_snapshot' => 'Luminaria LED',
+            'reference_snapshot' => 'XL-100', 'description_snapshot' => 'Producto XL',
         ]);
         $customerReturn = CustomerReturn::create([
             'return_number' => 'DEV-2026-'.random_int(1000, 999999), 'order_id' => $order->id,
@@ -509,7 +509,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         // acumulado MAYOR que la factura, que el ticket prohíbe en cualquier tipo de nota (ver
         // `test_una_nota_mayor_que_el_valor_de_la_factura_se_rechaza`).
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 300, saldoAplicado: 300);
-        $account = AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
         $token = $this->loginAsFelix();
 
         $payload = [...$this->baseRegisterPayloadConComprobante($invoice, 300), 'resultado' => 'devuelto', 'cuenta_bancaria_salida_id' => $account->id];
@@ -1319,7 +1319,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrderWithQuote($ownerId, self::CONTABILIDAD_EMAIL, monto: 107);
         $invoice->lines()->create([
-            'quote_item_id' => static::uniqueTestNumber(), 'descripcion' => 'Lámpara', 'cantidad' => 1, 'precio_unitario' => 100.00,
+            'quote_item_id' => static::uniqueTestNumber(), 'descripcion' => 'Producto', 'cantidad' => 1, 'precio_unitario' => 100.00,
             'subtotal' => 100.00, 'itbms_rate_id' => $invoice->itbms_rate_id, 'itbms' => 7.00, 'total' => 107.00,
         ]);
 

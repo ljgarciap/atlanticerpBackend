@@ -61,7 +61,7 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
         $card->deliveryDates()->create(['date' => '2026-12-15']);
 
         $product = CatalogProduct::create([
-            'reference' => 'REF-'.uniqid(), 'name' => 'Lámpara de prueba', 'description' => 'Lámpara de prueba',
+            'reference' => 'REF-'.uniqid(), 'name' => 'Producto de prueba', 'description' => 'Producto de prueba',
             'price_full' => 250, 'cost' => 150, 'stock_quantity' => 0, 'is_active' => true,
         ]);
 

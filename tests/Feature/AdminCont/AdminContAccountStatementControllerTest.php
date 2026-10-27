@@ -269,7 +269,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master] = $this->makeClientWithProject('Pago');
         AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::CONTABILIDAD_EMAIL)]);
-        AdminContBankAccount::create(['banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '03-01-01-074521-4', 'moneda' => 'USD', 'activa' => true]);
+        AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '03-01-01-074521-4', 'moneda' => 'USD', 'activa' => true]);
         $token = $this->loginAsFelix();
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -293,7 +293,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         ['master' => $master] = $this->makeClientWithProject('PagoCompleto');
         AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::CONTABILIDAD_EMAIL)]);
         AdminContBankAccount::create([
-            'banco' => 'Banco General', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4455',
+            'banco' => 'Banco Demo A', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4455',
             'numero_cuenta_completo' => '00-00-00-000000-1', 'moneda' => 'USD', 'activa' => true,
         ]);
         $token = $this->loginAsFelix();
@@ -303,7 +303,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->assertSame('00-00-00-000000-1', $response->json('numero_cuenta'));
-        $this->assertSame('Banco General', $response->json('banco'));
+        $this->assertSame('Banco Demo A', $response->json('banco'));
         $this->assertSame('corriente', $response->json('tipo_cuenta'));
         $this->assertStringContainsString('00-00-00-000000-1', (string) $response->json('cuenta_pago'));
         $this->assertStringNotContainsString('****', (string) $response->json('cuenta_pago'));
@@ -313,7 +313,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_928_bloque_de_pago_no_enmascara_si_la_cuenta_no_tiene_numero_completo(): void
     {
         ['master' => $master] = $this->makeClientWithProject('PagoSinNumero');
-        AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '4521', 'activa' => true]);
+        AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4521', 'activa' => true]);
         $token = $this->loginAsFelix();
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -323,13 +323,13 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         $this->assertNull($response->json('numero_cuenta'));
         $this->assertNull($response->json('cuenta_pago'));
         $this->assertStringNotContainsString('*', (string) json_encode($response->json()), 'ningún campo del estado de cuenta lleva asteriscos');
-        $this->assertSame('Banco General', $response->json('banco'), 'el banco sí se sigue mostrando');
+        $this->assertSame('Banco Demo A', $response->json('banco'), 'el banco sí se sigue mostrando');
     }
 
     public function test_928_numero_completo_en_blanco_cuenta_como_sin_numero(): void
     {
         ['master' => $master] = $this->makeClientWithProject('PagoBlanco');
-        AdminContBankAccount::create(['banco' => 'Banco General', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '   ', 'activa' => true]);
+        AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '   ', 'activa' => true]);
         $token = $this->loginAsFelix();
 
         $response = $this->withHeaders($this->authHeaders($token))

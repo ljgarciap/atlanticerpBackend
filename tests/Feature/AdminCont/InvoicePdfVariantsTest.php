@@ -95,7 +95,7 @@ final class InvoicePdfVariantsTest extends FeatureTestCase
             'vendedor' => 'MARIBEL', 'monto' => 107.0, 'subtotal' => 100.0, 'descuentos' => 0.0, 'itbms' => 7.0, 'total' => 107.0,
             'saldo_aplicado' => 0.0, 'total_a_pagar' => 107.0, 'cuenta_pago' => '0123456789', 'responsable' => 'Contabilidad',
             'fe_estado' => $invoice->fe_estado, 'cufe' => $invoice->cufe, 'qr_content' => $invoice->qr_content,
-            'items' => [['referencia_publica' => 'ML-10221CBK', 'descripcion' => 'EMP/LED DIM 10W 3K', 'cantidad' => 2, 'precio_unitario' => 50.0, 'subtotal' => 100.0]],
+            'items' => [['referencia_publica' => 'ML-10221CBK', 'descripcion' => 'EMP/XL DIM 10W 3K', 'cantidad' => 2, 'precio_unitario' => 50.0, 'subtotal' => 100.0]],
         ], $over);
     }
 
@@ -468,7 +468,7 @@ final class InvoicePdfVariantsTest extends FeatureTestCase
         $this->makeTransmision($invoice);
         $items = [];
         for ($i = 1; $i <= 45; $i++) {
-            $items[] = ['referencia_publica' => "REF-{$i}", 'descripcion' => "Luminaria de prueba número {$i} con descripción larga para ocupar el ancho", 'cantidad' => $i, 'precio_unitario' => 10.0, 'subtotal' => 10.0 * $i];
+            $items[] = ['referencia_publica' => "REF-{$i}", 'descripcion' => "Producto de prueba número {$i} con descripción larga para ocupar el ancho", 'cantidad' => $i, 'precio_unitario' => 10.0, 'subtotal' => 10.0 * $i];
         }
 
         $inicio = microtime(true);

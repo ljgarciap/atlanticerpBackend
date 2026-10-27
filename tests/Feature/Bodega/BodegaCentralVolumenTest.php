@@ -23,7 +23,7 @@ final class BodegaCentralVolumenTest extends FeatureTestCase
         $this->makeCurrentTenant();
         $central = (int) Warehouse::query()->where('name', 'Bodega Central')->value('id');
         DB::statement("INSERT INTO atlantic_ventas_diseno.catalog_products (reference, name, price_full, is_active, stock_quantity, created_at, updated_at)
-            SELECT 'VOL-' || g, 'Luminaria volumen ' || g, 10, true, CASE WHEN g % 10 = 0 THEN -g ELSE g END, now(), now() FROM generate_series(1, 3500) g");
+            SELECT 'VOL-' || g, 'Producto volumen ' || g, 10, true, CASE WHEN g % 10 = 0 THEN -g ELSE g END, now(), now() FROM generate_series(1, 3500) g");
         DB::statement("INSERT INTO atlantic_bodega.product_warehouse_stock (catalog_product_id, warehouse_id, quantity, created_at, updated_at)
             SELECT id, {$central}, stock_quantity, now(), now() FROM atlantic_ventas_diseno.catalog_products WHERE reference LIKE 'VOL-%'");
 
@@ -36,7 +36,7 @@ final class BodegaCentralVolumenTest extends FeatureTestCase
         memory_reset_peak_usage();
         $base = memory_get_usage(true);
         $ms = [];
-        foreach (['' => '', 'con search' => '?search=luminaria', 'pagina 20' => '?page=20&per_page=100', 'search sin resultados' => '?search=zzzzqqq'] as $nombre => $q) {
+        foreach (['' => '', 'con search' => '?search=producto', 'pagina 20' => '?page=20&per_page=100', 'search sin resultados' => '?search=zzzzqqq'] as $nombre => $q) {
             $t0 = microtime(true);
             $r = $this->withHeaders($this->authHeaders($token))->getJson($url . $q)->assertOk();
             $ms[$nombre] = (microtime(true) - $t0) * 1000;

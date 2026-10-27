@@ -78,7 +78,7 @@ class QuoteNewVersionFromDesignTest extends FeatureTestCase
         $quote->deliveryDates()->create(['date' => '2026-09-01']);
         $quote->contacts()->attach($contact->id);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
-        $part->items()->create(['reference' => 'REF-1', 'description' => 'Luminaria', 'quantity' => 2, 'unit_price' => 100, 'discount_percent' => 5]);
+        $part->items()->create(['reference' => 'REF-1', 'description' => 'Producto', 'quantity' => 2, 'unit_price' => 100, 'discount_percent' => 5]);
 
         $this->withHeaders($this->h($token))->postJson("/api/ventas-diseno/quotes/{$quote->id}/generate")->assertStatus(200);
         $this->withHeaders($this->h($token))->postJson("/api/ventas-diseno/quotes/{$quote->id}/confirm")->assertStatus(200);

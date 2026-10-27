@@ -170,7 +170,7 @@ class QuotePartControllerTest extends FeatureTestCase
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $part->items()->create([
-            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara A',
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto A',
             'quantity' => 2, 'unit_price' => 100,
         ]);
         $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
@@ -199,7 +199,7 @@ class QuotePartControllerTest extends FeatureTestCase
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $item = $part->items()->create([
-            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara A',
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto A',
             'quantity' => 1, 'unit_price' => 100,
         ]);
         app(QuoteItemPhotoService::class)->uploadPhoto($item, UploadedFile::fake()->image('foto.jpg', 400, 400));
@@ -253,7 +253,7 @@ class QuotePartControllerTest extends FeatureTestCase
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $item = $part->items()->create([
-            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Lámpara A',
+            'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto A',
             'quantity' => 1, 'unit_price' => 100,
         ]);
         app(QuoteItemPhotoService::class)->uploadPhoto($item, UploadedFile::fake()->image('foto.jpg', 400, 400));
