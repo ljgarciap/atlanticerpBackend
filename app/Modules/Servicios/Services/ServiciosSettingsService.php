@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Servicios\Services;
 
+use App\Modules\AdminCont\Services\ItbmsRateResolver;
 use App\Modules\Servicios\Models\ServiciosSetting;
 use App\Modules\Servicios\Models\Ticket;
 use App\Shared\Auth\JwtActor;
@@ -127,11 +128,18 @@ final class ServiciosSettingsService
     // Servicios" sin depender de un deploy.
     private const KEY_ITBMS_PERCENT = 'itbms_percent';
 
-    private const DEFAULT_ITBMS_PERCENT = 7;
+    /**
+     * Fase 7a — el valor por omisión ya no es un 7 fijo (tasa de Panamá): es la tasa por defecto de Configuración Fiscal
+     * (`itbms_rates`) del país de la empresa. El ajuste sigue permitiendo una tasa propia para las cotizaciones de Servicios.
+     */
+    private function defaultItbmsPercent(): int
+    {
+        return (int) round(ItbmsRateResolver::defaultPercentage());
+    }
 
     public function itbmsPercent(): int
     {
-        return $this->intSetting(self::KEY_ITBMS_PERCENT, self::DEFAULT_ITBMS_PERCENT);
+        return $this->intSetting(self::KEY_ITBMS_PERCENT, $this->defaultItbmsPercent());
     }
 
     // Batch 12 (REQ-237, SCRUM-300) — condiciones del servicio, texto libre configurado por
@@ -416,7 +424,7 @@ final class ServiciosSettingsService
             ['key' => self::KEY_ADJUNTOS_MAX_ARCHIVOS, 'group' => 'operacion', 'label' => 'Máximo de adjuntos por ticket', 'type' => 'int', 'default' => self::DEFAULT_ADJUNTOS_MAX_ARCHIVOS],
             ['key' => self::KEY_ADJUNTOS_MAX_SIZE_MB, 'group' => 'operacion', 'label' => 'Tamaño máximo por adjunto (MB)', 'type' => 'int', 'default' => self::DEFAULT_ADJUNTOS_MAX_SIZE_MB],
             ['key' => self::KEY_SIN_RESPONDER_UMBRAL_DIAS, 'group' => 'operacion', 'label' => 'Inicio — Días sin responder (umbral panel "Servicios sin responder")', 'type' => 'int', 'default' => self::DEFAULT_SIN_RESPONDER_UMBRAL_DIAS],
-            ['key' => self::KEY_ITBMS_PERCENT, 'group' => 'cotizacion', 'label' => 'Cotización — '.\App\Shared\Multitenancy\TenantRegion::taxLabel().' (%)', 'type' => 'int', 'default' => self::DEFAULT_ITBMS_PERCENT],
+            ['key' => self::KEY_ITBMS_PERCENT, 'group' => 'cotizacion', 'label' => 'Cotización — '.\App\Shared\Multitenancy\TenantRegion::taxLabel().' (%)', 'type' => 'int', 'default' => $this->defaultItbmsPercent()],
             ['key' => self::KEY_CONDICIONES_COTIZACION_SERVICIOS, 'group' => 'cotizacion', 'label' => 'Cotización — Condiciones del servicio (texto)', 'type' => 'text', 'default' => self::DEFAULT_CONDICIONES_COTIZACION_SERVICIOS],
             ['key' => self::KEY_SLA_DIAS_CLAIM, 'group' => 'sla', 'label' => 'SLA — Reclamos (días hábiles)', 'type' => 'int', 'default' => self::DEFAULT_SLA_DIAS_CLAIM],
             ['key' => self::KEY_SLA_DIAS_WARRANTY, 'group' => 'sla', 'label' => 'SLA — Garantías (días hábiles)', 'type' => 'int', 'default' => self::DEFAULT_SLA_DIAS_WARRANTY],

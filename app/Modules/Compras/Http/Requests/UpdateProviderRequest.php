@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Compras\Http\Requests;
 
 use App\Modules\Compras\Models\Provider;
+use App\Shared\Catalogs\CatalogService;
 use App\Shared\Fiscal\TaxId\ValidTaxId;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,9 +33,9 @@ class UpdateProviderRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', $this->uniqueNameRule()],
-            'category' => ['nullable', 'string', Rule::in(Provider::CATEGORIES)],
+            'category' => ['nullable', 'string', Rule::in(CatalogService::keys('provider_category'))],
             // Fase 6c: solo un proveedor LOCAL usa las reglas de identificación del país de la empresa; uno del exterior trae la suya.
-            'tax_id' => ['nullable', 'string', 'max:100', $this->uniqueTaxIdRule(), new ValidTaxId('tax_id_dv', fn (array $d): bool => ($d['category'] ?? $this->categoriaActual()) === Provider::CATEGORY_LOCALES)],
+            'tax_id' => ['nullable', 'string', 'max:100', $this->uniqueTaxIdRule(), new ValidTaxId('tax_id_dv', fn (array $d): bool => Provider::categoryValidatesTaxId($d['category'] ?? $this->categoriaActual()))],
             // SCRUM-1014 — DV del RUC, mismo formato que clientes (SCRUM-928).
             'tax_id_dv' => ['nullable', 'string', 'regex:/^\d{1,2}$/'],
             'currency' => ['nullable', 'string', 'size:3'],

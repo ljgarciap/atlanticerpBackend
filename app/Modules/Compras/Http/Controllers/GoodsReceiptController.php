@@ -134,6 +134,8 @@ final class GoodsReceiptController extends Controller
             'provider_id'     => $order->provider_id,
             'provider_name'   => $order->provider?->name,
             'provider_origin' => $order->provider?->origin,
+            // Fase 7a — tasa del impuesto que el backend aplica a un proveedor local (la de Configuración Fiscal), para la vista previa del costeo.
+            'local_tax_percentage' => $order->provider?->origin === Provider::ORIGIN_LOCAL ? ItbmsRateResolver::defaultRate()->porcentaje : null,
             'status'          => $order->status,
             'products'        => $products,
         ]);
