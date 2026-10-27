@@ -1,6 +1,6 @@
 # Fase 7c — Etapas del pipeline de Ventas como catálogo (2026-10-27)
 
-**Estado**: diseño aprobado por Luis (2026-10-27, §5). **7c-1 (backend) IMPLEMENTADA (§8)**; 7c-2 (frontend) pendiente de su «adelante». Continúa `fase7-catalogos.md` (§6, 7c).
+**Estado**: diseño aprobado por Luis (2026-10-27, §5). **7c-1 (backend, §8) y 7c-2 (frontend, §9) IMPLEMENTADAS.** Continúa `fase7-catalogos.md` (§6, 7c).
 
 ## 1. Objetivo
 Que las etapas del embudo de Ventas & Diseño dejen de ser constantes repetidas en el código para que cada empresa pueda llamarlas, ordenarlas y colorearlas a su negocio (y, según la opción elegida, añadir etapas propias).
@@ -41,3 +41,7 @@ Panamá sin cambio visible con los datos por defecto; migración aditiva y rever
 - **Fachada** `PipelineStages` (`linear`, `open`, `won`, `lost`, `isWon`, `isLost`, `isAtOrAfter`, `isBefore`, `openAtOrAfter`, `anchorOf`, `label`, `labels`). Compuertas del modelo colgadas de la etapa de DESTINO. ~20 archivos migrados (Pipeline, Quote, Dashboard, Reports, Clients, Commission, Home, Orders, SalesTotals, ProjectsList, AdminCont ×2, Gerencia). Retiradas `PipelineCard::NON_EDITABLE_STAGE`/`RESTRICTED_EDIT_STAGE`.
 - **`CatalogCache`** (memo `scoped` por petición/job) para que preguntar por una etapa o un tipo dentro de un bucle no consulte la BD.
 - Informe: `docs/reviews/fase7c1-etapas-pipeline-2026-10-28.md`. Pendiente: **7c-2 (frontend)**, con su «adelante».
+
+## 9. Resultado de la 7c-2 — frontend (2026-10-28)
+- Hook `usePipelineStages` (respaldo a las 6 de sistema; responde por categoría y posición: `isWon`, `isLost`, `isOpen`, `next`, `isAtOrAfter`, `isBefore`); `PipelineStage` pasa a clave de texto. 9 componentes migrados: tablero (columnas del catálogo), modal de tarjeta (sin el mapa fijo `STAGE_FLOW`: avanza a la siguiente etapa del flujo), lista de cotizaciones, lista de proyectos, dashboard, inicio, reportes, clientes y asociados. `CatalogsPanel` bloquea el orden y la categoría de las etapas de sistema (el backend informa `locked_when_system`) y no ofrece `ganada`/`perdida` a una etapa propia.
+- Verificado con Playwright CLI (informe `docs/reviews/fase7c1-…`). CRM (`KanbanBoard`, `crm:stages`) no se tocó, por decisión de Luis.

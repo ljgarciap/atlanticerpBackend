@@ -31,3 +31,11 @@
 
 ## Verificación
 PHPStan L8 sin errores. Suite completa antes de la memo: **5141 tests, 0 fallos**. Con la memo: catálogos y etapas 50/50; la suite completa se re-ejecuta (cambio transversal).
+
+## Verificación visual de la 7c-2 (frontend) — Playwright CLI, BD local reseteada (2026-10-28)
+- **Antes (build de `master`) y después (build de la 7c-2), con los datos por defecto**: tablero, inicio, lista de cotizaciones, lista de proyectos y dashboard con las mismas 6 etapas, etiquetas, filtros y tarjetas, y sin errores de consola. Diff de texto idéntico.
+- **Panel de Catálogos → Etapas del pipeline**: las 6 etapas de sistema muestran el orden y la categoría **bloqueados** (la categoría con su valor real: 4 abiertas, Aprobado «ganada», Perdido «perdida»); el formulario de etapa nueva solo ofrece «abierta».
+- **Etapa propia creada desde la interfaz** («Negociación», sin orden explícito): quedó con orden 410 (entre Propuesta y Aprobado) y aparece como 7.ª columna del tablero, en el inicio, en el dashboard, en el filtro de cotizaciones y en el chip «Final Stage».
+- **Flujo**: una tarjeta en Propuesta ofrece «Mover a Negociación»; ya en la etapa propia, «Mover a Aprobado», y al intentarlo se aplica la **compuerta de aprobación** («Falta al menos 1 fecha de entrega antes de aprobar»), igual que desde Propuesta.
+- La etapa de prueba se borró y la tarjeta volvió a Propuesta.
+- Nota: el modal avanza a la SIGUIENTE etapa del flujo (no a una clave fija); así el auto-avance al subir la cotización firmada o el comprobante no se salta una etapa propia.
