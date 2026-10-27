@@ -16,7 +16,7 @@ use Carbon\Carbon;
  *   2. Si el sistema todavía no tiene `installationGoalHistoryMonths()` meses completos de
  *      historial real (medido desde el ticket más antiguo del sistema) — valor manual configurable
  *      (RN2a-a, default 36).
- *   3. Con historial suficiente — promedio de instalaciones completadas (Ticket::TIPO_INSTALLATION,
+ *   3. Con historial suficiente — promedio de instalaciones completadas (comportamiento `instalacion` de TicketTypes,
  *      resolved|closed, `closed_at` dentro del mes) de los N meses INMEDIATOS anteriores al mes
  *      pedido, × (1 + growthPct/100) (RN2a-b).
  */
