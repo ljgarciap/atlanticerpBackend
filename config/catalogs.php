@@ -3,6 +3,8 @@
 declare(strict_types=1);
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Servicios\Models\Ticket;
+use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Modules\VentasDiseno\Services\PipelineStageRules;
 use App\Modules\VentasDiseno\Models\Architect;
 
 /*
@@ -24,6 +26,19 @@ return [
             'label' => 'Tipos de arquitecto / prescriptor',
             'usage' => [Architect::class, 'type'],
             'props' => [],
+        ],
+        // Fase 7c — etapas del pipeline de Ventas & Diseño. La lógica pregunta por `categoria`, no por la clave. Las 6 de sistema no se
+        // reordenan ni cambian de categoría (las compuertas, las comisiones y «pasar a pedido» dependen de ellas); las propias van entre
+        // Lead y Aprobado y son siempre `abierta` (ganada/perdida son `system_only`).
+        'pipeline_stage' => [
+            'label' => 'Etapas del pipeline (Ventas & Diseño)',
+            'usage' => [PipelineCard::class, 'stage'],
+            'rules' => PipelineStageRules::class,
+            'locked_when_system' => ['sort_order', 'categoria'],
+            'props' => [
+                'categoria' => ['type' => 'enum', 'values' => ['abierta', 'ganada', 'perdida'], 'system_only' => ['ganada', 'perdida'], 'default' => 'abierta'],
+                'color' => ['type' => 'string', 'max' => 7, 'pattern' => '/^#[0-9a-fA-F]{6}$/', 'default' => null],
+            ],
         ],
         // Fase 7b — tipos de ticket de Servicios. La lógica pregunta por `comportamiento` (qué flujo hereda), no por la clave.
         'ticket_type' => [
