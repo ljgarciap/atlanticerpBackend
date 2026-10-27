@@ -66,17 +66,6 @@ class Ticket extends Model
 
     public const TIPO_RETROFIT = 'retrofit';
 
-    /** @var list<string> */
-    public const TIPOS = [self::TIPO_INSTALLATION, self::TIPO_WARRANTY, self::TIPO_CLAIM, self::TIPO_RETROFIT];
-
-    /** @var array<string, string> tipo => prefijo de numeración (REQ-249 RN1) */
-    public const PREFIX_BY_TIPO = [
-        self::TIPO_INSTALLATION => 'INS',
-        self::TIPO_WARRANTY     => 'GAR',
-        self::TIPO_CLAIM        => 'REC',
-        self::TIPO_RETROFIT     => 'RET',
-    ];
-
     public const SUBTIPO_INSTALLATION = 'installation';
 
     public const SUBTIPO_INSPECTION = 'inspection';
@@ -84,17 +73,6 @@ class Ticket extends Model
     public const SUBTIPO_WARRANTY_GENERIC = 'warranty_generic';
 
     public const SUBTIPO_REPLACEMENT_INSPECTION = 'replacement_inspection';
-
-    /**
-     * Solo `installation` y `warranty` manejan subtipo (REQ-279 RN4) — `claim`/`retrofit` no
-     * tienen entrada acá, `subtipo` debe quedar `null` para esos 2 tipos.
-     *
-     * @var array<string, list<string>>
-     */
-    public const SUBTIPOS_BY_TIPO = [
-        self::TIPO_INSTALLATION => [self::SUBTIPO_INSTALLATION, self::SUBTIPO_INSPECTION],
-        self::TIPO_WARRANTY     => [self::SUBTIPO_WARRANTY_GENERIC, self::SUBTIPO_REPLACEMENT_INSPECTION],
-    ];
 
     public const TIPO_INSTALACION_INTERNAL = 'internal';
 

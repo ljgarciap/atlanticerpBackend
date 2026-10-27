@@ -30,15 +30,6 @@ use Illuminate\Support\Facades\Storage;
 final class InspectionReportPdfService
 {
     private const DISK = 's3-private';
-    /** Mismas etiquetas que `TicketPdfService::TIPO_LABELS` — cada PdfService las duplica, no hay
-     *  infraestructura de i18n de dominio en el backend (mismo criterio ya usado en el módulo). */
-    private const TIPO_LABELS = [
-        Ticket::TIPO_INSTALLATION => 'Instalación',
-        Ticket::TIPO_WARRANTY     => 'Garantía',
-        Ticket::TIPO_CLAIM        => 'Reclamo',
-        Ticket::TIPO_RETROFIT     => 'Retrofit',
-    ];
-
     private const SUBTIPO_LABELS = [
         Ticket::SUBTIPO_INSTALLATION           => 'Instalación',
         Ticket::SUBTIPO_INSPECTION             => 'Inspección',
@@ -55,7 +46,7 @@ final class InspectionReportPdfService
         return Pdf::setOption('isPhpEnabled', true)->loadView('servicios.inspection-report-pdf', [
             'ticket'                   => $ticket,
             'report'                   => $report,
-            'tipoLabel'                => self::TIPO_LABELS[$ticket->tipo] ?? $ticket->tipo,
+            'tipoLabel'                => TicketTypes::label($ticket->tipo),
             'subtipoLabel'             => $ticket->subtipo === null ? null : (self::SUBTIPO_LABELS[$ticket->subtipo] ?? $ticket->subtipo),
             'generatedAt'              => now(),
             'firmaClienteImagenDataUri' => $this->signatureImageDataUri($report),
@@ -101,7 +92,7 @@ final class InspectionReportPdfService
         return Pdf::setOption('isPhpEnabled', true)->loadView('servicios.inspection-report-pdf-blank', [
             'ticket'       => $ticket,
             'fields'       => $this->reports->fieldsForTicket($ticket),
-            'tipoLabel'    => self::TIPO_LABELS[$ticket->tipo] ?? $ticket->tipo,
+            'tipoLabel'    => TicketTypes::label($ticket->tipo),
             'subtipoLabel' => $ticket->subtipo === null ? null : (self::SUBTIPO_LABELS[$ticket->subtipo] ?? $ticket->subtipo),
             'generatedAt'  => now(),
             'logoDataUri'  => PdfLogo::dataUri(),

@@ -58,7 +58,7 @@ final class CatalogService
     public function create(string $domain, array $data): CatalogEntry
     {
         return CatalogEntry::create([
-            'domain' => $domain, 'key' => $data['key'], 'label' => $data['label'], 'sort_order' => $data['sort_order'] ?? 0,
+            'domain' => $domain, 'key' => $data['key'], 'label' => $data['label'], 'sort_order' => $data['sort_order'] ?? ((int) CatalogEntry::query()->where('domain', $domain)->max('sort_order') + 1),
             'is_active' => true, 'is_system' => false, 'props' => $this->cleanProps($domain, $data['props'] ?? []),
         ]);
     }
@@ -127,7 +127,8 @@ final class CatalogService
             $ok = $def !== null && match ($def['type']) {
                 'bool' => is_bool($value),
                 'enum' => in_array($value, $def['values'], true),
-                'string' => is_string($value) && $value !== '' && mb_strlen($value) <= ($def['max'] ?? 120),
+                'string' => is_string($value) && $value !== '' && mb_strlen($value) <= ($def['max'] ?? 120)
+                    && (! isset($def['pattern']) || preg_match($def['pattern'], $value) === 1),
                 'int' => is_int($value) && $value >= ($def['min'] ?? PHP_INT_MIN) && $value <= ($def['max'] ?? PHP_INT_MAX),
                 'list' => is_array($value) && array_is_list($value) && count($value) <= ($def['max'] ?? 50)
                     && array_filter($value, static fn ($v): bool => ! is_string($v) || $v === '' || mb_strlen($v) > 60) === [],

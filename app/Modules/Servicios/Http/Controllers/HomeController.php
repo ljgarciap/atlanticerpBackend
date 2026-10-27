@@ -32,7 +32,7 @@ final class HomeController extends Controller
 
     /**
      * GET /api/servicios/home/estado-tickets — REQ-215. Query param `tipo` opcional (mismo
-     * vocabulario que `Ticket::TIPOS`, validado por el filtro de `TicketService::board()`). Aparte
+     * vocabulario que `TicketTypes::keys()`, validado por el filtro de `TicketService::board()`). Aparte
      * de `summary()` porque necesita este param, que el resto de las secciones no usa.
      */
     public function estadoTickets(Request $request): JsonResponse

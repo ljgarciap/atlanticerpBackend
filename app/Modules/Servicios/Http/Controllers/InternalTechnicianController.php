@@ -10,6 +10,7 @@ use App\Modules\Servicios\Http\Requests\StoreCommissionCaptureRequest;
 use App\Modules\Servicios\Http\Requests\StoreInternalTechnicianRequest;
 use App\Modules\Servicios\Http\Requests\UpdateInternalTechnicianRequest;
 use App\Modules\Servicios\Models\InternalTechnician;
+use App\Modules\Servicios\Services\TicketTypes;
 use App\Modules\Servicios\Services\CommissionCaptureService;
 use App\Modules\Servicios\Services\InternalTechnicianService;
 use App\Modules\Servicios\Services\ServiciosSettingsService;
@@ -68,13 +69,14 @@ final class InternalTechnicianController extends Controller
     /** PATCH /api/servicios/internal-technicians/sla-settings — REQ-292 RN2 (RN: rol validado en la ruta). */
     public function updateSlaSettings(Request $request): JsonResponse
     {
+        // Fase 7b — una regla por cada tipo de ticket ACTIVO del catálogo (antes, los 4 fijos).
+        $rules = [];
+        foreach (TicketTypes::keys() as $tipo) {
+            $rules[$tipo] = ['sometimes', 'integer', 'min:1', 'max:365'];
+        }
+
         /** @var array<string, int> $validated */
-        $validated = $request->validate([
-            'claim'        => ['sometimes', 'integer', 'min:1'],
-            'warranty'     => ['sometimes', 'integer', 'min:1'],
-            'installation' => ['sometimes', 'integer', 'min:1'],
-            'retrofit'     => ['sometimes', 'integer', 'min:1'],
-        ]);
+        $validated = $request->validate($rules);
 
         $this->settings->updateSlaSettings($validated);
 

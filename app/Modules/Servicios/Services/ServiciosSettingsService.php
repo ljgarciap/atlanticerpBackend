@@ -8,6 +8,7 @@ use App\Modules\AdminCont\Services\ItbmsRateResolver;
 use App\Modules\Servicios\Models\ServiciosSetting;
 use App\Modules\Servicios\Models\Ticket;
 use App\Shared\Auth\JwtActor;
+use App\Shared\Catalogs\CatalogService;
 
 /**
  * Batch 2 (REQ-222 RN4) — umbral configurable de "días sin agendar" para la tarjeta de
@@ -51,25 +52,6 @@ final class ServiciosSettingsService
     private const KEY_SIN_RESPONDER_UMBRAL_DIAS = 'sin_responder_umbral_dias';
 
     private const DEFAULT_SIN_RESPONDER_UMBRAL_DIAS = 5;
-
-    // Batch 7 (REQ-292 RN2) — SLA por tipo de ticket, en días hábiles. "valores propuestos como
-    // punto de partida razonable, ajustables por Gerencia sin intervención de Tecnología" — nunca
-    // hardcodeados en el cálculo de Cumplimiento de tiempos (REQ-258 RN3), solo acá como default.
-    private const KEY_SLA_DIAS_CLAIM = 'sla_dias_claim';
-
-    private const DEFAULT_SLA_DIAS_CLAIM = 2;
-
-    private const KEY_SLA_DIAS_WARRANTY = 'sla_dias_warranty';
-
-    private const DEFAULT_SLA_DIAS_WARRANTY = 3;
-
-    private const KEY_SLA_DIAS_INSTALLATION = 'sla_dias_installation';
-
-    private const DEFAULT_SLA_DIAS_INSTALLATION = 7;
-
-    private const KEY_SLA_DIAS_RETROFIT = 'sla_dias_retrofit';
-
-    private const DEFAULT_SLA_DIAS_RETROFIT = 10;
 
     // Batch 10 (REQ-258 RN1/RN6) — pesos y montos máximos de los 5 criterios del "Plan de
     // Bonificación por Desempeño" real (documento RRHH, Plan_Bonificacion_Carlos_Vergara.docx,
@@ -215,53 +197,43 @@ final class ServiciosSettingsService
     }
 
     /**
-     * REQ-292 RN2 — SLA (días hábiles) por tipo de ticket, para el mapa que consume la UI de ajuste.
+     * REQ-292 RN2 — SLA (días hábiles) por tipo de ticket activo, para el mapa que consume la UI de ajuste.
+     * Fase 7b: el SLA vive en la propiedad `sla_dias` de cada tipo del catálogo `ticket_type` (antes, 4 ajustes fijos).
      *
      * @return array<string, int>
      */
     public function slaSettings(): array
     {
-        return [
-            Ticket::TIPO_CLAIM        => $this->slaDiasByTipo(Ticket::TIPO_CLAIM),
-            Ticket::TIPO_WARRANTY     => $this->slaDiasByTipo(Ticket::TIPO_WARRANTY),
-            Ticket::TIPO_INSTALLATION => $this->slaDiasByTipo(Ticket::TIPO_INSTALLATION),
-            Ticket::TIPO_RETROFIT     => $this->slaDiasByTipo(Ticket::TIPO_RETROFIT),
-        ];
+        $map = [];
+        foreach (TicketTypes::keys() as $tipo) {
+            $map[$tipo] = TicketTypes::slaDias($tipo);
+        }
+
+        return $map;
     }
 
     /** REQ-258 RN3 — SLA vigente para un tipo de ticket puntual (consumido por el cálculo de Cumplimiento de tiempos). */
     public function slaDiasByTipo(string $tipo): int
     {
-        return match ($tipo) {
-            Ticket::TIPO_CLAIM        => $this->intSetting(self::KEY_SLA_DIAS_CLAIM, self::DEFAULT_SLA_DIAS_CLAIM),
-            Ticket::TIPO_WARRANTY     => $this->intSetting(self::KEY_SLA_DIAS_WARRANTY, self::DEFAULT_SLA_DIAS_WARRANTY),
-            Ticket::TIPO_INSTALLATION => $this->intSetting(self::KEY_SLA_DIAS_INSTALLATION, self::DEFAULT_SLA_DIAS_INSTALLATION),
-            Ticket::TIPO_RETROFIT     => $this->intSetting(self::KEY_SLA_DIAS_RETROFIT, self::DEFAULT_SLA_DIAS_RETROFIT),
-            default                   => self::DEFAULT_SLA_DIAS_INSTALLATION,
-        };
+        return TicketTypes::slaDias($tipo);
     }
 
     /**
-     * REQ-292 RN2 — actualización de Gerencia. Solo pisa las claves presentes en `$data` (permite
-     * ajustar un solo tipo sin reenviar los otros 3).
+     * REQ-292 RN2 — actualización de Gerencia. Solo pisa los tipos presentes en `$data` (permite ajustar uno sin reenviar los demás);
+     * una clave que no sea un tipo activo se ignora.
      *
-     * @param array<string, int> $data claves: Ticket::TIPO_CLAIM|TIPO_WARRANTY|TIPO_INSTALLATION|TIPO_RETROFIT
+     * @param array<string, int> $data clave del tipo de ticket => días hábiles
      */
     public function updateSlaSettings(array $data): void
     {
-        $map = [
-            Ticket::TIPO_CLAIM        => self::KEY_SLA_DIAS_CLAIM,
-            Ticket::TIPO_WARRANTY     => self::KEY_SLA_DIAS_WARRANTY,
-            Ticket::TIPO_INSTALLATION => self::KEY_SLA_DIAS_INSTALLATION,
-            Ticket::TIPO_RETROFIT     => self::KEY_SLA_DIAS_RETROFIT,
-        ];
+        $catalog = new CatalogService();
 
-        foreach ($map as $tipo => $key) {
-            if (! array_key_exists($tipo, $data)) {
+        foreach (CatalogService::entries(TicketTypes::DOMAIN) as $entry) {
+            if (! array_key_exists($entry->key, $data)) {
                 continue;
             }
 
-            ServiciosSetting::updateOrCreate(['key' => $key], ['value' => (string) $data[$tipo]]);
+            $catalog->update($entry, ['props' => [...($entry->props ?? []), 'sla_dias' => (int) $data[$entry->key]]]);
         }
     }
 
@@ -426,10 +398,6 @@ final class ServiciosSettingsService
             ['key' => self::KEY_SIN_RESPONDER_UMBRAL_DIAS, 'group' => 'operacion', 'label' => 'Inicio — Días sin responder (umbral panel "Servicios sin responder")', 'type' => 'int', 'default' => self::DEFAULT_SIN_RESPONDER_UMBRAL_DIAS],
             ['key' => self::KEY_ITBMS_PERCENT, 'group' => 'cotizacion', 'label' => 'Cotización — '.\App\Shared\Multitenancy\TenantRegion::taxLabel().' (%)', 'type' => 'int', 'default' => $this->defaultItbmsPercent()],
             ['key' => self::KEY_CONDICIONES_COTIZACION_SERVICIOS, 'group' => 'cotizacion', 'label' => 'Cotización — Condiciones del servicio (texto)', 'type' => 'text', 'default' => self::DEFAULT_CONDICIONES_COTIZACION_SERVICIOS],
-            ['key' => self::KEY_SLA_DIAS_CLAIM, 'group' => 'sla', 'label' => 'SLA — Reclamos (días hábiles)', 'type' => 'int', 'default' => self::DEFAULT_SLA_DIAS_CLAIM],
-            ['key' => self::KEY_SLA_DIAS_WARRANTY, 'group' => 'sla', 'label' => 'SLA — Garantías (días hábiles)', 'type' => 'int', 'default' => self::DEFAULT_SLA_DIAS_WARRANTY],
-            ['key' => self::KEY_SLA_DIAS_INSTALLATION, 'group' => 'sla', 'label' => 'SLA — Instalación (días hábiles)', 'type' => 'int', 'default' => self::DEFAULT_SLA_DIAS_INSTALLATION],
-            ['key' => self::KEY_SLA_DIAS_RETROFIT, 'group' => 'sla', 'label' => 'SLA — Retrofit (días hábiles)', 'type' => 'int', 'default' => self::DEFAULT_SLA_DIAS_RETROFIT],
             ['key' => self::KEY_COMMISSION_SATISFACCION_UMBRAL_100, 'group' => 'comision', 'label' => 'Comisión — Satisfacción, umbral 100% (promedio ≥)', 'type' => 'float', 'default' => self::DEFAULT_COMMISSION_SATISFACCION_UMBRAL_100],
             ['key' => self::KEY_COMMISSION_SATISFACCION_UMBRAL_60, 'group' => 'comision', 'label' => 'Comisión — Satisfacción, umbral 60% (promedio ≥)', 'type' => 'float', 'default' => self::DEFAULT_COMMISSION_SATISFACCION_UMBRAL_60],
             ['key' => self::KEY_COMMISSION_SLA_UMBRAL_100_PCT, 'group' => 'comision', 'label' => 'Comisión — Cumplimiento SLA, umbral 100% (% cumplimiento ≥)', 'type' => 'int', 'default' => self::DEFAULT_COMMISSION_SLA_UMBRAL_100_PCT],

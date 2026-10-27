@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Servicios\Http\Requests;
 
 use App\Modules\Servicios\Models\Ticket;
+use App\Modules\Servicios\Services\TicketTypes;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -29,7 +30,7 @@ class StoreTicketRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipo'                       => ['required', 'string', Rule::in(Ticket::TIPOS)],
+            'tipo'                       => ['required', 'string', Rule::in(TicketTypes::keys())],
             'subtipo'                    => ['nullable', 'string'],
             'tipo_instalacion'           => ['required', 'string', Rule::in(Ticket::TIPOS_INSTALACION)],
             'descripcion'                => ['required', 'string'],
@@ -77,10 +78,10 @@ class StoreTicketRequest extends FormRequest
             return;
         }
 
-        $allowedSubtipos = Ticket::SUBTIPOS_BY_TIPO[$tipo] ?? null;
+        $allowedSubtipos = TicketTypes::subtipos($tipo);
 
         // REQ-279 RN4 — claim/retrofit no tienen subtipo, debe venir vacío.
-        if ($allowedSubtipos === null) {
+        if ($allowedSubtipos === []) {
             if ($subtipo !== null && $subtipo !== '') {
                 $v->errors()->add('subtipo', 'Este tipo de ticket no maneja subtipo.');
             }

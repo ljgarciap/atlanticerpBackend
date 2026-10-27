@@ -31,9 +31,9 @@ return [
             'usage' => [Ticket::class, 'tipo'],
             'props' => [
                 'comportamiento' => ['type' => 'enum', 'values' => ['instalacion', 'garantia', 'reclamo', 'retrofit', 'generico'], 'default' => 'generico'],
-                'prefijo' => ['type' => 'string', 'max' => 5, 'default' => 'TCK'],
+                'prefijo' => ['type' => 'string', 'max' => 5, 'pattern' => '/^[A-Z0-9]{1,5}$/', 'default' => 'TCK'],
                 'sla_dias' => ['type' => 'int', 'min' => 1, 'max' => 365, 'default' => 7],
-                'color' => ['type' => 'string', 'max' => 30, 'default' => null],
+                'color' => ['type' => 'string', 'max' => 7, 'pattern' => '/^#[0-9a-fA-F]{6}$/', 'default' => null],
                 'subtipos' => ['type' => 'list', 'max' => 20, 'default' => []],
             ],
         ],

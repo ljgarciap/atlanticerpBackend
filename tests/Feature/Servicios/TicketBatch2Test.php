@@ -6,6 +6,7 @@ namespace Tests\Feature\Servicios;
 
 use App\Models\User;
 use App\Modules\Servicios\Models\Ticket;
+use App\Modules\Servicios\Services\TicketTypes;
 use App\Modules\Servicios\Models\TicketProduct;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
@@ -46,7 +47,7 @@ class TicketBatch2Test extends FeatureTestCase
         unset($overrides['created_at']);
 
         $ticket = Ticket::create([
-            'numero' => Ticket::PREFIX_BY_TIPO[$overrides['tipo'] ?? Ticket::TIPO_INSTALLATION].'-2026-'.static::uniqueTestNumber(),
+            'numero' => TicketTypes::prefijo($overrides['tipo'] ?? Ticket::TIPO_INSTALLATION).'-2026-'.static::uniqueTestNumber(),
             'tipo' => Ticket::TIPO_INSTALLATION,
             'subtipo' => Ticket::SUBTIPO_INSPECTION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL,

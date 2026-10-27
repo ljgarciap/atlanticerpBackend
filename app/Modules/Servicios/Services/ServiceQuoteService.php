@@ -174,7 +174,7 @@ final class ServiceQuoteService
         $notes = [];
 
         if ($ticket->ticketProducts()->exists()) {
-            $notes[] = $ticket->tipo === Ticket::TIPO_RETROFIT
+            $notes[] = TicketTypes::is($ticket->tipo, TicketTypes::RETROFIT)
                 ? 'Este ticket tiene productos a cambiar registrados en la inspección — considere cotizar su reemplazo.'
                 : 'Este ticket tiene productos reclamados/afectados registrados — considere cotizar su reemplazo.';
         }

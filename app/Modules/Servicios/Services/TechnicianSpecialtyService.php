@@ -29,7 +29,7 @@ final class TechnicianSpecialtyService
     /** @return Collection<int, User> técnicos activos válidos para el tipo de ticket dado. */
     public function forTipo(string $tipo): Collection
     {
-        $roleKey = $tipo === Ticket::TIPO_WARRANTY ? self::ROLE_TECNICO_GARANTIAS : self::ROLE_TECNICO_GENERAL;
+        $roleKey = TicketTypes::is($tipo, TicketTypes::GARANTIA) ? self::ROLE_TECNICO_GARANTIAS : self::ROLE_TECNICO_GENERAL;
         $roleId = Role::where('key', $roleKey)->value('id');
 
         return User::where('role_id', $roleId)
