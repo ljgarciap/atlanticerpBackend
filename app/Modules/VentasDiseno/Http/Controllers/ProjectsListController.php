@@ -6,6 +6,7 @@ namespace App\Modules\VentasDiseno\Http\Controllers;
 
 use App\Models\User;
 use App\Modules\VentasDiseno\Models\PipelineCard;
+use App\Modules\VentasDiseno\Services\PipelineStages;
 use App\Modules\VentasDiseno\Services\ProjectsListService;
 use App\Shared\Http\Pagination;
 use App\Shared\Support\ParsesIdListQueryParam;
@@ -27,16 +28,6 @@ final class ProjectsListController extends Controller
 
     /** @var list<string> */
     private const ALLOWED_SORTS = ['stage_changed_at', 'amount', 'stage'];
-
-    /** @var array<string, string> RN4/RN5 — mismos valores que PipelineCard::stage / SalesProject::tag. */
-    private const STAGE_LABELS = [
-        'lead'     => 'Lead',
-        'design'   => 'Diseño',
-        'quote'    => 'Cotización',
-        'proposal' => 'Propuesta',
-        'approved' => 'Aprobado',
-        'lost'     => 'Perdido',
-    ];
 
     /** @var array<string, string> */
     private const TAG_LABELS = [
@@ -94,7 +85,10 @@ final class ProjectsListController extends Controller
         $cards   = $this->service->query($user, $filters)->orderBy('stage_changed_at', 'desc')->get();
         $filename = 'lista-proyectos-' . now()->format('Y-m-d') . '.csv';
 
-        return response()->streamDownload(function () use ($cards): void {
+        // Las etiquetas se resuelven ANTES de transmitir: el cierre corre sin contexto de tenant (no puede consultar el catálogo).
+        $stageLabels = PipelineStages::labels();
+
+        return response()->streamDownload(function () use ($cards, $stageLabels): void {
             $stream = fopen('php://output', 'w');
             assert($stream !== false);
 
@@ -113,7 +107,7 @@ final class ProjectsListController extends Controller
                 fputcsv($stream, [
                     $row['sales_project']['name'],
                     $row['master_client']['name'] ?? '—',
-                    self::STAGE_LABELS[$row['stage']] ?? $row['stage'],
+                    $stageLabels[$row['stage']] ?? $row['stage'],
                     $row['sales_project']['tag'] !== null ? (self::TAG_LABELS[$row['sales_project']['tag']] ?? '') : '',
                     $row['owner']['name'],
                     $row['amount'] ?? '—',

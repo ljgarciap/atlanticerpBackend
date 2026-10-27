@@ -30,7 +30,11 @@ final class CatalogController extends Controller
     {
         $out = [];
         foreach (CatalogService::domains() as $key => $def) {
-            $out[] = ['domain' => $key, 'label' => $def['label'], 'props' => $def['props']];
+            $out[] = [
+                'domain' => $key, 'label' => $def['label'], 'props' => $def['props'],
+                // Fase 7c: lo que una entrada de sistema no puede cambiar, para que la pantalla de Ajustes lo bloquee en vez de dejar que falle al guardar.
+                'locked_when_system' => $def['locked_when_system'] ?? [],
+            ];
         }
 
         return response()->json($out);

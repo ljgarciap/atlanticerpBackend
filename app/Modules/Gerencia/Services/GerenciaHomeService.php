@@ -15,6 +15,7 @@ use App\Modules\Compras\Models\BodegaZonaLibreRequest;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\Servicios\Models\Ticket;
+use App\Modules\VentasDiseno\Services\PipelineStages;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\Quote;
 use App\Shared\Support\AprobacionGate;
@@ -38,8 +39,6 @@ use Illuminate\Support\Collection;
  */
 final class GerenciaHomeService
 {
-    private const ACTIVE_PIPELINE_STAGES = ['lead', 'design', 'quote', 'proposal'];
-
     public function __construct(
         private readonly AprobacionGate $gate,
         private readonly InventoryKpiService $inventoryKpis,
@@ -99,7 +98,7 @@ final class GerenciaHomeService
             ->when($clienteId, fn ($q) => $q->where('master_client_id', $clienteId))
             ->sum('monto');
 
-        $cotizado = (float) PipelineCard::where('stage', 'approved')
+        $cotizado = (float) PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereBetween('updated_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->sum('amount');
@@ -117,7 +116,7 @@ final class GerenciaHomeService
 
         // SCRUM-156 RN1: margen_cotiz_pct — margen % de las cotizaciones aprobadas en el
         // período (PipelineCard.stage=approved → Quote confirmada → QuoteItem.cost).
-        $approvedProjectIds = array_values(PipelineCard::where('stage', 'approved')
+        $approvedProjectIds = array_values(PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereBetween('updated_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->pluck('sales_project_id')
@@ -155,7 +154,7 @@ final class GerenciaHomeService
             ->sum('saldo');
 
         // Proyectos activos: tarjetas en etapas no terminadas
-        $proyectosActivos = PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
+        $proyectosActivos = PipelineCard::whereIn('stage', PipelineStages::open())
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->count();
 
@@ -307,21 +306,21 @@ final class GerenciaHomeService
         $baseQuery = PipelineCard::whereBetween('created_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId));
 
-        $aprobadas = PipelineCard::where('stage', 'approved')
+        $aprobadas = PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereBetween('updated_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->count();
-        $montoAprobado = (float) PipelineCard::where('stage', 'approved')
+        $montoAprobado = (float) PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereBetween('updated_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->sum('amount');
 
         // Cerrados (approved) este año
-        $cerradosAnio = (float) PipelineCard::where('stage', 'approved')
+        $cerradosAnio = (float) PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereYear('updated_at', $hasta->year)
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->sum('amount');
-        $cerradosAnioCount = PipelineCard::where('stage', 'approved')
+        $cerradosAnioCount = PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereYear('updated_at', $hasta->year)
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->count();
@@ -343,7 +342,7 @@ final class GerenciaHomeService
             ->all();
 
         // Margen anio: cotizaciones de tarjetas cerradas (approved) en el año en curso
-        $cerradosAnioProjectIds = array_values(PipelineCard::where('stage', 'approved')
+        $cerradosAnioProjectIds = array_values(PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereYear('updated_at', $hasta->year)
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->pluck('sales_project_id')
@@ -353,7 +352,7 @@ final class GerenciaHomeService
             ->all());
 
         // Margen mes: cotizaciones de tarjetas cerradas en el rango filtrado
-        $cerradosMesProjectIds = array_values(PipelineCard::where('stage', 'approved')
+        $cerradosMesProjectIds = array_values(PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereBetween('updated_at', [$desde, $hasta])
             ->when($vendedorId, fn ($q) => $q->where('owner_id', $vendedorId))
             ->pluck('sales_project_id')
@@ -477,16 +476,16 @@ final class GerenciaHomeService
 
         // ── Ventas & Diseño ───────────────────────────────────────────────────
         $vd = [
-            'en_final_stage' => PipelineCard::where('stage', 'proposal')->count(),
-            'estancados' => PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
+            'en_final_stage' => PipelineCard::whereIn('stage', PipelineStages::openAtOrAfter(PipelineStages::PROPOSAL))->count(),
+            'estancados' => PipelineCard::whereIn('stage', PipelineStages::open())
                 ->where('stage_changed_at', '<', Carbon::now()->subDays(app(\App\Modules\CRM\Services\CrmSettingsService::class)->pipelineEstancadoDias()))
                 ->count(),
             'monto_cotizado_mes' => (float) PipelineCard::whereBetween('created_at', [$inicioMes, $finMes])
                 ->sum('amount'),
-            'monto_aprobado_mes' => (float) PipelineCard::where('stage', 'approved')
+            'monto_aprobado_mes' => (float) PipelineCard::whereIn('stage', PipelineStages::won())
                 ->whereBetween('updated_at', [$inicioMes, $finMes])
                 ->sum('amount'),
-            'pipeline_total' => (float) PipelineCard::whereIn('stage', self::ACTIVE_PIPELINE_STAGES)
+            'pipeline_total' => (float) PipelineCard::whereIn('stage', PipelineStages::open())
                 ->sum('amount'),
         ];
 

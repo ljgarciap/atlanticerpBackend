@@ -22,7 +22,6 @@ use Illuminate\Support\Facades\DB;
 final class ClientsService
 {
 
-    private const ACTIVE_STAGES = ['lead', 'design', 'quote', 'proposal'];
 
     /**
      * SCRUM-754 (2026-08-18) — paginación real de backend, un Cliente Master (con sus
@@ -94,11 +93,11 @@ final class ClientsService
             'name'               => $client->name,
             'default_price_type' => $client->default_price_type,
             'categories'         => $client->subClients->pluck('category')->filter()->unique()->values(),
-            'active_projects'    => $cards->whereIn('stage', self::ACTIVE_STAGES)->count(),
-            'lost_projects'      => $cards->where('stage', 'lost')->count(),
+            'active_projects'    => $cards->whereIn('stage', PipelineStages::open())->count(),
+            'lost_projects'      => $cards->whereIn('stage', PipelineStages::lost())->count(),
             'total_projects'     => $cards->count(),
-            'total_amount'       => (float) $cards->whereIn('stage', array_merge(self::ACTIVE_STAGES, ['approved']))->sum('amount'),
-            'closed_amount'      => (float) $cards->where('stage', 'approved')->sum('amount'),
+            'total_amount'       => (float) $cards->whereIn('stage', array_merge(PipelineStages::open(), PipelineStages::won()))->sum('amount'),
+            'closed_amount'      => (float) $cards->whereIn('stage', PipelineStages::won())->sum('amount'),
             'last_contact_days'  => $lastContact !== null ? (int) $lastContact->diffInDays(now()) : null,
         ];
     }

@@ -12,6 +12,7 @@ use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\PipelineCardFile;
 use App\Modules\VentasDiseno\Models\Quote;
 use App\Modules\VentasDiseno\Models\SubClient;
+use App\Modules\VentasDiseno\Services\PipelineStages;
 use App\Modules\VentasDiseno\Services\PipelineFileService;
 use App\Modules\VentasDiseno\Services\PipelineService;
 use App\Modules\VentasDiseno\Services\ProductDeliveryService;
@@ -64,8 +65,8 @@ final class PipelineController extends Controller
             // SCRUM-796 (secc. 1.1/1.2) — filtro genérico por etapa literal (los 6 stages),
             // distinto de `chip` (que mantiene su semántica propia: final_stage/stagnant/
             // approved). Dashboard CRM (indicadores y gráfica "Proyectos por etapa") navega
-            // acá con ?stage=<lead|design|quote|proposal|approved|lost>.
-            'stage'    => isset($raw['stage']) && in_array($raw['stage'], [...PipelineCard::stageOrder(), 'lost'], true) ? (string) $raw['stage'] : null,
+            // acá con ?stage=<clave de una etapa activa del catálogo pipeline_stage>.
+            'stage'    => isset($raw['stage']) && in_array($raw['stage'], PipelineStages::keys(), true) ? (string) $raw['stage'] : null,
             // SCRUM-1128 — filtro "Pedidos": approved = ya pasó a pedido (existe el pedido en
             // Bodega); pending = Aprobado en Pipeline y todavía sin pasar a pedido.
             'orders'   => isset($raw['orders']) && in_array($raw['orders'], ['approved', 'pending'], true) ? (string) $raw['orders'] : null,
@@ -210,7 +211,7 @@ final class PipelineController extends Controller
         $deliveryDatesSet = array_key_exists('delivery_dates', $validated) && count($validated['delivery_dates']) > 0;
         if (
             ($deliveryTypeSet || $deliveryDatesSet)
-            && ! in_array($card->stage, ['quote', 'proposal', 'approved'], true)
+            && ! PipelineStages::isAtOrAfter($card->stage, PipelineStages::QUOTE)
         ) {
             return response()->json(
                 ['message' => 'La fecha de entrega solo se puede definir en las etapas Cotización, Propuesta o Aprobado.'],
@@ -266,14 +267,14 @@ final class PipelineController extends Controller
 
         /** @var array{stage: string} $validated */
         $validated = $request->validate([
-            'stage' => ['required', 'string', Rule::in(['lead', 'design', 'quote', 'proposal', 'approved', 'lost'])],
+            'stage' => ['required', 'string', Rule::in(PipelineStages::keys())],
         ]);
         $targetStage = $validated['stage'];
 
         // REQ-018 es la única acción permitida sobre una tarjeta en "lost" — bypassea
         // isEditableBy() a propósito (que bloquea "lost" por completo) para permitir
         // justamente esa reactivación.
-        if ($card->stage !== PipelineCard::NON_EDITABLE_STAGE && ! $card->isEditableBy($user)) {
+        if (! PipelineStages::isLost($card->stage) && ! $card->isEditableBy($user)) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -286,7 +287,7 @@ final class PipelineController extends Controller
         // Model, porque necesita resolver la cotización del proyecto (Quote/QuoteItem), algo que
         // el Model no hace en ningún otro gate — mismo criterio que ya separa
         // PipelineCard::isEditableBy() de la resolución de cotización en OrderService.
-        if ($gateError === null && $card->stage === 'proposal' && $targetStage === 'approved') {
+        if ($gateError === null && $targetStage === PipelineStages::APPROVED) {
             $gateError = $this->productDeliveries->validationErrorForApproval($card);
         }
 
@@ -370,7 +371,7 @@ final class PipelineController extends Controller
         // reemplazarse después, ver test_subir_comprobante_de_aprobacion_en_aprobado_*.
         if (
             in_array($validated['type'], ['design', 'proposal'], true)
-            && $card->stage === PipelineCard::RESTRICTED_EDIT_STAGE
+            && PipelineStages::isWon($card->stage)
         ) {
             $label = $validated['type'] === 'design' ? 'de diseño' : 'de propuesta';
 
@@ -463,7 +464,7 @@ final class PipelineController extends Controller
 
         // REQ-013/015 + evidencia de aprobación: en un proyecto Aprobado estos tipos no se quitan, ni siquiera con el
         // permiso `ventas_diseno.edit.approved` (igual de incondicional que el bloqueo de la subida en `uploadFile`).
-        if ($card->stage === PipelineCard::RESTRICTED_EDIT_STAGE && isset(PipelineCard::APPROVED_LOCKED_FILE_TYPES[$file->type])) {
+        if (PipelineStages::isWon($card->stage) && isset(PipelineCard::APPROVED_LOCKED_FILE_TYPES[$file->type])) {
             $label = PipelineCard::APPROVED_LOCKED_FILE_TYPES[$file->type];
 
             return response()->json([
@@ -585,7 +586,7 @@ final class PipelineController extends Controller
             return 'approved';
         }
 
-        return $card->stage === PipelineCard::RESTRICTED_EDIT_STAGE ? 'pending' : null;
+        return PipelineStages::isWon($card->stage) ? 'pending' : null;
     }
 
     /** @return array<string, mixed> */
@@ -628,7 +629,7 @@ final class PipelineController extends Controller
             'has_architect_contact' => $card->hasArchitectContact(),
             'can_edit'              => $card->isEditableBy($user),
             // SCRUM-1128 — el botón "Pasar a Pedido" se muestra solo con esto en true.
-            'can_pass_to_order'     => $card->stage === PipelineCard::RESTRICTED_EDIT_STAGE
+            'can_pass_to_order'     => PipelineStages::isWon($card->stage)
                 && $this->orderStatus($card) === 'pending'
                 && $this->canPassToOrder($user),
             'files'                 => $card->files->map(fn (PipelineCardFile $f) => $this->formatFile($f))->values(),

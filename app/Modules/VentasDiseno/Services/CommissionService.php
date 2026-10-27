@@ -167,7 +167,7 @@ final class CommissionService
         // SCRUM-849.4 — mismo criterio de reparto N-way que monthlyApprovedTotal(); si no se
         // hiciera acá, "Final Stage" sobrecontaría el monto completo de una tarjeta compartida
         // en cada uno de sus N asignados.
-        $proposalTotal = (float) PipelineCard::where('stage', 'proposal')
+        $proposalTotal = (float) PipelineCard::whereIn('stage', PipelineStages::openAtOrAfter(PipelineStages::PROPOSAL))
             ->where(function ($q) use ($vendor): void {
                 $q->where('owner_id', $vendor->id)
                     ->orWhereJsonContains('compartido_con', $vendor->id);

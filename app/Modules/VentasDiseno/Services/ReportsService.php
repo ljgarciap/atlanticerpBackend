@@ -114,7 +114,7 @@ final class ReportsService
             'owner_ids' => $ownerIds,
         ], fn (mixed $v): bool => $v !== null));
 
-        return $cards->where('stage', 'approved')->values();
+        return $cards->whereIn('stage', PipelineStages::won())->values();
     }
 
     /**
@@ -280,11 +280,11 @@ final class ReportsService
         $settings = ReportSettings::current();
 
         $allTeamCards = $this->pipeline->list($user, ['scope' => 'team']);
-        $closed       = (float) $this->filterByPeriod($allTeamCards->where('stage', 'approved'), $period)->sum('amount');
+        $closed       = (float) $this->filterByPeriod($allTeamCards->whereIn('stage', PipelineStages::won()), $period)->sum('amount');
 
         $probabilities = [
-            'quote'    => $settings->quote_probability_percent,
-            'proposal' => $settings->proposal_probability_percent,
+            PipelineStages::QUOTE    => $settings->quote_probability_percent,
+            PipelineStages::PROPOSAL => $settings->proposal_probability_percent,
         ];
 
         $stageBreakdown   = [];
@@ -293,13 +293,15 @@ final class ReportsService
         $committed        = 0.0;
 
         foreach ($probabilities as $stage => $probabilityPercent) {
-            $cards      = $allTeamCards->where('stage', $stage);
+            // Una etapa propia hereda la probabilidad de la última etapa de sistema con probabilidad que la precede (Fase 7c).
+            $cards      = $allTeamCards->filter(fn (PipelineCard $c): bool => in_array($c->stage, PipelineStages::open(), true)
+                && PipelineStages::anchorOf($c->stage, array_keys($probabilities)) === $stage);
             $openAmount = (float) $cards->sum('amount');
             $weightedAmount = round($openAmount * $probabilityPercent / 100, 2);
 
             $bestCase += $openAmount;
             $weightedPipeline += $weightedAmount;
-            if ($stage === 'proposal') {
+            if ($stage === PipelineStages::PROPOSAL) {
                 $committed = $openAmount;
             }
 

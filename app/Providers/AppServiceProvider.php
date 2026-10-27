@@ -39,6 +39,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Memo por petición de los ajustes de CRM (`PipelineCard::isStagnant()` se evalúa por tarjeta; sin esto sería una consulta por tarjeta).
         $this->app->scoped(\App\Modules\CRM\Services\CrmSettingsService::class);
+        // Fase 7c: memo de las entradas de catálogo por petición/job (ver CatalogCache).
+        $this->app->scoped(\App\Shared\Catalogs\CatalogCache::class);
         $this->app->scoped(\App\Modules\Compras\Services\ComprasThresholds::class);
 
     }

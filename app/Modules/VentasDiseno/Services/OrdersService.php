@@ -127,7 +127,7 @@ final class OrdersService
     private function buildOrders(User $user, string $scope, array $ownerIds = [], bool $verEquipo = false): Collection
     {
         $cardsQuery = PipelineCard::query()
-            ->where('stage', PipelineCard::RESTRICTED_EDIT_STAGE)
+            ->whereIn('stage', PipelineStages::won())
             ->with(['salesProject', 'masterClient', 'owner']);
 
         // SCRUM-1119: `$verEquipo` lo manda el controlador para Compras, que no tiene vista de equipo en

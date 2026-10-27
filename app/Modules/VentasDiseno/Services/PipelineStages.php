@@ -114,10 +114,54 @@ final class PipelineStages
         return $i !== null && $a !== null && $i < $a;
     }
 
+    /**
+     * Etapas abiertas que están en la posición de `$anchor` o después (p. ej. las «propuestas pendientes de aprobar»: Propuesta más las
+     * etapas propias intercaladas entre Propuesta y Aprobado). La ganada y la perdida no son abiertas, así que no entran.
+     *
+     * @return list<string>
+     */
+    public static function openAtOrAfter(string $anchor): array
+    {
+        return array_values(array_filter(self::open(), static fn (string $k): bool => self::isAtOrAfter($k, $anchor)));
+    }
+
+    /**
+     * La última etapa ancla (de las dadas) que está en la posición de `$stage` o antes; null si ninguna. Una etapa propia hereda así la
+     * probabilidad del forecast de la etapa de sistema que la precede.
+     *
+     * @param  list<string>  $anchors
+     */
+    public static function anchorOf(?string $stage, array $anchors): ?string
+    {
+        $i = self::index($stage);
+        $best = null;
+        $bestIdx = -1;
+        foreach ($anchors as $anchor) {
+            $a = self::index($anchor);
+            if ($i !== null && $a !== null && $a <= $i && $a > $bestIdx) {
+                $best = $anchor;
+                $bestIdx = $a;
+            }
+        }
+
+        return $best;
+    }
+
     /** Etiqueta de la etapa, también de una desactivada; sin entrada, la propia clave. */
     public static function label(string $stage): string
     {
-        return CatalogEntry::query()->where('domain', self::DOMAIN)->where('key', $stage)->value('label') ?? $stage;
+        return self::labels()[$stage] ?? $stage;
+    }
+
+    /**
+     * Etiquetas de TODAS las etapas (también las desactivadas), clave => etiqueta. Para respuestas transmitidas (CSV) cuyo cierre corre
+     * cuando el contexto del tenant ya se olvidó: se resuelve antes de transmitir, no dentro del cierre.
+     *
+     * @return array<string, string>
+     */
+    public static function labels(): array
+    {
+        return CatalogService::entries(self::DOMAIN, onlyActive: false)->pluck('label', 'key')->map(strval(...))->all();
     }
 
     /**

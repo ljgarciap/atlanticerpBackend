@@ -17,9 +17,7 @@ use Illuminate\Support\Collection;
  */
 final class DashboardService
 {
-    private const STAGES = ['lead', 'design', 'quote', 'proposal', 'approved', 'lost'];
 
-    private const ACTIVE_STAGES = ['lead', 'design', 'quote', 'proposal'];
 
     private const TAGS = ['design', 'quote', 'both'];
 
@@ -66,7 +64,7 @@ final class DashboardService
     {
         /** @var Collection<int, PipelineCard> $overdue */
         $overdue = $this->overdueProposals(
-            PipelineCard::with(['salesProject', 'owner'])->where('stage', 'proposal')->get()
+            PipelineCard::with(['salesProject', 'owner'])->whereIn('stage', PipelineStages::openAtOrAfter(PipelineStages::PROPOSAL))->get()
         );
 
         $notified = [];
@@ -140,7 +138,7 @@ final class DashboardService
         // cliente si quiere. Tarjetas sin Cliente Master (ej. Lead sin vincular) se
         // excluyen — no se pueden atribuir a ningún cliente.
         $staleCards = $cards
-            ->whereIn('stage', self::ACTIVE_STAGES)
+            ->whereIn('stage', PipelineStages::open())
             ->filter(fn (PipelineCard $c): bool => $c->isStagnant() && $c->masterClient !== null)
             ->values();
         $clientCount = $staleCards->map(fn (PipelineCard $c) => $c->masterClient?->name)->unique()->count();
@@ -175,7 +173,7 @@ final class DashboardService
      */
     private function overdueProposals(Collection $cards): Collection
     {
-        return $cards->where('stage', 'proposal')->filter(fn (PipelineCard $c): bool => $c->isStagnant())->values();
+        return $cards->whereIn('stage', PipelineStages::openAtOrAfter(PipelineStages::PROPOSAL))->filter(fn (PipelineCard $c): bool => $c->isStagnant())->values();
     }
 
     /**
@@ -185,7 +183,7 @@ final class DashboardService
     private function stageCounts(Collection $cards): array
     {
         $counts = [];
-        foreach (self::STAGES as $stage) {
+        foreach (PipelineStages::keys() as $stage) {
             $counts[$stage] = $cards->where('stage', $stage)->count();
         }
 
@@ -199,8 +197,8 @@ final class DashboardService
     private function totals(Collection $cards): array
     {
         return [
-            'active_pipeline' => (float) $cards->whereIn('stage', self::ACTIVE_STAGES)->sum('amount'),
-            'closed_won'      => (float) $cards->where('stage', 'approved')->sum('amount'),
+            'active_pipeline' => (float) $cards->whereIn('stage', PipelineStages::open())->sum('amount'),
+            'closed_won'      => (float) $cards->whereIn('stage', PipelineStages::won())->sum('amount'),
         ];
     }
 

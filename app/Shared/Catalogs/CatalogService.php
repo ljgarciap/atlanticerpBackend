@@ -27,12 +27,9 @@ final class CatalogService
     /** @return Collection<int, CatalogEntry> */
     public static function entries(string $domain, bool $onlyActive = true): Collection
     {
-        $query = CatalogEntry::query()->where('domain', $domain)->orderBy('sort_order')->orderBy('label');
-        if ($onlyActive) {
-            $query->where('is_active', true);
-        }
+        $all = app(CatalogCache::class)->entries($domain);
 
-        return $query->get();
+        return $onlyActive ? $all->filter(static fn (CatalogEntry $e): bool => $e->is_active)->values() : $all;
     }
 
     /** @return list<string> claves activas del dominio (para reglas `in:`) */
@@ -49,7 +46,7 @@ final class CatalogService
             return $default;
         }
 
-        $entry = CatalogEntry::query()->where('domain', $domain)->where('key', $key)->first();
+        $entry = self::entries($domain, onlyActive: false)->firstWhere('key', $key);
 
         return $entry?->props[$prop] ?? $default;
     }
@@ -64,10 +61,13 @@ final class CatalogService
             $rules::validate($domain, ['sort_order' => $sort, 'props' => $props ?? []], null);
         }
 
-        return CatalogEntry::create([
+        $entry = CatalogEntry::create([
             'domain' => $domain, 'key' => $data['key'], 'label' => $data['label'], 'sort_order' => $sort,
             'is_active' => true, 'is_system' => false, 'props' => $props,
         ]);
+        app(CatalogCache::class)->forget();
+
+        return $entry;
     }
 
     /** @param array{label?: string, sort_order?: int, is_active?: bool, props?: array<string, mixed>} $data */
@@ -101,6 +101,7 @@ final class CatalogService
             $entry->props = $props;
         }
         $entry->save();
+        app(CatalogCache::class)->forget();
 
         return $entry;
     }
@@ -114,6 +115,7 @@ final class CatalogService
             throw new \DomainException('No se puede borrar: hay registros que la usan. Desactívala en su lugar.');
         }
         $entry->delete();
+        app(CatalogCache::class)->forget();
     }
 
     /**

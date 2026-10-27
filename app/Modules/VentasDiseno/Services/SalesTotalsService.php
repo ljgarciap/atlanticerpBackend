@@ -48,7 +48,7 @@ final class SalesTotalsService
      */
     public function monthlyApprovedTotal(User $vendor, CarbonImmutable $monthStart): float
     {
-        $cards = PipelineCard::where('stage', 'approved')
+        $cards = PipelineCard::whereIn('stage', PipelineStages::won())
             ->whereBetween('stage_changed_at', [$monthStart, $monthStart->endOfMonth()])
             ->where(function ($q) use ($vendor): void {
                 $q->where('owner_id', $vendor->id)

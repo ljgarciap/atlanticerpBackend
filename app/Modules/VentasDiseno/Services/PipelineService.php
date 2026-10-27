@@ -71,7 +71,7 @@ final class PipelineService
 
             $card = PipelineCard::create([
                 'sales_project_id' => $project->id,
-                'stage'            => $data['type'] === 'design' ? 'design' : 'lead',
+                'stage'            => $data['type'] === 'design' ? PipelineStages::DESIGN : PipelineStages::LEAD,
                 'master_client_id' => $masterClientId,
                 'sub_client_id'    => $subClientId,
                 'owner_id'         => $resolvedOwnerId,
@@ -228,7 +228,7 @@ final class PipelineService
             /** @var PipelineCard $locked */
             $locked = PipelineCard::whereKey($card->id)->lockForUpdate()->firstOrFail();
 
-            if ($locked->stage !== PipelineCard::RESTRICTED_EDIT_STAGE) {
+            if (! PipelineStages::isWon($locked->stage)) {
                 throw new \DomainException('Solo un proyecto en estado Aprobado puede pasar a Pedido.');
             }
 
@@ -324,18 +324,18 @@ final class PipelineService
         if (($filters['orders'] ?? null) === 'approved') {
             $query->whereHas('orders');
         } elseif (($filters['orders'] ?? null) === 'pending') {
-            $query->where('stage', PipelineCard::RESTRICTED_EDIT_STAGE)->whereDoesntHave('orders');
+            $query->whereIn('stage', PipelineStages::won())->whereDoesntHave('orders');
         }
 
         $chip = $filters['chip'] ?? 'all';
         if ($chip === 'final_stage') {
-            $query->where('stage', 'proposal');
+            $query->whereIn('stage', PipelineStages::openAtOrAfter(PipelineStages::PROPOSAL));
         }
         // REQ-074 (Reportes — Mejores clientes): "el ícono de ojo navega a Pipeline
         // mostrando solo la etapa Aprobado, ordenada de mayor a menor valor" — mismo
         // mecanismo de chip que final_stage, no un filtro nuevo aparte.
         if ($chip === 'approved') {
-            $query->where('stage', 'approved');
+            $query->whereIn('stage', PipelineStages::won());
         }
 
         $order = $filters['order'] ?? 'days';
