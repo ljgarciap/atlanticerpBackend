@@ -47,7 +47,7 @@ final class ArchitectController extends Controller
         // Admin&Cont no deben ver de repente contratistas); `all` = toda la base de asociados; o un tipo puntual.
         $type = $request->query('type');
         if ($type !== null && $type !== 'all') {
-            if (! is_string($type) || ! in_array($type, Architect::TYPES, true)) {
+            if (! is_string($type) || ! in_array($type, \App\Shared\Catalogs\CatalogService::keys('architect_type'), true)) {
                 return response()->json(['message' => 'type inválido'], 422);
             }
             $query->where('type', $type);

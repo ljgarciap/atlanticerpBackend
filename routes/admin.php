@@ -7,6 +7,7 @@ use App\Modules\Auth\Http\Controllers\AuditLogController;
 use App\Modules\Auth\Http\Controllers\GlobalSettingsController;
 use App\Modules\Auth\Http\Controllers\ImpersonationAdminController;
 use App\Modules\Auth\Http\Controllers\ModuleController;
+use App\Shared\Catalogs\CatalogController;
 use App\Modules\Auth\Http\Controllers\RoleController;
 use App\Modules\Auth\Http\Controllers\SecurityAnomalyController;
 use App\Modules\Auth\Http\Controllers\UserController;
@@ -73,6 +74,12 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     Route::post('/modules',        [ModuleController::class, 'store']);
     Route::put('/modules/{id}',    [ModuleController::class, 'update']);
     Route::delete('/modules/{id}', [ModuleController::class, 'destroy']);
+
+    // Fase 7a — administración de los catálogos de vocabulario por empresa (docs/specs/fase7-catalogos.md); mismo permiso que módulos y roles.
+    Route::get('/catalogs/{domain}',                [CatalogController::class, 'all']);
+    Route::post('/catalogs/{domain}',               [CatalogController::class, 'store']);
+    Route::put('/catalogs/{domain}/{id}',           [CatalogController::class, 'update'])->whereNumber('id');
+    Route::delete('/catalogs/{domain}/{id}',        [CatalogController::class, 'destroy'])->whereNumber('id');
 
     // SCRUM-724 — override de visibilidad de módulos/menús por usuario, por encima
     // de la visibilidad por rol de arriba. Mismo permiso que la administración de

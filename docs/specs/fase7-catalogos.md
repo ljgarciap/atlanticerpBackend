@@ -1,6 +1,6 @@
 # Fase 7 — Catálogos de vocabulario configurables (2026-10-26)
 
-**Estado**: decisiones tomadas (§4); diseño en §6 PENDIENTE DE APROBACIÓN. Sin código hasta aprobar. Origen: análisis `erp/docs/analisis/aislamiento-nucleo-2026-10-24.md` (fase 7) y aviso de la 6d.
+**Estado**: diseño aprobado por Luis (2026-10-26). 7a IMPLEMENTADA (§7), pendiente de merge; 7b y 7c pendientes (cada una con su «adelante»). Origen: análisis `erp/docs/analisis/aislamiento-nucleo-2026-10-24.md` (fase 7) y aviso de la 6d.
 
 ## 1. Objetivo
 Que el vocabulario del negocio (tipos de ticket, categorías, tasa de impuesto visible) sea DATOS por empresa y no constantes del código, para que el ERP sirva a otros sectores y países sin tocar PHP.
@@ -35,3 +35,15 @@ Panamá/ILUMINACIÓN sin cambio visible con los datos por defecto; migración ad
 - **7c — Etapas del pipeline**: dominio `pipeline_stage` con `tipo` (`abierta` | `ganada` | `perdida`), orden y etiqueta; los 6 servicios que repiten la lista dejan de tenerla fija. Spec propia antes de tocar el embudo.
 
 **Riesgos conocidos**: (1) `tickets.tipo` y `pipeline_cards.stage` son texto con datos existentes → se conservan las claves actuales como entradas de sistema, sin migrar datos; (2) los permisos finos nuevos no deben compartir `security_level` con roles sin derecho (lección de la Fase 2 del esquema de permisos); (3) los textos traducidos del frontend (`servicios.json` etc.) hoy mapean clave→texto: la etiqueta pasa a venir del catálogo, con el i18n como respaldo de las claves de sistema.
+
+## 7. Resultado de la 7a — infraestructura de catálogos + dominios simples (2026-10-26)
+- **Tabla** `catalog_entries` (esquema `{tenant}_auth`; `domain`, `key`, `label`, `sort_order`, `is_active`, `is_system`, `props` JSONB; única `domain+key`), migración `2026_10_27_100000` aditiva y reversible, sembrada con los valores que eran constantes: 6 categorías de proveedor (con `origen` y `valida_identificacion` = lo que antes
+  derivaba de `category === 'locales'`) y 6 tipos de arquitecto. Todas `is_system` (el código aún las referencia): se renombran y reordenan, no se borran ni se desactivan.
+- **Código** `App\Shared\Catalogs` (`CatalogEntry`, `CatalogService`, `CatalogController`) + `config/catalogs.php` (dominios, tabla/columna en uso, propiedades admitidas con tipo). Una entrada en uso por registros no se borra ni se desactiva; las propiedades se validan contra el esquema del dominio.
+- **API**: lectura general `GET /api/catalogs/domains` y `GET /api/catalogs/{domain}` (activas); administración `GET|POST|PUT|DELETE /api/admin/catalogs/{domain}[/{id}]` bajo `permission:superadmin.all` (mismo criterio que módulos y roles; **no se creó permiso nuevo**, así que no hay riesgo de fuga por nivel compartido).
+- **Comportamiento tomado del catálogo**: `Provider::deriveOrigin()` y `Provider::categoryValidatesTaxId()` (validación de identificación de la 6c); las reglas `in:` de proveedores y asociados leen las claves activas. Migración `2026_10_27_100001`: se elimina el CHECK fijo de `architects.type` y la columna pasa a 60 caracteres (sin eso un tipo nuevo no se podía guardar).
+- **Residuos del 7 % (decisión de Luis)**: el ajuste de Servicios `itbms_percent` ya no tiene un 7 fijo (su valor por omisión es la tasa por defecto de Configuración Fiscal; sigue siendo editable); la recepción de mercancía manda `local_tax_percentage` y la vista previa del frontend ya no usa `0.07`.
+- **Frontend**: `catalogsApi`, `useCatalog`/`useCatalogOptions` (con respaldo mientras carga o si falla), pestaña **Catálogos** en Configuración global (`CatalogsPanel`: renombrar, reordenar, activar, propiedades de comportamiento, alta y borrado con el motivo del rechazo), selects de categoría de proveedor desde el catálogo (alta y detalle).
+- **Limitación conocida**: la etiqueta de una entrada es un solo texto (el idioma de la empresa); las traducciones es/en solo rigen como respaldo. Los tipos de asociado todavía no se muestran desde el catálogo en el frontend (siguen con su texto traducido; el backend ya acepta los nuevos): pendiente de 7b junto con el resto del vocabulario.
+- **Tests**: backend +5 (`CatalogEntriesTest`: siembra, lectura/permisos, categoría nueva con comportamiento, inactivas/inexistentes, protección de entradas de sistema y en uso); suites Compras/VentasDiseno/Servicios/Auth/Shared 2713 tests verdes, PHPStan 0. Frontend +8 (`CatalogsPanel`, `useCatalog`), 239 archivos / 2967 tests.
+- Informe: `docs/reviews/fase7a-infra-catalogos-2026-10-26.md`.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Compras\Models;
 
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Shared\Catalogs\CatalogService;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
 use Carbon\Carbon;
@@ -93,7 +94,14 @@ class Provider extends Model
      */
     public static function deriveOrigin(?string $category): string
     {
-        return $category === self::CATEGORY_LOCALES ? self::ORIGIN_LOCAL : self::ORIGIN_INTERNACIONAL;
+        // Fase 7a — el origen es una propiedad de la categoría en el catálogo de la empresa (`provider_category.origen`).
+        return CatalogService::prop('provider_category', $category, 'origen') === self::ORIGIN_LOCAL ? self::ORIGIN_LOCAL : self::ORIGIN_INTERNACIONAL;
+    }
+
+    /** Fase 7a — ¿la categoría exige validar la identificación fiscal con las reglas del país (Fase 6c)? Propiedad del catálogo. */
+    public static function categoryValidatesTaxId(?string $category): bool
+    {
+        return (bool) CatalogService::prop('provider_category', $category, 'valida_identificacion');
     }
 
     /** @return array<string, string> */
