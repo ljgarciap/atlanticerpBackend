@@ -46,6 +46,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property \Carbon\Carbon|null $scheduled_ends_at
  * @property int          $visit_count
  * @property \Carbon\Carbon|null $closed_at
+ * @property \Carbon\Carbon|null $reopened_at
+ * @property string|null $reopened_reason
  * @property int|null    $created_by
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
