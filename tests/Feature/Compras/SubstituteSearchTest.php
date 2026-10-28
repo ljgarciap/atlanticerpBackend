@@ -75,7 +75,7 @@ class SubstituteSearchTest extends FeatureTestCase
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $original = $this->makeProduct();
-        $candidate = $this->makeProduct(['name' => 'Artículo genérico E27', 'stock_quantity' => 7, 'category' => 'bombillos']);
+        $candidate = $this->makeProduct(['name' => 'Artículo genérico E27', 'stock_quantity' => 7, 'category' => 'general']);
         $family = CatalogProductFamily::create(['name' => 'Artículos', 'is_active' => true]);
         $family->products()->attach([$candidate->id]);
 
@@ -105,7 +105,7 @@ class SubstituteSearchTest extends FeatureTestCase
         $poll->assertJsonPath('results.0.stock_quantity', 7);
         $poll->assertJsonPath('results.0.cost', 12);
         // SCRUM-246 (rebote de Gerencia Test) — Categoría, ausente hasta ahora en la tabla.
-        $poll->assertJsonPath('results.0.category', 'bombillos');
+        $poll->assertJsonPath('results.0.category', 'general');
         $poll->assertJsonPath('results.0.name', 'Artículo genérico E27');
 
         $log = DB::table('atlantic_auth.audit_logs')

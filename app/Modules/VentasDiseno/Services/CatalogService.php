@@ -112,8 +112,10 @@ final class CatalogService
         // palabras en cualquier orden, igual que el resto de buscadores de catálogo de SCRUM-992.
         $search = trim(QueryParams::string($request, 'search'));
         $categoryValues = array_column($categories, 'value');
+        // Fase 9a — la búsqueda también compara la ETIQUETA de la categoría (vocabulario de la empresa), no solo su clave.
+        $categoryLabels = \App\Shared\Catalogs\CatalogService::entries('product_category', onlyActive: false)->pluck('label', 'key')->map(strval(...))->all();
         foreach (CatalogProduct::searchWords($search) as $word) {
-            $this->whereWordMatches($query, $word, $categoryValues);
+            $this->whereWordMatches($query, $word, $categoryValues, $categoryLabels);
         }
 
         $category = QueryParams::string($request, 'category');
@@ -469,14 +471,14 @@ final class CatalogService
      * `IN (...)` si hay alguna. Evaluar `f_unaccent(lower(...))` fila por fila (un `EXISTS` por
      * producto) costaba ~90 ms por consulta con 30K productos, dos veces (conteo + página).
      *
-     * Mismas 8 etiquetas que `compras:newProduct.categories.*` en el frontend: acá solo importa el
-     * matching (REQ-617 RN1 Escenario 1: "Modelos" matchea aunque el slug persistido sea
-     * `candelabros_colgantes`), la etiqueta que ve el usuario la resuelve el frontend vía i18n.
+     * Fase 9a — la etiqueta de cada categoría sale del catálogo `product_category` (vocabulario de la empresa): una palabra
+     * matchea si aparece en la clave o en la etiqueta (REQ-617 RN1 Escenario 1).
      *
      * @param \Illuminate\Database\Eloquent\Builder<CatalogProduct> $query
      * @param list<string> $categoryValues categorías existentes del universo (slugs)
+     * @param array<string, string> $categoryLabels etiqueta de cada categoría por clave (catálogo `product_category`)
      */
-    private function whereWordMatches($query, string $word, array $categoryValues): void
+    private function whereWordMatches($query, string $word, array $categoryValues, array $categoryLabels = []): void
     {
         $needle = addcslashes($word, '%_\\');
         $like   = "'%' || public.f_unaccent(lower(?)) || '%'";
@@ -496,12 +498,17 @@ final class CatalogService
         // evalúan como `VALUES` en una consulta de ms, sin escanear el catálogo.
         $categories = [];
         if ($categoryValues !== []) {
-            $values = implode(', ', array_fill(0, count($categoryValues), '(?)'));
+            $values = implode(', ', array_fill(0, count($categoryValues), '(?, ?)'));
+            $bindings = [];
+            foreach (array_values($categoryValues) as $value) {
+                $bindings[] = $value;
+                $bindings[] = $categoryLabels[$value] ?? $value;
+            }
             $categories = array_map(
                 static fn (\stdClass $r): string => (string) $r->v,
                 DB::select(
-                    "SELECT v FROM (VALUES {$values}) AS t(v) WHERE public.f_unaccent(lower(replace(v, '_', ' '))) LIKE {$like}",
-                    [...array_values($categoryValues), $needle],
+                    "SELECT v FROM (VALUES {$values}) AS t(v, l) WHERE public.f_unaccent(lower(replace(v, '_', ' '))) LIKE {$like} OR public.f_unaccent(lower(l)) LIKE {$like}",
+                    [...$bindings, $needle, $needle],
                 ),
             );
         }

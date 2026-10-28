@@ -56,7 +56,7 @@ class AdjustmentRequestLine extends Model
 
     // SCRUM-428 (REQ-358, rebote de Gerencia Test 2026-08-13) — Motivo pasa de texto libre a un
     // desplegable de exactamente 6 opciones fijas. Keys en snake_case/mayúscula (mismo criterio
-    // que CatalogProduct::CATEGORIES/ROTATIONS) — el frontend resuelve la etiqueta en español,
+    // que CatalogProduct::ROTATIONS y el catálogo `product_category`) — el frontend resuelve la etiqueta en español,
     // el backend nunca hardcodea el texto visible.
     public const MOTIVO_CONTEO_FISICO_NO_COINCIDE = 'CONTEO_FISICO_NO_COINCIDE';
 

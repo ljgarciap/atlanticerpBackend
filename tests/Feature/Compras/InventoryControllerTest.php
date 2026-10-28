@@ -112,7 +112,7 @@ class InventoryControllerTest extends FeatureTestCase
             'other_cost' => 2.5,
             'reorder_point' => 5,
             'provider_id' => $providerId,
-            'category' => 'bombillos',
+            'category' => 'general',
             'rotation' => 'media',
             // SCRUM-426 — ficha técnica (Caso A/B: archivo O link) vuelve a ser obligatoria.
             'link' => 'https://proveedor.example.com/ficha.pdf',
@@ -688,6 +688,41 @@ class InventoryControllerTest extends FeatureTestCase
             ]))
             ->assertStatus(422)
             ->assertJsonValidationErrors(['category']);
+    }
+
+    /** Fase 9a — las categorías son un catálogo por empresa: una entrada propia es válida, y desactivarla la deja inválida. */
+    public function test_crear_producto_con_categoria_propia_del_catalogo(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $provider = $this->makeProvider();
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $entry = \App\Shared\Catalogs\CatalogEntry::query()->create([
+            'domain' => 'product_category', 'key' => 'herramientas', 'label' => 'Herramientas', 'sort_order' => 5, 'is_active' => true, 'is_system' => false,
+        ]);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id, ['category' => 'herramientas']))
+            ->assertStatus(201)->assertJsonPath('category', 'herramientas');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $entry->update(['is_active' => false]);
+        app(\App\Shared\Catalogs\CatalogCache::class)->forget();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id, ['category' => 'herramientas', 'reference' => 'REF-'.uniqid()]))
+            ->assertStatus(422)->assertJsonValidationErrors(['category']);
+    }
+
+    /** Fase 9a — un tenant nuevo trae «General» como categoría de sistema. */
+    public function test_el_catalogo_trae_general_como_categoria_de_sistema(): void
+    {
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $general = \App\Shared\Catalogs\CatalogEntry::query()->where('domain', 'product_category')->where('key', 'general')->first();
+
+        $this->assertNotNull($general);
+        $this->assertTrue($general->is_system);
+        $this->assertContains('general', \App\Shared\Catalogs\CatalogService::keys('product_category'));
     }
 
     /** SCRUM-240 — familia opcional: si se manda, sincroniza la relación N:M (mismo criterio que update()). */

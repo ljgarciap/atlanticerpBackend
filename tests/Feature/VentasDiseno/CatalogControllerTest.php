@@ -48,7 +48,7 @@ class CatalogControllerTest extends FeatureTestCase
             'handling_cost'  => 5.00,
             'other_cost'     => 2.00,
             'stock_quantity' => 14,
-            'category'       => 'candelabros_colgantes',
+            'category'       => 'general',
             'is_active'      => true,
             ...$overrides,
         ]);
@@ -124,15 +124,15 @@ class CatalogControllerTest extends FeatureTestCase
         $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
 
-        $withFamily = $this->makeProduct(['reference' => 'A-1', 'category' => 'candelabros_colgantes']);
+        $withFamily = $this->makeProduct(['reference' => 'A-1', 'category' => 'general']);
         $withFamily->families()->attach($family->id);
-        $this->makeProduct(['reference' => 'A-2', 'category' => 'iluminacion_bano']);
+        $this->makeProduct(['reference' => 'A-2', 'category' => 'otra']);
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // Filtrar solo por categoría no exige familia.
         $byCategory = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/ventas-diseno/catalog?category=candelabros_colgantes')
+            ->getJson('/api/ventas-diseno/catalog?category=general')
             ->assertStatus(200);
         $this->assertEquals(['A-1'], collect($byCategory->json('data'))->pluck('reference')->all());
 
@@ -146,8 +146,8 @@ class CatalogControllerTest extends FeatureTestCase
     public function test_dropdown_de_categorias_solo_incluye_las_que_tienen_producto_activo(): void
     {
         $this->grantVentasDisenoRead('vendedor@atlantic.test');
-        $this->makeProduct(['reference' => 'A-1', 'category' => 'candelabros_colgantes']);
-        $this->makeProduct(['reference' => 'A-2', 'category' => 'bombillos', 'is_active' => false]);
+        $this->makeProduct(['reference' => 'A-1', 'category' => 'general']);
+        $this->makeProduct(['reference' => 'A-2', 'category' => 'otra', 'is_active' => false]);
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -155,8 +155,8 @@ class CatalogControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $values = collect($response->json('categories'))->pluck('value');
-        $this->assertContains('candelabros_colgantes', $values);
-        $this->assertNotContains('bombillos', $values);
+        $this->assertContains('general', $values);
+        $this->assertNotContains('otra', $values);
     }
 
     // ── REQ-617 RN1 Escenario 1 — búsqueda universal, matchea nombre de familia ──
@@ -177,6 +177,26 @@ class CatalogControllerTest extends FeatureTestCase
         $refs = collect($response->json('data'))->pluck('reference');
         $this->assertContains('EXT-01', $refs);
         $this->assertNotContains('OTHER-01', $refs);
+    }
+
+    /** Fase 9a — la búsqueda matchea la ETIQUETA de la categoría (vocabulario de la empresa), no solo su clave. */
+    public function test_busqueda_matchea_la_etiqueta_de_la_categoria(): void
+    {
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $this->makeProduct(['reference' => 'CAT-1', 'name' => 'Pieza uno', 'description' => 'Pieza uno', 'category' => 'herramientas']);
+        $this->makeProduct(['reference' => 'CAT-2', 'name' => 'Pieza dos', 'description' => 'Pieza dos', 'category' => 'general']);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        \App\Shared\Catalogs\CatalogEntry::query()->create([
+            'domain' => 'product_category', 'key' => 'herramientas', 'label' => 'Utensilios', 'sort_order' => 5, 'is_active' => true, 'is_system' => false,
+        ]);
+        app(\App\Shared\Catalogs\CatalogCache::class)->forget();
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $refs = collect($this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/catalog?search=utensilios')
+            ->assertStatus(200)->json('data'))->pluck('reference');
+
+        $this->assertContains('CAT-1', $refs);
+        $this->assertNotContains('CAT-2', $refs);
     }
 
     // ── REQ-617 RN4 — filtro de stock ────────────────────────────────────────────

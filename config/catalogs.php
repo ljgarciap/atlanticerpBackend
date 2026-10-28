@@ -6,6 +6,7 @@ use App\Modules\Servicios\Models\Ticket;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Services\PipelineStageRules;
 use App\Modules\VentasDiseno\Models\Architect;
+use App\Modules\VentasDiseno\Models\CatalogProduct;
 
 /*
 | Fase 7a — dominios de los catálogos de vocabulario por empresa (tabla `catalog_entries`). Cada dominio declara su nombre para la
@@ -26,6 +27,15 @@ return [
             'label' => 'Tipos de arquitecto / prescriptor',
             'usage' => [Architect::class, 'type'],
             'props' => [],
+        ],
+        // Fase 9a — categorías de producto del catálogo. La lógica nunca pregunta por una categoría concreta (es vocabulario de la empresa); el
+        // `color` solo lo usa la foto de relleno de los datos de prueba. `general` es de sistema: el campo es obligatorio al crear un producto.
+        'product_category' => [
+            'label' => 'Categorías de producto',
+            'usage' => [CatalogProduct::class, 'category'],
+            'props' => [
+                'color' => ['type' => 'string', 'max' => 7, 'pattern' => '/^#[0-9a-fA-F]{6}$/', 'default' => null],
+            ],
         ],
         // Fase 7c — etapas del pipeline de Ventas & Diseño. La lógica pregunta por `categoria`, no por la clave. Las 6 de sistema no se
         // reordenan ni cambian de categoría (las compuertas, las comisiones y «pasar a pedido» dependen de ellas); las propias van entre
