@@ -21,7 +21,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class PipelineCanEditTest extends FeatureTestCase
 {
-    private const FELIX = 'contabilidad@test.com';
+    private const CONTABILIDAD = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -75,12 +75,12 @@ class PipelineCanEditTest extends FeatureTestCase
      */
     public function test_quien_solo_lee_con_read_all_recibe_can_edit_false_en_etapas_no_aprobadas(string $stage): void
     {
-        $this->felixComoEnScrum1139();
-        $contabilidad = \App\Models\User::where('email', self::FELIX)->firstOrFail();
+        $this->contabilidadComoEnScrum1139();
+        $contabilidad = \App\Models\User::where('email', self::CONTABILIDAD)->firstOrFail();
         $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
 
         $card    = $this->makeCard($stage);
-        $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
+        $headers = $this->headersFor(self::CONTABILIDAD, self::CONTABILIDAD, 'lider_admin_contab');
 
         $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}")
             ->assertOk()->assertJsonPath('can_edit', false);

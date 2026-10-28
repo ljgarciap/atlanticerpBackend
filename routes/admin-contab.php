@@ -308,7 +308,7 @@ Route::middleware('primary_approver_only')->prefix('commissions/internal')->grou
 });
 
 // SCRUM-585→590 (REQ-508→513) — Comisiones Externas (arquitectos), Batch 16 (ver
-// docs/adr/ADR-SCRUM585-590-batch16-comisiones-externas.md). Audiencia de lectura Contabilidad/Yaneth/
+// docs/adr/ADR-SCRUM585-590-batch16-comisiones-externas.md). Audiencia de lectura Contabilidad/Asistente/
 // Gerencia/Gerencia únicamente (a diferencia de Comisiones Internas, ningún vendedor/arquitecto la
 // consulta) — `permission:admin_contab.read` alcanza, sin permiso angosto adicional (mismo
 // criterio que `bank-accounts` GET, role_module_visibility ya cubre a los 4 roles sin seeding).
@@ -320,7 +320,7 @@ Route::middleware('permission:admin_contab.read')->prefix('commissions/external'
     Route::get('/projects/{pipelineCardId}/comprobante-retencion', [AdminContArchitectCommissionController::class, 'showComprobanteRetencion'])->whereNumber('pipelineCardId');
 });
 
-// Datos fiscales (REQ-510) — Contabilidad/Yaneth "y Gerencia/Gerencia si lo necesitan" (texto explícito del
+// Datos fiscales (REQ-510) — Contabilidad/Asistente "y Gerencia/Gerencia si lo necesitan" (texto explícito del
 // REQ), mismo roster que el grupo de escritura de `bank-accounts` de arriba.
 Route::middleware('permission:admin_contab.records.manage')
     ->prefix('commissions/external')->group(function (): void {
@@ -338,7 +338,7 @@ Route::middleware('permission:admin_contab.operations.manage')
     });
 
 // Marcar pagado (REQ-515) y proponer % (REQ-516 RN3) — mismo roster amplio que REQ-510
-// (Contabilidad/Yaneth/Mark/Gerencia, el REQ lo dice explícito para ambos).
+// (Contabilidad/Asistente/Mark/Gerencia, el REQ lo dice explícito para ambos).
 Route::middleware('permission:admin_contab.records.manage')
     ->prefix('commissions/external')->group(function (): void {
         Route::post('/projects/{pipelineCardId}/mark-paid', [AdminContArchitectCommissionController::class, 'markPaid'])->whereNumber('pipelineCardId');
@@ -354,7 +354,7 @@ Route::middleware('primary_approver_only')->prefix('commissions/external')->grou
 
 // SCRUM-597→601 (REQ-520→524), Batch 18 — Arqueo / Flujo de Caja, parte 1 (ver
 // docs/adr/ADR-SCRUM597-601-batch18-arqueo-caja.md, gates exactos en la tabla "Contrato de API").
-// REQ-520/522 (encabezado, toggle) — Contabilidad/Yaneth/Mark/Gerencia, mismo grupo amplio que
+// REQ-520/522 (encabezado, toggle) — Contabilidad/Asistente/Mark/Gerencia, mismo grupo amplio que
 // bank-accounts/facturación/cobros/notas-credito.
 Route::middleware('permission:admin_contab.records.manage')
     ->prefix('cash-position')->group(function (): void {
@@ -444,7 +444,7 @@ Route::middleware('permission:admin_contab.operations.manage')
         // Batch 21 (REQ-545) — editar línea + soporte adicional, mismo roster que registrar gastos.
         Route::put('/expenses/{id}', [AdminContPettyCashController::class, 'updateExpense'])->whereNumber('id');
         Route::post('/expenses/{id}/attachments', [AdminContPettyCashController::class, 'addExpenseAttachment'])->whereNumber('id');
-        // Batch 21 (REQ-544) — reabrir NO es de Gerencia, es de Contabilidad/Yaneth (distinto de rechazar).
+        // Batch 21 (REQ-544) — reabrir NO es de Gerencia, es de Contabilidad/Asistente (distinto de rechazar).
         Route::put('/expenses/{id}/reopen', [AdminContPettyCashController::class, 'reopenExpense'])->whereNumber('id');
     });
 
@@ -456,11 +456,11 @@ Route::middleware('primary_approver_only')->prefix('petty-cash')->group(function
     Route::put('/reports/{numero}/reject', [AdminContPettyCashController::class, 'rejectReport']);
 });
 
-// Batch 22 (SCRUM-643→647, REQ-566→570) — home de Reportes. Roster amplio Contabilidad/Yaneth/Mark/
+// Batch 22 (SCRUM-643→647, REQ-566→570) — home de Reportes. Roster amplio Contabilidad/Asistente/Mark/
 // Gerencia (Excel de requerimientos, hoja "Matriz de Permisos por Rol", fila "Ver pantalla
 // Reportes" — el cliente había confirmado que Asistente Administrativa ve el dashboard completo, solo lectura), mismo
 // grupo ya usado en `cash-position`/`petty-cash/summary`. Ninguno de estos endpoints acepta
-// `window`/período propio distinto del selector — Felix-commission y cartera son fijos (RN4
+// `window`/período propio distinto del selector — Contabilidad-commission y cartera son fijos (RN4
 // REQ-567/RN3 REQ-568), ventas/flujo-caja sí toman `periodo` (RN3 REQ-566: se recalculan juntas).
 Route::middleware('permission:admin_contab.records.manage')
     ->prefix('reports')->group(function (): void {
@@ -481,7 +481,7 @@ Route::middleware('permission:admin_contab.records.manage')
 // Reportes no cambia.
 Route::middleware('permission:admin_contab.oversight.manage')
     ->prefix('reports')->group(function (): void {
-        Route::get('/felix-commission', [AdminContReportsController::class, 'felixCommission']);
+        Route::get('/commission-tiers', [AdminContReportsController::class, 'commissionTiers']);
     });
 
 // Batch 23 Grupo 2 (SCRUM-651→660, REQ-574→583) — "Reporte mensual por cliente" (4M1, agrupación

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1168 F5 — devolución de dinero al cliente desde su saldo a favor: la solicitan Contabilidad/Yaneth (cuenta de salida, referencia y comprobante
+ * SCRUM-1168 F5 — devolución de dinero al cliente desde su saldo a favor: la solicitan Contabilidad/Asistente (cuenta de salida, referencia y comprobante
  * obligatorios) y la aprueba solo Gerencia; al aprobar sale de la fuente elegida, queda en el libro y en la caja del día.
  */
 class AdminContDevolucionF5Test extends FeatureTestCase

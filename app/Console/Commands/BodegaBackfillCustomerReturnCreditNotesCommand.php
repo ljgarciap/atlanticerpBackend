@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
  * `customer_returns.credit_note_id` recién en el commit 14e3f69 (la columna se agrega en la misma
  * migración). Toda devolución finalizada ANTES de ese deploy quedó con `credit_note_id = NULL`, y
  * el listado de Devoluciones de Bodega no puede armar el enlace "Ver nota de crédito" para esas
- * filas (rebote de marly.rangel 2026-09-09 — PED-2026-0019 / NC-0003).
+ * filas (rebote de qa.qa 2026-09-09 — PED-2026-0019 / NC-0003).
  *
  * La correlación es exacta y sin FK cross-schema (mismo criterio del resto del proyecto):
  * `admin_contab.credit_notes.devolucion_bodega_id` apunta a `bodega.customer_returns.id`. Se

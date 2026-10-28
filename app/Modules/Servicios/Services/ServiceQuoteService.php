@@ -32,7 +32,7 @@ use Illuminate\Support\Facades\DB;
  * `App\Modules\VentasDiseno\Models\PricingSettings::min_margin_percent` — el MISMO valor
  * parametrizado que ya usa Ventas & Diseño (SCRUM-293 lo pide explícito: "igual que la regla ya
  * usada en el módulo Ventas & Diseño"), no una copia/tabla nueva. A diferencia de Ventas & Diseño
- * (que tiene `ventas_diseno.override_min_margin` para Gerencia/David), acá NO hay excepción — el
+ * (que tiene `ventas_diseno.override_min_margin` para Gerencia/Gerencia2), acá NO hay excepción — el
  * ticket lo describe como bloqueo sin salvedad.
  */
 final class ServiceQuoteService

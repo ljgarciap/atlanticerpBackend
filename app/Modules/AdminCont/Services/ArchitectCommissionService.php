@@ -729,7 +729,7 @@ final class ArchitectCommissionService
      * la primera cuenta corriente activa (Fase 4a: ya no por nombre de banco), deliberadamente duplicado en vez de depender de ese
      * servicio — mismo criterio de independencia entre motores ya establecido en el docblock de
      * clase. `null` si esa cuenta específica no existe todavía en este tenant (nunca bloquea nada,
-     * el campo queda sin resolver hasta que Contabilidad/Yaneth la creen en Cuentas Bancarias).
+     * el campo queda sin resolver hasta que Contabilidad/Asistente la creen en Cuentas Bancarias).
      */
     public function defaultBankAccount(): ?AdminContBankAccount
     {

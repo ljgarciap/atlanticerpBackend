@@ -188,10 +188,10 @@ class InventoryReviewFlowTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->makeCurrentTenant();
-        $yirenaId = (int) User::where('email', 'lidercompras@test.com')->value('id');
+        $lidercomprasId = (int) User::where('email', 'lidercompras@test.com')->value('id');
         $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE)
             ->where('source_ref', "order:{$review->id}")
-            ->get()->first(fn (NotificationSend $n): bool => in_array($yirenaId, $n->audience, true));
+            ->get()->first(fn (NotificationSend $n): bool => in_array($lidercomprasId, $n->audience, true));
 
         $this->assertNotNull($send, 'Lider Compras (lider_compras) recibe el aviso.');
         $this->assertSame('/inventario?search=ML-10097BWH-1', $send->content['cta_url']);
@@ -201,7 +201,7 @@ class InventoryReviewFlowTest extends FeatureTestCase
         // La campana de Lider Compras guarda ese enlace: el clic navega a Inventario con el producto buscado.
         $this->assertSame(
             '/inventario?search=ML-10097BWH-1',
-            Notification::where('user_id', $yirenaId)->where('notification_send_id', $send->id)->value('link_url'),
+            Notification::where('user_id', $lidercomprasId)->where('notification_send_id', $send->id)->value('link_url'),
         );
     }
 
@@ -263,9 +263,9 @@ class InventoryReviewFlowTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->makeCurrentTenant();
-        $yirenaId = (int) User::where('email', 'lidercompras@test.com')->value('id');
+        $lidercomprasId = (int) User::where('email', 'lidercompras@test.com')->value('id');
         $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ORDER_SHORTAGE)->where('source_ref', "order:{$review->id}")
-            ->get()->first(fn (NotificationSend $n): bool => in_array($yirenaId, $n->audience, true));
+            ->get()->first(fn (NotificationSend $n): bool => in_array($lidercomprasId, $n->audience, true));
 
         $this->assertNotNull($send);
         $this->assertStringContainsString('Producto especial a medida (x5)', $send->content['body']);

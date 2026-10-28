@@ -53,7 +53,7 @@ Route::prefix('aprobaciones')->middleware('permission:gerencia.view')->group(fun
 // REQ-101 (SCRUM-163) — infraestructura configurable de REGLA_APROBACION (tipo de solicitud →
 // aprobador(es)). "Quién puede configurar esto" está pendiente de definir con el cliente (ver
 // Excel 6__Requerimientos_Gerencia.xlsx) — hasta entonces, exclusivo de superadmin, nadie de
-// Gerencia/David/Whil individualmente lo ve todavía.
+// Gerencia/Gerencia2/Gerencia5 individualmente lo ve todavía.
 Route::prefix('reglas-aprobacion')->group(function (): void {
     Route::middleware('permission:superadmin.all')->group(function (): void {
         Route::get('/', [ReglaAprobacionController::class, 'index']);

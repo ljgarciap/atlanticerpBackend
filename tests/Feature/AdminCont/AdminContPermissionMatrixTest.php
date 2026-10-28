@@ -21,13 +21,13 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
 {
     private const SUPERADMIN = 'superadmin@test.com';
 
-    private const FELIX = 'contabilidad@test.com';
+    private const CONTABILIDAD = 'contabilidad@test.com';
 
-    private const YANETH = 'asistenteadministrativa@test.com';
+    private const ASISTENTE = 'asistenteadministrativa@test.com';
 
-    private const DANIELA = 'gerencia@test.com';
+    private const GERENCIA1 = 'gerencia@test.com';
 
-    private const MARIAM = 'lideroperaciones@test.com';
+    private const LIDEROPERACIONES = 'lideroperaciones@test.com';
 
     protected function setUp(): void
     {
@@ -45,9 +45,9 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
     public function test_bank_accounts_store_contabilidad_asistente_y_gerencia_pueden(): void
     {
         foreach ([
-            [self::FELIX, 'lider_admin_contab'],
-            [self::YANETH, 'asistente_administrativa'],
-            [self::DANIELA, 'management'],
+            [self::CONTABILIDAD, 'lider_admin_contab'],
+            [self::ASISTENTE, 'asistente_administrativa'],
+            [self::GERENCIA1, 'management'],
         ] as [$email, $role]) {
             $status = $this->withHeaders($this->authHeaders($this->tokenFor($email, $role)))
                 ->postJson('/api/admin-contab/bank-accounts', ['nombre' => 'Cuenta Test', 'banco' => 'Banco X'])
@@ -60,11 +60,11 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
 
     public function test_retention_attachment_contabilidad_y_asistente_pueden_gerencia_no(): void
     {
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::DANIELA, 'management')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::GERENCIA1, 'management')))
             ->postJson('/api/admin-contab/payments/1/retention-attachment', [])
             ->assertStatus(403);
 
-        foreach ([[self::FELIX, 'lider_admin_contab'], [self::YANETH, 'asistente_administrativa']] as [$email, $role]) {
+        foreach ([[self::CONTABILIDAD, 'lider_admin_contab'], [self::ASISTENTE, 'asistente_administrativa']] as [$email, $role]) {
             $status = $this->withHeaders($this->authHeaders($this->tokenFor($email, $role)))
                 ->postJson('/api/admin-contab/payments/1/retention-attachment', [])
                 ->status();
@@ -74,11 +74,11 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
 
     public function test_daily_count_contabilidad_y_asistente_pueden_gerencia_no(): void
     {
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::DANIELA, 'management')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::GERENCIA1, 'management')))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(403);
 
-        $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::YANETH, 'asistente_administrativa')))
+        $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::ASISTENTE, 'asistente_administrativa')))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->status();
         $this->assertNotSame(403, $status);
@@ -90,10 +90,10 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
     public function test_payments_summary_contabilidad_gerencia_asistente_y_operaciones_pueden(): void
     {
         foreach ([
-            [self::FELIX, 'lider_admin_contab'],
-            [self::DANIELA, 'management'],
-            [self::YANETH, 'asistente_administrativa'],
-            [self::MARIAM, 'lider_operaciones'],
+            [self::CONTABILIDAD, 'lider_admin_contab'],
+            [self::GERENCIA1, 'management'],
+            [self::ASISTENTE, 'asistente_administrativa'],
+            [self::LIDEROPERACIONES, 'lider_operaciones'],
         ] as [$email, $role]) {
             $status = $this->withHeaders($this->authHeaders($this->tokenFor($email, $role)))
                 ->getJson('/api/admin-contab/payments/summary')
@@ -104,7 +104,7 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
 
     public function test_cash_position_real_asistente_no_puede(): void
     {
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::YANETH, 'asistente_administrativa')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::ASISTENTE, 'asistente_administrativa')))
             ->getJson('/api/admin-contab/cash-position/real')
             ->assertStatus(403);
     }
@@ -114,12 +114,12 @@ class AdminContPermissionMatrixTest extends FeatureTestCase
 
     public function test_lider_operaciones_espeja_a_la_asistente_pero_no_gana_oversight(): void
     {
-        $token = $this->tokenFor(self::MARIAM, 'lider_operaciones');
+        $token = $this->tokenFor(self::LIDEROPERACIONES, 'lider_operaciones');
 
         $this->assertNotSame(403, $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/payments/summary')->status());
         $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/reports/felix-commission')
+            ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(403);
     }
 

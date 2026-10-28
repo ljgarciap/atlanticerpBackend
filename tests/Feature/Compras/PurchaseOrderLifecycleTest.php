@@ -327,7 +327,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     }
 
     /**
-     * REQ-142 Escenario 1 (fix Pre-QA 2026-07-20, rechazado por marly: "al marcar la orden como
+     * REQ-142 Escenario 1 (fix Pre-QA 2026-07-20, rechazado por qa: "al marcar la orden como
      * Recibido, los productos que estaban esperando confirmación NO se confirman solos") — el
      * docblock original de `advance()` decía que este efecto quedaba diferido porque Ingreso de
      * Mercancía no existía; ya existe, así que debe confirmar solo al llegar a "Recibido".
@@ -439,7 +439,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
      * (`PurchaseOrderController::createProduct()`) nunca inicializa `stock_quantity`, queda NULL
      * ("disponibilidad no controlada", ver migración `2026_07_19_100002`). `increment()`/
      * `decrement()` sobre una columna NULL en SQL se quedan en NULL, no en el número esperado —
-     * coincide exacto con lo que marly reportó 3 veces como "stock nulo" tras confirmar/recibir.
+     * coincide exacto con lo que qa reportó 3 veces como "stock nulo" tras confirmar/recibir.
      * Esto es DISTINTO del test anterior (que arranca con stock_quantity=0 explícito) — sin este
      * caso, la regresión real (cualquier producto pedido por Nueva Orden, el camino normal de
      * Compras) queda sin cubrir.

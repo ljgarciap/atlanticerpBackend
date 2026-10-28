@@ -128,7 +128,7 @@ final class QuoteService
 
     /**
      * SCRUM-1195 — «Diseñador» que imprime el PDF de la cotización: el Responsable del proyecto (dueño de la tarjeta del Pipeline), no
-     * quien generó esa versión. Cuando Gerencia (Gerencia/Whil/Felix) crea una versión nueva sobre la cotización de un vendedor,
+     * quien generó esa versión. Cuando Gerencia (Gerencia/Gerencia5/Contabilidad) crea una versión nueva sobre la cotización de un vendedor,
      * `quotes.owner_id` de esa fila es Gerencia (queda como «Generado por» en el historial de versiones, trazabilidad interna) pero el
      * documento que llega al cliente debe seguir diciendo el nombre del vendedor. Si Gerencia reasigna la tarjeta, el PDF sale con el
      * nuevo Responsable. Sin tarjeta (borrador sin confirmar) o una cotización que Gerencia armó desde cero, el nombre es el
@@ -165,7 +165,7 @@ final class QuoteService
      *   proyecto restaurado desde Perdido parte de su historial en Lead/Diseño).
      * - Si ya avanzó a "proposal"/"approved" (RN2.4/RN2.6) o está "lost"
      *   (RN2.5 — hay que reactivarla primero), confirmar se bloquea con
-     *   QuoteActionBlockedException. Nunca hay excepción para Gerencia/David acá —
+     *   QuoteActionBlockedException. Nunca hay excepción para Gerencia/Gerencia2 acá —
      *   esa excepción es solo de margen (SCRUM-725), un concepto distinto.
      *
      * Conserva el `pg_advisory_xact_lock` de SCRUM-722 (ver historial en git
@@ -221,7 +221,7 @@ final class QuoteService
     /**
      * SCRUM-734 (RN2.2) — una cotización ya confirmada ("en firme") nunca se
      * edita directamente, sin excepción de rol/permiso (la excepción de margen
-     * de Gerencia/David, SCRUM-725, es un concepto distinto y no aplica acá). La
+     * de Gerencia/Gerencia2, SCRUM-725, es un concepto distinto y no aplica acá). La
      * única forma de modificar su contenido es "Usar como base para nueva
      * versión" (ver duplicate()), que crea una cotización NUEVA en Borrador.
      *
@@ -354,7 +354,7 @@ final class QuoteService
      *
      * SCRUM-734 (RN10) — "margen" ahora es parte de esta misma lista de
      * faltantes (ver Quote::validationErrorsForGenerating()); $skipMarginCheck
-     * es la excepción de Gerencia/David, resuelta por el controller vía
+     * es la excepción de Gerencia/Gerencia2, resuelta por el controller vía
      * `ventas_diseno.override_min_margin` — acá no se conoce al usuario.
      *
      * @throws QuoteValidationBlockedException

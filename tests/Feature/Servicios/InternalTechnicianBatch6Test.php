@@ -302,7 +302,7 @@ class InternalTechnicianBatch6Test extends FeatureTestCase
     }
 
     /**
-     * SCRUM-322 — regresión real reportada por QA (marly.rangel, 2026-08-10): el POST respondía
+     * SCRUM-322 — regresión real reportada por QA (qa.qa, 2026-08-10): el POST respondía
      * 'available' (hardcodeado), pero un GET /internal-technicians inmediatamente después (lo que
      * la tarjeta de Vista Equipo realmente muestra tras refrescar) devolvía 'off' para SIEMPRE,
      * porque `TechnicianStatusService::statusFor()` forzaba "Fuera" a cualquier técnico sin

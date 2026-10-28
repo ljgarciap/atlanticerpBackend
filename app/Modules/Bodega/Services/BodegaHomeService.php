@@ -143,7 +143,7 @@ final class BodegaHomeService
     // ── SCRUM-367 (REQ-297) — Mi día / Día del equipo ───────────────────────
 
     /**
-     * REQ-297 — corregido tras hallazgo de QA (marly.rangel, 2026-07-26, comentario SCRUM-367):
+     * REQ-297 — corregido tras hallazgo de QA (qa.qa, 2026-07-26, comentario SCRUM-367):
      * "Pedidos hoy"/`asignados_hoy` mostraba 0 con 12 pedidos activos sembrados (SCRUM-501) en
      * alcance Equipo — mismo síntoma que SCRUM-372 (commit a23e9ae). La interpretación original
      * contaba pedidos que ENTRARON a `STAGE_ASIGNADO` HOY (`order_stage_history.to_stage`), y
@@ -456,7 +456,7 @@ final class BodegaHomeService
     // ── SCRUM-372 (REQ-302) — Estado de pedidos ─────────────────────────────
 
     /**
-     * REQ-302 — corregido tras hallazgo de QA (marly.rangel, 2026-07-26, comentario SCRUM-372): la
+     * REQ-302 — corregido tras hallazgo de QA (qa.qa, 2026-07-26, comentario SCRUM-372): la
      * interpretación original de "las primeras 6 etapas cuentan 'hoy'" como "pedidos que ENTRARON
      * a esa etapa hoy" (`order_stage_history.to_stage`) dejaba el panel en 0/0/0/0/0/0 mientras el
      * Kanban (REQ-311) mostraba 12 pedidos activos — para un usuario que abre Inicio, "0 en cada

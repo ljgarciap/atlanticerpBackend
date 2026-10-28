@@ -15,7 +15,7 @@ use Tests\Feature\FeatureTestCase;
 /**
  * SCRUM-865 punto 2 — cubre `bodega:backfill-customer-return-credit-notes`: rellena
  * `customer_returns.credit_note_id` para devoluciones finalizadas ANTES de que
- * `finalizeForCreditNote()` empezara a persistirlo (rebote de marly.rangel 2026-09-09).
+ * `finalizeForCreditNote()` empezara a persistirlo (rebote de qa.qa 2026-09-09).
  */
 class BodegaBackfillCustomerReturnCreditNotesCommandTest extends FeatureTestCase
 {

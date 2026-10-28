@@ -21,7 +21,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class PipelineEditPermissionTest extends FeatureTestCase
 {
-    private const FELIX = 'contabilidad@test.com';
+    private const CONTABILIDAD = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -47,9 +47,9 @@ class PipelineEditPermissionTest extends FeatureTestCase
     }
 
     /** @return array<string, string> */
-    private function felixHeaders(): array
+    private function contabilidadHeaders(): array
     {
-        $headers = $this->authHeaders($this->loginAs(self::FELIX, self::FELIX, 'lider_admin_contab'));
+        $headers = $this->authHeaders($this->loginAs(self::CONTABILIDAD, self::CONTABILIDAD, 'lider_admin_contab'));
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         return $headers;
@@ -58,7 +58,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     /** @param list<string> $quitar */
     private function quitarPermisosDeFelix(array $quitar): void
     {
-        $contabilidad = User::where('email', self::FELIX)->firstOrFail();
+        $contabilidad = User::where('email', self::CONTABILIDAD)->firstOrFail();
         $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], $quitar))]);
     }
 
@@ -72,7 +72,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     public function test_contabilidad_edita_tarjetas_del_equipo_en_etapas_no_aprobadas(string $stage): void
     {
         $card    = $this->makeCard($stage);
-        $headers = $this->felixHeaders();
+        $headers = $this->contabilidadHeaders();
 
         $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}")
             ->assertOk()->assertJsonPath('can_edit', true);
@@ -85,7 +85,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     {
         $card = $this->makeCard('lead');
 
-        $this->withHeaders($this->felixHeaders())->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])->assertOk();
+        $this->withHeaders($this->contabilidadHeaders())->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])->assertOk();
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame('lost', PipelineCard::find($card->id)->stage);
@@ -95,14 +95,14 @@ class PipelineEditPermissionTest extends FeatureTestCase
     {
         $card = $this->makeCard('lead');
 
-        $this->withHeaders($this->felixHeaders())->getJson('/api/ventas-diseno/pipeline?scope=team')
+        $this->withHeaders($this->contabilidadHeaders())->getJson('/api/ventas-diseno/pipeline?scope=team')
             ->assertOk()->assertJsonFragment(['id' => $card->id]);
     }
 
     public function test_contabilidad_puede_editar_un_proyecto_aprobado_por_edit_approved(): void
     {
         $card    = $this->makeCard('approved');
-        $headers = $this->felixHeaders();
+        $headers = $this->contabilidadHeaders();
 
         $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}")
             ->assertOk()->assertJsonPath('can_edit', true);
@@ -113,16 +113,16 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->quitarPermisosDeFelix(['ventas_diseno.edit.approved']);
         $card = $this->makeCard('approved');
 
-        $this->withHeaders($this->felixHeaders())->getJson("/api/ventas-diseno/pipeline/{$card->id}")
+        $this->withHeaders($this->contabilidadHeaders())->getJson("/api/ventas-diseno/pipeline/{$card->id}")
             ->assertOk()->assertJsonPath('can_edit', false);
     }
 
     public function test_sin_pipeline_edit_contabilidad_vuelve_a_solo_lectura(): void
     {
-        $this->felixComoEnScrum1139();
+        $this->contabilidadComoEnScrum1139();
         $this->quitarPermisosDeFelix(['ventas_diseno.pipeline.edit']);
         $card    = $this->makeCard('design');
-        $headers = $this->felixHeaders();
+        $headers = $this->contabilidadHeaders();
 
         $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}")
             ->assertOk()->assertJsonPath('can_edit', false);
@@ -133,8 +133,8 @@ class PipelineEditPermissionTest extends FeatureTestCase
 
     public function test_pipeline_edit_no_abre_ninguna_ruta_fuera_del_pipeline(): void
     {
-        $this->felixComoEnScrum1139();
-        $headers = $this->felixHeaders();
+        $this->contabilidadComoEnScrum1139();
+        $headers = $this->contabilidadHeaders();
 
         // Cotizaciones y arquitectos/asociados exigen `ventas_diseno.edit`/`write`: el permiso angosto no los desbloquea.
         $this->withHeaders($headers)->putJson('/api/ventas-diseno/quotes/999999', ['name' => 'X'])->assertStatus(403);
@@ -145,7 +145,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     public function test_contabilidad_lee_y_guarda_las_entregas_parciales_de_una_tarjeta_del_equipo(): void
     {
         $card    = $this->makeCard('quote');
-        $headers = $this->felixHeaders();
+        $headers = $this->contabilidadHeaders();
 
         $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments")->assertOk();
         // Pasó el permiso y la autorización de la tarjeta: lo que responde ahora es la validación del cuerpo.
@@ -154,8 +154,8 @@ class PipelineEditPermissionTest extends FeatureTestCase
 
     public function test_contabilidad_vincula_cliente_desde_nuevo_proyecto_pero_no_entra_a_la_pantalla_clientes(): void
     {
-        $this->felixComoEnScrum1139();
-        $headers = $this->felixHeaders();
+        $this->contabilidadComoEnScrum1139();
+        $headers = $this->contabilidadHeaders();
 
         // Flujo mínimo REQ-010 («Nuevo proyecto»): buscar y crear Cliente Master / Subcliente.
         // Pasan el permiso: lo que responden es la validación (falta el parámetro o el cuerpo), no un 403.
@@ -173,9 +173,9 @@ class PipelineEditPermissionTest extends FeatureTestCase
 
     public function test_sin_pipeline_edit_contabilidad_no_vincula_clientes(): void
     {
-        $this->felixComoEnScrum1139();
+        $this->contabilidadComoEnScrum1139();
         $this->quitarPermisosDeFelix(['ventas_diseno.pipeline.edit']);
-        $headers = $this->felixHeaders();
+        $headers = $this->contabilidadHeaders();
 
         $this->withHeaders($headers)->getJson('/api/ventas-diseno/master-clients')->assertStatus(403);
         $this->withHeaders($headers)->postJson('/api/ventas-diseno/sub-clients', [])->assertStatus(403);
@@ -183,7 +183,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
 
     public function test_contabilidad_con_pipeline_edit_tambien_replica_los_permisos_de_mark(): void
     {
-        $permisos = User::where('email', self::FELIX)->firstOrFail()->effectivePermissionsV2();
+        $permisos = User::where('email', self::CONTABILIDAD)->firstOrFail()->effectivePermissionsV2();
 
         $this->assertContains('ventas_diseno.pipeline.edit', $permisos);
         $this->assertContains('ventas_diseno.edit.approved', $permisos);

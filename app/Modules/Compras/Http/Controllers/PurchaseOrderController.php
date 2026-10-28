@@ -587,7 +587,7 @@ final class PurchaseOrderController extends Controller
      * REQ-141/142/143 — avanza al siguiente estado de la secuencia (según origen del proveedor),
      * bloqueando de verdad si falta la aprobación de Gerencia (REQ-143, ya no es solo un aviso).
      * El efecto "auto-confirma productos Por ingresar en Inventario" (REQ-142 Escenario 1) — fix
-     * Pre-QA 2026-07-20, rechazado por marly: quedaba diferido desde que se escribió este método
+     * Pre-QA 2026-07-20, rechazado por qa: quedaba diferido desde que se escribió este método
      * porque Ingreso de Mercancía no existía. Ya existe (SCRUM-220→230); al llegar a "Recibido" se
      * confirman ahora todas las líneas pendientes de ingresos registrados contra ESTA orden
      * (`GoodsReceiptConfirmationService::confirmPendingForOrder()`, mismo efecto de stock que

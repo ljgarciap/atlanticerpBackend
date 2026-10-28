@@ -300,8 +300,8 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
      */
     public function test_summary_puede_editar_tramos_solo_para_mark(): void
     {
-        $felixToken = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felixToken))
+        $contabilidadToken = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200)
             ->assertJsonPath('puede_editar_tramos', false);
@@ -319,8 +319,8 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $this->makeCommissionableOrder($vendorId, 10000.0, 10000.0);
 
         // Otro vendedor — no debería aparecer en la vista del designer.
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $this->makeCommissionableOrder($contabilidadId, 30000.0, 30000.0);
 
         $token = $this->loginAsDesigner();
 
@@ -347,8 +347,8 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($designerId, 20000.0, 20000.0);
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $this->makeCommissionableOrder($contabilidadId, 30000.0, 30000.0);
 
         $token = $this->loginAsYaneth();
 
@@ -365,7 +365,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $vendedores = collect($response->json('vendedores'));
         $this->assertGreaterThan(1, $vendedores->count(), 'Asistente Administrativa debe ver la tabla completa, no una sola fila.');
         $this->assertNotNull($vendedores->firstWhere('vendedor_id', $designerId), 'Debe incluir vendedores que no son ella misma.');
-        $this->assertNotNull($vendedores->firstWhere('vendedor_id', $felixId), 'Debe incluir vendedores que no son ella misma.');
+        $this->assertNotNull($vendedores->firstWhere('vendedor_id', $contabilidadId), 'Debe incluir vendedores que no son ella misma.');
     }
 
     public function test_export_prohibido_para_un_vendedor(): void
@@ -446,9 +446,9 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     public function test_tier_crud_exclusivo_de_mark(): void
     {
-        $felixToken = $this->loginAsFelix();
+        $contabilidadToken = $this->loginAsFelix();
 
-        $this->withHeaders($this->authHeaders($felixToken))
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson('/api/admin-contab/commissions/internal/tiers', [
                 'monto_minimo' => 0, 'monto_maximo' => 1000, 'porcentaje' => 1, 'orden' => 99,
             ])
@@ -557,12 +557,12 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_banner_auto_pago_se_angosta_al_vendedor_sin_view_team_scrum904(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
         // Designer: pedido propio, cobrado, "por pagar" — 8000 * 1.5% = 120.
         $this->makeCommissionableOrder($designerId, 8000.0, 8000.0);
         // Otro vendedor con una comisión "por pagar" grande — NO debe filtrarse al banner del designer.
-        $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
+        $this->makeCommissionableOrder($contabilidadId, 30000.0, 30000.0);
 
         $token = $this->loginAsDesigner();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -580,12 +580,12 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_banner_auto_pago_en_cero_no_muestra_comisiones_ajenas_scrum904(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
         // Designer: facturado pero todavía NO cobrado → pendiente_cobro, no cuenta para el banner.
         $this->makeCommissionableOrder($designerId, 8000.0, 0.0);
         // Contabilidad: comisión "por pagar" real de otro vendedor — no debe "prestarse" al designer.
-        $this->makeCommissionableOrder($felixId, 30000.0, 30000.0);
+        $this->makeCommissionableOrder($contabilidadId, 30000.0, 30000.0);
 
         $token = $this->loginAsDesigner();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -709,9 +709,9 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_divide_el_monto_en_partes_iguales_entre_2(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, null, [$felixId]);
+        $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, null, [$contabilidadId]);
 
         $token = $this->loginAsFelix();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -719,7 +719,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $vendedores = collect($response->json('vendedores'));
-        foreach ([$vendorId, $felixId] as $id) {
+        foreach ([$vendorId, $contabilidadId] as $id) {
             $row = $vendedores->firstWhere('vendedor_id', $id);
             $this->assertNotNull($row, "vendedor {$id} debería tener una fila comisionable");
             $pedido = collect($row['groups'][0]['pedidos'])->first();
@@ -735,10 +735,10 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_divide_el_monto_en_partes_iguales_entre_3(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
-        $this->makeCommissionableOrder($vendorId, 30000.0, 30000.0, null, [$felixId, $markId]);
+        $this->makeCommissionableOrder($vendorId, 30000.0, 30000.0, null, [$contabilidadId, $markId]);
 
         $token = $this->loginAsMark();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -764,10 +764,10 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_no_triplica_la_comision_caso_real_scrum906(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
-        $this->makeCommissionableOrder($designerId, 10700.0, 10700.0, null, [$felixId, $markId]);
+        $this->makeCommissionableOrder($designerId, 10700.0, 10700.0, null, [$contabilidadId, $markId]);
 
         $token = $this->loginAsMark();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -776,7 +776,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
         $vendedores = collect($response->json('vendedores'));
         $totalComision = 0.0;
-        foreach ([$designerId, $felixId, $markId] as $id) {
+        foreach ([$designerId, $contabilidadId, $markId] as $id) {
             $row = $vendedores->firstWhere('vendedor_id', $id);
             $pedido = collect($row['groups'][0]['pedidos'])->first();
             $this->assertEqualsWithDelta(53.5, $pedido['monto_comision'], 0.05, "Responsable {$id} debería recibir ~\$53.50, no \$160.50.");
@@ -790,12 +790,12 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_proyecto_compartido_divide_la_comision_entre_4_responsables_scrum906(): void
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
         $vendedor2Id = $this->userIdByEmail('vendedor2@test.com');
 
         // 40000 / 4 = 10000 c/u (tramo 1.5%) → 150 de comisión c/u, 600 en total.
-        $this->makeCommissionableOrder($designerId, 40000.0, 40000.0, null, [$felixId, $markId, $vendedor2Id]);
+        $this->makeCommissionableOrder($designerId, 40000.0, 40000.0, null, [$contabilidadId, $markId, $vendedor2Id]);
 
         $token = $this->loginAsMark();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -804,7 +804,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
         $vendedores = collect($response->json('vendedores'));
         $totalComision = 0.0;
-        foreach ([$designerId, $felixId, $markId, $vendedor2Id] as $id) {
+        foreach ([$designerId, $contabilidadId, $markId, $vendedor2Id] as $id) {
             $row = $vendedores->firstWhere('vendedor_id', $id);
             $pedido = collect($row['groups'][0]['pedidos'])->first();
             $this->assertSame(10000, $pedido['total_pedido']);
@@ -855,11 +855,11 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     public function test_estado_de_cuenta_prohibido_para_ver_el_de_otro_vendedor(): void
     {
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsDesigner();
 
         $this->withHeaders($this->authHeaders($token))
-            ->getJson("/api/admin-contab/commissions/internal/{$felixId}/account-statement")
+            ->getJson("/api/admin-contab/commissions/internal/{$contabilidadId}/account-statement")
             ->assertStatus(403);
     }
 

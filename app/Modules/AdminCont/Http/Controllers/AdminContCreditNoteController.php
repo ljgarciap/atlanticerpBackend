@@ -187,7 +187,7 @@ class AdminContCreditNoteController
         }
 
         // Pre-QA Batch 13 (2026-08-24) — `puede_aprobar_rechazar` (REQ-494) es dependiente del
-        // actor, no solo del estado de la nota: sin este chequeo, Contabilidad/Yaneth/Gerencia veían los
+        // actor, no solo del estado de la nota: sin este chequeo, Contabilidad/Asistente/Gerencia veían los
         // botones Aprobar/Rechazar en cualquier nota pendiente (el backend igual los bloqueaba con
         // un 403 claro al intentar decidir, nunca un gap de seguridad, pero sí un patrón
         // inconsistente respecto del gemelo REQ-448 en Facturación —

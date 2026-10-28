@@ -69,23 +69,23 @@ class Scrum1167Scrum1157DataFixesTest extends FeatureTestCase
         $this->assertSame('Recordatorio: solicitud Zona Libre #3 pendiente de aprobar', $content['subject']);
     }
 
-    public function test_a_mariam_se_le_quita_solo_la_fila_de_ventas_y_diseno(): void
+    public function test_a_lideroperaciones_se_le_quita_solo_la_fila_de_ventas_y_diseno(): void
     {
-        $mariam = (int) User::where('email', 'lideroperaciones@test.com')->value('id');
+        $lideroperaciones = (int) User::where('email', 'lideroperaciones@test.com')->value('id');
         $otra   = (int) User::where('email', 'contabilidad@test.com')->value('id');
         $t      = 'atlantic_auth.user_module_visibility';
-        DB::table($t)->whereIn('user_id', [$mariam, $otra])->delete();
+        DB::table($t)->whereIn('user_id', [$lideroperaciones, $otra])->delete();
 
-        foreach ([[$mariam, 'ventas_diseno'], [$mariam, 'compras'], [$otra, 'ventas_diseno']] as [$uid, $modulo]) {
+        foreach ([[$lideroperaciones, 'ventas_diseno'], [$lideroperaciones, 'compras'], [$otra, 'ventas_diseno']] as [$uid, $modulo]) {
             DB::table($t)->insert(['user_id' => $uid, 'module' => $modulo, 'can_view' => 2, 'can_view_team' => true]);
         }
 
-        $migracion = $this->migration('2026_10_18_120000_remove_ventas_diseno_visibility_from_mariam.php');
+        $migracion = $this->migration('2026_10_18_120000_remove_ventas_diseno_visibility_from_lideroperaciones.php');
         $migracion->up();
         $migracion->up(); // idempotente
 
-        $this->assertFalse(DB::table($t)->where('user_id', $mariam)->where('module', 'ventas_diseno')->exists());
-        $this->assertTrue(DB::table($t)->where('user_id', $mariam)->where('module', 'compras')->exists());
+        $this->assertFalse(DB::table($t)->where('user_id', $lideroperaciones)->where('module', 'ventas_diseno')->exists());
+        $this->assertTrue(DB::table($t)->where('user_id', $lideroperaciones)->where('module', 'compras')->exists());
         $this->assertTrue(DB::table($t)->where('user_id', $otra)->where('module', 'ventas_diseno')->exists());
     }
 }

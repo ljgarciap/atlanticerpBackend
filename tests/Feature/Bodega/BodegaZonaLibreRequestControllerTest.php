@@ -232,8 +232,8 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $this->reMakeCurrent();
         $send = NotificationSend::where('source', NotificationSend::SOURCE_BODEGA_ZONA_LIBRE_REMINDER)->first();
         $this->assertNotNull($send);
-        $yirenaId = (int) DB::table('atlantic_auth.users')->where('email', 'lidercompras@test.com')->value('id');
-        $this->assertContains($yirenaId, $send->audience);
+        $lidercomprasId = (int) DB::table('atlantic_auth.users')->where('email', 'lidercompras@test.com')->value('id');
+        $this->assertContains($lidercomprasId, $send->audience);
 
         // SCRUM-1167/1170 — el aviso lleva a la pantalla donde Compras aprueba/rechaza Y a esa solicitud concreta (`?request={id}`), tanto en el contenido
         // como en la notificación in-app de Lider Compras.
@@ -241,7 +241,7 @@ class BodegaZonaLibreRequestControllerTest extends FeatureTestCase
         $this->assertSame($esperado, $send->content['cta_url']);
         $this->assertSame(
             $esperado,
-            Notification::where('user_id', $yirenaId)->where('notification_send_id', $send->id)->value('link_url'),
+            Notification::where('user_id', $lidercomprasId)->where('notification_send_id', $send->id)->value('link_url'),
         );
     }
 

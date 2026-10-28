@@ -1274,12 +1274,12 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1175_el_listado_trae_los_vendedores_y_se_filtra_por_vendedor_combinable_con_por_cobrar(): void
     {
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAsFelix();
-        $a = $this->facturar($token, $felixId, ['compartido_con' => [$designerId]]); // Contabilidad + diseñador, por cobrar
+        $a = $this->facturar($token, $contabilidadId, ['compartido_con' => [$designerId]]); // Contabilidad + diseñador, por cobrar
         $b = $this->facturar($token, $designerId);                                   // solo el diseñador
-        $c = $this->facturar($token, $felixId);                                      // solo Contabilidad, cobrada
+        $c = $this->facturar($token, $contabilidadId);                                      // solo Contabilidad, cobrada
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $c['invoice']->update(['saldo_aplicado' => $c['invoice']->monto]);
 
@@ -1293,8 +1293,8 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
         // Opciones del filtro: solo responsables de pedidos facturables, con id y nombre.
         $opciones = collect($this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/invoices/sellers')->assertStatus(200)->json('data'));
-        $this->assertEqualsCanonicalizing([$felixId, $designerId], $opciones->pluck('id')->intersect([$felixId, $designerId])->all());
-        $this->assertSame($nombreFelix, $opciones->firstWhere('id', $felixId)['name']);
+        $this->assertEqualsCanonicalizing([$contabilidadId, $designerId], $opciones->pluck('id')->intersect([$contabilidadId, $designerId])->all());
+        $this->assertSame($nombreFelix, $opciones->firstWhere('id', $contabilidadId)['name']);
 
         $ids = fn (string $qs): array => collect($this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/invoices?view=plana{$qs}")->assertStatus(200)->json('rows'))
@@ -1303,12 +1303,12 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $soloMios = fn (array $ids): array => array_values(array_intersect($ids, $propios));
 
         // Coincide si CUALQUIER responsable contiene el texto (Contabilidad está en A y en C; el diseñador en A y en B).
-        $this->assertEqualsCanonicalizing([$a['order']->id, $c['order']->id], $soloMios($ids("&vendedor_ids[]={$felixId}")));
+        $this->assertEqualsCanonicalizing([$a['order']->id, $c['order']->id], $soloMios($ids("&vendedor_ids[]={$contabilidadId}")));
         $this->assertEqualsCanonicalizing([$a['order']->id, $b['order']->id], $soloMios($ids("&vendedor_ids[]={$designerId}")));
         // Varios a la vez: OR entre responsables.
-        $this->assertEqualsCanonicalizing($propios, $soloMios($ids("&vendedor_ids[]={$felixId}&vendedor_ids[]={$designerId}")));
+        $this->assertEqualsCanonicalizing($propios, $soloMios($ids("&vendedor_ids[]={$contabilidadId}&vendedor_ids[]={$designerId}")));
         // Combinado con «por cobrar»: la de Contabilidad que ya está cobrada (C) sale.
-        $this->assertSame([$a['order']->id], $soloMios($ids("&cobro=por_cobrar&vendedor_ids[]={$felixId}")));
+        $this->assertSame([$a['order']->id], $soloMios($ids("&cobro=por_cobrar&vendedor_ids[]={$contabilidadId}")));
         // Un vendedor que no existe no devuelve nada.
         $this->assertSame([], $soloMios($ids('&vendedor_ids[]=999999')));
         // También en la vista agrupada.
@@ -1321,19 +1321,19 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_1175_el_export_incluye_cliente_y_vendedor_y_marca_sin_vendedor(): void
     {
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsFelix();
-        ['order' => $order] = $this->facturar($token, $felixId);
+        ['order' => $order] = $this->facturar($token, $contabilidadId);
         $fila = collect($this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/invoices?view=plana')->json('rows'))->firstWhere('order_id', $order->id);
 
         $sheet = $this->loadWorkbook($this->withHeaders($this->authHeaders($token))
-            ->get('/api/admin-contab/invoices/export?format=excel&vendedor_ids[]='.$felixId)->assertStatus(200))->getActiveSheet();
+            ->get('/api/admin-contab/invoices/export?format=excel&vendedor_ids[]='.$contabilidadId)->assertStatus(200))->getActiveSheet();
         $datos = $sheet->toArray();
         $this->assertSame($fila['cliente'], collect($datos)->firstWhere(3, $fila['numero_factura'])[1]);
         $this->assertSame($fila['vendedores'][0], collect($datos)->firstWhere(3, $fila['numero_factura'])[2]);
 
-        $this->withHeaders($this->authHeaders($token))->get('/api/admin-contab/invoices/export?format=pdf&vendedor_ids[]='.$felixId)->assertStatus(200);
+        $this->withHeaders($this->authHeaders($token))->get('/api/admin-contab/invoices/export?format=pdf&vendedor_ids[]='.$contabilidadId)->assertStatus(200);
 
         // Sin responsables (factura migrada o de venta chica) la celda dice «—», no queda vacía.
         $bytes = app(InvoiceExportService::class)->toExcel([[

@@ -114,7 +114,7 @@ Route::prefix('clients')->group(function (): void {
     Route::post('/{id}/sub-clients', [ClientsController::class, 'storeSubClient'])->middleware('permission:ventas_diseno.write');
     Route::patch('/sub-clients/{subClientId}/category', [ClientsController::class, 'updateSubClientCategory'])->middleware('permission:ventas_diseno.edit');
     // SCRUM-1002 — validar RUC/Cédula contra la DGI (vía MSL, 20/min por usuario) y editar los datos fiscales de un SubCliente.
-    // Edición: quien ya edita en Ventas & Diseño (`.edit`) o tiene el permiso angosto (Gerencia/Felix, SpecialPermissionSeeder).
+    // Edición: quien ya edita en Ventas & Diseño (`.edit`) o tiene el permiso angosto (Gerencia/Contabilidad, SpecialPermissionSeeder).
     Route::post('/validate-tax-id', [ClientTaxDataController::class, 'validateTaxId'])->middleware(['permission:ventas_diseno.write,ventas_diseno.edit.client_tax_data', 'throttle:tax-lookup']);
     Route::patch('/sub-clients/{subClientId}/tax-data', [ClientTaxDataController::class, 'updateTaxData'])->middleware('permission:ventas_diseno.edit,ventas_diseno.edit.client_tax_data');
 });

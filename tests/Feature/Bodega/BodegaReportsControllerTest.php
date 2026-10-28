@@ -42,16 +42,16 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_productividad_rankea_por_pedidos_gestionados_en_el_periodo(): void
     {
-        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
-        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
+        $asistentebodega2Id = $this->userIdByEmail('asistentebodega2@test.com');
+        $asistentebodegaId = $this->userIdByEmail('asistentebodega@test.com');
 
-        $this->makeOrder(['assistant_id' => $marianoId]);
-        $this->makeOrder(['assistant_id' => $marianoId]);
-        $this->makeOrder(['assistant_id' => $marianoId]);
-        $this->makeOrder(['assistant_id' => $osvaldoId]);
+        $this->makeOrder(['assistant_id' => $asistentebodega2Id]);
+        $this->makeOrder(['assistant_id' => $asistentebodega2Id]);
+        $this->makeOrder(['assistant_id' => $asistentebodega2Id]);
+        $this->makeOrder(['assistant_id' => $asistentebodegaId]);
 
         // Fuera del período actual (mes pasado) — no debe contar en "month".
-        $old = $this->makeOrder(['assistant_id' => $marianoId]);
+        $old = $this->makeOrder(['assistant_id' => $asistentebodega2Id]);
         $old->created_at = Carbon::now()->subMonths(2);
         $old->save();
 
@@ -61,22 +61,22 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
         $response->assertJsonPath('has_data', true);
         $rows = collect($response->json('data'));
-        $marianoRow = $rows->firstWhere('assistant_id', $marianoId);
-        $osvaldoRow = $rows->firstWhere('assistant_id', $osvaldoId);
+        $asistentebodega2Row = $rows->firstWhere('assistant_id', $asistentebodega2Id);
+        $asistentebodegaRow = $rows->firstWhere('assistant_id', $asistentebodegaId);
 
-        $this->assertSame(3, $marianoRow['orders_count']);
+        $this->assertSame(3, $asistentebodega2Row['orders_count']);
         // json_encode() de un float entero (100.0) serializa como 100 (int), no 100.0.
-        $this->assertEqualsWithDelta(100.0, $marianoRow['percent_of_top'], 0.01);
-        $this->assertSame(1, $osvaldoRow['orders_count']);
-        $this->assertEqualsWithDelta(33.3, $osvaldoRow['percent_of_top'], 0.1);
+        $this->assertEqualsWithDelta(100.0, $asistentebodega2Row['percent_of_top'], 0.01);
+        $this->assertSame(1, $asistentebodegaRow['orders_count']);
+        $this->assertEqualsWithDelta(33.3, $asistentebodegaRow['percent_of_top'], 0.1);
     }
 
     public function test_productividad_incluye_asistentes_activos_sin_pedidos(): void
     {
-        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
-        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
+        $asistentebodega2Id = $this->userIdByEmail('asistentebodega2@test.com');
+        $asistentebodegaId = $this->userIdByEmail('asistentebodega@test.com');
 
-        $this->makeOrder(['assistant_id' => $marianoId]);
+        $this->makeOrder(['assistant_id' => $asistentebodega2Id]);
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson('/api/bodega/reports/productivity?period=month')
@@ -85,9 +85,9 @@ class BodegaReportsControllerTest extends FeatureTestCase
         // RN1 — "todos los Asistentes de Bodega activos", dinámico: Asistente Bodega aparece con 0 aunque
         // no haya gestionado ningún pedido este período, en vez de desaparecer del ranking.
         $rows = collect($response->json('data'));
-        $osvaldoRow = $rows->firstWhere('assistant_id', $osvaldoId);
-        $this->assertNotNull($osvaldoRow);
-        $this->assertSame(0, $osvaldoRow['orders_count']);
+        $asistentebodegaRow = $rows->firstWhere('assistant_id', $asistentebodegaId);
+        $this->assertNotNull($asistentebodegaRow);
+        $this->assertSame(0, $asistentebodegaRow['orders_count']);
     }
 
     public function test_productividad_sin_pedidos_en_el_periodo_indica_sin_datos(): void
@@ -103,21 +103,21 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_productividad_excluye_asistente_inactivo(): void
     {
-        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
-        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
+        $asistentebodega2Id = $this->userIdByEmail('asistentebodega2@test.com');
+        $asistentebodegaId = $this->userIdByEmail('asistentebodega@test.com');
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('id', $osvaldoId)->update(['is_active' => false]);
+        DB::table("{$slug}_auth.users")->where('id', $asistentebodegaId)->update(['is_active' => false]);
 
-        $this->makeOrder(['assistant_id' => $marianoId]);
-        $this->makeOrder(['assistant_id' => $osvaldoId]);
+        $this->makeOrder(['assistant_id' => $asistentebodega2Id]);
+        $this->makeOrder(['assistant_id' => $asistentebodegaId]);
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson('/api/bodega/reports/productivity?period=month')
             ->assertStatus(200);
 
         $rows = collect($response->json('data'));
-        $this->assertNull($rows->firstWhere('assistant_id', $osvaldoId));
-        $this->assertNotNull($rows->firstWhere('assistant_id', $marianoId));
+        $this->assertNull($rows->firstWhere('assistant_id', $asistentebodegaId));
+        $this->assertNotNull($rows->firstWhere('assistant_id', $asistentebodega2Id));
     }
 
     // ── REQ-422 — Precisión de inventario ────────────────────────────────────

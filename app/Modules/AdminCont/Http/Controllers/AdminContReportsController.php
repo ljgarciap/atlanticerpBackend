@@ -31,10 +31,10 @@ class AdminContReportsController
         private readonly CreditNoteService $creditNotes,
     ) {}
 
-    /** GET /api/admin-contab/reports/felix-commission — REQ-567, nunca depende del período. */
-    public function felixCommission(): JsonResponse
+    /** GET /api/admin-contab/reports/commission-tiers — REQ-567, nunca depende del período. */
+    public function commissionTiers(): JsonResponse
     {
-        return response()->json($this->carteraCommission->felixCommissionForCurrentMonth());
+        return response()->json($this->carteraCommission->commissionTiersForCurrentMonth());
     }
 
     /** GET /api/admin-contab/reports/cartera — REQ-568, nunca depende del período. */

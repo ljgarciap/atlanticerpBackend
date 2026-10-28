@@ -275,7 +275,7 @@ class QuoteItemControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    // ── SCRUM-725: margen global + excepción Gerencia/David + precio manual ────────
+    // ── SCRUM-725: margen global + excepción Gerencia/Gerencia2 + precio manual ────────
 
     public function test_agregar_item_ok_individualmente_pero_que_rompe_el_margen_global_con_descuento_de_totales_ya_aplicado_retorna_422(): void
     {

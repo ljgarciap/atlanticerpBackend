@@ -20,7 +20,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
 {
-    private const YIRENA_EMAIL = 'lidercompras@test.com';
+    private const LIDERCOMPRAS_EMAIL = 'lidercompras@test.com';
 
     protected function setUp(): void
     {
@@ -68,7 +68,7 @@ class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
     {
         $zonaLibreRequest = $this->makeRequestWithLine(quantity: 3, unitCost: 20);
 
-        $token = $this->loginAs(self::YIRENA_EMAIL, self::YIRENA_EMAIL);
+        $token = $this->loginAs(self::LIDERCOMPRAS_EMAIL, self::LIDERCOMPRAS_EMAIL);
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/zona-libre/requests/{$zonaLibreRequest->id}/approve");
 
@@ -94,7 +94,7 @@ class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
     {
         $zonaLibreRequest = $this->makeRequestWithLine();
 
-        $token = $this->loginAs(self::YIRENA_EMAIL, self::YIRENA_EMAIL);
+        $token = $this->loginAs(self::LIDERCOMPRAS_EMAIL, self::LIDERCOMPRAS_EMAIL);
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/zona-libre/requests/{$zonaLibreRequest->id}/reject", [])
             ->assertStatus(422);
@@ -104,7 +104,7 @@ class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
     {
         $zonaLibreRequest = $this->makeRequestWithLine();
 
-        $token = $this->loginAs(self::YIRENA_EMAIL, self::YIRENA_EMAIL);
+        $token = $this->loginAs(self::LIDERCOMPRAS_EMAIL, self::LIDERCOMPRAS_EMAIL);
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/zona-libre/requests/{$zonaLibreRequest->id}/reject", [
                 'rejection_reason' => 'Precio no competitivo',
@@ -123,7 +123,7 @@ class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_approve_sobre_solicitud_ya_resuelta_retorna_422(): void
     {
         $zonaLibreRequest = $this->makeRequestWithLine();
-        $token = $this->loginAs(self::YIRENA_EMAIL, self::YIRENA_EMAIL);
+        $token = $this->loginAs(self::LIDERCOMPRAS_EMAIL, self::LIDERCOMPRAS_EMAIL);
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson("/api/compras/zona-libre/requests/{$zonaLibreRequest->id}/approve")->assertStatus(200);
@@ -136,7 +136,7 @@ class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_reject_sobre_solicitud_ya_resuelta_retorna_422(): void
     {
         $zonaLibreRequest = $this->makeRequestWithLine();
-        $token = $this->loginAs(self::YIRENA_EMAIL, self::YIRENA_EMAIL);
+        $token = $this->loginAs(self::LIDERCOMPRAS_EMAIL, self::LIDERCOMPRAS_EMAIL);
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson("/api/compras/zona-libre/requests/{$zonaLibreRequest->id}/reject", ['rejection_reason' => 'A'])->assertStatus(200);
@@ -166,7 +166,7 @@ class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
     {
         $zonaLibreRequest = BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
 
-        $token = $this->loginAs(self::YIRENA_EMAIL, self::YIRENA_EMAIL);
+        $token = $this->loginAs(self::LIDERCOMPRAS_EMAIL, self::LIDERCOMPRAS_EMAIL);
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/zona-libre/requests/{$zonaLibreRequest->id}/approve")
             ->assertStatus(422);

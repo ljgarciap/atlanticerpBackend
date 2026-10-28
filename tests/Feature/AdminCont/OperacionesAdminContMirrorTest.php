@@ -19,7 +19,7 @@ use Tests\Feature\FeatureTestCase;
 class OperacionesAdminContMirrorTest extends FeatureTestCase
 {
     private const OPERACIONES = 'lideroperaciones@test.com';
-    private const YANETH      = 'asistenteadministrativa@test.com';
+    private const ASISTENTE      = 'asistenteadministrativa@test.com';
 
     protected function setUp(): void
     {
@@ -94,11 +94,11 @@ class OperacionesAdminContMirrorTest extends FeatureTestCase
 
     public function test_las_exclusiones_deliberadas_siguen_vigentes_para_operaciones_y_para_la_asistente(): void
     {
-        foreach ([[self::OPERACIONES, 'lider_operaciones'], [self::YANETH, 'asistente_administrativa']] as [$email, $role]) {
+        foreach ([[self::OPERACIONES, 'lider_operaciones'], [self::ASISTENTE, 'asistente_administrativa']] as [$email, $role]) {
             $headers = $this->headersFor($email, $role);
 
             $this->withHeaders($headers)->getJson('/api/admin-contab/cash-position/real?window=30')->assertStatus(403);
-            $this->withHeaders($headers)->getJson('/api/admin-contab/reports/felix-commission')->assertStatus(403);
+            $this->withHeaders($headers)->getJson('/api/admin-contab/reports/commission-tiers')->assertStatus(403);
         }
     }
 

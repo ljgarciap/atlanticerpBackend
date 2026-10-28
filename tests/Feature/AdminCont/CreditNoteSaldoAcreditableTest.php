@@ -44,7 +44,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function felixId(): int
+    private function contabilidadId(): int
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
 
@@ -275,7 +275,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
     public function test_el_servicio_rechaza_un_exceso_aunque_se_salte_el_form_request(): void
     {
         $f     = $this->factura(1000);
-        $actor = User::findOrFail($this->felixId());
+        $actor = User::findOrFail($this->contabilidadId());
 
         try {
             app(CreditNoteService::class)->register([
@@ -295,7 +295,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
     public function test_el_servicio_pide_el_resultado_si_aparece_un_excedente_que_el_form_request_no_vio(): void
     {
         $f     = $this->factura(1000, saldoAplicado: 500);
-        $actor = User::findOrFail($this->felixId());
+        $actor = User::findOrFail($this->contabilidadId());
 
         try {
             app(CreditNoteService::class)->register([
@@ -315,7 +315,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
     public function test_el_servicio_rechaza_la_anulacion_de_una_factura_sin_nada_por_acreditar(): void
     {
         $f     = $this->factura(1000);
-        $actor = User::findOrFail($this->felixId());
+        $actor = User::findOrFail($this->contabilidadId());
         $datos = [
             'master_client_id' => $f->master_client_id, 'cliente' => $f->cliente,
             'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA, 'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
@@ -348,7 +348,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         return AdminContCreditNote::create([
             'numero' => 'NC-' . static::uniqueTestNumber(), 'master_client_id' => $f->master_client_id, 'cliente' => $f->cliente,
             'tipo' => $tipo, 'factura_origen_id' => $f->id, 'monto' => $monto, 'subtotal' => $monto, 'itbms' => 0,
-            'motivo' => 'Heredada', 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION, 'registrado_por' => $this->felixId(), 'fecha' => now(),
+            'motivo' => 'Heredada', 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION, 'registrado_por' => $this->contabilidadId(), 'fecha' => now(),
             'resultado' => AdminContCreditNote::RESULTADO_APLICADO_SALDO,
             'comprobante_url' => 'tests/soporte.pdf',
         ]);
@@ -361,7 +361,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         AdminContCreditNote::create([
             'numero' => 'NC-' . static::uniqueTestNumber(), 'master_client_id' => $f->master_client_id, 'cliente' => $f->cliente,
             'tipo' => AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, 'factura_origen_id' => $f->id, 'monto' => 128.76, 'subtotal' => 128.76, 'itbms' => 0,
-            'motivo' => 'Devolución', 'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => $this->felixId(), 'fecha' => now(),
+            'motivo' => 'Devolución', 'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => $this->contabilidadId(), 'fecha' => now(),
         ]);
         $anulacion = $this->notaPendienteForzada($f, 137.77, AdminContCreditNote::TIPO_ANULACION_COMPLETA);
 
@@ -381,7 +381,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         AdminContCreditNote::create([
             'numero' => 'NC-' . static::uniqueTestNumber(), 'master_client_id' => $f->master_client_id, 'cliente' => $f->cliente,
             'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'factura_origen_id' => $f->id, 'monto' => 60, 'subtotal' => 60, 'itbms' => 0,
-            'motivo' => 'Previa', 'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => $this->felixId(), 'fecha' => now(),
+            'motivo' => 'Previa', 'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => $this->contabilidadId(), 'fecha' => now(),
         ]);
         $nota = $this->notaPendienteForzada($f, 100, AdminContCreditNote::TIPO_ANULACION_COMPLETA);
 

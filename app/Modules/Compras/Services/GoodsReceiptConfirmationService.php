@@ -76,7 +76,7 @@ final class GoodsReceiptConfirmationService
      * Aplica el efecto de stock de una línea ya confirmada (recién guardada o recién
      * confirmada).
      *
-     * Hallazgo de Pre-QA 2026-07-20 (SCRUM-205, coincide con lo que marly veía como "stock
+     * Hallazgo de Pre-QA 2026-07-20 (SCRUM-205, coincide con lo que qa veía como "stock
      * nulo" en sus 3 rechazos previos): `catalog_products.stock_quantity` es nullable a
      * propósito ("disponibilidad no controlada", ver migración `2026_07_19_100002`) — un
      * producto creado desde Nueva Orden (`PurchaseOrderController::createProduct()`) nunca lo

@@ -167,7 +167,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
     {
         $token = $this->loginAsDesigner();
 
-        foreach (['/api/admin-contab/reports/felix-commission', '/api/admin-contab/reports/cartera',
+        foreach (['/api/admin-contab/reports/commission-tiers', '/api/admin-contab/reports/cartera',
             '/api/admin-contab/reports/ventas', '/api/admin-contab/reports/flujo-caja'] as $url) {
             $this->withHeaders($this->authHeaders($token))->getJson($url)->assertStatus(403);
         }
@@ -195,7 +195,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $token = $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
 
         $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/reports/felix-commission')
+            ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(403);
     }
 
@@ -222,7 +222,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
         $token = $this->loginAsFelix();
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/reports/felix-commission')
+            ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(200);
 
         $response->assertJson(['cobrado_mes' => 8400.0, 'porcentaje' => 1.0, 'comision' => 84.0]);
@@ -236,7 +236,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
         $token = $this->loginAsFelix();
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/reports/felix-commission')
+            ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(200);
 
         $response->assertJson(['cobrado_mes' => 17000.0, 'porcentaje' => 1.5, 'comision' => 255.0]);
@@ -249,7 +249,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
         $token = $this->loginAsFelix();
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/reports/felix-commission')
+            ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(200);
 
         $response->assertJson(['cobrado_mes' => 25000.0, 'porcentaje' => 2.0, 'comision' => 500.0]);
@@ -259,7 +259,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
     {
         $token = $this->loginAsFelix();
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/reports/felix-commission')
+            ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(200);
 
         $tiers = $response->json('tiers');

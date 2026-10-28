@@ -24,9 +24,9 @@ use Illuminate\Http\UploadedFile;
 
 /**
  * Rebotes de QA "BLOQUEADO, SIN DATOS DE PRUEBA" (2026-08-27) en SCRUM-583/590/591/592/595/601 —
- * marly no pudo ejercitar ninguno de estos escenarios en dev.atlanticerp.ai porque no existía en ese
+ * qa no pudo ejercitar ninguno de estos escenarios en dev.atlanticerp.ai porque no existía en ese
  * entorno ningún registro real en el estado que cada ticket necesita. No son bugs de código — ver
- * comentarios de marly en cada ticket. Este comando siembra, vía los modelos y servicios reales
+ * comentarios de qa en cada ticket. Este comando siembra, vía los modelos y servicios reales
  * del módulo (no SQL directo), un caso por escenario:
  *
  * - SCRUM-583 — un pedido compartido entre 2 vendedores reales (`PipelineCard.compartido_con`).
@@ -81,21 +81,21 @@ final class AdminContSeedRebotesQaCommand extends Command
         Tenant::forgetCurrent();
         $tenant->makeCurrent();
 
-        $felixId = (int) User::where('email', 'contabilidad@test.com')->value('id');
+        $contabilidadId = (int) User::where('email', 'contabilidad@test.com')->value('id');
         $vendedor2Id = (int) User::where('email', 'vendedor2@test.com')->value('id');
         $vendedor3Id = (int) User::where('email', 'vendedor3@test.com')->value('id');
 
-        if ($felixId === 0 || $vendedor2Id === 0 || $vendedor3Id === 0) {
+        if ($contabilidadId === 0 || $vendedor2Id === 0 || $vendedor3Id === 0) {
             $this->error('Faltan usuarios base del roster real (Contabilidad/Vendedor) — abortando.');
 
             return self::FAILURE;
         }
 
         $this->seedSharedProject($vendedor2Id, $vendedor3Id);
-        $this->seedArchitectPendingSinArchivo(self::MARKER_590, ArchitectFiscalProfile::REGIMEN_CON_ITBMS, $felixId);
-        $this->seedArchitectPendingSinArchivo(self::MARKER_591, ArchitectFiscalProfile::REGIMEN_RETENCION_50, $felixId);
-        $this->seedArchitectReadyToPay($felixId, $commissions);
-        $this->seedDailyCashCountPayment($felixId);
+        $this->seedArchitectPendingSinArchivo(self::MARKER_590, ArchitectFiscalProfile::REGIMEN_CON_ITBMS, $contabilidadId);
+        $this->seedArchitectPendingSinArchivo(self::MARKER_591, ArchitectFiscalProfile::REGIMEN_RETENCION_50, $contabilidadId);
+        $this->seedArchitectReadyToPay($contabilidadId, $commissions);
+        $this->seedDailyCashCountPayment($contabilidadId);
 
         $this->info('Listo — verificar en dev.atlanticerp.ai (Comisiones Internas/Externas, Arqueo del día).');
 

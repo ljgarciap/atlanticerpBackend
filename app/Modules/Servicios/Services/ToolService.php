@@ -81,7 +81,7 @@ final class ToolService
      * Desgaste generan un movimiento en el kardex; reasignar (REQ-270) nunca pasa por acá.
      */
     /**
-     * SCRUM-779 (rebote QA/Daniela 2026-08-20) — `$detalle` es nuevo: antes el movimiento de
+     * SCRUM-779 (rebote QA/Gerencia1 2026-08-20) — `$detalle` es nuevo: antes el movimiento de
      * Dañada/Pérdida/Desgaste se creaba sin ningún detalle del incidente (ni el controller lo
      * pedía al request), así que el Kardex siempre mostraba "—" para esos 3 tipos — no era un
      * campo que se perdía, nunca se capturó. Buen estado no genera movimiento, así que `$detalle`

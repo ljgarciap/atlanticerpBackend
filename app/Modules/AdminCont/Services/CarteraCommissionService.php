@@ -29,7 +29,7 @@ final class CarteraCommissionService
     /**
      * @return array{cobrado_mes: float, rango_actual: string, porcentaje: float, comision: float, tiers: AnonymousResourceCollection}
      */
-    public function felixCommissionForCurrentMonth(): array
+    public function commissionTiersForCurrentMonth(): array
     {
         $cobradoMes = $this->invoices->over90DaysCollectedForCurrentMonth()['cobrado_mes'];
         $tiers      = $this->tiers();

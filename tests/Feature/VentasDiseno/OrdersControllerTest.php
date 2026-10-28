@@ -598,7 +598,7 @@ class OrdersControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/orders')->assertStatus(200);
 
         \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $this->felixComoEnScrum1139();
+        $this->contabilidadComoEnScrum1139();
         $token = $this->loginAs('contabilidad@test.com', 'contabilidad@test.com', 'lider_admin_contab');
         $this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/orders')->assertStatus(403);
     }

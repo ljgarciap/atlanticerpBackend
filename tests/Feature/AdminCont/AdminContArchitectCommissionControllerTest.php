@@ -387,9 +387,9 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $felixToken = $this->loginAsFelix();
+        $contabilidadToken = $this->loginAsFelix();
         $file = UploadedFile::fake()->create('cuenta.pdf', 100, 'application/pdf');
-        $this->withHeaders($this->authHeaders($felixToken))
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro", ['file' => $file])
             ->assertStatus(201);
 
@@ -418,9 +418,9 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $felixToken = $this->loginAsFelix();
+        $contabilidadToken = $this->loginAsFelix();
         $file = UploadedFile::fake()->create('cuenta.pdf', 100, 'application/pdf');
-        $this->withHeaders($this->authHeaders($felixToken))
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro", ['file' => $file])
             ->assertStatus(201);
 
@@ -473,9 +473,9 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_RETENCION_50]);
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $felixToken = $this->loginAsFelix();
+        $contabilidadToken = $this->loginAsFelix();
         $file = UploadedFile::fake()->create('retencion.pdf', 100, 'application/pdf');
-        $this->withHeaders($this->authHeaders($felixToken))
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion", ['file' => $file])
             ->assertStatus(201)
             ->assertJsonPath('nombre_archivo', 'retencion.pdf');
@@ -494,9 +494,9 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_RETENCION_50]);
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $felixToken = $this->loginAsFelix();
+        $contabilidadToken = $this->loginAsFelix();
         $file = UploadedFile::fake()->create('retencion.pdf', 100, 'application/pdf');
-        $this->withHeaders($this->authHeaders($felixToken))
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion", ['file' => $file])
             ->assertStatus(201);
 
@@ -598,12 +598,12 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $felixToken = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felixToken))
+        $contabilidadToken = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/propose", ['porcentaje' => 12.5, 'motivo' => 'x'])
             ->assertStatus(200);
 
-        $this->withHeaders($this->authHeaders($felixToken))
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/decide", ['approve' => true])
             ->assertStatus(403);
     }
@@ -613,8 +613,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $felixToken = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felixToken))
+        $contabilidadToken = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/propose", ['porcentaje' => 12.5, 'motivo' => 'x'])
             ->assertStatus(200);
 
@@ -635,8 +635,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $felixToken = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felixToken))
+        $contabilidadToken = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/propose", ['porcentaje' => 12.5, 'motivo' => 'x'])
             ->assertStatus(200);
 
@@ -808,8 +808,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertStatus(200)
             ->assertJsonPath('puede_decidir_porcentaje', true);
 
-        $felixToken = $this->loginAsFelix();
-        $this->withHeaders($this->authHeaders($felixToken))
+        $contabilidadToken = $this->loginAsFelix();
+        $this->withHeaders($this->authHeaders($contabilidadToken))
             ->getJson('/api/admin-contab/commissions/external')
             ->assertStatus(200)
             ->assertJsonPath('puede_decidir_porcentaje', false);
