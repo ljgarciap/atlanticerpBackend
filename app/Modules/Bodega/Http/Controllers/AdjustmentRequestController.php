@@ -130,7 +130,7 @@ final class AdjustmentRequestController extends Controller
         ]);
     }
 
-    /** SCRUM-429/161 — misma condición que resolveMarkAccess(), como boolean informativo para el listado. */
+    /** SCRUM-429/161 — misma condición que resolveApproverAccess(), como boolean informativo para el listado. */
     private function canApprove(Request $request): bool
     {
         $user = $this->resolveUser($request);
@@ -342,7 +342,7 @@ final class AdjustmentRequestController extends Controller
      */
     public function approve(Request $request, int $lineId): JsonResponse
     {
-        $access = $this->resolveMarkAccess($request);
+        $access = $this->resolveApproverAccess($request);
         if ($access instanceof JsonResponse) {
             return $access;
         }
@@ -402,7 +402,7 @@ final class AdjustmentRequestController extends Controller
      */
     public function reject(Request $request, int $lineId): JsonResponse
     {
-        $access = $this->resolveMarkAccess($request);
+        $access = $this->resolveApproverAccess($request);
         if ($access instanceof JsonResponse) {
             return $access;
         }
@@ -458,7 +458,7 @@ final class AdjustmentRequestController extends Controller
      *
      * @return array{0: User}|JsonResponse
      */
-    private function resolveMarkAccess(Request $request): array|JsonResponse
+    private function resolveApproverAccess(Request $request): array|JsonResponse
     {
         $user = $this->resolveUser($request);
         if ($user === null) {

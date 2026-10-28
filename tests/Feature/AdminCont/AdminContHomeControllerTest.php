@@ -254,7 +254,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
     private const APPROVALS_URL = '/api/admin-contab/home/approvals-pending';
 
     /** Los 5 tipos de Admin&Cont son exclusivos de "Gerencia" (`AdminContFiscalSettings.primary_approver_user_id`). */
-    private function makeMark(): int
+    private function makeApprover(): int
     {
         $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $contabilidadId]);
@@ -264,7 +264,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_incobrable_para_mark(): void
     {
-        $this->makeMark();
+        $this->makeApprover();
         $this->makeInvoice(500, 0, now()->toDateTimeString(), false, true);
 
         $token = $this->loginAsContabilidad();
@@ -276,7 +276,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_nota_de_credito_para_mark(): void
     {
-        $contabilidadId = $this->makeMark();
+        $contabilidadId = $this->makeApprover();
         $invoice = $this->makeInvoice(300, 0, now()->toDateTimeString());
         AdminContCreditNote::create([
             'numero' => 'NC-'.self::uniqueTestNumber(),
@@ -295,7 +295,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_comision_arquitecto_para_mark(): void
     {
-        $contabilidadId = $this->makeMark();
+        $contabilidadId = $this->makeApprover();
         $architect = Architect::create(['name' => 'Arq. '.uniqid(), 'email' => uniqid().'@arq.test']);
         $master = MasterClient::create(['name' => 'Cliente Arq '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
@@ -317,7 +317,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_arqueo_para_mark(): void
     {
-        $this->makeMark();
+        $this->makeApprover();
         AdminContDailyCashCount::create(['fecha' => now()->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION]);
 
         $token = $this->loginAsContabilidad();
@@ -329,7 +329,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_caja_chica_para_mark(): void
     {
-        $this->makeMark();
+        $this->makeApprover();
         AdminContPettyCashReport::create(['numero' => 'CC-'.self::uniqueTestNumber(), 'forma_pago' => AdminContPettyCashReport::FORMA_PAGO_EFECTIVO]);
 
         $token = $this->loginAsContabilidad();
@@ -342,7 +342,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
     /** Asistente Administrativa (asistente_administrativa) tiene acceso al Home, pero no es Gerencia. */
     public function test_approvals_pending_vacio_para_quien_no_es_mark(): void
     {
-        $this->makeMark();
+        $this->makeApprover();
         $this->makeInvoice(500, 0, now()->toDateTimeString(), false, true);
 
         $token = $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');

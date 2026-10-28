@@ -48,7 +48,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         Storage::fake('s3-private');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -187,7 +187,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $card = $this->makeArchitectProject($architect, 34000.0, 34000.0); // pendiente_factura_arquitecto, cliente ya cobró 100%
         $projectName = $card->salesProject->name;
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/external')
             ->assertStatus(200);
@@ -216,7 +216,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         // el cliente sí pagó algo → "parcial", no "pendiente".
         $this->makeArchitectProject($architect, 34000.0, 10000.0);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/external')
             ->assertStatus(200);
@@ -236,7 +236,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $this->markCommissionPaid($card1);
         $this->makeArchitectProject($architect, 5000.0, 5000.0); // pendiente_factura_arquitecto ($500)
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/external')
             ->assertStatus(200);
@@ -251,7 +251,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/external')
             ->assertStatus(200);
@@ -268,7 +268,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_EXENTO]);
         $this->makeArchitectProject($architect, 5000.0, 2500.0);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/external')
             ->assertStatus(200);
@@ -284,7 +284,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio X', 'ruc' => '1-1-1', 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_EXENTO]);
         $this->makeArchitectProject($architect, 5000.0, 2500.0); // aun_no_generada
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/external?estado='.ArchitectCommissionService::ESTADO_PAGADA)
             ->assertStatus(200)
@@ -371,7 +371,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $file = UploadedFile::fake()->create('cuenta.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
@@ -393,8 +393,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro", ['file' => $file])
             ->assertStatus(201);
 
-        $markToken = $this->loginAsMark();
-        $response = $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $response = $this->withHeaders($this->authHeaders($approverToken))
             ->getJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro")
             ->assertStatus(200);
 
@@ -406,7 +406,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $architect = $this->makeArchitect();
         $card = $this->makeArchitectProject($architect, 10000.0, 10000.0);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro")
             ->assertStatus(404);
@@ -424,18 +424,18 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro", ['file' => $file])
             ->assertStatus(201);
 
-        $markToken = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $this->withHeaders($this->authHeaders($approverToken))
             ->getJson("/api/admin-contab/commissions/external/projects/{$card->id}/cuenta-cobro")
             ->assertStatus(200);
 
         $this->reactivateTenant();
-        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        $approverId = $this->userIdByEmail(self::APPROVER_EMAIL);
         $commission = ArchitectCommission::where('pipeline_card_id', $card->id)->firstOrFail();
         $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::ADMIN_CONT_CUENTA_COBRO_VIEWED)
             ->where('entity_id', (string) $commission->id)
-            ->where('user_id', $markId)
+            ->where('user_id', $approverId)
             ->first();
 
         $this->assertNotNull($log, 'Debe existir una entrada admin_cont.cuenta_cobro.viewed en audit_logs.');
@@ -480,8 +480,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->assertStatus(201)
             ->assertJsonPath('nombre_archivo', 'retencion.pdf');
 
-        $markToken = $this->loginAsMark();
-        $response = $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $response = $this->withHeaders($this->authHeaders($approverToken))
             ->getJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion")
             ->assertStatus(200);
         $this->assertNotNull($response->json('url'));
@@ -500,18 +500,18 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion", ['file' => $file])
             ->assertStatus(201);
 
-        $markToken = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $this->withHeaders($this->authHeaders($approverToken))
             ->getJson("/api/admin-contab/commissions/external/projects/{$card->id}/comprobante-retencion")
             ->assertStatus(200);
 
         $this->reactivateTenant();
-        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        $approverId = $this->userIdByEmail(self::APPROVER_EMAIL);
         $commission = ArchitectCommission::where('pipeline_card_id', $card->id)->firstOrFail();
         $log = DB::table('atlantic_auth.audit_logs')
             ->where('action', AuditService::ADMIN_CONT_COMPROBANTE_RETENCION_VIEWED)
             ->where('entity_id', (string) $commission->id)
-            ->where('user_id', $markId)
+            ->where('user_id', $approverId)
             ->first();
 
         $this->assertNotNull($log, 'Debe existir una entrada admin_cont.comprobante_retencion.viewed en audit_logs.');
@@ -525,7 +525,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $this->reactivateTenant();
         $inactiva->update(['activa' => false]);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/external/bank-accounts')
             ->assertStatus(200);
@@ -618,8 +618,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/propose", ['porcentaje' => 12.5, 'motivo' => 'x'])
             ->assertStatus(200);
 
-        $markToken = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $this->withHeaders($this->authHeaders($approverToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/decide", ['approve' => true])
             ->assertStatus(200)
             ->assertJsonPath('porcentaje_aprobado', 12.5);
@@ -640,12 +640,12 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/propose", ['porcentaje' => 12.5, 'motivo' => 'x'])
             ->assertStatus(200);
 
-        $markToken = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $this->withHeaders($this->authHeaders($approverToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/decide", ['approve' => false])
             ->assertStatus(422);
 
-        $this->withHeaders($this->authHeaders($markToken))
+        $this->withHeaders($this->authHeaders($approverToken))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/percent/decide", ['approve' => false, 'motivo_rechazo' => 'No aplica'])
             ->assertStatus(200);
 
@@ -802,8 +802,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
     /** REQ-516 RN4 — el frontend gatea Aprobar/Rechazar en el modal de detalle con este flag. */
     public function test_summary_expone_puede_decidir_porcentaje_segun_actor(): void
     {
-        $markToken = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $this->withHeaders($this->authHeaders($approverToken))
             ->getJson('/api/admin-contab/commissions/external')
             ->assertStatus(200)
             ->assertJsonPath('puede_decidir_porcentaje', true);
@@ -894,7 +894,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
             $this->makeArchitectProject($architect, 10000.0, 10000.0);
         }
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $page1 = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/external?per_page=10')

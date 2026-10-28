@@ -60,7 +60,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         Storage::fake('s3-private');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -106,7 +106,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         $this->conAhora(self::T0, function (): void {
             $f = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
             Carbon::setTestNow(Carbon::parse('2026-10-03 08:59:00', 'America/Panama'));
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
         });
     }
 
@@ -115,7 +115,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         $this->conAhora(self::T0, function (): void {
             $f = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
             Carbon::setTestNow(Carbon::parse('2026-10-03 09:00:00', 'America/Panama'));
-            $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertStatus(200);
+            $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertStatus(200);
             $r->assertJsonPath('fe_estado', 'certificado'); // borde inclusivo: "más de 24 horas" bloquea, 24 h exactas todavía reenvía
         });
     }
@@ -125,10 +125,10 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         $this->conAhora(self::T0, function (): void {
             $f = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
             Carbon::setTestNow(Carbon::parse('2026-10-03 09:01:00', 'America/Panama'));
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'error_configuracion')->assertJsonPath('codigo', 'ventana_vencida');
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'error_configuracion')->assertJsonPath('codigo', 'ventana_vencida');
             Http::assertSentCount(1);
             // reintentar de nuevo sigue sin reenviar (y sin explotar)
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('codigo', 'ventana_vencida');
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('codigo', 'ventana_vencida');
             Http::assertSentCount(1);
             $this->assertSame(Carbon::parse(self::T0, 'America/Panama')->timestamp, $f->fresh()->fe_emision_at->timestamp, 'fe_emision_at intacto');
         });
@@ -140,9 +140,9 @@ final class PreQa1019FeMslTest extends FeatureTestCase
             AdminContFiscalSettings::current()->forceFill(['fe_reintento_max_horas' => 1])->save();
             $f = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
             Carbon::setTestNow(Carbon::parse('2026-10-02 10:01:00', 'America/Panama'));
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertJsonPath('codigo', 'ventana_vencida');
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertJsonPath('codigo', 'ventana_vencida');
             Carbon::setTestNow(Carbon::parse('2026-10-02 09:59:00', 'America/Panama'));
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertJsonPath('fe_estado', 'certificado');
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertJsonPath('fe_estado', 'certificado');
         });
     }
 
@@ -152,7 +152,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
             AdminContFiscalSettings::current()->forceFill(['fe_reintento_max_horas' => 720])->save();
             $f = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
             Carbon::setTestNow(Carbon::parse('2026-10-02 09:00:00', 'America/Panama')->addHours(719));
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertJsonPath('fe_estado', 'certificado');
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertJsonPath('fe_estado', 'certificado');
         });
     }
 
@@ -162,14 +162,14 @@ final class PreQa1019FeMslTest extends FeatureTestCase
             $f = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
             AdminContFiscalSettings::current()->forceFill(['fe_reintento_max_horas' => 2])->save();
             Carbon::setTestNow(Carbon::parse('2026-10-02 12:00:00', 'America/Panama'));
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertJsonPath('codigo', 'ventana_vencida');
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reintentar'))->assertJsonPath('codigo', 'ventana_vencida');
         });
     }
 
     // ── PUT fiscal-settings: validación y forma ───────────────────────────
     public function test_preqa_put_fiscal_settings_valores(): void
     {
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $esperado = [[null, 422], [0, 422], [-1, 422], [1, 200], [720, 200], [721, 422], [24.5, 422], ['24', 200], ['abc', 422], ['', 422], [[], 422]];
         foreach ($esperado as [$v, $status]) {
             $this->api($approver, 'PUT', '/api/admin-contab/fiscal-settings', ['fe_reintento_max_horas' => $v])->assertStatus($status);
@@ -179,7 +179,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
 
     public function test_preqa_put_sin_el_campo_no_lo_toca_y_contabilidad_no_puede(): void
     {
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $this->api($approver, 'PUT', '/api/admin-contab/fiscal-settings', ['fe_reintento_max_horas' => 48])->assertStatus(200);
         $this->api($approver, 'PUT', '/api/admin-contab/fiscal-settings', ['dias_credito_factura' => 30])->assertStatus(200)->assertJsonPath('fe_reintento_max_horas', 48);
         $this->api($this->token(), 'PUT', '/api/admin-contab/fiscal-settings', ['fe_reintento_max_horas' => 1])->assertStatus(403);
@@ -242,7 +242,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
     {
         $f = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(self::CERTIFICADO, 200)]);
-        $m = $this->loginAsMark();
+        $m = $this->loginAsApprover();
         $this->api($m, 'POST', $this->urlFactura($f, 'fe-reconciliar'))->assertStatus(200);
         $this->api($m, 'POST', $this->urlFactura($f, 'fe-reconciliar'))->assertStatus(409)->assertJsonPath('codigo', 'estado_no_reconciliable')->assertJsonStructure(['message', 'codigo']);
         $this->assertSame(1, AuditLog::query()->where('action', AuditService::ADMIN_CONT_FE_DOCUMENTO_RECONCILIADO)->count());
@@ -254,14 +254,14 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         $lock = Cache::lock("fe-recertificar:atlantic:factura:{$f->id}", 90);
         $this->assertTrue($lock->get());
         try {
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reconciliar'))->assertStatus(409)->assertJsonPath('codigo', 'en_curso');
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reconciliar'))->assertStatus(409)->assertJsonPath('codigo', 'en_curso');
         } finally { $lock->release(); }
     }
 
     public function test_preqa_reconciliar_estados_no_reconciliables_409(): void
     {
         $f = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
-        $m = $this->loginAsMark();
+        $m = $this->loginAsApprover();
         foreach (['no_aplica', 'en_espera_nc', 'certificado', null] as $e) {
             $this->reTenant();
             $f->forceFill(['fe_estado' => $e])->save();
@@ -277,7 +277,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
     public function test_preqa_reconciliar_anulada_fe_apagada_y_404(): void
     {
         $f = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
-        $m = $this->loginAsMark();
+        $m = $this->loginAsApprover();
         $this->api($m, 'POST', '/api/admin-contab/invoices/999999/fe-reconciliar')->assertStatus(404);
         $this->api($m, 'POST', '/api/admin-contab/notas-credito/999999/fe-reconciliar')->assertStatus(404);
         $this->api($m, 'POST', "/api/admin-contab/invoices/{$f->order_id}/fe-reconciliar?invoice_id=abc")->assertStatus(422);
@@ -293,7 +293,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
     public function test_preqa_reconciliar_con_msl_caido_o_401_no_reenvia(): void
     {
         $f = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
-        $m = $this->loginAsMark();
+        $m = $this->loginAsApprover();
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(['ok' => false, 'error' => 'API key inválida'], 401)]);
         $r = $this->api($m, 'POST', $this->urlFactura($f, 'fe-reconciliar'))->assertStatus(200);
         $this->assertSame('sin_cambios', $r->json('accion'));
@@ -315,7 +315,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
             $f = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
             Carbon::setTestNow(Carbon::parse('2026-10-09 09:00:00', 'America/Panama'));
             Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(self::NO_EN_COLA_P, 404)]);
-            $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($f, 'fe-reconciliar'))->assertStatus(200);
+            $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($f, 'fe-reconciliar'))->assertStatus(200);
             Http::assertNotSent(fn ($q) => $q->method() === 'POST');
             $this->assertSame('error_configuracion', $f->fresh()->fe_estado);
             $this->assertSame(1, AuditLog::query()->where('action', AuditService::ADMIN_CONT_FE_DOCUMENTO_RECONCILIADO)->count());
@@ -481,7 +481,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         // NC rechazada inicial; luego GET (consulta) => certificada y POST del reemplazo => certificado.
         ['note' => $note, 'nueva' => $nueva] = $this->correccionConNcRechazada(certificacionesPosteriores: 2);
         $this->assertSame('en_espera_nc', $nueva->fe_estado);
-        $r = $this->withHeaders($this->authHeaders($this->loginAsMark()))->postJson("/api/admin-contab/notas-credito/{$note->id}/fe-reconciliar")->assertStatus(200);
+        $r = $this->withHeaders($this->authHeaders($this->loginAsApprover()))->postJson("/api/admin-contab/notas-credito/{$note->id}/fe-reconciliar")->assertStatus(200);
         $this->reTenant();
         $this->assertSame('certificado', $note->fresh()->fe_estado);
         $this->assertSame('certificado', $nueva->fresh()->fe_estado, 'el reemplazo en_espera_nc se libera');
@@ -490,16 +490,16 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         $this->assertSame(2, $posts, 'POST NC rechazada + POST reemplazo');
         $this->assertSame(1, $gets);
         // segundo clic: ya no reconciliable
-        $this->withHeaders($this->authHeaders($this->loginAsMark()))->postJson("/api/admin-contab/notas-credito/{$note->id}/fe-reconciliar")->assertStatus(409)->assertJsonPath('codigo', 'estado_no_reconciliable');
+        $this->withHeaders($this->authHeaders($this->loginAsApprover()))->postJson("/api/admin-contab/notas-credito/{$note->id}/fe-reconciliar")->assertStatus(409)->assertJsonPath('codigo', 'estado_no_reconciliable');
         // detalle: puede_reconciliar_fe false para Gerencia tras certificar y ausente/false para Contabilidad
-        $d = $this->withHeaders($this->authHeaders($this->loginAsMark()))->getJson("/api/admin-contab/notas-credito/{$note->id}")->assertStatus(200);
+        $d = $this->withHeaders($this->authHeaders($this->loginAsApprover()))->getJson("/api/admin-contab/notas-credito/{$note->id}")->assertStatus(200);
         $this->assertFalse($d->json('puede_reconciliar_fe'));
     }
 
     public function test_preqa_detalle_nc_puede_reconciliar_solo_mark(): void
     {
         ['note' => $note] = $this->correccionConNcRechazada();
-        $dm = $this->withHeaders($this->authHeaders($this->loginAsMark()))->getJson("/api/admin-contab/notas-credito/{$note->id}")->assertStatus(200);
+        $dm = $this->withHeaders($this->authHeaders($this->loginAsApprover()))->getJson("/api/admin-contab/notas-credito/{$note->id}")->assertStatus(200);
         $this->assertTrue($dm->json('puede_reconciliar_fe'));
         $df = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->getJson("/api/admin-contab/notas-credito/{$note->id}");
         $this->assertNotTrue($df->json('puede_reconciliar_fe'));
@@ -583,7 +583,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
             'direccion_fiscal' => 'Panamá', 'regimen_tributario' => 'general', 'pac_ambiente' => 'testing',
             'pac_doc_factura_habilitado' => true, 'pac_doc_nota_credito_habilitado' => false,
             'retencion_proveedores_activa' => true, 'dias_credito_factura' => 30, 'petty_cash_max_intentos_rechazo' => 2];
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         foreach ([24, 48] as $horas) {
             $this->api($approver, 'PUT', '/api/admin-contab/fiscal-settings', $base + ['fe_reintento_max_horas' => $horas])
                 ->assertStatus(200)->assertJsonPath('fe_reintento_max_horas', $horas);

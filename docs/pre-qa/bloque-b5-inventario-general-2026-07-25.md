@@ -192,7 +192,7 @@ número, no el placeholder.
      bloquea antes de llegar al controller). ✅
   2. Usuario CON `bodega.approve` concedido pero que NO es el `mark_approver_user_id` configurado
      (grant temporal a `gerencia@atlantic.test`, revertido al cierre) → pasa el middleware,
-     pero `resolveMarkAccess()` responde 403 "Solo Aprobador puede aprobar o rechazar esta solicitud".
+     pero `resolveApproverAccess()` responde 403 "Solo Aprobador puede aprobar o rechazar esta solicitud".
      ✅ Esta es la variante que realmente prueba el gate de negocio (no solo el de permisos), y
      coincide con el mismo mecanismo de `AdjustmentRequestController`/`RelocationRequestController`.
   3. Confirmado además que el candado (`IcoLock`) es SVG propio, nunca el emoji `🔒` del mockup

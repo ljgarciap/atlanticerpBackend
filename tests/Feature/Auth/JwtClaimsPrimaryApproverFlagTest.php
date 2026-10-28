@@ -11,10 +11,10 @@ use App\Shared\Multitenancy\Tenant;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1157 — `flags.mark_approver` es la identidad del aprobador Gerencia (`primary_approver_user_id`). «Datos de la Empresa» y «Configuración
+ * SCRUM-1157 — `flags.primary_approver` es la identidad del aprobador Gerencia (`primary_approver_user_id`). «Datos de la Empresa» y «Configuración
  * Fiscal» son `primary_approver_only` en el backend; el menú del frontend usa este flag para no ofrecer a nadie más pantallas que responden 403.
  */
-class JwtClaimsMarkApproverFlagTest extends FeatureTestCase
+class JwtClaimsPrimaryApproverFlagTest extends FeatureTestCase
 {
     protected function setUp(): void
     {
@@ -29,7 +29,7 @@ class JwtClaimsMarkApproverFlagTest extends FeatureTestCase
 
     private function flagFor(User $user): bool
     {
-        return (bool) app(JwtClaimsBuilder::class)->claims($user, 'atlantic')['flags']['mark_approver'];
+        return (bool) app(JwtClaimsBuilder::class)->claims($user, 'atlantic')['flags']['primary_approver'];
     }
 
     public function test_solo_el_aprobador_configurado_lleva_el_flag(): void
@@ -57,7 +57,7 @@ class JwtClaimsMarkApproverFlagTest extends FeatureTestCase
 
         $payload = app(JwtClaimsBuilder::class)->userPayload($approver, 'es');
 
-        $this->assertTrue($payload['flags']['mark_approver']);
+        $this->assertTrue($payload['flags']['primary_approver']);
         $this->assertArrayHasKey('approve_large_amounts', $payload['flags'], 'Los flags existentes no cambian.');
         $this->assertArrayHasKey('manage_users', $payload['flags']);
     }

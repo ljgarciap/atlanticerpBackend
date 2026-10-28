@@ -18,14 +18,14 @@ class AdminContLocationControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_index_incluye_las_ubicaciones_oficiales_de_atlantic_como_solo_lectura(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/locations')
@@ -59,7 +59,7 @@ class AdminContLocationControllerTest extends FeatureTestCase
 
     public function test_store_crea_una_ubicacion_administrativa_activa_por_defecto(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/locations', [
@@ -80,7 +80,7 @@ class AdminContLocationControllerTest extends FeatureTestCase
 
     public function test_store_rechaza_tipo_invalido(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/locations', ['nombre' => 'X', 'tipo' => 'bodega'])
@@ -89,7 +89,7 @@ class AdminContLocationControllerTest extends FeatureTestCase
 
     public function test_update_desactiva_una_ubicacion_administrativa_sin_eliminarla(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/locations', ['nombre' => 'Bodega Temporal', 'tipo' => 'otra'])
@@ -107,7 +107,7 @@ class AdminContLocationControllerTest extends FeatureTestCase
 
     public function test_update_devuelve_404_para_un_id_que_no_pertenece_a_admin_contab_locations(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         // id 1 existe como Warehouse ("Bodega Central"), pero nunca como AdminContLocation propia.
         $this->withHeaders($this->authHeaders($token))

@@ -22,7 +22,7 @@ use App\Modules\Gerencia\Models\ReglaAprobacion;
  *   - relocation/adjustment/general_count: Gerencia, O cualquier usuario con una ReglaAprobacion
  *     activa para ese tipo específico (SCRUM-163) — esto es la extensión real que faltaba: antes
  *     una ReglaAprobacion de tipo=adjustment volvía al usuario "aprobador" de TODO, pero el gate
- *     nativo de cada controller de Bodega (`resolveMarkAccess()`) igual lo rechazaba por no ser
+ *     nativo de cada controller de Bodega (`resolveApproverAccess()`) igual lo rechazaba por no ser
  *     Gerencia. Ahora esos 3 controllers consultan este mismo gate.
  *   - zona_libre: el permiso real `compras.zona-libre.approve` (Lider Compras/lider_compras, vía
  *     middleware de ruta normalmente — bypaseado cuando Gerencia delega la llamada directamente,
@@ -40,8 +40,8 @@ final class AprobacionGate
         }
 
         $puedeNativo = match ($tipo) {
-            'purchase_order' => $this->esMark($user),
-            'relocation', 'adjustment', 'general_count' => $this->esMark($user),
+            'purchase_order' => $this->esAprobador($user),
+            'relocation', 'adjustment', 'general_count' => $this->esAprobador($user),
             'zona_libre' => $user->hasPermission('compras.zona-libre.approve'),
             default => false,
         };
@@ -62,12 +62,12 @@ final class AprobacionGate
         return array_values(array_filter($tipos, fn (string $tipo): bool => $this->canAct($user, $tipo)));
     }
 
-    private function esMark(User $user): bool
+    private function esAprobador(User $user): bool
     {
         $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
 
         // Mismo criterio permisivo que los gates nativos que reemplaza (RelocationRequestController::
-        // resolveMarkAccess() etc.): sin primary_approver_user_id configurado todavía, el gate no
+        // resolveApproverAccess() etc.): sin primary_approver_user_id configurado todavía, el gate no
         // bloquea a nadie — estado inicial antes del ajuste (SCRUM-206), no un bug.
         return $primaryApproverId === null || $user->id === $primaryApproverId;
     }

@@ -22,14 +22,14 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_show_devuelve_los_defaults_para_mark(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/fiscal-settings')
@@ -67,7 +67,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_los_datos_fiscales(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
@@ -85,7 +85,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
     // cargado: ConvertEmptyStringsToNull convertía el "" a null y `string` lo rechazaba.
     public function test_update_permite_vaciar_un_campo_de_texto_ya_cargado(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', ['nombre_comercial' => 'Algo Cargado'])
@@ -100,7 +100,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_update_ignora_pac_last_sync_at_y_primary_approver_user_id_del_body(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
@@ -124,7 +124,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
     {
         config(['services.msl_fe.sandbox.api_key' => 'una-key-real']);
         AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl'])->save();
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
@@ -141,7 +141,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
     {
         config(['services.msl_fe.sandbox.api_key' => null]);
         AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl', 'pac_ambiente' => 'testing'])->save();
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/fiscal-settings')
@@ -153,7 +153,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
     {
         config(['services.msl_fe.sandbox.api_key' => 'una-key-real']);
         AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl', 'pac_ambiente' => 'apagado'])->save();
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/fiscal-settings')
@@ -164,7 +164,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
     /** SCRUM-943 — interruptor global apagado/sandbox/producción, Senior Review 2026-09-24. */
     public function test_update_acepta_apagado_como_valor_de_pac_ambiente(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', ['pac_ambiente' => 'apagado'])
@@ -175,7 +175,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_update_rechaza_un_valor_invalido_de_pac_ambiente(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', ['pac_ambiente' => 'no-existe'])
@@ -186,7 +186,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
     // en Configuración Fiscal para que el recibo de cobro pueda mostrarlo (RN1).
     public function test_update_carga_y_vacia_el_contacto_de_la_empresa(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', [
@@ -208,7 +208,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_update_rechaza_correo_contacto_con_formato_invalido(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', ['correo_contacto' => 'no-es-un-correo'])
@@ -217,7 +217,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_update_rechaza_regimen_tributario_invalido(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', ['regimen_tributario' => 'otro'])

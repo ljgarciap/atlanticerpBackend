@@ -57,7 +57,7 @@ Otros lugares revisados que **no** filtran: `InvoiceService::list/detail`, expor
    - `test_pendiente_202_deja_fe_detalle_en_null` (`FiscalCertificationServiceTest.php:214`) arranca con `fe_detalle` ya en null, así que no prueba que un `pendiente` pise un detalle previo. Sembrar `fe_detalle = 'viejo'` antes, que es el caso real: re-certificación que queda pendiente después de un rechazo.
    - `test_preview_muestra_el_ambiente_segun_pac_ambiente` no afirma `Http::assertNothingSent()`, y el criterio C.2 lo exige. El test hermano sí lo hace, así que conviene repetirlo en este.
 
-6. **Duplicación del cálculo de `$isMark`.** Está copiado de forma idéntica en `AdminContInvoiceController::detail()` (`:178-186`) y `AdminContCreditNoteController::show()` (`:187-196`). Ahora gobierna también la exposición de datos, no solo la visibilidad de botones. Conviene extraerlo a un helper compartido (p. ej. junto a `EnsureIsPrimaryApprover`) para que el criterio de Aprobador/superadmin no pueda divergir entre los dos endpoints. Es deuda previa, pero con este batch el costo de que diverjan sube.
+6. **Duplicación del cálculo de `$isApprover`.** Está copiado de forma idéntica en `AdminContInvoiceController::detail()` (`:178-186`) y `AdminContCreditNoteController::show()` (`:187-196`). Ahora gobierna también la exposición de datos, no solo la visibilidad de botones. Conviene extraerlo a un helper compartido (p. ej. junto a `EnsureIsPrimaryApprover`) para que el criterio de Aprobador/superadmin no pueda divergir entre los dos endpoints. Es deuda previa, pero con este batch el costo de que diverjan sube.
 
 7. **Gate de suite completa antes del push.** La falla de folio F-0003/F-0001 es consistente con la BD compartida que se describió, y el test pasa en aislamiento. Aun así, la regla del proyecto exige una corrida completa limpia antes de pushear. Repetirla con la BD de tests sin otra sesión activa. Si reaparece, verificar si es un `->first()` sin `orderBy` (mismo patrón que `OrderPickingFlowTest` en memoria) antes de descartarla.
 
@@ -92,6 +92,6 @@ Otros lugares revisados que **no** filtran: `InvoiceService::list/detail`, expor
     - Arreglo: quitar `detalles`, o dejarlo vacío, para que la key en la posición 1995 del `error` quede a caballo del corte del texto final.
 - **Sug. 2 y 3: cerradas.** `test_show_y_decision_exponen_fe_detalle_solo_a_mark` cubre Contabilidad y Aprobador en `show` y Aprobador en `decision`. `decision()` agrega el campo; la ruta es `primary_approver_only`.
 - **Sug. 4: cerrada** (spec corregida). **Sug. 5: cerrada.**
-- **Sug. 6: cerrada.** El helper `AdminContFiscalSettings::actorEsMarkOSuperadmin()` reproduce exactamente el criterio anterior. Ahora corta antes de `current()` cuando el actor es superadmin, lo que es estrictamente más seguro.
+- **Sug. 6: cerrada.** El helper `AdminContFiscalSettings::actorEsAprobadorOSuperadmin()` reproduce exactamente el criterio anterior. Ahora corta antes de `current()` cuando el actor es superadmin, lo que es estrictamente más seguro.
 - **Sug. 7: cerrada** según lo que reportó el Arquitecto: backend 4023/0 fallos, PHPStan L8 limpio, vitest 2066/2066.
 - Se mantiene la advertencia de alcance: el commit tiene que excluir los cambios de Bodega/Servicios/CatalogProduct y los tests `Scrum996*`/`ProductLookupSql*`, que no tienen Senior Review.

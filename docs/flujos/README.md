@@ -20,7 +20,10 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | [Admin & Contab: notas de crédito y anulaciones](admin-contab-notas-y-anulaciones.md) | Admin & Contab | verificado (notas de crédito, anulación completa, anulación de cobro); pendiente: compensaciones, abonos, incobrables, comisiones, caja chica, arqueo, tesorería (11d) |
 | [Admin & Contab: compensaciones, incobrables, caja chica y arqueo](admin-contab-cierres.md) | Admin & Contab | verificado; pendiente: comisiones externas (cuenta de cobro, retención, pago), tesorería y movimientos bancarios, reportes (11d) |
 | [Servicios: tickets](servicios-tickets.md) | Servicios | verificado (instalación, garantía con compuertas de cierre, cotización de servicio, cancelación); pendiente: técnicos externos, herramientas, insumos, hoja de reclamo, reportes (11e) |
-| Transversales (acceso, usuarios y permisos, notificaciones, catálogos, perfil de empresa) | varios | pendiente (11f) |
+| [Transversales: usuarios, acceso, permisos, «Ver como usuario», niveles y notificaciones](transversales.md) | varios | verificado; pendiente: MFA, recuperación de clave por correo, perfil, departamentos, roles/módulos, reglas de aprobación y de notificación, ajustes globales, IA (11f) |
+
+## Cierre
+[Lista priorizada de candidatos](candidatos-priorizados.md): qué conviene convertir en fases, con impacto y esfuerzo.
 
 ## Prerrequisitos del entorno local (hallazgos de esta fase)
 Sin esto los flujos no corren; ninguno está en el seed demo.

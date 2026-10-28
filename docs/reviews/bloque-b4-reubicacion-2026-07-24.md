@@ -40,9 +40,9 @@ concurrente tocando el Postgres compartido de dev), como pide la nota de la tare
   de validación independientes (`test_store_con_bodega_destino_igual_a_origen_retorna_422`,
   `test_store_sin_cantidad_retorna_422`, `test_store_sin_motivo_retorna_422`,
   `test_store_sin_bodega_destino_retorna_422`).
-- **Gate "exclusivo de Aprobador" robusto y no bypasseable por rol.** `resolveMarkAccess()` reutiliza
+- **Gate "exclusivo de Aprobador" robusto y no bypasseable por rol.** `resolveApproverAccess()` reutiliza
   exactamente `ComprasSettings::current()->mark_approver_user_id`, mismo mecanismo palabra por
-  palabra que `AdjustmentRequestController::resolveMarkAccess()` — una sola fuente de verdad de
+  palabra que `AdjustmentRequestController::resolveApproverAccess()` — una sola fuente de verdad de
   quién es Aprobador. Verificado con `test_aprobar_no_siendo_mark_retorna_403`: un segundo usuario con
   `bodega.approve` pero que no es Aprobador recibe 403 y el estado permanece `pendiente`. Los permisos de
   ruta (`bodega.read`/`write`/`approve` en `routes/bodega.php` líneas 61–65) son defensa en
@@ -83,7 +83,7 @@ concurrente tocando el Postgres compartido de dev), como pide la nota de la tare
 
 ### 🟡 Suggestions (no bloqueantes)
 
-1. **`resolveMarkAccess()` duplicado palabra por palabra en `AdjustmentRequestController` y
+1. **`resolveApproverAccess()` duplicado palabra por palabra en `AdjustmentRequestController` y
    `RelocationRequestController`.** La ADR ya lo señala como decisión aceptada de Backend Dev
    ("puede extraer a un trait compartido si lo prefiere, no es bloqueante"). Con dos controllers
    ya en el mismo estado, y aparentemente un tercer módulo (`purchase-order`, gate de Aprobador también
@@ -136,7 +136,7 @@ Ninguno.
   resuelto y permitió que el frontend simplificara un workaround fràgil (commit `c850007`) — buen
   ejemplo de "encontrado durante el propio desarrollo, corregido antes de pedir review", no una
   deuda oculta.
-- 3 suggestions no bloqueantes documentadas arriba (duplicación de `resolveMarkAccess`, falta de piso
+- 3 suggestions no bloqueantes documentadas arriba (duplicación de `resolveApproverAccess`, falta de piso
   de stock en Reubicación — comparte el gap con Ajustes, y un test frágil) — ninguna requiere volver
   a Backend/Frontend Dev antes de Pre-QA. La de "piso de stock" vale la pena que el Arquitecto la
   registre como ítem de backlog compartido Ajustes/Reubicación para una decisión de producto con

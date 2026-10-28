@@ -42,7 +42,7 @@ relocation_requests(
   negativo en origen, positivo en destino, misma `referencia_entidad_id` = id de la solicitud.
 - `reject()`: mismo lock, exige `motivo_rechazo`, no llama Kardex.
 - Gate "exclusivo de Aprobador": reutiliza `ComprasSettings::current()->mark_approver_user_id` (mismo
-  mecanismo que `AdjustmentRequestController::resolveMarkAccess()` — no un permiso de rol nuevo).
+  mecanismo que `AdjustmentRequestController::resolveApproverAccess()` — no un permiso de rol nuevo).
   Backend Dev puede extraer esto a un trait compartido si lo prefiere, no es bloqueante.
 - Frontend: activa el botón "Reubicar" existente + modal (cantidad, bodega destino excluyendo la
   actual, motivo) + modal "Solicitudes de reubicación" (chips Todas/Pendientes/Aprobadas/

@@ -48,7 +48,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -656,11 +656,11 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
             ->assertStatus(200);
         $this->assertFalse($asContabilidadPendiente->json('puede_decidir_incobrable'));
 
-        $approver = $this->loginAsMark();
-        $asMarkPendiente = $this->withHeaders($this->authHeaders($approver))
+        $approver = $this->loginAsApprover();
+        $asApproverPendiente = $this->withHeaders($this->authHeaders($approver))
             ->getJson("/api/admin-contab/invoices/{$order->id}/detail")
             ->assertStatus(200);
-        $this->assertTrue($asMarkPendiente->json('puede_decidir_incobrable'));
+        $this->assertTrue($asApproverPendiente->json('puede_decidir_incobrable'));
     }
 
     /** Batch endurecimiento FE/MSL — el motivo textual del rechazo del PAC solo lo ve Gerencia/superadmin. */
@@ -680,11 +680,11 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->assertNull($asContabilidad->json('fe_detalle'));
         $this->assertFalse($asContabilidad->json('puede_ver_fe_transmisiones'));
 
-        $asMark = $this->withHeaders($this->authHeaders($this->loginAsMark()))
+        $asApprover = $this->withHeaders($this->authHeaders($this->loginAsApprover()))
             ->getJson("/api/admin-contab/invoices/{$order->id}/detail")
             ->assertStatus(200);
-        $this->assertSame('9026 - Falló la validación', $asMark->json('fe_detalle'));
-        $this->assertTrue($asMark->json('puede_ver_fe_transmisiones'));
+        $this->assertSame('9026 - Falló la validación', $asApprover->json('fe_detalle'));
+        $this->assertTrue($asApprover->json('puede_ver_fe_transmisiones'));
     }
 
     /** Blocker de la Senior Review: `markUncollectible()` devuelve el modelo Eloquent; `fe_detalle`
@@ -786,7 +786,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta']);
 
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/invoices/{$order->id}/uncollectible-decision", ['approve' => true])
             ->assertStatus(200);
@@ -811,7 +811,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta']);
 
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/invoices/{$order->id}/uncollectible-decision", ['approve' => false])
             ->assertStatus(200);
@@ -909,7 +909,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         // aprobamos como incobrable la vieja — no debe contar en ningún rango.
         $this->withHeaders($this->authHeaders($contabilidad))
             ->postJson("/api/admin-contab/invoices/{$orderVieja->id}/mark-uncollectible", ['motivo' => 'x']);
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/invoices/{$orderVieja->id}/uncollectible-decision", ['approve' => true]);
 

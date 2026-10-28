@@ -95,7 +95,7 @@ class AdminContFiscalSettings extends Model
      *
      * @param  array{sub?: int, permissions?: mixed}|null  $jwt
      */
-    public static function actorEsMarkOSuperadmin(?array $jwt): bool
+    public static function actorEsAprobadorOSuperadmin(?array $jwt): bool
     {
         $permissions = is_array($jwt['permissions'] ?? null)
             ? array_values(array_filter($jwt['permissions'], 'is_string'))

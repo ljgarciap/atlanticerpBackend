@@ -18,14 +18,14 @@ class AdminContContactControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_store_crea_un_contacto_activo(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/contacts', [
@@ -41,7 +41,7 @@ class AdminContContactControllerTest extends FeatureTestCase
 
     public function test_store_exige_los_3_campos(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/contacts', ['area' => 'Soporte'])
@@ -61,7 +61,7 @@ class AdminContContactControllerTest extends FeatureTestCase
 
     public function test_update_desactiva_un_contacto_sin_eliminarlo(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/contacts', [
@@ -80,7 +80,7 @@ class AdminContContactControllerTest extends FeatureTestCase
 
     public function test_update_de_id_inexistente_devuelve_404(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/contacts/999999', ['activo' => false])

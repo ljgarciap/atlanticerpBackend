@@ -53,7 +53,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -390,7 +390,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_daily_count_rechaza_a_management(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
@@ -730,8 +730,8 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $contabilidadHeaders = $this->authHeaders($this->loginAsContabilidad());
         $this->withHeaders($contabilidadHeaders)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
 
-        $markToken = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $this->withHeaders($this->authHeaders($approverToken))
             ->getJson('/api/admin-contab/cash-position/history')
             ->assertStatus(200);
     }
@@ -749,8 +749,8 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])
             ->assertStatus(403);
 
-        $markToken = $this->loginAsMark();
-        $response = $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $response = $this->withHeaders($this->authHeaders($approverToken))
             ->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])
             ->assertStatus(200);
 
@@ -766,9 +766,9 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ->assertStatus(200);
         $id = $close->json('id');
 
-        $markHeaders = $this->authHeaders($this->loginAsMark());
-        $this->withHeaders($markHeaders)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(200);
-        $this->withHeaders($markHeaders)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(409);
+        $approverHeaders = $this->authHeaders($this->loginAsApprover());
+        $this->withHeaders($approverHeaders)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(200);
+        $this->withHeaders($approverHeaders)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(409);
     }
 
     // ---------------------------------------------------------------- puede_aprobar (gap encontrado por Frontend Dev) ----
@@ -781,7 +781,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ->assertStatus(200);
         $id = $close->json('id');
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsMark()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsApprover()))
             ->getJson("/api/admin-contab/cash-position/history/{$id}")
             ->assertStatus(200);
 
@@ -811,10 +811,10 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ->assertStatus(200);
         $id = $close->json('id');
 
-        $markHeaders = $this->authHeaders($this->loginAsMark());
-        $this->withHeaders($markHeaders)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(200);
+        $approverHeaders = $this->authHeaders($this->loginAsApprover());
+        $this->withHeaders($approverHeaders)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(200);
 
-        $response = $this->withHeaders($markHeaders)
+        $response = $this->withHeaders($approverHeaders)
             ->getJson("/api/admin-contab/cash-position/history/{$id}")
             ->assertStatus(200);
 

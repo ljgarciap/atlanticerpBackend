@@ -68,18 +68,18 @@ class OperacionesAdminContMirrorTest extends FeatureTestCase
 
     public function test_los_grupos_primary_approver_only_no_incluyen_a_operaciones(): void
     {
-        $markOnly = 0;
+        $approverOnly = 0;
         foreach (Route::getRoutes() as $route) {
             if (! str_starts_with($route->uri(), 'api/admin-contab')) {
                 continue;
             }
             if (in_array('primary_approver_only', $route->gatherMiddleware(), true)) {
-                $markOnly++;
+                $approverOnly++;
                 $this->assertNotContains('lider_operaciones', self::rolesDeLaRuta($route), "{$route->uri()} es primary_approver_only.");
             }
         }
 
-        $this->assertGreaterThan(0, $markOnly);
+        $this->assertGreaterThan(0, $approverOnly);
     }
 
     public function test_operaciones_llega_a_cobros_y_a_la_posicion_de_caja_proyectada_recortada(): void
