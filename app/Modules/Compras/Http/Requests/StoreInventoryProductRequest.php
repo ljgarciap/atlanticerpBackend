@@ -81,7 +81,7 @@ class StoreInventoryProductRequest extends FormRequest
             'provider_ids' => ['sometimes', 'array', 'min:1'],
             'provider_ids.*' => ['integer', 'min:1', 'distinct', $this->existsRule(Provider::class)],
             'family_id' => ['nullable', 'integer', 'min:1', $this->existsRule(CatalogProductFamily::class)],
-            'category' => ['required', 'string', Rule::in(CatalogProduct::CATEGORIES)],
+            'category' => ['required', 'string', Rule::in(\App\Shared\Catalogs\CatalogService::keys('product_category'))],
             'rotation' => ['required', 'string', Rule::in(CatalogProduct::ROTATIONS)],
             'initial_stock' => ['nullable', 'array'],
             'initial_stock.*.warehouse_id' => ['required', 'integer', 'min:1', Warehouse::existsRule()],

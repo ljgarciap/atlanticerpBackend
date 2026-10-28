@@ -81,7 +81,7 @@ class CatalogListSqlTest extends FeatureTestCase
         $this->famB     = CatalogProductFamily::create(['name' => 'Andamios']);
         $this->famEmpty = CatalogProductFamily::create(['name' => 'Sin productos']);
 
-        $this->make('p01', 'Alfa colgante', ['brand' => 'Acme', 'description' => 'techo alto', 'category' => 'candelabros_colgantes', 'stock_quantity' => 10]);
+        $this->make('p01', 'Alfa colgante', ['brand' => 'Acme', 'description' => 'techo alto', 'category' => 'general', 'stock_quantity' => 10]);
         $this->make('p02', 'Beta pared', ['factory_reference' => 'FR-XYZ', 'stock_quantity' => 0]);
         $this->make('p03', 'Gamma techo', ['category' => 'vastagos', 'stock_quantity' => 5]);       // comprometido 5 -> 0
         $this->make('p04', 'Delta piso', ['category' => 'vastagos', 'stock_quantity' => 8]);        // 8 en bodega excluida -> 0
@@ -222,7 +222,7 @@ class CatalogListSqlTest extends FeatureTestCase
             'texto en marca (case-insens.)'     => [['search' => 'acme']],
             'texto en nombre'                   => [['search' => 'techo']],
             'texto en descripción'              => [['search' => 'alto']],
-            'texto en etiqueta de categoría'    => [['search' => 'candelabros']],
+            'texto en etiqueta de categoría'    => [['search' => 'general']],
             'texto en nombre de familia'        => [['search' => 'zafiro']],
             'texto de 1 carácter'               => [['search' => 'z']],
             'texto que no existe'               => [['search' => 'nadaquesea']],
@@ -417,7 +417,7 @@ class CatalogListSqlTest extends FeatureTestCase
             'grado + letra'         => ['°C'],
             'categoría sin símbolo' => ['vastagos'],
             'categoría con acento'  => ['VÁSTAGOS'],
-            'dos palabras'          => ['candelabros colgantes'],
+            'dos palabras'          => ['general techo'],
             'multiplicación'        => ['×'],
         ];
     }
@@ -497,8 +497,8 @@ class CatalogListSqlTest extends FeatureTestCase
         $this->assertContains('catalog_products_description_trgm_idx', $indexes);
         $this->assertContains('catalog_products_category_idx', $indexes);
 
-        // una palabra de nombre/descripción ('techo'), una que coincide con una etiqueta de categoría ('candelabros') y una con el nombre de una familia ('zafiro')
-        foreach (['techo', 'candelabros', 'zafiro'] as $term) {
+        // una palabra de nombre/descripción ('techo'), una que coincide con una etiqueta de categoría ('general') y una con el nombre de una familia ('zafiro')
+        foreach (['techo', 'general', 'zafiro'] as $term) {
             $queries = [];
             DB::listen(static function ($q) use (&$queries): void {
                 $queries[] = [$q->sql, $q->bindings];

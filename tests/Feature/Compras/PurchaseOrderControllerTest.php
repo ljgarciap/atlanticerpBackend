@@ -362,7 +362,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
                 'lines' => [[
                     'new_product' => [
                         'reference' => 'CAT-001', 'name' => 'Artículo XL', 'price_full' => 20, 'cost' => 10,
-                        'category' => 'bombillos', 'rotation' => 'unica',
+                        'category' => 'general', 'rotation' => 'unica',
                     ],
                     'quantity' => 1,
                 ]],
@@ -372,7 +372,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas(
             "{$slug}_ventas_diseno.catalog_products",
-            ['reference' => 'CAT-001', 'category' => 'bombillos', 'rotation' => 'unica'],
+            ['reference' => 'CAT-001', 'category' => 'general', 'rotation' => 'unica'],
         );
     }
 

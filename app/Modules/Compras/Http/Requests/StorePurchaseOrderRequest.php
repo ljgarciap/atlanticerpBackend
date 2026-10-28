@@ -80,7 +80,7 @@ class StorePurchaseOrderRequest extends FormRequest
             'lines.*.new_product.reorder_point' => ['nullable', 'integer', 'min:0'],
             // SCRUM-194 (REQ-131, hallazgo de Gerencia Test 2026-07-30) — Categoría/Rotación
             // esperada del mockup, ausentes hasta ahora en el alta de producto nuevo.
-            'lines.*.new_product.category' => ['nullable', 'string', Rule::in(CatalogProduct::CATEGORIES)],
+            'lines.*.new_product.category' => ['nullable', 'string', Rule::in(\App\Shared\Catalogs\CatalogService::keys('product_category'))],
             'lines.*.new_product.rotation' => ['nullable', 'string', Rule::in(CatalogProduct::ROTATIONS)],
             // Tope técnico: la columna `quantity` es integer (SCRUM-1184, Pre-QA: 999999999999 llegaba a la BD y devolvía un 500 con el SQL a la vista).
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:'.self::MAX_INT_COLUMN],

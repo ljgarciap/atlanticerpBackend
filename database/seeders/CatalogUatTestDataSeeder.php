@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Catalogs\CatalogEntry;
 use Illuminate\Database\Seeder;
 
 /**
@@ -53,27 +54,26 @@ class CatalogUatTestDataSeeder extends Seeder
     private const DESCRIPTION_PREFIX = '[PRUEBA UAT] ';
     public const FAMILY_PREFIX      = '[PRUEBA UAT] ';
 
-    /** Distribución por categoría — cubre las 8 categorías del catálogo con al menos 1 c/u. */
+    /** Distribución por categoría — cubre las categorías demo con al menos 1 producto c/u (Fase 9a: `general` viene del núcleo, el resto se siembra acá). */
     private const CATEGORY_COUNTS = [
-        'candelabros_colgantes' => 4,
-        'iluminacion_techo'     => 4,
-        'apliques_pared'        => 4,
-        'iluminacion_bano'      => 3,
-        'iluminacion_exterior'  => 4,
-        'lamparas_piso_mesa'    => 4,
-        'iluminacion_empotrada' => 4,
-        'bombillos'             => 3,
+        'general'     => 8,
+        'accesorios'  => 8,
+        'repuestos'   => 7,
+        'consumibles' => 7,
     ];
 
     private const CATEGORY_LABELS = [
-        'candelabros_colgantes' => 'Modelo/Colgante',
-        'iluminacion_techo'     => 'Iluminación de Techo',
-        'apliques_pared'        => 'Aplique de Pared',
-        'iluminacion_bano'      => 'Iluminación de Baño',
-        'iluminacion_exterior'  => 'Iluminación Exterior',
-        'lamparas_piso_mesa'    => 'Producto de Piso/Mesa',
-        'iluminacion_empotrada' => 'Iluminación Empotrada',
-        'bombillos'             => 'Artículo',
+        'general'     => 'Producto General',
+        'accesorios'  => 'Accesorio',
+        'repuestos'   => 'Repuesto',
+        'consumibles' => 'Consumible',
+    ];
+
+    /** Entradas del dominio `product_category` que el demo agrega además de `general` (de sistema, sembrada por migración). */
+    private const DEMO_CATEGORY_ENTRIES = [
+        'accesorios'  => 'Accesorios',
+        'repuestos'   => 'Repuestos',
+        'consumibles' => 'Consumibles',
     ];
 
     public function run(): void
@@ -105,6 +105,8 @@ class CatalogUatTestDataSeeder extends Seeder
         if (CatalogProduct::where('reference', 'like', self::REFERENCE_PREFIX . '%')->exists()) {
             return;
         }
+
+        $this->seedCategoryEntries();
 
         $definitions = $this->buildDefinitions();
         $rotations   = CatalogProduct::ROTATIONS;
@@ -169,18 +171,29 @@ class CatalogUatTestDataSeeder extends Seeder
         return $definitions;
     }
 
+    private function seedCategoryEntries(): void
+    {
+        $order = (int) CatalogEntry::query()->where('domain', 'product_category')->max('sort_order');
+        foreach (self::DEMO_CATEGORY_ENTRIES as $key => $label) {
+            CatalogEntry::query()->firstOrCreate(
+                ['domain' => 'product_category', 'key' => $key],
+                ['label' => $label, 'sort_order' => ++$order, 'is_active' => true, 'is_system' => false, 'props' => null],
+            );
+        }
+    }
+
     /** @param array<string, list<int>> $productsByCategory */
     private function seedFamilies(array $productsByCategory): void
     {
         $families = [
             self::FAMILY_PREFIX . 'Familia Sala' => array_merge(
-                array_slice($productsByCategory['candelabros_colgantes'] ?? [], 0, 3),
-                array_slice($productsByCategory['lamparas_piso_mesa'] ?? [], 0, 2),
+                array_slice($productsByCategory['general'] ?? [], 0, 3),
+                array_slice($productsByCategory['accesorios'] ?? [], 0, 2),
             ),
-            self::FAMILY_PREFIX . 'Familia Exterior' => $productsByCategory['iluminacion_exterior'] ?? [],
+            self::FAMILY_PREFIX . 'Familia Exterior' => $productsByCategory['repuestos'] ?? [],
             self::FAMILY_PREFIX . 'Familia Empotrados y Artículos' => array_merge(
-                array_slice($productsByCategory['iluminacion_empotrada'] ?? [], 0, 3),
-                array_slice($productsByCategory['bombillos'] ?? [], 0, 2),
+                array_slice($productsByCategory['consumibles'] ?? [], 0, 3),
+                array_slice($productsByCategory['accesorios'] ?? [], 2, 2),
             ),
         ];
 

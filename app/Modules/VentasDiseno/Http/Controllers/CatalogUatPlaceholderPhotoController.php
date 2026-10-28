@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\VentasDiseno\Http\Controllers;
 
-use App\Modules\VentasDiseno\Models\CatalogProduct;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -28,25 +27,16 @@ use Illuminate\Http\Response;
  */
 class CatalogUatPlaceholderPhotoController
 {
-    /** RGB de fondo — mismo criterio que CatalogUatTestDataSeeder::CATEGORY_COLORS. */
-    private const CATEGORY_COLORS = [
-        'candelabros_colgantes' => [91, 165, 160],
-        'iluminacion_techo'     => [61, 126, 122],
-        'apliques_pared'        => [159, 197, 77],
-        'iluminacion_bano'      => [79, 143, 173],
-        'iluminacion_exterior'  => [42, 37, 32],
-        'lamparas_piso_mesa'    => [200, 140, 60],
-        'iluminacion_empotrada' => [120, 90, 160],
-        'bombillos'             => [180, 60, 60],
-    ];
-
     public function __invoke(Request $request, string $reference): Response
     {
-        $category = $request->query('category', '');
-        $category = in_array($category, CatalogProduct::CATEGORIES, true) ? $category : 'candelabros_colgantes';
+        // Fase 9a — las categorías son datos de la empresa: el color de fondo sale de la clave (estable, oscuro para que el texto blanco se lea).
+        $category = substr(preg_replace('/[^a-z0-9_]/', '', (string) $request->query('category', '')) ?? '', 0, 50) ?: 'general';
         $reference = substr($reference, 0, 40);
 
-        [$r, $g, $b] = self::CATEGORY_COLORS[$category];
+        $hash = crc32($category);
+        $r = 40 + ($hash & 0x7F);
+        $g = 40 + (($hash >> 8) & 0x7F);
+        $b = 40 + (($hash >> 16) & 0x7F);
 
         $image = imagecreatetruecolor(640, 480);
         $bg    = (int) imagecolorallocate($image, $r, $g, $b);

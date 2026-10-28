@@ -368,7 +368,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     public function test_filtro_combinado_bodega_y_categoria(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $family = CatalogProductFamily::create(['name' => 'Bombillos', 'is_active' => true]);
+        $family = CatalogProductFamily::create(['name' => 'Accesorios', 'is_active' => true]);
 
         $matching = $this->makeCatalogProduct(['description' => 'Cilindro XL']);
         $family->products()->attach($matching->id);

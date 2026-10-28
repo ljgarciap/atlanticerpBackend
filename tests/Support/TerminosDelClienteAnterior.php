@@ -36,24 +36,11 @@ final class TerminosDelClienteAnterior
 
     /**
      * Excepciones TEMPORALES (patrón => dueño). Son términos del modelo, no del dato:
-     * - «catálogo de productos genérico»: las 8 claves de `CatalogProduct::CATEGORIES`, sus etiquetas y el campo `dialux` del CRM.
+     * - «catálogo de productos genérico»: el campo `dialux` del CRM (Fase 9b) y los campos de la ficha técnica (Fase 9c).
      *
      * @var array<string, string>
      */
     public const PERMITIDOS = [
-        'candelabros_colgantes' => 'catálogo de productos genérico',
-        'iluminacion_(?:techo|bano|exterior|empotrada)' => 'catálogo de productos genérico',
-        'apliques_pared' => 'catálogo de productos genérico',
-        'lamparas_piso_mesa' => 'catálogo de productos genérico',
-        '(?<=[\'"])bombillos(?=[\'"])' => 'catálogo de productos genérico',
-        '(?<=categories\.)bombillos' => 'catálogo de productos genérico',
-        '(?<=category[:=] [\'"])bombillos' => 'catálogo de productos genérico',
-        'Candelabros y Colgantes' => 'catálogo de productos genérico',
-        '(?<=[\'"])candelabros(?: colgantes)?(?=[\'"])' => 'catálogo de productos genérico',
-        'Iluminaci[oó]n de (?:Techo|Ba[ñn]o)' => 'catálogo de productos genérico',
-        'Iluminaci[oó]n (?:Exterior|Empotrada)' => 'catálogo de productos genérico',
-        'L[aá]mparas de Piso y Mesa' => 'catálogo de productos genérico',
-        '(?<=["\'])L[aá]mparas(?=["\'])' => 'catálogo de productos genérico',
         'dialux' => 'catálogo de productos genérico',
     ];
 

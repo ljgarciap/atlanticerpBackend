@@ -38,7 +38,7 @@ class CatalogUatTestDataCleanupControllerTest extends FeatureTestCase
             'cost'           => 20.00,
             'stock_quantity' => 10,
             'is_active'      => true,
-            'category'       => CatalogProduct::CATEGORIES[0],
+            'category'       => 'general',
         ]);
     }
 

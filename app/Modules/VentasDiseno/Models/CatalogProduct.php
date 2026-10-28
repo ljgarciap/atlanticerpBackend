@@ -107,17 +107,6 @@ class CatalogProduct extends Model
     ];
 
     /**
-     * SCRUM-194 (REQ-131) — 8 valores fijos del mockup, distinto de `catalog_product_families`
-     * (REQ-037: combos que se cotizan juntos, ej. "Kit Baño" — concepto no relacionado).
-     *
-     * @var list<string>
-     */
-    public const CATEGORIES = [
-        'candelabros_colgantes', 'iluminacion_techo', 'apliques_pared', 'iluminacion_bano',
-        'iluminacion_exterior', 'lamparas_piso_mesa', 'iluminacion_empotrada', 'bombillos',
-    ];
-
-    /**
      * SCRUM-425/426 (REQ-355/356) — los 12 sub-campos de `technical_spec`, fuente única de verdad
      * para la validación de `StoreInventoryProductRequest` y para el modal de solo lectura de
      * SCRUM-425 — no repetir esta lista en otro lugar.

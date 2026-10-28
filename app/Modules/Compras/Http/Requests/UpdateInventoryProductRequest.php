@@ -148,7 +148,7 @@ class UpdateInventoryProductRequest extends FormRequest
             'rotation' => ['sometimes', 'nullable', 'string', Rule::in(CatalogProduct::ROTATIONS)],
             // SCRUM-237 (hallazgo de Gerencia Test 2026-08-09) — Categoría y Código de barras
             // pasan a ser editables desde la sección "Información del producto" del modal.
-            'category' => ['sometimes', 'nullable', 'string', Rule::in(CatalogProduct::CATEGORIES)],
+            'category' => ['sometimes', 'nullable', 'string', Rule::in(\App\Shared\Catalogs\CatalogService::keys('product_category'))],
             'barcode' => ['sometimes', 'nullable', 'string', 'max:100', Rule::unique('catalog_products', 'barcode')->ignore($productId)],
             // SCRUM-237 — selector único de familia en el modal (N:M por debajo, ver
             // CatalogProduct::families(); `null` quita al producto de toda familia).

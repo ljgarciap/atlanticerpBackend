@@ -60,7 +60,7 @@ class InventoryMultiProviderTest extends FeatureTestCase
         return [
             'reference' => 'REF-'.uniqid(), 'factory_reference' => 'FAB-'.uniqid(), 'name' => 'Producto nuevo',
             'description' => 'x', 'brand' => 'M', 'barcode' => '7501234567890', 'price_full' => 30, 'cost' => 15,
-            'other_cost' => 2.5, 'reorder_point' => 5, 'category' => 'bombillos', 'rotation' => 'media',
+            'other_cost' => 2.5, 'reorder_point' => 5, 'category' => 'general', 'rotation' => 'media',
             'link' => 'https://proveedor.example.com/ficha.pdf', 'photo' => UploadedFile::fake()->image('f.jpg', 400, 400),
             ...$o,
         ];
