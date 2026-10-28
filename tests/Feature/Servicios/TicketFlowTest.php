@@ -401,7 +401,7 @@ class TicketFlowTest extends FeatureTestCase
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
-            ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_CANCELLED])
+            ->patchJson("/api/servicios/tickets/{$ticket->id}/cancelar", ['motivo' => 'Cancelado sin cotización ni informe'])
             ->assertStatus(200)
             ->assertJsonPath('estado', Ticket::ESTADO_CANCELLED);
     }

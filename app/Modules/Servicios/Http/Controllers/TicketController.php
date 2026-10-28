@@ -327,6 +327,14 @@ final class TicketController extends Controller
             'estado' => ['required', 'string', Rule::in(Ticket::ESTADOS)],
         ]);
 
+        // REQ-227 RN6 — cancelar exige motivo y tiene su propia ruta (`/cancelar`): por aquí se saltaba esa regla.
+        if ($validated['estado'] === Ticket::ESTADO_CANCELLED) {
+            return response()->json([
+                'message' => 'Para cancelar un ticket usa la cancelación, que exige el motivo.',
+                'errors'  => ['estado' => ['Para cancelar un ticket usa la cancelación, que exige el motivo.']],
+            ], 422);
+        }
+
         try {
             $ticket = $this->tickets->changeStage($ticket, $validated['estado'], $user);
         } catch (TicketCloseBlockedException $e) {
