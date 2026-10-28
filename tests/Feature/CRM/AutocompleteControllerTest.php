@@ -19,7 +19,7 @@ class AutocompleteControllerTest extends FeatureTestCase
             ->postJson('/api/crm/projects', array_merge([
                 'nombre'       => self::PREFIX . ' Proyecto Autocomplete',
                 'tipo'         => 'diseno',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => [],
             ], $extra))
             ->assertStatus(201);

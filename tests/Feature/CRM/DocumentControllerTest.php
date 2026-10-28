@@ -40,7 +40,7 @@ class DocumentControllerTest extends FeatureTestCase
                 'nombre'       => 'Proyecto Documentos',
                 'tipo'         => 'ambos',
                 'etapa'        => 'lead',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => [],
             ]);
         $response->assertStatus(201);
@@ -692,7 +692,7 @@ class DocumentControllerTest extends FeatureTestCase
                 'nombre'       => 'Proyecto Documentos',
                 'tipo'         => 'ambos',
                 'etapa'        => 'lead',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => [$designerId],
             ])
             ->assertStatus(200);
@@ -1059,7 +1059,7 @@ class DocumentControllerTest extends FeatureTestCase
                 'nombre'       => 'Proyecto Documentos',
                 'tipo'         => 'ambos',
                 'etapa'        => 'lead',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => [$userId],
             ])
             ->assertStatus(200);

@@ -30,19 +30,17 @@ final class TerminosDelClienteAnterior
 
     /** Vocabulario del sector del cliente anterior (iluminación). */
     public const SECTOR = [
-        'iluminaci', 'iluminacon', 'luminaria', 'l[aá]mpara', 'lamparas', 'downlight', 'candelabro', 'bombill', '\bLED\b', 'chandelier', 'luminaire',
+        'iluminaci', 'iluminacon', 'luminaria', 'l[aá]mpara', 'lamparas', 'downlight', 'candelabro', 'bombill', '\bLED\b', 'chandelier', 'luminaire', 'dialux',
         '(?<![A-Za-z])LAMP(?![A-Za-z])',
     ];
 
     /**
      * Excepciones TEMPORALES (patrón => dueño). Son términos del modelo, no del dato:
-     * - «catálogo de productos genérico»: el campo `dialux` del CRM (Fase 9b) y los campos de la ficha técnica (Fase 9c).
+     * Vacía desde la Fase 9b (categorías y `dialux`). La Fase 9c agrega los campos de la ficha técnica y retira lo que quede.
      *
      * @var array<string, string>
      */
-    public const PERMITIDOS = [
-        'dialux' => 'catálogo de productos genérico',
-    ];
+    public const PERMITIDOS = [];
 
     /**
      * Archivos con identidad o prompts del cliente anterior que corresponden a la Fase 4c (se borran de esta lista al migrarlos).

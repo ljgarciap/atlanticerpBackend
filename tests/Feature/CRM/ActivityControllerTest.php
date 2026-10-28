@@ -17,7 +17,7 @@ class ActivityControllerTest extends FeatureTestCase
                 'nombre'       => 'Proyecto Actividades',
                 'tipo'         => 'ambos',
                 'etapa'        => 'lead',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => [],
             ]);
         $response->assertStatus(201);

@@ -29,7 +29,7 @@ class AiUsageTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/crm/projects', [
                 'nombre' => 'Proyecto Usage Test', 'tipo' => 'diseno', 'etapa' => 'lead',
-                'dialux' => false, 'contacto' => 'Cliente Test', 'valor' => 1000, 'assignee_ids' => [],
+                'requires_technical_study' => false, 'contacto' => 'Cliente Test', 'valor' => 1000, 'assignee_ids' => [],
             ]);
         $response->assertStatus(201);
 

@@ -110,7 +110,7 @@ class DocumentsMaxSizeSettingTest extends FeatureTestCase
                 'nombre' => 'Proyecto Cache Test',
                 'tipo'   => 'ambos',
                 'etapa'  => 'lead',
-                'dialux' => false,
+                'requires_technical_study' => false,
                 'assignee_ids' => [],
             ])
             ->assertStatus(201)

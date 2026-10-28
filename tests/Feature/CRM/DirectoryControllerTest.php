@@ -15,7 +15,7 @@ class DirectoryControllerTest extends FeatureTestCase
         $payload = array_merge([
             'nombre'       => 'Proyecto Directorio',
             'tipo'         => 'diseno',
-            'dialux'       => false,
+            'requires_technical_study'       => false,
             'assignee_ids' => [],
         ], $extra);
 
@@ -40,7 +40,7 @@ class DirectoryControllerTest extends FeatureTestCase
             ->putJson("/api/crm/projects/{$projectId}", [
                 'nombre'       => 'Proyecto Directorio',
                 'tipo'         => 'diseno',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => [$userId],
             ])
             ->assertStatus(200);

@@ -31,7 +31,7 @@ final class ProjectController extends Controller
 
         $raw = $request->only([
             'search', 'etapa', 'urgency', 'freshness',
-            'area', 'tipo', 'despacho', 'ubicacion', 'user_id', 'dialux', 'per_page',
+            'area', 'tipo', 'despacho', 'ubicacion', 'user_id', 'requires_technical_study', 'per_page',
         ]);
 
         $filters = array_filter([
@@ -46,8 +46,8 @@ final class ProjectController extends Controller
             'user_id' => isset($raw['user_id']) ? (int) $raw['user_id'] : null,
             // SCRUM-854 — multi-selección Vendedor/Diseñador (OR entre seleccionados).
             'user_ids' => $this->parseIdListParam($request, 'user_ids'),
-            'dialux' => isset($raw['dialux']) && $raw['dialux'] !== ''
-                             ? filter_var($raw['dialux'], FILTER_VALIDATE_BOOLEAN)
+            'requires_technical_study' => isset($raw['requires_technical_study']) && $raw['requires_technical_study'] !== ''
+                             ? filter_var($raw['requires_technical_study'], FILTER_VALIDATE_BOOLEAN)
                              : null,
             'per_page' => isset($raw['per_page']) ? (int) $raw['per_page'] : null,
         ], fn (mixed $v): bool => $v !== null);
@@ -85,7 +85,7 @@ final class ProjectController extends Controller
          *   encargado?: string|null,
          *   developer?: string|null,
          *   arquitecto?: string|null,
-         *   dialux?: bool,
+         *   requires_technical_study?: bool,
          *   area?: string|null,
          *   despacho?: string|null,
          *   ubicacion?: string|null,
@@ -147,7 +147,7 @@ final class ProjectController extends Controller
          *   encargado?: string|null,
          *   developer?: string|null,
          *   arquitecto?: string|null,
-         *   dialux?: bool,
+         *   requires_technical_study?: bool,
          *   area?: string|null,
          *   despacho?: string|null,
          *   ubicacion?: string|null,
@@ -240,7 +240,7 @@ final class ProjectController extends Controller
             'developer' => $project->developer,
             'arquitecto' => $project->arquitecto,
             'tipo' => $project->tipo,
-            'dialux' => $project->dialux,
+            'requires_technical_study' => $project->requires_technical_study,
             'area' => $project->area,
             'despacho' => $project->despacho,
             'ubicacion' => $project->ubicacion,

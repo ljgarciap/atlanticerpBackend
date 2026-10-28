@@ -29,7 +29,7 @@ final class ProjectService
      *   ubicacion?: string,
      *   user_id?: int,
      *   user_ids?: list<int>,
-     *   dialux?: bool,
+     *   requires_technical_study?: bool,
      *   per_page?: int,
      * } $filters
      * @return LengthAwarePaginator<int, Project>
@@ -83,8 +83,8 @@ final class ProjectService
             $query->whereHas('assignees', fn ($q) => $q->where('user_id', (int) $filters['user_id']));
         }
 
-        if (isset($filters['dialux'])) {
-            $query->where('dialux', (bool) $filters['dialux']);
+        if (isset($filters['requires_technical_study'])) {
+            $query->where('requires_technical_study', (bool) $filters['requires_technical_study']);
         }
 
         // Urgency filter — based on fecha_entrega
@@ -134,7 +134,7 @@ final class ProjectService
      *   encargado?: string|null,
      *   developer?: string|null,
      *   arquitecto?: string|null,
-     *   dialux?: bool,
+     *   requires_technical_study?: bool,
      *   area?: string|null,
      *   despacho?: string|null,
      *   ubicacion?: string|null,
@@ -158,7 +158,7 @@ final class ProjectService
                 'encargado' => $data['encargado'] ?? null,
                 'developer' => $data['developer'] ?? null,
                 'arquitecto' => $data['arquitecto'] ?? null,
-                'dialux' => $data['dialux'] ?? false,
+                'requires_technical_study' => $data['requires_technical_study'] ?? false,
                 'area' => $data['area'] ?? null,
                 'despacho' => $data['despacho'] ?? null,
                 'ubicacion' => $data['ubicacion'] ?? null,
@@ -198,7 +198,7 @@ final class ProjectService
      *   encargado?: string|null,
      *   developer?: string|null,
      *   arquitecto?: string|null,
-     *   dialux?: bool,
+     *   requires_technical_study?: bool,
      *   area?: string|null,
      *   despacho?: string|null,
      *   ubicacion?: string|null,
@@ -213,7 +213,7 @@ final class ProjectService
         return DB::transaction(function () use ($project, $data): Project {
             $fillable = [
                 'nombre', 'tipo', 'etapa', 'contacto', 'email', 'celular',
-                'encargado', 'developer', 'arquitecto', 'dialux', 'area',
+                'encargado', 'developer', 'arquitecto', 'requires_technical_study', 'area',
                 'despacho', 'ubicacion', 'fecha_entrega', 'valor', 'notas',
             ];
 
