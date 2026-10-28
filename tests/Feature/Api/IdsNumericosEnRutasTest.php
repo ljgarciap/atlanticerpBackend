@@ -14,7 +14,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class IdsNumericosEnRutasTest extends FeatureTestCase
 {
-    /** Parámetros que admiten texto y que no son ids numéricos. */
+    /** Parámetros que admiten texto y que no son ids numéricos (los `id` UUID llevan `whereUuid` en su ruta). */
     private const NO_NUMERICOS = ['jobId', 'uuid', 'token', 'type', 'domain', 'key', 'numero', 'model', 'order', 'masterClient', 'customerReturn', 'creditNote'];
 
     public function test_todo_parametro_de_ruta_tipo_id_tiene_restriccion_numerica(): void

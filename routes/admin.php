@@ -51,7 +51,7 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
 
     // SCRUM-1158 — sesiones de «Ver como usuario»: listado para la pantalla «Sesiones de soporte» y terminación forzada de una sesión activa.
     Route::get('/security/impersonations',                  [ImpersonationAdminController::class, 'index']);
-    Route::post('/security/impersonations/{id}/revoke',     [ImpersonationAdminController::class, 'revoke']);
+    Route::post('/security/impersonations/{id}/revoke',     [ImpersonationAdminController::class, 'revoke'])->whereUuid('id');
 
     // SCRUM-49 Fase 2 — motor de reglas de notificaciones (whitelist de modelos, ver
     // App\Modules\CRM\Notifications\NotifiableModel).
