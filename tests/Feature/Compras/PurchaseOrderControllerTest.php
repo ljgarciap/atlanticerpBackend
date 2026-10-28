@@ -554,8 +554,8 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_aprobar_orden_exitosa(): void
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.approve']);
-        $markId = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
@@ -741,8 +741,8 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         // simular un management genuino, no-aprobador y no-superadmin.
         $this->grantCompras('nivel8@atlantic.test', ['compras.approve']);
 
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
@@ -762,8 +762,8 @@ class PurchaseOrderControllerTest extends FeatureTestCase
      *  Gerencia genérica sin ser el Gerencia configurado (test de arriba, sigue en 403). */
     public function test_aprobar_orden_superadmin_bypassa_el_gate_de_mark(): void
     {
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
@@ -779,8 +779,8 @@ class PurchaseOrderControllerTest extends FeatureTestCase
     public function test_aprobar_orden_siendo_el_aprobador_configurado_es_exitosa(): void
     {
         $this->grantCompras('management@atlantic.test', ['compras.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $provider = $this->makeProvider();
         $order = PurchaseOrder::create([
@@ -791,7 +791,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/approve")
             ->assertStatus(200)
-            ->assertJsonPath('approved_by', $markId)
+            ->assertJsonPath('approved_by', $approverId)
             ->assertJsonPath('approved_by_name', fn ($v) => $v !== null && $v !== '');
     }
 

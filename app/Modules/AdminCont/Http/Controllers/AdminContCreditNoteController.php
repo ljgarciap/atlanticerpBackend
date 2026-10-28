@@ -195,18 +195,18 @@ class AdminContCreditNoteController
         // actor acá mismo). Mismo criterio: `superadmin.all` bypassa, igual que `primary_approver_only`.
         /** @var array{sub?: int, permissions?: mixed}|null $payload */
         $payload = $request->attributes->get('jwt');
-        $isMark = AdminContFiscalSettings::actorEsMarkOSuperadmin($payload);
+        $isApprover = AdminContFiscalSettings::actorEsAprobadorOSuperadmin($payload);
 
-        $result['puede_aprobar_rechazar'] = $result['puede_aprobar_rechazar'] && $isMark;
+        $result['puede_aprobar_rechazar'] = $result['puede_aprobar_rechazar'] && $isApprover;
         // El texto del rechazo del PAC es información de Configuración Fiscal: solo Gerencia/superadmin.
         // Se agrega acá (deny-by-default) y no en `CreditNoteService::show()`, que también consumen
         // Bodega y un job de correo sin este gate.
-        $result['puede_ver_fe_transmisiones'] = $isMark;
-        $notaMark = $isMark ? AdminContCreditNote::query()->whereKey($creditNote)->first() : null;
-        $result['fe_detalle'] = $notaMark?->fe_detalle;
+        $result['puede_ver_fe_transmisiones'] = $isApprover;
+        $notaAprobador = $isApprover ? AdminContCreditNote::query()->whereKey($creditNote)->first() : null;
+        $result['fe_detalle'] = $notaAprobador?->fe_detalle;
         // SCRUM-1007 — 'reintentar' | 'actualizar_estado' | null; solo Gerencia/superadmin y solo si el documento lo admite.
-        $result['accion_fe'] = $notaMark !== null ? $this->certification->accionDisponible($notaMark, 'nota_credito') : null;
-        $result['puede_reconciliar_fe'] = $notaMark !== null && $this->certification->reconciliacionDisponible($notaMark, 'nota_credito'); // SCRUM-1019
+        $result['accion_fe'] = $notaAprobador !== null ? $this->certification->accionDisponible($notaAprobador, 'nota_credito') : null;
+        $result['puede_reconciliar_fe'] = $notaAprobador !== null && $this->certification->reconciliacionDisponible($notaAprobador, 'nota_credito'); // SCRUM-1019
 
         return response()->json($result);
     }

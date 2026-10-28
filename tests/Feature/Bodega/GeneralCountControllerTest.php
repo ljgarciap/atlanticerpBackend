@@ -52,10 +52,10 @@ class GeneralCountControllerTest extends FeatureTestCase
     private function markUp(string $email = 'management@atlantic.test'): int
     {
         $this->grantBodega($email, ['bodega.approve']);
-        $markId = (int) User::where('email', $email)->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', $email)->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
-        return $markId;
+        return $approverId;
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -1007,10 +1007,10 @@ class GeneralCountControllerTest extends FeatureTestCase
         ProductWarehouseStock::create(['catalog_product_id' => $productFaltante->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
         ProductWarehouseStock::create(['catalog_product_id' => $productSinDiferencia->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
-        $markId = $this->markUp();
+        $approverId = $this->markUp();
         $generalCount = GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitanteId,
-            'estado' => GeneralCountRequest::ESTADO_APROBADA, 'resuelto_por' => $markId, 'resuelto_at' => now(),
+            'estado' => GeneralCountRequest::ESTADO_APROBADA, 'resuelto_por' => $approverId, 'resuelto_at' => now(),
         ]);
         GeneralCountRequestLine::create([
             'general_count_request_id' => $generalCount->id, 'catalog_product_id' => $productSobrante->id,
@@ -1113,7 +1113,7 @@ class GeneralCountControllerTest extends FeatureTestCase
             'estado' => GeneralCountRequest::ESTADO_APROBADA,
         ]);
 
-        $markId = $this->markUp();
+        $approverId = $this->markUp();
         $this->grantBodega('management@atlantic.test', ['bodega.approve', 'bodega.write']);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
@@ -1123,7 +1123,7 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $this->reMakeCurrent();
         $this->assertNull(GeneralCountRequest::find($generalCount->id)->aplicado_at);
-        $this->assertSame($markId, ComprasSettings::current()->primary_approver_user_id);
+        $this->assertSame($approverId, ComprasSettings::current()->primary_approver_user_id);
     }
 
     /**

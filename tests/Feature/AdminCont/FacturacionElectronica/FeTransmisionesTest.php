@@ -62,7 +62,7 @@ final class FeTransmisionesTest extends FeatureTestCase
         return AdminContInvoice::forOrder($root)->whereNull('anulada_at')->firstOrFail();
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -310,7 +310,7 @@ final class FeTransmisionesTest extends FeatureTestCase
         $this->assertSame('certificado', $t->resultado);
         $this->assertSame('FE0120000...origen', $t->request_payload['referencia']['cufe']);
 
-        $this->api($this->loginAsMark(), 'GET', "/api/admin-contab/notas-credito/{$note->id}/fe-transmisiones")
+        $this->api($this->loginAsApprover(), 'GET', "/api/admin-contab/notas-credito/{$note->id}/fe-transmisiones")
             ->assertStatus(200)
             ->assertJsonPath('data.0.documento_id', null) // el endpoint no expone ids internos de documento
             ->assertJsonPath('data.0.endpoint', '/v1/notas-credito');
@@ -343,7 +343,7 @@ final class FeTransmisionesTest extends FeatureTestCase
 
         $this->api($this->token(), 'GET', $url)->assertStatus(403); // Contabilidad
 
-        $r = $this->api($this->loginAsMark(), 'GET', $url)->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'GET', $url)->assertStatus(200);
         $r->assertJsonCount(1, 'data');
         $r->assertJsonPath('data.0.resultado', 'rechazado');
         $r->assertJsonPath('data.0.http_status', 422);
@@ -368,7 +368,7 @@ final class FeTransmisionesTest extends FeatureTestCase
         $url = "/api/admin-contab/notas-credito/{$note->id}/fe-transmisiones";
 
         $this->api($this->token(), 'GET', $url)->assertStatus(403);
-        $this->api($this->loginAsMark(), 'GET', $url)->assertStatus(200)->assertJsonCount(1, 'data');
-        $this->api($this->loginAsMark(), 'GET', '/api/admin-contab/notas-credito/999999/fe-transmisiones')->assertStatus(404);
+        $this->api($this->loginAsApprover(), 'GET', $url)->assertStatus(200)->assertJsonCount(1, 'data');
+        $this->api($this->loginAsApprover(), 'GET', '/api/admin-contab/notas-credito/999999/fe-transmisiones')->assertStatus(404);
     }
 }

@@ -344,8 +344,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -376,8 +376,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -405,8 +405,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -432,8 +432,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-aprobador y no-superadmin.
         $this->grantBodega('nivel8@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -458,8 +458,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -505,8 +505,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     public function test_index_expone_can_approve_true_para_mark(): void
     {
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/adjustment-requests');
@@ -518,8 +518,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
     public function test_index_expone_can_approve_false_para_bodega(): void
     {
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
         $this->grantBodega('vendedor@atlantic.test');
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
@@ -674,8 +674,8 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $headers = $this->authHeaders($token);

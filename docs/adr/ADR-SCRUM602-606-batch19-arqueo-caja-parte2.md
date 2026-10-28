@@ -200,7 +200,7 @@ arqueo — funciona sobre un pago de cualquier arqueo, cerrado o no (REQ-525 RN4
 ## Servicios nuevos/extendidos
 
 - `DailyCashCountService` — agrega `activeDate()`, `active()`, `close(int $actorId)`,
-  `history(int $page)`, `detail(int $id)`, `approve(int $id, int $markUserId)`. `forDate()` es el
+  `history(int $page)`, `detail(int $id)`, `approve(int $id, int $approverUserId)`. `forDate()` es el
   refactor de la lógica ya existente de `today()`, sin cambios de comportamiento.
 - `AdminContPaymentRetentionAttachmentService` — nuevo, clon con reemplazo real de
   `AdminContPaymentAttachmentService`.

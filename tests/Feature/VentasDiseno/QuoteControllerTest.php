@@ -1467,8 +1467,8 @@ class QuoteControllerTest extends FeatureTestCase
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.override_min_margin'])]);
-        $markId = $this->userIdByEmail('gerencia3@test.com');
-        $data = $this->makeQuoteWithGeneralFieldsComplete($markId);
+        $approverId = $this->userIdByEmail('gerencia3@test.com');
+        $data = $this->makeQuoteWithGeneralFieldsComplete($approverId);
         $part = $data['quote']->parts()->create(['name' => 'Partida 1']);
         $itemId = $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 60, 'cost' => 50])->id;
 
@@ -1491,8 +1491,8 @@ class QuoteControllerTest extends FeatureTestCase
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.override_min_margin'])]);
-        $markId = $this->userIdByEmail('gerencia3@test.com');
-        $data = $this->makeQuoteWithGeneralFieldsComplete($markId);
+        $approverId = $this->userIdByEmail('gerencia3@test.com');
+        $data = $this->makeQuoteWithGeneralFieldsComplete($approverId);
         $part = $data['quote']->parts()->create(['name' => 'Partida 1']);
         $part->items()->create(['reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 60, 'cost' => 50]);
 

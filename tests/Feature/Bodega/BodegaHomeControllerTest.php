@@ -704,7 +704,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     /**
      * Senior Review SCRUM-908: `bodega.approve` es solo el gate grueso de la ruta —
-     * `RelocationRequestController::resolveMarkAccess()` decide 100% vía `AprobacionGate` (Gerencia, o
+     * `RelocationRequestController::resolveApproverAccess()` decide 100% vía `AprobacionGate` (Gerencia, o
      * una `ReglaAprobacion` activa para 'relocation', SCRUM-161/162). Este test ya no le da
      * `bodega.approve` a almacen@ (no alcanzaría solo) — usa el mecanismo real: una
      * `ReglaAprobacion` que lo vuelve aprobador de ese tipo específico.
@@ -757,17 +757,17 @@ class BodegaHomeControllerTest extends FeatureTestCase
     }
 
     /** relocation/adjustment/general_count comparten `ComprasSettings.primary_approver_user_id`. */
-    private function makeBodegaMark(): int
+    private function makeBodegaApprover(): int
     {
-        $markId = (int) User::where('email', 'liderbodega@test.com')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'liderbodega@test.com')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
-        return $markId;
+        return $approverId;
     }
 
     public function test_approvals_pending_incluye_ajuste_de_inventario_para_mark(): void
     {
-        $this->makeBodegaMark();
+        $this->makeBodegaApprover();
         $product = CatalogProduct::create([
             'reference' => 'REF-ADJ-908', 'name' => 'Artículo XL', 'description' => 'Artículo XL',
             'price_full' => 20, 'cost' => 10, 'stock_quantity' => 10, 'is_active' => true,
@@ -792,7 +792,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_conteo_general_para_mark(): void
     {
-        $this->makeBodegaMark();
+        $this->makeBodegaApprover();
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $solicitante = User::where('email', 'vendedor@atlantic.test')->first();
         GeneralCountRequest::create([

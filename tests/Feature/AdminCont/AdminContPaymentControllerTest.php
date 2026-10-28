@@ -38,7 +38,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -141,7 +141,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     {
         $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/payments/summary')->assertStatus(200);
-        $this->withHeaders($this->authHeaders($this->loginAsMark()))
+        $this->withHeaders($this->authHeaders($this->loginAsApprover()))
             ->getJson('/api/admin-contab/payments/summary')->assertStatus(200);
         $this->withHeaders($this->authHeaders($this->loginAsAsistente()))
             ->getJson('/api/admin-contab/payments/summary')->assertStatus(200);

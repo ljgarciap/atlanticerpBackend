@@ -23,7 +23,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
         config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn.atlantic.test']);
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -35,7 +35,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
             'nombre_comercial' => 'Atlantic',
         ]);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/company-profile')
@@ -63,7 +63,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     public function test_update_cambia_los_campos_editables(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/company-profile', [
@@ -82,7 +82,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     {
         AdminContFiscalSettings::current()->update(['razon_social' => 'Original S.A.', 'nombre_comercial' => 'Original']);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/company-profile', [
@@ -102,7 +102,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     public function test_show_expone_el_catalogo_de_paises_y_el_contexto_regional(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/company-profile')->assertOk();
 
@@ -116,7 +116,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     public function test_update_rechaza_una_zona_horaria_que_no_es_iana(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/company-profile', ['zona_horaria' => 'Marte/Olimpo'])
@@ -126,7 +126,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     /** Fase 6a — país, moneda, zona y locale viven en el tenant; el perfil los lee y los escribe ahí. */
     public function test_update_cambia_el_contexto_regional_del_tenant(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/company-profile', ['pais' => 'CO', 'moneda' => 'COP', 'zona_horaria' => 'America/Bogota', 'locale' => 'es-CO'])
@@ -144,7 +144,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     public function test_update_rechaza_un_pais_fuera_del_catalogo_y_una_moneda_invalida(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))->putJson('/api/admin-contab/company-profile', ['pais' => 'ZZ'])->assertStatus(422);
         $this->withHeaders($this->authHeaders($token))->putJson('/api/admin-contab/company-profile', ['moneda' => 'dolar'])->assertStatus(422);
@@ -152,7 +152,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     public function test_upload_logo_acepta_png_y_devuelve_url_publica(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token) + ['Accept' => 'application/json'])
             ->post('/api/admin-contab/company-profile/logo', [
@@ -171,7 +171,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
 
     public function test_upload_logo_rechaza_formato_no_permitido(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token) + ['Accept' => 'application/json'])
             ->post('/api/admin-contab/company-profile/logo', [

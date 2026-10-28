@@ -112,7 +112,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -167,7 +167,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         $this->reTenant();
         Http::assertNothingSent(); // sigue pendiente, no debió certificar al registrar
 
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$store->json('id')}/decision", ['approve' => true])
             ->assertStatus(200);
@@ -190,7 +190,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
             ->assertStatus(201);
         $this->reTenant();
 
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$store->json('id')}/decision", ['approve' => false, 'motivo_rechazo' => 'No procede'])
             ->assertStatus(200);
@@ -397,7 +397,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
             'comprobante_url' => 'admin-contab/credit-notes/test/soporte.pdf',
         ]);
 
-        $this->withHeaders($this->authHeaders($this->loginAsMark()))
+        $this->withHeaders($this->authHeaders($this->loginAsApprover()))
             ->putJson("/api/admin-contab/notas-credito/{$note->id}/decision", ['approve' => true])
             ->assertStatus(200);
         $this->reTenant();

@@ -372,9 +372,9 @@ final class DailyCashCountService
      *
      * @throws DailyCashCountStateException si el arqueo ya no está `pendiente_aprobacion`.
      */
-    public function approve(int $id, int $markUserId): array
+    public function approve(int $id, int $approverUserId): array
     {
-        return DB::transaction(function () use ($id, $markUserId): array {
+        return DB::transaction(function () use ($id, $approverUserId): array {
             /** @var AdminContDailyCashCount $record */
             $record = AdminContDailyCashCount::query()->lockForUpdate()->findOrFail($id);
 
@@ -384,7 +384,7 @@ final class DailyCashCountService
 
             $record->update([
                 'estado' => AdminContDailyCashCount::ESTADO_APROBADO,
-                'aprobado_por' => $markUserId,
+                'aprobado_por' => $approverUserId,
                 'aprobado_at' => now(),
             ]);
 

@@ -53,7 +53,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -881,7 +881,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $noteId = $store->json('id');
         $this->assertSame(AdminContCreditNote::ESTADO_PENDIENTE_APROBACION, $store->json('estado'));
 
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => true])
             ->assertStatus(200);
@@ -908,7 +908,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         ])->assertStatus(201);
         $noteId = $store->json('id');
 
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
 
         // RN4 — sin motivo, 422.
         $this->withHeaders($this->authHeaders($approver))
@@ -941,7 +941,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         ]);
         $noteId = DB::table($this->tableFqn('credit_notes'))->where('numero', 'NC-BLOQ')->value('id');
 
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => true])
             ->assertStatus(422);
@@ -995,12 +995,12 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $this->assertNull($asContabilidad->json('fe_detalle'));
         $this->assertFalse($asContabilidad->json('puede_ver_fe_transmisiones'));
 
-        $approver = $this->loginAsMark();
-        $asMark = $this->withHeaders($this->authHeaders($approver))
+        $approver = $this->loginAsApprover();
+        $asApprover = $this->withHeaders($this->authHeaders($approver))
             ->getJson("/api/admin-contab/notas-credito/{$noteId}")
             ->assertStatus(200);
-        $this->assertSame('9026 - Falló la validación', $asMark->json('fe_detalle'));
-        $this->assertTrue($asMark->json('puede_ver_fe_transmisiones'));
+        $this->assertSame('9026 - Falló la validación', $asApprover->json('fe_detalle'));
+        $this->assertTrue($asApprover->json('puede_ver_fe_transmisiones'));
 
         $decision = $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$noteId}/decision", ['approve' => false, 'motivo_rechazo' => 'Documentación insuficiente'])
@@ -1035,11 +1035,11 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
             ->assertStatus(200);
         $this->assertFalse($asContabilidad->json('puede_aprobar_rechazar'));
 
-        $approver = $this->loginAsMark();
-        $asMark = $this->withHeaders($this->authHeaders($approver))
+        $approver = $this->loginAsApprover();
+        $asApprover = $this->withHeaders($this->authHeaders($approver))
             ->getJson("/api/admin-contab/notas-credito/{$noteId}")
             ->assertStatus(200);
-        $this->assertTrue($asMark->json('puede_aprobar_rechazar'));
+        $this->assertTrue($asApprover->json('puede_aprobar_rechazar'));
     }
 
     /** SCRUM-943 — el detalle expone el estado real de Facturación Electrónica, nunca oculto. */
@@ -1276,7 +1276,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         Mail::assertNothingSent();
 
-        $approver = $this->loginAsMark();
+        $approver = $this->loginAsApprover();
         $this->withHeaders($this->authHeaders($approver))
             ->putJson("/api/admin-contab/notas-credito/{$store->json('id')}/decision", ['approve' => true])
             ->assertStatus(200);

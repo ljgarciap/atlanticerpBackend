@@ -40,7 +40,7 @@ final class JwtClaimsBuilder
             'flags'          => [
                 'approve_large_amounts' => (bool) $user->approve_large_amounts,
                 'manage_users'          => (bool) $user->manage_users,
-                'mark_approver'         => $this->isPrimaryApprover($user),
+                'primary_approver'         => $this->isPrimaryApprover($user),
                 // SCRUM-1168 — ¿tiene este entorno el concepto nuevo de cobros? Solo para que el menú ofrezca «Compensaciones»; dato visual.
                 'cobros_v2'             => $this->cobrosV2Activo(),
             ],

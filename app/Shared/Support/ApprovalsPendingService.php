@@ -36,17 +36,17 @@ use Illuminate\Support\Collection;
  * asumía que el permiso nativo del módulo dueño (`bodega.approve`/`compras.approve`) era un
  * camino INDEPENDIENTE de decisión, en unión con `AprobacionGate::canAct()`. Verificado contra los
  * controllers reales: para purchase_order/relocation/adjustment/general_count esos permisos son
- * SOLO el gate grueso de la ruta — `RelocationRequestController::resolveMarkAccess()`,
+ * SOLO el gate grueso de la ruta — `RelocationRequestController::resolveApproverAccess()`,
  * `AdjustmentRequestController`, `GeneralCountController` y `PurchaseOrderController::approve()`
  * delegan la decisión real 100% a `AprobacionGate`/`primary_approver_user_id` (`compras.approve`
- * no es Gerencia, ver docblock de `AprobacionGate::esMark()`). Usar la unión ahí mostraba items a
+ * no es Gerencia, ver docblock de `AprobacionGate::esAprobador()`). Usar la unión ahí mostraba items a
  * usuarios que después recibían 403/422 al intentar actuar — por eso esos 4 usan SOLO
  * `$this->gate->canAct()`, sin el permiso nativo.
  *
  * `zona_libre` es la EXCEPCIÓN real (mantiene la unión, ver `zonaLibreItems()`/
  * `canActOnGateType()`): `ComprasZonaLibreRequestController::approve()` autoriza por el permiso
  * v2 del JWT (`compras.zona-libre.approve`) directamente, sin pasar por `AprobacionGate` — pero
- * `AprobacionGate::esMark()`/`canAct('zona_libre')` chequea ese mismo permiso vía
+ * `AprobacionGate::esAprobador()`/`canAct('zona_libre')` chequea ese mismo permiso vía
  * `$user->hasPermission()` (v1). Por el gap v1/v2 ya documentado en SCRUM-818, un usuario puede
  * tener el permiso real en el JWT (v2) sin tenerlo en v1 — acá sí hace falta la unión para no
  * ocultarle su propia aprobación pendiente.
@@ -148,7 +148,7 @@ final class ApprovalsPendingService
      */
     private function uncollectibleInvoiceItems(User $user, array $jwtPermissions): Collection
     {
-        if (! $this->isMarkAdminCont($user, $jwtPermissions)) {
+        if (! $this->isApproverAdminCont($user, $jwtPermissions)) {
             return collect();
         }
 
@@ -169,7 +169,7 @@ final class ApprovalsPendingService
      */
     private function creditNoteDecisionItems(User $user, array $jwtPermissions): Collection
     {
-        if (! $this->isMarkAdminCont($user, $jwtPermissions)) {
+        if (! $this->isApproverAdminCont($user, $jwtPermissions)) {
             return collect();
         }
 
@@ -190,7 +190,7 @@ final class ApprovalsPendingService
      */
     private function architectCommissionItems(User $user, array $jwtPermissions): Collection
     {
-        if (! $this->isMarkAdminCont($user, $jwtPermissions)) {
+        if (! $this->isApproverAdminCont($user, $jwtPermissions)) {
             return collect();
         }
 
@@ -211,7 +211,7 @@ final class ApprovalsPendingService
      */
     private function cashCountApprovalItems(User $user, array $jwtPermissions): Collection
     {
-        if (! $this->isMarkAdminCont($user, $jwtPermissions)) {
+        if (! $this->isApproverAdminCont($user, $jwtPermissions)) {
             return collect();
         }
 
@@ -232,7 +232,7 @@ final class ApprovalsPendingService
      */
     private function pettyCashReportItems(User $user, array $jwtPermissions): Collection
     {
-        if (! $this->isMarkAdminCont($user, $jwtPermissions)) {
+        if (! $this->isApproverAdminCont($user, $jwtPermissions)) {
             return collect();
         }
 
@@ -248,15 +248,15 @@ final class ApprovalsPendingService
     }
 
     /** @param list<string> $jwtPermissions */
-    private function isMarkAdminCont(User $user, array $jwtPermissions): bool
+    private function isApproverAdminCont(User $user, array $jwtPermissions): bool
     {
         if (in_array('superadmin.all', $jwtPermissions, true)) {
             return true;
         }
 
-        $markId = AdminContFiscalSettings::current()->primary_approver_user_id;
+        $approverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        return $markId !== null && $user->id === $markId;
+        return $approverId !== null && $user->id === $approverId;
     }
 
     // ── Bodega / Compras (tipos ya cubiertos por AprobacionGate) ────────────────────

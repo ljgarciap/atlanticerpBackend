@@ -40,7 +40,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -306,8 +306,8 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             ->assertStatus(200)
             ->assertJsonPath('puede_editar_tramos', false);
 
-        $markToken = $this->loginAsMark();
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAsApprover();
+        $this->withHeaders($this->authHeaders($approverToken))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200)
             ->assertJsonPath('puede_editar_tramos', true);
@@ -457,7 +457,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     public function test_tier_store_por_mark(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/commissions/internal/tiers', [
@@ -476,7 +476,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
      */
     public function test_tier_store_reordena_automaticamente_por_monto_minimo(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         // Cae entre los tramos [81001,120000] y [120001,∞) — un `orden` a propósito "de trámite"
         // (99), simulando el push-al-final que hacía el frontend antes del fix.
@@ -501,7 +501,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     /** Mismo fix que arriba — borrar un tramo del medio no debe dejar huecos en `orden`. */
     public function test_tier_destroy_resequencia_orden_sin_huecos(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $before = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/commissions/internal/tiers')->json();
         $middleId = collect($before)->firstWhere('monto_minimo', 35001)['id'];
 
@@ -736,16 +736,16 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        $approverId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
-        $this->makeCommissionableOrder($vendorId, 30000.0, 30000.0, null, [$contabilidadId, $markId]);
+        $this->makeCommissionableOrder($vendorId, 30000.0, 30000.0, null, [$contabilidadId, $approverId]);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
 
-        $row = collect($response->json('vendedores'))->firstWhere('vendedor_id', $markId);
+        $row = collect($response->json('vendedores'))->firstWhere('vendedor_id', $approverId);
         $pedido = collect($row['groups'][0]['pedidos'])->first();
         $this->assertSame(10000, $pedido['total_pedido']); // 30000 / 3
         $this->assertCount(2, $pedido['compartido_con']);
@@ -765,18 +765,18 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        $approverId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
-        $this->makeCommissionableOrder($designerId, 10700.0, 10700.0, null, [$contabilidadId, $markId]);
+        $this->makeCommissionableOrder($designerId, 10700.0, 10700.0, null, [$contabilidadId, $approverId]);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
 
         $vendedores = collect($response->json('vendedores'));
         $totalComision = 0.0;
-        foreach ([$designerId, $contabilidadId, $markId] as $id) {
+        foreach ([$designerId, $contabilidadId, $approverId] as $id) {
             $row = $vendedores->firstWhere('vendedor_id', $id);
             $pedido = collect($row['groups'][0]['pedidos'])->first();
             $this->assertEqualsWithDelta(53.5, $pedido['monto_comision'], 0.05, "Responsable {$id} debería recibir ~\$53.50, no \$160.50.");
@@ -791,20 +791,20 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     {
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
+        $approverId = $this->userIdByEmail(self::APPROVER_EMAIL);
         $vendedor2Id = $this->userIdByEmail('vendedor2@test.com');
 
         // 40000 / 4 = 10000 c/u (tramo 1.5%) → 150 de comisión c/u, 600 en total.
-        $this->makeCommissionableOrder($designerId, 40000.0, 40000.0, null, [$contabilidadId, $markId, $vendedor2Id]);
+        $this->makeCommissionableOrder($designerId, 40000.0, 40000.0, null, [$contabilidadId, $approverId, $vendedor2Id]);
 
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
 
         $vendedores = collect($response->json('vendedores'));
         $totalComision = 0.0;
-        foreach ([$designerId, $contabilidadId, $markId, $vendedor2Id] as $id) {
+        foreach ([$designerId, $contabilidadId, $approverId, $vendedor2Id] as $id) {
             $row = $vendedores->firstWhere('vendedor_id', $id);
             $pedido = collect($row['groups'][0]['pedidos'])->first();
             $this->assertSame(10000, $pedido['total_pedido']);

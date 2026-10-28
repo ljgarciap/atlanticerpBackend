@@ -306,8 +306,8 @@ class QuoteItemControllerTest extends FeatureTestCase
             ->update(['extra_permissions' => json_encode([
                 'ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.override_min_margin',
             ])]);
-        $markId = $this->userIdByEmail('gerencia3@test.com');
-        $fixture = $this->makeQuoteWithPart($markId);
+        $approverId = $this->userIdByEmail('gerencia3@test.com');
+        $fixture = $this->makeQuoteWithPart($approverId);
         // CoreUserSeeder: password default = el propio email (nunca sobreescrito si
         // ya se cambió), a diferencia de los usuarios *@atlantic.test de fixtures.
         $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
@@ -938,8 +938,8 @@ class QuoteItemControllerTest extends FeatureTestCase
             ->update(['extra_permissions' => json_encode([
                 'ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.override_min_margin',
             ])]);
-        $markId = $this->userIdByEmail('gerencia3@test.com');
-        $fixture = $this->makeQuoteWithPart($markId);
+        $approverId = $this->userIdByEmail('gerencia3@test.com');
+        $fixture = $this->makeQuoteWithPart($approverId);
         $lowMargin = $this->makeCatalogProduct(['reference' => 'BULK-040', 'price_full' => 60, 'cost' => 50]);
         $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
 
@@ -1118,8 +1118,8 @@ class QuoteItemControllerTest extends FeatureTestCase
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")->where('email', 'gerencia3@test.com')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.override_min_margin'])]);
-        $markId = $this->userIdByEmail('gerencia3@test.com');
-        $fixture = $this->makeQuoteWithPart($markId);
+        $approverId = $this->userIdByEmail('gerencia3@test.com');
+        $fixture = $this->makeQuoteWithPart($approverId);
         $itemId = $fixture['part']->items()->create([
             'reference' => 'REF-1', 'description' => 'X', 'quantity' => 1, 'unit_price' => 100, 'cost' => 50,
         ])->id;

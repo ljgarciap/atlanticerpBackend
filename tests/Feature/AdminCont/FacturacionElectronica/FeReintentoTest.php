@@ -46,7 +46,7 @@ final class FeReintentoTest extends FeatureTestCase
         Storage::fake('s3-private');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -84,7 +84,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
         $this->assertSame('rechazado', $factura->fresh()->fe_estado);
 
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
 
         $r->assertJsonPath('accion', 'reenviado');
         $r->assertJsonPath('fe_estado', 'certificado');
@@ -109,7 +109,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[['ok' => false, 'error' => 'API key inválida'], 401], [self::CERTIFICADO, 200]]);
         $this->assertSame('error_configuracion', $factura->fresh()->fe_estado);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
             ->assertStatus(200)
             ->assertJsonPath('fe_estado', 'certificado');
     }
@@ -119,7 +119,7 @@ final class FeReintentoTest extends FeatureTestCase
         $nuevo = ['ok' => false, 'estado' => 'RECHAZADO', 'detalles' => ['9032 - El identificador tributario es incorrecto']];
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422], [$nuevo, 422]]);
 
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
 
         $r->assertJsonPath('fe_estado', 'rechazado');
         $this->assertStringContainsString('9032', (string) $r->json('fe_detalle'));
@@ -131,7 +131,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::CERTIFICADO, 200]]);
         $this->assertSame('certificado', $factura->fresh()->fe_estado);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
             ->assertStatus(409)
             ->assertJsonPath('codigo', 'estado_no_reintentable');
 
@@ -144,7 +144,7 @@ final class FeReintentoTest extends FeatureTestCase
         $detalleAntes = $factura->fresh()->fe_detalle;
         AdminContFiscalSettings::current()->forceFill(['pac_ambiente' => 'apagado'])->save();
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
             ->assertStatus(409)
             ->assertJsonPath('codigo', 'fe_apagada');
 
@@ -159,7 +159,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         $factura->forceFill(['anulada_at' => now()])->save();
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
             ->assertStatus(409)
             ->assertJsonPath('codigo', 'documento_anulado');
     }
@@ -183,7 +183,7 @@ final class FeReintentoTest extends FeatureTestCase
         $this->assertTrue($lock->get());
 
         try {
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
                 ->assertStatus(409)
                 ->assertJsonPath('codigo', 'en_curso');
             Http::assertSentCount(1);
@@ -194,8 +194,8 @@ final class FeReintentoTest extends FeatureTestCase
 
     public function test_un_documento_inexistente_es_404(): void
     {
-        $this->api($this->loginAsMark(), 'POST', '/api/admin-contab/notas-credito/999999/fe-reintentar')->assertStatus(404);
-        $this->api($this->loginAsMark(), 'POST', '/api/admin-contab/invoices/999999/fe-reintentar')->assertStatus(404);
+        $this->api($this->loginAsApprover(), 'POST', '/api/admin-contab/notas-credito/999999/fe-reintentar')->assertStatus(404);
+        $this->api($this->loginAsApprover(), 'POST', '/api/admin-contab/invoices/999999/fe-reintentar')->assertStatus(404);
     }
 
     // ── Notas de crédito ─────────────────────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ final class FeReintentoTest extends FeatureTestCase
         $nota = $this->notaRechazada();
         $this->assertSame('rechazado', $nota->fe_estado);
 
-        $this->api($this->loginAsMark(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-reintentar")
+        $this->api($this->loginAsApprover(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-reintentar")
             ->assertStatus(200)
             ->assertJsonPath('fe_estado', 'certificado')
             ->assertJsonPath('cufe', 'FE0420000...nc-reintento');
@@ -238,7 +238,7 @@ final class FeReintentoTest extends FeatureTestCase
         $nota = $this->notaRechazada();
         $nota->forceFill(['estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION])->save();
 
-        $this->api($this->loginAsMark(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-reintentar")
+        $this->api($this->loginAsApprover(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-reintentar")
             ->assertStatus(409)
             ->assertJsonPath('codigo', 'nota_no_aplicada');
     }
@@ -266,7 +266,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaPendiente();
         $this->fakeConsulta($factura, Http::response(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE01...cola', 'qr' => 'https://qr.test'], 200));
 
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(200);
 
         $r->assertJsonPath('accion', 'resuelto');
         $r->assertJsonPath('fe_estado', 'certificado');
@@ -284,7 +284,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaPendiente();
         $this->fakeConsulta($factura, Http::response(['ok' => true, 'estado' => 'PENDIENTE'], 202));
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
             ->assertStatus(200)
             ->assertJsonPath('accion', 'sigue_en_cola')
             ->assertJsonPath('fe_estado', 'pendiente');
@@ -298,7 +298,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaPendiente([[self::CERTIFICADO, 200]]); // el POST del reenvío
         $this->fakeConsulta($factura, Http::response(['ok' => false, 'error' => 'Documento no encontrado en la cola'], 404));
 
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(200);
 
         $r->assertJsonPath('accion', 'reenviado');
         $r->assertJsonPath('fe_estado', 'certificado');
@@ -312,7 +312,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaPendiente([[$rechazo9022, 422]]);
         $this->fakeConsulta($factura, Http::response(['ok' => false, 'error' => 'Documento no encontrado en la cola'], 404));
 
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(200);
 
         $r->assertJsonPath('accion', 'reenviado');
         $r->assertJsonPath('codigo', 'ya_certificado_9022');
@@ -334,7 +334,7 @@ final class FeReintentoTest extends FeatureTestCase
 
         try {
             Http::fake();
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
                 ->assertStatus(200)
                 ->assertJsonPath('accion', 'sin_cambios')
                 ->assertJsonPath('fe_estado', 'pendiente');
@@ -349,7 +349,7 @@ final class FeReintentoTest extends FeatureTestCase
     {
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
             ->assertStatus(409)
             ->assertJsonPath('codigo', 'estado_no_actualizable');
     }
@@ -361,25 +361,25 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         $detalle = "/api/admin-contab/invoices/{$factura->order_id}/detail?invoice_id={$factura->id}";
 
-        $this->assertSame('reintentar', $this->api($this->loginAsMark(), 'GET', $detalle)->json('accion_fe'));
+        $this->assertSame('reintentar', $this->api($this->loginAsApprover(), 'GET', $detalle)->json('accion_fe'));
         $this->assertNull($this->api($this->token(), 'GET', $detalle)->json('accion_fe')); // Contabilidad
 
         $factura->forceFill(['fe_estado' => 'pendiente'])->save();
-        $this->assertSame('actualizar_estado', $this->api($this->loginAsMark(), 'GET', $detalle)->json('accion_fe'));
+        $this->assertSame('actualizar_estado', $this->api($this->loginAsApprover(), 'GET', $detalle)->json('accion_fe'));
 
         $factura->forceFill(['fe_estado' => 'certificado'])->save();
-        $this->assertNull($this->api($this->loginAsMark(), 'GET', $detalle)->json('accion_fe'));
+        $this->assertNull($this->api($this->loginAsApprover(), 'GET', $detalle)->json('accion_fe'));
 
         $factura->forceFill(['fe_estado' => 'rechazado'])->save();
         AdminContFiscalSettings::current()->forceFill(['pac_ambiente' => 'apagado'])->save();
-        $this->assertNull($this->api($this->loginAsMark(), 'GET', $detalle)->json('accion_fe')); // FE apagada
+        $this->assertNull($this->api($this->loginAsApprover(), 'GET', $detalle)->json('accion_fe')); // FE apagada
     }
 
     public function test_el_detalle_de_una_nc_ofrece_la_accion_a_mark(): void
     {
         $nota = $this->notaRechazada();
 
-        $this->assertSame('reintentar', $this->api($this->loginAsMark(), 'GET', "/api/admin-contab/notas-credito/{$nota->id}")->json('accion_fe'));
+        $this->assertSame('reintentar', $this->api($this->loginAsApprover(), 'GET', "/api/admin-contab/notas-credito/{$nota->id}")->json('accion_fe'));
         $this->assertNull($this->api($this->token(), 'GET', "/api/admin-contab/notas-credito/{$nota->id}")->json('accion_fe'));
     }
 
@@ -393,7 +393,7 @@ final class FeReintentoTest extends FeatureTestCase
         ]);
         $detalleAntes = $factura->fresh()->fe_detalle;
 
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
 
         $r->assertJsonPath('codigo', 'ya_certificado_9022');
         $fresca = $factura->fresh();
@@ -408,7 +408,7 @@ final class FeReintentoTest extends FeatureTestCase
         Redis::set('cb:msl_fe_pruebas:opened_at', (string) time());
 
         try {
-            $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
+            $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
                 ->assertStatus(200)
                 ->assertJsonPath('accion', 'sin_cambios')
                 ->assertJsonPath('fe_estado', 'rechazado');
@@ -426,7 +426,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaPendiente([[self::CERTIFICADO, 200]]); // si reenviara, este POST certificaría
         $this->fakeConsulta($factura, Http::response(['ok' => false, 'error' => 'Not Found'], 404)); // p. ej. base_url mal configurada
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
             ->assertStatus(200)
             ->assertJsonPath('accion', 'sin_cambios')
             ->assertJsonPath('fe_estado', 'pendiente');
@@ -439,7 +439,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaPendiente([[self::CERTIFICADO, 200]]);
         $this->fakeConsulta($factura, Http::response(['ok' => false, 'error' => 'API key inválida'], 401));
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))
             ->assertStatus(200)
             ->assertJsonPath('accion', 'sin_cambios');
 
@@ -452,7 +452,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaPendiente();
         $this->fakeConsulta($factura, Http::response(['ok' => false, 'estado' => 'RECHAZADO', 'detalles' => ['9032 - El identificador tributario es incorrecto']], 422));
 
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-actualizar-estado'))->assertStatus(200);
 
         $r->assertJsonPath('accion', 'resuelto');
         $r->assertJsonPath('fe_estado', 'rechazado');
@@ -464,19 +464,19 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]); // última transmisión: ambiente 'pruebas'
         AdminContFiscalSettings::current()->forceFill(['pac_ambiente' => 'production'])->save();
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
             ->assertStatus(409)
             ->assertJsonPath('codigo', 'ambiente_distinto');
 
         Http::assertSentCount(1); // un documento del sandbox no se convierte en una emisión real
-        $this->assertNull($this->api($this->loginAsMark(), 'GET', "/api/admin-contab/invoices/{$factura->order_id}/detail?invoice_id={$factura->id}")->json('accion_fe'));
+        $this->assertNull($this->api($this->loginAsApprover(), 'GET', "/api/admin-contab/invoices/{$factura->order_id}/detail?invoice_id={$factura->id}")->json('accion_fe'));
     }
 
     public function test_el_limitador_es_por_usuario_y_responde_429_a_la_septima_accion(): void
     {
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         AdminContFiscalSettings::current()->forceFill(['pac_ambiente' => 'apagado'])->save(); // 409 baratos: solo cuentan como intentos
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         for ($i = 1; $i <= 6; $i++) {
             $this->api($token, 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(409);
@@ -498,7 +498,7 @@ final class FeReintentoTest extends FeatureTestCase
         $this->api($contabilidad, 'POST', $url)->assertStatus(429);
 
         // Gerencia, desde la misma IP, conserva el suyo: recibe la respuesta normal (409 por FE apagada), no un 429.
-        $this->api($this->loginAsMark(), 'POST', $url)->assertStatus(409)->assertJsonPath('codigo', 'fe_apagada');
+        $this->api($this->loginAsApprover(), 'POST', $url)->assertStatus(409)->assertJsonPath('codigo', 'fe_apagada');
     }
 
     public function test_un_numero_9022_dentro_del_motivo_no_se_confunde_con_el_codigo_9022(): void
@@ -506,7 +506,7 @@ final class FeReintentoTest extends FeatureTestCase
         $motivo = ['ok' => false, 'estado' => 'RECHAZADO', 'detalles' => ['9032 - RUC 8-9022-33 inválido, monto 9022.50']];
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422], [$motivo, 422]]);
 
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
 
         $r->assertJsonPath('codigo', null); // NO es un 9022 real
         $this->assertStringContainsString('8-9022-33', (string) $factura->fresh()->fe_detalle); // el rechazo nuevo sí se guardó
@@ -532,7 +532,7 @@ final class FeReintentoTest extends FeatureTestCase
         $nota = $this->notaRechazada();
         $nota->facturaOrigen->forceFill(['cufe' => null])->save(); // la referencia ya no existe: el builder lanza
 
-        $r = $this->api($this->loginAsMark(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-reintentar")->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-reintentar")->assertStatus(200);
 
         $r->assertJsonPath('fe_estado', 'error_configuracion');
         $this->assertNotEmpty($nota->fresh()->fe_detalle);
@@ -558,7 +558,7 @@ final class FeReintentoTest extends FeatureTestCase
         $this->servicio()->certificarNotaCredito($nota);
         $this->assertSame('pendiente', $nota->fresh()->fe_estado);
 
-        $this->api($this->loginAsMark(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-actualizar-estado")
+        $this->api($this->loginAsApprover(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-actualizar-estado")
             ->assertStatus(200)
             ->assertJsonPath('accion', 'reenviado')
             ->assertJsonPath('fe_estado', 'certificado');
@@ -570,11 +570,11 @@ final class FeReintentoTest extends FeatureTestCase
     {
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         $factura->forceFill(['anulada_at' => now()])->save();
-        $this->assertNull($this->api($this->loginAsMark(), 'GET', "/api/admin-contab/invoices/{$factura->order_id}/detail?invoice_id={$factura->id}")->json('accion_fe'));
+        $this->assertNull($this->api($this->loginAsApprover(), 'GET', "/api/admin-contab/invoices/{$factura->order_id}/detail?invoice_id={$factura->id}")->json('accion_fe'));
 
         $nota = $this->notaRechazada();
         $nota->forceFill(['estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION])->save();
-        $this->assertNull($this->api($this->loginAsMark(), 'GET', "/api/admin-contab/notas-credito/{$nota->id}")->json('accion_fe'));
+        $this->assertNull($this->api($this->loginAsApprover(), 'GET', "/api/admin-contab/notas-credito/{$nota->id}")->json('accion_fe'));
     }
 
     // ── SCRUM-1019 — idempotencia 200, reconciliación y fe_emision_at (ventana de reenvío) ──────────
@@ -586,7 +586,7 @@ final class FeReintentoTest extends FeatureTestCase
     {
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::YA_CERTIFICADO, 200]]);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))
             ->assertStatus(200)
             ->assertJsonPath('fe_estado', 'certificado')
             ->assertJsonPath('cufe', 'FE0120000...original-msl');
@@ -603,7 +603,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(self::CERTIFICADO, 200)]);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
             ->assertStatus(200)
             ->assertJsonPath('accion', 'resuelto')
             ->assertJsonPath('fe_estado', 'certificado')
@@ -623,7 +623,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::YA_CERTIFICADO, 200]]);
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(self::NO_EN_COLA, 404)]);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
             ->assertStatus(200)
             ->assertJsonPath('fe_estado', 'certificado')
             ->assertJsonPath('cufe', 'FE0120000...original-msl');
@@ -639,7 +639,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422], [$nueve, 422]]);
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(self::NO_EN_COLA, 404)]);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
             ->assertStatus(200)
             ->assertJsonPath('codigo', 'ya_certificado_9022')
             ->assertJsonPath('fe_estado', 'rechazado');
@@ -653,7 +653,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::CERTIFICADO, 200]]);
 
         $this->api($this->token(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))->assertStatus(403); // Contabilidad
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))
             ->assertStatus(409)
             ->assertJsonPath('codigo', 'estado_no_reconciliable');
         Http::assertSentCount(1);
@@ -665,7 +665,7 @@ final class FeReintentoTest extends FeatureTestCase
         $this->assertSame('rechazado', $nota->fe_estado);
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE0420000...nc-msl'], 200)]);
 
-        $this->api($this->loginAsMark(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-reconciliar")
+        $this->api($this->loginAsApprover(), 'POST', "/api/admin-contab/notas-credito/{$nota->id}/fe-reconciliar")
             ->assertStatus(200)
             ->assertJsonPath('fe_estado', 'certificado')
             ->assertJsonPath('cufe', 'FE0420000...nc-msl');
@@ -676,11 +676,11 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422]]);
         $url = "/api/admin-contab/invoices/{$factura->order_id}/detail?invoice_id={$factura->id}";
 
-        $this->assertTrue($this->api($this->loginAsMark(), 'GET', $url)->json('puede_reconciliar_fe'));
+        $this->assertTrue($this->api($this->loginAsApprover(), 'GET', $url)->json('puede_reconciliar_fe'));
         $this->assertNotTrue($this->api($this->token(), 'GET', $url)->json('puede_reconciliar_fe'));
 
         $factura->forceFill(['fe_estado' => 'certificado'])->save();
-        $this->assertFalse($this->api($this->loginAsMark(), 'GET', $url)->json('puede_reconciliar_fe'));
+        $this->assertFalse($this->api($this->loginAsApprover(), 'GET', $url)->json('puede_reconciliar_fe'));
     }
 
     public function test_fe_emision_at_se_fija_en_el_primer_intento_y_los_reintentos_reutilizan_la_misma_fecha_de_emision(): void
@@ -691,7 +691,7 @@ final class FeReintentoTest extends FeatureTestCase
         $this->assertNotNull($fijada);
 
         Carbon::setTestNow(Carbon::parse('2026-10-02 15:30:00', 'America/Panama')); // 6 h después, dentro de la ventana
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
 
         $this->assertTrue($fijada->equalTo($factura->fresh()->fe_emision_at), 'la fecha de emisión nunca se regenera');
         $fechas = collect(Http::recorded())->map(fn ($par): string => (string) $par[0]['fechaEmision'])->unique();
@@ -706,7 +706,7 @@ final class FeReintentoTest extends FeatureTestCase
         $this->assertSame(24, AdminContFiscalSettings::current()->fe_reintento_max_horas);
 
         Carbon::setTestNow(Carbon::parse('2026-10-03 09:30:00', 'America/Panama')); // 24 h 30 min
-        $r = $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
+        $r = $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
 
         $r->assertJsonPath('fe_estado', 'error_configuracion')->assertJsonPath('codigo', 'ventana_vencida')->assertJsonPath('accion', 'sin_cambios');
         $this->assertStringContainsString('24 horas', (string) $r->json('mensaje'));
@@ -719,10 +719,10 @@ final class FeReintentoTest extends FeatureTestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-10-02 09:00:00', 'America/Panama'));
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
-        $this->api($this->loginAsMark(), 'PUT', '/api/admin-contab/fiscal-settings', ['fe_reintento_max_horas' => 72])->assertStatus(200)->assertJsonPath('fe_reintento_max_horas', 72);
+        $this->api($this->loginAsApprover(), 'PUT', '/api/admin-contab/fiscal-settings', ['fe_reintento_max_horas' => 72])->assertStatus(200)->assertJsonPath('fe_reintento_max_horas', 72);
 
         Carbon::setTestNow(Carbon::parse('2026-10-03 21:00:00', 'America/Panama')); // 36 h
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
         Carbon::setTestNow();
     }
 
@@ -733,7 +733,7 @@ final class FeReintentoTest extends FeatureTestCase
         Carbon::setTestNow(Carbon::parse('2026-10-05 09:00:00', 'America/Panama'));
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(self::CERTIFICADO, 200)]);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reconciliar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
         Carbon::setTestNow();
     }
 
@@ -750,7 +750,7 @@ final class FeReintentoTest extends FeatureTestCase
         $this->assertNotNull($sub);
         $sub->update(['tax_id' => '155704849-2-2021', 'tax_id_dv' => '32', 'business_name' => 'DIGIFACT SERVICIOS, SOCIEDAD ANÓNIMA']);
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200)->assertJsonPath('fe_estado', 'certificado');
 
         $fresco = $factura->fresh();
         $this->assertNotSame($congeladoInicial, $fresco->receptor_ruc);
@@ -766,7 +766,7 @@ final class FeReintentoTest extends FeatureTestCase
         $factura = $this->facturaConRespuestas([[self::RECHAZO, 422], [self::CERTIFICADO, 200]]);
         $factura->forceFill(['receptor_tipo' => '02', 'receptor_ruc' => null, 'receptor_dv' => null, 'receptor_nombre' => 'CONSUMIDOR FINAL', 'receptor_validado_at' => null])->save();
 
-        $this->api($this->loginAsMark(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
+        $this->api($this->loginAsApprover(), 'POST', $this->urlFactura($factura, 'fe-reintentar'))->assertStatus(200);
 
         $this->assertSame('02', $factura->fresh()->receptor_tipo, 'El cliente tiene RUC, pero la decisión de esa factura fue Consumidor Final.');
         $this->assertNull($factura->fresh()->receptor_ruc);
