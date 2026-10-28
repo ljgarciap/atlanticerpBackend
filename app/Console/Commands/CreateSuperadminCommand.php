@@ -10,6 +10,7 @@ use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 
 /**
  * Fase 4d (docs/specs/fase4d-superadmin-inicial.md) — alta del primer superadmin de un entorno. Reemplaza a las cuentas `*@test.com` con contraseña = correo
@@ -89,7 +90,8 @@ final class CreateSuperadminCommand extends Command
 
         $this->info("Superadmin {$email} creado en el tenant [{$tenant->slug}].");
         if (! is_string($provided) || $provided === '') {
-            $this->warn('Contraseña inicial (se muestra una sola vez, no queda guardada): '.$password);
+            // escape: una contraseña con «<…>» se leería como etiqueta de estilo y se mostraría incompleta
+            $this->warn('Contraseña inicial (se muestra una sola vez, no queda guardada): '.OutputFormatter::escape($password));
         }
         $this->line('El primer ingreso exige cambiarla.');
 
