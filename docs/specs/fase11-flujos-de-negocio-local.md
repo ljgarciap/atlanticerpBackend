@@ -1,6 +1,6 @@
 # Spec — Fase 11: flujos de negocio completos en el entorno local
 
-**Estado**: BORRADOR — decisiones de Luis pendientes (§5).
+**Estado**: alcance AMPLIADO por Luis (2026-10-28): cubrir **todos** los flujos y resumir cómo funcionan hoy, porque pueden cambiar o mejorar. Decisiones en §5.
 **Origen**: «lo que nos importa en primera instancia es probar el desarrollo local y ajustarlo antes de desplegarlo» (2026-10-28). El humo de las fases 6 a 9 ya existe; falta ejercitar las **cadenas de negocio** de punta a punta.
 
 ## 1. Hechos verificados (BD local de desarrollo, 2026-10-28)
@@ -18,26 +18,37 @@
 - Cadena de compra: `POST compras/orders` → `PATCH …/approve` → `PATCH …/advance` → `POST compras/goods-receipts` → `…/lines/{id}/confirm` (sube el stock).
 - Límites: nginx admite 10 conexiones simultáneas a la API (un solo worker de Playwright); los datos de facturas y cobros no se borran (inmutables por diseño).
 
-## 2. Diseño propuesto
-**11a — Flujos ejecutables** (`e2e/flujos-atlantic.spec.ts`, `npm run e2e:flujos`, 1 worker): cada flujo crea **sus propios datos** (prefijo «[FLUJO]» + marca de tiempo) por la API real con la cuenta de cada rol y verifica el estado en cada paso, con capturas de las pantallas clave en el navegador. No depende del demo ni lo modifica.
-1. **Venta**: vendedor cotiza (2 líneas) → confirma → avanza el pipeline → Bodega arma, despacha y registra entrega → Contabilidad factura y registra el cobro → el estado de cuenta refleja saldo 0.
-2. **Compra**: líder de compras crea OC → gerencia/aprobador aprueba → recepción de mercancía → el stock del almacén sube.
-3. **Servicios**: ticket de instalación creado → asignado a un técnico → cierre.
-4. **Permisos cruzados**: cada paso intentado con un rol que no corresponde devuelve 403 (p. ej. el vendedor no despacha, el técnico no factura).
-**11b — Demo más completo** (opcional, según §5-2): líneas en las 3 cotizaciones, un cobro y una nota de crédito, una OC recibida, para que las pantallas de reportes y estados de cuenta no salgan vacías al recorrerlas a mano.
-**11c — Ajustes**: todo hallazgo de los flujos se corrige en su propio PR pequeño (como el de familias), con test de regresión.
+## 2. Diseño (alcance ampliado)
+Un **flujo** es un proceso de negocio con transiciones de estado (no un endpoint). El universo medido: **708 rutas de API (345 de escritura)** en 10 módulos; hay manuales técnicos por módulo heredados de binax (`docs/manuales-tecnicos/`), por verificar contra el código (uno es del módulo Soporte, ya eliminado).
+
+Cada módulo entrega tres cosas:
+1. **Catálogo de flujos «cómo funciona hoy»** (`docs/flujos/<modulo>.md`): por flujo, quién lo ejecuta (rol/permiso), pasos y endpoints, estados y transiciones, reglas de negocio y umbrales configurables, efectos en otros módulos (stock, cuentas por cobrar, notificaciones), y **qué se verificó ejecutándolo** frente a lo que solo se leyó del código. Cada flujo cierra con **«Candidatos a cambio o mejora»** (huecos, reglas rígidas, pasos manuales, deuda heredada), sin implementarlos.
+2. **Flujo ejecutable** (`e2e/flujos/<modulo>.spec.ts`, `npm run e2e:flujos`, 1 worker): crea sus propios datos (prefijo «[FLUJO]» + marca de tiempo) por la API real con la cuenta de cada rol, verifica el **estado resultante** en cada paso y prueba los permisos cruzados (el rol incorrecto recibe 403). Capturas de las pantallas clave en navegador.
+3. **Informe de hallazgos** (`docs/reviews/fase11-<modulo>-…`) con un PR pequeño y test de regresión por cada defecto corregido (como el de familias); lo que sea decisión de producto va al catálogo como candidato, no se cambia solo.
+
+### Orden de entrega (un módulo por entrega)
+| Sub-fase | Módulo | Flujos previstos (a confirmar al inventariarlos) |
+|---|---|---|
+| 11a | Ventas & Diseño + CRM | cotización (partes, líneas, versiones), confirmación, pipeline y compuertas, proyectos de venta, clientes/subclientes/contactos, arquitectos y comisiones, catálogo, proyectos CRM |
+| 11b | Compras | OC (alta, aprobación por umbral, avance), recepción de mercancía, pagos a proveedor, logística, reposición, reclamos/garantías, Zona Libre, sustitutos |
+| 11c | Bodega | pedidos (picking, despacho, entrega, guía firmada), inventario y ajustes, kardex, devoluciones, rutas del día, ubicaciones/reubicación, almacenes |
+| 11d | Admin & Contab | facturación (documento interno), cobros/abonos/anulaciones, notas de crédito, comisiones internas/externas, caja chica, arqueo, cuentas bancarias, tesorería, reportes, configuración fiscal |
+| 11e | Servicios | tickets por tipo (instalación, garantía, reclamo, retrofit), asignación a técnicos, informes de inspección, cotizaciones de servicio, insumos y herramientas, agenda |
+| 11f | Transversales | autenticación (login, MFA, cambio obligatorio de clave), usuarios/roles/niveles/permisos adicionales, «Ver como usuario», notificaciones, catálogos y ajustes, perfil de empresa y región, gerencia, IA, auditoría |
+Un **catálogo global** (`docs/flujos/README.md`) enlaza los módulos y consolida los candidatos a mejora, priorizados, para que Luis decida cuáles se convierten en fases.
 
 ## 3. Fuera de alcance
-Transmisión fiscal real (DGI/MSL/Digifact), correo saliente, AWS y despliegue, el adaptador de Colombia, rendimiento/carga.
+Transmisión fiscal real (DGI/MSL/Digifact), correo saliente real, AWS y despliegue, el adaptador de Colombia, rendimiento/carga. No se implementan mejoras de producto sin decisión de Luis: se registran.
 
 ## 4. Criterios de aceptación
-1. `npm run e2e:flujos` corre los 4 flujos en verde contra el stack local y es repetible (cada corrida crea datos nuevos sin chocar con las anteriores).
-2. Cada transición verifica el estado resultante, no solo el código HTTP.
-3. Todo hallazgo queda en un informe (`docs/reviews/fase11-…`) con su PR de corrección y prueba de regresión.
-4. Los textos de commits, PR y datos de prueba no incluyen nombres reales ni vocabulario de otro sector (contrato de neutralidad).
+1. Cada módulo tiene su catálogo de flujos, y cada afirmación está marcada como «verificado ejecutando» o «leído del código».
+2. `npm run e2e:flujos` corre los flujos del módulo en verde contra el stack local, es repetible y verifica el estado resultante (no solo el código HTTP) y los permisos cruzados.
+3. Todo defecto encontrado tiene PR con test de regresión; lo demás queda como candidato priorizado.
+4. Textos de commits, PR, docs y datos de prueba sin nombres reales ni vocabulario de otro sector (contrato de neutralidad en verde).
+5. Los manuales heredados se contrastan: lo que ya no es cierto se corrige o se marca.
 
-## 5. Decisiones de Luis (pendientes)
-1. Enfoque: flujos que crean sus propios datos (recomendado) / demo más completo / ambos.
-2. Cadenas incluidas: venta, compra, servicios, permisos cruzados.
-3. Qué hacer con los datos que dejan los flujos en la BD local.
-4. Entrega: PR por sub-fase.
+## 5. Decisiones de Luis
+1. Enfoque: flujos que crean sus propios datos. ✅ (2026-10-28)
+2. Cadenas: **todos los flujos de todos los módulos**, con resumen de cómo funcionan hoy y candidatos a mejora. ✅ (2026-10-28)
+3. Datos que dejan los flujos en la BD local: se dejan marcados «[FLUJO]» (la BD local se resetea con el ciclo habitual si se llena). *Por defecto, a confirmar.*
+4. Entrega: un PR por módulo (catálogo + flujo ejecutable) y un PR pequeño por cada defecto corregido. *Por defecto, a confirmar.*
