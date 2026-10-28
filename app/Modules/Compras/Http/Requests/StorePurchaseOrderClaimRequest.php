@@ -62,6 +62,14 @@ class StorePurchaseOrderClaimRequest extends FormRequest
                 $seen[] = $lineId;
 
                 $orderLine = PurchaseOrderLine::find((int) $lineId);
+
+                // Cada línea del reclamo debe ser de LA orden reclamada: antes se aceptaba una línea de otra orden.
+                if ($orderLine !== null && is_numeric($this->input('purchase_order_id')) && (int) $orderLine->purchase_order_id !== (int) $this->input('purchase_order_id')) {
+                    $validator->errors()->add("lines.{$i}.purchase_order_line_id", 'Esa línea no pertenece a la orden del reclamo.');
+
+                    continue;
+                }
+
                 $affected = (int) ($line['affected_quantity'] ?? 0);
                 if ($orderLine !== null && $affected > $orderLine->quantity) {
                     $validator->errors()->add(
