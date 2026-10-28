@@ -44,7 +44,7 @@ final class WarehouseController extends Controller
     public function index(): JsonResponse
     {
         return response()->json([
-            'data' => Warehouse::orderBy('id')->get(['id', 'name', 'responsable', 'capacidad_pct', 'modo_detalle']),
+            'data' => Warehouse::activos()->orderBy('id')->get(['id', 'name', 'responsable', 'capacidad_pct', 'modo_detalle']),
         ]);
     }
 

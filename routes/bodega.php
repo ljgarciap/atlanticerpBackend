@@ -53,6 +53,9 @@ Route::prefix('settings')->group(function (): void {
     // Solo superadmin (el ticket lo pide así): `bodega.settings.configure` lo tienen otros roles y cambiar qué bodegas venden afecta el stock de todos.
     Route::get('/warehouses', [WarehouseSaleRulesController::class, 'index'])->middleware('permission:superadmin.all');
     Route::put('/warehouses/{id}', [WarehouseSaleRulesController::class, 'update'])->whereNumber('id')->middleware('permission:superadmin.all');
+    // Fase 8b — administración de almacenes (mismo gate; sin permiso nuevo).
+    Route::post('/warehouses', [WarehouseSaleRulesController::class, 'store'])->middleware('permission:superadmin.all');
+    Route::delete('/warehouses/{id}', [WarehouseSaleRulesController::class, 'destroy'])->whereNumber('id')->middleware('permission:superadmin.all');
 });
 
 // REQ-298 — "Mi calendario"/"Calendario del equipo", mismo endpoint compartido con Ventas & Diseño

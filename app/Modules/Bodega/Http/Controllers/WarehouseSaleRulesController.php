@@ -8,6 +8,7 @@ use App\Modules\Bodega\Models\OrderItem;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Services\StockReservationService;
+use App\Modules\Bodega\Services\WarehouseUsage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\DB;
  * defecto (`despacho_por_defecto`) y cuáles se excluyen del «Disponible» (`excluye_disponible`, SCRUM-851). Regla global del proyecto: nada de esto vive fijo en el
  * código; se cambia sin deploy. Auditado por `LogsAuditTrail` del modelo `Warehouse`.
  *
+ * Fase 8b — también administra los almacenes: alta (`store`), renombre/tipo/desactivación (`update`) y baja protegida (`destroy`). Un almacén de
+ * sistema (`funcion`), el de despacho por defecto, uno con stock o con historial NO se borra: se desactiva (`is_active`), y solo si está vacío.
+ *
  * Invariantes que este controlador protege (la base impone además un índice único parcial y un CHECK):
  *  - siempre existe EXACTAMENTE UNA bodega de despacho por defecto, y es de venta;
  *  - una bodega de solo consulta (Zona Libre) nunca permite venta;
@@ -25,7 +29,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class WarehouseSaleRulesController extends Controller
 {
-    public function __construct(private readonly StockReservationService $reservations) {}
+    public function __construct(
+        private readonly StockReservationService $reservations,
+        private readonly WarehouseUsage $usage,
+    ) {}
 
     /** GET /api/bodega/settings/warehouses */
     public function index(): JsonResponse
@@ -40,6 +47,9 @@ final class WarehouseSaleRulesController extends Controller
             'permite_venta'        => ['sometimes', 'boolean'],
             'despacho_por_defecto' => ['sometimes', 'boolean'],
             'excluye_disponible'   => ['sometimes', 'boolean'],
+            'name'                 => ['sometimes', 'string', 'min:2', 'max:60'],
+            'tipo'                 => ['sometimes', 'in:'.Warehouse::TIPO_BODEGA.','.Warehouse::TIPO_EXHIBICION],
+            'is_active'            => ['sometimes', 'boolean'],
         ]);
 
         try {
@@ -51,7 +61,7 @@ final class WarehouseSaleRulesController extends Controller
         }
 
         // Cambiar qué bodegas venden o cuál es la por defecto mueve las reservas de los pedidos en picking: se recalculan ya, no en el próximo evento de picking.
-        if ($response->getStatusCode() === 200 && (array_key_exists('permite_venta', $validated) || array_key_exists('despacho_por_defecto', $validated))) {
+        if ($response->getStatusCode() === 200 && (array_key_exists('permite_venta', $validated) || array_key_exists('despacho_por_defecto', $validated) || array_key_exists('is_active', $validated))) {
             /** @var list<int> $productIds */
             $productIds = OrderItem::query()->whereNotNull('catalog_product_id')
                 ->whereHas('order', fn ($q) => $q->whereIn('stage', [Order::STAGE_EN_PICKING]))
@@ -87,7 +97,31 @@ final class WarehouseSaleRulesController extends Controller
                 return $this->invalid('La bodega de despacho por defecto no puede excluirse del Disponible: el Disponible que ven los vendedores es el de esa bodega.');
             }
 
-            $changes = array_intersect_key($validated, array_flip(['permite_venta', 'excluye_disponible']));
+            $changes = array_intersect_key($validated, array_flip(['permite_venta', 'excluye_disponible', 'tipo']));
+
+            if (array_key_exists('name', $validated)) {
+                $name = trim((string) $validated['name']);
+                if (Warehouse::query()->where('name', $name)->whereKeyNot($warehouse->id)->exists()) {
+                    return $this->invalid('Ya existe un almacén con ese nombre.');
+                }
+                $changes['name'] = $name;
+            }
+
+            if (array_key_exists('is_active', $validated)) {
+                $activo = (bool) $validated['is_active'];
+                if (! $activo && $warehouse->is_active) {
+                    if (($motivo = $this->usage->motivoParaNoDesactivar($warehouse)) !== null) {
+                        return $this->invalid($motivo);
+                    }
+                    $changes['is_active'] = false;
+                    $changes['permite_venta'] = false;
+                } elseif ($activo && ! $warehouse->is_active) {
+                    $changes['is_active'] = true;
+                }
+            }
+            if (! ($changes['is_active'] ?? $warehouse->is_active) && ($changes['permite_venta'] ?? false)) {
+                return $this->invalid('Un almacén desactivado no puede surtir ventas: actívalo primero.');
+            }
             if ($porDefecto && ! $warehouse->despacho_por_defecto) {
                 // La anterior deja de serlo en el mismo movimiento (índice único parcial: nunca dos a la vez).
                 Warehouse::query()->where('despacho_por_defecto', true)->update(['despacho_por_defecto' => false]);
@@ -98,6 +132,54 @@ final class WarehouseSaleRulesController extends Controller
             }
 
             return response()->json($this->format($warehouse->fresh() ?? $warehouse));
+        });
+    }
+
+    /** POST /api/bodega/settings/warehouses — alta de un almacén (nunca de sistema, ni por defecto). */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name'               => ['required', 'string', 'min:2', 'max:60'],
+            'tipo'               => ['sometimes', 'in:'.Warehouse::TIPO_BODEGA.','.Warehouse::TIPO_EXHIBICION],
+            'modo_detalle'       => ['sometimes', 'in:'.Warehouse::MODO_UBICACION_EXACTA.','.Warehouse::MODO_PENDIENTE.','.Warehouse::MODO_CLIENTE],
+            'permite_venta'      => ['sometimes', 'boolean'],
+            'excluye_disponible' => ['sometimes', 'boolean'],
+        ]);
+        $name = trim($validated['name']);
+
+        if (Warehouse::query()->where('name', $name)->exists()) {
+            return $this->invalid('Ya existe un almacén con ese nombre.');
+        }
+
+        $warehouse = Warehouse::query()->create([
+            'name'               => $name,
+            'tipo'               => $validated['tipo'] ?? Warehouse::TIPO_BODEGA,
+            'modo_detalle'       => $validated['modo_detalle'] ?? Warehouse::MODO_UBICACION_EXACTA,
+            'permite_venta'      => (bool) ($validated['permite_venta'] ?? false),
+            'excluye_disponible' => (bool) ($validated['excluye_disponible'] ?? false),
+            'is_active'          => true,
+        ]);
+
+        return response()->json($this->format($warehouse->fresh() ?? $warehouse), 201);
+    }
+
+    /** DELETE /api/bodega/settings/warehouses/{id} — baja protegida: solo un almacén vacío, sin historial y que no sea de sistema. */
+    public function destroy(int $id): JsonResponse
+    {
+        return DB::transaction(function () use ($id): JsonResponse {
+            $warehouse = Warehouse::query()->lockForUpdate()->find($id);
+            if ($warehouse === null) {
+                return response()->json(['message' => 'Bodega no encontrada.'], 404);
+            }
+            if (($motivo = $this->usage->motivoParaNoBorrar($warehouse)) !== null) {
+                return response()->json(['message' => $motivo, 'errors' => ['warehouse' => [$motivo]], 'code' => 'no_se_puede_borrar'], 422);
+            }
+
+            // Filas de stock en 0 (sin movimiento) no son historial: caen con el almacén.
+            \App\Modules\Bodega\Models\ProductWarehouseStock::query()->where('warehouse_id', $warehouse->id)->delete();
+            $warehouse->delete();
+
+            return response()->json(null, 204);
         });
     }
 
@@ -115,6 +197,10 @@ final class WarehouseSaleRulesController extends Controller
             'permite_venta'        => $w->permite_venta,
             'despacho_por_defecto' => $w->despacho_por_defecto,
             'excluye_disponible'   => $w->excluye_disponible,
+            'tipo'                 => $w->tipo,
+            'funcion'              => $w->funcion,
+            'is_active'            => $w->is_active,
+            'modo_detalle'         => $w->modo_detalle,
         ];
     }
 }

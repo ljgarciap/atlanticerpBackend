@@ -798,7 +798,7 @@ final class InventoryController extends Controller
         }
 
         return response()->json([
-            'data' => Warehouse::query()->orderBy('id')->get(['id', 'name']),
+            'data' => Warehouse::activos()->orderBy('id')->get(['id', 'name']),
         ]);
     }
 

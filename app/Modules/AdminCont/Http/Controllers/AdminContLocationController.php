@@ -28,7 +28,7 @@ class AdminContLocationController
                 'nombre'    => $w->name,
                 'tipo'      => $w->tipo,
                 'direccion' => null,
-                'activa'    => true,
+                'activa'    => $w->is_active,
                 'editable'  => false,
                 'source'    => 'bodega',
             ]);
