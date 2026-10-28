@@ -51,7 +51,7 @@ class QuoteResponsibleViewTest extends FeatureTestCase
      */
     private function makeProjectWithGerenciaVersion(array $cardOverrides = []): array
     {
-        $bernardo = $this->userIdByEmail(self::RESPONSABLE);
+        $vendedor9 = $this->userIdByEmail(self::RESPONSABLE);
         $approver     = $this->userIdByEmail(self::MARK);
 
         $master  = MasterClient::create(['name' => 'Cliente 1143 '.uniqid()]);
@@ -59,7 +59,7 @@ class QuoteResponsibleViewTest extends FeatureTestCase
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto 1143 '.uniqid()]);
         $card    = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote', 'master_client_id' => $master->id,
-            'sub_client_id' => $sub->id, 'owner_id' => $bernardo, 'stage_changed_at' => Carbon::now(), 'amount' => 500.0,
+            'sub_client_id' => $sub->id, 'owner_id' => $vendedor9, 'stage_changed_at' => Carbon::now(), 'amount' => 500.0,
             ...$cardOverrides,
         ]);
 
@@ -76,7 +76,7 @@ class QuoteResponsibleViewTest extends FeatureTestCase
         };
 
         return [
-            'card' => $card, 'own' => $make($bernardo, true), 'gerencia' => $make($approver, true), 'draft' => $make($approver, false),
+            'card' => $card, 'own' => $make($vendedor9, true), 'gerencia' => $make($approver, true), 'draft' => $make($approver, false),
         ];
     }
 
@@ -218,13 +218,13 @@ class QuoteResponsibleViewTest extends FeatureTestCase
     public function test_el_responsable_crea_una_version_nueva_partiendo_de_la_de_gerencia_y_la_edita_como_suya(): void
     {
         $f = $this->makeProjectWithGerenciaVersion();
-        $bernardo = $this->userIdByEmail(self::RESPONSABLE);
+        $vendedor9 = $this->userIdByEmail(self::RESPONSABLE);
         $headers  = $this->headersFor(self::RESPONSABLE);
 
         $created = $this->withHeaders($headers)->postJson("/api/ventas-diseno/quotes/{$f['gerencia']->id}/duplicate")->assertStatus(201);
 
         // nace como borrador SUYO con el contenido que dejó Gerencia
-        $this->assertSame($bernardo, $created->json('owner.id'));
+        $this->assertSame($vendedor9, $created->json('owner.id'));
         $this->assertNull($created->json('confirmed_at'));
         $this->assertSame('REF-1143', $created->json('parts.0.items.0.reference'));
         $this->assertTrue($created->json('can_edit'));

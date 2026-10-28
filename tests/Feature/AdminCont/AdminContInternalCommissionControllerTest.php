@@ -792,10 +792,10 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
-        $neilId = $this->userIdByEmail('vendedor2@test.com');
+        $vendedor2Id = $this->userIdByEmail('vendedor2@test.com');
 
         // 40000 / 4 = 10000 c/u (tramo 1.5%) → 150 de comisión c/u, 600 en total.
-        $this->makeCommissionableOrder($designerId, 40000.0, 40000.0, null, [$felixId, $markId, $neilId]);
+        $this->makeCommissionableOrder($designerId, 40000.0, 40000.0, null, [$felixId, $markId, $vendedor2Id]);
 
         $token = $this->loginAsMark();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -804,7 +804,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
         $vendedores = collect($response->json('vendedores'));
         $totalComision = 0.0;
-        foreach ([$designerId, $felixId, $markId, $neilId] as $id) {
+        foreach ([$designerId, $felixId, $markId, $vendedor2Id] as $id) {
             $row = $vendedores->firstWhere('vendedor_id', $id);
             $pedido = collect($row['groups'][0]['pedidos'])->first();
             $this->assertSame(10000, $pedido['total_pedido']);

@@ -23,16 +23,16 @@ class VentasDisenoSalesGoalsSeederTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    public function test_juanma_tiene_su_meta_real_seeded(): void
+    public function test_vendedor8_tiene_su_meta_seeded(): void
     {
-        $juanma = User::where('email', 'vendedor8@test.com')->firstOrFail();
-        $goal = SalesGoal::where('user_id', $juanma->id)->firstOrFail();
+        $vendedor8 = User::where('email', 'vendedor8@test.com')->firstOrFail();
+        $goal = SalesGoal::where('user_id', $vendedor8->id)->firstOrFail();
 
         $this->assertEquals(4328.87, $goal->goal_amount);
         $this->assertEquals(1500000.00, $goal->goal_plus_amount);
     }
 
-    public function test_paola_recibe_los_valores_de_mauricio_del_ticket_original(): void
+    public function test_vendedor5_recibe_sus_metas(): void
     {
         $paola = User::where('email', 'vendedor5@test.com')->firstOrFail();
         $goal = SalesGoal::where('user_id', $paola->id)->firstOrFail();
@@ -50,12 +50,12 @@ class VentasDisenoSalesGoalsSeederTest extends FeatureTestCase
 
     public function test_no_pisa_una_meta_ya_ajustada_a_mano(): void
     {
-        $idmar = User::where('email', 'vendedor10@test.com')->firstOrFail();
-        SalesGoal::where('user_id', $idmar->id)->update(['goal_amount' => 99999.99]);
+        $vendedor10 = User::where('email', 'vendedor10@test.com')->firstOrFail();
+        SalesGoal::where('user_id', $vendedor10->id)->update(['goal_amount' => 99999.99]);
 
         (new VentasDisenoSalesGoalsSeeder)->run();
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $this->assertEquals(99999.99, SalesGoal::where('user_id', $idmar->id)->firstOrFail()->goal_amount);
+        $this->assertEquals(99999.99, SalesGoal::where('user_id', $vendedor10->id)->firstOrFail()->goal_amount);
     }
 }

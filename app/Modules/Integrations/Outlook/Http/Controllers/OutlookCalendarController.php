@@ -131,7 +131,7 @@ final class OutlookCalendarController extends Controller
      * raíz: la primera versión de este método (y `HomeService::vendorEmails()`, que la copié de
      * ahí) usaba el rol LEGADO `user_roles.role = 'designer'` — en dev.atlanticerp.ai ese valor solo lo
      * tienen 3 cuentas demo `*.test`, ninguna con buzón real. Los vendedores/diseñadores reales
-     * (`annie@`, `bernardo@`, etc.) están asignados por el sistema de roles NUEVO (`role_id` →
+     * (`annie@`, `vendedor9@`, etc.) están asignados por el sistema de roles NUEVO (`role_id` →
      * `Role` "Vendedor/Diseñador", ver ADR-006/SCRUM-144-145) — el legado nunca se actualizó para
      * ellos porque ya no es la fuente de verdad de permisos, pero seguía siendo la fuente de
      * verdad de ESTE query.

@@ -62,7 +62,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $this->assertSame($ayudanteBodega->id, $apolonio->role_id);
     }
 
-    public function test_vendedor_disenador_incluye_a_idmar_el_decimo(): void
+    public function test_vendedor_disenador_incluye_al_decimo_vendedor(): void
     {
         // Cuenta acotada al roster real (no al total de role_id=vendedor de la BD):
         // en local/testing, AuthUserSeeder también le asigna este rol al fixture
@@ -91,8 +91,8 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         // — can_edit=true solo en ventas_diseno) para poder darle visibilidad de solo lectura en
         // `servicios` sin heredar edición ahí. Ver
         // 2026_08_02_100003_grant_servicios_view_to_vendedor_disenador.php.
-        $neil = User::where('email', 'vendedor2@test.com')->firstOrFail();
-        $this->assertSame(6, $neil->securityLevel?->level);
+        $vendedor2 = User::where('email', 'vendedor2@test.com')->firstOrFail();
+        $this->assertSame(6, $vendedor2->securityLevel?->level);
     }
 
     public function test_dan_rosales_sigue_sin_cargo_y_sin_crear(): void
