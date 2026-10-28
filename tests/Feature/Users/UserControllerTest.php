@@ -507,9 +507,39 @@ class UserControllerTest extends FeatureTestCase
                 'extra_permissions' => ['superadmin.all'],
             ]);
 
-        // Request succeeds but extra_permissions are silently dropped
-        $response->assertStatus(201)
-            ->assertJsonPath('extra_permissions', []);
+        // Antes se descartaban en silencio (201 sin efecto); ahora se rechazan.
+        $response->assertStatus(403);
+    }
+
+    public function test_management_puede_crear_sin_permisos_adicionales_y_reenviar_el_mismo_valor_al_editar(): void
+    {
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
+
+        $creado = $this->withHeaders($this->authHeaders($token))->postJson('/api/users', [
+            'first_name' => 'Sin', 'last_name' => 'Cambios', 'email' => 'sin.cambios@atlantic.test',
+            'role_id' => $this->roleId('vendedor'), 'security_level_id' => $this->defaultLevelId(), 'extra_permissions' => [],
+        ])->assertStatus(201);
+
+        // la pantalla reenvía el cuerpo completo: el mismo valor guardado se acepta
+        $this->withHeaders($this->authHeaders($token))->putJson('/api/users/'.$creado->json('id'), [
+            'first_name' => 'Sin', 'extra_permissions' => [], 'additional_role_ids' => [],
+        ])->assertStatus(200);
+    }
+
+    public function test_management_no_puede_cambiar_permisos_adicionales_de_un_usuario_existente(): void
+    {
+        $superadmin = $this->loginAs();
+        $id = $this->withHeaders($this->authHeaders($superadmin))->postJson('/api/users', [
+            'first_name' => 'Con', 'last_name' => 'Permiso', 'email' => 'con.permiso@atlantic.test',
+            'role_id' => $this->roleId('vendedor'), 'security_level_id' => $this->defaultLevelId(), 'extra_permissions' => ['crm.read'],
+        ])->assertStatus(201)->json('id');
+
+        $token = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
+        $this->withHeaders($this->authHeaders($token))->putJson("/api/users/{$id}", ['extra_permissions' => []])->assertStatus(403);
+        $this->withHeaders($this->authHeaders($token))->putJson("/api/users/{$id}", ['extra_permissions' => ['crm.read']])->assertStatus(200);
+
+        // y no se perdió nada
+        $this->withHeaders($this->authHeaders($superadmin))->getJson("/api/users/{$id}")->assertJsonPath('extra_permissions', ['crm.read']);
     }
 
     public function test_extra_permissions_con_valor_fuera_de_catalogo_retorna_422(): void
@@ -606,10 +636,8 @@ class UserControllerTest extends FeatureTestCase
                 'additional_role_ids' => [$this->roleId('lider_servicios')],
             ]);
 
-        // Request succeeds (role_id sigue siendo asignable), pero additional_role_ids se ignora
-        $response->assertStatus(201)
-            ->assertJsonPath('role_id', $this->roleId('vendedor'))
-            ->assertJsonPath('additional_role_ids', []);
+        // Antes el rol adicional se descartaba en silencio (201 sin efecto); ahora se rechaza.
+        $response->assertStatus(403);
     }
 
     public function test_actor_no_superadmin_no_puede_asignar_role_id_de_rol_superadmin_al_crear_retorna_403(): void
@@ -674,8 +702,8 @@ class UserControllerTest extends FeatureTestCase
                 'additional_role_ids' => [$this->roleId('lider_servicios')],
             ]);
 
-        $response->assertStatus(200)
-            ->assertJsonPath('additional_role_ids', []);
+        // Antes se descartaba en silencio (200 sin efecto); ahora se rechaza.
+        $response->assertStatus(403);
     }
 
     public function test_actor_no_superadmin_no_puede_asignar_role_id_de_rol_superadmin_al_editar_retorna_403(): void

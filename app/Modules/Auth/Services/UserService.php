@@ -60,6 +60,29 @@ final class UserService
     }
 
     /**
+     * Permisos adicionales y roles adicionales son exclusivos de superadmin. Antes, si otra cuenta los enviaba se DESCARTABAN en silencio (200 sin efecto);
+     * ahora se rechaza cuando el valor enviado cambia lo guardado. Reenviar el mismo valor se acepta: la pantalla suele mandar el cuerpo completo.
+     *
+     * @param list<int|string> $enviado
+     * @param list<int|string> $guardado
+     * @throws \DomainException si no es superadmin y el valor enviado difiere del guardado
+     */
+    private function assertSuperadminOnly(string $campo, array $enviado, array $guardado, bool $actorHasSuperadmin): void
+    {
+        if ($actorHasSuperadmin) {
+            return;
+        }
+
+        $a = array_map('strval', $enviado);
+        $b = array_map('strval', $guardado);
+        sort($a);
+        sort($b);
+        if ($a !== $b) {
+            throw new \DomainException("Solo un superadmin puede asignar {$campo}.");
+        }
+    }
+
+    /**
      * Fase D, blocker de Senior Review 2026-07-13 — role_id (rol base) no tenía el mismo gate
      * que additional_role_ids/extra_permissions: un actor sin superadmin.all podía asignar un
      * rol con is_superadmin=true vía role_id y escalar privilegios. Mismo patrón de guardia que
@@ -115,6 +138,8 @@ final class UserService
         }
 
         $this->assertRoleAssignable($data['role_id'] ?? null, $actorHasSuperadmin);
+        $this->assertSuperadminOnly('permisos adicionales', $data['extra_permissions'] ?? [], [], $actorHasSuperadmin);
+        $this->assertSuperadminOnly('roles adicionales', $data['additional_role_ids'] ?? [], [], $actorHasSuperadmin);
 
         $user = DB::transaction(function () use ($data, $defaultLevelId, $actorHasSuperadmin): User {
             /** @var User $user */
@@ -205,6 +230,13 @@ final class UserService
 
         if (array_key_exists('role_id', $data)) {
             $this->assertRoleAssignable($data['role_id'], $actorHasSuperadmin);
+        }
+
+        if (array_key_exists('extra_permissions', $data)) {
+            $this->assertSuperadminOnly('permisos adicionales', $data['extra_permissions'] ?? [], $user->extra_permissions ?? [], $actorHasSuperadmin);
+        }
+        if (array_key_exists('additional_role_ids', $data)) {
+            $this->assertSuperadminOnly('roles adicionales', $data['additional_role_ids'] ?? [], $user->additionalRoles()->pluck('role_id')->all(), $actorHasSuperadmin);
         }
 
         return DB::transaction(function () use ($user, $data, $actorHasSuperadmin): User {
