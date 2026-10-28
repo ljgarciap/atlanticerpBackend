@@ -61,7 +61,7 @@ final class SuggestActionsJob extends BaseAiJob
             "Valor: $" . number_format((float) ($project->valor ?? 0), 0, '.', ','),
             "Días para entrega: " . ($daysToDelivery !== null ? $daysToDelivery : 'Sin fecha definida'),
             "Días desde última actividad: " . ($daysSinceActivity !== null ? $daysSinceActivity : 'Sin actividades'),
-            "DiALux requerido: " . ($project->dialux ? 'Sí — pendiente de verificar' : 'No'),
+            "Estudio técnico requerido: " . ($project->requires_technical_study ? 'Sí — pendiente de verificar' : 'No'),
         ];
 
         $assigneeNames = $project->assignees->map(fn (User $u) => "{$u->first_name} {$u->last_name}")->join(', ');

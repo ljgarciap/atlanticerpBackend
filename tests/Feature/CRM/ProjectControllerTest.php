@@ -17,7 +17,7 @@ class ProjectControllerTest extends FeatureTestCase
             'nombre'        => "Proyecto Test{$suffix}",
             'tipo'          => 'ambos',
             'etapa'         => 'lead',
-            'dialux'        => false,
+            'requires_technical_study'        => false,
             'contacto'      => 'Cliente Test',
             'email'         => "cliente{$suffix}@test.com",
             'valor'         => 50000,
@@ -114,7 +114,7 @@ class ProjectControllerTest extends FeatureTestCase
 
         $response->assertStatus(201);
         $response->assertJsonStructure([
-            'id', 'nombre', 'tipo', 'etapa', 'dialux',
+            'id', 'nombre', 'tipo', 'etapa', 'requires_technical_study',
             'urgency', 'freshness', 'assignees', 'latest_activity',
         ]);
         $response->assertJsonPath('nombre', 'Proyecto Test_create');

@@ -27,7 +27,7 @@ class StoreProjectRequest extends FormRequest
             'encargado'      => ['nullable', 'string', 'max:255'],
             'developer'      => ['nullable', 'string', 'max:255'],
             'arquitecto'     => ['nullable', 'string', 'max:255'],
-            'dialux'         => ['nullable', 'boolean'],
+            'requires_technical_study'         => ['nullable', 'boolean'],
             'area'           => ['nullable', 'string', 'max:100'],
             'despacho'       => ['nullable', 'string', 'max:100'],
             'ubicacion'      => ['nullable', 'string', 'max:255'],

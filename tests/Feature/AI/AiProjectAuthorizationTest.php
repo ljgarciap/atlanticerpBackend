@@ -39,7 +39,7 @@ class AiProjectAuthorizationTest extends FeatureTestCase
     private function proyecto(string $token, array $assignees = []): int
     {
         return (int) $this->withHeaders($this->authHeaders($token))->postJson('/api/crm/projects', [
-            'nombre' => 'PROYECTO-CONFIDENCIAL-XYZ', 'tipo' => 'ambos', 'etapa' => 'lead', 'dialux' => false,
+            'nombre' => 'PROYECTO-CONFIDENCIAL-XYZ', 'tipo' => 'ambos', 'etapa' => 'lead', 'requires_technical_study' => false,
             'assignee_ids' => $assignees, 'contacto' => 'Cliente VIP', 'notas' => 'margen 38 por ciento',
         ])->assertStatus(201)->json('id');
     }

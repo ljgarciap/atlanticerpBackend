@@ -16,7 +16,7 @@ class DashboardControllerTest extends FeatureTestCase
             'nombre'       => "Proyecto Dashboard {$etapa}",
             'tipo'         => 'ambos',
             'etapa'        => $etapa,
-            'dialux'       => false,
+            'requires_technical_study'       => false,
             'assignee_ids' => [],
         ];
 
@@ -52,7 +52,7 @@ class DashboardControllerTest extends FeatureTestCase
                 'contacto'      => 'Cliente de Prueba',
                 'tipo'          => 'ambos',
                 'etapa'         => $etapa,
-                'dialux'        => false,
+                'requires_technical_study'        => false,
                 'fecha_entrega' => $fechaEntrega,
                 'assignee_ids'  => [],
             ]);

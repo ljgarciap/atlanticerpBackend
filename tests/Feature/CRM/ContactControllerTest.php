@@ -29,7 +29,7 @@ class ContactControllerTest extends FeatureTestCase
             ->postJson('/api/crm/projects', array_merge([
                 'nombre'       => 'Proyecto Contacto',
                 'tipo'         => 'diseno',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => [],
             ], $extra));
 

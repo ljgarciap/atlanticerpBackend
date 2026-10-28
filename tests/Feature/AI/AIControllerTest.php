@@ -27,7 +27,7 @@ class AIControllerTest extends FeatureTestCase
                 'nombre'       => 'Proyecto AI Test',
                 'tipo'         => 'diseno',
                 'etapa'        => 'lead',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'contacto'     => 'Cliente AI',
                 'valor'        => 100000,
                 'assignee_ids' => [],

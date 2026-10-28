@@ -48,7 +48,7 @@ final class ExternalServiceFailureTest extends FeatureTestCase
     private function createProject(string $token): int
     {
         $r = $this->withHeaders($this->authHeaders($token))->postJson('/api/crm/projects', [
-            'nombre' => 'Proyecto Caos', 'tipo' => 'ambos', 'etapa' => 'lead', 'dialux' => false, 'assignee_ids' => [],
+            'nombre' => 'Proyecto Caos', 'tipo' => 'ambos', 'etapa' => 'lead', 'requires_technical_study' => false, 'assignee_ids' => [],
         ]);
         $r->assertStatus(201);
 

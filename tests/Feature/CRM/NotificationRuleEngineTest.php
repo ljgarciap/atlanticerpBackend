@@ -25,7 +25,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
                 'nombre'       => 'Proyecto Reglas',
                 'tipo'         => 'ambos',
                 'etapa'        => 'lead',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => [],
             ], $overrides));
         $response->assertStatus(201);
@@ -194,7 +194,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($mgmtToken))
             ->putJson("/api/crm/projects/{$projectId}", [
-                'nombre' => 'Proyecto Reglas', 'tipo' => 'ambos', 'etapa' => 'lead', 'dialux' => false, 'valor' => 150000,
+                'nombre' => 'Proyecto Reglas', 'tipo' => 'ambos', 'etapa' => 'lead', 'requires_technical_study' => false, 'valor' => 150000,
             ])
             ->assertStatus(200);
 
@@ -217,7 +217,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($mgmtToken))
             ->putJson("/api/crm/projects/{$projectId}", [
-                'nombre' => 'Proyecto Reglas', 'tipo' => 'ambos', 'etapa' => 'lead', 'dialux' => false, 'valor' => 90000,
+                'nombre' => 'Proyecto Reglas', 'tipo' => 'ambos', 'etapa' => 'lead', 'requires_technical_study' => false, 'valor' => 90000,
             ])
             ->assertStatus(200);
 

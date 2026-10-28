@@ -85,6 +85,7 @@ final class NeutralidadDelRepoTest extends TestCase
 
     public function test_cada_dueno_de_excepciones_temporales_sigue_teniendo_al_menos_un_uso(): void
     {
+        $this->addToAssertionCount(1); // la lista puede estar vacía (Fase 9: catálogo de productos genérico)
         // Una fase terminada deja de tener usos: entonces su excepción debe borrarse (el contrato solo puede encogerse).
         $contenido = '';
         foreach ($this->archivos() as $rel) {

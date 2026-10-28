@@ -43,7 +43,7 @@ class PromptInjectionIntegrationTest extends FeatureTestCase
                 'nombre'       => 'Proyecto Injection Test',
                 'tipo'         => 'diseno',
                 'etapa'        => 'lead',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'contacto'     => 'Cliente Test',
                 'valor'        => 50000,
                 'notas'        => $notas,

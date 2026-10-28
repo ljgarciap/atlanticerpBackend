@@ -59,7 +59,7 @@ final class SummarizeProjectJob extends BaseAiJob
             "Área: " . (($project->area ?? '') !== '' ? "{$project->area} m²" : 'N/A'),
             "Ubicación: " . ($project->ubicacion ?? 'N/A'),
             "Días para entrega: " . ($daysToDelivery !== null ? $daysToDelivery : 'Sin fecha'),
-            "DiALux requerido: " . ($project->dialux ? 'Sí' : 'No'),
+            "Estudio técnico requerido: " . ($project->requires_technical_study ? 'Sí' : 'No'),
         ];
 
         $assigneeNames = $project->assignees->map(fn (User $u) => "{$u->first_name} {$u->last_name}")->join(', ');

@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string|null                  $developer
  * @property string|null                  $arquitecto
  * @property string                       $tipo
- * @property bool                         $dialux
+ * @property bool                         $requires_technical_study
  * @property string|null                  $area
  * @property string|null                  $despacho
  * @property string|null                  $ubicacion
@@ -52,7 +52,7 @@ class Project extends Model
         'developer',
         'arquitecto',
         'tipo',
-        'dialux',
+        'requires_technical_study',
         'area',
         'despacho',
         'ubicacion',
@@ -67,7 +67,7 @@ class Project extends Model
     protected function casts(): array
     {
         return [
-            'dialux'        => 'boolean',
+            'requires_technical_study'        => 'boolean',
             'valor'         => 'float',
             'fecha_entrega' => 'date',
         ];

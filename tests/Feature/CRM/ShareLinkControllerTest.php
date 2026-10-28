@@ -40,7 +40,7 @@ class ShareLinkControllerTest extends FeatureTestCase
                 'nombre'       => 'Proyecto Share Links',
                 'tipo'         => 'ambos',
                 'etapa'        => 'lead',
-                'dialux'       => false,
+                'requires_technical_study'       => false,
                 'assignee_ids' => $assigneeIds,
             ]);
         $response->assertStatus(201);
