@@ -21,26 +21,23 @@ use Illuminate\Support\Facades\DB;
  * promedio automático") — este seeder solo siembra el punto de partida, nunca
  * pisa un valor ya ajustado manualmente.
  *
- * "MAURICIO" del ticket original no corresponde a ningún vendedor real
- * (BusinessRoleUserSeeder no tiene ese nombre) — decisión de Luis (2026-07-29):
- * esos valores ($812.48/$700,000) son de Vendedor Test 5 (vendedor5@test.com).
- * Vendedor "Vendedor" Vendedor (vendedor6@test.com) queda sin Meta configurada — el
- * ticket no trae su valor real, pendiente de que Luis lo confirme por separado.
+ * Metas de ejemplo para las cuentas demo `vendedor[N]@test.com`. `vendedor6@test.com` queda sin Meta
+ * configurada a propósito (cubre el caso «vendedor sin meta»).
  */
 class VentasDisenoSalesGoalsSeeder extends Seeder
 {
     /** @var array<string, array{goal_amount: float, goal_plus_amount: float}> */
     private const GOALS_BY_EMAIL = [
-        'vendedor8@test.com' => ['goal_amount' => 4328.87, 'goal_plus_amount' => 1500000.00], // JUANMA
-        'vendedor9@test.com' => ['goal_amount' => 494.60,  'goal_plus_amount' => 420000.00],  // BERNARDO
-        'vendedor5@test.com' => ['goal_amount' => 812.48,  'goal_plus_amount' => 700000.00],  // "MAURICIO" del ticket -> Vendedor (decisión Luis 2026-07-29)
-        'vendedor10@test.com' => ['goal_amount' => 951.07,  'goal_plus_amount' => 700000.00],  // IDMAR
-        'vendedor2@test.com' => ['goal_amount' => 603.28,  'goal_plus_amount' => 420000.00],  // NEIL
-        'vendedor@test.com' => ['goal_amount' => 779.10,  'goal_plus_amount' => 420000.00],  // MILE
-        'vendedor3@test.com' => ['goal_amount' => 750.00,  'goal_plus_amount' => 420000.00],  // FEFI
-        'vendedor7@test.com' => ['goal_amount' => 1116.47, 'goal_plus_amount' => 700000.00],  // MARIBEL
-        'vendedor4@test.com' => ['goal_amount' => 533.30,  'goal_plus_amount' => 420000.00],  // VANESSA
-        // vendedor6@test.com — sin valor real en el ticket, pendiente de Luis.
+        'vendedor8@test.com' => ['goal_amount' => 4328.87, 'goal_plus_amount' => 1500000.00],
+        'vendedor9@test.com' => ['goal_amount' => 494.60,  'goal_plus_amount' => 420000.00],
+        'vendedor5@test.com' => ['goal_amount' => 812.48,  'goal_plus_amount' => 700000.00],
+        'vendedor10@test.com' => ['goal_amount' => 951.07,  'goal_plus_amount' => 700000.00],
+        'vendedor2@test.com' => ['goal_amount' => 603.28,  'goal_plus_amount' => 420000.00],
+        'vendedor@test.com' => ['goal_amount' => 779.10,  'goal_plus_amount' => 420000.00],
+        'vendedor3@test.com' => ['goal_amount' => 750.00,  'goal_plus_amount' => 420000.00],
+        'vendedor7@test.com' => ['goal_amount' => 1116.47, 'goal_plus_amount' => 700000.00],
+        'vendedor4@test.com' => ['goal_amount' => 533.30,  'goal_plus_amount' => 420000.00],
+        // vendedor6@test.com — sin meta a propósito.
     ];
 
     public function run(): void
