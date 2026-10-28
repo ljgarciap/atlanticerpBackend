@@ -52,6 +52,12 @@ class AppServiceProvider extends ServiceProvider
         // SCRUM-1178 — SES con el rol de la instancia (ver SesRoleTransport).
         \Illuminate\Support\Facades\Mail::extend('ses-role', fn (array $config) => \App\Shared\Mail\SesRoleTransport::make());
 
+        // Desarrollo local (stack de Docker): nginx pasa HTTP_HOST sin puerto, así que las URLs que arma la app (p. ej. las firmadas del
+        // almacenamiento local) saldrían sin el puerto publicado. En `local` la raíz canónica es APP_URL.
+        if (app()->isLocal() && ! app()->runningInConsole()) {
+            \Illuminate\Support\Facades\URL::forceRootUrl((string) config('app.url'));
+        }
+
         // Fail loud if FRONTEND_URL was never set — catches misconfigured deploys before emails break.
         if (! app()->isLocal() && ! app()->runningInConsole() && str_contains((string) config('app.frontend_url'), 'localhost')) {
             throw new \RuntimeException('FRONTEND_URL must be set to the public domain in non-local environments (current value points to localhost).');

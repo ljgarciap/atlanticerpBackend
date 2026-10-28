@@ -48,6 +48,8 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
+        <!-- Los tests no dependen del .env de desarrollo: los discos s3-* se simulan siempre como S3 (STORAGE_DRIVER=local es solo para desarrollo). -->
+        <env name="STORAGE_DRIVER" value="s3" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
