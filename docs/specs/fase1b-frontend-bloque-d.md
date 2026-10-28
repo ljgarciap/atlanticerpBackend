@@ -62,7 +62,7 @@ Renombrar roles (Fase 3), Fase E del ADR-006 (Fase 2), tocar permisos del backen
 2. **`ReportsCommissionSection`**: además de `isManagement`, el acceso depende de ser el técnico con `has_bonus_plan`
    (ver hallazgo de Review: nombre de persona en endpoint/identificadores). Propongo resolverlo junto con 1b:
    gate por `servicios.technicians.commission.view_own` + `platform.management`, y renombrar
-   `comision-carlos-vergara` → `comision-tecnico` en backend y frontend (cambio de contrato de API, coordinado en un solo PR par).
+   `comision-carlos-tecnico` → `comision-tecnico` en backend y frontend (cambio de contrato de API, coordinado en un solo PR par).
 3. ¿Un PR por repo, o 1b en dos PR (guards de `App.tsx` primero, componentes sueltos después)? Recomiendo dos, por el tamaño de revisión.
 
 ## 7. Riesgos
@@ -78,7 +78,7 @@ Rama backend `fase1b/frontend-bloque-d`; frontend 2 PR apilados: `fase1b/guards-
 1. **El alcance real fue mayor que el medido en §2.** La búsqueda original no veía los helpers `canX(role)` que reciben el rol como parámetro. Además de las 30 guardas y las ~12 comparaciones listadas, había ~20 más (Servicios: `TicketsPage`, `HomePage`, `InternalTechniciansPage`, `ExternalTechniciansPage`, `TicketDetailModal`, `ToolsPanel`, `InsumosPanel`, `HomeMonthlyIndicators`, `InternalTechnicianCommissionModal`, `ServiciosSettingsPanel`; Admin & Contab: `ArqueoCajaPage`, `ComisionesExternasPage`, `ReportesPage`, `SolicitudesReversoPanel`; `ReplenishmentPage`, `CatalogPage`). Todas migradas.
 2. **`orGerenciaScope` no se eliminó sin más** (corrige §3): `ApplyGerenciaScope` solo añade `platform.management` / `ventas_diseno.orders.access` a la petición EN EL SERVIDOR, no al `user.permissions` que ve el frontend. Se reemplazó por «`platform.management` **o** `ventas_diseno.gerencia_scope`» (`GUARD.GERENCIA_O_ALCANCE`, `GUARD.PEDIDOS`).
 3. **Mapeo de los helpers sueltos**: `tickets.manage` (agendar, herramientas, insumos, alta de técnico), `tickets.create`, `field_ops.admin` (técnicos externos, captura de comisión), `settings.configure` (ajustes, meta del mes, SLA), `claim_sheets.manage` (plantilla en blanco), `field_work.edit` (informe asignado), `admin_contab.operations/records/oversight.manage`, `ventas_diseno.orders.access`.
-4. **§6.1** → migración `2026_10_24_400000` (permiso `servicios.tools.kardex.view` a `lider_servicios` y `management`, con chequeo de fuga). **§6.2** → `/comision-carlos-vergara` ahora es `/comision-tecnico` (backend y frontend). **§6.3** → dos PR por repo.
+4. **§6.1** → migración `2026_10_24_400000` (permiso `servicios.tools.kardex.view` a `lider_servicios` y `management`, con chequeo de fuga). **§6.2** → `/comision-carlos-tecnico` ahora es `/comision-tecnico` (backend y frontend). **§6.3** → dos PR por repo.
 
 **Excepciones que SIGUEN decidiendo por rol a propósito** (el backend las decide por rol; igualarlas en la UI evita mostrar botones que terminan en 403):
 - `UsersPage`: reset de contraseñas y «Ver como usuario». La ruta pide `permission:superadmin.all`, pero `AdminPasswordResetService::operatorIsStillSuperadmin` revalida en BD el ROL BASE `superadmin` (H3 del threat model).
@@ -92,6 +92,6 @@ Convertirlas requiere cambiar primero el backend (ver §9).
 
 ## 9. Pendientes que salieron de la 1b
 - Backend: `BodegaZonaLibreRequestController` y `AdminPasswordResetService` aún deciden por `role_key` (ver excepciones). Si se quiere cerrar del todo, hay que darles permiso propio antes de tocar el frontend.
-- Nombres de personas que siguen en el código: endpoint `/reports/felix-commission` y `FelixCommissionCard` (Admin & Contab), y el texto i18n «Esta pantalla es exclusiva de Mark» (`CompanyProfilePage`/Fiscal). Entran en la Fase 4 (demo genérica) o antes si Luis lo pide.
+- Nombres de personas que siguen en el código: endpoint `/reports/commission-tiers` y `CommissionTiersCard` (Admin & Contab), y el texto i18n «Esta pantalla es exclusiva de Aprobador» (`CompanyProfilePage`/Fiscal). Entran en la Fase 4 (demo genérica) o antes si Luis lo pide.
 - `usersApi.isMaxPrivilegeUser` inspecciona los roles del usuario OBJETIVO (elegibilidad de impersonación), no un gate de acceso: se dejó.
 - Lección de proceso: el nginx de desarrollo monta `atlanticerp-frontend/dist` por inodo; reemplazar el directorio (`mv`/`rm`) deja al contenedor sirviendo el build viejo. Copiar el contenido EN el mismo directorio (`rsync -a --delete origen/ dist/`) o reiniciar el contenedor.

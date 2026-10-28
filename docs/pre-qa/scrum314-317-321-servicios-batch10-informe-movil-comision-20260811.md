@@ -1,4 +1,4 @@
-# Pre-QA — Batch 10: Informe móvil (SCRUM-314/315/316/317) + Comisión Carlos Vergara (SCRUM-321)
+# Pre-QA — Batch 10: Informe móvil (SCRUM-314/315/316/317) + Comisión Tecnico Test (SCRUM-321)
 
 **Fecha:** 2026-08-11
 **Alcance:** 5 tickets fusionados en un solo pase (Visual Review + Pre-QA, un solo login/seed,
@@ -14,7 +14,7 @@ working tree de `atlanticerp-backend`/`atlanticerp-frontend`. Playwright headles
 (0 tickets, 0 master_clients, 0 capturas de comisión) — nunca se había corrido `db:seed` contra
 este volumen de Postgres. Se corrió `php artisan db:seed --force` (entorno `local`, corre los
 seeders demo por diseño). Esto trajo `ServiciosDemoSeeder` con 14 tickets, incluido
-`INS-2026-0003` (Instalación/Inspección, sin productos, ya asignado a Carlos Vergara vía
+`INS-2026-0003` (Instalación/Inspección, sin productos, ya asignado a Tecnico Test vía
 `internal_technician_id=18`) — usado como fixture principal para todo el batch, sin necesidad de
 crear un ticket nuevo a mano. `InternalTechnicianSeeder` ya deja a Carlos con `has_bonus_plan=true`
 (id=1) y a Miguel con `has_bonus_plan=false` (id=4), cubriendo directamente el escenario negativo
@@ -33,9 +33,9 @@ corrió al final para no interferir con los datos manuales usados en las captura
 | # | Criterio | Escenario ejecutado | Resultado |
 |---|---|---|---|
 | RN1 | Botón "Ver en móvil" solo desde el modal de escritorio | Confirmado — no hay ruta de menú ni acceso independiente; navegando directo a `/servicios/tickets/93/inspection-report/movil` sin pasar por el modal SÍ carga (es una ruta pública dentro del SPA autenticado), pero el criterio real (RN1) habla de "no existe como acceso independiente" en la UI de navegación, no de bloquear la URL — no hay ningún link/botón fuera del modal que lleve ahí | PASA |
-| RN2 | Datos reales precargados (número, cliente, proyecto, dirección, técnico, fecha, producto) | Confirmado con captura real: `TICKET INS-2026-0003`, `CLIENTE Clínica Paitilla`, técnico `Carlos Vergara` precargado en el select — mismo registro (`GET /api/servicios/tickets/93`), no una copia | PASA |
+| RN2 | Datos reales precargados (número, cliente, proyecto, dirección, técnico, fecha, producto) | Confirmado con captura real: `TICKET INS-2026-0003`, `CLIENTE Clínica Paitilla`, técnico `Tecnico Test` precargado en el select — mismo registro (`GET /api/servicios/tickets/93`), no una copia | PASA |
 | RN3 | Optimizado para teléfono, una columna, campos grandes | Confirmado visualmente en viewport 420×900 — una columna, inputs `py-3 text-base` | PASA |
-| **RN4 (camino de ruptura)** | Técnico interno NO asignado a este ticket intenta acceder | **Agustín Rodríguez** (`tecnico_servicios`, no asignado a `INS-2026-0003`, técnico real vía `agustinrodriguez141985@gmail.com`) navegó directo a la URL del informe móvil → pantalla **"No tenés acceso a este informe."** con botón "Volver al ticket", sin renderizar ningún campo del formulario. Verificado ADEMÁS a nivel de API (no solo el gate de UI): `POST /api/servicios/tickets/93/inspection-report/mobile` directo con `fetch()` autenticado como Agustín → **403** `"Solo Aaron/Líder de Servicios o el técnico interno asignado a este ticket pueden generar o editar su informe de inspección."` | **PASA — dos capas de gate confirmadas (UI + API), no solo un botón escondido** |
+| **RN4 (camino de ruptura)** | Técnico interno NO asignado a este ticket intenta acceder | **[persona] [persona]** (`tecnico_servicios`, no asignado a `INS-2026-0003`, técnico real vía `agustinrodriguez141985@gmail.com`) navegó directo a la URL del informe móvil → pantalla **"No tenés acceso a este informe."** con botón "Volver al ticket", sin renderizar ningún campo del formulario. Verificado ADEMÁS a nivel de API (no solo el gate de UI): `POST /api/servicios/tickets/93/inspection-report/mobile` directo con `fetch()` autenticado como [persona] → **403** `"Solo Aaron/Líder de Servicios o el técnico interno asignado a este ticket pueden generar o editar su informe de inspección."` | **PASA — dos capas de gate confirmadas (UI + API), no solo un botón escondido** |
 
 ### Hallazgo menor, NO bloqueante — `fields()` sin `assertCanEdit()`
 `GET /api/servicios/tickets/{id}/inspection-report/fields` (catálogo de campos, solo labels/tipos,
@@ -53,7 +53,7 @@ registrado que se verificó, no como hallazgo nuevo.
 |---|---|---|---|
 | RN1 | Mismos campos/reglas dinámicas que escritorio | Confirmado — `fieldsForTicket()` es el MISMO catálogo backend que usa el modal de escritorio (mismo servicio, no una copia) | PASA |
 | RN2 | Material con nombre/cantidad reales, no genérico | Se agregó "Cinta aislante" / "2" vía el formulario móvil → persistido tal cual en el registro y visible después en el modal de escritorio y en el PDF | PASA |
-| RN3 | Técnico responsable precargado | Confirmado (select mostró "Carlos Vergara" ya seleccionado al abrir) | PASA |
+| RN3 | Técnico responsable precargado | Confirmado (select mostró "Tecnico Test" ya seleccionado al abrir) | PASA |
 | **RN4 (camino de ruptura)** | "Guardar informe" NO debe persistir nada hasta firmar | Se llenó el formulario completo y se hizo click en "Continuar a firmar" — **cero requests POST/PUT disparados en ese momento** (solo GETs de lectura, confirmado por log de red). El único POST real (`/inspection-report/mobile`) ocurrió recién al confirmar la firma en el paso siguiente. Además, se intentó avanzar con el campo de firma vacío → bloqueado con toast, sin ningún request tampoco | PASA |
 
 ## SCRUM-316 (REQ-253) — Firma gráfica
@@ -86,7 +86,7 @@ Inspección (genera el PDF real del informe, con la firma). El primer intento de
 descargó el equivocado — quedó documentado acá para que quien retome este flujo (ej. QA formal)
 no repita la confusión.
 
-## SCRUM-321 (REQ-258) — Comisión Carlos Vergara
+## SCRUM-321 (REQ-258) — Comisión Tecnico Test
 
 | # | Criterio | Escenario ejecutado | Resultado |
 |---|---|---|---|
@@ -95,22 +95,22 @@ no repita la confusión.
 | RN3 | SLA 100% automático | Confirmado — no hay ningún campo de captura para SLA en el formulario; el desglose de resultado sí lo muestra calculado (0% en este caso, por falta de tickets cerrados en el período — comportamiento correcto de `convertSla()`, no un bug) | PASA |
 | **RN5 (camino de ruptura/regla especial)** | Licencia médica → Puntualidad a 0%, redistribución proporcional entre los otros 4 | Se capturó un período distinto (julio 2026, vía el selector "◀"/"▶" del modal — RN5 de REQ-292 también verificado de paso) con el checkbox de licencia médica marcado → **Total $272.94**, desglose devuelto por la API: `monto_max` de calidad/satisfacción/SLA subió de $100 a **$117.65** cada uno, actitud de $40 a **$47.06**, puntualidad quedó en `monto_max=0`/`monto_obtenido=0` — matemática de redistribución PROPORCIONAL (no igualitaria) verificada exactamente: $100 + 60×(100/340) = $117.647 ≈ $117.65. Suma de los 5 `monto_max` = $400.01 (redondeo de centavos, el techo estructural se mantiene) | PASA |
 | RN6 | Techo $400 | Confirmado en ambos escenarios — la suma de montos máximos nunca excede $400 (con o sin redistribución) | PASA |
-| RN7 | Solo Carlos tiene el plan | Confirmado — Miguel Castillo (`has_bonus_plan=false`) no muestra NINGÚN bloque de comisión en su tarjeta, ni para Aaron ni para Daniela ni para Miguel mismo | PASA |
-| **RN8 (camino de ruptura, el más crítico del batch)** | Aaron puede capturar pero NUNCA ver el resultado | Verificado en 3 capas: (1) **UI** — tarjeta de Carlos vista por Aaron muestra solo el botón "Comisión del mes" (captura), nunca el mini-indicador con el monto, ni antes ni después de capturar valores; (2) **UI positiva** — Carlos viendo su propia tarjeta ve "Ver comisión" (resultado) y NO ve el botón de captura; Daniela (Gerencia) ve AMBOS botones; (3) **API directa** — `GET /api/servicios/internal-technicians/1/commission` con el token real de Aaron → **403** `"No tienes permiso para realizar esta acción."` (rechazado ya en el middleware de ruta, `role:superadmin,management,tecnico_servicios,garantias_servicios` excluye explícitamente a `lider_servicios`) | **PASA — verificado en las 3 capas, no solo un botón escondido en el frontend** |
+| RN7 | Solo Carlos tiene el plan | Confirmado — Miguel [persona] (`has_bonus_plan=false`) no muestra NINGÚN bloque de comisión en su tarjeta, ni para Aaron ni para Gerencia1 ni para Miguel mismo | PASA |
+| **RN8 (camino de ruptura, el más crítico del batch)** | Aaron puede capturar pero NUNCA ver el resultado | Verificado en 3 capas: (1) **UI** — tarjeta de Carlos vista por Aaron muestra solo el botón "Comisión del mes" (captura), nunca el mini-indicador con el monto, ni antes ni después de capturar valores; (2) **UI positiva** — Carlos viendo su propia tarjeta ve "Ver comisión" (resultado) y NO ve el botón de captura; Gerencia1 (Gerencia) ve AMBOS botones; (3) **API directa** — `GET /api/servicios/internal-technicians/1/commission` con el token real de Aaron → **403** `"No tienes permiso para realizar esta acción."` (rechazado ya en el middleware de ruta, `role:superadmin,management,tecnico_servicios,garantias_servicios` excluye explícitamente a `lider_servicios`) | **PASA — verificado en las 3 capas, no solo un botón escondido en el frontend** |
 | RN9 | Desglose con peso/%/monto por criterio | Confirmado — tabla completa en el modal de Carlos: 5 filas, columnas Peso/% obtenido/Monto, coincide con la respuesta de la API | PASA |
 
 ## Extra — "Ajustes de Servicios" (`/servicios/ajustes`, sin ticket de Jira)
 
 | # | Criterio (de la spec de la tarea, no de Jira) | Escenario ejecutado | Resultado |
 |---|---|---|---|
-| Positivo | Gerencia/superadmin puede editar y guardar | Daniela cambió "Días sin agendar" de 3 a 4, guardó, recargó la página → el valor persistió en 4 (confirmado vía `GET /api/servicios/settings` tras reload). Revertido a 3 al terminar para dejar el entorno limpio | PASA |
+| Positivo | Gerencia/superadmin puede editar y guardar | Gerencia1 cambió "Días sin agendar" de 3 a 4, guardó, recargó la página → el valor persistió en 4 (confirmado vía `GET /api/servicios/settings` tras reload). Revertido a 3 al terminar para dejar el entorno limpio | PASA |
 | Positivo | `lider_servicios`/técnicos ven la pantalla pero deshabilitada | Aaron ve los 21 campos con texto atenuado (`disabled`, `opacity-50`), nota explícita **"Solo Gerencia puede editar estos valores."**, sin botón "Guardar cambios" renderizado (no solo deshabilitado — no existe en el DOM para este rol) | PASA |
 | **Camino de ruptura (pedido explícito de la tarea)** | `lider_servicios` intenta `PATCH /api/servicios/settings` directo, sin pasar por el frontend | `fetch()` autenticado como Aaron con `{ commission_calidad_peso: 999 }` → **403** `"No tienes permiso para realizar esta acción."` — el gate real está en la ruta (`role:superadmin,management`), no depende de que el frontend esconda el botón | **PASA** |
 
 ### Hallazgo MEDIO, no bloqueante para los 5 tickets de Jira — sin validación de rango en `PATCH /settings`
 Probando adversarialmente valores fuera de rango (Paso 3 de Pre-QA, "input inválido"), con las
 keys REALES del schema (`commission_peso_calidad_pct: -25`, `sla_dias_installation: -7`) enviados
-por **Daniela** (usuario CON permiso, no un problema de rol): la API respondió **200**, aceptó y
+por **Gerencia1** (usuario CON permiso, no un problema de rol): la API respondió **200**, aceptó y
 persistió los valores negativos sin ningún error de validación. Revisado el código
 (`ServiciosSettingsController::update()` solo valida `is_numeric()`, ningún `min:`) — confirma que
 no hay ningún guardrail server-side de rango. El único freno hoy es el `min={0}` HTML del input en

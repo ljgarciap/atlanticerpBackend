@@ -1,6 +1,6 @@
 # SCRUM-1115 — Proyecto restaurado desde Perdido: partir de la cotización existente
 
-**Ticket:** SCRUM-1115 (reporta marly.rangel, prioridad High, épica SCRUM-731). **Estado:** spec pendiente de aprobación de Luis (2026-10-07).
+**Ticket:** SCRUM-1115 (reporta qa.qa, prioridad High, épica SCRUM-731). **Estado:** spec pendiente de aprobación de Luis (2026-10-07).
 **Decisiones ya tomadas por Luis:** D1 alcance = solo "nueva versión" (sin atajo para volver a Cotización sin documento nuevo);
 D2 comportamiento = "Crear cotización" PREGUNTA siempre cuando el proyecto ya tiene una cotización confirmada.
 

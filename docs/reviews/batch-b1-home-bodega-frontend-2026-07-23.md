@@ -132,7 +132,7 @@ faltantes de un lado ni del otro.
 `ajuste_inventario_pendiente` → alta, `guia_sin_subir` → media. Confirmé contra
 `BodegaHomeService::pendientes()` (backend) que efectivamente no hay ningún campo `prioridad` en el
 payload real — es 100% una decisión de presentación tomada en este batch. Encuentro razonable el
-criterio (ambos casos "alta" bloquean un flujo — despacho o una aprobación de Mark — mientras
+criterio (ambos casos "alta" bloquean un flujo — despacho o una aprobación de Aprobador — mientras
 "guía sin subir" es papeleo de cierre sobre un pedido ya entregado), y está documentado en 3
 lugares distintos con la misma advertencia explícita ("a confirmar con Luis/Analista si no era la
 intención"): `types/bodega.ts:310-313`, `BodegaHomePage.tsx:19-24` y

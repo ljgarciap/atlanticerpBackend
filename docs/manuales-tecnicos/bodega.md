@@ -23,12 +23,12 @@ Bodega gestiona el movimiento físico de la mercancía y su registro:
 | **Inventario de Bodega** | Pantalla de solo lectura del catálogo con "por servir" propio (pedidos de Bodega), por ingresar, en camino y confirmación de llegada física. |
 | **Bodegas** | Las 7 bodegas físicas, ubicaciones, espacio libre y stock por bodega. |
 | **Kardex** | Registro inmutable de todos los movimientos de stock. |
-| **Ajustes, reubicaciones y conteos** | Solicitudes que Mark aprueba y que modifican el stock a través del Kardex. |
+| **Ajustes, reubicaciones y conteos** | Solicitudes que Aprobador aprueba y que modifican el stock a través del Kardex. |
 | **Devoluciones de cliente** | Ciclo completo, desde una guía de entrega real hasta la nota de crédito. |
 | **Zona Libre** | Solicitudes de orden de compra al proveedor "Zona Libre de Colón" y catálogo de solo consulta de Lafayette Lighting. |
 | **Home, reportes y ajustes** | Inicio con paneles, cuatro reportes y umbrales configurables. |
 
-**Quiénes lo usan.** Los cuatro roles propios (`App\Modules\Bodega\Support\BodegaRoles`): `lider_bodega` (jefe), `asistente_bodega`, `ayudante_general_bodega` (el *picker*) y `transporte` (el repartidor). No hay modelos de picker ni de repartidor: son usuarios con ese rol. Mark (configurado en `ComprasSettings`, ver el manual de Compras) aprueba ajustes, reubicaciones y conteos. Gerencia y Ventas & Diseño consultan.
+**Quiénes lo usan.** Los cuatro roles propios (`App\Modules\Bodega\Support\BodegaRoles`): `lider_bodega` (jefe), `asistente_bodega`, `ayudante_general_bodega` (el *picker*) y `transporte` (el repartidor). No hay modelos de picker ni de repartidor: son usuarios con ese rol. Aprobador (configurado en `ComprasSettings`, ver el manual de Compras) aprueba ajustes, reubicaciones y conteos. Gerencia y Ventas & Diseño consultan.
 
 **Qué no es Bodega.** Los pedidos nacen en Ventas & Diseño (`PipelineService::passToOrder()`, SCRUM-1128). Las órdenes de compra son de Compras. La factura es de Admin & Contabilidad: Bodega solo la lee. El catálogo de productos (`CatalogProduct`) es de Ventas & Diseño.
 
@@ -204,15 +204,15 @@ Tabla clave-valor editable en `/bodega/configuracion` (solo superadmin en la int
 - "Confirmar llegada física" (`ArrivalConfirmationService`) es el paso 1 de un flujo de dos: Bodega avisa la cantidad realmente contada; **solo Compras** factura al inventario (paso 2).
 
 **Ajustes, reubicaciones y conteos**
-- **Ajuste y reubicación:** Bodega solicita, Mark aprueba o rechaza, y aprobar aplica el stock **de inmediato** vía Kardex.
-- **Conteo general:** aprobar y aplicar son **dos pasos separados**. `store` precarga el stock de la bodega, `evaluate` calcula diferencias, `submit` lo manda a aprobación, `approve`/`reject` lo resuelve Mark y `apply` escribe en el Kardex.
+- **Ajuste y reubicación:** Bodega solicita, Aprobador aprueba o rechaza, y aprobar aplica el stock **de inmediato** vía Kardex.
+- **Conteo general:** aprobar y aplicar son **dos pasos separados**. `store` precarga el stock de la bodega, `evaluate` calcula diferencias, `submit` lo manda a aprobación, `approve`/`reject` lo resuelve Aprobador y `apply` escribe en el Kardex.
 - **Duplicados:** al crear un ajuste se detecta colisión con otra línea pendiente del mismo producto y bodega (mismo tipo: se puede reemplazar con confirmación; cruzado con un conteo sin resolver: solo se avisa). Un conflicto sin confirmar lanza `AdjustmentDuplicateConflictException` dentro de la transacción para que se revierta todo.
-- **Quién aprueba** lo decide `AprobacionGate::canAct($user, $tipo)` (tipos `adjustment`, `relocation`, `general_count`): Mark, un superadmin o un usuario con una regla de aprobación activa para ese tipo. Si `primary_approver_user_id` es nulo, no se bloquea a nadie.
+- **Quién aprueba** lo decide `AprobacionGate::canAct($user, $tipo)` (tipos `adjustment`, `relocation`, `general_count`): Aprobador, un superadmin o un usuario con una regla de aprobación activa para ese tipo. Si `primary_approver_user_id` es nulo, no se bloquea a nadie.
 
 **Devoluciones**
 - Se crea siempre a partir de una guía de entrega real (`order_id` obligatorio; no existen devoluciones libres). La cantidad solicitada de cada línea no puede superar lo realmente entregado (`qty_delivered`). Los motivos son un catálogo fijo.
 - Confirmar la recepción física suma al inventario vía Kardex en una sola bodega destino, puede recibir cantidades distintas a las solicitadas y sella el aviso de nota de crédito.
-- Rechazar es potestad exclusiva de Bodega (sin aprobación de Mark). `finalizeForCreditNote()` lo llama Admin & Contabilidad al emitir la nota.
+- Rechazar es potestad exclusiva de Bodega (sin aprobación de Aprobador). `finalizeForCreditNote()` lo llama Admin & Contabilidad al emitir la nota.
 
 **Zona Libre**
 - Bodega crea la solicitud solo con productos del proveedor fijo de Zona Libre (`ComprasSettings.zona_libre_provider_id`), con el costo congelado por línea. Mientras esté `pendiente` la puede modificar quien tenga el rol `lider_bodega` o el permiso `compras.zona-libre.approve` (el "Líder de Compras" se reconoce por ese permiso, no por el rol). Compras la aprueba o rechaza (ver el manual de Compras). `remind` envía correo y notificación interna a todos los usuarios activos con rol `lider_compras` vía `NotificationService` (patrón de audiencia por rol que sirve de modelo para cualquier aviso nuevo).
@@ -259,13 +259,13 @@ sequenceDiagram
   B->>API: POST /adjustment-requests (motivo, evidencia, N bodegas)
   Note over API: detecta duplicados y pide confirmar reemplazo
   API->>G: canAct(user, adjustment)
-  G-->>API: Mark / regla / superadmin
+  G-->>API: Aprobador / regla / superadmin
   API->>K: registrar(Ajuste, ±cantidad) por línea aprobada
 ```
 
 ### 5.3 Conteo general
 
-`store` (precarga la bodega completa) → `evaluate` (calcula diferencia por línea, repetible) → `submit` (pasa a `pendiente_aprobacion`, limpia solicitudes de ajuste cruzadas) → `approve` o `reject` (Mark) → `apply` (escribe los ajustes en el Kardex). También existen `continue` (retomar un borrador) y `destroy`.
+`store` (precarga la bodega completa) → `evaluate` (calcula diferencia por línea, repetible) → `submit` (pasa a `pendiente_aprobacion`, limpia solicitudes de ajuste cruzadas) → `approve` o `reject` (Aprobador) → `apply` (escribe los ajustes en el Kardex). También existen `continue` (retomar un borrador) y `destroy`.
 
 ### 5.4 Puente con Compras
 
@@ -483,7 +483,7 @@ Solo existe un Form Request: **`BodegaSettingsRequest`** (reglas `sometimes` par
 |---|---|
 | `bodega.read` | Todas las lecturas del módulo (hoy: la mayoría de las pantallas). |
 | `bodega.write` | Operar: picking, entregas, solicitudes, devoluciones, conteos, mapeo y ubicaciones. |
-| `bodega.approve` | Aprobar o rechazar ajustes, reubicaciones y conteos (además del gate de Mark). |
+| `bodega.approve` | Aprobar o rechazar ajustes, reubicaciones y conteos (además del gate de Aprobador). |
 | `bodega.settings.configure` | `PUT /bodega/settings`. |
 | `bodega.warehouses.view` | Ver Bodegas y el catálogo de Zona Libre sin el resto del módulo. |
 | `compras.zona-libre.approve` | Aprobar solicitudes de Zona Libre (lado Compras). |
@@ -498,7 +498,7 @@ Además de los permisos hay gates por `role_key` dentro de los servicios y contr
 | Ejecutar picking | `lider_bodega`, `asistente_bodega`, `ayudante_general_bodega` (nunca `transporte`) |
 | Editar el mapeo vendedor → asistente | `lider_bodega` y superadmin (no los asistentes) |
 | Modificar una solicitud de Zona Libre pendiente | rol `lider_bodega`, o permiso `compras.zona-libre.approve` |
-| Aprobar ajuste, reubicación o conteo | Mark, superadmin o una regla de aprobación activa para ese tipo (`AprobacionGate`) |
+| Aprobar ajuste, reubicación o conteo | Aprobador, superadmin o una regla de aprobación activa para ese tipo (`AprobacionGate`) |
 
 ### 7.3 Trampa: permisos v1 contra v2
 
@@ -636,7 +636,7 @@ El menú (`components/Sidebar.tsx`) y `RequirePermission` en `App.tsx` deben coi
 ### 9.5 Integraciones
 
 - **Ventas & Diseño:** `PipelineService::passToOrder()` crea el pedido; `PipelineCard`, `Quote` y `QuoteItem` son el origen de datos; `CatalogProduct` es el producto.
-- **Compras:** evento `PurchaseOrderReceived`, confirmación de recepción (paso 2), `ComprasSettings` (Mark y proveedor de Zona Libre) y `InventoryKpiService`.
+- **Compras:** evento `PurchaseOrderReceived`, confirmación de recepción (paso 2), `ComprasSettings` (Aprobador y proveedor de Zona Libre) y `InventoryKpiService`.
 - **Admin & Contabilidad:** lectura de la factura real (`AdminContInvoice`); recibe el aviso de devoluciones.
 - **Servicios:** `SyncInsumoReservationOnPurchaseOrderReceived` reubica stock a la Reserva Servicios y puede lanzar `InsufficientStockException`.
 - **Lafayette Lighting:** espejo del catálogo por comando programado; solo consulta.
@@ -655,7 +655,7 @@ Los modelos con `LogsAuditTrail` registran altas, cambios y bajas (entre ellos `
 |---|---|---|
 | `WarehouseAssistantMappingSeeder` | Mapeo inicial vendedor → asistente | Todos |
 | `BusinessRoleUserSeeder` | Personas reales por rol (jefe, asistentes, picker, repartidor) | Todos |
-| `SpecialPermissionSeeder` | Permisos angostos por persona (por ejemplo `bodega.read` a Yirena) | Todos |
+| `SpecialPermissionSeeder` | Permisos angostos por persona (por ejemplo `bodega.read` a Lidercompras) | Todos |
 | `bodega:backfill-order-item-prices` | Rellena `unit_price` en ítems de pedidos previos al snapshot de precios (SCRUM-786) | Manual |
 | `bodega:backfill-order-item-quote-links` | Rellena el vínculo ítem de pedido → ítem de cotización | Manual |
 | `bodega:backfill-general-count-replaced-lines` | Rellena líneas reemplazadas de conteos | Manual |
@@ -785,7 +785,7 @@ Fotografía del 2026-10-12. Nada de esto se corrigió.
 | **Por ingresar / En camino** | Unidades llegadas sin confirmar / aún no llegadas (de Compras). |
 | **Disponible** | Stock menos comprometido menos bodegas que excluyen disponibilidad. |
 | **Bodega de solo consulta** | La de Zona Libre / Lafayette: no admite stock. |
-| **Mark** | Aprobador configurado en `ComprasSettings.primary_approver_user_id`. |
+| **Aprobador** | Aprobador configurado en `ComprasSettings.primary_approver_user_id`. |
 | **Gate (aprobación)** | `AprobacionGate`, decide quién puede aprobar cada tipo de solicitud. |
 | **Gate (local)** | `infra/gate.sh`, verificación previa al push. |
 

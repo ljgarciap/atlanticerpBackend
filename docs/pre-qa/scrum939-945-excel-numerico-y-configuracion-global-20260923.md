@@ -69,7 +69,7 @@ en verde según el Senior Review), no se ejercitó en dev.
 |---|---|
 | **Gating API** — `lider_admin_contab` y `lider_bodega` sobre `GET/PUT /crm/settings`, `GET/POST/DELETE /ventas-diseno/sales-commission-tiers` | **403 en las 10 combinaciones**; anónimo 401. CRM intacto tras los intentos (no hubo escritura). |
 | **Gating UI** — Admin&Cont en `/configuracion/global` | No ve el título ni el ítem del Sidebar (Playwright, sesión inyectada). |
-| **Fiscal sigue exclusiva de Mark** — `GET /admin-contab/fiscal-settings` | `lider_admin_contab` 403, `lider_bodega` 403, superadmin 200 (bypass documentado en `EnsureIsPrimaryApprover`). UI: Admin&Cont no ve el formulario en `/admin-contab/fiscal`. |
+| **Fiscal sigue exclusiva de Aprobador** — `GET /admin-contab/fiscal-settings` | `lider_admin_contab` 403, `lider_bodega` 403, superadmin 200 (bypass documentado en `EnsureIsPrimaryApprover`). UI: Admin&Cont no ve el formulario en `/admin-contab/fiscal`. |
 | **Vista consolidada** | 11 tabs visibles; cada una monta sin pantalla en blanco ni errores JS (recorrido de las 11). |
 | **Solo la tab activa monta su panel** | `/api/crm/settings` no se pide hasta abrir la tab CRM (conteo de requests). |
 | **Validación de servidor CRM** | `0`, `-1`, `366`, `'abc'`, `2.5`, `null`, `''` → **422** en los 3 campos (21 casos) y `1000` → 422; el valor guardado nunca cambió. |
@@ -124,7 +124,7 @@ COSMÉTICO (G) — la acción de auditoría se llama `c_r_m.crm_setting.updated`
   /ventas-diseno/reports/commissions` devuelve vacío en dev (no hay tarjetas aprobadas en el mes). Lo cubre el test de
   12 puntos de corte del Senior Review, no se ejercitó en dev; sembrar tarjetas aprobadas requeriría escribir datos
   de negocio y no se hizo.
-- **No verificado con la cuenta de Mark:** que Mark sí vea Fiscal en su pantalla original (no se logueó con esa cuenta
+- **No verificado con la cuenta de Aprobador:** que Aprobador sí vea Fiscal en su pantalla original (no se logueó con esa cuenta
   por el throttling). Sí se verificó lo contrario (Admin&Cont/Bodega 403) y que superadmin entra por bypass.
 
 ## Restauración en dev
@@ -181,7 +181,7 @@ Throttling aplicado: 0 logins nuevos (tokens reutilizados), 1.5 s entre requests
 | **C — freshness recent < stale** | **Verificado en runtime y limpio.** |
 | **E — tab Global (backend)** | **Parcial:** listado, lista blanca, 404 y gating verificados; **rangos, escrituras válidas, invalidación de cache y audit NO ejecutados.** |
 | **B — 422 visible en la UI** | **No verificado** (el navegador no llegó a correr; el spec actualizado está listo). |
-| Regresión (11→12 tabs, Fiscal solo Mark, urgency=proximo, CxC neta) | **No verificada** en esta pasada (sí pasó limpia en la 2ª). |
+| Regresión (11→12 tabs, Fiscal solo Aprobador, urgency=proximo, CxC neta) | **No verificada** en esta pasada (sí pasó limpia en la 2ª). |
 | Spec e2e | **No ejecutado.** |
 | **SCRUM-945** | **No puede darse por limpio: falta ejecutar E-rangos/escrituras, UI (B, E, A por fila) y la regresión.** |
 
@@ -229,7 +229,7 @@ primer tramo distinto de 0, tramo abierto en medio ni sin tramo abierto final.
 1. **Redondeo silencioso de `porcentaje`:** enviar `4.555` responde 200 y guarda `4.56` (sin regla `decimal` como en los montos).
 2. **Mensaje en inglés + ruta cruda:** el `message` general concatena el sufijo de Laravel "(and 1 more error)" sin traducir, y los mensajes por
    fila usan el atributo crudo ("El campo **tiers.0.porcentaje** no debe ser mayor que 100."). `summaryMessage()` muestra `message`, así que el
-   usuario ve ese texto. Redacción/UX para QA (marly), no funcional.
+   usuario ve ese texto. Redacción/UX para QA (qa), no funcional.
 3. La convención de contigüidad obliga a `mínimo = máximo anterior + 0.01` (ej. 19999.99 → 20000.00); no admite un esquema `0–20000 / 20000–35000`.
    Es coherente con lo sembrado, pero conviene documentarlo para quien edite.
 
@@ -325,7 +325,7 @@ Con esto queda **descartado el riesgo residual** de la 3ª pasada (el tramo 5 es
 Formato de los 422: `{message, errors:{value:[…]}}` en español, clave `value` — consumible por la UI.
 
 **Sigue sin ejecutarse** (el corte llegó justo aquí): (a) lectura de `audit_logs` para confirmar la fila de cada escritura con usuario
-(`updated_by` no se expone por API; solo se puede confirmar por el audit o BD); (b) regresión: Fiscal solo Mark, `urgency=proximo`
+(`updated_by` no se expone por API; solo se puede confirmar por el audit o BD); (b) regresión: Fiscal solo Aprobador, `urgency=proximo`
 3→30→3 y CxC neta 13 982.33 (sí pasaron limpias en la 2ª pasada, **no** se reconfirmaron tras los fixes); (c) **todo el bloque de UI/e2e**
 (hallazgo B en CRM/Tramos, tab Global lazy-load/ES-EN, error por fila); (d) invalidación de cache (solo test unitario).
 
@@ -410,7 +410,7 @@ Pre-QA habilitada. Ritmo 2–3 s entre llamadas, **0 logins nuevos** (sesión re
 | UI: rango local | retención 11 → "…entre 12 y 120" sin request de escritura; guardado válido → 200 |
 
 ### Regresión de lo que ya pasó limpio ✅
-12 tabs (11→12), cada una monta sin pantalla en blanco ni errores JS · solo la tab activa monta su panel · **Fiscal solo Mark** (Admin&Cont y Bodega 403, superadmin 200 por bypass, y la UI no muestra el formulario a Admin&Cont) ·
+12 tabs (11→12), cada una monta sin pantalla en blanco ni errores JS · solo la tab activa monta su panel · **Fiscal solo Aprobador** (Admin&Cont y Bodega 403, superadmin 200 por bypass, y la UI no muestra el formulario a Admin&Cont) ·
 **`urgency=proximo`** 3 d → 2 proyectos · 30 d → 4 · vuelta a 3 d → 2 (API y UI) · **CxC neta de Gerencia 13 982.33** (no el bruto 14 032.33) · las 10 pruebas de gating (403/401) de `/crm/settings` y tramos.
 
 ### Spec e2e `preqa-scrum944-945-configuracion-global-20260923.spec.ts`: **13/13 en verde**
@@ -431,7 +431,7 @@ a ES y lo restaura en `afterAll`; se repitió ese test y el idioma quedó en `es
 3. **Sufijo "(and N more error)" en inglés** en el `message` general del 422 (no se ve en la UI actual porque muestra el mensaje del campo; sí lo verá cualquier otro consumidor de la API).
 4. La convención de contigüidad exige `mínimo = máximo anterior + 0.01` (documentar para quien edite).
 5. **No verificable en runtime:** el efecto de un tramo sobre la comisión real (`/ventas-diseno/reports/commissions` vacío en dev, no hay tarjetas aprobadas),
-   la invalidación de cache de `documents.max_size_mb` sin subir documentos, y la vista de Fiscal con la cuenta de Mark (no se usó su login). Los cubre la suite de backend (`GlobalSettingsControllerTest`, tests de `percentFor`).
+   la invalidación de cache de `documents.max_size_mb` sin subir documentos, y la vista de Fiscal con la cuenta de Aprobador (no se usó su login). Los cubre la suite de backend (`GlobalSettingsControllerTest`, tests de `percentFor`).
 6. `ip_address` es `null` en `audit_logs` de todos los módulos (no propio de estos cambios; contrastar con REQ-633).
 7. Las claves globales ahora tienen fila propia en BD con el valor default (no cambia el valor efectivo).
 
@@ -443,7 +443,7 @@ a ES y lo restaura en `afterAll`; se repitió ese test y el idioma quedó en `es
 ## Qué falta para pasar a QA
 - **SCRUM-945:** nada bloqueante desde Pre-QA — pasada limpia y concluyente, Visual Review N/A (sin mockup). Pendientes **fuera de Pre-QA** que siguen abiertos: aprobación de Luis de la spec
   (`docs/specs/auditoria-valores-parametricos-superadmin.md`, sigue en `Draft`) y revisión del Arquitecto de las 2 migraciones (`crm_settings`,
-  `sales_commission_tiers`); decidir si las observaciones 1–3 se corrigen antes de QA (redacción que marly probablemente marque) o se abren como tickets.
+  `sales_commission_tiers`); decidir si las observaciones 1–3 se corrigen antes de QA (redacción que qa probablemente marque) o se abren como tickets.
 - **SCRUM-939:** ya limpio desde la 2ª pasada; sin cambios.
 - **Marcadores locales del gate Jira** (`~/.claude-preqa-markers/{SCRUM-939,SCRUM-945}` y `~/.claude-visual-review-markers/{…}`): **no creados** (no se movió ningún ticket); los crea quien haga la transición.
 - **Spec e2e:** listo para promover a `atlanticerp-frontend/e2e/` como test permanente (gating superadmin, 422 visible, tab Global). Ya está commiteado en `95dc37f`; los cambios de esta pasada (afterAll atómico, idioma, `PUT`) quedan **sin commitear**.
@@ -471,7 +471,7 @@ Línea base leída antes de escribir (16:13): `crm_settings` 3/7/21 · 6 tramos 
 **Nota sobre el único "FAIL" del script:** fue un error de mi aserción (exigía la palabra plural "errores más"; el mensaje real es "(y 1 error más)", correcto en singular). No es un defecto de la app; con 2+ errores adicionales saldría "(y N errores más)" (no probado con N>1 en runtime).
 
 ## Observaciones (sin cambio)
-- Siguen sin verificarse en runtime (no eran de esta pasada): el efecto de un tramo sobre la comisión real, la invalidación de cache de `documents.max_size_mb`, y Fiscal con la cuenta de Mark.
+- Siguen sin verificarse en runtime (no eran de esta pasada): el efecto de un tramo sobre la comisión real, la invalidación de cache de `documents.max_size_mb`, y Fiscal con la cuenta de Aprobador.
 - Contigüidad `mínimo = máximo anterior + 0.01` y `ip_address` nulo en `audit_logs`: sin cambios (ver 5ª pasada).
 
 ## Restauración ✅ (lectura de cierre, 16:19)

@@ -7,7 +7,7 @@ de este pase). Test permanente: `atlanticerp-frontend/e2e/preqa-batch20-scrum612
 
 ## CRÍTICO — SCRUM-617 (REQ-540) / afecta también SCRUM-616 (REQ-539)
 
-**Qué se rompe:** al aprobar un reporte (Mark, botón "Aprobar reporte" → confirmar), el modal de
+**Qué se rompe:** al aprobar un reporte (Aprobador, botón "Aprobar reporte" → confirmar), el modal de
 detalle se cae en blanco con `Cannot read properties of undefined (reading 'map')` en
 `DetalleReportePettyCashModal`. La aprobación SÍ se persiste correctamente en BD (`estado` pasa a
 `finalizado`, `aprobado_por`/`fecha_aprobacion` quedan seteados — verificado por SQL directo), es
@@ -26,7 +26,7 @@ el runtime real del backend no cumple ese contrato — el mismatch nunca lo agar
 los tests de backend solo verifican `numero`/`estado` (correcto para su propio alcance) y los tests
 de frontend mockeados le dan al mock el shape completo en vez del shape real y mínimo del backend.
 
-**Cómo reproducir:** login Mark (`mbekhar@atlantic.com.pa`) → Caja chica → Reportes → Ver un
+**Cómo reproducir:** login Aprobador (`gerencia3@test.com`) → Caja chica → Reportes → Ver un
 reporte `pendiente_aprobacion` → Aprobar reporte → confirmar. Pantalla en blanco.
 
 **Evidencia:** `docs/visual-review/screenshots/SCRUM-617-1.png` (estado en blanco tras aprobar) +
@@ -48,7 +48,7 @@ no se pueden verificar con la UI en su estado actual. No pasa a QA hasta que se 
 
 ## Nota — no bloqueante (SCRUM-612/REQ-535)
 
-Mark (`management`, sin permiso de registrar gastos) sigue viendo los botones "+ Nuevo gasto" y
+Aprobador (`management`, sin permiso de registrar gastos) sigue viendo los botones "+ Nuevo gasto" y
 "Generar reporte" en el header — el frontend no los oculta por rol. Al intentar usarlos, el backend
 bloquea de verdad (403) y el error SÍ se muestra visible en el modal ("No tienes permiso para
 realizar esta acción.", ver `e2e/screenshots/batch20-mark-boton-visible-pero-403.png`) — no es un
@@ -65,13 +65,13 @@ botones para roles sin `admin_contab.write` en vez de dejar que el usuario llegu
 - **REQ-536** — 3 tabs con contador correcto en la etiqueta ("N gasto(s) sin reportar", "N
   generado(s) · N sin aprobar", "N línea(s)"), Pendientes por defecto.
 - **REQ-537** — agrupado alfabético por solicitante confirmado con 2 solicitantes reales (Aaron
-  Leis, Agustín Rodríguez), subtotal por grupo y total general correctos aritméticamente.
+  Leis, [persona] [persona]), subtotal por grupo y total general correctos aritméticamente.
 - **REQ-538** — flujo de 2 pasos real: desmarcar un solicitante completo lo saca por completo de
   la selección (paso 1 → paso 2 solo con el otro grupo), "Continuar" sin forma de pago vacía
   bloquea con mensaje, folio consecutivo `NNNN-2026` generado al confirmar, los gastos
   seleccionados desaparecen de Pendientes tras generar el reporte.
-- **REQ-539** — Felix (no Mark) no ve el botón "Aprobar reporte" en el detalle de un reporte
-  pendiente (gate de `puede_aprobar` funciona del lado correcto para quien NO es Mark).
+- **REQ-539** — Contabilidad (no Aprobador) no ve el botón "Aprobar reporte" en el detalle de un reporte
+  pendiente (gate de `puede_aprobar` funciona del lado correcto para quien NO es Aprobador).
 - Rol sin permiso — el registro de gasto está genuinamente bloqueado a nivel backend para
   `management`, con feedback visible (ver nota arriba).
 
@@ -94,8 +94,8 @@ checklist, no solo el punto que falló:
   passed**, incluyendo el test REQ-540 que antes hubiera fallado (asserta `Descargar` visible y
   `Aprobar reporte` con count 0 tras aprobar).
 - Confirmado visualmente (`e2e/screenshots/batch20-reporte-finalizado.png`): tras aprobar, el modal
-  muestra el detalle completo real (grupo "Agustín Rodríguez", línea con fecha/proveedor/
-  descripción/monto, "Total general", "Aprobado por Mark Bekhar el 26 ago 2026", botón
+  muestra el detalle completo real (grupo "[persona] [persona]", línea con fecha/proveedor/
+  descripción/monto, "Total general", "Aprobado por Gerencia3 Test el 26 ago 2026", botón
   "Descargar") — sin crash, sin pantalla en blanco.
 - Segundo intento de aprobar (ya finalizado) sigue devolviendo 409 sin romper la UI (cubierto por
   el test backend `test_aprobar_reporte_es_exclusivo_de_mark`, no re-verificado en el navegador en

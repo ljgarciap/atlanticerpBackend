@@ -5,8 +5,8 @@
 server (`localhost:5173`) — no `dev.atlanticerp.ai`. Datos sembrados con prefijo `[PREQA-B13]`: fixtures
 de `Order`/`AdminContInvoice` vía tinker (mismo criterio que
 `AdminContCreditNoteControllerTest::makeInvoicedOrder()` — plumbing Quote→Order→Invoice fuera de
-alcance de este batch) + `register()`/`decide()` ejercitados por HTTP real (`curl` con JWT de Felix/
-Mark) y por la UI real (Playwright).
+alcance de este batch) + `register()`/`decide()` ejercitados por HTTP real (`curl` con JWT de Contabilidad/
+Aprobador) y por la UI real (Playwright).
 
 **Resultado: 1 hallazgo CRÍTICO real encontrado y corregido en el momento (commit local pendiente
 de push) + 1 hallazgo MEDIO no bloqueante documentado para el Arquitecto + 1 nota de documentación
@@ -27,10 +27,10 @@ en verde tras las correcciones de este documento, corridos contra el stack local
 
 ## Paso 0 — nota de entorno (no bloqueante, corregido en el camino)
 
-El prompt de despacho traía una contraseña específica para Mark (`B1n4X_2026?`) marcada como
+El prompt de despacho traía una contraseña específica para Aprobador (`B1n4X_2026?`) marcada como
 "excepción al patrón default", con la advertencia de que un despacho previo se había colgado en el
 login. Verificado con `Hash::check()` contra la BD real del stack local: esa contraseña **no es
-válida** — el usuario Mark (`mbekhar@atlantic.com.pa`, id 6, coincide con
+válida** — el usuario Aprobador (`gerencia3@test.com`, id 6, coincide con
 `fiscal_settings.mark_approver_user_id`) sigue con el password default (su propio email), igual que
 el resto del roster. No es un bug de código — es una desactualización de la nota de despacho/
 memoria del proyecto. Recomendación: corregir esa nota en `memory/` o `reference_ssh_dev.md` para
@@ -89,25 +89,25 @@ batch, junto con el resto).
 
 ---
 
-## Hallazgo MEDIO (no bloqueante) — botones Aprobar/Rechazar visibles para actores que NO son Mark
+## Hallazgo MEDIO (no bloqueante) — botones Aprobar/Rechazar visibles para actores que NO son Aprobador
 
-REQ-494 RN1 es explícito: *"Solo el usuario con rol Mark puede aprobar o rechazar una nota
+REQ-494 RN1 es explícito: *"Solo el usuario con rol Aprobador puede aprobar o rechazar una nota
 pendiente — ningún otro rol, ni siquiera 'Gerencia' en general, tiene este permiso."* El backend
 cumple esto correctamente (`EnsureIsMarkApprover`, 403 con mensaje claro "Esta pantalla es
-exclusiva de Mark." — verificado por API real y en navegador, ver captura). Pero
+exclusiva de Aprobador." — verificado por API real y en navegador, ver captura). Pero
 `CreditNoteService::show()` calcula `puede_aprobar_rechazar` **solo por estado** de la nota
 (`estado === pendiente_aprobacion`), sin considerar quién es el actor — a diferencia del patrón ya
 establecido en el mismo epic para la misma regla de negocio: `AdminContInvoiceController::detail()`
 (Facturación, incobrables) calcula `puede_decidir_incobrable` resolviendo la identidad real
-(`mark_approver_user_id` o `superadmin.all`) para que el frontend solo muestre el botón a Mark.
+(`mark_approver_user_id` o `superadmin.all`) para que el frontend solo muestre el botón a Aprobador.
 
-**Efecto real, confirmado en navegador:** Felix (líder Admin&Cont, NO Mark) ve los botones
-"Aprobar"/"Rechazar" en cualquier nota pendiente, igual que Mark. Si los usa, el backend bloquea
-correctamente y muestra un mensaje inline claro ("Esta pantalla es exclusiva de Mark.") — **no es
-un fallo silencioso ni un problema de seguridad** (ver captura `felix-click-aprobar-result.png`
+**Efecto real, confirmado en navegador:** Contabilidad (líder Admin&Cont, NO Aprobador) ve los botones
+"Aprobar"/"Rechazar" en cualquier nota pendiente, igual que Aprobador. Si los usa, el backend bloquea
+correctamente y muestra un mensaje inline claro ("Esta pantalla es exclusiva de Aprobador.") — **no es
+un fallo silencioso ni un problema de seguridad** (ver captura `contabilidad-click-aprobar-result.png`
 tomada durante la verificación). Es una inconsistencia de UX/patrón: la misma regla de negocio
-("exclusivo de Mark") se resuelve distinto en dos pantallas del mismo batch/epic, y el usuario real
-(Felix, Yaneth, Gerencia) ve dos botones de acción que van a fallar siempre para su rol, en vez de
+("exclusivo de Aprobador") se resuelve distinto en dos pantallas del mismo batch/epic, y el usuario real
+(Contabilidad, Asistente, Gerencia) ve dos botones de acción que van a fallar siempre para su rol, en vez de
 no verlos.
 
 No lo clasifico CRÍTICO porque no hay pérdida de funcionalidad del mockup ni bypass de seguridad —
@@ -125,10 +125,10 @@ Queda a criterio del Arquitecto si amerita un ticket de seguimiento (mismo crite
 | Foco | Verificación | Resultado |
 |---|---|---|
 | REQ-494 RN1 — "Anulación completa, monto bajo" SIEMPRE pendiente_aprobacion | NC-0007 ($200, muy bajo el umbral $5,000) registrada por API real → `estado: pendiente_aprobacion` confirmado por API y en UI ("Pendiente de aprobación") | ✅ |
-| REQ-494 RN1 — exclusividad de Mark (backend) | Felix intenta `PUT .../decision` → 403 "Esta pantalla es exclusiva de Mark." (API y UI, con mensaje inline visible) | ✅ (ver hallazgo MEDIO sobre visibilidad del botón) |
-| REQ-494 RN2 — bloqueo de aprobación sin comprobante (Anulación completa/monto alto) | Nota pendiente sin comprobante (creada directo en BD para forzar el estado, ya que `register()` lo exige desde el alta) → Mark intenta aprobar → 422 "...requiere comprobante de soporte adjunto antes de poder aprobarse." | ✅ |
-| REQ-494 RN2 — Devolución de mercancía NUNCA exige comprobante | NC-0008 (devolución, $8,000 > umbral, SIN comprobante) → Mark aprueba sin problema → `estado: aplicada`, `tiene_comprobante: false` | ✅ (API y UI) |
-| REQ-494 RN3 — aprobar registra quién y cuándo | NC-0011 aprobada por Mark → `aprobado_por: "Mark Bekhar"`, `fecha_decision` presente, visible en UI | ✅ |
+| REQ-494 RN1 — exclusividad de Aprobador (backend) | Contabilidad intenta `PUT .../decision` → 403 "Esta pantalla es exclusiva de Aprobador." (API y UI, con mensaje inline visible) | ✅ (ver hallazgo MEDIO sobre visibilidad del botón) |
+| REQ-494 RN2 — bloqueo de aprobación sin comprobante (Anulación completa/monto alto) | Nota pendiente sin comprobante (creada directo en BD para forzar el estado, ya que `register()` lo exige desde el alta) → Aprobador intenta aprobar → 422 "...requiere comprobante de soporte adjunto antes de poder aprobarse." | ✅ |
+| REQ-494 RN2 — Devolución de mercancía NUNCA exige comprobante | NC-0008 (devolución, $8,000 > umbral, SIN comprobante) → Aprobador aprueba sin problema → `estado: aplicada`, `tiene_comprobante: false` | ✅ (API y UI) |
+| REQ-494 RN3 — aprobar registra quién y cuándo | NC-0011 aprobada por Aprobador → `aprobado_por: "Gerencia3 Test"`, `fecha_decision` presente, visible en UI | ✅ |
 | REQ-494 RN4 — motivo obligatorio al rechazar | Rechazo sin `motivo_rechazo` → 422 "El campo motivo rechazo es obligatorio."; con motivo → 200, `estado: rechazada`, `motivo_rechazo` guardado | ✅ |
 | REQ-494 RN5 — rechazo no genera factura ni mueve dinero | NC-0010 rechazada, sin `factura_nueva_numero`, sin movimiento bancario/saldo a favor generado | ✅ |
 | REQ-495 — Ver comprobante (PDF/imagen) | NC-0009 (imagen JPG): `<img>` real, URL presignada S3 verificada por `curl` (devuelve `content-type: image/jpeg`, bytes reales del JPG subido); NC-0007 (PDF): `mime_type: application/pdf` correcto | ✅ |
@@ -173,7 +173,7 @@ anteriores (datos locales, sin impacto en `dev`/`test`/`prod`).
 
 **Limpio, con 1 fix aplicado en el momento** (regla del proyecto: hallazgo chico se corrige acá
 mismo y se vuelve a correr el checklist completo — ya hecho, ver tabla arriba, todo verde tras el
-fix). El hallazgo MEDIO (visibilidad de botones para no-Mark) queda documentado como no bloqueante,
+fix). El hallazgo MEDIO (visibilidad de botones para no-Aprobador) queda documentado como no bloqueante,
 a criterio del Arquitecto. Los 4 tickets (SCRUM-571→574) están en condiciones de pasar de `Dev
 Testing` a `QA` — transición y push la ejecuta el Arquitecto al cerrar el batch, según el flujo del
 proyecto.

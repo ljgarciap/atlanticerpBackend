@@ -4,7 +4,7 @@ Fecha: 2026-09-29 (UTC) · Entorno: dev.atlanticerp.ai · Backend origin/dev **5
 Catálogo real de dev: 29.630 activos + 6 inactivos (incluido PREQA-992-A id 29697). Pedidos de Bodega: 58 (asignado 21, picking_pendiente 2, en_picking 2, packing 0, por_despachar 25, despachado 3, entregado 5).
 
 Método: API real con JWT temporales (SSH+tinker, borrados al terminar), oráculos INDEPENDIENTES por SQL de solo lectura (stock, punto de reorden, rotación, compromiso de pedidos de Bodega en etapas activas, stock en bodegas excluidas, líneas de ingreso sin confirmar, familias, stock por bodega, orden por `LOWER(col), id`) escritos con subconsultas correlacionadas a partir de las reglas de la spec (no del código bajo prueba); baterías HTTPS a través de nginx desde el EC2 de dev (IP en allowlist de CrowdSec); Playwright CLI headless (NO Claude in Chrome); `npx vitest run`; `infra/test.sh`; medición de memoria en proceso por el kernel HTTP con `memory_limit=256M`.
-Usuarios: `almacen@` (Líder de Bodega, `bodega.read`), `fefi@` (Vendedor/Diseñador, sin `bodega.read`), superadmin. Sin logins fallidos (no se dispara CrowdSec).
+Usuarios: `almacen@` (Líder de Bodega, `bodega.read`), `[persona]@` (Vendedor/Diseñador, sin `bodega.read`), superadmin. Sin logins fallidos (no se dispara CrowdSec).
 
 ## Paso 0 (permisos angostos, valores paramétricos, dependencias de otros tickets, datos sembrados)
 
@@ -57,7 +57,7 @@ Punto de la spec "Pre-QA debe probar orden por `name` con acentos y mayúsculas"
 
 ## (d) Autorización
 
-Sin token → 401. `fefi@` (sin `bodega.read`) → **403** en `/api/bodega/inventory` y también con `chip=criticos` (sin `data` en el cuerpo; no se oculta solo el botón). Superadmin → 200. En UI, `fefi@` entrando a `/bodega/inventario?filter=criticos` no recibe ninguna respuesta 200 del listado y la tabla queda vacía.
+Sin token → 401. `[persona]@` (sin `bodega.read`) → **403** en `/api/bodega/inventory` y también con `chip=criticos` (sin `data` en el cuerpo; no se oculta solo el botón). Superadmin → 200. En UI, `[persona]@` entrando a `/bodega/inventario?filter=criticos` no recibe ninguna respuesta 200 del listado y la tabla queda vacía.
 
 ## (e) Forma de la respuesta (criterio 6)
 
@@ -88,7 +88,7 @@ Spec permanente `atlanticerp-frontend/e2e/preqa-scrum994-bodega-inventario-sql-2
 2. KPIs visibles 29630 / 2 / 26283 / 21 / 213 y no cambian al aplicar `estado=sin_stock` (total del listado 26.283).
 3. Chips En atención (21) / Inactivos (6) / Por ingresar (5) + chip En atención con Estado Sin stock (19) + Todos con Estado Disponible (3.345): 200 y conteos exactos; sin 5xx durante toda la sesión.
 4. Deep-link `?filter=criticos`, recarga a mitad de flujo (mismo primer producto), orden por columna Nombre asc/desc, página 2 (distinto conjunto de filas, `total` 26.285) y "Todas" (`per_page=all`, 1.000 filas renderizadas): todo 200.
-5. `fefi@` sin `bodega.read`: ningún 200 del listado, tabla vacía.
+5. `[persona]@` sin `bodega.read`: ningún 200 del listado, tabla vacía.
 Sin errores de consola ni 5xx en ninguno. `npx vitest run src/pages/BodegaHomePage.test.tsx src/pages/BodegaInventarioPage`: 49/49 (frontend sin cambios en este ticket).
 
 ## (k) Backend local

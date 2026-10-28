@@ -19,7 +19,7 @@ que los campos coincidan, o campos tipeados que no coinciden con la imagen). La 
 persistiendo para que el usuario la consulte y valide el dato extraído.
 
 **Este ADR documenta esa decisión como override explícito de RN9** — no es un cambio de alcance
-de Daniela, es una decisión de negocio de Luis, registrada acá para que quede trazable.
+de Gerencia1, es una decisión de negocio de Luis, registrada acá para que quede trazable.
 
 **Por qué esto es más sensible que un ticket de UI típico:** los campos que se auto-llenan
 alimentan pagos reales a proveedores. Un error de lectura sin detectar (un dígito mal leído en

@@ -8,8 +8,8 @@ Mockup: `4G__Admin_Contabilidad_ArqueoCaja.html` (cubre este batch y Batch 19 �
 REQ-520→524; cerrar arqueo, historial, aprobación de Gerencia y constancia de retención son
 Batch 19, fuera de alcance).
 
-Credenciales usadas: Felix (`conta@atlantic.com.pa`), Yaneth
-(`asistente@atlantic.com.pa`), Mark (`mbekhar@atlantic.com.pa` /
+Credenciales usadas: Contabilidad (`conta@atlantic.com.pa`), Asistente
+(`asistente@atlantic.com.pa`), Aprobador (`gerencia3@test.com` /
 `B1n4X_2026?`, real de Gerencia).
 
 ## Resumen ejecutivo
@@ -51,7 +51,7 @@ Salidas/Saldo proyectados sí dependen de la ventana Hoy/30/90", no del toggle P
 propio mockup recalcula esas 3 tarjetas siempre, sin importar `currentView`.
 
 **Reproducción (2 casos confirmados):**
-1. Felix → default Proyectado+30 (tarjetas OK) → "Real (histórico)" → chip "Hoy" → tarjetas en
+1. Contabilidad → default Proyectado+30 (tarjetas OK) → "Real (histórico)" → chip "Hoy" → tarjetas en
    "—", aunque el mismo dato (Entradas $0.00 / Salidas $86.06 / Saldo $11,851.25) se confirma
    correcto si "Hoy" se clickea estando en Proyectado. Ver
    `atlanticerp-frontend/docs/visual-review/screenshots/scrum597-real-hoy-dash.png` vs.
@@ -71,10 +71,10 @@ fix:** cambiar el `enabled` a `canProjectedReal` a secas (sin `&& view === 'proy
 las tarjetas del encabezado se mantengan pobladas sin importar la pestaña activa.
 
 **Hallazgo aparte, no autoclasificado — pendiente de decisión de Arquitecto/PM:** el criterio de
-Jira de este ticket lista "Permisos: Felix, Yaneth, Mark, Gerencia", y el ADR (reconciliación #8)
-dice que REQ-520/522 "sí incluyen a Yaneth", a diferencia de REQ-521/523. Pero el endpoint que
+Jira de este ticket lista "Permisos: Contabilidad, Asistente, Aprobador, Gerencia", y el ADR (reconciliación #8)
+dice que REQ-520/522 "sí incluyen a Asistente", a diferencia de REQ-521/523. Pero el endpoint que
 alimenta las 3 tarjetas proyectadas (`GET /cash-position/projected`) está gateado en el propio ADR
-contra Yaneth. Confirmado en vivo (403 real): las 3 tarjetas de Yaneth SIEMPRE muestran "—",
+contra Asistente. Confirmado en vivo (403 real): las 3 tarjetas de Asistente SIEMPRE muestran "—",
 incluso sin el bug de arriba. No está claro si es la intención (solo "Saldo disponible hoy" con
 dato real para ella) — no lo autoclasifico, queda para que Arquitecto/PM decidan.
 
@@ -84,7 +84,7 @@ Documentado también en el comentario de Jira de SCRUM-597, con 3 capturas adjun
 
 Panel de 2 columnas, tags de vencimiento, neto proyectado (matemática verificada: 3,293.65 -
 86.06 = +3,207.59) y filtro del chip "Hoy" — todo correcto con el fixture disponible. Acceso
-correcto para Felix/Mark, 403 real confirmado para Yaneth.
+correcto para Contabilidad/Aprobador, 403 real confirmado para Asistente.
 
 No se pudo ejercitar en vivo RN1 (exclusión de facturas "incobrable") ni RN2 (exclusión de nota de
 crédito ya `aplicada`) — el fixture de dev.atlanticerp.ai solo tiene 1 entrada y 1 salida en total, sin
@@ -92,10 +92,10 @@ ningún caso negativo sembrado. Recomendado sembrar ambos escenarios antes de un
 
 ## SCRUM-599 (REQ-522) — limpio en su propio alcance, bloqueado por dependencia
 
-RN1 (default Proyectado+30 para Felix/Mark, Real+Hoy para Yaneth sin ofrecer las otras opciones),
+RN1 (default Proyectado+30 para Contabilidad/Aprobador, Real+Hoy para Asistente sin ofrecer las otras opciones),
 RN2 (Real+Hoy → Arqueo del día completo, no tabla filtrada), RN3 (Real+30/90 → tabla cronológica) y
 RN4 (chip Hoy en Proyectado filtra sin comportamiento especial) — todos confirmados correctos.
-Intento de bypass por URL directa (`?view=proyectado&window=30` como Yaneth) sin efecto, ignorado
+Intento de bypass por URL directa (`?view=proyectado&window=30` como Asistente) sin efecto, ignorado
 por el frontend. Recarga a mitad de flujo pierde el tab/ventana elegidos (vuelve al default) —
 documentado como nota, no como hallazgo (ni el ticket ni el mockup definen persistencia de UI
 state entre reloads).
@@ -108,8 +108,8 @@ cerrarlo junto con SCRUM-597 en el mismo batch de re-verificación.
 
 Tabla con las 6 columnas del mockup, orden cronológico ascendente y saldo acumulado matemáticamente
 correcto (23 ago $6,200.00 → saldo $6,200.00; 25 ago +$5,737.31 → saldo $11,937.31, coincide con
-"Saldo disponible hoy"). Origen visible por tag ("Cobros"). Acceso correcto para Felix/Mark, 403
-real confirmado para Yaneth.
+"Saldo disponible hoy"). Origen visible por tag ("Cobros"). Acceso correcto para Contabilidad/Aprobador, 403
+real confirmado para Asistente.
 
 El fixture solo tiene movimientos de origen "Cobros" — ningún caso real de origen "comisión"
 (comisión externa pagada) ni "devolución" (nota de crédito aplicada) para confirmar tag/resta de
@@ -122,24 +122,24 @@ Tabla Concepto/Monto/Observaciones auto-armada (RN1); observación por fila edit
 guardar, recargar a mitad de flujo, confirmar persistencia, y vaciar el campo correctamente (RN2);
 matemática de totales correcta en el único caso disponible, sin NC ese día (RN3); textarea
 "Observación general del día" presente (RN4); nota de conciliación bancaria presente tal cual el
-mockup (RN5). Acceso correcto para Felix; 403 real confirmado (GET y PUT) para Mark en
+mockup (RN5). Acceso correcto para Contabilidad; 403 real confirmado (GET y PUT) para Aprobador en
 `/cash-position/daily-count` — el bloqueo de seguridad funciona.
 
 **MEDIO:** el mensaje que ve Gerencia al intentar Real+Hoy dice **"El Arqueo del día está
-disponible para Felix, Yaneth y Mark."**, contradiciendo RN524 (excluye Mark/Gerencia
+disponible para Contabilidad, Asistente y Aprobador."**, contradiciendo RN524 (excluye Aprobador/Gerencia
 explícitamente) — la seguridad real funciona, solo el texto está mal. String en
 `atlanticerp-frontend/src/i18n/locales/es/adminContab.json` (clave `arqueoCaja.restricted.dailyCount`,
-línea ~969) y su espejo en `en/adminContab.json`. Fix: "Felix y Yaneth" / "Felix and Yaneth".
+línea ~969) y su espejo en `en/adminContab.json`. Fix: "Contabilidad y Asistente" / "Contabilidad and Asistente".
 Captura: `atlanticerp-frontend/docs/visual-review/screenshots/scrum601-mark-wrong-message.png`.
 
 No se pudo ejercitar RN3 con Notas crédito > 0 (mismo motivo de cobertura de datos).
 
 ## Camino de ruptura — genérico (Pre-QA Paso 3)
 
-- Rol sin permiso: Yaneth → 403 real en `/projected` y `/real` (no solo botón oculto). Mark → 403
+- Rol sin permiso: Asistente → 403 real en `/projected` y `/real` (no solo botón oculto). Aprobador → 403
   real en `/daily-count` GET y PUT (no solo botón oculto). Confirmado con requests directos vía
   token Bearer, sin pasar por la UI.
-- Bypass por URL: intento de forzar `?view=proyectado&window=30` como Yaneth — ignorado por el
+- Bypass por URL: intento de forzar `?view=proyectado&window=30` como Asistente — ignorado por el
   frontend, sigue en Real+Hoy.
 - Recarga a mitad de flujo: probado en observación de arqueo del día (persiste correctamente) y en
   el tab/ventana elegidos (no persiste, vuelve al default — no es un criterio del ticket).
@@ -192,7 +192,7 @@ Los 4 puntos de "Próxima acción" (abajo, dejados como quedaron en el momento) 
 
 1. **SCRUM-597 + SCRUM-601 corregidos** (backend commit `6a624ab`, frontend `3185509`/`ddd9192`) y
    **desplegados** a `dev.atlanticerp.ai`.
-2. **Yaneth y las 3 tarjetas proyectadas: resuelto con Luis** — REQ-520 le da el encabezado
+2. **Asistente y las 3 tarjetas proyectadas: resuelto con Luis** — REQ-520 le da el encabezado
    completo (incluidos los 3 totales), REQ-521 solo le veda el panel de detalle línea por línea.
    `/projected` ahora acepta `asistente_administrativa` y devuelve `entradas`/`salidas` vacíos
    para ese rol (backend commit `6a624ab`), desplegado y verificado en vivo.
@@ -214,7 +214,7 @@ Los 5 tickets pasan a `QA` con marcadores de Pre-QA y Visual Review creados.
 
 1. PM reasigna SCRUM-597 (fix de `enabled` en `ArqueoCajaPage.tsx`) y, junto con el mismo fix,
    aplicar el de SCRUM-601 (texto de locale) — ambos triviales, un solo commit/deploy.
-2. Resolver la nota de Arquitecto/PM sobre Yaneth y las 3 tarjetas proyectadas (SCRUM-597).
+2. Resolver la nota de Arquitecto/PM sobre Asistente y las 3 tarjetas proyectadas (SCRUM-597).
 3. Sembrar los casos de datos faltantes (incobrable, NC aplicada, comisión/devolución en Vista
    real, NC>0 en Arqueo del día) antes del próximo pase.
 4. Re-correr el checklist COMPLETO de los 5 tickets (no solo lo que falló) una vez `dev.atlanticerp.ai`

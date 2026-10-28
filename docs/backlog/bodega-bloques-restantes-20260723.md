@@ -185,7 +185,7 @@ con cualquiera de los bloques anteriores si hay squad de Compras disponible.
 | SCRUM-442 | REQ-372 | Bandeja de órdenes Zona Libre — tabla y encabezado |
 | SCRUM-443 | REQ-373 | Chips de filtro por estado — Todas, Por aprobar, Aprobadas, Rechazadas |
 | SCRUM-444 | REQ-374 | Los 3 estados de una orden y su acción correspondiente |
-| SCRUM-445 | REQ-375 | Botón Recordar — aviso a Yirena sobre una orden pendiente |
+| SCRUM-445 | REQ-375 | Botón Recordar — aviso a Lidercompras sobre una orden pendiente |
 
 ## Bloque B4 — Bodegas: reubicación entre bodegas (4 tickets)
 

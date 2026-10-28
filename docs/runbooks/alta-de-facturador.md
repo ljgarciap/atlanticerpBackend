@@ -17,7 +17,7 @@ Quien genera facturas desde "+ Crear Factura" necesita, además del acceso al m�
 4. Verificar en la vista previa de una factura de prueba: el aviso de la guarda debe mostrar "Facturar como consumidor final"
    y, si el documento no valida, el formulario de corrección.
 
-## Mark y Felix
+## Aprobador y Contabilidad
 
 Ya los tienen por `SpecialPermissionSeeder` (idempotente por fusión: corre en todos los entornos y nunca pisa permisos
 existentes). Para una persona nueva NO se edita el seeder cada vez: la asigna un superadmin desde la pantalla. Solo si la

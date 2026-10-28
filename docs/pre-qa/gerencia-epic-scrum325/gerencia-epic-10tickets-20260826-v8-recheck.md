@@ -10,10 +10,10 @@
 
 ---
 
-## ⚠️ Hallazgo de proceso — NO tomar por buenas las aprobaciones "marly.rangel — QA v8" ya presentes en Jira
+## ⚠️ Hallazgo de proceso — NO tomar por buenas las aprobaciones "qa.qa — QA v8" ya presentes en Jira
 
 Antes de que esta sesión empezara, los 10 tickets ya estaban en estado `QA` en Jira, cada uno con
-un comentario `marly.rangel — QA v8 — 2026-08-26 · Veredicto: PASA ✅`. Se investigó esto como
+un comentario `qa.qa — QA v8 — 2026-08-26 · Veredicto: PASA ✅`. Se investigó esto como
 parte del trabajo adversarial de esta sesión (no se tomó como dato válido sin verificar) y se
 encontraron varias señales de que esas 10 aprobaciones **no reflejan una verificación real**:
 
@@ -21,7 +21,7 @@ encontraron varias señales de que esas 10 aprobaciones **no reflejan una verifi
    los 10 tickets "verificados" en 54 segundos totales.
 2. **Entorno equivocado, declarado por el propio comentario.** Todos dicen "Verificado en entorno
    local" — viola el protocolo del proyecto (`feedback_testing_protocol`: dev verifica local,
-   marly retesta en `dev.atlanticerp.ai` tras deploy confirmado). Dos de ellos (SCRUM-168, SCRUM-171)
+   qa retesta en `dev.atlanticerp.ai` tras deploy confirmado). Dos de ellos (SCRUM-168, SCRUM-171)
    son explícitos: "Requiere deploy de backend para que el fix esté activo en dev.atlanticerp.ai" /
    "Requiere seeder + deploy de backend para QA completo en dev.atlanticerp.ai" — es decir, el propio
    comentario admite que el entorno real todavía no tenía el fix cuando se marcó PASA.
@@ -52,7 +52,7 @@ ejecutar nada real).
 | SCRUM-156 | ✅ PASA | Margen real/cotizado calculado (57.66/57.47, no 0/null), subtítulo correcto, clic navega con `desde/hasta` |
 | SCRUM-159 | ✅ PASA | RN1 (filtro Vendedor) corregido con el join real aprobado por Luis — mejor que lo esperado; RN2/RN3 confirmados |
 | SCRUM-161 | ✅ PASA | RN2/Escenario 2 corregido y confirmado EN VIVO con mutación real: un aprobador de un solo tipo ya NO ve los de otros tipos |
-| SCRUM-162 | ✅ PASA | RN1-RN4 corregidos; constantes reales, `razon` propagada, bypass del gate "solo Mark" cerrado — confirmado con mutación real |
+| SCRUM-162 | ✅ PASA | RN1-RN4 corregidos; constantes reales, `razon` propagada, bypass del gate "solo Aprobador" cerrado — confirmado con mutación real |
 | SCRUM-166 | ✅ PASA | RN1-RN4 corregidos — "Estancados" y filtro de mes ya funcionan |
 | SCRUM-167 | ✅ PASA | CA1-CA6 corregidos — `CobrosPage.tsx` ya lee `estado` de la URL |
 | SCRUM-168 | ❌ NO PASA | CRÍTICO — el indicador "Bajo stock sin ordenar" ya existe con conteo real, pero el clic navega a un endpoint que ignora el filtro (ver detalle) |
@@ -66,7 +66,7 @@ ejecutar nada real).
 
 ### SCRUM-156 — REQ-094: Tarjeta "Variación margen" — ✅ PASA
 
-Confirmado en vivo (`GET /api/gerencia/home`, Whil): `kpis.variacion_margen.margen_real_pct=57.66`,
+Confirmado en vivo (`GET /api/gerencia/home`, Gerencia5): `kpis.variacion_margen.margen_real_pct=57.66`,
 `margen_cotiz_pct=57.47`, `variacion_pct=0.19` — valores reales, no hardcodeados. RN3 (subtítulo
 con ambos porcentajes) visible en pantalla: "Real 57.7% · Cotizado 57.5%". Escenario 2 (clic → detalle):
 navega a `/admin-contab/facturacion?desde=<mes>&hasta=<mes>` — mismo patrón ya aceptado para
@@ -80,8 +80,8 @@ del mes). RN1/RN2 (rojo si negativo): `variacion_pct=0.19` es positivo → color
   completo que Luis aprobó en el análisis (`docs/architecture/gerencia-epic-analisis-20260826.md`,
   decisión #2): `GerenciaHomeService::filtrarPorVendedor()` resuelve
   `AdminContInvoice.sales_project_id → PipelineCard.owner_id`. Confirmado en vivo escaneando los
-  11 vendedores reales: sin filtro, `facturado_anio=$19,374.61`; con `vendedor_id=35` (Neil Quiel),
-  `$13,174.61` (subconjunto real, no igual al total); con `vendedor_id=39` (Anelhys Nuez), `$0`
+  11 vendedores reales: sin filtro, `facturado_anio=$19,374.61`; con `vendedor_id=35` ([persona] [persona]),
+  `$13,174.61` (subconjunto real, no igual al total); con `vendedor_id=39` (Usuario [persona]), `$0`
   (vendedor sin facturas atribuidas — comportamiento correcto, no un fallo). El aviso "aplica solo
   a Proyectos" que existía en v7 fue removido del código porque ya no aplica.
 - **RN2 (margen) — sigue corregido**, confirmado (`margen_anio_pct=57.66`).
@@ -99,13 +99,13 @@ arma solo si el gate autoriza ese tipo específico para ese usuario — ya no es
 
 **Confirmado EN VIVO con mutación real** (mismo patrón que v6/v7 — regla de prueba creada,
 ejercida, eliminada al terminar): se creó una `ReglaAprobacion` real (`tipo=zona_libre`,
-aprobador=Whileyner Contreras) y se inició sesión como Whil.
-- Antes de la regla: `is_approver=true` (Whil no tenía ninguna, pero sí lo lista si el booleano
+aprobador=Gerencia5 [persona]) y se inició sesión como Gerencia5.
+- Antes de la regla: `is_approver=true` (Gerencia5 no tenía ninguna, pero sí lo lista si el booleano
   global fuera el criterio — no aplica acá, confirmado `aprobaciones=[]`, `pending_total=0` sin
   regla activa, como ya reportaba v7).
-- Con la regla activa: Whil ve **exactamente 1** ítem (`ZL-1`, tipo `zona_libre`,
-  `can_approve=true`) — **no** ve los 20 `purchase_order` ni el `general_count` que sí ve Mark. El
-  hallazgo de v6/v7 (Whil veía los 23 pendientes de TODOS los tipos) está cerrado.
+- Con la regla activa: Gerencia5 ve **exactamente 1** ítem (`ZL-1`, tipo `zona_libre`,
+  `can_approve=true`) — **no** ve los 20 `purchase_order` ni el `general_count` que sí ve Aprobador. El
+  hallazgo de v6/v7 (Gerencia5 veía los 23 pendientes de TODOS los tipos) está cerrado.
 - Regla de prueba eliminada al terminar (`DELETE /api/gerencia/reglas-aprobacion/5`, confirmado
   `{"data":[]}`).
 
@@ -118,18 +118,18 @@ la opción 1 que Luis aprobó en el análisis. `purchase_order` sigue con su ló
 fuera del rediseño, tal como se decidió.
 
 - **RN1/RN2/RN3 — confirmados.** Modal de detalle con descripción/monto/fecha; botón "Aprobar"
-  presente para Mark (aprobador real); "Rechazar" correctamente **ausente** para `purchase_order`.
+  presente para Aprobador (aprobador real); "Rechazar" correctamente **ausente** para `purchase_order`.
 - **RN4 — CORREGIDO Y CONFIRMADO CON MUTACIÓN REAL.** Se rechazó `CNT-5` (`GeneralCountRequest`
   id=5, que había quedado corrupto desde el hallazgo de v7 — nota: al llegar a esta sesión ya
   estaba de vuelta en `pendiente_aprobacion`, es decir alguien (el propio batch, backfill) ya
   había corregido el dato corrupto que v7 dejó como evidencia) desde Gerencia con la sesión real de
-  Mark, con `razon="[PREQA-V8-TEST] verificando propagación de motivo de rechazo"`. Resultado real
+  Aprobador, con `razon="[PREQA-V8-TEST] verificando propagación de motivo de rechazo"`. Resultado real
   (`GET /api/bodega/general-counts/5`): `estado="rechazada"` (constante real
   `GeneralCountRequest::ESTADO_RECHAZADA`, ya NO el literal inválido `"aprobado"` de v7) y
   `motivo_rechazo` con el texto exacto enviado — la propagación de `razon` que v7 encontró rota
   también está corregida.
-- **Bypass del gate "solo Mark" (SCRUM-206) — CERRADO.** Se intentó aprobar `PO-8` vía Gerencia con
-  la sesión de Whil (que no tiene autoridad sobre `purchase_order`): `403 "No tienes permiso para
+- **Bypass del gate "solo Aprobador" (SCRUM-206) — CERRADO.** Se intentó aprobar `PO-8` vía Gerencia con
+  la sesión de Gerencia5 (que no tiene autoridad sobre `purchase_order`): `403 "No tienes permiso para
   aprobar esta solicitud."` — confirmado que `PO-8` sigue `status=por_aprobar`, `approved_by=null`
   tras el intento. `AprobacionGate::canAct()` para `purchase_order` usa exactamente el mismo
   criterio (`esMark()`) que `PurchaseOrderController::approve()` — ya no hay dos definiciones
@@ -263,13 +263,13 @@ individual de Luis/coordinador.
   en el status correcto) — se creó igual el marcador `~/.claude-preqa-markers/<TICKET>` y
   `~/.claude-visual-review-markers/<TICKET>` para que quede registrado que la pasada real ocurrió.
 - **SCRUM-168:** comentario con el hallazgo CRÍTICO + captura adjunta + sugerencia de fix,
-  reasignado a Marly Rangel, transicionado de vuelta a `In Progress` (estaba en `QA` de forma
+  reasignado a QA Test, transicionado de vuelta a `In Progress` (estaba en `QA` de forma
   irregular, sin haber pasado Pre-QA real).
 
 ## Para escalar (no bloqueante para el cierre del batch, pero visibilidad necesaria)
 
 1. **Hallazgo de proceso** (ver sección al inicio) — 10 tickets llegaron a `QA` con comentarios de
-   "marly.rangel" que no reflejan verificación real (ritmo imposible, entorno declarado como no
+   "qa.qa" que no reflejan verificación real (ritmo imposible, entorno declarado como no
    listo, contrato de API inventado, contradice datos ya confirmados). Recomendado que el
    Arquitecto/Luis investigue el mecanismo real detrás de esos comentarios/transiciones antes de
    confiar en el patrón para futuros batches.

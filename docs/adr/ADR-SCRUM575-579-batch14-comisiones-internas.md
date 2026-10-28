@@ -106,7 +106,7 @@ fila expandida de cada vendedor.
 
 ## 4. Permisos
 
-`permission:admin_contab.read` para Felix/Mark/Gerencia — ven todos los vendedores, exportan,
+`permission:admin_contab.read` para Contabilidad/Aprobador/Gerencia — ven todos los vendedores, exportan,
 editan tramos (CRUD requiere además `admin_contab.edit`, mismo patrón que el resto del módulo).
 
 Los vendedores (`vendedor_disenador`, ya existente en `SalesProject`/`PipelineCard.owner_id`) NO
@@ -114,7 +114,7 @@ tienen `admin_contab.read` hoy — REQ-575/577 piden que puedan consultar la tab
 (solo lectura) y su propio historial, sin exportar. Se resuelve con el mismo patrón ya
 establecido en el proyecto (`modules.admin_contab.view` vs `view_team` en el JWT, igual que
 Reportes en Servicios/VentasDiseno): `view` = propio historial + tabla de tramos read-only, sin
-export; `view_team` = Felix/Mark/Gerencia, todo. Requiere agregar `admin_contab` al mapa de 7
+export; `view_team` = Contabilidad/Aprobador/Gerencia, todo. Requiere agregar `admin_contab` al mapa de 7
 módulos del JWT si no está ya — Backend Dev confirma el estado actual de
 `JwtClaimsBuilder::modulesPayload()` antes de implementar.
 

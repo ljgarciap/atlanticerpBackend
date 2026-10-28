@@ -35,7 +35,7 @@ resultado, solo al tiempo de la sesión.
 ## Paso 0 — permisos
 
 `bodega.read`/`bodega.write` **no** requirieron ningún grant manual: el rol `lider_bodega`
-(Esteban, `almacen@atlantic.com.pa`) ya los trae nativos vía el rol (confirmado en el JWT:
+(Liderbodega, `almacen@atlantic.com.pa`) ya los trae nativos vía el rol (confirmado en el JWT:
 `modules.bodega = {view:true, view_team:true, edit:true}`, sin `extra_permissions`). Intenté
 otorgarlos manualmente por las dudas al principio de la sesión y confirmé después que era
 redundante — revertido a `extra_permissions: []` antes de terminar, entorno queda limpio, nada que
@@ -46,7 +46,7 @@ agregar a `SpecialPermissionSeeder`.
 | Order | Flujo | Propósito |
 |---|---|---|
 | 125 (`PED-2026-PREQA-A2`) | Packing → `register-delivery` → **Por despachar**, guía generada sin firmar | Escenario 1 |
-| 126 (`PED-2026-PREQA-B2`) | + `assign-courier` (Gary Arrocha) + `dispatch` + `register-signed-guide` con `received_by_name = "Maria Fernandez (Recepcionista)"` (deliberadamente distinto del repartidor) | Escenario 2 |
+| 126 (`PED-2026-PREQA-B2`) | + `assign-courier` ([persona] [persona]) + `dispatch` + `register-signed-guide` con `received_by_name = "Maria Fernandez (Recepcionista)"` (deliberadamente distinto del repartidor) | Escenario 2 |
 | 127 (`PED-2026-PREQA-C2`) | Mismo flujo que 126, `received_by_name = "Carlos Receptor Real"`, **+ un 3er documento `guia_entrega` insertado a mano después, sin firmar (id más alto)** | Adversarial — "herir el orden de creación" |
 
 ## Veredicto: 🟢 Limpio para SCRUM-400 — 1 hallazgo MEDIO nuevo, no bloqueante, fuera del alcance reachable hoy
@@ -70,11 +70,11 @@ Screenshot: `e2e/.tmp/scrum400-recheck-order103-unsigned.png`.
 
 ## Escenario 2 — guía firmada, nombres deliberadamente distintos (Order 126) ✅
 
-Repartidor (`assign-courier`) = **Gary Arrocha**. `received_by_name` sembrado = **"Maria Fernandez
+Repartidor (`assign-courier`) = **[persona] [persona]**. `received_by_name` sembrado = **"Maria Fernandez
 (Recepcionista)"** — a propósito un nombre que no se parece en nada al repartidor, para que la
 prueba sea significativa (no repetir el error de sembrar el mismo nombre en ambos roles).
 
-> REPARTIDOR: "Gary Arrocha" (campo separado, correcto)
+> REPARTIDOR: "[persona] [persona]" (campo separado, correcto)
 > FIRMA: **"Firmado y recibido por: Maria Fernandez (Recepcionista)"**
 
 El bug original (mostrar el repartidor en la firma) **no reaparece**. Screenshot:
@@ -136,11 +136,11 @@ el Senior Review ya había señalado como corregido de rebote — confirmado en 
 
 ## Paso 3 — casos de ruptura estándar
 
-- **Rol sin permiso de Bodega:** primero probé con Gary (`transporte`) asumiendo que no tendría
+- **Rol sin permiso de Bodega:** primero probé con [persona] (`transporte`) asumiendo que no tendría
   acceso — **resultó ser un supuesto mío incorrecto**, no un bug: el rol `transporte` SÍ trae
   `bodega.view/edit` nativos (confirmado en el JWT, sin `extra_permissions`), tiene sentido de
   negocio (un repartidor necesita ver sus pedidos). Corregí el test con un rol que de verdad no
-  tiene ningún permiso de Bodega (`vendedor_disenador`, `neil.quiel@atlantic.com.pa` —
+  tiene ningún permiso de Bodega (`vendedor_disenador`, `[persona].[persona]@atlantic.com.pa` —
   `modules.bodega` todo en `false`): navegar a `/bodega/pedidos` **nunca llama a la API** (el
   router del frontend bloquea antes), termina en el Dashboard genérico ("Selecciona un módulo").
   Verificado también a nivel API directo: `GET /api/bodega/orders` con su JWT → `403`. Gate real,

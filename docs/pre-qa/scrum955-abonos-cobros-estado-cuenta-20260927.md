@@ -1,7 +1,7 @@
 # Pre-QA — SCRUM-955 (Ajustes en Abonos, Cobros y Estado de Cuenta)
 
 **Fecha:** 2026-09-27 (2 pasadas) · **Entorno:** stack LOCAL (Docker `infra/`, backend `dev` @
-`72aeff3`, frontend `dev` @ `72aeff3`/`758b082` — sin push, no `dev.atlanticerp.ai`) · **Cuenta:** Felix
+`72aeff3`, frontend `dev` @ `72aeff3`/`758b082` — sin push, no `dev.atlanticerp.ai`) · **Cuenta:** Contabilidad
 Campos (`contabilidad@test.com`, `lider_admin_contab`) · **Resultado final: PARCIAL —
 puntos 1 (parcial) y 2 confirmados limpios en vivo; puntos 3 (Cobro), 4 y 5 siguen bloqueados por
 ausencia de una factura real en el ambiente, bloqueo estructural confirmado, no solo sospechado.**

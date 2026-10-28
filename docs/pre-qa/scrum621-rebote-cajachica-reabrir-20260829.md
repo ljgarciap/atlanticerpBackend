@@ -9,16 +9,16 @@ cubriendo el escenario, no hizo falta agregar uno nuevo).
 
 ## Contexto del rebote
 
-QA (marly.rangel, probado con Mark Bekhar + una cuenta "QA Admin") reportó CRÍTICO el 2026-08-29:
+QA (qa.qa, probado con Gerencia3 Test + una cuenta "QA Admin") reportó CRÍTICO el 2026-08-29:
 "En el detalle de una línea en Rechazados solo aparecen botones Cerrar y Editar. No existe un
-botón Reabrir dedicado" — probado con Mark (Gerencia, correcto que no lo vea) y QA Admin (rol
-`lider_admin_contab`, mismo rol que Felix — debía verlo y no lo vio).
+botón Reabrir dedicado" — probado con Aprobador (Gerencia, correcto que no lo vea) y QA Admin (rol
+`lider_admin_contab`, mismo rol que Contabilidad — debía verlo y no lo vio).
 
 ## Investigación de causa raíz (antes de esta pasada)
 
 Descartado en vivo contra `dev.atlanticerp.ai`:
 - **Permisos de la cuenta de prueba** — `qa@atlantic.com.pa` (id 57) tiene `role_key =
-  lider_admin_contab`, idéntico a Felix. `isFelixOrYaneth()` la reconoce correctamente.
+  lider_admin_contab`, idéntico a Contabilidad. `isPersonaOrPersona()` la reconoce correctamente.
 - **Build de frontend desactualizado** — el bundle servido en dev ya incluía el código de
   `puede_reabrir`/Reabrir, construido antes de que QA probara.
 - **Cálculo del backend** — simulado en vivo (Tinker) contra la línea y usuario exactos que usó
@@ -27,7 +27,7 @@ Descartado en vivo contra `dev.atlanticerp.ai`:
 
 Encontrados y corregidos 2 gaps reales de consistencia (no confirmados como LA causa exacta del
 síntoma reportado — el cache de React Query es por navegador/sesión, así que la staleness de la
-sesión de Mark no explica automáticamente lo que vio la sesión separada de QA Admin — pero ambos
+sesión de Aprobador no explica automáticamente lo que vio la sesión separada de QA Admin — pero ambos
 son defectos reales que corresponde tener corregidos de todas formas):
 1. `useRejectPettyCashReport()` no invalidaba el cache de `expenseDetail()` de las líneas del
    reporte rechazado (a diferencia de `useRejectPettyCashExpense()`, que sí lo hace).
@@ -40,17 +40,17 @@ No alcanza con confirmar el camino feliz de SCRUM-621 aislado — se corrió el 
 completo del batch (21 tests, SCRUM-618→623 + Extra) para descartar que el fix haya introducido
 una regresión en el resto del flujo de Caja Chica.
 
-- **SCRUM-618** (rechazo línea/reporte, exclusivo Mark) — OK, sin cambios respecto a la
+- **SCRUM-618** (rechazo línea/reporte, exclusivo Aprobador) — OK, sin cambios respecto a la
   verificación anterior.
 - **SCRUM-619/REQ-542** (regla de 2 intentos, incluye rechazo vía "reporte completo" — el
   mecanismo real que dispara el gap corregido) — OK: 2do rechazo pasa PERMANENTEMENTE a
   Rechazados.
 - **SCRUM-620** (panel Rechazados, 4 roles) — OK.
 - **SCRUM-621/REQ-544 (el ticket del rebote)** — OK en los 2 escenarios adversariales clave:
-  - Mark NO ve el botón Reabrir (ni por UI ni por API — 403 real).
-  - Felix, en una sesión fresca separada (login propio, sin reload a mitad de flujo), abre el
+  - Aprobador NO ve el botón Reabrir (ni por UI ni por API — 403 real).
+  - Contabilidad, en una sesión fresca separada (login propio, sin reload a mitad de flujo), abre el
     detalle de la línea que llegó a Rechazados vía "rechazar reporte completo" (el mismo camino
-    que usó Mark en el escenario reportado) y el botón Reabrir aparece, exige motivo, resetea el
+    que usó Aprobador en el escenario reportado) y el botón Reabrir aparece, exige motivo, resetea el
     contador a 0, conserva el historial completo (2 rechazos + reapertura).
 - **SCRUM-622/SCRUM-623** (modal unificado, ver/descargar soporte) — OK, sin regresión.
 - **Extra — Configuración Fiscal** — OK.
@@ -81,7 +81,7 @@ superficie visual nueva que auditar.
 **PASA LIMPIO.** Sin hallazgos nuevos. Los 2 gaps de consistencia encontrados durante la
 investigación de causa raíz quedaron corregidos, testeados (suite completa 2852+1645 en verde,
 más 1 test de regresión nuevo) y desplegados a `dev.atlanticerp.ai`. Ticket queda listo para volver a
-`QA` — comentario dejado en Jira con el resumen para marly/QA, pidiendo reintentar el flujo
+`QA` — comentario dejado en Jira con el resumen para qa/QA, pidiendo reintentar el flujo
 puntual que rebotó.
 
 **Caveat honesto:** no se pudo reproducir con certeza absoluta la secuencia exacta de clics que

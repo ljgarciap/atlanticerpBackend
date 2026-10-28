@@ -16,8 +16,8 @@ los 9 restantes son el alcance completo de esta re-verificación.
 
 **Alcance:** rol Pre-QA — verificar en vivo contra `dev.atlanticerp.ai` (Playwright CLI + curl directo
 contra la API, nunca Claude in Chrome) + lectura de código cuando el criterio no depende de dato
-del día, y transicionar: cumple → `PM Review` (asignado a Daniela Amaya); no cumple → `In
-Progress` con comentario explícito (asignado a Marly Rangel). **No se implementó ni pusheó ningún
+del día, y transicionar: cumple → `PM Review` (asignado a Gerencia1 Test); no cumple → `In
+Progress` con comentario explícito (asignado a QA Test). **No se implementó ni pusheó ningún
 fix** — por instrucción explícita para esta pasada, distinto de la práctica default de
 `pre-qa.md` Paso 6; el fix lo hace el otro equipo. Acciones en Jira ejecutadas y confirmadas con
 `jira_search_issues` tras cada transición.
@@ -28,15 +28,15 @@ fix** — por instrucción explícita para esta pasada, distinto de la práctica
 
 | Ticket | Veredicto v5 | Veredicto v6 | Cambio | Transición ejecutada |
 |---|---|---|---|---|
-| SCRUM-156 (Variación margen) | ❌ NO PASA | ❌ NO PASA | Sin cambio real (campos agregados pero hardcodeados) | → `In Progress`, Marly |
-| SCRUM-159 (Panel Facturación) | ❌ NO PASA | ❌ NO PASA | Mejora parcial (selects poblados) + 1 hallazgo NUEVO | → `In Progress`, Marly |
-| SCRUM-160 (Panel Proyectos) | ❌ NO PASA | ❌ NO PASA | Sin cambio | → `In Progress`, Marly |
-| SCRUM-161 (Aprobaciones — listado) | ❌ NO PASA | ❌ NO PASA | Sin cambio (commit no tocó este código) | → `In Progress`, Marly |
-| SCRUM-162 (Aprobaciones — detalle/acción) | ❌ NO PASA | ❌ NO PASA | Sin cambio — ahora confirmado con Mark real (antes bloqueado por password) | → `In Progress`, Marly |
-| SCRUM-166 (Salud Ventas&Diseño) | ❌ NO PASA | ❌ NO PASA | Mejora aparente pero rota (mismatch de contrato query param) | → `In Progress`, Marly |
-| SCRUM-168 (Salud Compras) | ❌ NO PASA | ❌ NO PASA | Mejora parcial + 1 hallazgo NUEVO (inconsistencia de conteo) | → `In Progress`, Marly |
-| SCRUM-171 (Agenda Bodega) | ❌ NO PASA | ❌ NO PASA | RN3 corregido por código (mismo patrón que 172, no ejercitable en vivo hoy); RN2 sin cambio | → `In Progress`, Marly |
-| SCRUM-172 (Agenda Servicios) | ❌ NO PASA (solo RN3) | ✅ **PASA** | RN3 corregido y confirmado en vivo con dato real | → `PM Review`, Daniela |
+| SCRUM-156 (Variación margen) | ❌ NO PASA | ❌ NO PASA | Sin cambio real (campos agregados pero hardcodeados) | → `In Progress`, Qa |
+| SCRUM-159 (Panel Facturación) | ❌ NO PASA | ❌ NO PASA | Mejora parcial (selects poblados) + 1 hallazgo NUEVO | → `In Progress`, Qa |
+| SCRUM-160 (Panel Proyectos) | ❌ NO PASA | ❌ NO PASA | Sin cambio | → `In Progress`, Qa |
+| SCRUM-161 (Aprobaciones — listado) | ❌ NO PASA | ❌ NO PASA | Sin cambio (commit no tocó este código) | → `In Progress`, Qa |
+| SCRUM-162 (Aprobaciones — detalle/acción) | ❌ NO PASA | ❌ NO PASA | Sin cambio — ahora confirmado con Aprobador real (antes bloqueado por password) | → `In Progress`, Qa |
+| SCRUM-166 (Salud Ventas&Diseño) | ❌ NO PASA | ❌ NO PASA | Mejora aparente pero rota (mismatch de contrato query param) | → `In Progress`, Qa |
+| SCRUM-168 (Salud Compras) | ❌ NO PASA | ❌ NO PASA | Mejora parcial + 1 hallazgo NUEVO (inconsistencia de conteo) | → `In Progress`, Qa |
+| SCRUM-171 (Agenda Bodega) | ❌ NO PASA | ❌ NO PASA | RN3 corregido por código (mismo patrón que 172, no ejercitable en vivo hoy); RN2 sin cambio | → `In Progress`, Qa |
+| SCRUM-172 (Agenda Servicios) | ❌ NO PASA (solo RN3) | ✅ **PASA** | RN3 corregido y confirmado en vivo con dato real | → `PM Review`, Gerencia1 |
 
 **1 de 9 pasa** (SCRUM-172 — primer ticket de todo el ciclo de re-verificación de este épica que
 cierra limpio). **8 de 9 siguen sin pasar.**
@@ -103,15 +103,15 @@ cierra limpio). **8 de 9 siguen sin pasar.**
 ### SCRUM-161 — Aprobaciones (listado) — ❌ NO PASA — GAP DE DISEÑO, sin cambio
 El commit `9f82409` no tocó `pendingApprovalsSection()` — sigue siendo un único aprobador global
 (`ComprasSettings.mark_approver_user_id`), sin consultar la tabla `ReglaAprobacion` (SCRUM-163)
-que ya existe en el código. Confirmado en vivo con `whil@atlantic.com.pa`:
+que ya existe en el código. Confirmado en vivo con `gerencia5@atlantic.com.pa`:
 `is_approver=false`, `aprobaciones=[]`. Mismo hallazgo estructural que v3/v4/v5, sin variación.
 - **Sugerencia de fix concreta:** `GerenciaHomeService::pendingApprovalsSection()`, línea ~380 —
   reemplazar el chequeo `$userId === $markApproverId` por una consulta a `ReglaAprobacion` que
   resuelva, por `type` de cada ítem (`purchase_order`, `relocation`, `adjustment`,
   `general_count`, `zona_libre`), qué rol/usuario está autorizado a verlo/aprobarlo.
 
-### SCRUM-162 — Aprobaciones (detalle/acción) — ❌ NO PASA — confirmado con Mark real esta vez
-A diferencia de v5 (bloqueado por password no-default de Mark), esta pasada usó la password real
+### SCRUM-162 — Aprobaciones (detalle/acción) — ❌ NO PASA — confirmado con Aprobador real esta vez
+A diferencia de v5 (bloqueado por password no-default de Aprobador), esta pasada usó la password real
 confirmada `B1n4X_2026?` — login exitoso, `is_approver=true`, `pending_total=23`,
 `aprobaciones.length=22` (dato real, no vacío).
 - **CRÍTICO RN2 (confirmado con datos reales, no solo por código):** con 22 aprobaciones reales
@@ -200,8 +200,8 @@ confirmada `B1n4X_2026?` — login exitoso, `is_approver=true`, `pending_total=2
 
 ### SCRUM-172 — Agenda Servicios — ✅ PASA
 - **RN3 corregido y confirmado en vivo:** a diferencia de v5 (sin datos ese día), hoy
-  `dev.atlanticerp.ai` tiene 1 visita real sembrada (ticket `INS-2026-0002`, id=2, técnico Agustín
-  Rodríguez, 19:00). Clic en la fila navegó a `/servicios/tickets?ticket=2` y el detalle del
+  `dev.atlanticerp.ai` tiene 1 visita real sembrada (ticket `INS-2026-0002`, id=2, técnico [persona]
+  [persona], 19:00). Clic en la fila navegó a `/servicios/tickets?ticket=2` y el detalle del
   ticket `INS-2026-0002` específico quedó visible en pantalla — confirmado con Playwright, no solo
   por código.
 - RN2 ya funcionaba desde v4/v5 (botón "Ver detalle" → `/servicios/inicio`, panel real "Rutas del
@@ -214,12 +214,12 @@ confirmada `B1n4X_2026?` — login exitoso, `is_approver=true`, `pending_total=2
 ---
 
 ## Verificación de credenciales (esta pasada)
-- `whil@atlantic.com.pa` — password default (su propio email) — OK, usado en todos los tests.
-- `mbekhar@atlantic.com.pa` (Mark, aprobador real) — password `B1n4X_2026?` — **login exitoso
+- `gerencia5@atlantic.com.pa` — password default (su propio email) — OK, usado en todos los tests.
+- `gerencia3@test.com` (Aprobador, aprobador real) — password `B1n4X_2026?` — **login exitoso
   esta vez** (a diferencia de v5, que falló por asumir password default). Permitió confirmar
   SCRUM-162 con datos reales (`is_approver=true`, 22 aprobaciones pendientes reales) en vez de solo
   por lectura de código — evidencia más fuerte que en cualquier pasada anterior.
-- `daniela@atlantic.com.pa` — no se necesitó para este batch (no hay tickets que dependan de
+- `gerencia1@atlantic.com.pa` — no se necesitó para este batch (no hay tickets que dependan de
   su rol específico en los 9 de este batch).
 
 ---
@@ -235,9 +235,9 @@ confirmada `B1n4X_2026?` — login exitoso, `is_approver=true`, `pending_total=2
 
 ## Resumen conciso
 **1 de 9 pasa:** SCRUM-172 (Agenda Servicios) — RN3 corregido y confirmado en vivo con dato real,
-sin hallazgos bloqueantes. → `PM Review`/Daniela.
+sin hallazgos bloqueantes. → `PM Review`/Gerencia1.
 
-**8 de 9 no pasan** (todos a `In Progress`/Marly):
+**8 de 9 no pasan** (todos a `In Progress`/Qa):
 - SCRUM-156 — `margen_real_pct`/`margen_cotiz_pct` agregados al payload pero hardcodeados a 0
   (TODO server-side); el subtítulo ahora muestra ese 0% como si fuera un dato real.
 - SCRUM-159 — selects Vendedor/Cliente ahora poblados (mejora real), pero el filtro de Vendedor no
@@ -245,7 +245,7 @@ sin hallazgos bloqueantes. → `PM Review`/Daniela.
   no solo pendiente) + margen año/mes sigue hardcodeado en 0%.
 - SCRUM-160 — margen cotizado año/mes sigue hardcodeado en 0%.
 - SCRUM-161 — gap de diseño sin cambio: aprobador único global, no por tipo de solicitud.
-- SCRUM-162 — confirmado con Mark real (22 aprobaciones reales visibles): sigue sin existir botón
+- SCRUM-162 — confirmado con Aprobador real (22 aprobaciones reales visibles): sigue sin existir botón
   Aprobar/Rechazar, y cada ítem navega a la lista genérica del módulo, no al registro puntual.
 - SCRUM-166 — 2 de 5 métricas ahora navegan con querystring, pero la pantalla destino
   (`PipelinePage.tsx`) no reconoce esos valores — el filtro no se aplica pese a la URL cambiar; las

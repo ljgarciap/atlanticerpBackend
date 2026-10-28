@@ -3,8 +3,8 @@
 **Fecha:** 2026-08-24
 **Ambiente:** `dev.atlanticerp.ai`, post-merge de `gerencia → dev` (ambos repos).
 **Alcance de esta sesión:** rol Pre-QA puro — verificar cumplimiento de criterio contra Jira+código
-real, y transicionar: cumple → `PM Review` (asignado a Daniela Amaya); no cumple → `In Progress`
-con comentario explícito a Marly Rangel (asignado a ella). **Acciones ya ejecutadas en Jira**, no
+real, y transicionar: cumple → `PM Review` (asignado a Gerencia1 Test); no cumple → `In Progress`
+con comentario explícito a QA Test (asignado a ella). **Acciones ya ejecutadas en Jira**, no
 es una recomendación pendiente.
 
 ---
@@ -13,18 +13,18 @@ es una recomendación pendiente.
 
 | Ticket | Veredicto | Transición ejecutada |
 |---|---|---|
-| SCRUM-157 (CxC al día) | ✅ **PASA** | → `PM Review`, asignado a Daniela |
-| SCRUM-158 (Proyectos activos) | ✅ **PASA** | → `PM Review`, asignado a Daniela |
-| SCRUM-165 (Día/Semana/Mes) | ✅ **PASA** | → `PM Review`, asignado a Daniela |
-| SCRUM-156 (Variación margen) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
-| SCRUM-159 (Panel Facturación) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
-| SCRUM-160 (Panel Proyectos) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
-| SCRUM-161 (Aprobaciones — listado) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
-| SCRUM-162 (Aprobaciones — detalle/acción) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
-| SCRUM-166 (Salud Ventas&Diseño) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
-| SCRUM-168 (Salud Compras) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
-| SCRUM-171 (Agenda Bodega) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
-| SCRUM-172 (Agenda Servicios) | ❌ NO PASA | → `In Progress`, asignado a Marly, comentario detallado |
+| SCRUM-157 (CxC al día) | ✅ **PASA** | → `PM Review`, asignado a Gerencia1 |
+| SCRUM-158 (Proyectos activos) | ✅ **PASA** | → `PM Review`, asignado a Gerencia1 |
+| SCRUM-165 (Día/Semana/Mes) | ✅ **PASA** | → `PM Review`, asignado a Gerencia1 |
+| SCRUM-156 (Variación margen) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
+| SCRUM-159 (Panel Facturación) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
+| SCRUM-160 (Panel Proyectos) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
+| SCRUM-161 (Aprobaciones — listado) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
+| SCRUM-162 (Aprobaciones — detalle/acción) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
+| SCRUM-166 (Salud Ventas&Diseño) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
+| SCRUM-168 (Salud Compras) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
+| SCRUM-171 (Agenda Bodega) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
+| SCRUM-172 (Agenda Servicios) | ❌ NO PASA | → `In Progress`, asignado a Qa, comentario detallado |
 
 **3 de 12 pasan. 9 de 12 vuelven a `In Progress`.**
 
@@ -55,11 +55,11 @@ es una recomendación pendiente.
 
 ### SCRUM-161 — CRÍTICO (gap de diseño, no bug puntual)
 - RN1/RN2 piden varios aprobadores, cada uno viendo solo sus tipos autorizados. Lo implementado es
-  un único `mark_approver_user_id` global (hoy: Mark/`mbekhar`, confirmado por SQL) — cualquier
+  un único `mark_approver_user_id` global (hoy: Aprobador/`mbekhar`, confirmado por SQL) — cualquier
   otra persona ve "Solo para aprobadores" sin importar su tipo. Requiere una tabla de reglas
   tipo→aprobador (como `REGLA_APROBACION` de SCRUM-163), no un ajuste chico.
 - RN3 (descripción/módulo/motivo por fila) sí está bien implementado.
-- **Limitación de esta sesión:** no se pudo probar el camino feliz como Mark real — su password no
+- **Limitación de esta sesión:** no se pudo probar el camino feliz como Aprobador real — su password no
   es el default y el intento de resetearlo vía tinker fue bloqueado por el propio sistema de
   permisos de Claude Code (no es una decisión mía, es un bloqueo real del harness). Verificado en
   cambio el camino "no aprobador" completo.

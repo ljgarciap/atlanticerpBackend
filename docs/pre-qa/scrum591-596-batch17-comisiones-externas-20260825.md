@@ -3,8 +3,8 @@
 Despacho consolidado (Visual Reviewer + Pre-QA fusionados en un solo pase, mismo criterio ya
 formalizado 2026-08-15). Verificación en vivo contra `dev.atlanticerp.ai` recién desplegado — no local,
 para probar el flujo real de extremo a extremo (backend + frontend + Postgres real). Usuarios
-reales: `mbekhar@atlantic.com.pa` (Mark Approver real, contraseña real distinta del default
-email) y `conta@atlantic.com.pa` (Felix, lider_admin_contab, password = email). Playwright CLI
+reales: `gerencia3@test.com` (Aprobador Approver real, contraseña real distinta del default
+email) y `conta@atlantic.com.pa` (Contabilidad, lider_admin_contab, password = email). Playwright CLI
 (`atlanticerp-frontend/e2e/preqa-batch17-scrum591-596-20260825.spec.ts`, spec permanente).
 
 ## Resumen de veredicto
@@ -38,21 +38,21 @@ futura limpieza de datos de prueba o investigación de causa raíz, no ticket ab
 | REQ-508→512 | Proyecto pasa a "Pendiente de factura" tras cobro 100% | ✅ confirmado (`comisión generada`/`pendiente de factura` recalculados: $658.73 al 10% inicial) |
 | REQ-519 | Modal de detalle: monto, cobro, estado, RUC, % comisión, comisión/impuesto/total, cuenta de pago, cuenta de cobro | ✅ todos presentes y con el valor correcto |
 | REQ-514 RN1 | Comprobante de retención NO aparece con régimen `con_itbms` | ✅ confirmado (`getByText('Comprobante de retención')` → 0 matches) |
-| REQ-516 RN3 | Felix propone 12% con motivo | ✅ persistido server-side (confirmado al reabrir el modal en un login posterior) |
-| REQ-516 RN4 | Mark aprueba el % pendiente, **sin cerrar el modal** | ✅ — ver hallazgo CRÍTICO abajo |
+| REQ-516 RN3 | Contabilidad propone 12% con motivo | ✅ persistido server-side (confirmado al reabrir el modal en un login posterior) |
+| REQ-516 RN4 | Aprobador aprueba el % pendiente, **sin cerrar el modal** | ✅ — ver hallazgo CRÍTICO abajo |
 | REQ-511 | Comisión/impuesto/total recalculados con el % aprobado (12%) | ✅ $790.48 / $55.33 / $845.81 (6,587.31 × 12% = 790.4772, redondeado) |
 | REQ-517 RN1 | Cuenta de pago resuelta al default "Banco General — Cuenta Corriente" sin asignación explícita | ✅ |
-| REQ-517 | Mark (`management`) ve la cuenta de pago como texto, no como `<select>` editable | ✅ (roster angosto de edición confirmado, Mark no está en él) |
+| REQ-517 | Aprobador (`management`) ve la cuenta de pago como texto, no como `<select>` editable | ✅ (roster angosto de edición confirmado, Aprobador no está en él) |
 | REQ-513/515 RN2 | "Marcar como pagado" deshabilitado sin cuenta de cobro | ✅ (ya confirmado también por 2 tests de backend con HTTP real) |
-| REQ-513 | Felix sube cuenta de cobro, aparece en la fila Y en el modal sin recargar | ✅ |
+| REQ-513 | Contabilidad sube cuenta de cobro, aparece en la fila Y en el modal sin recargar | ✅ |
 | REQ-515 | "Marcar como pagado" habilitado tras subir cuenta de cobro → estado pasa a "Pagada" | ✅ |
 | REQ-515 RN3 | Tras pagada: cuenta de pago pasa a texto estático, "Marcar pagado"/"Recordar" desaparecen | ✅ |
-| REQ-516 RN4 (ajuste) | `puede_decidir_porcentaje` en `summary()` — `true` para Mark, `false` para Felix | ✅ verificado vía API directa |
+| REQ-516 RN4 (ajuste) | `puede_decidir_porcentaje` en `summary()` — `true` para Aprobador, `false` para Contabilidad | ✅ verificado vía API directa |
 
 ## Hallazgo CRÍTICO encontrado y corregido en el momento
 
 **Modal de detalle con datos congelados tras una mutación exitosa.** Al proponer un % de comisión
-desde el modal (Felix), el backend persistía el cambio correctamente (confirmado leyendo la fila
+desde el modal (Contabilidad), el backend persistía el cambio correctamente (confirmado leyendo la fila
 directo de `architect_commissions` vía Eloquent), pero el modal — todavía abierto, sin cerrarlo —
 seguía mostrando "% de comisión: 10%" sin ningún banner de "pendiente de aprobación". Root cause:
 `ComisionesExternasPage.tsx` guardaba una **copia completa** del proyecto/arquitecto en el momento
@@ -70,7 +70,7 @@ o peor, habría asumido que la acción falló silenciosamente.
 pipelineCardId}`; `architect`/`project` se derivan de `summary` en cada render
 (`summary?.arquitectos.find(...)`). Cuando `summary` se refresca tras cualquier mutación, el modal
 automáticamente recibe los props frescos. Re-verificado en vivo tras el redeploy: proponer % →
-aprobar (Mark) → subir cuenta de cobro → marcar pagado, los 4 pasos reflejados en el MISMO modal
+aprobar (Aprobador) → subir cuenta de cobro → marcar pagado, los 4 pasos reflejados en el MISMO modal
 sin cerrarlo ninguna vez — capturas en `atlanticerp-frontend/e2e/screenshots/batch17-*.png` (no
 commiteadas, evidencia local de esta sesión). Test de regresión agregado:
 `ComisionesExternasPage.test.tsx` → "REQ-519 modal de detalle refleja mutaciones sin

@@ -10,7 +10,7 @@ Spec de referencia: 6 tickets de Jira (SCRUM-632→637) + mockup adjunto en SCRU
 Admin&Cont (SCRUM-331) con mockup real para comparar.
 
 Suite Playwright: `atlanticerp-frontend/e2e/preqa-scrum632-637-config-fiscal-20260819.spec.ts` — se
-conserva como test permanente del gate de Mark (mismo criterio que otros batches: un
+conserva como test permanente del gate de Aprobador (mismo criterio que otros batches: un
 gate/flujo de permiso que ya se verificó adversarialmente se promueve, no se descarta).
 
 ---
@@ -35,7 +35,7 @@ badge nuevo en `FiscalConfigPage.tsx` junto al de Ambiente.
 ### MAYOR #2 — Formulario "+ Agregar tasa" pedía 3 campos (Nombre/Descripción/Porcentaje); RN3 de REQ-558 solo pide 2
 
 RN3 es textual: "tanto el porcentaje como la descripción de uso son obligatorios" — el mockup y el
-escenario de aceptación ("Mark agrega una tasa nueva de 10% para 'Servicios de hospedaje'") tampoco
+escenario de aceptación ("Aprobador agrega una tasa nueva de 10% para 'Servicios de hospedaje'") tampoco
 mencionan un nombre separado.
 
 **Fix aplicado** (mismo día): `nombre` pasa a opcional/nullable en `StoreItbmsRateRequest` y en la
@@ -43,7 +43,7 @@ migración `2026_08_19_100013_make_nombre_nullable_on_admin_contab_itbms_rates_t
 "Nombre" se quitó del formulario de alta. Tabla y modal de detalle usan `rate.nombre ?? rate.descripcion`
 como label — las 3 tasas base (que sí tienen `nombre` fijo, ej. "7% General") no cambian.
 
-### MENOR — Falta el banner informativo del mockup ("Solo Mark puede editar esta pantalla...")
+### MENOR — Falta el banner informativo del mockup ("Solo Aprobador puede editar esta pantalla...")
 
 Decorativo, sin pérdida de funcionalidad. **No se corrigió** — queda pendiente a propósito, no
 bloqueante.
@@ -57,7 +57,7 @@ bloqueante.
   que "Última sincronización".
 - Creación de tasa solo con `{descripcion, porcentaje}` → `201` real (antes `422`). Form sin campo
   "Nombre" confirmado por label en Playwright, no solo por código. Tasas base sin cambios.
-- Sin regresión: gate de Mark (403 GET/PUT para no-Mark, `superadmin.all` NO bypassea), defensa en
+- Sin regresión: gate de Aprobador (403 GET/PUT para no-Aprobador, `superadmin.all` NO bypassea), defensa en
   profundidad (`pac_last_sync_at`/`mark_approver_user_id` inmunes a un PUT que intenta colarlos),
   modo lectura/edición con confirmación, tasas base sin botón eliminar, alta siempre `activa=false`,
   toggle de detalle de tasa reflejado en tabla sin cerrar el modal, retención a proveedores con nota
@@ -69,7 +69,7 @@ bloqueante.
 | Ticket | Escenario | Resultado |
 |---|---|---|
 | SCRUM-632 (REQ-555) | Solo-lectura por defecto, "Editar" desbloquea todo salvo "Última sincronización", confirmación al guardar | OK |
-| SCRUM-632 (REQ-555) | Acceso exclusivo de Mark — otro usuario (incl. superadmin) ve "Acceso restringido", 403 real en GET/PUT | OK |
+| SCRUM-632 (REQ-555) | Acceso exclusivo de Aprobador — otro usuario (incl. superadmin) ve "Acceso restringido", 403 real en GET/PUT | OK |
 | SCRUM-633 (REQ-556) | Datos fiscales de la empresa, régimen tributario con exactamente 2 opciones | OK |
 | SCRUM-634 (REQ-557) | Panel PAC: proveedor fijo, ambiente con contraste fuerte, última sincronización solo lectura, 2 toggles de documento | OK |
 | SCRUM-634 (REQ-557) | Badge "Estado de conexión" | **MAYOR detectado y corregido** |

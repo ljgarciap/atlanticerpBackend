@@ -4,7 +4,7 @@
 **Config fiscal original anotada al empezar:** `pac_provider=msl`, `pac_ambiente=testing`, `primary_approval_threshold=5000`, `pac_doc_factura_habilitado=true`, `pac_doc_nota_credito_habilitado=true`, `serie_fiscal=ILU`.
 **Tope de sandbox (Luis): 4 documentos nuevos certificados/intentados.** Contador al final del documento.
 
-## Fixtures creados (por API real, flujo Neil -> Bodega)
+## Fixtures creados (por API real, flujo [persona] -> Bodega)
 Cliente master 7706 / subcliente DIGIFACT 7710 (RUC real). El precio unitario del cotizador se pisa con el del catalogo (18.37), asi que las facturas grandes se hicieron con cantidad 300 (total 5896.77 > umbral 5000).
 - Pedidos 65 (PED-0045, 1 u, sin facturar), 66 (F-0018, 19.66), 67 (PED-0047, 1 u, sin facturar), 68 (F-0019, 19.66): fixtures chicos (mi primer intento de precio grande fue ignorado por el catalogo).
 - Pedidos "Grande A/B/C" = 69 (F-0020), 70 (F-0021), 71 (sin facturar aun; reservado para sandbox doc 4).
@@ -12,16 +12,16 @@ Cliente master 7706 / subcliente DIGIFACT 7710 (RUC real). El precio unitario de
 ## Bloque A — Umbral / aprobacion / rechazo en modo APAGADO (`pac_ambiente=apagado`, cero costo de sandbox)
 | Escenario de ruptura | Resultado |
 |---|---|
-| Correccion sin comprobante (Felix) | 422 "comprobante obligatorio" |
-| Felix registra correccion sobre F-0020 (5896.77 > 5000) | 201 NC-0005 `pendiente_aprobacion`; F-0020 NO anulada; sin factura nueva; `fe_estado` de la nota = null; transmisiones vacias |
-| Segunda correccion sobre la misma factura mientras hay una pendiente | 422 "ya tiene una correccion pendiente de aprobacion de Mark" |
-| Felix `GET notas-credito/5` | `puede_aprobar_rechazar=false`, `puede_ver_fe_transmisiones=false` |
-| Mark `GET notas-credito/5` | `puede_aprobar_rechazar=true`, `puede_ver_fe_transmisiones=true` |
-| Felix `PUT decision` (approve true) | 403 "exclusiva de Mark" |
-| Mark aprueba NC-0005 en apagado | 200 `aplicada`; F-0020 `es_anulada=true`; factura nueva F-0022 (`factura_nueva_numero`) con `fe_estado=no_aplica`; ninguna transmision registrada (nota, F-0020, F-0022) |
-| Mark decide de nuevo una nota ya aplicada | 422 "ya no esta pendiente" |
+| Correccion sin comprobante (Contabilidad) | 422 "comprobante obligatorio" |
+| Contabilidad registra correccion sobre F-0020 (5896.77 > 5000) | 201 NC-0005 `pendiente_aprobacion`; F-0020 NO anulada; sin factura nueva; `fe_estado` de la nota = null; transmisiones vacias |
+| Segunda correccion sobre la misma factura mientras hay una pendiente | 422 "ya tiene una correccion pendiente de aprobacion de Aprobador" |
+| Contabilidad `GET notas-credito/5` | `puede_aprobar_rechazar=false`, `puede_ver_fe_transmisiones=false` |
+| Aprobador `GET notas-credito/5` | `puede_aprobar_rechazar=true`, `puede_ver_fe_transmisiones=true` |
+| Contabilidad `PUT decision` (approve true) | 403 "exclusiva de Aprobador" |
+| Aprobador aprueba NC-0005 en apagado | 200 `aplicada`; F-0020 `es_anulada=true`; factura nueva F-0022 (`factura_nueva_numero`) con `fe_estado=no_aplica`; ninguna transmision registrada (nota, F-0020, F-0022) |
+| Aprobador decide de nuevo una nota ya aplicada | 422 "ya no esta pendiente" |
 | Rechazo sin `motivo_rechazo` (NC-0006 sobre F-0021) | 422 |
-| Mark rechaza NC-0006 con motivo | 200 `rechazada`; F-0021 sigue vigente (no anulada), sin factura nueva, sin transmisiones |
+| Aprobador rechaza NC-0006 con motivo | 200 `rechazada`; F-0021 sigue vigente (no anulada), sin factura nueva, sin transmisiones |
 | Correccion bajo umbral en apagado (F-0018, 19.66) | 201 NC-0007 `aplicada` de inmediato; factura nueva F-0023 `no_aplica`; sin transmisiones |
 | Paso 5: NC descuento comercial (NC-0008, 1.00) contra F-0016 certificada, en apagado; `fe-preview` | `ok=true`, `ambiente "sin envío"`, serie `NC-ILU`, numero `"0008"`, receptor DIGIFACT, items, pagos 1, `referencia.cufe` = CUFE de F-0016 (`FE0120000155704849-...063271`), `fecha` de la factura origen; `fe_estado=no_aplica`; transmisiones vacias (paso 6: cero llamadas a MSL) |
 
@@ -36,16 +36,16 @@ Nota: NC-0008 (1.00, aplicada en apagado) quedo como descuento real sobre F-0016
 - **Hipotesis de causa (no confirmada aun):** la NC lleva `fechaEmision` = fecha de la nota a las 00:00 (`AdminContCreditNote.fecha` es `date`, `->toIso8601String()`), mientras la factura de origen se emitio ese mismo dia a las 21:08:51. La NC quedaria "emitida antes" que el documento que referencia. Si es asi, toda NC registrada el MISMO dia de la factura falla. Se verifica repitiendo pasada la medianoche (NC con fecha 2026-09-30 > factura 2026-09-29 21:08). Alternativa: que F-0016 (certificada en el punto viejo) no sirva de referencia en el punto nuevo (no distinguible sin otra factura certificada).
 - Consecuencia sistemica ya observable: una certificacion rechazada NO tiene reintento (no existe endpoint/accion de recertificar); la nota queda aplicada con `fe_estado=rechazado` para siempre.
 
-### Paso 8 (sin costo) — F-0016 en UI (Playwright, Mark)
+### Paso 8 (sin costo) — F-0016 en UI (Playwright, Aprobador)
 Badge "Certificada" presente, CUFE `FE0120000155704849-...063271` visible, link "Ver QR" (`target=_blank`) abre `dgi-fep-test.mef.gob.pa:40001` ("Consultar Facturas Por QR", portal de pruebas de la DGI). OK.
 
 ### Paso 16, primera parte, en sandbox y sin costo de documento
-Con `pac_ambiente=testing`, correccion por UI (Mark) sobre F-0021 (5896.77 > 5000; factura sin certificar, `no_aplica`, para no gastar documentos): la pantalla de revision previa muestra "supera el umbral de aprobacion de Mark - NO se genera ningun documento fiscal todavia"; `POST correccion` 201 -> NC-0010 `pendiente_aprobacion`, `fe_estado=null`, cero transmisiones, F-0021 NO anulada, sin factura nueva. Mark rechaza (`approve=false` + motivo) -> `rechazada`, cero transmisiones, F-0021 intacta.
+Con `pac_ambiente=testing`, correccion por UI (Aprobador) sobre F-0021 (5896.77 > 5000; factura sin certificar, `no_aplica`, para no gastar documentos): la pantalla de revision previa muestra "supera el umbral de aprobacion de Aprobador - NO se genera ningun documento fiscal todavia"; `POST correccion` 201 -> NC-0010 `pendiente_aprobacion`, `fe_estado=null`, cero transmisiones, F-0021 NO anulada, sin factura nueva. Aprobador rechaza (`approve=false` + motivo) -> `rechazada`, cero transmisiones, F-0021 intacta.
 
 ### Doc 2 (intento 2/4) — NC descuento 5.00 contra F-0016, registrada 2026-09-30 00:00 Panama: CERTIFICADA (paso 9 OK)
 Repetido pasada la medianoche (fecha de la NC 2026-09-30 > emision de F-0016 el 2026-09-29 21:08:51): `POST notas-credito` -> NC-0011 `aplicada`, `fe_estado=certificado`, CUFE propio `FE0420000155704849-2-2021-3200022026093000000000110090122075979818` (prefijo FE04 de NC, distinto al de la factura), `referencia.cufe` = CUFE de F-0016 (FE01...160020121586063271). Registro de transmision id 4: `/v1/notas-credito`, `numero "0011"` (solo digitos), `serie NC-ILU`, HTTP 200, 2402 ms, `pagos` 5.00; sin API key ni xmlFirmado. UI: detalle de la NC muestra "Certificada", CUFE, "Ver QR", factura de origen F-0016 y el visor con payload/respuesta. **Esto confirma la hipotesis del Doc 1** y demuestra que F-0016 (certificada en el punto viejo) SI sirve de referencia en el punto nuevo. Consume el numero de NC 0011 del sandbox. Una NC parcial no anula la factura (F-0016 siguio vigente).
 
-### Docs 3 y 4 (intentos 3 y 4/4) — "Corrección de datos" sobre F-0016 por UI (Mark), monto 19.66 < umbral 5000
+### Docs 3 y 4 (intentos 3 y 4/4) — "Corrección de datos" sobre F-0016 por UI (Aprobador), monto 19.66 < umbral 5000
 - Paso 13: `POST correccion` 201 -> NC-0012 `aplicada` de inmediato (sin pasar por `decide()`); la pantalla de revision previa NO mostro el aviso de umbral (correcto).
 - Paso 14: F-0016 `es_anulada=true` (anulada_at); NC-0012 `factura_nueva_numero=F-0024`; F-0024 es la factura vigente del pedido 62.
 - Paso 15: F-0024 (invoice 33) `fe_estado=certificado` por su cuenta, sin accion manual: CUFE propio `FE0120000155704849-2-2021-3200022026093000000000240090122867612369` (distinto al de F-0016), transmision id 6 `/v1/facturas`, `numero "0024"`, `fechaEmision 2026-09-30T00:01:23-05:00`, HTTP 200, 767 ms. Badge "Certificada", CUFE y visor visibles en UI.
@@ -77,12 +77,12 @@ Adicionales de F-0016/F-0017 de la corrida previa (SCRUM-987): ILU 0016 certific
 | 13 (correccion bajo umbral queda aplicada de inmediato) | OK |
 | 14 (original anulada + factura nueva vinculada) | OK |
 | 15 (factura nueva certificada con CUFE propio) | OK (F-0024), pero con NC de anulacion rechazada (Hallazgo 2) |
-| 16 primera parte (sobre umbral -> `pendiente_aprobacion`, nada se certifica) | OK, en apagado (NC-0005/0006) y en sandbox (NC-0010, sin gastar documentos, sobre factura no certificada); rechazo de Mark no certifica nada; Felix 403 en decision, `puede_aprobar_rechazar=false` |
+| 16 primera parte (sobre umbral -> `pendiente_aprobacion`, nada se certifica) | OK, en apagado (NC-0005/0006) y en sandbox (NC-0010, sin gastar documentos, sobre factura no certificada); rechazo de Aprobador no certifica nada; Contabilidad 403 en decision, `puede_aprobar_rechazar=false` |
 | 16 segunda parte (al aprobar, recien ahi se certifica la factura de reemplazo) | NO CUBIERTO POR EL TOPE (costaria 2 documentos mas: NC + reemplazo). En apagado la aprobacion genero F-0022 `no_aplica` sin transmisiones. Decision de Luis |
-| Visor "Ver transmisiones al PAC" | OK: id 3/4/5/6 con `numero` numerico, `referencia.cufe` en NC, HTTP 200/422, sin API key ni xmlFirmado; visible en UI para Mark en NC-0011, NC-0012 y F-0024 |
+| Visor "Ver transmisiones al PAC" | OK: id 3/4/5/6 con `numero` numerico, `referencia.cufe` en NC, HTTP 200/422, sin API key ni xmlFirmado; visible en UI para Aprobador en NC-0011, NC-0012 y F-0024 |
 
 ## Veredicto
-**HALLAZGOS BLOQUEANTES** (2 CRITICOS: NC del mismo dia rechazada por la DGI; correccion sobre factura con NC previa deja doble facturacion fiscal) + 1 MEDIO (sin reintento). No corresponde pasar a QA. Lo demas del protocolo (umbral, aprobacion/rechazo, permisos de Felix, visor, anulacion y factura vinculada, certificacion de la NC dia siguiente) funciona.
+**HALLAZGOS BLOQUEANTES** (2 CRITICOS: NC del mismo dia rechazada por la DGI; correccion sobre factura con NC previa deja doble facturacion fiscal) + 1 MEDIO (sin reintento). No corresponde pasar a QA. Lo demas del protocolo (umbral, aprobacion/rechazo, permisos de Contabilidad, visor, anulacion y factura vinculada, certificacion de la NC dia siguiente) funciona.
 
 ## Estado que quedo en dev
 - `pac_ambiente` original: `testing` (proveedor `msl`). Cambie a `apagado` para el bloque A y volvi a `testing`; verificado por API al final (`msl`/`testing`, umbral 5000 intacto).

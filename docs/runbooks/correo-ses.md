@@ -34,7 +34,7 @@ Cada paso requiere el OK explícito de Luis. Regla de Luis: el cambio en prod de
    `cd /var/www/backend/infra && docker compose -f docker-compose.prod.yml up -d laravel horizon`
    **No basta editar el `.env`**: los contenedores leen el `.env` al crearse y el `MAIL_MAILER` ya presente en su proceso gana sobre el archivo. Hay unos segundos de corte. Verificar: `php artisan tinker --execute="echo config('mail.default');"` debe decir `ses_respaldo`.
 5. **Verificar** con un restablecimiento de contraseña y un código MFA reales: Horizon en DONE, sin `failed_jobs` nuevos, sin «Transport "ses-v2" failed» en `storage/logs/laravel.log`, y métricas `Send`/`Delivery` del conjunto `atlanticerp-correo` en CloudWatch.
-6. **Validación de QA en producción con SES** (decisión de Luis 2026-10-20: la revisión de QA del correo se hace en prod, no en test): al desplegar, pedir a QA (Marly) que pruebe con SES real un restablecimiento de contraseña y un código MFA, y que confirme llegada, idioma y enlace. No dar por cerrado SCRUM-1178 sin esa validación.
+6. **Validación de QA en producción con SES** (decisión de Luis 2026-10-20: la revisión de QA del correo se hace en prod, no en test): al desplegar, pedir a QA (Qa) que pruebe con SES real un restablecimiento de contraseña y un código MFA, y que confirme llegada, idioma y enlace. No dar por cerrado SCRUM-1178 sin esa validación.
 7. **Reversión inmediata**: `MAIL_MAILER=smtp` en el `.env`, recrear `laravel` y `horizon`.
 
 Si SES falla en producción, el respaldo envía por Microsoft 365 solo; el fallo queda en `laravel.log`.

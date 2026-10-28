@@ -17,8 +17,8 @@ timestamp anterior a los archivos fuente del batch). Contenedores `laravel`/`hor
 commit `a402ead` (verificado con `git log` dentro del contenedor). Migraciones y seeders del batch
 ya corridas (`credit_note_folio_counters`, `fiscal_settings.mark_approval_threshold=5000.00`).
 
-Sesión real con **Felix** (`conta@atlantic.com.pa`, `lider_admin_contab`) para los flujos
-principales, y **Neil** (`neil.quiel@atlantic.com.pa`, `vendedor_disenador`) para el chequeo
+Sesión real con **Contabilidad** (`conta@atlantic.com.pa`, `lider_admin_contab`) para los flujos
+principales, y **[persona]** (`[persona].[persona]@atlantic.com.pa`, `vendedor_disenador`) para el chequeo
 negativo de permisos — nunca cuentas `*@atlantic.test`.
 
 **Fixtures sembradas** (el ambiente local no tenía ningún dato facturable — 0 filas en
@@ -143,11 +143,11 @@ Verificado en frontend y backend por separado:
 
 ## 8. Permisos (gate de rol de la ruta)
 
-**Neil** (`vendedor_disenador`) — no ve la pantalla real (el body no muestra las tarjetas ni el
+**[persona]** (`vendedor_disenador`) — no ve la pantalla real (el body no muestra las tarjetas ni el
 formulario reales, cae al layout de Ventas & Diseño), no ve el link "Notas de Crédito" en el
 sidebar, y pegándole directo al endpoint `GET /notas-credito/summary` con su propio token recibe
 **403**. Mismo gate de rol que Facturación/Cobros (`superadmin,lider_admin_contab,
-asistente_administrativa,management`) — consistente con "Disponible para Felix, Yaneth, Mark y
+asistente_administrativa,management`) — consistente con "Disponible para Contabilidad, Asistente, Aprobador y
 Gerencia" de los 6 tickets.
 
 ## Hallazgos y su resolución

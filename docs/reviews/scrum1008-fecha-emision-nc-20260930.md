@@ -13,7 +13,7 @@ criterio de aceptación 2 (`fechaEmision > referencia.fecha` siempre). El fix de
 aprueba. Se devuelve por un solo motivo: el alcance del ticket pide explícitamente una prueba de
 regresión para **"corrección de datos el mismo día"**, y ese flujo (`registerCorreccion` →
 certificación real) no tiene prueba. Además hay que registrar una decisión (queda abajo como
-sugerencia): con `created_at`, una NC que Mark aprueba días después sale con una fecha de emisión
+sugerencia): con `created_at`, una NC que Aprobador aprueba días después sale con una fecha de emisión
 atrasada.
 
 No volví a correr la suite: el que me despachó tiene una corrida completa de `infra/test.sh` en

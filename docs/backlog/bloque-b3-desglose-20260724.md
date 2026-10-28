@@ -40,7 +40,7 @@ dev asignado, leyendo primero el ADR y los archivos de referencia listados.
 4. `add_zona_libre_approve_permission_to_catalog` — insertar `compras.zona-libre.approve` en
    `permission_catalog` (módulo `compras`), siguiendo el docblock ya usado para
    `compras.settings.configure` (permiso angosto, no atado a ningún `security_level`, grant
-   individual vía `extra_permissions` a Yirena — o a quien Luis designe como aprobador — más
+   individual vía `extra_permissions` a Lidercompras — o a quien Luis designe como aprobador — más
    `superadmin.all` que ya lo bypassa).
 
 ### B-2. Seeder del Provider "Zona Libre de Colón"
@@ -73,7 +73,7 @@ que `CoreUserSeeder`.
   `order_number` consecutivo (ver punto abierto), estado inicial `pendiente`.
 - `GET  /bodega/zona-libre/requests/{id}` — detalle, incluye `rejection_reason` cuando aplica
   (SCRUM-444, botón "Ver motivo").
-- `POST /bodega/zona-libre/requests/{id}/remind` — SCRUM-445, dispara email real a Yirena (o al
+- `POST /bodega/zona-libre/requests/{id}/remind` — SCRUM-445, dispara email real a Lidercompras (o al
   usuario configurado como aprobador — reusar el mismo mecanismo de mail ya usado en el proyecto,
   ej. el que dispara `OrderService::notifyNoAssistant()` o el flow de Outlook real ya integrado en
   SCRUM-66/177, no craft SMTP nuevo).
@@ -87,7 +87,7 @@ lista disponible, reaparece si se quita, sin recargar") es responsabilidad del F
 están disponibles del proveedor (vía el endpoint de catálogo, punto abierto #2) y aceptar/rechazar
 líneas por `catalog_product_id`.
 
-### B-5. Controller Compras: decisión de Yirena
+### B-5. Controller Compras: decisión de Lidercompras
 **Cierra:** SCRUM-440
 **Depende de:** B-3, B-4 (mismo modelo)
 **Referencia exacta:** `ReplacementRequestController::generateOrder()` — mismo mecanismo: al
@@ -154,7 +154,7 @@ puede volver a aprobar/rechazar (idempotencia de estado); Bodega no puede editar
 6. Guardar orden (SCRUM-439) — valida al menos 1 línea antes de habilitar el botón, muestra
    errores del backend si la validación server-side falla.
 7. Panel de confirmación (SCRUM-441) — tras guardar: número de orden + "Estado: Pendiente por
-   aprobar de Yirena (Compras)" + botón "Ir a Ver Órdenes" (navega a F-2) + link "Crear una
+   aprobar de Lidercompras (Compras)" + botón "Ir a Ver Órdenes" (navega a F-2) + link "Crear una
    nueva" que **reinicia el formulario sin salir de la pantalla** (no un `location.reload()` como
    en el mockup — reset de estado React).
 

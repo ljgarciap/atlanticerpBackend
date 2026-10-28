@@ -11,7 +11,7 @@ Ninguno.
 
 ## IMPORTANTE
 
-1. **Editar un asociado con duplicado histórico queda bloqueado para siempre** — `ArchitectController::update` (~l.190) llama `find(..., includeSimilar:false)` con los 3 identificadores aunque no cambien. La spec admite que ya existen duplicados históricos. Escenario: arquitecto A y B comparten teléfono (dato viejo); Daniela corrige el nombre de A (PUT con name+phone) y recibe 409 `duplicate_exact`, sin forma de arreglarlo. Fix: en `update`, comparar solo los identificadores que CAMBIARON respecto del registro actual (o ignorar los que no cambiaron).
+1. **Editar un asociado con duplicado histórico queda bloqueado para siempre** — `ArchitectController::update` (~l.190) llama `find(..., includeSimilar:false)` con los 3 identificadores aunque no cambien. La spec admite que ya existen duplicados históricos. Escenario: arquitecto A y B comparten teléfono (dato viejo); Gerencia1 corrige el nombre de A (PUT con name+phone) y recibe 409 `duplicate_exact`, sin forma de arreglarlo. Fix: en `update`, comparar solo los identificadores que CAMBIARON respecto del registro actual (o ignorar los que no cambiaron).
 
 2. **`PUT /architects/{id}` permite cambiar `type` de un arquitecto ya usado en cotizaciones** — `UpdateArchitectRequest` (`type` sometimes). Escenario: se pasa un arquitecto con comisiones a `designer`: desaparece de la pantalla Arquitectos (índice sin `type` = solo architect) y, peor, cada vez que se guarde una cotización con ese `architect_id` `QuoteRequest` (`exists ... where type=architect`) devuelve 422 y la cotización no se puede guardar. Fix: rechazar (422) el cambio de `type` si existe `quotes.architect_id = id` (o no aceptar `type` en update).
 

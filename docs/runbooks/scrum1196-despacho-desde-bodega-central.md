@@ -1,6 +1,6 @@
 # SCRUM-1196 — Despachos desde Bodega Central: puesta en marcha y datos a corregir
 
-Reglas de Esteban Cárdenas (Líder de Bodega, 22-10-2026). Diseño: `docs/specs/scrum1196-despacho-bodega-central.md` (repo de docs).
+Reglas de Liderbodega Liderbodega (Líder de Bodega, 22-10-2026). Diseño: `docs/specs/scrum1196-despacho-bodega-central.md` (repo de docs).
 
 ## Qué cambia al desplegar
 

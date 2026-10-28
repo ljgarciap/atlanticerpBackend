@@ -29,7 +29,7 @@ El fallo más probable acá es una `QueryException`. Su `getMessage()` trae el S
 ### B2. Al aprobar la NC desaparece el visor, justo cuando se acaba de certificar
 `app/Modules/AdminCont/Http/Controllers/AdminContCreditNoteController.php:229-234`, junto con `atlanticerp-frontend/src/hooks/useAdminContab.ts:724` (`qc.setQueryData(notaCreditoDetailKey(note.id), note)`).
 
-`decision()` es `primary_approver_only` y arma la respuesta con `show()` + `fe_detalle`, pero **no** agrega `puede_ver_fe_transmisiones`. El frontend reemplaza la caché del detalle con esa respuesta más angosta. El flag queda `undefined` y el visor se desmonta (`DetalleNotaCreditoModal.tsx:231`) en el momento exacto en que aprobar disparó la certificación síncrona (`CreditNoteService::decide()` → `certificarSiCorresponde()`), que es cuando Mark más lo necesita. Es el mismo patrón de la memoria `feedback_tanstack_query_setquerydata_narrow_mutation_response` y el mismo hueco que el batch anterior tuvo con `fe_detalle`.
+`decision()` es `primary_approver_only` y arma la respuesta con `show()` + `fe_detalle`, pero **no** agrega `puede_ver_fe_transmisiones`. El frontend reemplaza la caché del detalle con esa respuesta más angosta. El flag queda `undefined` y el visor se desmonta (`DetalleNotaCreditoModal.tsx:231`) en el momento exacto en que aprobar disparó la certificación síncrona (`CreditNoteService::decide()` → `certificarSiCorresponde()`), que es cuando Aprobador más lo necesita. Es el mismo patrón de la memoria `feedback_tanstack_query_setquerydata_narrow_mutation_response` y el mismo hueco que el batch anterior tuvo con `fe_detalle`.
 
 **Fix:** en `decision()`, dentro del `if ($result !== null)`, agregar `$result['puede_ver_fe_transmisiones'] = true;` (la ruta ya es `primary_approver_only`). Sumar la aserción al test existente `test_show_y_decision_exponen_fe_detalle_solo_a_mark` (`tests/Feature/AdminCont/AdminContCreditNoteControllerTest.php`, bloque de `$decision`).
 
@@ -72,7 +72,7 @@ Revisé los callers de hoy y ninguno certifica con una transacción abierta: `In
 `FeTransmisionRecorder.php:48`. Es correcta con los 2 callers actuales (certificación → `certificar`, polling → `consultar_estado`), pero acopla 2 conceptos. Si aparece un reintento manual o una consulta de estado disparada a mano, va a mentir. Recomiendo pasarla explícita o derivarla del `endpoint`. Es menor.
 
 ### S10. Los topes 64 KB y 50 son técnicos, no umbrales de negocio: bien como constantes
-`FeTransmisionRecorder::MAX_BYTES` y `AdminContFeTransmisionController::LIMITE` (`:21`) protegen el almacenamiento y el tamaño de la respuesta HTTP. No representan ninguna regla comercial (margen, porcentaje, monto) que Mark o superadmin necesiten ajustar sin deploy. No aplica la regla de tabla paramétrica. Dos notas:
+`FeTransmisionRecorder::MAX_BYTES` y `AdminContFeTransmisionController::LIMITE` (`:21`) protegen el almacenamiento y el tamaño de la respuesta HTTP. No representan ninguna regla comercial (margen, porcentaje, monto) que Aprobador o superadmin necesiten ajustar sin deploy. No aplica la regla de tabla paramétrica. Dos notas:
 - el tope es sobre el JSON antes del cast `array`. El jsonb final puede superar 64 KB, porque el cast vuelve a codificar `contenido_parcial` escapando comillas y no-ASCII. Es aceptable, pero conviene decirlo en el docblock.
 - con más de 50 registros la UI no avisa que hay más. Con 20 polls como máximo por documento es improbable.
 

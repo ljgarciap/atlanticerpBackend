@@ -13,8 +13,8 @@ tests automatizados.
 `sprint2`, nada pusheado a ningún remoto, ningún ticket transicionado a `QA` en Jira (se deja
 comentario pero el status queda en `Dev Testing`).
 
-Usuarios reales usados: `gerencia2@atlantic.com.pa` (Yirena Teng, lider_compras),
-`mbekhar@atlantic.com.pa` (Mark, management, aprobador), `designer@atlantic.test`
+Usuarios reales usados: `gerencia2@atlantic.com.pa` (Lider Compras Test, lider_compras),
+`gerencia3@test.com` (Aprobador, management, aprobador), `designer@atlantic.test`
 (vendedor_disenador, rol sin ningún acceso a Compras — negativo).
 
 ---
@@ -32,9 +32,9 @@ bloqueante de esta pasada.
 
 ## Gap de datos entre ramas — resuelto para poder probar
 
-`gerencia2@atlantic.com.pa` (Yirena, única persona real con rol `lider_compras`) estaba en
+`gerencia2@atlantic.com.pa` (Lidercompras, única persona real con rol `lider_compras`) estaba en
 `security_level_id` Nivel 1 en `sprint2` (el fix a Nivel 4, commit `c09fcb4`, solo existía en
-`dev`). Sin este fix, Yirena no tenía `compras.edit`/`compras.write` reales y no se podía probar su
+`dev`). Sin este fix, Lidercompras no tenía `compras.edit`/`compras.write` reales y no se podía probar su
 camino feliz. Se cherry-pickeó `c09fcb4` a `sprint2` (commit `06eadc4`, ya commiteado, sin push) y
 se aplicó el efecto de la migración directamente vía tinker contra el Postgres local (no se corrió
 `tenants:artisan migrate` completo para no arriesgar el estado compartido del Postgres local, ver
@@ -82,7 +82,7 @@ incluye abrir el modal vacío). No se intentó romper por ser un botón sin esta
 ### SCRUM-184 (REQ-121) — ⚠️ MEDIO: umbral configurable, pero sin vista de administración real
 El umbral de "calificación baja" (`low_rating_threshold`, `ComprasSettings`) SÍ es paramétrico
 (nada hardcodeado — confirmado leyendo `ComprasSettingsController`/`Provider::isLowRating()`), y
-el permiso que lo protege (`compras.settings.configure`) SÍ está concedido de verdad a Yirena vía
+el permiso que lo protege (`compras.settings.configure`) SÍ está concedido de verdad a Lidercompras vía
 `SpecialPermissionSeeder` (agregado hoy, commit `7918e91`). Confirmado en vivo con su token real:
 - `GET /api/compras/settings` → `{"low_rating_threshold":60}` (200, con `compras.read`)
 - `PUT /api/compras/settings` con `{"low_rating_threshold":55}` → 200, cambia el valor real
@@ -92,7 +92,7 @@ Pero **no existe ninguna pantalla que use esto**: `grep -rln "comprasApi\." src/
 ninguna página consumiendo `comprasApi.settings.*`, no hay hook en `useCompras.ts`, y
 `SettingsPage.tsx` (la pantalla genérica de configuración) no referencia Compras en absoluto — a
 diferencia de Ventas & Diseño, que sí tiene `PricingSettingsPanel`/`ReportsConfigPanel` como
-precedente del mismo patrón. Hoy, la única forma real de que Yirena cambie este umbral es que
+precedente del mismo patrón. Hoy, la única forma real de que Lidercompras cambie este umbral es que
 alguien lo haga por API/Postman directamente — no hay ningún botón ni pantalla. Esto es
 exactamente el "vista de administración" que la regla dura del proyecto exige
 (`feedback_no_hardcoded_business_values.md`: "tabla paramétrica configurable, con CRUD y vista de
@@ -118,7 +118,7 @@ hallazgos.
 | SCRUM-194 | REQ-131 Producto nuevo — unicidad de referencias | ✅ Limpio |
 | SCRUM-195 | REQ-132 Tabla de líneas, recálculo en vivo | ✅ Limpio |
 | SCRUM-196 | REQ-133 Asignar proyecto por línea, solo Aprobados | ✅ Limpio |
-| SCRUM-197 | REQ-134 Envío aéreo + aviso de aprobación de Mark | ✅ Limpio |
+| SCRUM-197 | REQ-134 Envío aéreo + aviso de aprobación de Aprobador | ✅ Limpio |
 | SCRUM-198 | REQ-135 Guardar orden, numeración automática | ✅ Limpio |
 | SCRUM-199 | REQ-136 PDF con/sin costo | ✅ Limpio |
 
@@ -170,7 +170,7 @@ generado por la corrida de esta sesión.
 | SCRUM-203 | REQ-140 Tabla principal + columna Proyecto asignado | ✅ Limpio |
 | SCRUM-204 | REQ-141 Ciclo de vida — proveedor local salta pasos | ✅ Limpio |
 | SCRUM-205 | REQ-142 Avanzar estado + auto-confirmación en Inventario | ✅ Limpio (parcial, ver nota) |
-| SCRUM-206 | REQ-143 Bloqueo real de aprobación de Mark | ✅ Limpio — ya implementado, el "deber ser" del ticket YA está construido |
+| SCRUM-206 | REQ-143 Bloqueo real de aprobación de Aprobador | ✅ Limpio — ya implementado, el "deber ser" del ticket YA está construido |
 | SCRUM-207 | REQ-144 Editar orden solo "Por aprobar" | ✅ Limpio |
 | SCRUM-208 | REQ-145 Recepción por línea y consolidada | ⚠️ MEDIO — cobertura de frontend, ver abajo |
 | SCRUM-209 | REQ-146 Desglose de proyecto por línea | ✅ Limpio |
@@ -178,8 +178,8 @@ generado por la corrida de esta sesión.
 
 ### SCRUM-204 (REQ-141) — ciclo de vida completo probado en vivo, no solo el primer salto
 Se llevó una orden real (#51, proveedor local) por **todo** el ciclo vía API con el token real de
-Yirena/Mark:
-`por_aprobar` → (Mark aprueba) → `ordenado` → (avanzar) → `en_transito_local` → (avanzar) →
+Lidercompras/Aprobador:
+`por_aprobar` → (Aprobador aprueba) → `ordenado` → (avanzar) → `en_transito_local` → (avanzar) →
 `recibido`. Confirmado que **nunca** pasó por `en_transito` ni `en_aduana` — el salto es real, no
 solo cosmético en la UI.
 
@@ -187,10 +187,10 @@ solo cosmético en la UI.
 El ticket de Jira dice literalmente: *"comportamiento deseado, todavía no aplicado en el mockup...
 el aviso es solo informativo"*. Esto ya no es cierto en el código actual — se probó en vivo:
 1. Orden nueva aérea/Atlantic (#53) queda `por_aprobar`, `blocked_by_mark_approval:true`.
-2. Intentar `PATCH /advance` con el token de Yirena (compras.edit, sin compras.approve) → **422**:
-   `"Esta orden requiere la aprobación de Mark antes de avanzar."` — bloqueo real, no solo aviso.
-3. Con el token de Mark, `PATCH /approve` → pasa a `ordenado`, `blocked_by_mark_approval:false`.
-4. Recién ahí `PATCH /advance` (con Yirena) funciona.
+2. Intentar `PATCH /advance` con el token de Lidercompras (compras.edit, sin compras.approve) → **422**:
+   `"Esta orden requiere la aprobación de Aprobador antes de avanzar."` — bloqueo real, no solo aviso.
+3. Con el token de Aprobador, `PATCH /approve` → pasa a `ordenado`, `blocked_by_mark_approval:false`.
+4. Recién ahí `PATCH /advance` (con Lidercompras) funciona.
 
 Coincide con `test_avanzar_bloqueado_sin_aprobacion_de_mark` +
 `test_avanzar_permitido_tras_aprobacion_de_mark`, ya verificados por el Senior Review de hoy. La
@@ -286,7 +286,7 @@ LogisticsPage, columna Proyecto asignado) ya estaban corregidos por el equipo AN
 (commits `a9b9da3`/`6aa195a` en frontend, verificados). Lo que esta sesión sí hizo:
 
 1. **Cherry-pick de `c09fcb4` → `sprint2`** (commit `06eadc4`, backend): fix de nivel de seguridad
-   de `lider_compras` (Nivel 1 → 4), necesario para poder probar el camino feliz real de Yirena.
+   de `lider_compras` (Nivel 1 → 4), necesario para poder probar el camino feliz real de Lidercompras.
    Migración commiteada; el efecto ya se aplicó al Postgres local vía tinker (no vía
    `tenants:artisan migrate`, para no arriesgar el estado compartido del Postgres local — ver
    incidentes de contaminación de la sesión). **Pendiente:** correr la migración formalmente
@@ -306,7 +306,7 @@ bloquea el camino feliz ni compromete un dato o permiso de seguridad real** — 
 alcance (falta una vista de administración) o de cobertura de test (falta un archivo de test), no
 bugs de comportamiento. El B4 original del Senior Review (permiso `compras.settings.configure`
 inalcanzable) está **medio resuelto**: el backend y el grant real ya están, falta la UI — este es
-el único punto que de verdad impide decir "terminado al 100%", porque Yirena hoy no puede usar esa
+el único punto que de verdad impide decir "terminado al 100%", porque Lidercompras hoy no puede usar esa
 función sin que alguien le llame la API a mano.
 
 **Priorización de lo pendiente:**
@@ -344,7 +344,7 @@ mismo patrón que `PricingSettingsPanel`/`ReportsConfigPanel`. Default de la mig
 tinker: `low_rating_threshold = 40`).
 
 Verificado en vivo (Playwright real contra `localhost:5173`, no solo los tests unitarios):
-- Yirena (`gerencia2@atlantic.com.pa`, `compras.settings.configure` real vía
+- Lidercompras (`gerencia2@atlantic.com.pa`, `compras.settings.configure` real vía
   `SpecialPermissionSeeder`) abre el panel "Ajustes de Compras" en `/compras/proveedores`, ve `40`
   cargado, lo cambia a `55`, guarda (el botón Guardar desaparece tras el `onSuccess`), **recarga la
   página completa** y el valor sigue en `55` — no era solo estado local de React. Restaurado a `40`
@@ -369,7 +369,7 @@ Verificado en vivo (Playwright real contra `localhost:5173`, no solo los tests u
 ### SCRUM-208 (REQ-145) — ✅ pasada limpia, sin hallazgo nuevo
 
 Fix: `OrderDetailPage.test.tsx` nuevo (commit `b53fc6c`, 7 tests) — render de estado/total/líneas,
-avanzar estado, gate de edición solo en "Por aprobar", aprobación de Mark, manejo de error del
+avanzar estado, gate de edición solo en "Por aprobar", aprobación de Aprobador, manejo de error del
 backend al avanzar.
 
 Verificado en vivo además de los tests: se creó una orden real vía API (proveedor local nuevo,

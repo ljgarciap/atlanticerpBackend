@@ -61,14 +61,14 @@ proyecto hoy — es desarrollo 100% nuevo cuando se retome.
    `QuoteListService` en vez de reimplementar la regla en Compras.
 5. **REQ-118, aunque diferido, contiene una regla de negocio que SÍ aplica a Nueva Orden (2H,
    en alcance):** "Si Tipo de envío = Aéreo y Quién paga = Atlantic → requiere aprobación de
-   Mark". El propio REQ-118 dice literalmente que reutiliza "los mismos campos y reglas" de Nueva
+   Aprobador". El propio REQ-118 dice literalmente que reutiliza "los mismos campos y reglas" de Nueva
    Orden — es decir, esta regla vive conceptualmente en el wizard que sí estamos construyendo
    (SCRUM-191/192), aunque el texto completo solo aparece escrito en el ticket diferido. Se
    incluye en el diseño de `purchase_orders` de este sprint.
 6. **Roles y permisos ya están completamente sembrados**, sin trabajo adicional: módulo `compras`
    en `ModuleCatalog`, rol `lider_compras` en la tabla `roles`, visibilidad en
    `role_module_visibility`, capacidades en `security_level_module_permissions` (niveles 11-14,
-   incluyendo `can_approve` para Gerencia Total), y la usuaria real Yirena Teng
+   incluyendo `can_approve` para Gerencia Total), y la usuaria real Lider Compras Test
    (`gerencia2@atlantic.com.pa`) ya con ese rol asignado.
 7. **No existe mock visual de Compras** (solo hay mocks de Ventas & Diseño en
    `Illumination/sprint1/Mock/`). El diseño de pantalla se basa en los criterios de aceptación de
@@ -94,14 +94,14 @@ proyecto hoy — es desarrollo 100% nuevo cuando se retome.
    principal ni una vista de desglose agrupado (REQ-146 Escenario 1, "Ver detalle" agrupado por
    proyecto). Filtro por proyecto sí existe en el backend (`sales_project_id` vía
    `whereHas('lines', ...)`, `PurchaseOrderController.php:60-62`) — solo falta la columna/vista.
-10. **Yirena Teng (`lider_compras`), la única persona real identificada para operar todo este
+10. **Lider Compras Test (`lider_compras`), la única persona real identificada para operar todo este
     módulo, tiene hoy `security_level` = 1 ("Read Only") por default de su rol — sin ningún
     permiso de edición en `compras`.** Confirmado en
     `database/migrations/tenant/2026_07_18_100002_reuse_existing_levels_for_role_defaults.php`:
     el array `$defaults` mapea `'lider_compras' => 1`, y la fila de
     `security_level_module_permissions` para nivel 1 + módulo `compras` es
     `can_edit=false, can_approve=false` (líneas 100-102 del archivo). `BusinessRoleUserSeeder.php`
-    no le da ningún override individual (a diferencia de Whil, que sí tiene uno a Nivel 8) — Yirena
+    no le da ningún override individual (a diferencia de Gerencia5, que sí tiene uno a Nivel 8) — Lidercompras
     queda con el default puro del rol. **Esto es inconsistente con el resto del roster**: los
     otros 4 roles "líder de área" (`lider_admin_contab`, `lider_bodega`, `lider_servicios`, y
     `vendedor_disenador`) tienen default Nivel 4 ("Editor sin aprobar", `can_edit=true`) — solo
@@ -109,7 +109,7 @@ proyecto hoy — es desarrollo 100% nuevo cuando se retome.
     asignado en esa migración (2026-07-10, antes de que existiera este sprint de Compras), no una
     decisión de negocio deliberada — no hay ningún comentario ni ADR que justifique que Compras
     deba ser de solo lectura para su propia líder. **Consecuencia real, más severa que
-    `compras.settings.configure` (hallazgo B4 del Senior Review): con el dato actual, Yirena no
+    `compras.settings.configure` (hallazgo B4 del Senior Review): con el dato actual, Lidercompras no
     puede crear proveedores, crear órdenes, avanzar estados ni subir documentos de logística — es
     decir, ninguna de las acciones de escritura de los 33 tickets de este sprint, no solo el
     umbral de calificación baja.** Ver sección de permisos más abajo para la recomendación
@@ -205,8 +205,8 @@ GET    /api/compras/orders                      permission:compras.read   (filtr
 POST   /api/compras/orders                      permission:compras.write  (wizard completo: proveedor + líneas)
 GET    /api/compras/orders/{id}                  permission:compras.read
 PUT    /api/compras/orders/{id}                  permission:compras.edit    (solo mientras "por_aprobar", REQ-144)
-PATCH  /api/compras/orders/{id}/approve          permission:compras.approve (gate de Mark, RN3)
-PATCH  /api/compras/orders/{id}/advance          permission:compras.edit    (REQ-141/142/143 — bloquea si falta aprobación de Mark)
+PATCH  /api/compras/orders/{id}/approve          permission:compras.approve (gate de Aprobador, RN3)
+PATCH  /api/compras/orders/{id}/advance          permission:compras.edit    (REQ-141/142/143 — bloquea si falta aprobación de Aprobador)
 GET    /api/compras/orders/{id}/pdf              permission:compras.read    (REQ-136/149, ?include_cost=)
 POST   /api/compras/orders/{id}/send-email       permission:compras.edit    (REQ-136)
 PATCH  /api/compras/orders/{id}/shipping-info     permission:compras.edit    (REQ-156 — contenedor/naviera/llegada real)
@@ -224,7 +224,7 @@ PUT    /api/compras/settings                      permission:compras.settings.co
 vigente desde el cutover de Fase C, ADR-006; la referencia a "nivel 11" de la versión anterior de
 este documento quedó obsoleta tras `2026_07_18_100002_reuse_existing_levels_for_role_defaults.php`)
 ya lo tiene sembrado. `compras.edit`/`compras.write` dependen de `can_edit=true` en esa misma
-tabla — ver hallazgo 10 arriba: Yirena (`lider_compras`) hoy NO tiene `can_edit=true`.
+tabla — ver hallazgo 10 arriba: Lidercompras (`lider_compras`) hoy NO tiene `can_edit=true`.
 
 ### Extensión necesaria en `App\Modules\VentasDiseno`
 
@@ -287,7 +287,7 @@ aceptación. 4 tienen una discrepancia real:
 | SCRUM-203/209 (REQ-140/146) | Columna "Proyecto asignado" (single/"Ver detalle") ausente en `formatSummary()` y en `OrdersPage.tsx` | **No — hallazgo nuevo de esta reconciliación** | Backend Dev + Frontend Dev, ver tarea PM abajo |
 
 Además, un hallazgo de permisos que **no es de código sino de datos de configuración**, y es más
-severo que B4: **Yirena Teng (`lider_compras`) tiene `security_level`=1 ("Read Only") por default
+severo que B4: **Lider Compras Test (`lider_compras`) tiene `security_level`=1 ("Read Only") por default
 de rol — sin `compras.edit`, no solo sin `compras.settings.configure`** (hallazgo 10 en la sección
 de dependencias arriba). Ningún ticket de escritura de este sprint es operable por la única
 persona real asignada a Compras hoy.
@@ -297,7 +297,7 @@ asignados a Backend/Frontend Dev por el PM, fuera de este documento — no se to
 
 ### Respuesta a la pregunta del Senior Review: ¿quién debe tener `compras.settings.configure`?
 
-**Yirena Teng (`gerencia2@atlantic.com.pa`, rol `lider_compras`) es la persona real
+**Lider Compras Test (`gerencia2@atlantic.com.pa`, rol `lider_compras`) es la persona real
 identificada** — confirmado en código: `database/seeders/BusinessRoleUserSeeder.php:52` la da de
 alta con ese rol, `database/migrations/tenant/2026_07_11_100000_create_auth_roles_table.php:35`
 define `lider_compras` = "Líder de Compras" (`is_system: true`), y
@@ -306,8 +306,8 @@ módulo `compras`. No hay ninguna otra persona ni rol en Jira/código que sea ca
 nadie.
 
 **Pero no alcanza con agregarla al `SpecialPermissionSeeder` para `compras.settings.configure` y
-darlo por resuelto** (patrón Mark/Felix de Ventas & Diseño) — ese patrón asume que la persona ya
-tiene el resto de permisos de módulo (`.edit`/`.write`) y solo le falta el permiso angosto. Yirena
+darlo por resuelto** (patrón Aprobador/Contabilidad de Ventas & Diseño) — ese patrón asume que la persona ya
+tiene el resto de permisos de módulo (`.edit`/`.write`) y solo le falta el permiso angosto. Lidercompras
 hoy no tiene ni eso: su `security_level`=1 le bloquea `compras.edit` completo (hallazgo 10). Fix
 recomendado, en 2 partes, ambas requieren decisión de Luis antes de implementar (cambia el acceso
 real de una persona):
@@ -318,12 +318,12 @@ real de una persona):
    `compras.edit`/`compras.write` para toda la operación normal del módulo (crear proveedores,
    crear/editar/avanzar órdenes, subir documentos de logística).
 2. **Agregar `compras.settings.configure` a `SpecialPermissionSeeder.php`** para
-   `gerencia2@atlantic.com.pa`, igual patrón que Mark/Felix — este permiso angosto no es
+   `gerencia2@atlantic.com.pa`, igual patrón que Aprobador/Contabilidad — este permiso angosto no es
    parte del puente `.edit`→`.write` de `effectivePermissionsV2()` (confirmado por B4 del Senior
    Review), así que necesita su propia entrada aunque el fix del punto 1 ya se aplique.
 
-Si Luis prefiere no tocar el nivel de Yirena por ahora, la alternativa mínima es (2) solo — pero
-eso deja a Yirena sin poder operar el resto del módulo (crear órdenes, etc.), lo cual contradice
+Si Luis prefiere no tocar el nivel de Lidercompras por ahora, la alternativa mínima es (2) solo — pero
+eso deja a Lidercompras sin poder operar el resto del módulo (crear órdenes, etc.), lo cual contradice
 el propósito completo del sprint. **Se recomienda (1)+(2) juntos.**
 
 ## Historial de cambios de alcance

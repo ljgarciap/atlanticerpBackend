@@ -1,4 +1,4 @@
-# ADR: Batch 13 Notas Crédito y Devoluciones — aprobación de Mark, comprobante, documento formal, factura relacionada (SCRUM-571→574 + SCRUM-787)
+# ADR: Batch 13 Notas Crédito y Devoluciones — aprobación de Aprobador, comprobante, documento formal, factura relacionada (SCRUM-571→574 + SCRUM-787)
 
 **Estado:** Propuesto — pendiente de aprobación de Luis antes de dispatchar implementación.
 **Épica:** Admin&Cont (SCRUM-331). **Tickets:** SCRUM-571→574 (REQ-494→497), + SCRUM-787 (fix de
@@ -10,7 +10,7 @@ timezone, bundleado a pedido de la sesión previa — ver
 Batches 10-12 dejaron toda la plumbing de este batch ya provisionada a propósito: columna `estado`
 (`aplicada`/`pendiente_aprobacion`/`rechazada`), `aprobado_por`/`fecha_decision`/`motivo_rechazo`,
 `comprobante_url`, middleware `mark_only` (ya usado en Facturación para el mismo patrón de
-"decisión exclusiva de Mark", ver `AdminContInvoiceController::uncollectibleDecision`),
+"decisión exclusiva de Aprobador", ver `AdminContInvoiceController::uncollectibleDecision`),
 `markApprovalThreshold()`, el flag `puede_aprobar_rechazar` en `show()`, y los botones
 "Aprobar"/"Rechazar" en `DetalleNotaCreditoModal.tsx` ya renderizados pero `disabled` con el hint
 "próximo batch". Este batch conecta esa acción real y agrega 3 vistas nuevas (comprobante,
@@ -70,7 +70,7 @@ escenarios nuevos de Batch 13.
 
 ### 2. Ver comprobante — REQ-495
 
-`GET /notas-credito/{creditNote}/comprobante` — gate de rol estándar (Felix/Yaneth/Mark/Gerencia),
+`GET /notas-credito/{creditNote}/comprobante` — gate de rol estándar (Contabilidad/Asistente/Aprobador/Gerencia),
 no `mark_only`. Reusa `AdminContCreditNoteAttachmentService::presignedUrl()` (ya existe). Respuesta:
 `{tiene_comprobante: true, url, subido_por, fecha}` o `{tiene_comprobante: false}` (RN2, mensaje
 explícito en frontend). `subido_por`/`fecha` reusan `registrado_por`/`fecha` de la nota — el

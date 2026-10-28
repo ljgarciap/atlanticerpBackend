@@ -160,7 +160,7 @@ El flujo es **lineal**: `lead → design → quote → proposal → approved`. N
 - **Duplicar** (`duplicate`) crea una nueva versión solo desde cotizaciones confirmadas y con la tarjeta en Lead, Diseño o Cotización; congela las Condiciones vigentes en ese momento.
 - **Tipos de precio** (`QuoteItem::effectiveUnitPrice`): `public` (precio de lista), `project` (lista menos descuento de proyecto), `special` (además descuento adicional), `partner` (`costo / partner_divisor`), `premium` (`costo / premium_divisor`). Sin costo, `partner` y `premium` caen al precio de lista. Un ítem puede tener su propio tipo (`price_type_override`), pero `QuoteItemRequest` solo acepta `public`, `project`, `special` y `premium` (no `partner`; la cotización entera sí puede ser `partner`).
 - **Descuento:** `discount_mode` es `line` o `global`.
-- **Margen mínimo:** `QuoteItem::violatesMinMargin` compara contra `pricing_settings.min_margin_percent`; quien tenga el permiso `ventas_diseno.override_min_margin` (Mark y David, SCRUM-725) puede generar por debajo del mínimo (`QuoteController::hasMarginOverride`), con advertencia en pantalla (`MarginOverrideWarningModal`).
+- **Margen mínimo:** `QuoteItem::violatesMinMargin` compara contra `pricing_settings.min_margin_percent`; quien tenga el permiso `ventas_diseno.override_min_margin` (Aprobador y Gerencia2, SCRUM-725) puede generar por debajo del mínimo (`QuoteController::hasMarginOverride`), con advertencia en pantalla (`MarginOverrideWarningModal`).
 - **ITBMS:** sale de `ItbmsRateResolver` (Configuración Fiscal de Admin & Contabilidad), ya no es 7 % fijo.
 
 ### 4.3 Parámetros configurables y valores sembrados
@@ -481,8 +481,8 @@ Rutas de este módulo fuera del prefijo: `GET /public/catalog/uat-placeholder/{r
 | `ventas_diseno.write` | Crear tarjetas, cotizaciones, clientes. |
 | `ventas_diseno.edit` | Editar, mover etapa, subir archivos. |
 | `ventas_diseno.override_min_margin` | Generar cotizaciones por debajo del margen mínimo. |
-| `ventas_diseno.edit.approved` | Editar una tarjeta Aprobada (Mark). |
-| `ventas_diseno.pipeline.read_all` | Ver el Pipeline de todo el equipo, solo lectura (Félix). |
+| `ventas_diseno.edit.approved` | Editar una tarjeta Aprobada (Aprobador). |
+| `ventas_diseno.pipeline.read_all` | Ver el Pipeline de todo el equipo, solo lectura (Contabilidad). |
 | `ventas_diseno.pass_to_order` | "Pasar a Pedido". |
 | `ventas_diseno.pricing.configure` | Tipos de precio, margen mínimo y umbral de Pedidos. |
 | `ventas_diseno.edit.conditions` | Texto global de Condiciones. |

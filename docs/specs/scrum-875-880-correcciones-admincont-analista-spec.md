@@ -33,7 +33,7 @@ dependencia de validación de SCRUM-876.
 |---|---|---|
 | D-1 | Nota con resultado `saldo_favor` | Crédito por el **monto completo** de la nota → el saldo puede quedar a favor (negativo). |
 | D-2 | Notas `pendiente_aprobacion` | **No se muestran.** Solo las `aplicada`. |
-| D-3 | Fecha para el saldo corrido | **Fecha de aprobación/decisión de Mark** (`fecha_decision`, o fecha de registro si fue aplicación inmediata). Mismo criterio que el Arqueo de Caja. |
+| D-3 | Fecha para el saldo corrido | **Fecha de aprobación/decisión de Aprobador** (`fecha_decision`, o fecha de registro si fue aplicación inmediata). Mismo criterio que el Arqueo de Caja. |
 | D-4 | Descuento comercial / cortesía | Crédito por el **monto completo** de la nota. |
 | D-5 | Anulación completa | Fila "Anulación" que revierte el débito → efecto neto cero, factura visible. |
 | D-6 | Devolución de mercancía con excedente devuelto en efectivo | Crédito = **solo la parte que redujo la factura**; el efectivo devuelto es neutro al saldo. |
@@ -94,7 +94,7 @@ tocar el orden de la constante compartida `AdminContPayment::METODOS` (la usan A
 otros). Se introduce un orden propio del reporte, aplicado en la pantalla y en el Excel.
 
 ## Users and roles
-Felix, Yaneth, Mark, Gerencia (lectura de Reportes, `permission:admin_contab.read`). Sin diferencias
+Contabilidad, Asistente, Aprobador, Gerencia (lectura de Reportes, `permission:admin_contab.read`). Sin diferencias
 de permiso para este cambio.
 
 ## Contexto (código actual)
@@ -163,7 +163,7 @@ columnas, tanto en la vista plana como en la agrupada (que tiene una columna "Pr
 Corrección puramente visual, sin tocar cálculos.
 
 ## Users and roles
-Felix, Yaneth, Mark, Gerencia (lectura de Estado de Cuenta).
+Contabilidad, Asistente, Aprobador, Gerencia (lectura de Estado de Cuenta).
 
 ## Contexto (código actual)
 `atlanticerp-frontend/src/pages/admin-contab/EstadoCuentaPage.tsx:403` — la fila de subtotal usa
@@ -218,7 +218,7 @@ encabezado y pie de página usan el **estándar ya definido** para los descargab
 la sección "Conciliación" con "Retenciones con constancia: X de Y".
 
 ## Users and roles
-Felix, Yaneth (`role:superadmin,lider_admin_contab,asistente_administrativa`). Mark/Gerencia no
+Contabilidad, Asistente (`role:superadmin,lider_admin_contab,asistente_administrativa`). Aprobador/Gerencia no
 llegan a esta pantalla (mismo gate que el resto de `cash-position/daily-count`).
 
 ## Contexto (código actual)
@@ -249,7 +249,7 @@ llegan a esta pantalla (mismo gate que el resto de `cash-position/daily-count`).
 1. **Bloque "RESUMEN"** — líneas separadas:
    - `Fecha: [fecha del arqueo]`
    - `Estado: Realizado por [nombre] a las [HH:MM]` (cuando ya está cerrado)
-   - `Aprobado por Gerencia — [nombre] el [fecha]` (cuando aprobado), o `Pendiente de aprobación de Gerencia (Mark)` (cuando cerrado sin aprobar), o `Arqueo aún no cerrado` (cuando abierto).
+   - `Aprobado por Gerencia — [nombre] el [fecha]` (cuando aprobado), o `Pendiente de aprobación de Gerencia (Aprobador)` (cuando cerrado sin aprobar), o `Arqueo aún no cerrado` (cuando abierto).
 2. **Sección "CONCILIACIÓN"** — `Retenciones con constancia: X de Y` donde `Y` = cantidad de
    retenciones del arqueo (`retenciones[]`) y `X` = cuántas de ellas tienen `constancia !== null`.
    Si `Y = 0`: mostrar `Retenciones con constancia: 0 de 0` (no se omite la sección).
@@ -312,7 +312,7 @@ Ninguna.
 Cuando desde **Ventas** se crea un pedido con **Fecha de entrega Parcial** e ingresando 2 o más
 fechas, el pedido que llega a **Bodega → Pedidos** no se divide: el sistema toma solo la fecha más
 próxima y crea una única tarjeta. Las demás fechas parciales se pierden. Esto además impide validar
-SCRUM-876 por la vía que reportó Daniela.
+SCRUM-876 por la vía que reportó Gerencia1.
 
 ## Solution summary
 Al crearse el pedido de Bodega desde una cotización aprobada, si el pedido tiene modo de entrega
@@ -416,7 +416,7 @@ Administración, y por lo tanto su propia factura. Un pedido de 3 entregas → 3
 cliente aparece debiendo 3× el pedido, y solo la tarjeta facturada muestra la factura — las
 hermanas quedan "sin factura asociada".
 
-Confirmado en la captura de Daniela: F-0004 + F-0005, mismo COT-2026-0153, USD 87.42 c/u → saldo
+Confirmado en la captura de Gerencia1: F-0004 + F-0005, mismo COT-2026-0153, USD 87.42 c/u → saldo
 de 174.84 (el doble). También causa la comisión externa duplicada de SCRUM-879 (2 líneas de
 USD 9.05 para el mismo PED-2026-0070).
 
@@ -430,7 +430,7 @@ posterior genera una factura adicional. El seguimiento de entregas parciales (qu
 falta) sigue funcionando por tarjeta en "Status de Pedidos".
 
 ## Users and roles
-Felix, Yaneth, Mark, Gerencia (`role:superadmin,lider_admin_contab,asistente_administrativa,management`
+Contabilidad, Asistente, Aprobador, Gerencia (`role:superadmin,lider_admin_contab,asistente_administrativa,management`
 en `invoices`). Usuarios de Bodega (`permission:bodega.read`) leen la factura asociada de cada
 tarjeta vía `OrderInvoiceController`.
 
@@ -579,13 +579,13 @@ incorrectas (saldo sobrestimado).
 ## Solution summary
 `AccountStatementService::movements()` incorpora, además de facturas y cobros confirmados, las
 **notas de crédito aplicadas** (`estado = aplicada`) sobre facturas del cliente, como filas de
-crédito que entran al saldo corrido con la fecha de aprobación de Mark. Las facturas **anuladas**
+crédito que entran al saldo corrido con la fecha de aprobación de Aprobador. Las facturas **anuladas**
 (hoy excluidas) vuelven a mostrarse con una fila de anulación que revierte su débito (neto cero).
 Todo esto aplica tanto en la pantalla como en el PDF descargable. Se corrige además la alineación
 del subtotal (ver SCRUM-877 parte 2, Batch A).
 
 ## Users and roles
-Felix, Yaneth, Mark, Gerencia (lectura de Estado de Cuenta, `permission:admin_contab.read`).
+Contabilidad, Asistente, Aprobador, Gerencia (lectura de Estado de Cuenta, `permission:admin_contab.read`).
 
 ## Contexto (código actual)
 - `atlanticerp-backend/app/Modules/AdminCont/Services/AccountStatementService.php::movements()` —
@@ -627,7 +627,7 @@ Para cada `AdminContCreditNote` con `estado = aplicada` cuya `factura_origen` pe
 | `anulacion_completa` | ver abajo (fila de anulación) | = `monto` de la factura de origen | revierte el débito de esa factura → neto cero |
 
 - **Fecha de la fila** (para el saldo corrido cronológico): `fecha_decision` si existe; si no
-  (aplicación inmediata sin pasar por aprobación de Mark), `fecha`. Mismo criterio que
+  (aplicación inmediata sin pasar por aprobación de Aprobador), `fecha`. Mismo criterio que
   `DailyCashCountService::creditNotesReturnedOn()`.
 - **Columna "N° Factura"**: el número de la **factura de origen** (para que el lector cruce la nota
   con su factura). **Columna "Concepto"**: "Descuento", "Devolución" o "Anulación" según el tipo.
@@ -665,9 +665,9 @@ Para cada `AdminContCreditNote` con `estado = aplicada` cuya `factura_origen` pe
 - [ ] El Estado de Cuenta muestra las **anulaciones de facturas**: la factura original (Débito) más una fila de Anulación (Crédito por el mismo monto), con efecto neto cero en el saldo.
 - [ ] Una nota de crédito cuyo excedente va a **saldo a favor** del cliente se refleja como Crédito por el monto completo, y el saldo puede quedar a favor (negativo).
 - [ ] Una devolución de mercancía donde parte del monto se **devolvió en efectivo** al cliente se refleja solo por la parte que redujo la factura; el excedente en efectivo no aparece como crédito.
-- [ ] Las notas de crédito **pendientes de aprobación** de Mark **no** aparecen en el Estado de Cuenta.
+- [ ] Las notas de crédito **pendientes de aprobación** de Aprobador **no** aparecen en el Estado de Cuenta.
 - [ ] Las notas de crédito **rechazadas** no aparecen.
-- [ ] Cada nota de crédito entra al saldo corrido con la **fecha de aprobación/decisión** de Mark (o la de registro si fue aplicación inmediata).
+- [ ] Cada nota de crédito entra al saldo corrido con la **fecha de aprobación/decisión** de Aprobador (o la de registro si fue aplicación inmediata).
 - [ ] Todos estos movimientos coinciden con lo registrado en el módulo "Notas Crédito y Devoluciones" — sin discrepancias entre ambos módulos.
 - [ ] El **saldo actual** del encabezado refleja el efecto de todos estos movimientos (facturas, pagos, notas de crédito, devoluciones, descuentos, anulaciones).
 - [ ] Todo lo anterior se ve igual en la **vista en pantalla** y en el **PDF descargable** del Estado de Cuenta.
@@ -729,9 +729,9 @@ cierre ya pasó).
    en prod en ventana coordinada con Luis.
 
 ## Users and roles
-- Marcar comisión externa como pagada: roster angosto de Comisiones Externas (Felix/Yaneth).
-- Asignar cuenta a un movimiento de comisión: Mark/Gerencia (`PUT /bank-movements/{id}/assign-account`, ya existe).
-- Ver Cuentas Bancarias / Flujo de Caja: Felix, Yaneth, Mark, Gerencia (con las restricciones ya existentes por vista).
+- Marcar comisión externa como pagada: roster angosto de Comisiones Externas (Contabilidad/Asistente).
+- Asignar cuenta a un movimiento de comisión: Aprobador/Gerencia (`PUT /bank-movements/{id}/assign-account`, ya existe).
+- Ver Cuentas Bancarias / Flujo de Caja: Contabilidad, Asistente, Aprobador, Gerencia (con las restricciones ya existentes por vista).
 - El job de comisiones internas: sistema (sin usuario).
 
 ## Contexto (código actual)

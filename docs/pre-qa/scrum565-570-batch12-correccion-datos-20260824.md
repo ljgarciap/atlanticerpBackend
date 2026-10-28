@@ -148,7 +148,7 @@ aparece "—"/"[object Object]") antes de dar el batch por cerrado.
 |---|---|
 | RN1 — corrección >$5,000 → `pendiente_aprobacion`, sin factura nueva | OK, confirmado en vivo: NC-0001 sobre F-0001 ($6,156.36 tras corrección) → `estado: pendiente_aprobacion`, `factura_nueva_numero: null` |
 | RN2 — mensaje explícito: sin documento fiscal, original sigue activa | OK — banner ámbar visible en la Revisión previa ("Esta corrección supera el umbral... NO se genera ningún documento fiscal todavía"); confirmado por API que F-0001 sigue en la lista de facturas activas del cliente con su saldo completo |
-| RN3/RN4 — aprobar/rechazar real (Mark) | Fuera de alcance (Batch 13, REQ-494) — botones presentes, deshabilitados, con hint "próximo batch" — comportamiento ESPERADO, no es un hallazgo |
+| RN3/RN4 — aprobar/rechazar real (Aprobador) | Fuera de alcance (Batch 13, REQ-494) — botones presentes, deshabilitados, con hint "próximo batch" — comportamiento ESPERADO, no es un hallazgo |
 | RN5 — ≤$5,000 → todo de inmediato | OK, confirmado en vivo: NC-0002 sobre F-0002 ($3,293.65) → `estado: aplicada` de inmediato, generó F-0003, F-0002 quedó anulada (fuera de la lista de facturas activas del cliente) |
 
 ### SCRUM-568 (REQ-491) — Cola de devoluciones confirmadas por Bodega
@@ -176,7 +176,7 @@ aparece "—"/"[object Object]") antes de dar el batch por cerrado.
 | RN1 — "Motivo del rechazo"/"Aprobado o rechazado por" solo cuando aplican | OK — en NC-0001 (`pendiente_aprobacion`) ninguno de los 2 aparece; el backend ya los devuelve `null` según el estado real (`estado !== ESTADO_PENDIENTE_APROBACION`/`estado === ESTADO_RECHAZADA`), nunca vacíos por default |
 | RN2 — trazabilidad de Bodega SOLO en Devolución de mercancía | OK en ambos sentidos: ausente en NC-0001/NC-0002 (Corrección de datos), presente y completa en NC-0003 (Devolución) — historial completo con 5 pasos (creada → firma → recepción → notificación → finalizado) |
 | RN3 — "Ver comprobante"/"Ver documento" (Batch 13) coherentes si aparecen | El componente actual NO los muestra en absoluto (ni habilitados ni deshabilitados) — "ausentes" es una de las 2 formas aceptadas explícitamente por la RN, no rotos |
-| RN4 — Aprobar/Rechazar visibles y deshabilitados en `pendiente_aprobacion` | OK, confirmado con Felix — ambos botones presentes, `disabled`, con `title` "próximo batch". No se pudo repetir la misma verificación logueado como Mark (`mbekhar@atlantic.com.pa` ya no tiene el password default en `dev.atlanticerp.ai`, sin acceso para resetearlo en esta sesión) — el componente es el mismo para cualquier rol con acceso (`puede_aprobar_rechazar` 100% server-side), gap de credenciales documentado, no un hallazgo funcional |
+| RN4 — Aprobar/Rechazar visibles y deshabilitados en `pendiente_aprobacion` | OK, confirmado con Contabilidad — ambos botones presentes, `disabled`, con `title` "próximo batch". No se pudo repetir la misma verificación logueado como Aprobador (`gerencia3@test.com` ya no tiene el password default en `dev.atlanticerp.ai`, sin acceso para resetearlo en esta sesión) — el componente es el mismo para cualquier rol con acceso (`puede_aprobar_rechazar` 100% server-side), gap de credenciales documentado, no un hallazgo funcional |
 
 ---
 

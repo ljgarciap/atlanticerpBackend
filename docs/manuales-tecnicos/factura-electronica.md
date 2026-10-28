@@ -26,7 +26,7 @@ Factura Electrónica certifica ante la DGI (Dirección General de Ingresos) cada
 **Qué hace este módulo:**
 - Arma el documento fiscal (emisor, receptor, ítems, pagos, referencia) y lo certifica.
 - Guarda el resultado (CUFE, QR, XML firmado) y un historial inmutable de cada transmisión.
-- Reintenta, consulta y reconcilia documentos pendientes o rechazados (acciones manuales de Mark).
+- Reintenta, consulta y reconcilia documentos pendientes o rechazados (acciones manuales de Aprobador).
 - Valida el RUC de los clientes contra la DGI y bloquea facturar a un receptor cuyos datos no coinciden.
 - Previsualiza el JSON que se enviaría, sin enviarlo.
 
@@ -55,7 +55,7 @@ Factura Electrónica certifica ante la DGI (Dirección General de Ingresos) cada
 
 | Archivo | Para qué |
 |---|---|
-| `Http/Controllers/AdminContFiscalSettingsController.php` | Configuración Fiscal (solo Mark). |
+| `Http/Controllers/AdminContFiscalSettingsController.php` | Configuración Fiscal (solo Aprobador). |
 | `Http/Controllers/AdminContFeReintentoController.php` | Reintentar, actualizar estado y reconciliar. |
 | `Http/Controllers/AdminContFeTransmisionController.php` | Historial de transmisiones. |
 | `Http/Controllers/AdminContInvoiceReceptorController.php` | Corregir el receptor desde la vista previa de la factura. |
@@ -79,7 +79,7 @@ También intervienen `CreditNoteService` (certifica la nota al aplicarla), `Invo
 | `components/admin-contab/ReceptorGuardNotice.tsx` | Aviso de la guarda de RUC al facturar. |
 | `components/admin-contab/InvoiceDetailModal.tsx` y `DetalleNotaCreditoModal.tsx` | Muestran el estado de FE y las acciones. |
 | `components/TaxIdValidator.tsx` y `components/EditSubClientTaxDataModal.tsx` | Validar RUC y editar datos fiscales. |
-| `pages/admin-contab/ClientesFiscalPage.tsx` | Pantalla de datos fiscales de clientes para Mark y Felix. |
+| `pages/admin-contab/ClientesFiscalPage.tsx` | Pantalla de datos fiscales de clientes para Aprobador y Contabilidad. |
 | `api/adminContabApi.ts`, `api/ventasDisenoApi.ts`, `hooks/useAdminContab.ts`, `types/adminContab.ts` | Capa de datos y tipos (contienen otras funciones de Admin & Contabilidad; aquí solo las de FE). |
 
 ### 2.3 Cómo viaja una factura
@@ -177,7 +177,7 @@ El **código 9022** ("referencia interna ya enviada a certificar") significa que
 - **Nota de crédito:** se arma con un ítem sintético y la referencia a la factura original, que **debe tener CUFE**. Si la nota anula una "Corrección de datos" de una factura nunca certificada, no hay nada que anular ante la DGI: la nota queda `no_aplica` y el reemplazo se certifica normalmente.
 - **Corrección de datos:** la factura de reemplazo queda retenida en `en_espera_nc` hasta que la nota de anulación certifica; entonces se libera con una comparación atómica (`UPDATE ... WHERE fe_estado = 'en_espera_nc'`) para que se certifique **una sola vez** aunque el polling y un reintento manual la resuelvan a la vez.
 
-### 4.4 Acciones manuales (solo Mark o superadmin)
+### 4.4 Acciones manuales (solo Aprobador o superadmin)
 Con `fe-reintentar`, `fe-actualizar-estado` y `fe-reconciliar`, sobre facturas y notas de crédito, con un límite de **6 por minuto por usuario** (`throttle:fe-accion`).
 
 | Acción | Disponible para | Qué hace |
@@ -291,13 +291,13 @@ Generada con `php artisan route:list --json` el 2026-10-12 (16 rutas). El alias 
 
 | Qué | Quién |
 |---|---|
-| Configuración Fiscal, historial de transmisiones y acciones manuales (`primary_approver_only`) | **Solo Mark** o `superadmin.all`. Es una excepción de identidad, no un permiso: compara el usuario del JWT con `AdminContFiscalSettings.primary_approver_user_id`; si ese campo es nulo, **nadie** pasa (fail-closed), a diferencia del gate de Compras. |
+| Configuración Fiscal, historial de transmisiones y acciones manuales (`primary_approver_only`) | **Solo Aprobador** o `superadmin.all`. Es una excepción de identidad, no un permiso: compara el usuario del JWT con `AdminContFiscalSettings.primary_approver_user_id`; si ese campo es nulo, **nadie** pasa (fail-closed), a diferencia del gate de Compras. |
 | Vista previa (`fe-preview`) | Roles `superadmin`, `lider_admin_contab`, `asistente_administrativa`, `management`. |
 | Corregir el receptor al facturar | Esos roles más `admin_contab.edit.receptor_fiscal`. |
 | Facturar a Consumidor final por decisión de quien factura | Esos roles más `admin_contab.edit.receptor_consumidor_final` (ver `docs/runbooks/alta-de-facturador.md`). |
-| Validar y editar datos fiscales de clientes | `ventas_diseno.write` o `.edit`, o el permiso angosto `ventas_diseno.edit.client_tax_data` (Mark y Felix desde Admin & Contabilidad). |
+| Validar y editar datos fiscales de clientes | `ventas_diseno.write` o `.edit`, o el permiso angosto `ventas_diseno.edit.client_tax_data` (Aprobador y Contabilidad desde Admin & Contabilidad). |
 
-**Dos "Mark" distintos.** `ComprasSettings.primary_approver_user_id` (órdenes de compra, ajustes, etc.) y `AdminContFiscalSettings.primary_approver_user_id` (este módulo) son **campos separados**. Los dos suelen apuntar a la misma persona, pero cambiar uno no cambia el otro. `AdminContPrimaryApproverBackfillSeeder` rellena el de Admin & Contabilidad solo si está nulo.
+**Dos "Aprobador" distintos.** `ComprasSettings.primary_approver_user_id` (órdenes de compra, ajustes, etc.) y `AdminContFiscalSettings.primary_approver_user_id` (este módulo) son **campos separados**. Los dos suelen apuntar a la misma persona, pero cambiar uno no cambia el otro. `AdminContPrimaryApproverBackfillSeeder` rellena el de Admin & Contabilidad solo si está nulo.
 
 **Trampa v1/v2:** igual que en el resto del sistema, los permisos efectivos del JWT pueden diferir de `hasPermission()`; `EnsureIsPrimaryApprover` ya lee el JWT.
 
@@ -307,8 +307,8 @@ Generada con `php artisan route:list --json` el 2026-10-12 (16 rutas). El alias 
 
 | Ruta | Página | Qué hace |
 |---|---|---|
-| `/admin-contab/fiscal` | `FiscalConfigPage` | Monta `FiscalSettingsPanel`. El gate real es el 403 del backend: un usuario que no es Mark ve "acceso restringido". También la monta la vista consolidada de superadmin (`GlobalSettingsPage`). |
-| (modales de factura y de nota de crédito) | `InvoiceDetailModal`, `DetalleNotaCreditoModal` | Estado de FE con `FiscalElectronicStatusBadge`, y para Mark el historial de transmisiones y los botones de reintentar, actualizar estado y reconciliar. |
+| `/admin-contab/fiscal` | `FiscalConfigPage` | Monta `FiscalSettingsPanel`. El gate real es el 403 del backend: un usuario que no es Aprobador ve "acceso restringido". También la monta la vista consolidada de superadmin (`GlobalSettingsPage`). |
+| (modales de factura y de nota de crédito) | `InvoiceDetailModal`, `DetalleNotaCreditoModal` | Estado de FE con `FiscalElectronicStatusBadge`, y para Aprobador el historial de transmisiones y los botones de reintentar, actualizar estado y reconciliar. |
 | `/admin-contab/datos-fiscales-clientes` | `ClientesFiscalPage` | (requiere `admin_contab.view` y uno de los roles superadmin, lider_admin_contab, asistente_administrativa o management) Lista de clientes con sus datos fiscales; los "bloqueados" (con documentos certificados o pendientes) muestran el botón de edición deshabilitado con la razón. |
 
 **Componentes y reglas de interfaz:**
@@ -426,7 +426,7 @@ Campo en `UpdateFiscalSettingsRequest` (con su regla), en el modelo y en `Fiscal
 
 **Documentación fiscal desactualizada.** `facturacion-electronica-conocimiento.md` sigue diciendo que la tasa de retención 3.5 % mapea al código `01`; el código ya la rechaza (opción A, 2026-10-05). El código manda.
 
-**Dos configuraciones de "Mark".** `ComprasSettings.primary_approver_user_id` y `AdminContFiscalSettings.primary_approver_user_id` pueden desincronizarse; no hay una única fuente de verdad.
+**Dos configuraciones de "Aprobador".** `ComprasSettings.primary_approver_user_id` y `AdminContFiscalSettings.primary_approver_user_id` pueden desincronizarse; no hay una única fuente de verdad.
 
 **Digifact sin cablear.** `DigifactPacAdapter` y `NucJsonMapper` no están conectados y su mapeo se extrajo de la documentación pública sin verificarse campo a campo.
 
@@ -465,7 +465,7 @@ Campo en `UpdateFiscalSettingsRequest` (con su regla), en el modelo y en `Fiscal
 | **Reconciliar** | Recuperar de MSL un documento que ya tiene y que AtlanticERP muestra con problema. |
 | **Corrección de datos** | Anular una factura con una nota de crédito y emitir una de reemplazo. |
 | **9022** | Código de MSL: la referencia interna ya fue enviada a certificar. |
-| **`primary_approver_only`** | Alias de ruta que limita el acceso a Mark o superadmin. |
+| **`primary_approver_only`** | Alias de ruta que limita el acceso a Aprobador o superadmin. |
 | **Sandbox** | Ambiente de pruebas de MSL, sin validez fiscal. |
 
 <!-- nav-manuales:inicio -->

@@ -71,6 +71,27 @@ final class NeutralidadDelRepoTest extends TestCase
         $this->assertSame([], array_slice($hallazgos, 0, 25), sprintf('%d línea(s) con términos del cliente anterior (se muestran 25)', count($hallazgos)));
     }
 
+    /** `docs/`: solo nombres de personas. El vocabulario del sector queda como historia en los documentos fechados. */
+    public function test_docs_no_lleva_nombres_de_personas(): void
+    {
+        $base = base_path('docs');
+        $this->assertDirectoryExists($base);
+        $hits = [];
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base, RecursiveDirectoryIterator::SKIP_DOTS));
+        foreach ($it as $f) {
+            if ($f->getExtension() !== 'md') {
+                continue;
+            }
+            foreach (explode("\n", (string) file_get_contents($f->getPathname())) as $i => $linea) {
+                if (T::nombreDePersona($linea) !== null) {
+                    $hits[] = 'docs/'.ltrim(substr((string) $f->getPathname(), strlen($base)), '/').':'.($i + 1);
+                }
+            }
+        }
+
+        $this->assertSame([], array_slice($hits, 0, 25), count($hits).' línea(s) de docs/ con nombres de personas (se muestran 25)');
+    }
+
     public function test_cada_archivo_pendiente_de_la_4c_sigue_necesitando_su_excepcion(): void
     {
         $this->addToAssertionCount(1); // la lista puede estar vacía (4c completa)

@@ -22,7 +22,7 @@ que llega a implementación real.
   `tenant:sync-schemas` (corre antes de `tenants:artisan migrate` en `ci-backend.yml` y en
   `infra/deploy-manual.sh`) — el deploy crea el schema solo, sin paso manual.
 - `EnsureIsMarkApprover` aplicado como middleware sobre las 6 rutas del grupo
-  (`routes/admin-contab.php`), incluido el GET — cumple RN1 de REQ-555 (nadie más, ni Felix ni
+  (`routes/admin-contab.php`), incluido el GET — cumple RN1 de REQ-555 (nadie más, ni Contabilidad ni
   Gerencia, ve la pantalla). Fail-closed si `mark_approver_user_id` es NULL.
 - `AdminContMarkApproverBackfillSeeder` replica el criterio de `MarkApproverBackfillSeeder`
   (backfill-if-null, nunca pisa una reasignación manual de Luis).

@@ -21,9 +21,9 @@ Admin & Contabilidad es el **back-office financiero** de Atlantic: factura lo de
 | **Inicio** | Resumen del mes, pendientes, vencidos y por vencer, aprobaciones pendientes. |
 | **Facturación** | Facturar entregas (parcial o completa), vista previa, PDF, antigüedad de cartera, incobrables. |
 | **Cobros, Abonos y Saldo a favor** | Registrar pagos contra facturas, anticipos y su aplicación. |
-| **Notas de crédito y Devoluciones** | Descuento, devolución, anulación y corrección de datos, con aprobación de Mark. |
+| **Notas de crédito y Devoluciones** | Descuento, devolución, anulación y corrección de datos, con aprobación de Aprobador. |
 | **Estado de cuenta** | Documento por cliente y proyecto. |
-| **Comisiones** | Internas (vendedores) y externas (arquitectos), más la comisión de cartera de Felix. |
+| **Comisiones** | Internas (vendedores) y externas (arquitectos), más la comisión de cartera de Contabilidad. |
 | **Arqueo y Flujo de caja, Cuentas bancarias, Movimientos** | Posición de caja, cierre diario y libro de movimientos. |
 | **Caja chica** | Gastos, reportes y aprobación. |
 | **Reportes** | Mensual por cliente, acumulado, Libro de Facturas, ventas por medio de pago, cartera. |
@@ -33,7 +33,7 @@ Admin & Contabilidad es el **back-office financiero** de Atlantic: factura lo de
 **Reglas de oro del módulo:**
 1. Nunca una fórmula paralela: Inicio, Reportes y Comisiones **reutilizan** el cómputo del servicio dueño (`InvoiceService`, `CommissionOrderService`, `CashPositionService`).
 2. Un documento fiscal no se edita: se anula y se emite otro.
-3. Mark (aprobador fiscal) decide lo sensible; el resto del equipo propone.
+3. Aprobador (aprobador fiscal) decide lo sensible; el resto del equipo propone.
 
 ---
 
@@ -55,7 +55,7 @@ Admin & Contabilidad es el **back-office financiero** de Atlantic: factura lo de
 | `AdminContAccountStatementController` | Estado de cuenta. |
 | `AdminContInternalCommissionController` | Comisiones internas y sus tramos. |
 | `AdminContArchitectCommissionController` | Comisiones externas (arquitectos). |
-| `AdminContCarteraCommissionController` | Tramos de la comisión de cartera de Felix. |
+| `AdminContCarteraCommissionController` | Tramos de la comisión de cartera de Contabilidad. |
 | `AdminContCashPositionController` | Flujo de caja y arqueo del día. |
 | `AdminContBankAccountController`, `AdminContBankMovementController` | Cuentas bancarias y movimientos. |
 | `AdminContPettyCashController` | Caja chica. |
@@ -63,7 +63,7 @@ Admin & Contabilidad es el **back-office financiero** de Atlantic: factura lo de
 | `AdminContClientReportsController` | Mensual por cliente y acumulado. |
 | `AdminContInvoiceBookController` | Libro de Facturas. |
 | `AdminContPaymentMethodSalesController` | Ventas por medio de pago. |
-| `AdminContFiscalSettingsController`, `AdminContCompanyProfileController`, `AdminContItbmsRateController`, `AdminContLocationController`, `AdminContContactController` | Configuración (solo Mark). |
+| `AdminContFiscalSettingsController`, `AdminContCompanyProfileController`, `AdminContItbmsRateController`, `AdminContLocationController`, `AdminContContactController` | Configuración (solo Aprobador). |
 | `AdminContSettingsController` | Umbrales de alertas de fraude. |
 | `AdminContFeReintentoController`, `AdminContFeTransmisionController` | Acciones y evidencia de factura electrónica (ver su manual). |
 
@@ -90,7 +90,7 @@ Admin & Contabilidad es el **back-office financiero** de Atlantic: factura lo de
 | `AccountStatementService`, `AccountStatementPdfService`, `AccountStatementExportService` | Estado de cuenta, PDF y Excel. |
 | `CommissionOrderService`, `CommissionExportService` | Comisiones internas y sus exportaciones. |
 | `ArchitectCommissionService` | Comisiones externas (965 líneas). |
-| `CarteraCommissionService` | Comisión de cartera de Felix. |
+| `CarteraCommissionService` | Comisión de cartera de Contabilidad. |
 | `CashPositionService`, `CashPositionExportService` | Flujo de caja proyectado y real. |
 | `DailyCashCountService`, `DailyCashCountSummaryPdfService` | Arqueo del día y su resumen. |
 | `AdminContPettyCashService`, `AdminContPettyCashAttachmentService`, `AdminContPettyCashReportFolioService`, `AdminContPettyCashReportPdfService` | Caja chica. |
@@ -139,7 +139,7 @@ Esquema PostgreSQL `{tenant}_admin_contab`. Diccionario de columnas en el ERD (3
 - **Modos:** `entrega` (factura parcial de una entrega) y `completo` (todo el pedido). Si algún ítem del pedido no está enlazado a un ítem de la cotización vigente, el pedido solo admite `completo` (degradación segura).
 - **Invariante** (`InvoiceBillingPlanner`): Σ facturas activas ≤ total de la cotización, y = total al centavo al cerrar la última cantidad. Una factura anulada devuelve su saldo.
 - **Confirmar** (`InvoiceService::confirm`): bajo transacción y con la fila raíz bloqueada, arma el plan, asigna folio, crea factura y líneas, y dispara `InvoiceCreated`. Los campos faltantes se informan con `InvoicePreviewException` (422).
-- **Incobrables:** Felix, Mark o Gerencia **proponen**; solo Mark **decide**. Solo sobre facturas emitidas vigentes y sin otra propuesta pendiente. Aprobar la pasa a cartera incobrable; rechazar la deja como estaba.
+- **Incobrables:** Contabilidad, Aprobador o Gerencia **proponen**; solo Aprobador **decide**. Solo sobre facturas emitidas vigentes y sin otra propuesta pendiente. Aprobar la pasa a cartera incobrable; rechazar la deja como estaba.
 - **Antigüedad** (`agingBuckets`): rangos fijos 0-30, 31-60, 61-90 y +91 días contados desde el **vencimiento**, no la emisión. Lo configurable es `dias_credito_factura` (default 30). Excluye incobrables aprobadas.
 - **Guarda de RUC:** el receptor se valida contra la DGI antes de guardarse (`AdminContInvoiceReceptorController`); el candado 409 por documentos certificados aplica igual que en Clientes. Desde SCRUM-1140 la factura **congela** su receptor (razón social de la DGI, o Consumidor final por decisión de quien factura) y una razón social distinta ya no bloquea; ver `factura-electronica.md` §4.5.
 
@@ -158,15 +158,15 @@ Esquema PostgreSQL `{tenant}_admin_contab`. Diccionario de columnas en el ERD (3
 
 - **Tipos:** `descuento_comercial`, `devolucion_mercancia`, `anulacion_completa` (subtipo `cancelado`) y la **corrección de datos** (subtipo `correccion`, motivos `itbms`, `fecha` o `ambos`), que anula y reemplaza la factura.
 - **Estados:** `aplicada`, `pendiente_aprobacion`, `rechazada`. **Resultado:** `aplicado_saldo`, `devuelto`, `saldo_favor`.
-- **Aprobación:** una nota queda `pendiente_aprobacion` si su monto supera `fiscal_settings.primary_approval_threshold` (default 5 000.00) **o** si es una anulación completa; una corrección de datos, si el total de la factura nueva supera ese umbral. Solo Mark decide (`primary_approver_only`). Aprobar ejecuta el efecto diferido; rechazar exige motivo y no ejecuta nada. `requiresComprobante` define cuándo el soporte es obligatorio.
+- **Aprobación:** una nota queda `pendiente_aprobacion` si su monto supera `fiscal_settings.primary_approval_threshold` (default 5 000.00) **o** si es una anulación completa; una corrección de datos, si el total de la factura nueva supera ese umbral. Solo Aprobador decide (`primary_approver_only`). Aprobar ejecuta el efecto diferido; rechazar exige motivo y no ejecuta nada. `requiresComprobante` define cuándo el soporte es obligatorio.
 - Al confirmar una nota con factura de origen, `SendCreditNoteConfirmedEmailJob` envía `CreditNoteConfirmedMail` con la nota y el estado de cuenta; un fallo del correo nunca revierte la nota.
 
 ### 4.5 Comisiones
 
 - **Internas** (`CommissionOrderService`): el "pedido comisionable" no es una tabla; es un join de solo lectura de tarjetas aprobadas → pedidos → facturas. Tramos en `commission_tiers`. Estados: `pendiente_cobro` (no totalmente facturado o cobrado), `por_pagar` (ganada, mes de cierre en curso) y `pagado` (mes de cierre ya pasado, liquidada el día 1-5). El estado depende del **mes de cierre del pedido**, no de la fecha del cobro. `commission_month_snapshots` fija % y monto al cerrar el mes. El comando `commissions:settle-internal` (03:45 diario) las liquida al libro.
-- **Externas** (`ArchitectCommissionService`): independiente de las internas a propósito. Estados: `aun_no_generada` (no facturado y cobrado al 100 %), `pendiente_factura` (lista, sin fecha de pago) y `pagada`. Monto = proyecto × % (`fiscal_settings.comision_externa_default_percent`, default 10) o el % aprobado del proyecto; el impuesto depende del régimen del arquitecto: `exento` (0), `con_itbms` (comisión × tasa) o retención del 50 % (la mitad de esa tasa). Un % distinto al default se **propone** y Mark lo **decide**. Se exige cuenta de cobro antes de marcar pagada; el recordatorio al arquitecto va por `SendArchitectReminderEmailJob`.
-- **Cartera de Felix** (`CarteraCommissionService`): tramos en `cartera_commission_tiers`, siempre sobre el mes en curso y gestión de cartera de +90 días.
-- Todos los tramos se editan solo por Mark (`primary_approver_only`) y los lee el grupo amplio de Reportes.
+- **Externas** (`ArchitectCommissionService`): independiente de las internas a propósito. Estados: `aun_no_generada` (no facturado y cobrado al 100 %), `pendiente_factura` (lista, sin fecha de pago) y `pagada`. Monto = proyecto × % (`fiscal_settings.comision_externa_default_percent`, default 10) o el % aprobado del proyecto; el impuesto depende del régimen del arquitecto: `exento` (0), `con_itbms` (comisión × tasa) o retención del 50 % (la mitad de esa tasa). Un % distinto al default se **propone** y Aprobador lo **decide**. Se exige cuenta de cobro antes de marcar pagada; el recordatorio al arquitecto va por `SendArchitectReminderEmailJob`.
+- **Cartera de Contabilidad** (`CarteraCommissionService`): tramos en `cartera_commission_tiers`, siempre sobre el mes en curso y gestión de cartera de +90 días.
+- Todos los tramos se editan solo por Aprobador (`primary_approver_only`) y los lee el grupo amplio de Reportes.
 
 ### 4.6 Caja
 
@@ -203,7 +203,7 @@ Las alertas de fraude las consume `SecurityAnalysisJob`; el umbral de monto se a
 5. Un cobro `esperando_confirmacion` espera `PUT /admin-contab/payments/{id}/confirm`.
 
 ### 5.2 Nota de crédito
-`POST /notas-credito` (o `/correccion/preview` y `/correccion`) → si supera el umbral o es corrección, queda pendiente → `PUT /notas-credito/{creditNote}/decision` (Mark) → efecto real, folio, PDF y correo. La certificación electrónica de la nota sigue el flujo de FE.
+`POST /notas-credito` (o `/correccion/preview` y `/correccion`) → si supera el umbral o es corrección, queda pendiente → `PUT /notas-credito/{creditNote}/decision` (Aprobador) → efecto real, folio, PDF y correo. La certificación electrónica de la nota sigue el flujo de FE.
 
 ### 5.3 Cierre del día
 Ver `GET /cash-position/daily-count`, anotar observaciones, `POST …/close` (congela el snapshot) y `POST /cash-position/history/{id}/approve`. El historial y el detalle se consultan por `history` y `history/{id}`.
@@ -218,7 +218,7 @@ Registrar gastos (`POST /petty-cash/expenses`) → generar reporte (`POST /petty
 
 ## 6. API
 
-Prefijo `/api`. Permisos en OR. Tabla generada con `scripts/manual-routes-table.py admin-contab` desde `route:list` el 2026-10-12 (161 rutas). "La comprueba el controlador" suele significar el grupo `primary_approver_only` (solo Mark o superadmin) o un chequeo interno. Las rutas de factura electrónica (`fe-*`, `fiscal-settings`, `invoices/receptors`) se explican en el manual de Factura Electrónica.
+Prefijo `/api`. Permisos en OR. Tabla generada con `scripts/manual-routes-table.py admin-contab` desde `route:list` el 2026-10-12 (161 rutas). "La comprueba el controlador" suele significar el grupo `primary_approver_only` (solo Aprobador o superadmin) o un chequeo interno. Las rutas de factura electrónica (`fe-*`, `fiscal-settings`, `invoices/receptors`) se explican en el manual de Factura Electrónica.
 
 **`/admin-contab/abonos`**
 
@@ -455,7 +455,7 @@ Prefijo `/api`. Permisos en OR. Tabla generada con `scripts/manual-routes-table.
 |---|---|---|---|
 | GET | `/admin-contab/reports/cartera` | `AdminContReportsController@cartera` | `role:superadmin,lider_admin_contab,asistente_administrativa,management` |
 | GET | `/admin-contab/reports/comisiones` | `AdminContReportsController@comisiones` | `role:superadmin,lider_admin_contab,asistente_administrativa,management` |
-| GET | `/admin-contab/reports/felix-commission` | `AdminContReportsController@felixCommission` | `role:superadmin,lider_admin_contab,management` |
+| GET | `/admin-contab/reports/commission-tiers` | `AdminContReportsController@commissionTiers` | `role:superadmin,lider_admin_contab,management` |
 | GET | `/admin-contab/reports/flujo-caja` | `AdminContReportsController@flujoCaja` | `role:superadmin,lider_admin_contab,asistente_administrativa,management` |
 | GET | `/admin-contab/reports/libro-facturas` | `AdminContInvoiceBookController@index` | `role:superadmin,lider_admin_contab,asistente_administrativa,management` |
 | GET | `/admin-contab/reports/libro-facturas/excel` | `AdminContInvoiceBookController@excel` | `role:superadmin,lider_admin_contab,asistente_administrativa,management` |
@@ -488,8 +488,8 @@ Prefijo `/api`. Permisos en OR. Tabla generada con `scripts/manual-routes-table.
 | Quién | Qué puede |
 |---|---|
 | `superadmin`, `lider_admin_contab`, `asistente_administrativa`, `management` | Operar la mayoría de las pantallas: facturar, cobrar, abonar, notas, comisiones externas, reportes. |
-| `asistente_administrativa` | Sin acceso a Flujo de caja *real* ni a la comisión de Felix; sí al arqueo y caja chica. |
-| **Mark** (`primary_approver_only`, `EnsureIsPrimaryApprover`) | Configuración fiscal, ITBMS, empresa, ubicaciones y contactos; decidir notas, incobrables y % de comisión; aprobar el arqueo del día y los reportes y gastos de caja chica; crear, editar y borrar tramos de comisión; reintentar certificaciones; ver transmisiones. |
+| `asistente_administrativa` | Sin acceso a Flujo de caja *real* ni a la comisión de Contabilidad; sí al arqueo y caja chica. |
+| **Aprobador** (`primary_approver_only`, `EnsureIsPrimaryApprover`) | Configuración fiscal, ITBMS, empresa, ubicaciones y contactos; decidir notas, incobrables y % de comisión; aprobar el arqueo del día y los reportes y gastos de caja chica; crear, editar y borrar tramos de comisión; reintentar certificaciones; ver transmisiones. |
 | `admin_contab.commissions_internal.view` | Ver comisiones internas propias (un vendedor ve lo suyo, no lo ajeno). |
 | `admin_contab.edit.receptor_fiscal` | Corregir el receptor en la vista previa y actualizar la razón social del cliente. |
 | `admin_contab.edit.receptor_consumidor_final` | Facturar a Consumidor final por decisión de quien factura (SCRUM-1140). Va a quien factura; ver `docs/runbooks/alta-de-facturador.md`. |
@@ -539,7 +539,7 @@ Rutas (`App.tsx`), todas con `admin_contab.view` y, salvo excepción, el rol del
 
 - **Seeders:** `AdminContBankAccountSeeder`, `AdminContFiscalIdentitySeeder`, `AdminContPrimaryApproverBackfillSeeder`, `AdminContRoleVisibilityBackfillSeeder`.
 - **Comandos:** `commissions:settle-internal` (agendado), `commissions:backfill-cash-movements`, `admin-contab:backfill-credit-note-applied-amount`, `admin-contab:backfill-daily-cash-count-snapshots`, `admin-contab:set-pac-provider`, y los de QA `admincont:seed-rebotes-qa` y `qa:seed-invoiced-compras`.
-- **Mark:** `fiscal_settings.primary_approver_user_id` identifica al aprobador; sin él `primary_approver_only` no deja pasar a nadie salvo superadmin.
+- **Aprobador:** `fiscal_settings.primary_approver_user_id` identifica al aprobador; sin él `primary_approver_only` no deja pasar a nadie salvo superadmin.
 - **Variables:** las de S3 y las del PAC del `.env` general.
 
 ---
@@ -599,10 +599,10 @@ Frontend: `npx vitest run src/components/admin-contab src/pages/admin-contab`.
 | **VAR** | Valor acreditable restante de una factura. |
 | **Abono** | Anticipo registrado a nivel cliente, proyecto o factura. |
 | **Saldo a favor** | Crédito disponible de un cliente (abonos y notas). |
-| **Incobrable** | Factura que se retira de la cartera tras aprobación de Mark. |
+| **Incobrable** | Factura que se retira de la cartera tras aprobación de Aprobador. |
 | **Arqueo** | Cierre diario de caja con conciliación y aprobación. |
 | **Cuenta de cobro** | Documento que el arquitecto entrega para cobrar su comisión. |
-| **primary_approver_only** | Alias del middleware que deja pasar solo a Mark o superadmin. |
+| **primary_approver_only** | Alias del middleware que deja pasar solo a Aprobador o superadmin. |
 | **PAC** | Proveedor autorizado de certificación de facturas electrónicas. |
 
 <!-- nav-manuales:inicio -->

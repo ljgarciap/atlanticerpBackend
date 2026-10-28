@@ -26,7 +26,7 @@
 
 ## 3. Orden de ejecución por entorno (dev → test → prod)
 1. Seeder de equivalencias. 2. `legacy:crear-articulos-sin-catalogo` (dry-run → revisión de Luis → `--apply`). 3. `legacy:cargar-stock-bodegas` dry-run → revisión → `--apply`.
-4. `legacy:verify-stock-bodegas` = OK. 5. Cotejo con el Excel del 13-oct (AL2/B1/B2). **Prod:** backup verificado previo y aviso a Daniela/Mark del impacto en reportes (~1,1 M a costo).
+4. `legacy:verify-stock-bodegas` = OK. 5. Cotejo con el Excel del 13-oct (AL2/B1/B2). **Prod:** backup verificado previo y aviso a Gerencia1/Aprobador del impacto en reportes (~1,1 M a costo).
 Los `--apply` y las corridas largas por ssh los lanza Luis o van con nohup (ver `feedback_corridas_largas_por_ssh_desacopladas_20261015`); `DELETE` de la reversa en prod requiere su confirmación.
 
 ## 4. Fases y tareas (para el PM)

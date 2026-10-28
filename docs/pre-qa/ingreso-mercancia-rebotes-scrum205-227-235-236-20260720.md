@@ -1,6 +1,6 @@
 # Pre-QA — SCRUM-205/227/235/236 (rebotes de QA del 2026-07-20)
 
-Contexto: los 4 tickets ya habían pasado por QA (marly) y fueron rechazados hoy con hallazgos
+Contexto: los 4 tickets ya habían pasado por QA (qa) y fueron rechazados hoy con hallazgos
 CRÍTICOS concretos. Root cause de fondo (ver `feedback_protocolo_senior_review_antes_dev_testing.md`):
 las pasadas de "Pre-QA" anteriores para estos 4 tickets estaban rotas de 3 formas distintas —
 saltadas del todo (235/236), probando un criterio distinto al literal del ticket (227), o
@@ -53,12 +53,12 @@ en `purchase_order_receipt_lines` (persisten el TOTAL asignado a la línea, no e
 de confirmación — el docblock decía explícitamente que quedaba diferido porque Ingreso de
 Mercancía no existía. Ya existe; se conectó vía `GoodsReceiptConfirmationService::confirmPendingForOrder()`.
 
-**Causa raíz #2 (encontrada en ESTA pasada, no en el hallazgo original de marly):** un producto
+**Causa raíz #2 (encontrada en ESTA pasada, no en el hallazgo original de qa):** un producto
 creado por "Nueva Orden → + Producto nuevo" nunca inicializa `stock_quantity` (queda `NULL` por
 diseño — "disponibilidad no controlada"). `increment()`/`decrement()` sobre una columna `NULL`
 evalúan `NULL` en SQL, no el número esperado — el stock de CUALQUIER producto pedido por Nueva
 Orden nunca se actualizaba, sin importar cuántas veces se confirmara. Esto coincide con el patrón
-exacto que marly reportó 3 veces ("stock nulo") — muy probablemente la causa real detrás de sus
+exacto que qa reportó 3 veces ("stock nulo") — muy probablemente la causa real detrás de sus
 rechazos repetidos, más allá de la falta de wiring. Corregido con `COALESCE(stock_quantity, 0)` en
 ambos puntos (`confirmLine`, `reverseConfirmedEffects`).
 

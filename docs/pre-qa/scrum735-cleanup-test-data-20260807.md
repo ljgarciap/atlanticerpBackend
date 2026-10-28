@@ -20,9 +20,9 @@ confiar en la suite de PHPUnit (13/13 verde al llegar, ya verificada por Senior 
 | 1 | Guard de entorno: correr local sin `--env-override` | ✅ Aborta con mensaje claro, exit code 1, no toca la BD |
 | 2 | Usuario inexistente (`--user=noexiste@...`) | ✅ `RuntimeException` capturada, mensaje limpio, exit code 1 — sin stack trace crudo |
 | 3 | Sin candidatos (usuario real sin actividad en `audit_logs`) | ✅ Reporte vacío y legible, `rows_considered: 0`, sin excepción |
-| 4 | Entrelazamiento real: `SubClient` "de Daniela" referenciado por un `SalesProject` real (ajeno, `created_at` fuera de ventana) | ✅ `sub_client` excluido por `active_reference`; cascadea correctamente y también excluye el `master_client` padre (nadie se auto-descubrió como bug — comportamiento conservador correcto) |
-| 5 | `CatalogProduct` "de Daniela" referenciado cross-schema por una tabla **distinta** a la que ya cubre el PHPUnit test (usé `servicios.ticket_products`, el test unitario solo cubre `compras.purchase_order_lines`) | ✅ Excluido por `active_reference` — confirma que el fix del gap de Senior Review (commit `96ee7b3`) generaliza de verdad a las 13 tablas documentadas, no solo a la probada en PHPUnit |
-| 6 | `QuoteItem` "de Daniela" sin marcador propio, colgando de un `Quote` con `[QA-VD]` | ✅ Excluido por herencia de marcador (`labelsFor()`); además confirmé un efecto secundario correcto no cubierto por PHPUnit: el `master_client`/`sub_client` de los que cuelga ese `Quote` marker-protegido también quedan protegidos por `active_reference`, porque el `Quote` (no candidato) sigue apuntándolos |
+| 4 | Entrelazamiento real: `SubClient` "de Gerencia1" referenciado por un `SalesProject` real (ajeno, `created_at` fuera de ventana) | ✅ `sub_client` excluido por `active_reference`; cascadea correctamente y también excluye el `master_client` padre (nadie se auto-descubrió como bug — comportamiento conservador correcto) |
+| 5 | `CatalogProduct` "de Gerencia1" referenciado cross-schema por una tabla **distinta** a la que ya cubre el PHPUnit test (usé `servicios.ticket_products`, el test unitario solo cubre `compras.purchase_order_lines`) | ✅ Excluido por `active_reference` — confirma que el fix del gap de Senior Review (commit `96ee7b3`) generaliza de verdad a las 13 tablas documentadas, no solo a la probada en PHPUnit |
+| 6 | `QuoteItem` "de Gerencia1" sin marcador propio, colgando de un `Quote` con `[QA-VD]` | ✅ Excluido por herencia de marcador (`labelsFor()`); además confirmé un efecto secundario correcto no cubierto por PHPUnit: el `master_client`/`sub_client` de los que cuelga ese `Quote` marker-protegido también quedan protegidos por `active_reference`, porque el `Quote` (no candidato) sigue apuntándolos |
 | 7 | Doble `--dry-run` sin cambios en el medio | ✅ `diff` byte a byte de las dos corridas: idéntico — determinismo confirmado |
 | 8 | `--json` vs tabla de consola | ✅ Mismo contenido en ambos formatos (usuario, ventana, candidatos+IDs, excluidos+motivo+label) |
 
@@ -34,7 +34,7 @@ adelantaba al paso explícito de `DELETE_ORDER`.**
 `sales_projects.sub_client_id` es `cascadeOnDelete()`, y `sub_client` se borra ANTES que
 `sales_project` en `DELETE_ORDER` (que siempre lo deja al final, a propósito, por la razón inversa
 documentada en el docblock). Cuando ambos son candidatos del mismo owner — el caso típico, lo
-reproduce cualquier pipeline completo que Daniela haya creado — borrar el `sub_client` se lleva
+reproduce cualquier pipeline completo que Gerencia1 haya creado — borrar el `sub_client` se lleva
 puesto el `sales_project` por cascada antes de que `execute()` llegue a su propio paso explícito.
 `delete()->rowCount()` en ese paso ve 0 filas (ya no existen), así que el resumen de `--force`
 reportaba `sales_project: 0` pese a haber borrado 1 fila real — contradiciendo tanto el estado real
@@ -42,7 +42,7 @@ de la BD como el propio `Log::info()` de la línea siguiente (que sí lista el i
 `foreach` sobre `$ids` no depende del resultado de `delete()`).
 
 Reproducido en vivo (no solo inferido leyendo código): armé un pipeline completo
-(`MasterClient→SubClient→SalesProject→PipelineCard→Quote→QuotePart→QuoteItem`) de Daniela sin
+(`MasterClient→SubClient→SalesProject→PipelineCard→Quote→QuotePart→QuoteItem`) de Gerencia1 sin
 marcador, corrí `--force`, y el JSON mostró `"sales_project": 0` en `deleted` mientras
 `storage/logs/laravel.log` sí tenía la línea `ventas_diseno.cleanup_test_data.deleted
 {"entity_type":"sales_project","id":17}` y la fila efectivamente ya no existía en la BD.

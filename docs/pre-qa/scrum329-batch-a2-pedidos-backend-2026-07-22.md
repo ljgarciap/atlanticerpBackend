@@ -18,7 +18,7 @@ A1) — este documento + comentario en Jira son el registro del resultado, sin m
 Stack Docker local real (`infra/docker-compose.yml`), no solo lectura de código:
 
 1. Login real (`POST /api/auth/login`) con los 5 usuarios reales de Bodega
-   (`almacen@`/`almacen2@`/`logistica@`/`apolonio.gonzalez@atlantic.com.pa`,
+   (`almacen@`/`almacen2@`/`logistica@`/`auxiliarbodega@test.com`,
    `arrochagary@gmail.com`).
 2. Fixtures de pedidos armados vía `artisan tinker` sobre la BD real (mismo shape del modelo,
    sin pipeline_card por simplicidad — no afecta la lógica de Bodega, que es agnóstica de
@@ -36,7 +36,7 @@ Todos los pedidos/productos de prueba (`orders` 79-91 de la primera pasada, 85-8
 segunda tras el reset de la suite) fueron creados por esta sesión — quedaron eliminados
 automáticamente al correr `infra/test.sh` al final (mismo mecanismo que Batch A1, ver
 `memory/feedback_local_test_db_no_es_fresh.md`). Los `extra_permissions` temporales que
-otorgué a Mariano/Osvaldo/Apolonio/Gary (ver Paso 0) también quedaron restaurados a `[]`
+otorgué a Asistentebodega2/Asistentebodega/Auxiliarbodega/[persona] (ver Paso 0) también quedaron restaurados a `[]`
 por el mismo reset — confirmado con `psql` después de la corrida final.
 
 ## Paso 0 — verificación de permisos angostos (🔴 CRÍTICO, no corregido por mí — ver razón)
@@ -49,11 +49,11 @@ Login real de los 5 usuarios + decodificación del JWT real:
 
 | Usuario | `role_key` | `security_level` (BD) | `bodega.write` en JWT real |
 |---|---|---|---|
-| Esteban Cardenas (Jefe de Bodega) | `lider_bodega` | 4 (Power User) | ✅ sí |
-| Mariano Sandoval (Asistente) | `asistente_bodega` | 1 (Read Only) | ❌ **no** |
-| Osvaldo Santos (Asistente) | `asistente_bodega` | 1 (Read Only) | ❌ **no** |
-| Apolonio Gonzalez (Picker) | `ayudante_general_bodega` | 1 (Read Only) | ❌ **no** |
-| Gary Arrocha (Repartidor) | `transporte` | 1 (Read Only) | ❌ **no** |
+| Lider Bodega Test (Jefe de Bodega) | `lider_bodega` | 4 (Power User) | ✅ sí |
+| Asistentebodega2 [persona] (Asistente) | `asistente_bodega` | 1 (Read Only) | ❌ **no** |
+| Asistentebodega [persona] (Asistente) | `asistente_bodega` | 1 (Read Only) | ❌ **no** |
+| Auxiliarbodega [persona] (Picker) | `ayudante_general_bodega` | 1 (Read Only) | ❌ **no** |
+| [persona] [persona] (Repartidor) | `transporte` | 1 (Read Only) | ❌ **no** |
 
 Causa raíz: `bodega.write` se emite solo cuando `SecurityLevelModulePermission.can_edit = true`
 para el módulo `bodega` en el `security_level` del usuario (`User::effectivePermissionsV2()`).
@@ -62,27 +62,27 @@ Confirmé contra `atlantic_auth.security_level_module_permissions` que **solo lo
 `default_security_level_id` de los roles `asistente_bodega`/`ayudante_general_bodega`/
 `transporte` en `atlantic_auth.roles` (confirmado con `psql`), NO lo tiene.
 
-Confirmé el efecto real con HTTP: Mariano (Asistente, security_level 1 sin grant) recibía
+Confirmé el efecto real con HTTP: Asistentebodega2 (Asistente, security_level 1 sin grant) recibía
 `403` en `POST .../assign-picker` — el mismo endpoint que RN3 de SCRUM-383 exige que él SÍ
 pueda usar — hasta que le otorgué `extra_permissions: ["bodega.write"]` temporalmente vía SQL
 directo (restaurado por `infra/test.sh` al final, no persiste).
 
 **Por qué no lo corregí yo mismo:** esto no es un permiso angosto de una persona puntual (patrón
 `SpecialPermissionSeeder`, ej. SCRUM-126/138) — es el `default_security_level_id` de 3 roles de
-negocio completos (afecta a Mariano/Osvaldo hoy y a cualquier futuro Asistente/Picker/Repartidor
+negocio completos (afecta a Asistentebodega2/Asistentebodega hoy y a cualquier futuro Asistente/Picker/Repartidor
 que se contrate), una decisión de nivel de seguridad por defecto que corresponde al
 Arquitecto/PM confirmar (¿nivel 4 igual que `lider_bodega`? ¿un nivel intermedio nuevo?), no
 algo que un grant SQL ad-hoc resuelva de forma duradera.
 
 **Impacto real si no se corrige antes de desplegar:** con la configuración actual de
-seguridad, **solo Esteban puede operar CUALQUIER paso del flujo de Pedidos** — Mariano y
-Osvaldo (Asistentes) no podrían asignar picker pese a que RN3 se los permite explícitamente,
-y Apolonio/Gary no podrían completar su propia Hoja de Picking ni registrar su propia entrega.
+seguridad, **solo Liderbodega puede operar CUALQUIER paso del flujo de Pedidos** — Asistentebodega2 y
+Asistentebodega (Asistentes) no podrían asignar picker pese a que RN3 se los permite explícitamente,
+y Auxiliarbodega/[persona] no podrían completar su propia Hoja de Picking ni registrar su propia entrega.
 Esto bloquea el uso real del batch por el equipo completo de Bodega, no un caso límite.
 
 **Recomiendo:** bloqueante para pasar a QA — el PM/Arquitecto debe decidir el
 `security_level` correcto para estos 3 roles (vía seeder de roles, no SQL manual) antes de que
-QA (marly) intente operar el flujo con una cuenta que no sea Esteban.
+QA (qa) intente operar el flujo con una cuenta que no sea Liderbodega.
 
 ## 🔴 CRÍTICO encontrado y corregido en vivo — `registerDelivery()` permitía entregar por
 encima de `qty_picked = 0`
@@ -117,7 +117,7 @@ los 2 commits previos del batch).
 Cobertura completa de los 13 tickets, con foco en las RN de ruptura explícitas del brief:
 
 - **SCRUM-383 (assign-picker):** RN1 (sin picker → 422), RN2 (picker visible en el pedido),
-  RN3 (Mariano/Osvaldo sí, Apolonio no — 403 correcto), picker inválido (id de repartidor) →
+  RN3 (Asistentebodega2/Asistentebodega sí, Auxiliarbodega no — 403 correcto), picker inválido (id de repartidor) →
   422. PASA (con el permiso temporal del Paso 0).
 - **SCRUM-384 (start-picking):** doble-click real (2 requests paralelos) → exactamente 1 `200`
   y 1 `422`, 1 sola fila de historial. PASA.
@@ -138,7 +138,7 @@ Cobertura completa de los 13 tickets, con foco en las RN de ruptura explícitas 
 - **SCRUM-393/394/395 (registrar entrega):** ver el CRÍTICO de arriba (corregido). RN1 (tope
   no supera lo pedido/alistado), RN2 (motivo obligatorio en parcial → 422 si falta), tarjeta
   Faltante hereda datos + vinculada a familia — todo confirmado en vivo. PASA (tras el fix).
-- **SCRUM-396 (assign-courier):** RN1 (Mariano/Asistente → 403, solo Esteban), RN2
+- **SCRUM-396 (assign-courier):** RN1 (Asistentebodega2/Asistente → 403, solo Liderbodega), RN2
   (propagación automática al hermano de familia ya en Por despachar sin repartidor propio) —
   confirmado con 2 pedidos reales de la misma familia. PASA.
 - **SCRUM-398 (bloqueo de despacho):** sin repartidor → 422 con mensaje propio; sin factura →
@@ -185,8 +185,8 @@ distintos) — todo verificado contra HTTP real + Postgres real, con la suite co
 **Veredicto: rebota por el hallazgo de Paso 0.** El motor de Pedidos en sí (los 13 tickets)
 funciona correctamente end-to-end — el único bloqueante real no es un bug de este batch sino
 un gap de configuración de seguridad (roles de Bodega sin el `security_level` que su propio
-diseño de permisos requiere) que debe resolverse antes de que QA (marly) pueda operar el
-flujo con cualquier cuenta que no sea la de Esteban. Recomiendo al PM: (1) escalar el
+diseño de permisos requiere) que debe resolverse antes de que QA (qa) pueda operar el
+flujo con cualquier cuenta que no sea la de Liderbodega. Recomiendo al PM: (1) escalar el
 `security_level` de Asistente/Picker/Repartidor al Arquitecto para decisión y seeder, (2) una
 vez resuelto, este batch no necesita una nueva pasada completa de Pre-QA — solo re-confirmar
 Paso 0 con la cuenta de un Asistente real.
@@ -208,21 +208,21 @@ falló localmente por memoria del host, no por código — con memory-limit expl
 
 | Usuario | `role_key` | `security_level` (JWT) | `bodega.write` | Resto de 6 módulos (`view`/`edit`) |
 |---|---|---|---|---|
-| Esteban (Jefe de Bodega) | `lider_bodega` | 4 | ✅ | todos `false` (sin cambios) |
-| Mariano (Asistente) | `asistente_bodega` | 3 | ✅ (antes ❌) | todos `false` |
-| Osvaldo (Asistente) | `asistente_bodega` | 3 | ✅ (antes ❌) | todos `false` |
-| Apolonio (Picker) | `ayudante_general_bodega` | 3 | ✅ (antes ❌) | todos `false` |
-| Gary (Repartidor) | `transporte` | 3 | ✅ (antes ❌) | todos `false` |
+| Liderbodega (Jefe de Bodega) | `lider_bodega` | 4 | ✅ | todos `false` (sin cambios) |
+| Asistentebodega2 (Asistente) | `asistente_bodega` | 3 | ✅ (antes ❌) | todos `false` |
+| Asistentebodega (Asistente) | `asistente_bodega` | 3 | ✅ (antes ❌) | todos `false` |
+| Auxiliarbodega (Picker) | `ayudante_general_bodega` | 3 | ✅ (antes ❌) | todos `false` |
+| [persona] (Repartidor) | `transporte` | 3 | ✅ (antes ❌) | todos `false` |
 
 Confirmado con `psql` directo que la matriz del Nivel 3 tiene `can_edit=true` únicamente en
 `bodega` (los otros 6 módulos en `false`) — **el fix no sobre-otorgó nada fuera de Bodega**, tal
-como lo diseñó la migración. Regresión probada en vivo: Mariano (Level 3) contra
+como lo diseñó la migración. Regresión probada en vivo: Asistentebodega2 (Level 3) contra
 `POST /api/ventas-diseno/pipeline` → `403` (sigue sin poder escribir fuera de Bodega).
 
-**RN3 de SCRUM-383 (el criterio que motivó el fix), probado de verdad:** Mariano ejecutando
+**RN3 de SCRUM-383 (el criterio que motivó el fix), probado de verdad:** Asistentebodega2 ejecutando
 `POST /api/bodega/orders/{id}/assign-picker` con un pedido real en `asignado` → `200`, pedido
 pasa a `picking_pendiente` con `picker_id` seteado. Antes del fix esto devolvía `403`. Confirmado
-también que `assignCourier` sigue exclusivo de `lider_bodega`: Gary (Transporte, ahora con
+también que `assignCourier` sigue exclusivo de `lider_bodega`: [persona] (Transporte, ahora con
 `bodega.write`) contra ese mismo endpoint → `403` explícito ("Solo el Jefe de Bodega puede asignar
 el repartidor") — el Nivel 3 no rompió el gate de rol específico dentro del propio módulo.
 
@@ -255,6 +255,6 @@ introdujo una regresión — ni en el alcance de permisos (Nivel 3 sigue estrict
 sesión (`PED-PREQA-*`, `orders` 80-86) creados vía `tinker` y limpiados automáticamente al correr
 `infra/test.sh` al final (mismo mecanismo que la pasada anterior).
 
-**Veredicto final: PASADA LIMPIA.** El batch queda listo para pasar a QA (marly.rangel) — no
+**Veredicto final: PASADA LIMPIA.** El batch queda listo para pasar a QA (qa.qa) — no
 quedan hallazgos bloqueantes ni heredados sin resolver más allá del 🟡 no bloqueante de permisos
 granulares (heredado de Senior Review, sin cambios, ya documentado arriba).

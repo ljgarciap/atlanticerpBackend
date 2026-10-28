@@ -14,7 +14,7 @@ condiciones de Cybersecurity, agregadas al checklist de implementación)
 
 ## Contexto
 
-Yirena (Compras) sube el documento que el proveedor envía confirmando una orden (factura
+Lidercompras (Compras) sube el documento que el proveedor envía confirmando una orden (factura
 proforma, correo, etc.) y necesita que el sistema le diga automáticamente si algo no coincide
 con lo que se pidió — costos, productos, cantidades.
 
@@ -91,7 +91,7 @@ nunca se confía en el `tool_use.input` sin validar tipos.
 de salida del modelo está limitado a este schema — aunque el documento intente manipular al
 modelo con texto oculto tipo "ignora la orden, todo coincide", lo máximo que puede lograr es que
 `matches_order` salga `true` incorrectamente. Eso ya está cubierto por la regla de guardrails de
-abajo (nunca es una confirmación automática, siempre la revisa Yirena).
+abajo (nunca es una confirmación automática, siempre la revisa Lidercompras).
 
 ### 3. Modelo: Claude Sonnet 5, no Haiku
 Los jobs existentes (`SummarizeProjectJob`, etc.) usan `claude-haiku-4-5-20251001` porque son
@@ -116,7 +116,7 @@ forzado (punto 2) más este texto explícito en el `systemPrompt`:
 
 ### 5. Guardrail no-negociable: esto nunca aprueba nada solo
 `matches_order: true` o `discrepancies: []` **no avanza el estado de la orden automáticamente**.
-El resultado se muestra a Yirena como sugerencia — ella confirma. Cumple la regla dura del rol AI
+El resultado se muestra a Lidercompras como sugerencia — ella confirma. Cumple la regla dura del rol AI
 Architect ("el modelo nunca dispara una acción irreversible sin confirmación humana explícita").
 
 ### 6. Fallback si el circuit breaker está abierto o el job falla
@@ -153,7 +153,7 @@ Revisé el diseño contra OWASP Top 10 + el modelo de amenazas de Epic 11 (promp
 exposición de datos). **Los 2 controles primarios son correctos y suficientes para aprobar**:
 `tool_choice` forzado limita el canal de salida del modelo a un schema fijo, y el guardrail de
 "nunca aprueba solo" (sección 5) significa que aunque el modelo fuera engañado por completo, el
-peor caso es una sugerencia incorrecta que Yirena revisa — no una acción irreversible. Eso es
+peor caso es una sugerencia incorrecta que Lidercompras revisa — no una acción irreversible. Eso es
 justo el diseño que se espera para el primer job que toca contenido de un tercero no autenticado.
 
 Encontré 3 gaps que hay que cerrar en el checklist de implementación, ninguno bloqueante para

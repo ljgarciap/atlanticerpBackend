@@ -24,7 +24,7 @@ de arqueos cerrados, aprobación de Gerencia, constancia de retención del clien
 **1. Caja Chica no existe todavía (Batch 20-21, posterior en el plan).** RN1 de REQ-520 exige
 sumar el saldo de caja chica al "Saldo disponible hoy". Resuelto agregando `petty_cash_balance`
 (decimal, default 0) a `admin_contab.fiscal_settings` — mismo patrón ya usado para
-`comision_externa_default_percent` (Batch 16): un valor de configuración editable por Mark
+`comision_externa_default_percent` (Batch 16): un valor de configuración editable por Aprobador
 (`mark_only`, mismo endpoint `PUT /fiscal-settings`), nunca hardcodeado. Cuando Batch 20 construya
 el ledger real de Caja Chica, este campo se reemplaza por el saldo calculado — documentado acá para
 que esa sesión no lo redescubra desde cero.
@@ -64,7 +64,7 @@ migración de `bank_movements` ya anticipaba desde Batch 1.
 campo `resultado=devuelto` solo puede ocurrir cuando `monto > saldo_pendiente_factura` (ver
 `RegisterCreditNoteRequest`/`CreditNoteService::register()` — si no hay excedente, `resultado` se
 fuerza a `aplicado_saldo`). "Aún no procesada" = `estado=pendiente_aprobacion` (esperando decisión
-de Mark); una vez `estado=aplicada`, ya generó su `bank_movements` real y pasa a la Vista real, no
+de Aprobador); una vez `estado=aplicada`, ya generó su `bank_movements` real y pasa a la Vista real, no
 a la proyectada. El monto proyectado se calcula igual que `applyToBalance()`:
 `excedente = max(0, monto_nota - (factura.monto - factura.saldo_aplicado))` sobre el estado
 ACTUAL de la factura — solo para la proyección, nunca persistido.
@@ -84,13 +84,13 @@ distinta capturada en ningún REQ). "Atrasado" = esa fecha ya pasó al momento d
 al mapear la fila, antes se seleccionaba en SQL pero se descartaba) por si un batch futuro
 necesita esa fecha — no lo usa esta implementación.
 
-**8. REQ-521/REQ-523 (Vista proyectada / Vista real 30-90d) NO están disponibles para Yaneth** —
-el REQ lo dice explícito ("Visible para Felix, Mark y Gerencia", sin Yaneth) — a diferencia de
-REQ-520/522 (encabezado + toggle, sí incluyen a Yaneth) y REQ-524 (arqueo del día, exclusivo
-Felix+Yaneth, sin Mark/Gerencia — mismo patrón ya usado en Batch 17 para `cuenta-cobro`/
-`cuenta-pago`, "Disponible para Felix y Yaneth" sin el carve-out estándar). Contradicción real del
+**8. REQ-521/REQ-523 (Vista proyectada / Vista real 30-90d) NO están disponibles para Asistente** —
+el REQ lo dice explícito ("Visible para Contabilidad, Aprobador y Gerencia", sin Asistente) — a diferencia de
+REQ-520/522 (encabezado + toggle, sí incluyen a Asistente) y REQ-524 (arqueo del día, exclusivo
+Contabilidad+Asistente, sin Aprobador/Gerencia — mismo patrón ya usado en Batch 17 para `cuenta-cobro`/
+`cuenta-pago`, "Disponible para Contabilidad y Asistente" sin el carve-out estándar). Contradicción real del
 default de RN1 (Proyectado+30d) para una usuaria que no puede ver Proyectado: resuelto en el
-frontend — Yaneth nunca aterriza en una combinación a la que no tiene acceso, su default es
+frontend — Asistente nunca aterriza en una combinación a la que no tiene acceso, su default es
 Real+Hoy (Arqueo del día, lo único a lo que tiene acceso completo); las opciones Proyectado/Real
 30-90d simplemente no se ofrecen para su rol (evita un 403 en vez de ocultar tras el hecho).
 
@@ -125,9 +125,9 @@ daily_cash_count_entries(
 | Método/ruta | Gate | REQ |
 |---|---|---|
 | `GET /cash-position` | `role:superadmin,lider_admin_contab,asistente_administrativa,management` | REQ-520 |
-| `GET /cash-position/export?view=proyectado\|real&window=0\|30\|90` | `role:superadmin,lider_admin_contab,management` (sin Yaneth — ver nota abajo) — 422 si `view=real&window=0` (RN3) | REQ-520 |
+| `GET /cash-position/export?view=proyectado\|real&window=0\|30\|90` | `role:superadmin,lider_admin_contab,management` (sin Asistente — ver nota abajo) — 422 si `view=real&window=0` (RN3) | REQ-520 |
 | `GET /cash-position/projected?window=0\|30\|90` | `role:superadmin,lider_admin_contab,asistente_administrativa,management` (ver nota abajo) | REQ-521/522 |
-| `GET /cash-position/real?window=30\|90` | `role:superadmin,lider_admin_contab,management` (sin Yaneth) | REQ-522/523 |
+| `GET /cash-position/real?window=30\|90` | `role:superadmin,lider_admin_contab,management` (sin Asistente) | REQ-522/523 |
 | `GET /cash-position/daily-count` | `role:superadmin,lider_admin_contab,asistente_administrativa` (sin management) | REQ-524 |
 | `PUT /cash-position/daily-count/entries` | ídem | REQ-524 RN2 |
 | `PUT /cash-position/daily-count/general-observation` | ídem | REQ-524 RN4 |
@@ -135,15 +135,15 @@ daily_cash_count_entries(
 `petty_cash_balance` se edita vía el `PUT /fiscal-settings` ya existente (`mark_only`) — solo se le
 agrega el campo al request/response, sin ruta nueva.
 
-**Aclarado por Luis 2026-08-25 (Pre-QA Batch 18) — `/projected` y Yaneth.** La implementación
-original bloqueaba `/projected` para Yaneth por completo, razonando que REQ-521 ("Visible para
-Felix, Mark y Gerencia") cubría todo el endpoint. Pre-QA encontró la contradicción real: REQ-520
-("Visible para Felix, Yaneth, Mark y Gerencia") incluye las 3 tarjetas "Entradas/Salidas/Saldo
+**Aclarado por Luis 2026-08-25 (Pre-QA Batch 18) — `/projected` y Asistente.** La implementación
+original bloqueaba `/projected` para Asistente por completo, razonando que REQ-521 ("Visible para
+Contabilidad, Aprobador y Gerencia") cubría todo el endpoint. Pre-QA encontró la contradicción real: REQ-520
+("Visible para Contabilidad, Asistente, Aprobador y Gerencia") incluye las 3 tarjetas "Entradas/Salidas/Saldo
 proyectados" del encabezado, y esas tarjetas se alimentan del mismo endpoint. Luis confirmó la
 lectura correcta: REQ-521 veda el **panel de detalle** (facturas/comisiones línea por línea), no
 los 3 totales agregados. Resuelto agregando `asistente_administrativa` al gate de `/projected`,
 con el controller devolviendo `entradas`/`salidas` vacíos para ese rol (totales siempre calculados
-sobre el dato completo) — `/real` y `/export` quedan sin cambios, sin excepción para Yaneth (ningún
+sobre el dato completo) — `/real` y `/export` quedan sin cambios, sin excepción para Asistente (ningún
 REQ le da una versión "solo totales" de esos dos).
 
 ## Contrato JSON exacto (Backend Dev y Frontend Dev implementan contra esto, sin improvisar shape)

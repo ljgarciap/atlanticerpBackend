@@ -8,7 +8,7 @@ pusheados al momento de esta pasada), `atlanticerp-frontend` rama `dev` (commits
 **Entorno de verificación:** stack Docker local (`infra-laravel-1`, `infra-postgres-1`,
 `infra-nginx-1` puerto 8090) + Vite dev server real (`localhost:5173`). Verificación de API con
 `curl` directo contra usuarios reales del roster (`almacen@atlantic.com.pa` = lider_bodega,
-`neil.quiel@atlantic.com.pa` = vendedor_disenador sin `bodega.read`) y verificación de UI con
+`[persona].[persona]@atlantic.com.pa` = vendedor_disenador sin `bodega.read`) y verificación de UI con
 **Playwright real** (`e2e/preqa-scrum329-batchb2-ver-inventario.spec.ts`, 17 tests, headless
 Chromium) — el tooling de navegador interactivo (claude-in-chrome) no estaba disponible en esta
 sesión (permiso denegado por el harness), así que la corrida en navegador real se hizo con
@@ -213,7 +213,7 @@ reactivarlo." (sin ningún botón), + campo "Familia (opcional)" con texto de ay
 - Confirmar llegada física: reparto FIFO correcto, rechazo 422 estructural si excede lo pendiente,
   idempotencia correcta (confirmar 2 veces la MISMA línea falla con mensaje claro), persiste
   correctamente tras recargar la página.
-- Rol sin `bodega.read` (`neil.quiel@atlantic.com.pa`, vendedor/diseñador): la ruta
+- Rol sin `bodega.read` (`[persona].[persona]@atlantic.com.pa`, vendedor/diseñador): la ruta
   `/bodega/inventario` no muestra la tabla real — bloqueado de verdad, no solo un botón escondido.
 
 ## Cómo correr esta suite de nuevo

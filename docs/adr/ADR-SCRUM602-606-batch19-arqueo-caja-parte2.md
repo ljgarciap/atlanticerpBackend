@@ -4,7 +4,7 @@ Arquitecto, 2026-08-26. Segundo y último batch del grupo "Arqueo / Flujo de Caj
 `docs/architecture/admin-contab-batches.md`). Mismo mockup que Batch 18:
 `4G__Admin_Contabilidad_ArqueoCaja.html` (adjunto en los 5 tickets) — este batch implementa lo que
 Batch 18 dejó fuera a propósito: cerrar el arqueo, cola secuencial de atrasados, historial +
-aprobación de Gerencia (Mark), constancia de retención, y ver/descargar resumen.
+aprobación de Gerencia (Aprobador), constancia de retención, y ver/descargar resumen.
 
 ## Alcance de los 5 tickets
 - REQ-525: sección "Ajustes / Retención" dentro del arqueo del día — cobros con método "Retención
@@ -14,7 +14,7 @@ aprobación de Gerencia (Mark), constancia de retención, y ver/descargar resume
 - REQ-527: bloqueo secuencial — el "arqueo activo" es siempre el más antiguo sin cerrar; aviso
   explícito si no es el de hoy; avanza solo al cerrar el atrasado.
 - REQ-528: historial de arqueos cerrados (solo lectura, inmutable salvo constancia) + aprobación
-  exclusiva de Mark, contador de pendientes.
+  exclusiva de Aprobador, contador de pendientes.
 - REQ-529: ver detalle de cualquier arqueo (activo o del historial) + descargar resumen formal
   (PDF).
 
@@ -48,14 +48,14 @@ qué fecha empieza a exigirse el cierre secuencial, y los datos reales de `bank_
 `AdminContPayment` existen desde antes de Batch 18 (2026-08-25) — tomar la fecha del primer cobro
 real como piso generaría un backlog de meses de "atrasados" el día que este batch se despliegue,
 que no es la intención. Se agrega `fiscal_settings.arqueo_tracking_start_date` (date, nullable,
-editable por Mark vía el `PUT /fiscal-settings` ya existente — mismo patrón que
+editable por Aprobador vía el `PUT /fiscal-settings` ya existente — mismo patrón que
 `petty_cash_balance`/Batch 18). `activeDate()` calcula el piso como
 `arqueo_tracking_start_date ?? MIN(daily_cash_counts.fecha) ?? hoy` y escanea día por día (rango
 acotado a semanas, sin problema de performance) hasta encontrar la primera fecha sin registro o con
 `estado=abierto`. Default `null` en fiscal_settings → si no hay filas previas, el piso es hoy mismo
 (cero backlog al día del deploy). **Antes de desplegar a QA/prod, verificar si ya existen filas de
 `daily_cash_counts` con fechas de prueba (dev/test) que distorsionen el piso real** — si las hay,
-Mark debe fijar `arqueo_tracking_start_date` explícitamente al promover.
+Aprobador debe fijar `arqueo_tracking_start_date` explícitamente al promover.
 
 **5. Totales del historial/detalle se recalculan en vivo, no se snapshot-ean.** RN1 de REQ-528
 ("ningún dato... puede editarse") se refiere a que el usuario no pueda escribir sobre el arqueo
@@ -93,14 +93,14 @@ diferencia de `ticket_folio_counters` en Servicios): volumen de 1 cierre/día, a
 explícita, sin escenario de concurrencia real que justifique el mecanismo más pesado.
 
 **9. Ambigüedad de permisos — "Descargar resumen" del arqueo ACTIVO (REQ-529 Escenario 1).**
-REQ-529 PERMISOS dice "Felix, Yaneth, Mark y Gerencia" sin distinguir activo vs. historial, pero
-REQ-524 (pantalla "Arqueo del día") ya excluye a Mark/Gerencia por completo — no hay forma de que
+REQ-529 PERMISOS dice "Contabilidad, Asistente, Aprobador y Gerencia" sin distinguir activo vs. historial, pero
+REQ-524 (pantalla "Arqueo del día") ya excluye a Aprobador/Gerencia por completo — no hay forma de que
 lleguen al botón "Descargar resumen" del arqueo activo si nunca ven esa pantalla. Resuelto
 igual que la ambigüedad ya reconciliada en Batch 18 (punto 8 de ese ADR): el gate real sigue la
 pantalla donde vive el botón, no la lista de PERMISOS tomada literalmente sin cruzar con REQ-524.
-`GET /cash-position/daily-count/export` (activo) → mismo gate que `/daily-count` (Felix+Yaneth).
-`GET /cash-position/history/{id}/export` (cerrado) → gate amplio (Felix, Yaneth, Mark, Gerencia),
-que es donde Mark/Gerencia sí llegan de forma natural vía el historial. **Marcado para que Luis lo
+`GET /cash-position/daily-count/export` (activo) → mismo gate que `/daily-count` (Contabilidad+Asistente).
+`GET /cash-position/history/{id}/export` (cerrado) → gate amplio (Contabilidad, Asistente, Aprobador, Gerencia),
+que es donde Aprobador/Gerencia sí llegan de forma natural vía el historial. **Marcado para que Luis lo
 confirme** — si prefiere lo contrario, es un cambio de una línea en el middleware de la ruta, sin
 impacto en el resto del diseño.
 
@@ -140,8 +140,8 @@ payment_retention_attachments(
 | `GET /cash-position/daily-count` | `role:superadmin,lider_admin_contab,asistente_administrativa` (sin cambio de gate — cambia el significado: ahora es el arqueo **activo**, no literal-hoy) | REQ-524/527, extendido |
 | `PUT /cash-position/daily-count/entries` | ídem, ahora 409 si `estado != abierto` | REQ-524, guard nuevo |
 | `PUT /cash-position/daily-count/general-observation` | ídem, ahora 409 si `estado != abierto` | REQ-524, guard nuevo |
-| `POST /cash-position/daily-count/close` | ídem (Felix+Yaneth) | REQ-526 |
-| `GET /cash-position/daily-count/export` | ídem (Felix+Yaneth) — PDF | REQ-529 (activo) |
+| `POST /cash-position/daily-count/close` | ídem (Contabilidad+Asistente) | REQ-526 |
+| `GET /cash-position/daily-count/export` | ídem (Contabilidad+Asistente) — PDF | REQ-529 (activo) |
 | `GET /cash-position/history?page=` | `role:superadmin,lider_admin_contab,asistente_administrativa,management` | REQ-528 |
 | `GET /cash-position/history/{id}` | ídem | REQ-528/529 |
 | `GET /cash-position/history/{id}/export` | ídem — PDF | REQ-529 (historial) |
@@ -177,8 +177,8 @@ arqueo — funciona sobre un pago de cualquier arqueo, cerrado o no (REQ-525 RN4
 {
   "data": [
     { "id": 5, "numero": 2, "fecha": "2026-07-02", "total_neto": 18420.00,
-      "estado": "aprobado", "aprobado_por": "Mark", "aprobado_at": "2026-07-03T09:10:00-05:00",
-      "realizado_por": "Yaneth Ríos" }
+      "estado": "aprobado", "aprobado_por": "Aprobador", "aprobado_at": "2026-07-03T09:10:00-05:00",
+      "realizado_por": "Asistente Ríos" }
   ],
   "meta": { "current_page": 1, "last_page": 3 },
   "pendientes_aprobacion": 2
@@ -215,7 +215,7 @@ Misma página `ArqueoCajaPage.tsx` (ya existe desde Batch 18) — agrega: secci�
 Retención" (condicional, RN1 REQ-525), banner de atrasado (`es_atrasado`), botón "Cerrar arqueo del
 día" con modal de confirmación (número+fecha+total neto+aviso de retención pendiente), panel
 "Historial de arqueos cerrados" con contador de pendientes y botón "Ver" → detalle de solo lectura,
-botón "Aprobar" visible solo si el actor es Mark (`flags`/gate del JWT, mismo criterio que otros
+botón "Aprobar" visible solo si el actor es Aprobador (`flags`/gate del JWT, mismo criterio que otros
 botones `mark_only` del frontend, ej. decisión de Notas de Crédito), botón "Descargar resumen" en
 ambos (activo e historial).
 

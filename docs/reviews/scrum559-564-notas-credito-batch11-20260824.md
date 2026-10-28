@@ -35,7 +35,7 @@ punto por punto contra los 6 tickets, incluidos los criterios negativos/bloquean
   mixtas.
 - El gate `estado = monto > threshold ? pendiente_aprobacion : aplicada` aplica parejo a los 3 tipos
   de nota (Descuento comercial, Devolución, Anulación completa) — no hay atajo que deje pasar una
-  Anulación completa de monto alto sin quedar pendiente de aprobación de Mark.
+  Anulación completa de monto alto sin quedar pendiente de aprobación de Aprobador.
 
 ## Gate real (suite completa)
 

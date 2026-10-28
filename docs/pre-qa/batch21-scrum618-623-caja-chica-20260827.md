@@ -13,8 +13,8 @@ desviación a reportar).
 
 ## CRÍTICO — SCRUM-620 (REQ-543) — el panel "Rechazados" crashea la aplicación completa a pantalla en blanco
 
-**Qué se rompe:** al hacer clic en la pestaña "Rechazados" (desde cualquier rol — Felix, Yaneth,
-Mark o Gerencia), toda la SPA se cae a una pantalla en blanco total (ni sidebar, ni header, ni
+**Qué se rompe:** al hacer clic en la pestaña "Rechazados" (desde cualquier rol — Contabilidad, Asistente,
+Aprobador o Gerencia), toda la SPA se cae a una pantalla en blanco total (ni sidebar, ni header, ni
 ningún contenido — `document.body` queda vacío). No hay forma de recuperarse sin recargar la
 página. Esto bloquea por completo REQ-543 (SCRUM-620) y, en cascada, también REQ-544 (SCRUM-621,
 reabrir), porque el único punto de entrada al detalle de una línea rechazada permanentemente
@@ -46,7 +46,7 @@ real que devuelve el backend y el tipo que el frontend asume, sin ningún test q
 correcto para su propio alcance; los tests frontend mockeados le dan al mock un array plano en vez
 del shape real `{lineas: [...]}`).
 
-**Cómo reproducir:** cualquier usuario (Felix/Yaneth/Mark/Daniela) → Admin&Contabilidad → Caja
+**Cómo reproducir:** cualquier usuario (Contabilidad/Asistente/Aprobador/Gerencia1) → Admin&Contabilidad → Caja
 Chica → clic en la pestaña "Rechazados" (con al menos 1 línea con 2 intentos de rechazo existente,
 para que el array no esté vacío — con 0 líneas el bug no se dispara porque no llega a `.map()`).
 
@@ -74,28 +74,28 @@ bloqueado, se probó directamente contra la API:
 - `GET /petty-cash/rejected` devuelve **exactamente** la línea con `intentos_rechazo=2`
   (ProveedorA1) — las líneas con 1 solo intento (ProveedorA2/A3/B1) correctamente **no** aparecen
   ahí (siguen en `pending()`). REQ-543 RN1 se cumple del lado del backend.
-- `PUT /petty-cash/expenses/{id}/reopen` como Felix: con motivo vacío → bloqueado (422, vía
+- `PUT /petty-cash/expenses/{id}/reopen` como Contabilidad: con motivo vacío → bloqueado (422, vía
   `PettyCashMotivoRequest`); con motivo → `200`, `intentos_rechazo` vuelve a `0`, `estado` pasa a
   `reabierto`, y el `historial` de la respuesta incluye los 2 rechazos anteriores **más** la
   reapertura nueva (3 entradas), confirmando REQ-544 RN2/RN3.
-- `PUT /petty-cash/expenses/{id}/reopen` como Mark → **403** (el middleware `role:` de la ruta ya
-  excluye a Mark del roster, ni siquiera llega al controller) — confirma la exclusividad
-  Felix/Yaneth de REQ-544 RN1.
+- `PUT /petty-cash/expenses/{id}/reopen` como Aprobador → **403** (el middleware `role:` de la ruta ya
+  excluye a Aprobador del roster, ni siquiera llega al controller) — confirma la exclusividad
+  Contabilidad/Asistente de REQ-544 RN1.
 
 Backend de REQ-543/544 correcto; solo falta corregir el desenvuelto de la respuesta en el
 frontend para que la UI sea consistente con eso.
 
 ## Lo que sí cumple (probado activamente en navegador real, camino de ruptura incluido)
 
-- **SCRUM-618/REQ-541** — Mark, desde el detalle de un reporte de 3 líneas: rechazo de 1 sola
+- **SCRUM-618/REQ-541** — Aprobador, desde el detalle de un reporte de 3 líneas: rechazo de 1 sola
   línea con motivo obligatorio (confirmar sin motivo bloquea) → esa línea sale del reporte, las
   otras 2 quedan intactas y pendientes de aprobación (`docs/visual-review/screenshots/SCRUM-618-1.png`).
   Rechazo del resto del reporte completo con un solo motivo → el reporte deja de existir como
   activo, `onDisuelto()` cierra el modal y vuelve a Pendientes sin dejar nada roto abierto
   (`SCRUM-618-2-tras-rechazo-completo.png`). Reporte de 1 sola línea: rechazo completo disuelve el
   reporte automáticamente, mismo comportamiento limpio (`SCRUM-618-4-reporte-unilinea-disuelto.png`).
-  Felix (no Mark) no ve ni "Rechazar" ni "Rechazar reporte" en un reporte pendiente
-  (`SCRUM-618-5-felix-sin-rechazar.png`) — y forzado por API directa, el backend igual responde
+  Contabilidad (no Aprobador) no ve ni "Rechazar" ni "Rechazar reporte" en un reporte pendiente
+  (`SCRUM-618-5-contabilidad-sin-rechazar.png`) — y forzado por API directa, el backend igual responde
   **403** (gate real, no solo UI escondida).
 - **SCRUM-618/SCRUM-623 — reporte rechazado (disuelto)** — aparece en la pestaña Reportes con
   badge "Rechazado"; su detalle muestra un mensaje explicativo simple en vez de una tabla vacía
@@ -127,7 +127,7 @@ frontend para que la UI sea consistente con eso.
   - "Ver" sobre un soporte adjunto abre el visor con la imagen real decodificada (`naturalWidth >
     0` confirmado programáticamente, no un ícono roto — `SCRUM-623-1-ver-soporte-imagen-real.png`).
   - "Descargar" funciona tanto en un reporte pendiente de aprobación (`SCRUM-623-2-descargar-reporte-pendiente.png`)
-    como en uno finalizado, y este último muestra "Aprobado por Mark Bekhar el ..." en el detalle
+    como en uno finalizado, y este último muestra "Aprobado por Gerencia3 Test el ..." en el detalle
     (`SCRUM-623-3-descargar-reporte-finalizado.png`).
 - **Extra (Senior Review) — Configuración Fiscal**: el campo "Caja chica — máximo de intentos de
   rechazo" existe, muestra el valor real (2, `AdminContFiscalSettings::current()`), es editable
@@ -148,7 +148,7 @@ frontend para que la UI sea consistente con eso.
   (`atlanticerp-frontend/src/i18n/locales/es/adminContab.json`). Bajo el default actual
   (`petty_cash_max_intentos_rechazo=2`) esto siempre es correcto porque el estado "temporal" solo
   existe en `intentos_rechazo=1` (con max=2, cualquier valor ≥2 ya es permanente) — pero si algún
-  día Mark sube el máximo a 3+ vía el campo de Configuración Fiscal recién verificado arriba, una
+  día Aprobador sube el máximo a 3+ vía el campo de Configuración Fiscal recién verificado arriba, una
   línea con 1 o 2 intentos (de un máximo de 3) seguiría mostrando literalmente "(1/2)", texto
   incorrecto. No bloquea nada hoy (el default nunca cambia solo, y el batch no pide verificar
   comportamiento bajo un máximo distinto de 2) pero vale la pena registrarlo — la corrección real
@@ -183,7 +183,7 @@ permisos cruzados, reporte disuelto, modal anidado, reporte rechazado).
 Re-correr el checklist COMPLETO de SCRUM-620/621 (no solo el punto que falló) una vez que
 Frontend Dev corrija `adminContabApi.ts` — el spec permanente
 (`e2e/preqa-batch21-scrum618-623-cajachica-20260827.spec.ts`) ya cubre ambos tickets end-to-end
-(incluyendo el caso Mark-no-puede-reabrir vía 403 real y Felix-sí-puede-con-historial-completo);
+(incluyendo el caso Aprobador-no-puede-reabrir vía 403 real y Contabilidad-sí-puede-con-historial-completo);
 solo falta que el panel deje de crashear para que esas aserciones de UI puedan correr. El resto
 del checklist (618/619/622/623/Extra) no hace falta repetirlo salvo que el fix de esta línea toque
 algo más — el spec queda como test permanente para la próxima corrida completa.
@@ -201,11 +201,11 @@ commit. Checklist COMPLETO re-corrido, no solo SCRUM-620/621.
 
 - Código confirmado en disco: la línea de `adminContabApi.ts` desenvuelve `{ lineas: [...] }`
   correctamente, con un comentario que documenta el hallazgo CRÍTICO original.
-- Panel "Rechazados" verificado en los 4 roles (Mark, Felix, Yaneth, Daniela) — carga sin
+- Panel "Rechazados" verificado en los 4 roles (Aprobador, Contabilidad, Asistente, Gerencia1) — carga sin
   crashear, sin pantalla en blanco, sin `pageerror` en consola.
 - SCRUM-620 (REQ-543) y SCRUM-621 (REQ-544) — antes bloqueados por el crash — ahora verificados
-  end-to-end vía navegador real, camino de ruptura incluido (Mark sin botón "Reabrir" + 403 real
-  al forzar por API; Felix con motivo obligatorio, reapertura exitosa, historial conservado).
+  end-to-end vía navegador real, camino de ruptura incluido (Aprobador sin botón "Reabrir" + 403 real
+  al forzar por API; Contabilidad con motivo obligatorio, reapertura exitosa, historial conservado).
 
 ### Ajuste al spec permanente (self-seeding)
 
@@ -222,7 +222,7 @@ inicial asumido.
 `PUT .../reports/{numero}/approve`, `POST .../expenses/{id}/attachments`) en vez de asumir
 folios/IDs fijos:
 - Reporte A (3 líneas) / Reporte B (1 línea) / Reporte C (1 línea, se mantiene pendiente toda la
-  corrida) / Reporte D (1 línea, pre-aprobado por Mark) + 1 línea standalone con 2 soportes (un
+  corrida) / Reporte D (1 línea, pre-aprobado por Aprobador) + 1 línea standalone con 2 soportes (un
   stub y un PNG real decodificable, generado a propósito para este spec — 4×4 rojo, para el test
   de "Ver soporte muestra la imagen real").
 - Nombres de proveedor únicos por corrida (`Proveedor{A1,A2,A3,B1,Standalone}-${RUN_ID}`,
@@ -255,21 +255,21 @@ corregidos en el spec, documentados acá porque casi se reportan como hallazgos 
 
 ### Checklist completo — todos los ítems
 
-- **SCRUM-618/REQ-541** (rechazo de línea individual / reporte completo, exclusivo Mark) — OK,
+- **SCRUM-618/REQ-541** (rechazo de línea individual / reporte completo, exclusivo Aprobador) — OK,
   igual que la 1ra corrida (motivo obligatorio, líneas restantes intactas, reporte se disuelve
-  correctamente, Felix sin acceso ni por UI ni por API).
+  correctamente, Contabilidad sin acceso ni por UI ni por API).
 - **SCRUM-619/REQ-542** (regla de 2 intentos) — OK: 1er rechazo vuelve a Pendientes con "1/2"
   visible; 2do rechazo de la misma línea pasa PERMANENTEMENTE a Rechazados.
 - **SCRUM-620/REQ-543** (panel "Rechazados") — **antes CRÍTICO, ahora OK** en los 4 roles: solo
   líneas con exactamente 2 intentos, líneas con 1 intento correctamente ausentes.
-- **SCRUM-621/REQ-544** (reabrir) — **antes bloqueado por el crash, ahora OK**: Mark sin botón y
-  403 real si se fuerza por API; Felix reabre con motivo obligatorio, línea vuelve a Pendientes
+- **SCRUM-621/REQ-544** (reabrir) — **antes bloqueado por el crash, ahora OK**: Aprobador sin botón y
+  403 real si se fuerza por API; Contabilidad reabre con motivo obligatorio, línea vuelve a Pendientes
   con intentos=0, historial conserva los 2 rechazos + la reapertura.
 - **SCRUM-622/REQ-545** (modal unificado, 3 contextos) — OK: standalone con Editar (solicitante no
   editable), anidado dentro de reporte pendiente (overlays apilados, sin Editar, con Agregar
   soporte), dentro de reporte finalizado (solo lectura total).
 - **SCRUM-623/REQ-546** (ver soporte + descargar) — OK: imagen real decodifica (`naturalWidth >
-  0`), descargar funciona en reporte pendiente y finalizado (con "aprobado por Mark" visible).
+  0`), descargar funciona en reporte pendiente y finalizado (con "aprobado por Aprobador" visible).
 - **Extra — Configuración Fiscal** — OK: campo de máximo de intentos de rechazo editable, guardar
   no rompe la pantalla, revertido a 2 al final.
 - **Sin emojis** — sin cambios de código de producto en esta re-verificación, no re-auditado

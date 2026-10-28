@@ -7,7 +7,7 @@
 ## Contexto
 
 Bodega necesita generar órdenes de compra directamente a un único proveedor fijo ("Zona Libre de
-Colón"), que luego Compras (Yirena) aprueba o rechaza. Al aprobarse, la orden debe seguir
+Colón"), que luego Compras (Lidercompras) aprueba o rechaza. Al aprobarse, la orden debe seguir
 exactamente el mismo flujo que cualquier otra orden de Compras (RN1 de REQ-370) — pago, logística,
 ingreso. 13 tickets: formulario de creación (3C), bandeja de seguimiento (3D).
 
@@ -17,8 +17,8 @@ Investigación de código (confirmada archivo por archivo, no asumida):
   estados (`por_aprobar` → ... → `recibido`), sin estado `rechazada` y sin gate de
   aprobación genérico — `store()` ya crea todo en `por_aprobar` sin pedirle permiso a nadie.
   El único "approve" que existe (`PurchaseOrderController::approve()`) es específico de la
-  aprobación de Mark para flete aéreo (`requires_mark_approval`) — **no es reusable** para
-  "Yirena aprueba una orden de Zona Libre" sin acoplar semánticas que no tienen relación.
+  aprobación de Aprobador para flete aéreo (`requires_mark_approval`) — **no es reusable** para
+  "Lidercompras aprueba una orden de Zona Libre" sin acoplar semánticas que no tienen relación.
 - **Precedente directo ya construido**: `ReplacementRequest` + `ReplacementRequestController`
   (Sustitutos con IA, Oleada 2). Modelo satélite con su propio `status`
   (`pendiente`/`pendiente_gerencia`/`aprobada`/`rechazada`), `requested_by`, `approved_by`,
@@ -36,8 +36,8 @@ Investigación de código (confirmada archivo por archivo, no asumida):
   lo reusa tal cual. El selector de proveedor de `NewPurchaseOrderPage.tsx` NO se reusa (acá el
   proveedor viene fijo, sin selector — RN de REQ-363).
 - Permisos: creación → `bodega.write` (ya existe, mismo que usa Solicitud de Ajuste). Decisión de
-  Yirena → permiso nuevo y angosto `compras.zona-libre.approve` (no reusar `compras.approve`, que
-  hoy está acoplado a la aprobación de Mark de flete aéreo — mezclarlos generaría confusión futura
+  Lidercompras → permiso nuevo y angosto `compras.zona-libre.approve` (no reusar `compras.approve`, que
+  hoy está acoplado a la aprobación de Aprobador de flete aéreo — mezclarlos generaría confusión futura
   sobre qué significa cada uno). Vía migración de tenant, mismo patrón que
   `2026_07_20_100005_add_compras_settings_configure_permission_to_catalog.php`.
 
@@ -49,7 +49,7 @@ distintos — `AdjustmentRequest` se aprueba DENTRO de Bodega (`permission:bodeg
 en `routes/bodega.php`), mientras que `ReplacementRequest` se resuelve con autoridad de Compras y
 termina en un `PurchaseOrder` (propiedad de Compras). El criterio real para decidir el módulo no es
 "quién lo crea" sino "quién tiene la autoridad de resolución + quién es dueño del artefacto final".
-Acá la autoridad de aprobar/rechazar es de Yirena (Compras) y el artefacto final es un
+Acá la autoridad de aprobar/rechazar es de Lidercompras (Compras) y el artefacto final es un
 `PurchaseOrder` — mismo criterio que `ReplacementRequest`. **Confirmado: `Compras\Models`, no
 `Bodega\Models`.**
 
@@ -89,7 +89,7 @@ frontend ni backend.
 GET  /bodega/zona-libre/requests           — bandeja (3D), soporta filtro por status
 POST /bodega/zona-libre/requests           — crear (3C)
 GET  /bodega/zona-libre/requests/{id}      — detalle (motivo de rechazo, etc.)
-POST /bodega/zona-libre/requests/{id}/remind  — REQ-375, email real a Yirena
+POST /bodega/zona-libre/requests/{id}/remind  — REQ-375, email real a Lidercompras
 ```
 
 **Compras** (`routes/compras.php`, permiso nuevo `compras.zona-libre.approve`):

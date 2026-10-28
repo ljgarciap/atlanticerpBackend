@@ -30,7 +30,7 @@ no a una tabla nueva, siguiendo la misma convención de reverse-lookup ya usada 
   de devolver el mensaje estático — sin duplicar Subtotal/ITBMS/Total, Bodega sigue sin calcular
   nada de eso.
 - Gate de rol: `role:superadmin,lider_admin_contab,asistente_administrativa,management`, igual que
-  Cuentas Bancarias (no exclusiva de Mark).
+  Cuentas Bancarias (no exclusiva de Aprobador).
 - `es_incobrable` existe en el modelo de datos pero siempre `false` en este batch — el flujo de
   aprobación (HU-448) es un batch posterior, mismo patrón de "vacío a propósito" ya usado en otras
   áreas del proyecto.

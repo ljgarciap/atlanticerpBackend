@@ -26,19 +26,19 @@ Sin `updated_at`: nunca se edita ni se borra desde la app. Índice por (`documen
 - `pac_ambiente = apagado`: no se envía nada, no se registra nada (la vista previa sigue siendo la herramienta).
 - Saneamiento antes de guardar: se quita `xmlFirmado` de la respuesta (ya se archiva en S3, y es enorme), se redactan las API keys configuradas (mismo método que `fe_detalle`), y un tope de tamaño por campo (propuesta 64 KB) con marca `[truncado]`.
 
-### 3. Lectura (solo Mark/superadmin, deny-by-default)
+### 3. Lectura (solo Aprobador/superadmin, deny-by-default)
 - `GET /api/admin-contab/invoices/{order}/fe-transmisiones?invoice_id=` y `GET /api/admin-contab/notas-credito/{id}/fe-transmisiones`, bajo el middleware `primary_approver_only`.
-- Frontend: en el detalle de factura y de NC, para Mark, un bloque plegable "Intentos de transmisión" con fecha, resultado, HTTP, y el request/response en JSON con botón "Copiar" (pensado para pegarlo en un correo a soporte del proveedor).
+- Frontend: en el detalle de factura y de NC, para Aprobador, un bloque plegable "Intentos de transmisión" con fecha, resultado, HTTP, y el request/response en JSON con botón "Copiar" (pensado para pegarlo en un correo a soporte del proveedor).
 
 ## Datos personales
-El payload lleva RUC, nombre, correo y dirección del receptor. Mismo criterio que `fe_detalle`: solo Mark/superadmin. No se replica a logs ni a `audit_logs` (evitar duplicar PII).
+El payload lleva RUC, nombre, correo y dirección del receptor. Mismo criterio que `fe_detalle`: solo Aprobador/superadmin. No se replica a logs ni a `audit_logs` (evitar duplicar PII).
 
 ## Fuera de alcance
 Backfill de intentos anteriores (no existen datos; los de dev se reconstruyeron a mano, ver correo a MSL); reintento manual desde la UI; purga.
 
 ## Decisiones que necesito de Luis
 1. **Retención:** propuesta = conservar sin purga (evidencia fiscal, volumen bajo). ¿Otra política?
-2. **Alcance de UI:** propuesta = almacenamiento + endpoints + visor plegable para Mark. ¿Solo almacenamiento y endpoint por ahora?
+2. **Alcance de UI:** propuesta = almacenamiento + endpoints + visor plegable para Aprobador. ¿Solo almacenamiento y endpoint por ahora?
 3. **Ticket:** ¿colgar de SCRUM-987 o crear uno nuevo?
 
 ## Criterios de aceptación
@@ -48,7 +48,7 @@ Backfill de intentos anteriores (no existen datos; los de dev se reconstruyeron 
 4. Con `apagado` no se crea ningún registro.
 5. Un error al escribir el registro no cambia el estado de la factura/NC ni el resultado de la certificación (test).
 6. Ningún registro contiene una API key ni `xmlFirmado`; campos por encima del tope quedan truncados y marcados.
-7. Los endpoints responden 403 a cualquier actor que no sea Mark/superadmin; `fe-transmisiones` no aparece en ningún otro serializador (Bodega, correo, PDF, exportaciones).
+7. Los endpoints responden 403 a cualquier actor que no sea Aprobador/superadmin; `fe-transmisiones` no aparece en ningún otro serializador (Bodega, correo, PDF, exportaciones).
 8. La suite de Bodega/otros no cambia; PHPStan Level 8 limpio; migración reversible.
 
 ## Plan de pruebas / asignación

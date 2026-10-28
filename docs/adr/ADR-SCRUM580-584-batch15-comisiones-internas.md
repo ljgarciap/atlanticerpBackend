@@ -77,7 +77,7 @@ lógico, cada uno viendo solo su parte) — ninguno ve el total completo (RN2/RN
 ## 5. REQ-507 — Estado de cuenta de comisiones (documento)
 
 Nuevo endpoint `GET /api/admin-contab/commissions/internal/{vendedor_id}/account-statement?mes=`
-(mismo permiso que summary — Felix/Mark/Gerencia de cualquier vendedor, un vendedor solo el propio,
+(mismo permiso que summary — Contabilidad/Aprobador/Gerencia de cualquier vendedor, un vendedor solo el propio,
 verificado server-side igual que el resto del módulo, nunca solo con la UI). Reusa
 `CommissionOrderService::summaryForVendor()` con el filtro de §2, pero:
 - **Mes cerrado (RN1):** solo pedidos con `estado='pagado'` de ese mes — lo pendiente no se repite,

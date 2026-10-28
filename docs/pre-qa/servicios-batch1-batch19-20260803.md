@@ -114,7 +114,7 @@ consistente con REQ-249 RN2 — **sin ambigüedad en ese REQ**, mismo batch: *"R
 aplica', Cotización pendiente de generar"*. La Hoja de Reclamo (REQ-278) es un batch futuro y no
 existe todavía como indicador propio — mostrarla "en su lugar" hoy no es construible.
 
-**No bloqueante.** Dejo esto documentado para que PM/Daniela reconcilien la redacción del REQ (cuál
+**No bloqueante.** Dejo esto documentado para que PM/Gerencia1 reconcilien la redacción del REQ (cuál
 de las dos frases es la intención real) antes de que se implemente REQ-278, para no repetir la
 ambigüedad en ese batch.
 
@@ -195,9 +195,9 @@ alcance, confirmado por Visual Review previo).
 
 ### REQ-287→290 (Navegación, Batch 19) — limpio
 - Aaron: 5 pestañas completas + 2 opciones en el desplegable de Técnicos (internos+externos).
-- Neil (`vendedor_disenador`): 3 pestañas (Inicio/Tickets/Técnicos), sin Insumos/Reportes, y el
+- [persona] (`vendedor_disenador`): 3 pestañas (Inicio/Tickets/Técnicos), sin Insumos/Reportes, y el
   desplegable de Técnicos con una sola opción (sin "Técnicos externos") — RN2/RN3 confirmados.
-- Felix (`lider_admin_contab`) y Yirena (`lider_compras`): sin ningún enlace "Servicios" en su
+- Contabilidad (`lider_admin_contab`) y Lidercompras (`lider_compras`): sin ningún enlace "Servicios" en su
   sidebar, y navegación directa por URL a `/servicios/tickets` no expone contenido del módulo (cae
   al layout de su propio módulo) — RN4 confirmado para ambos.
 - REQ-289 (menú ausente en vistas secundarias Movimiento de Herramientas/Informe móvil) — **no
@@ -276,7 +276,7 @@ del código, sin necesidad de spec nueva).
 
 **MENOR previo (REQ-220 RN1 vs Escenario 4) — re-confirmado, sigue igual, sin resolver a
 propósito** (código y REQ sin cambios desde la pasada anterior — no le corresponde a este fix
-tocarlo). Sigue pendiente de que PM/Daniela reconcilien la redacción antes de REQ-278.
+tocarlo). Sigue pendiente de que PM/Gerencia1 reconcilien la redacción antes de REQ-278.
 
 ### Conclusión del re-check
 

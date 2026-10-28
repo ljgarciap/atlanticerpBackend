@@ -68,7 +68,7 @@ transferencia registrado arrancando `esperando_confirmacion` (RN2 REQ-469, ya va
   (`test_confirm_sobre_cobro_ya_confirmado_falla_422`) + frontend
   (`REQ-475 RN1 — "Marcar como confirmado" solo aparece en esperando_confirmacion`).
 - **RN2 (registro CONF-XXX propio, con quién y cuándo):** verificado en vivo — tras confirmar, el
-  detalle mostró "CONF-001 — confirmado por Felix Campos el 23 ago 2026", captura
+  detalle mostró "CONF-001 — confirmado por Contabilidad Test el 23 ago 2026", captura
   `04-confirmado.png`. Test backend fija el formato `/^CONF-\d{3}$/` y que es independiente del
   `numero_recibo` (columna separada, contador separado).
 - **RN3 (pasa a Confirmado, cuenta en indicadores, reduce saldo pendiente):** verificado — tras

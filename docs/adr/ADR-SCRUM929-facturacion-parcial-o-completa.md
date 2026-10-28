@@ -445,7 +445,7 @@ emitido daba un 500 antes de este cambio). Una factura legada (sin líneas) se r
     datos (B3).
   - **A-7 (decisión de negocio)** — `AbonoService::reasociarAlFacturar()` ata TODO abono de nivel Proyecto a la
     PRIMERA factura del proyecto, que ahora puede ser una parcial chica (anticipo 500 sobre una parcial de 321: el
-    excedente sale como abono de nivel Cliente y la 2ª y 3ª factura no lo ven). Confirmar con Luis/Daniela si el
+    excedente sale como abono de nivel Cliente y la 2ª y 3ª factura no lo ven). Confirmar con Luis/Gerencia1 si el
     anticipo se reparte por factura o sigue atado a la primera.
   - **Performance** — `AdminContInvoiceController::index()` ejecuta `list()` dos veces por request (`list()` +
     `countInTab()`), y `list()` carga todo el histórico de entregas facturables. QA Performance debe medir
@@ -464,7 +464,7 @@ emitido daba un 500 antes de este cambio). Una factura legada (sin líneas) se r
      contara por factura). Salvedad de negocio, no de datos: una parcial chica pondera la cotización ENTERA en
      el margen del período (aproximación de KPI ya existente).
   4. **Premisa que no se sostuvo — corregir el ITBMS de UNA parcial y el cierre del pedido. → FALLA CERRADO
-     (decisión del Arquitecto 2026-09-19), decisión de fondo PENDIENTE de Luis/Daniela.** Al cambiar el
+     (decisión del Arquitecto 2026-09-19), decisión de fondo PENDIENTE de Luis/Gerencia1.** Al cambiar el
      tratamiento de ITBMS de una parcial (Σ facturas ≠ `card->amount` a propósito), la factura que luego CIERRA el
      pedido (o un completo posterior) toma `card->amount − Σ activas`: re-cobra en silencio la diferencia de ITBMS
      (p. ej. corregir la entrega 2 a 3.5 % baja 10.50 y el cierre los vuelve a sumar), anulando en la práctica la
@@ -473,7 +473,7 @@ emitido daba un 500 antes de este cambio). Una factura legada (sin líneas) se r
      sobre una factura `parcial`** con `MSG_CORRECCION_TASA_PARCIAL`: "La corrección de la tasa de ITBMS sobre una
      factura parcial no está disponible todavía; contacte a Administración." Sigue permitido: la corrección por
      FECHA sobre una parcial (mismo monto) y TODO sobre facturas `completo` (entrega única, o el completo que cubre
-     el resto). Preguntas abiertas para Luis/Daniela: (a) si una corrección de ITBMS sobre una parcial debe ajustar
+     el resto). Preguntas abiertas para Luis/Gerencia1: (a) si una corrección de ITBMS sobre una parcial debe ajustar
      también el total del pedido contra el que cierra la última factura; (b) o bloquearse mientras el pedido no esté
      cerrado. Tests: `test_b3b_corregir_la_tasa_de_itbms_de_una_parcial_se_rechaza_...` y
      `test_b3b_corregir_la_tasa_de_itbms_de_un_completo_recalcula_desde_sus_lineas`.
@@ -626,7 +626,7 @@ Cómo se calculan HOY:
   `cobrado < facturado`; `por_pagar`/`pagado` según el mes de cierre. Los snapshots mensuales
   (`CommissionMonthSnapshot`) congelan `total_pedidos × %` por mes cerrado (también independiente de las facturas).
 - **Externas (`ArchitectCommissionService::rawProjects`)**: una fila por proyecto con arquitecto; comisión =
-  `monto_proyecto` (= `card->amount`) × % (10 % por defecto o el aprobado por Mark), NO depende de las facturas; las
+  `monto_proyecto` (= `card->amount`) × % (10 % por defecto o el aprobado por Aprobador), NO depende de las facturas; las
   facturas solo deciden el estado (`aun_no_generada` mientras `cobrado < facturado`). Hay UNA cuenta de cobro y UNA
   fecha de pago persistidas por proyecto (`ArchitectCommission`, por `pipeline_card_id`).
 

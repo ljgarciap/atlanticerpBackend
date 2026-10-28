@@ -15,7 +15,7 @@ Ademas: el escaner se replico en un script aparte y se corrio contra 10 PDFs rea
 - BAJO — Falso positivo posible `PdfActiveContentScanner.php:45`: un `/URI (https://sitio/JS/...)` sin comprimir (los enlaces de Word van en claro) coincide con `/JS` + `/` (probado). Improbable en los 7 manuales, pero rechazaria un manual con un enlace asi. Los 10 PDFs reales probados dieron limpio, asi que se acepta el riesgo; si aparece un caso, la salida es exigir contexto (`/S\s*/JavaScript`, `/JS\s*[(<]`) en vez de solo el nombre. Al menos que el mensaje de rechazo oriente al usuario.
 - BAJO — `config/biblioteca.php` `pdf_scan_max_bytes` 100 MB vs `max_pdf_mb` hasta 1024 en `PUT /config`: un PDF mayor a 100 MB solo se escanea en el primer tramo (las actualizaciones incrementales van al final). Fix: rechazar en finalize cuando `size > pdf_scan_max_bytes` (o escanear todo); hoy el default de 50 MB lo cubre.
 - BAJO — Fallo abierto si PCRE falla: `preg_match === 1` y `(string) preg_replace_callback` tratan `false/null` como "limpio" (`:45`, `:60`). Fix: si `preg_last_error() !== PREG_NO_ERROR` rechazar.
-- BAJO — `database/seeders/SpecialPermissionSeeder.php:70-73`: el comentario y la entrada de Daniela se insertaron entre el comentario de `gerencia2` y su entrada; el comentario de Zona Libre ahora queda encima de Daniela. Cosmetico, mover la entrada.
+- BAJO — `database/seeders/SpecialPermissionSeeder.php:70-73`: el comentario y la entrada de Gerencia1 se insertaron entre el comentario de `gerencia2` y su entrada; el comentario de Zona Libre ahora queda encima de Gerencia1. Cosmetico, mover la entrada.
 - BAJO — Tests: no hay test de `S3LibraryStore::copy` (formato `CopySource`, `CopySourceIfMatch` sin versionado) ni del camino "version inexistente"; `test_finalize_repetido...` (577) solo prueba el 404 del segundo finalize. Sugerido: test con `Aws\MockHandler` que verifique el `CopySource` generado.
 
 ### Verificado OK (independiente)
@@ -25,7 +25,7 @@ Ademas: el escaner se replico en un script aparte y se corrio contra 10 PDFs rea
 4. Rate limiters `biblioteca-lectura` (60) / `biblioteca-escritura` (20): por `sub` decodificado y firmado, IP solo de respaldo; mismo patron que `fe-accion`; `GET /config` no lleva throttle (aceptable, permiso angosto).
 5. GET y PUT `/config`: misma forma (`toApi()`), los derivados `max_*_bytes` y `modules` son solo lectura; PUT audita viejo/nuevo con `BIBLIOTECA_CONFIG_UPDATED`; `library_max_pending_uploads=5` sembrado por migracion; PUT solo `superadmin.all`.
 6. Sin keys propias => `isConfigured()` false => 503 (test).
-7. `PermissionCatalogTest` actualizado coherentemente (13 modulos / 33 permisos) y verde; migracion tenant con `insertOrIgnore` e `down()` simetrico; Daniela en el seeder por persona (idempotente, test).
+7. `PermissionCatalogTest` actualizado coherentemente (13 modulos / 33 permisos) y verde; migracion tenant con `insertOrIgnore` e `down()` simetrico; Gerencia1 en el seeder por persona (idempotente, test).
 8. Tests: prueban comportamiento con un `FakeLibraryStore` versionado (re-PUT entre validar y copiar, Content-Type canonico, token partido en dos bloques, cupo tras rechazo, lock concurrente, limiter por usuario). No hay AWS real en PHPUnit, correcto.
 
 ### Veredicto backend: **DEVUELTO**

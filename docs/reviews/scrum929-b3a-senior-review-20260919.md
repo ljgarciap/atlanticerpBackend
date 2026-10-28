@@ -16,7 +16,7 @@ análisis lo indico.
 `CreditNoteService::decide()` carga la factura con `findOrFail($note->factura_origen_id)` SIN `whereNull('anulada_at')`
 (a diferencia de `correccionContext()`, que sí lo exige). `registerCorreccion()` no impide registrar dos correcciones
 pendientes sobre la MISMA factura. Escenario: factura F1 (monto > umbral), dos notas pendientes N1 y N2 sobre F1.
-Mark aprueba N1 → F1 anulada, F2 (reemplazo) activa. Mark aprueba N2 → `executeCorreccion(N2, F1)` re-anula F1
+Aprobador aprueba N1 → F1 anulada, F2 (reemplazo) activa. Aprobador aprueba N2 → `executeCorreccion(N2, F1)` re-anula F1
 (pisa `anulada_at`) e intenta crear F3 con el mismo `(order_id, tipo)` que F2 activa → violación del índice único
 `(order_id, tipo) WHERE anulada_at IS NULL` → 500 y rollback (la nota queda pendiente). No corrompe datos (el índice
 lo frena), pero es un 500 crudo en vez de un 422 explicativo, y si F2 ya estuviera anulada por otra vía el reemplazo

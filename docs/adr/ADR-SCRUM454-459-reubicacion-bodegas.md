@@ -12,14 +12,14 @@ Pantalla "Bodegas" (`3F__Bodega_Bodegas.html`, REQ-381→389). REQ-381→386 ya 
   (`ProductWarehouseStock.ubicacion`), no existe catálogo de qué ubicaciones existen físicamente.
 - SCRUM-457 (REQ-387) — botón "Reubicar" (hoy `disabled` en `BodegasPage.tsx`, ver comentario
   stale en el JSX).
-- SCRUM-458 (REQ-388) — Mark aprueba/rechaza; al aprobar, ajusta inventario automático
+- SCRUM-458 (REQ-388) — Aprobador aprueba/rechaza; al aprobar, ajusta inventario automático
   (-cantidad en origen, +cantidad en destino).
 - SCRUM-459 (REQ-389) — bandeja "Solicitudes de reubicación" (historial + filtros + acciones).
 
 ## Decisión
 
 ### Reubicación (457/458/459)
-Mismo patrón ya usado en `AdjustmentRequest`/`AdjustmentRequestLine` (Bodega solicita → Mark
+Mismo patrón ya usado en `AdjustmentRequest`/`AdjustmentRequestLine` (Bodega solicita → Aprobador
 aprueba/rechaza → automático). Simplificado a una sola tabla (no hace falta el patrón
 contenedora+líneas de Adjustment, acá siempre es 1 producto/1 origen/1 destino):
 
@@ -41,14 +41,14 @@ relocation_requests(
   `InventoryMovement::TIPO_REUBICACION` (constante ya reservada en el código para esto) —
   negativo en origen, positivo en destino, misma `referencia_entidad_id` = id de la solicitud.
 - `reject()`: mismo lock, exige `motivo_rechazo`, no llama Kardex.
-- Gate "exclusivo de Mark": reutiliza `ComprasSettings::current()->mark_approver_user_id` (mismo
+- Gate "exclusivo de Aprobador": reutiliza `ComprasSettings::current()->mark_approver_user_id` (mismo
   mecanismo que `AdjustmentRequestController::resolveMarkAccess()` — no un permiso de rol nuevo).
   Backend Dev puede extraer esto a un trait compartido si lo prefiere, no es bloqueante.
 - Frontend: activa el botón "Reubicar" existente + modal (cantidad, bodega destino excluyendo la
   actual, motivo) + modal "Solicitudes de reubicación" (chips Todas/Pendientes/Aprobadas/
   Rechazadas, se reinicia a "Todas" cada vez que se abre — Escenario 1 de REQ-389). Mismo patrón
   visual que `SolicitudAjustePage.tsx`: los botones Aprobar/Rechazar se muestran a todos los
-  perfiles, el backend es quien devuelve 403 si no sos Mark (consistencia con lo ya construido en
+  perfiles, el backend es quien devuelve 403 si no sos Aprobador (consistencia con lo ya construido en
   Ajustes, no se introduce un gate visual nuevo en este batch).
 
 ### Espacio libre (454)

@@ -78,7 +78,7 @@ Bodega/Compras vean existencias por bodega y el inventario físico posterior aju
   reubicaciones (SCRUM-837) pueden rechazar o comportarse mal con base negativa. Probar antes de cargar.
 - **R3 — Efecto en disponibilidad.** Bodegas como Merma/Reclamos/Reserva pueden tener `excluye_disponible`; cargar 28 k u en Merma no debe
   inflar el «disponible» de cotización/pedidos. Verificar la bandera por bodega antes del `--apply`.
-- **R4 — Costo y valor.** Los ≈1,1 M de valor fuera de AL4 aparecerán en reportes de inventario/Gerencia de golpe. Avisar a Daniela/Mark antes de prod.
+- **R4 — Costo y valor.** Los ≈1,1 M de valor fuera de AL4 aparecerán en reportes de inventario/Gerencia de golpe. Avisar a Gerencia1/Aprobador antes de prod.
 - **R5 — Doble conteo.** Si algún artículo ya tiene stock en `catalog_products.stock_quantity` (AL4) y se agrega en otra bodega, los totales
   por producto cambian; confirmar qué suma usa Compras («Ver Inventario») para no duplicar.
 - **R6 — Performance.** ~4 300 filas fuera de AL4: carga pequeña, sin riesgo de memoria; por lotes de 500 como el precedente.
@@ -116,7 +116,7 @@ Senior Review en F6b; Pre-QA en F6c (criterio 10). Sin migraciones nuevas salvo 
 - **Sin `catalog_product_id` resoluble (dev):** AL2 6 filas/28 u, ALX 7/47, ALY 4/78, **B2 42 filas/78 u**. AL2 coincide con los 8 descatalogados de F5 (en dev el `--apply` de F5
   no se corrió; sí en test/prod). B2 con 42 filas es llamativo: revisar en F6b si son artículos fuera del catálogo o servicios antes de decidir crear/omitir.
 - **R5/estado actual:** AtlanticERP solo tiene stock en Bodega Central (6): 3 530 filas / 79 407 u. Ninguna otra bodega tiene filas, no hay riesgo de pisar.
-- **Faltante de F6a:** costo/valor por almacén sobre los códigos resueltos (para el aviso a Daniela/Mark) — se calcula con el dry-run del comando.
+- **Faltante de F6a:** costo/valor por almacén sobre los códigos resueltos (para el aviso a Gerencia1/Aprobador) — se calcula con el dry-run del comando.
 
 ### Hallazgo B2 (2026-10-15): 42 artículos activos de ICG que nunca llegaron al catálogo
 Las 42 filas de B2 sin `catalog_product_id` (78 u) son artículos **activos** (`descatalogado = false`) con `icg_codarticulo` 73258→73333, ya en `legacy.productos` pero

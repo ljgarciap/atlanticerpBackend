@@ -47,7 +47,7 @@ total fiscal coincida con `PipelineCard.amount`, mismo criterio que Batch 3):
 | B | F-0002 $850, con Guía de Entrega generada DESPUÉS de la factura | REQ-447 Escenario 2 (completa) |
 | C | F-0003 $300, con `OrderDocument` guía_entrega creado ANTES de facturar | REQ-447 RN2 adversarial |
 | D | F-0004 $500, saldo a favor $150 aplicado, total a pagar $350 | REQ-449 RN2 + bloque de pago |
-| E | F-0005 $620 | REQ-448 workflow completo (Felix propone, RN5, Mark rechaza) |
+| E | F-0005 $620 | REQ-448 workflow completo (Contabilidad propone, RN5, Aprobador rechaza) |
 | F | F-0006 $275, `anulada_at` seteado manualmente (sin flujo real vía Notas de Crédito todavía) | REQ-449 RN3 |
 | G | F-0007 $900, `created_at` backdateado 75 días, incobrable PENDIENTE | REQ-450 RN1/RN2 + REQ-451 RN2 |
 | H | F-0008 $450, `created_at` backdateado 75 días, incobrable APROBADA | REQ-450 Escenario 2 + REQ-451 RN1 |
@@ -72,7 +72,7 @@ total fiscal coincida con `PipelineCard.amount`, mismo criterio que Batch 3):
 
 **Sin hallazgos bloqueantes en REQ-447.**
 
-## 2. SCRUM-525 / REQ-448 — Cobrabilidad + aprobación de Mark
+## 2. SCRUM-525 / REQ-448 — Cobrabilidad + aprobación de Aprobador
 
 Verificado tanto por API directa (adversarial) como con Playwright en el navegador real:
 
@@ -80,21 +80,21 @@ Verificado tanto por API directa (adversarial) como con Playwright en el navegad
   (anulada, ver sección 3).
 - **RN2 (motivo obligatorio):** cubierto por el frontend (mensaje inline) — no se re-probó por ser
   puramente de UI y ya cubierto por test unitario/E2E de Batch anterior con el mismo patrón.
-- **RN4 (Mark-only) — probado con Felix Y con Mark, como pidió el encargo:**
-  - Por **API directa**: Felix (`PUT /uncollectible-decision`) → **403** real
-    (`{"message":"Esta pantalla es exclusiva de Mark."}`), gateado por el middleware
+- **RN4 (Aprobador-only) — probado con Contabilidad Y con Aprobador, como pidió el encargo:**
+  - Por **API directa**: Contabilidad (`PUT /uncollectible-decision`) → **403** real
+    (`{"message":"Esta pantalla es exclusiva de Aprobador."}`), gateado por el middleware
     `EnsureIsMarkApprover` (fail-closed contra `AdminContFiscalSettings.mark_approver_user_id`, que
-    en este tenant apunta correctamente a `mbekhar@atlantic.com.pa`).
-  - Por **navegador real**: logueado como Felix, el modal de Cliente G (pendiente de aprobación)
-    **no muestra los botones Aprobar/Rechazar** (`scrum524-528-req448-felix-sin-botones.png`).
-    Logueado como Mark, el mismo modal **sí** los muestra (`scrum524-528-req448-mark-con-botones.png`)
+    en este tenant apunta correctamente a `gerencia3@test.com`).
+  - Por **navegador real**: logueado como Contabilidad, el modal de Cliente G (pendiente de aprobación)
+    **no muestra los botones Aprobar/Rechazar** (`scrum524-528-req448-contabilidad-sin-botones.png`).
+    Logueado como Aprobador, el mismo modal **sí** los muestra (`scrum524-528-req448-mark-con-botones.png`)
     — al hacer clic en "Rechazar" en vivo, el modal vuelve exactamente a normal: sin pastilla
     especial, "Marcar como incobrable" disponible de nuevo, "Registrar cobro" sigue visible
     (`scrum524-528-req448-mark-rechazo-vuelve-normal.png`).
 - **RN5 (no proponer un segundo cambio mientras el primero sigue pendiente):** verificado por API —
   segundo intento de `POST /mark-uncollectible` sobre una factura ya con propuesta pendiente →
   **422** (`"Ya existe una propuesta de incobrable pendiente..."`).
-- **Escenario 2 (Mark aprueba, REQ-450):** verificado con Cliente H — tras aprobar, la factura pasó
+- **Escenario 2 (Aprobador aprueba, REQ-450):** verificado con Cliente H — tras aprobar, la factura pasó
   de la pestaña "Cartera cobrable" a "Cartera incobrable" (confirmado por API en ambos tabs) y
   quedó excluida del panel de Antigüedad (ver sección 4).
 
@@ -106,7 +106,7 @@ aprobación".**
 
 - **RN1 (bloque de pago completo, foco explícito del encargo) — verificado en pantalla Y en el PDF
   real descargado:** con Cliente D se confirmaron en el modal los 3 campos ("Cuenta número: Banco
-  PreQA Test ****4321", "Responsable: Felix Campos") y se descargó el PDF real (evento `download`
+  PreQA Test ****4321", "Responsable: Contabilidad Test") y se descargó el PDF real (evento `download`
   interceptado por Playwright, no un mock) — `pdftotext` sobre el archivo descargado confirma los 3
   campos + ambos totales. Captura: `scrum524-528-req449-pago-y-saldo.png`.
 - **RN2 (saldo a favor, ambos totales):** Cliente D, monto $500 con $150 de saldo aplicado — "Total
@@ -141,7 +141,7 @@ Verificado con matemática real de antigüedad, no solo con el panel cargando:
 - **RN1 (excluye incobrable APROBADA, pendiente sigue contando) — medido con delta real:**
   - Con G y H ambas con propuesta de incobrable **pendiente** (no decidida): bucket 31-60 se
     mantuvo en cantidad 2 / $1,350 — confirma que una propuesta pendiente sigue contando.
-  - Tras **Mark aprobar** la propuesta de H: bucket 31-60 bajó a cantidad 1 / $900 (solo G) —
+  - Tras **Aprobador aprobar** la propuesta de H: bucket 31-60 bajó a cantidad 1 / $900 (solo G) —
     confirma exclusión real apenas se aprueba, no antes.
   - Verificado también en el navegador real (Playwright, captura
     `scrum524-528-req450-aging-panel.png`) con el mismo dato ($900 en 31-60, reflejando a G
@@ -161,7 +161,7 @@ Verificado con matemática real de antigüedad, no solo con el panel cargando:
 - **RN2 (propuesta PENDIENTE, no decidida, sigue mostrando el botón) — caso adversarial explícito
   del encargo, fácil de implementar al revés:** confirmado con Cliente G (incobrable pendiente, sin
   decidir) — el botón **sí** aparece, tanto por API (`puede_registrar_cobro: true`) como en el
-  navegador (`scrum524-528-req448-felix-sin-botones.png`, mismo modal usado para el hallazgo de RN4
+  navegador (`scrum524-528-req448-contabilidad-sin-botones.png`, mismo modal usado para el hallazgo de RN4
   de arriba).
 - **RN3 (navegación con cliente preseleccionado):** click en "Registrar cobro" sobre Cliente D
   navega a `/admin-contab/cobros?master_client_id=611&accion=nuevo-cobro` — `master_client_id`
@@ -174,7 +174,7 @@ Verificado con matemática real de antigüedad, no solo con el panel cargando:
 
 ## 6. RBAC negativo (los 5 tickets)
 
-`vendedor_disenador` (Neil Quiel) → `GET /api/admin-contab/invoices` responde **403** real, la UI
+`vendedor_disenador` ([persona] [persona]) → `GET /api/admin-contab/invoices` responde **403** real, la UI
 no expone datos de Facturación al navegar directo a la ruta. Sin cambios respecto a batches
 anteriores, re-verificado igual para este batch. Captura: `scrum524-528-rbac-negativo.png`.
 
@@ -211,16 +211,16 @@ normal de "Facturada" (`ESTADO_PILL_CLASSES`), indistinguible de cualquier otra 
    info de cobrabilidad completa).
 
 **Evidencia visual — comparar los dos casos, mismo layout de tabla, mismo ambiente de prueba:**
-- `scrum524-528-req448-felix-sin-botones.png` / `scrum524-528-req448-mark-con-botones.png`: fila de
+- `scrum524-528-req448-contabilidad-sin-botones.png` / `scrum524-528-req448-mark-con-botones.png`: fila de
   Cliente G (incobrable **pendiente**) muestra pastilla "Facturada" lisa en la tabla de fondo, pese
   a que el modal (mismo momento) sí refleja correctamente "Propuesta de incobrable pendiente de
-  aprobación de Mark."
+  aprobación de Aprobador."
 - `scrum524-528-req451-h-incobrable-sin-boton.png`: fila de Cliente H (incobrable **aprobada**, un
   campo que sí viaja en el payload de `list()`) muestra correctamente la pastilla roja "Incobrable"
   — confirma que el mecanismo de pastillas funciona bien en general, el problema es específicamente
   la ausencia del campo `incobrable_pendiente` en la proyección de `list()`.
 
-**Impacto:** Felix/Mark/Gerencia no tienen ninguna señal visual en la tabla principal de qué
+**Impacto:** Contabilidad/Aprobador/Gerencia no tienen ninguna señal visual en la tabla principal de qué
 facturas tienen una propuesta de incobrable esperando decisión — tienen que abrir el modal de
 detalle de cada fila una por una para descubrirlo. Rompe el propósito explícito de RN3 (dar
 visibilidad de un estado sensible sin tener que entrar a cada entrega).
@@ -268,7 +268,7 @@ Evidencia completa (capturas Playwright + PDF real descargado + rasterizado) en
 `scrum524-528-req447-escenario1-pendiente.png`, `scrum524-528-req447-escenario2-completa.png`,
 `scrum524-528-req447-rn2-guia-post-factura.png`, `scrum524-528-req449-pago-y-saldo.png`,
 `scrum524-528-req449-pdf-d-saldo.pdf` + `-1.png`, `scrum524-528-req449-anulada-modal.png`,
-`scrum524-528-req449-pdf-anulada.pdf` + `-watermark-1.png`, `scrum524-528-req448-felix-sin-botones.png`,
+`scrum524-528-req449-pdf-anulada.pdf` + `-watermark-1.png`, `scrum524-528-req448-contabilidad-sin-botones.png`,
 `scrum524-528-req448-mark-con-botones.png`, `scrum524-528-req448-mark-rechazo-vuelve-normal.png`,
 `scrum524-528-req451-h-incobrable-sin-boton.png`, `scrum524-528-req451-navegacion-cobros.png`,
 `scrum524-528-req450-aging-panel.png`. Spec de Playwright:
@@ -300,8 +300,8 @@ Mismos números que reportó el Senior Reviewer tras su propio re-run — confir
 independiente, no copiado del documento de review.
 
 ### Puntos ya cubiertos a fondo en la corrida anterior (NO se repitieron, ver arriba en este mismo
-documento): trazabilidad Cotización→Factura→Guía de Entrega (REQ-447), gate exclusivo de Mark con
-Felix Y Mark reales (REQ-448 RN4), marca de agua "ANULADA" en el PDF real vía `pdftoppm` (REQ-449
+documento): trazabilidad Cotización→Factura→Guía de Entrega (REQ-447), gate exclusivo de Aprobador con
+Contabilidad Y Aprobador reales (REQ-448 RN4), marca de agua "ANULADA" en el PDF real vía `pdftoppm` (REQ-449
 RN3), aritmética de antigüedad con factura backdateada (REQ-450), los 4 escenarios de "Registrar
 cobro" (REQ-451). Ninguno de estos puntos depende del método `list()` que tocó el fix, y ya estaban
 verificados con datos reales — no hay motivo para sospechar que cambiaron.
@@ -310,7 +310,7 @@ verificados con datos reales — no hay motivo para sospechar que cambiaron.
 
 Fixture nuevo sembrado por tinker/API (el ambiente había vuelto a 0 filas al cerrar la corrida
 anterior, confirmado por SQL antes de empezar): 3 entregas facturadas —
-- **P** (order 372, F-0001): Felix propuso incobrable vía `POST /mark-uncollectible` real → queda
+- **P** (order 372, F-0001): Contabilidad propuso incobrable vía `POST /mark-uncollectible` real → queda
   `incobrable_pendiente: true`, `es_incobrable: false`.
 - **N** (order 373, F-0002): factura normal, sin flags — control.
 - **A** (order 374, F-0003): `anulada_at` seteado manualmente por SQL (sigue sin existir flujo real,
@@ -364,7 +364,7 @@ renderizado en pantalla.
 
 Descargado el PDF real de la factura N vía Playwright (evento `download` interceptado, no mock) y
 extraído con `pdftotext -layout` — contiene "Cuenta número", "Banco PreQA Recheck ****9911",
-"Responsable" y "Felix" (nombre del `created_by` real). Confirma que el commit `e91c09a` (el edit
+"Responsable" y "Contabilidad" (nombre del `created_by` real). Confirma que el commit `e91c09a` (el edit
 de blade que había quedado sin commitear en la corrida anterior) sí está aplicado de punta a punta:
 `detail()`/`pdf()` → `pagoBlock()` → `invoice-pdf.blade.php` → PDF real.
 

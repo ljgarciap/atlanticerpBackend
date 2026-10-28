@@ -9,7 +9,7 @@ cortó antes de persistirla — quedó solo un resumen de una línea por ticket 
 2026-08-13 a pedido explícito de Luis ("rehacer la spec y guardarla porque entonces se perdieron
 horas de trabajo"). Esta vez se persiste acá + puntero en memoria, no solo en la conversación.
 
-Reportera de los 5 tickets: Daniela Amaya. Todos en estado `To Do`, sin comentarios, asignados a
+Reportera de los 5 tickets: Gerencia1 Test. Todos en estado `To Do`, sin comentarios, asignados a
 Luis. Ninguno tiene código implementado (verificado por `git status`/`git log` en ambos repos:
 sin cambios relacionados).
 

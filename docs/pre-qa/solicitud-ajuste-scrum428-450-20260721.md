@@ -10,12 +10,12 @@
 ### 1. Race condition — aprobar una línea puede aplicar el ajuste de inventario más de una vez
 `AdjustmentRequestController::approve()` lee la línea, valida `isPending()` fuera de cualquier lock, y recién dentro de la transacción llama a `KardexService::registrar()` y actualiza `estado`. No hay `lockForUpdate()` ni re-chequeo atómico del estado dentro de la transacción.
 
-**Repro:** se creó una solicitud con línea Pendiente ("Sumar 3" a Showroom Obarrio) y se dispararon 5 `POST /api/bodega/adjustment-requests/lines/{id}/approve` concurrentes con el token de Mark:
+**Repro:** se creó una solicitud con línea Pendiente ("Sumar 3" a Showroom Obarrio) y se dispararon 5 `POST /api/bodega/adjustment-requests/lines/{id}/approve` concurrentes con el token de Aprobador:
 - 3 de 5 requests devolvieron `200` (debería ser exactamente 1, los otros 4 deberían fallar con "ya fue resuelta").
 - El stock del producto en esa bodega pasó de `NULL` a `9` en vez de `3` (3 × 3).
 - Se crearon 3 `InventoryMovement` para la misma aprobación (`movement count = 3`).
 
-Esto viola directamente REQ-379 Escenario 1 (la aprobación debe aplicar el ajuste exactamente una vez) y es un riesgo real de corrupción de stock — un doble click, un reintento de red, o dos pestañas del mismo Mark aprobando casi simultáneo corrompen el inventario real sin ningún error visible para el usuario (2 de los 3 "duplicados" sí devuelven 200 con la data ya "Aprobada", parece éxito).
+Esto viola directamente REQ-379 Escenario 1 (la aprobación debe aplicar el ajuste exactamente una vez) y es un riesgo real de corrupción de stock — un doble click, un reintento de red, o dos pestañas del mismo Aprobador aprobando casi simultáneo corrompen el inventario real sin ningún error visible para el usuario (2 de los 3 "duplicados" sí devuelven 200 con la data ya "Aprobada", parece éxito).
 
 **Fix sugerido (para quien lo tome):** `SELECT ... FOR UPDATE` sobre la línea dentro de la transacción (o un `UPDATE ... WHERE estado = 'Pendiente'` atómico) antes de registrar el movimiento de Kardex, re-chequeando `affected rows === 1` antes de proceder.
 
@@ -46,12 +46,12 @@ El texto literal del criterio ("cuando se presiona agregar, entonces el sistema 
 - **RN2/RN4** — carrito multi-línea: cada línea tiene su propio tipo/cantidad/motivo/evidencia; se puede editar o quitar antes de enviar.
 - **RN3** — agregar una bodega la saca del selector; quitar esa línea la hace reaparecer. Verificado en ambas direcciones en navegador real.
 - **SCRUM-429 Escenario 1** — enviar una solicitud con 2 líneas crea exactamente 2 registros Pendiente independientes (1 `AdjustmentRequest` + 2 `AdjustmentRequestLine`).
-- **SCRUM-430 Escenario 1 + PERMISOS** — `gerencia@atlantic.test` (tiene `bodega.approve` pero NO es Mark) recibe `403 "Solo Mark puede aprobar o rechazar esta solicitud."` tanto en approve como en reject — el gate es server-side real, no solo un botón escondido. `resuelto_por`/`resolvedBy` queda registrado correctamente en ambos casos.
+- **SCRUM-430 Escenario 1 + PERMISOS** — `gerencia@atlantic.test` (tiene `bodega.approve` pero NO es Aprobador) recibe `403 "Solo Aprobador puede aprobar o rechazar esta solicitud."` tanto en approve como en reject — el gate es server-side real, no solo un botón escondido. `resuelto_por`/`resolvedBy` queda registrado correctamente en ambos casos.
 - **SCRUM-447 RN1/Escenario 1** — una solicitud de 2 bodegas aparece como 2 filas totalmente independientes en el historial, cada una con su propio estado (una quedó Pendiente mientras su hermana ya estaba Aprobada). Verificado en navegador con datos reales.
 - Chips de filtro (Todas/Pendientes/Aprobadas/Rechazadas) filtran correctamente contra la API.
 - **SCRUM-448 RN1** — rechazar sin motivo bloqueado (`422`, "El campo motivo rechazo es obligatorio.") vía API y en UI.
 - **SCRUM-448 RN2** — una línea ya Aprobada o Rechazada no admite una segunda acción: reintentar approve o reject sobre ella devuelve `422 "Esta solicitud ya fue resuelta."` (probado approve→approve y approve→reject).
-- **SCRUM-449 Escenario 1** — Mark aprueba una línea "Sumar 1" y el stock real de esa bodega sube exactamente en 1 (verificado 15→16 vía consulta directa a `ProductWarehouseStock` antes/después).
+- **SCRUM-449 Escenario 1** — Aprobador aprueba una línea "Sumar 1" y el stock real de esa bodega sube exactamente en 1 (verificado 15→16 vía consulta directa a `ProductWarehouseStock` antes/después).
 - **SCRUM-449 Escenario 2** — rechazar una línea no modifica el inventario en absoluto (verificado stock idéntico antes/después).
 - Validaciones de formulario: motivo solo-espacios bloqueado (`TrimStrings` + `required` → 422), evidencia faltante bloqueada (422), extensión inválida (`.exe`) bloqueada por la regla `extensions:` (422, coincide con la convención del proyecto de no usar `mimes:`), `cantidad=0` bloqueada por `min:1`.
 - Designer (sin `bodega.approve`) recibe `403` a nivel de middleware de ruta, ni siquiera llega al controller.
@@ -87,7 +87,7 @@ Notificando a PM para reasignación. Cuando ambos se corrijan, se debe volver a 
 - **Hallazgo #5 (duplicados): CONFIRMADO CORREGIDO** — 422 "tiene un valor duplicado" vía API directa.
 - **RN1 (cantidad por bodega): CONFIRMADO CORREGIDO** — verificado en navegador, el `<option>` muestra la cantidad real dinámica (ej. "Bodega Central (23 unidades)").
 - **RN5 (advertencia Restar): código correcto, no ejercitado con datos reales** — este entorno local no tenía ningún producto con `por_servir > 0` sembrado (requiere una cadena Provider→Order→Line→Project completa). Recomendado que QA lo verifique en `dev.atlanticerp.ai`, que sí tiene datos reales de Compras.
-- Reconfirmado sin regresión: multi-bodega (2 filas independientes), gerencia (no-Mark) bloqueada con 403, cantidad 0/negativa rechazada, motivo en blanco rechazado, reload a mitad del modal no rompe nada.
+- Reconfirmado sin regresión: multi-bodega (2 filas independientes), gerencia (no-Aprobador) bloqueada con 403, cantidad 0/negativa rechazada, motivo en blanco rechazado, reload a mitad del modal no rompe nada.
 - Hallazgos #2 y #6 no se re-reportaron — ya están documentados como decisiones aceptadas, no bugs.
 
 **Cierre del loop:** CRÍTICO encontrado → corregido → re-verificado por un subagente Pre-QA independiente (no el mismo que encontró el problema) → pasada limpia. Pasa a `QA`.

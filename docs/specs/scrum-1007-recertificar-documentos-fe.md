@@ -7,7 +7,7 @@
 - `FiscalCertificationService` tiene `certificarFactura()` / `certificarNotaCredito()`; ambos, con la FE apagada o el tipo deshabilitado, **sobrescriben `fe_estado = 'no_aplica'`**. Un reintento NO puede reutilizarlos tal cual: borraría el estado (y la evidencia) de un documento rechazado. Hay que entrar por el `certificar()` privado, que ya centraliza ensamblado + proveedor + registro de transmisión + `persistirResultado()`.
 - `persistirResultado()` es el **único** punto que escribe el resultado (estado, CUFE, QR, XML, `fe_detalle`) y agenda el polling; un reintento que pase por ahí hereda todo, incluido el registro en `fe_transmisiones`.
 - MSL confirmó que un documento rechazado **no consume el número**: se puede reenviar el mismo `numero` (`numeroFiscal` es determinista a partir del folio).
-- `primary_approver_only` + el flag `$isMark` de los controladores de detalle ya modelan "solo Mark/superadmin" (`AdminContFiscalSettings::actorEsMarkOSuperadmin`).
+- `primary_approver_only` + el flag `$isMark` de los controladores de detalle ya modelan "solo Aprobador/superadmin" (`AdminContFiscalSettings::actorEsMarkOSuperadmin`).
 - No hay `Cache::lock` en el código de AdminCont; Redis está disponible (circuitos, colas).
 - Un `9022` ("referencia interna ya enviada") indica que MSL ya tiene ese número certificado (p. ej. timeout tras un envío exitoso): reenviar no ayuda, hace falta consultar el estado. Fuera de alcance (ver abajo).
 
@@ -37,7 +37,7 @@
 - `fe_emision_at` (instante de emisión persistido) — ver SCRUM-1008; solo si MSL confirma un límite de atraso.
 
 ## Decisiones de Luis (2026-09-30)
-- **D1 — Quién puede reintentar:** Mark y superadmin.
+- **D1 — Quién puede reintentar:** Aprobador y superadmin.
 - **D2 — SÍ se incluye "Actualizar estado" para documentos `pendiente`** (distinto de la recomendación original, que lo dejaba para un ticket aparte). Ver "Hallazgo del spike" y el diseño ampliado abajo.
 - **D3 — Límite de intentos:** solo `throttle` (6/min por usuario), sin tope por documento.
 
@@ -48,7 +48,7 @@
 3. **Recuperar el CUFE de un documento certificado cuya respuesta se perdió NO es posible por API**: la consulta da 404 y un reenvío da `9022`. Pregunta abierta para MSL (ver abajo).
 
 ## Diseño ampliado de "Actualizar estado" (D2)
-Un solo botón para `pendiente`: **"Actualizar estado"** (Mark/superadmin), con la misma infraestructura (lock, auditoría, throttle, transmisión registrada con `origen = 'consulta_manual'` y `operacion = consultar_estado`):
+Un solo botón para `pendiente`: **"Actualizar estado"** (Aprobador/superadmin), con la misma infraestructura (lock, auditoría, throttle, transmisión registrada con `origen = 'consulta_manual'` y `operacion = consultar_estado`):
 1. `GET` estado. Si MSL responde `CERTIFICADO` o `RECHAZADO` ⇒ `persistirResultado()` (CUFE/QR/XML o rechazo con su detalle).
 2. Si responde `PENDIENTE` ⇒ "sigue en cola en MSL"; `persistirResultado()` vuelve a agendar el polling (ya lo hace para `pendiente`).
 3. Si responde **404 "no encontrado en la cola"** ⇒ MSL no lo tiene en cola: o nunca lo recibió o ya lo procesó. Se **reenvía** (`recertificar`, POST): 200 ⇒ certificado; 422 ⇒ rechazado con motivo; **`9022` ⇒ mensaje especial: "MSL indica que ese número ya fue certificado (9022); el CUFE no se puede recuperar por API, contactar a MSL"**, sin duplicar nada ante la DGI (MSL/DGI bloquean el duplicado). Como el reenvío es la acción irreversible, la confirmación de la UI lo explica.
@@ -65,7 +65,7 @@ Un solo botón para `pendiente`: **"Actualizar estado"** (Mark/superadmin), con 
 3. Con `pac_ambiente = apagado` (o proveedor no wireado) el reintento no llama a MSL, explica por qué y **no modifica** `fe_estado`/`fe_detalle`.
 4. Doble clic o dos usuarios a la vez: una sola llamada a MSL (test de concurrencia con el lock) y el segundo recibe 409.
 5. Un rechazo que persiste devuelve 200 con el nuevo `fe_detalle`; `error_configuracion` nunca se muestra como "rechazado".
-6. "Actualizar estado" sobre un `pendiente`: si MSL responde CERTIFICADO/RECHAZADO se persiste; si sigue en cola, se re-agenda el polling; si responde 404 "no encontrado en la cola", se reenvía y el resultado se persiste (200/422) o, ante `9022`, se muestra el mensaje especial sin sobrescribir el CUFE; si MSL no está disponible no se cambia nada. Solo Mark/superadmin, con lock, auditoría y registro en `fe_transmisiones` (`origen = consulta_manual`).
+6. "Actualizar estado" sobre un `pendiente`: si MSL responde CERTIFICADO/RECHAZADO se persiste; si sigue en cola, se re-agenda el polling; si responde 404 "no encontrado en la cola", se reenvía y el resultado se persiste (200/422) o, ante `9022`, se muestra el mensaje especial sin sobrescribir el CUFE; si MSL no está disponible no se cambia nada. Solo Aprobador/superadmin, con lock, auditoría y registro en `fe_transmisiones` (`origen = consulta_manual`).
 7. Imposible "Actualizar estado" sobre documentos que no están `pendiente`; con FE apagada no llama a MSL.
 8. PHPStan L8, suite completa y vitest verdes; Pre-QA en dev con un documento rechazado (NC-0009 o NC-0012, que hoy siguen rechazadas) y, sin costo de documentos, "Actualizar estado" contra un `pendiente` simulado con `Http::fake` en los tests (el sandbox no permite provocar un 202).
 

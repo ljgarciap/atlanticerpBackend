@@ -3,8 +3,8 @@
 Fecha: 2026-09-18 · Entorno: stack Docker local (nginx :8090), ramas `dev` de backend y frontend, trabajo
 de los 3 tickets ya commiteado localmente por el Arquitecto durante la pasada (5 commits: 66d079f B1a,
 0058aae 935, 0edcfe1 928, 4fb0ecf 934, 03994bb docs) + B1b (`family_root_id`/`tipo`/`invoice_lines`) todavía
-sin commitear. El contenido probado es el mismo. Cuentas: roster real local (`conta@` = Felix,
-`lider_admin_contab`; `mbekhar@` = Mark; password = email). Cuenta demo `designer@atlantic.test` solo para
+sin commitear. El contenido probado es el mismo. Cuentas: roster real local (`conta@` = Contabilidad,
+`lider_admin_contab`; `mbekhar@` = Aprobador; password = email). Cuenta demo `designer@atlantic.test` solo para
 el chequeo de rol sin permiso.
 
 Verificación de que se servía el código actual: el bundle servido por nginx estaba viejo (index-CCstiipQ.js,
@@ -30,10 +30,10 @@ real a `GET /admin-contab/cash-position/daily-count` ya devolvía `total_factura
 | PQ-928-2 | BAJO (decisión) | 928 | El Recibo de pago PDF ("Cuenta destino: Banco General — corriente ****4554") sigue enmascarado: no consume `paymentBlock()` sino `AdminContBankAccount::label()`. El ticket limita el alcance a Factura ("no modifica ningún otro documento") pero D-6 dice "nunca `****XXXX` en documentos al cliente". No lo autoclasifico: decide Arquitecto/PM. | REPRODUCIDO |
 | PQ-928-3 | BAJO (decisión) | 928 | Con cuenta activa SIN `numero_cuenta_completo`, en el PDF de Factura el nombre del banco desaparece (la línea es "Cuenta número: —" porque el banco solo iba dentro de `cuenta_pago`). En Estado de Cuenta (PDF/Excel/pantalla) sí se conserva la fila "Banco". Es lo que pide D-6, pero el criterio "banco, responsable, etc. permanece sin cambios" no se cumple en ese caso. | REPRODUCIDO |
 | PQ-928-4 | BAJO | 928 | El 422 dice "El campo tax id dv es obligatorio." (falta etiqueta de atributo en `lang/es`). Solo lo ve quien llama a la API directo o si el frontend muestra el mensaje crudo. | REPRODUCIDO |
-| PQ-934-1 | BAJO (decisión) | 934 | `total_facturado_dia` excluye facturas con `anulada_at` (solo lo setea "Corrección de datos"). Una factura anulada con NC "Anulación completa / cancelado" (aprobada por Mark) NO tiene `anulada_at` y SIGUE contando. Coincide con la letra del código y del Libro de facturas (factura + NC negativa), pero un lector del indicador puede esperar que una factura cancelada no cuente. | REPRODUCIDO (F-0006 + NC-0002) |
+| PQ-934-1 | BAJO (decisión) | 934 | `total_facturado_dia` excluye facturas con `anulada_at` (solo lo setea "Corrección de datos"). Una factura anulada con NC "Anulación completa / cancelado" (aprobada por Aprobador) NO tiene `anulada_at` y SIGUE contando. Coincide con la letra del código y del Libro de facturas (factura + NC negativa), pero un lector del indicador puede esperar que una factura cancelada no cuente. | REPRODUCIDO (F-0006 + NC-0002) |
 | PQ-934-2 | BAJO | 934 | Arqueos ya cerrados ANTES de este cambio (sin los indicadores en el `snapshot`) se reconstruyen en cada lectura "a la hora del cierre" con las tablas vivas; anular después una factura de ese día cambia el valor (reproducido 20 -> 0). Los arqueos cerrados de ahora en adelante SÍ quedan congelados (verificado). Solo afecta históricos previos; el backfill de snapshot los congelaría. | REPRODUCIDO |
 | INFO-1 | info | 935 | La columna "Núm." pasó de texto a número (mismo valor visible). Los montos son numéricos con `$#,##0.00`. | — |
-| INFO-2 | info | Paso 0 | El número de cuenta completo NO está sembrado: sin `ADMIN_CONTAB_BANK_ACCOUNT_NUMBER` el seeder no hace nada, así que en dev/test/prod la Factura y el Estado de Cuenta mostrarán "—" hasta que Luis/Daniela aporten el número (o Felix lo cargue en Cuentas Bancarias). El DV 81 sí queda cubierto por `AdminContFiscalIdentitySeeder` (solo si está vacío). Es acción pendiente explícita, no bug de código. | PENDIENTE de Luis/Daniela |
+| INFO-2 | info | Paso 0 | El número de cuenta completo NO está sembrado: sin `ADMIN_CONTAB_BANK_ACCOUNT_NUMBER` el seeder no hace nada, así que en dev/test/prod la Factura y el Estado de Cuenta mostrarán "—" hasta que Luis/Gerencia1 aporten el número (o Contabilidad lo cargue en Cuentas Bancarias). El DV 81 sí queda cubierto por `AdminContFiscalIdentitySeeder` (solo si está vacío). Es acción pendiente explícita, no bug de código. | PENDIENTE de Luis/Gerencia1 |
 | INFO-3 | info | Regresión | No ejercitado en runtime: propagación de `quote_item_id` en las tarjetas derivadas (Faltante, Revisión de Inventario, split "mixto") y NC de "Devolución de mercancía" — dependen de flujos de picking/stock; solo los cubre PHPUnit (`DeliveryFlowTest`, `InventoryReviewFlowTest`, `OrderPickingFlowTest`). | NO PROBADO en runtime |
 
 Pre-existentes vistos de pasada, fuera de alcance (no atribuibles a estos cambios): el Libro de facturas excluye la factura anulada pero incluye su NC negativa (documentado en `InvoiceBookService`); `POST /invoices/preview` devuelve `ok:true` para un pedido que ya tiene factura activa (el `store` sí rechaza); el reporte mensual atribuye 1500 a "Cheque" cuando el cobro en cheque fue 1000 + 500 de abono aplicado; el botón de la pantalla dice "+ Crear cliente" (el ticket dice "+ Crear Nuevo Cliente"); voseo en `createError` del ClientPicker.
@@ -104,7 +104,7 @@ Se abrieron los .xlsx reales con openpyxl y se volcó tipo de celda + `number_fo
 | Familia de 3 entregas = UNA factura por el total | POST desde la 2ª entrega (598), luego 599 | 1 factura (order_id = raíz 597, `family_root_id`=597, monto total); las hermanas 422 |
 | Concurrencia | 4 POST simultáneos sobre la familia S4 | 1 sola factura en BD |
 | Anulada + reemplazo conviven | Corrección de datos NC-0001 sobre F-0002 -> F-0005 | OK; F-0005 `order_id`=`family_root_id`=597; sigue rechazando otra factura desde 598/599; detalle y estado de cuenta muestran anulada + NC + reemplazo con saldo 1027.20 |
-| Cobros / Abonos / NC / Estado de Cuenta | 4 cobros (transferencia, cheque, efectivo, retención) + confirmar; abono nivel factura + confirmar; NC cancelado + aprobación de Mark | Sin regresión. El abono no baja el saldo del estado de cuenta hasta el cobro (diseño SCRUM-902) |
+| Cobros / Abonos / NC / Estado de Cuenta | 4 cobros (transferencia, cheque, efectivo, retención) + confirmar; abono nivel factura + confirmar; NC cancelado + aprobación de Aprobador | Sin regresión. El abono no baja el saldo del estado de cuenta hasta el cobro (diseño SCRUM-902) |
 
 ## Spec permanente
 
@@ -137,7 +137,7 @@ Fixes probados: frontend `88e658e` (quita `maxLength={2}` del DV en `CreateClien
 Estado inicial: la Postgres local estaba recreada y vacía (0 subclientes, 0 cuentas, 0 facturas; `fiscal_settings.dv`=81
 por seeder). Se resembró por API/tinker. Verificación de que se sirve el fix: nginx :8090 sirve `index-DvCQly7R.js`
 (build de las 18:20, distinto al de la primera pasada) y en los 6 inputs de DV probados el atributo `maxlength` es
-`null`. Los tokens de Felix y Mark sirven con password = email.
+`null`. Los tokens de Contabilidad y Aprobador sirven con password = email.
 
 ## Veredicto 928: PASADA LIMPIA
 
@@ -223,6 +223,6 @@ Estado inicial vacío. Ahora hay: ~165 subclientes / 106 clientes maestros de pr
 (80 subclientes `R-*` de la batería de pegado, todos con DV 81; el resto con DV 42/9/3/7 de los tests), tarjetas Lead
 `PQ928 …`, 2 cotizaciones aprobadas con sus pedidos (1 entrega única y 1 familia de 3, forzados a `por_despachar` por
 SQL), facturas F-0001 y F-0002, 1 cobro REC-001 (confirmación pendiente), 1 NC-0001 (`cancelado`, pendiente de
-aprobación de Mark), 1 cuenta bancaria id 100 (Banco PQ928, número completo `0403011234-54554`, activa) creada por el
+aprobación de Aprobador), 1 cuenta bancaria id 100 (Banco PQ928, número completo `0403011234-54554`, activa) creada por el
 spec, y el arqueo del 2026-09-18 abierto. El comprobante de la NC se subió al bucket S3 real de dev. No se corrió
 `infra/test.sh`, `migrate:fresh`, `DELETE`, commit, push, checkout ni stash, y no se tocó Jira.

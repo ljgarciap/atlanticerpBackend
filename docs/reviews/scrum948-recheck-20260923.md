@@ -4,7 +4,7 @@
 **Decision**: ✅ Approved
 
 ## Summary
-Hallazgo del proceso, no solo de código: el comentario de Daniela ("no veo el buscador") en
+Hallazgo del proceso, no solo de código: el comentario de Gerencia1 ("no veo el buscador") en
 Registrar Abono era correcto. Una investigación previa en esta misma sesión había concluido
 erróneamente que era un tema de promoción `dev→test` no promovida. Re-investigación con evidencia
 real (capturas de Luis) encontró la causa real: el 2026-09-22 se resolvió una versión más angosta
@@ -27,7 +27,7 @@ Ninguno.
 ### 🟡 Suggestions (non-blocking)
 1. **Proceso, no código** — este ticket ya había pasado por Senior Review + Pre-QA una vez
    (2026-09-22) sobre un alcance distinto al texto vigente. Vale la pena que el batch consolidado
-   de Luis a Daniela dejé explícito en Jira qué se resolvió cada vez, para que un futuro recheck
+   de Luis a Gerencia1 dejé explícito en Jira qué se resolvió cada vez, para que un futuro recheck
    no vuelva a asumir "ya se hizo" solo por el número de ticket — el texto del ticket puede
    cambiar de alcance entre una pasada y la siguiente sin que el historial de comentarios lo grite.
 2. **`AbonosPage.tsx`** — el select de Cliente deriva sus opciones de las filas ya cargadas

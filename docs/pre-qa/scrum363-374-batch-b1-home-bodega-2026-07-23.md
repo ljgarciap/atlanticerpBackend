@@ -5,10 +5,10 @@
 (dev, sin push). Senior Review de ambos lados: 🟢 Aprobado, sin blockers
 (`docs/reviews/batch-b1-home-bodega-{backend,frontend}-2026-07-23.md`).
 Verificación corrida contra el stack Docker local (`infra-laravel-1`, `infra-postgres-1`,
-`infra-nginx-1`, puerto `8090`), usuarios reales de `BusinessRoleUserSeeder` (Esteban Cardenas
-`almacen@atlantic.com.pa`/lider_bodega, Osvaldo Santos `logistica@atlantic.com.pa`/
-asistente_bodega, Mariano Sandoval `almacen2@atlantic.com.pa`/asistente_bodega, Apolonio
-Gonzalez `apolonio.gonzalez@atlantic.com.pa`/ayudante_general_bodega), login real vía
+`infra-nginx-1`, puerto `8090`), usuarios reales de `BusinessRoleUserSeeder` (Lider Bodega Test
+`almacen@atlantic.com.pa`/lider_bodega, Asistentebodega [persona] `logistica@atlantic.com.pa`/
+asistente_bodega, Asistentebodega2 [persona] `almacen2@atlantic.com.pa`/asistente_bodega, Auxiliarbodega
+[persona] `auxiliarbodega@test.com`/ayudante_general_bodega), login real vía
 `POST /api/auth/login` (password = email), llamadas `curl` directas a la API — no solo lectura de
 código.
 
@@ -38,21 +38,21 @@ alcance Mío/Equipo: SCRUM-367, 369, 370, 372).
 
 ```
 $ curl -s http://localhost:8090/api/bodega/home/team \
-    -H "Authorization: Bearer <token de Osvaldo Santos, asistente_bodega>"
+    -H "Authorization: Bearer <token de Asistentebodega [persona], asistente_bodega>"
 {"data":[
-  {"id":15,"name":"Apolonio Gonzalez"},
-  {"id":12,"name":"Esteban Cardenas"},
-  {"id":16,"name":"Gary Arrocha"},
-  {"id":14,"name":"Mariano Sandoval"},
-  {"id":13,"name":"Osvaldo Santos"}
+  {"id":15,"name":"Auxiliarbodega [persona]"},
+  {"id":12,"name":"Lider Bodega Test"},
+  {"id":16,"name":"[persona] [persona]"},
+  {"id":14,"name":"Asistentebodega2 [persona]"},
+  {"id":13,"name":"Asistentebodega [persona]"}
 ]}
 
 $ curl -s "http://localhost:8090/api/bodega/home/summary?scope=team&owner_id=14" \
-    -H "Authorization: Bearer <token de Osvaldo Santos>"
-{"saludo":{"nombre":"Osvaldo Santos", ..., "resumen":"El equipo tiene 0 pedidos asignados hoy..."}, ...}
+    -H "Authorization: Bearer <token de Asistentebodega [persona]>"
+{"saludo":{"nombre":"Asistentebodega [persona]", ..., "resumen":"El equipo tiene 0 pedidos asignados hoy..."}, ...}
 ```
 
-Osvaldo (asistente_bodega) obtiene 200 en ambos endpoints y puede filtrar por Mariano
+Asistentebodega (asistente_bodega) obtiene 200 en ambos endpoints y puede filtrar por Asistentebodega2
 (`owner_id=14`, otro Asistente) exactamente igual que si fuera el Jefe — sin ningún 403 ni
 advertencia. No es un caso de "el botón sigue visible en el front pero el backend bloquea" (el tipo
 de hallazgo que Batch A4/ownership ya dejó como lección) — acá el propio backend permite el acceso
@@ -108,8 +108,8 @@ lista de personas debe generarse dinámicamente según los Asistentes/Operativos
 En ningún lado se menciona al Jefe como una opción del selector — tiene sentido, un Jefe filtrando
 "por sí mismo" dentro de "Equipo" no aporta nada que "Inicio" no muestre ya.
 
-Confirmado en vivo: `GET /bodega/home/team` logueado como Esteban (el propio Jefe) devuelve 5
-personas, incluido él mismo ("Esteban Cardenas"). Causa: `BodegaHomeService::team()` usa
+Confirmado en vivo: `GET /bodega/home/team` logueado como Liderbodega (el propio Jefe) devuelve 5
+personas, incluido él mismo ("Lider Bodega Test"). Causa: `BodegaHomeService::team()` usa
 `BodegaRoles::ALL`, que incluye `LIDER_BODEGA`.
 
 No lo corrijo en el momento porque toca el mismo área de código que el hallazgo CRÍTICO de arriba
@@ -135,9 +135,9 @@ confirmado explícitamente en ningún ticket.
 Confirmado en vivo — los 3 casos devuelven el mismo texto pese a mostrar datos distintos:
 
 ```
-scope=team (sin owner_id, Esteban)         → "El equipo tiene 0 pedidos..."   (correcto: es el equipo)
-scope=team&owner_id=13 (Osvaldo, Esteban)  → "El equipo tiene 0 pedidos..."   (dato real: solo Osvaldo)
-scope=team&owner_id=34 (inválido, Esteban) → "El equipo tiene 0 pedidos..."   (dato real: solo Esteban, por fallback)
+scope=team (sin owner_id, Liderbodega)         → "El equipo tiene 0 pedidos..."   (correcto: es el equipo)
+scope=team&owner_id=13 (Asistentebodega, Liderbodega)  → "El equipo tiene 0 pedidos..."   (dato real: solo Asistentebodega)
+scope=team&owner_id=34 (inválido, Liderbodega) → "El equipo tiene 0 pedidos..."   (dato real: solo Liderbodega, por fallback)
 ```
 
 No es una fuga de datos (los paneles numéricos sí están bien filtrados), pero el copy puede hacer
@@ -167,9 +167,9 @@ docblock del método.
   `/bodega/ordenes-zona-libre`, `/bodega/inventario-general`, `/bodega/devoluciones`) están
   montadas en `App.tsx` con su propio `<Route>` — no hay riesgo de 404 al hacer clic. Confirmado
   además que las 4 usan `ComingSoonBodegaPage` con ícono real (`IcoBox`), sin emoji.
-- **SCRUM-364** — el saludo muestra el nombre real del usuario autenticado en cada caso (Esteban ve
-  "Esteban Cardenas", Osvaldo ve "Osvaldo Santos") — no hay fuga de nombre entre usuarios.
-- **SCRUM-367** — con 0 pedidos asignados hoy (caso real de Esteban en el dataset actual de dev),
+- **SCRUM-364** — el saludo muestra el nombre real del usuario autenticado en cada caso (Liderbodega ve
+  "Lider Bodega Test", Asistentebodega ve "Asistentebodega [persona]") — no hay fuga de nombre entre usuarios.
+- **SCRUM-367** — con 0 pedidos asignados hoy (caso real de Liderbodega en el dataset actual de dev),
   `percent_despachado_hoy`/`percent_a_tiempo` devuelven `null` — no hay división por cero ni error
   5xx.
 - **SCRUM-368** — credenciales Azure reales configuradas en el entorno local; confirmé en
@@ -181,8 +181,8 @@ docblock del método.
 - **SCRUM-370** — fabriqué en vivo (tinker) un pedido con `committed_delivery_date` a 5 días;
   confirmé que **no aparece** en `despachos_urgentes` (la ventana configurada es 1 día — hoy o
   mañana). Dato de prueba limpiado después.
-- **SCRUM-371** — fabriqué una orden de compra en tránsito (tinker) y confirmé en vivo que Esteban
-  y Osvaldo (ninguno tiene `compras.read`) obtienen `200` en `GET /api/compras/orders/{id}` gracias
+- **SCRUM-371** — fabriqué una orden de compra en tránsito (tinker) y confirmé en vivo que Liderbodega
+  y Asistentebodega (ninguno tiene `compras.read`) obtienen `200` en `GET /api/compras/orders/{id}` gracias
   al fix de permiso (`bodega.read` ahora también habilita esa ruta) — antes del fix habría sido
   `403`. Dato de prueba limpiado después.
 - **SCRUM-372** — `estado_pedidos.stages` devuelve exactamente 7 etapas

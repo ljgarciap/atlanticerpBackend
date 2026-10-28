@@ -1,6 +1,6 @@
 # SCRUM-1119 — Pedidos visible solo para Compras y Gerencia
 
-**Ticket:** SCRUM-1119 (reporta marly.rangel, prioridad High, épica SCRUM-325, etiquetas permisos/seguridad). **Estado:** spec aprobada por Luis (2026-10-07), con el alcance ampliado de §2 bis.
+**Ticket:** SCRUM-1119 (reporta qa.qa, prioridad High, épica SCRUM-325, etiquetas permisos/seguridad). **Estado:** spec aprobada por Luis (2026-10-07), con el alcance ampliado de §2 bis.
 **Decisiones ya tomadas por Luis:** (1) acceso únicamente para `lider_compras`, `management` y `superadmin`; pierden el acceso `lider_operaciones`, `lider_bodega`, `lider_servicios`, `vendedor_disenador` y el resto. (2) Se amplía el alcance para que Compras de verdad pueda usar Pedidos (§2 bis).
 
 ## 1. Defecto
@@ -47,5 +47,5 @@ La vista Pedidos muestra márgenes cotizado/facturado, montos y estado de compra
 
 ## 5. Riesgos
 
-- Operaciones, Bodega y Servicios pierden un acceso que hoy tienen: avisar a Marly al comentar el ticket.
+- Operaciones, Bodega y Servicios pierden un acceso que hoy tienen: avisar a Qa al comentar el ticket.
 - Verificar que ninguna otra pantalla consuma `/orders` fuera de `PedidosPage` (hoy solo `ventasDisenoApi.ts:588-591`).

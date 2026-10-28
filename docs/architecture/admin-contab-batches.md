@@ -68,7 +68,7 @@ real**, mismo criterio que Servicios Fase 4 (fundacional primero, agregador/dash
 ### Facturación
 - **Batch 2** — SCRUM-513→518 (REQ-436→441, 6): encabezado+crear factura, indicadores, tabs cartera cobrable/incobrable, toggle vista, cliente clicable→Estado de Cuenta, generar factura+validación de requisitos.
 - **Batch 3** — SCRUM-519→523 (REQ-442→446, 5): saldo a favor al generar, vista previa antes de confirmar, flujo guiado completo, filtros/búsqueda, exportar PDF/Excel.
-- **Batch 4** — SCRUM-524→528 (REQ-447→451, 5): modal detalle/trazabilidad, incobrable+aprobación Mark, vista previa/impresión fiscal+estado Anulada, antigüedad de cartera, botón registrar cobro.
+- **Batch 4** — SCRUM-524→528 (REQ-447→451, 5): modal detalle/trazabilidad, incobrable+aprobación Aprobador, vista previa/impresión fiscal+estado Anulada, antigüedad de cartera, botón registrar cobro.
 
 ### Cobros
 - **Batch 5** — SCRUM-539→544 (REQ-462→467, 6): encabezado+registrar cobro, indicadores, formulario alta (cliente+facturas abiertas), saldo a favor al registrar, método+cuenta bancaria auto-selección, campos condicionales+validaciones.
@@ -83,7 +83,7 @@ real**, mismo criterio que Servicios Fase 4 (fundacional primero, agregador/dash
 - **Batch 10** — SCRUM-553→558 (REQ-476→481, 6): encabezado+nueva nota, indicadores del mes, selección cliente/tipo (flujo manual), Anulación completa (subtipo+regreso mercancía), Anulación completa (Corrección de datos: motivo/ITBMS/fecha), devolución iniciada desde Bodega.
 - **Batch 11** — SCRUM-559→564 (REQ-482→487, 6): banners informativos, selección de factura de origen, auto-aplicación al saldo+resolución de excedente, monto/desglose ITBMS/motivo/fecha, avisos automáticos (notificación cliente+reducción comisión), comprobante de soporte obligatorio.
 - **Batch 12** — SCRUM-565→570 (REQ-488→493, 6): validaciones de registro, revisión previa+vista previa de factura nueva (Corrección de datos), aprobación diferida >$5,000, cola de devoluciones confirmadas por Bodega, historial filtros/búsqueda, modal de detalle.
-- **Batch 13** — SCRUM-571→574 (REQ-494→497, 4): aprobar/rechazar nota pendiente (exclusivo Mark), ver comprobante de soporte adjunto, ver documento (Nota de Crédito formal), ver factura relacionada (trazabilidad).
+- **Batch 13** — SCRUM-571→574 (REQ-494→497, 4): aprobar/rechazar nota pendiente (exclusivo Aprobador), ver comprobante de soporte adjunto, ver documento (Nota de Crédito formal), ver factura relacionada (trazabilidad).
 
 ### Comisiones Internas (vendedores)
 - **Batch 14** — SCRUM-575→579 (REQ-498→502, 5): encabezado+tabla escalonada+exportar, indicadores+aviso de pago automático, filtro de mes+vendedor, estado del pedido derivado de Cobros, cálculo de comisión escalonada.
@@ -91,18 +91,18 @@ real**, mismo criterio que Servicios Fase 4 (fundacional primero, agregador/dash
 
 ### Comisiones Externas (arquitectos)
 - **Batch 16** — SCRUM-585→590 (REQ-508→513, 6): encabezado+indicadores, filtros, datos fiscales del arquitecto, cálculo de comisión/impuesto/total según régimen, cobro del cliente determina estado, cuenta de cobro del arquitecto.
-- **Batch 17** — SCRUM-591→596 (REQ-514→519, 6): comprobante de retención (régimen 50%), marcar comisión como pagada, editar %+aprobación Mark, cuenta de pago editable, recordar al arquitecto, tabla expandir+modal de detalle.
+- **Batch 17** — SCRUM-591→596 (REQ-514→519, 6): comprobante de retención (régimen 50%), marcar comisión como pagada, editar %+aprobación Aprobador, cuenta de pago editable, recordar al arquitecto, tabla expandir+modal de detalle.
 
 ### Arqueo / Flujo de Caja
 - **Batch 18** — SCRUM-597→601 (REQ-520→524, 5): encabezado+indicadores de liquidez, vista proyectada, toggle vista proyectado/real+ventana de tiempo, vista real histórico, arqueo del día.
-- **Batch 19** — SCRUM-602→606 (REQ-525→529, 5): ajustes/retención (constancia del cliente), cerrar arqueo del día, bloqueo secuencial de arqueos atrasados, historial+aprobación de Gerencia (Mark), ver detalle/descargar resumen.
+- **Batch 19** — SCRUM-602→606 (REQ-525→529, 5): ajustes/retención (constancia del cliente), cerrar arqueo del día, bloqueo secuencial de arqueos atrasados, historial+aprobación de Gerencia (Aprobador), ver detalle/descargar resumen.
 
 ### Caja Chica
-- **Batch 20** — SCRUM-612→617 (REQ-535→540, 6): registrar gastos multi-línea, tabs Pendientes/Reportes/Rechazados, pendientes de reporte agrupado, generar reporte (2 pasos), reportes generados+detalle, aprobar reporte completo (exclusivo Mark).
-- **Batch 21** — SCRUM-618→623 (REQ-541→546, 6): rechazar línea/reporte (exclusivo Mark), regla de 2 intentos, panel rechazados permanentes, reabrir línea rechazada, detalle de línea (modal unificado), ver soporte+descargar reporte formal.
+- **Batch 20** — SCRUM-612→617 (REQ-535→540, 6): registrar gastos multi-línea, tabs Pendientes/Reportes/Rechazados, pendientes de reporte agrupado, generar reporte (2 pasos), reportes generados+detalle, aprobar reporte completo (exclusivo Aprobador).
+- **Batch 21** — SCRUM-618→623 (REQ-541→546, 6): rechazar línea/reporte (exclusivo Aprobador), regla de 2 intentos, panel rechazados permanentes, reabrir línea rechazada, detalle de línea (modal unificado), ver soporte+descargar reporte formal.
 
 ### Reportes
-- **Batch 22** — SCRUM-643→647 (REQ-566→570, 5): home de Reportes — encabezado+selector de período, tarjeta comisión gestión cartera Felix, tarjetas cartera por cobrar/cobrado +90 días, tarjeta Ventas, tarjeta Arqueo de Caja. CERRADO 2026-08-27.
+- **Batch 22** — SCRUM-643→647 (REQ-566→570, 5): home de Reportes — encabezado+selector de período, tarjeta comisión gestión cartera Contabilidad, tarjetas cartera por cobrar/cobrado +90 días, tarjeta Ventas, tarjeta Arqueo de Caja. CERRADO 2026-08-27.
 - **Batch 23** — SCRUM-648→650 (REQ-571→573, 3): tarjeta Comisiones (Internas vs Externas), tarjeta Notas de Crédito y Devoluciones, accesos de navegación a los 4 sub-reportes. **Fusionado con los Batches 24-27 de abajo** (decisión de Luis 2026-08-27): SCRUM-650 exigía que las 4 pantallas destino existieran de verdad antes de pasar Pre-QA — se implementaron los 22 tickets (SCRUM-648→669) en la misma sesión, en 4 grupos secuenciales (Comisiones/Notas → Mensual por Cliente/Acumulado → Libro de Facturas/Ventas por medio de pago → accesos de navegación, al final). CERRADO 2026-08-27, ver `memory/project_admincont_batch23_reportes_completo_cerrado.md`.
 - **Batch 24** — SCRUM-651→655 (REQ-574→578, 5): Reporte Mensual por Cliente completo. Ver Batch 23 — cerrado junto con él.
 - **Batch 25** — SCRUM-656→660 (REQ-579→583, 5): Reporte Mensual Acumulado completo. Ver Batch 23 — cerrado junto con él.

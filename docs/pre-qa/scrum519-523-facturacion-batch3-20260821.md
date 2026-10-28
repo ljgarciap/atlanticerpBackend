@@ -146,7 +146,7 @@ base de datos), no solo con el test unitario.
 
 ## 6. RBAC negativo (los 5 tickets)
 
-`vendedor_disenador` (Neil Quiel) → `GET /api/admin-contab/invoices` responde **403** real
+`vendedor_disenador` ([persona] [persona]) → `GET /api/admin-contab/invoices` responde **403** real
 (confirmado por `curl` directo con JWT real, no solo mockeado) y la UI no expone ningún dato de
 Facturación al navegar directo a la ruta. Sin cambios respecto al Batch 2 (mismo gate de rol),
 verificado igual para este batch por si algún cambio de ruta lo hubiera aflojado sin querer.
@@ -197,7 +197,7 @@ de este batch.
 
 ## Veredicto
 
-**Pasada limpia.** Los 5 tickets (SCRUM-519→523) pasan a QA (Marly). Ningún hallazgo bloqueante —
+**Pasada limpia.** Los 5 tickets (SCRUM-519→523) pasan a QA (Qa). Ningún hallazgo bloqueante —
 los 2 MENORES quedan a criterio de PM para agendar como ajuste cosmético menor (no ameritan volver
 a pasar por Senior Review ni retrasar el push a `dev`).
 

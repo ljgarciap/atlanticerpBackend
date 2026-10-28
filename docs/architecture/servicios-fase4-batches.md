@@ -66,7 +66,7 @@ endpoint mínimo) + Batch 19 + Batch 2 completos.** Batch 1/19 CERRADOS, en QA y
 hallazgos reales corregidos, ver `memory/project_sesion_20260802_fase4_servicios_arranque.md`).
 **Batch 2 (REQ-222/224/225/226, SCRUM-285/287/288/289) implementado y desplegado el 2026-08-03
 (commits `4454af3`/`dd5ccfb` + fixes post Visual Review `0b121cd`/`e2558a2`), Pre-QA + Visual
-Review PASA LIMPIO (12/12), QA de Marly aprobado — los 4 tickets están en `PM Review` en Jira.**
+Review PASA LIMPIO (12/12), QA de Qa aprobado — los 4 tickets están en `PM Review` en Jira.**
 
 > ⚠️ Esta sección quedó sin actualizar tras cerrarse Batch 2 el 2026-08-03 — la sesión que lo hizo
 > nunca tocó este archivo ni dejó memoria, así que la sesión siguiente (2026-08-05) volvió a
@@ -133,7 +133,7 @@ todos los entornos). Estado (REQ-256) 100% calculado en cada request desde
 persistido. Pre-QA (Playwright real, horario de reloj real) PASA LIMPIO, 0 hallazgos. Detalle
 completo en `atlanticerp-backend/docs/pre-qa/scrum318-323-servicios-batch6-tecnicos-internos-20260809.md`.
 
-**REQ-258 (Comisión del mes — Carlos Vergara, SCRUM-321) — BLOQUEADO, no se puede implementar
+**REQ-258 (Comisión del mes — Tecnico Test, SCRUM-321) — BLOQUEADO, no se puede implementar
 todavía.** RN3/RN4 dependen explícitamente de REQ-292 ("captura mensual de comisión" + definición
 de SLA por tipo de ticket), que es Batch 7 (SCRUM-362) — no existe todavía. Sigue en `In Progress`
 en Jira a propósito, con comentario explicando el bloqueo; Batch 6 se da por cerrado sin este
@@ -210,7 +210,7 @@ Reclamo esté completa. El mockup no lo implementa como bloqueo real, solo lo do
 decisión cerrada del cliente — **no se construye ningún gate en este batch**; retomar solo si el
 cliente lo confirma explícitamente (evita un gate que después haya que deshacer).
 
-**Batch 10 (REQ-251→254 SCRUM-314-317 Informe móvil + REQ-258 SCRUM-321 Comisión Carlos Vergara,
+**Batch 10 (REQ-251→254 SCRUM-314-317 Informe móvil + REQ-258 SCRUM-321 Comisión Tecnico Test,
 decisión de Luis 2026-08-11) — CERRADO, en `QA` y en dev.atlanticerp.ai** (commits backend `0d0e3db`/
 `be6e91e`, frontend `8a03f6b`). Luis decidió retomar REQ-258 (diferido desde Batch 7) junto con
 Batch 10 en la misma sesión, en vez de por separado. Visual Review + Pre-QA fusionados en un solo
@@ -233,7 +233,7 @@ credenciales) — corregido en `be6e91e`, mismo patrón que ya usa `TicketBatch4
   `InspectionReportModal.tsx` (mismo gate `canEdit` que editar el informe, RN4 REQ-251).
   `SignaturePad.tsx` — lienzo táctil con Pointer Events (RN1-RN6 REQ-253).
 
-- **Comisión Carlos Vergara (REQ-258):** el criterio "Calidad del trabajo técnico" (RN2) queda
+- **Comisión Tecnico Test (REQ-258):** el criterio "Calidad del trabajo técnico" (RN2) queda
   **sin auto-sugerencia en este batch** — depende de la tasa de reincidencia de REQ-211 ("Resuelto
   en 1ra visita"), que no existe (ni panel ni dato crudo, ver `InternalTechnicianService`). Decisión
   de Luis: captura manual (`commission_captures.calidad_pct`, nullable), mismo patrón que

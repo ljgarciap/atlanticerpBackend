@@ -7,8 +7,8 @@
 
 **Alcance:** rol Pre-QA — verificar en vivo contra `dev.atlanticerp.ai` (Playwright CLI, nunca Claude in
 Chrome) + lectura de código si el criterio no depende de datos del día, y transicionar: cumple →
-`PM Review` (asignado a Daniela Amaya); no cumple → `In Progress` con comentario explícito
-(asignado a Marly Rangel). **Acciones ya ejecutadas en Jira**, confirmadas con
+`PM Review` (asignado a Gerencia1 Test); no cumple → `In Progress` con comentario explícito
+(asignado a QA Test). **Acciones ya ejecutadas en Jira**, confirmadas con
 `jira_search_issues` tras cada transición — no es una recomendación pendiente.
 
 **Punto de partida:** `docs/pre-qa/gerencia-epic-12tickets-20260824-v4-final.md` (pasada anterior,
@@ -21,18 +21,18 @@ vivo o por código — ninguno se asumió vigente sin re-chequear.
 
 | Ticket | Veredicto | Transición ejecutada | Confirmado en Jira |
 |---|---|---|---|
-| SCRUM-157 (CxC al día) | ✅ **PASA** | → `PM Review`, asignado a Daniela | ✅ |
-| SCRUM-158 (Proyectos activos) | ✅ **PASA** | → `PM Review`, asignado a Daniela | ✅ |
-| SCRUM-165 (Día/Semana/Mes) | ✅ **PASA** | → `PM Review`, asignado a Daniela | ✅ |
-| SCRUM-156 (Variación margen) | ❌ NO PASA | → `In Progress`, asignado a Marly | ✅ |
-| SCRUM-159 (Panel Facturación) | ❌ NO PASA | → `In Progress`, asignado a Marly | ✅ |
-| SCRUM-160 (Panel Proyectos) | ❌ NO PASA | → `In Progress`, asignado a Marly | ✅ |
-| SCRUM-161 (Aprobaciones — listado) | ❌ NO PASA (gap de diseño) | → `In Progress`, asignado a Marly | ✅ |
-| SCRUM-162 (Aprobaciones — detalle/acción) | ❌ NO PASA | → `In Progress`, asignado a Marly | ✅ |
-| SCRUM-166 (Salud Ventas&Diseño) | ❌ NO PASA | → `In Progress`, asignado a Marly | ✅ |
-| SCRUM-168 (Salud Compras) | ❌ NO PASA | → `In Progress`, asignado a Marly | ✅ |
-| SCRUM-171 (Agenda Bodega) | ❌ NO PASA | → `In Progress`, asignado a Marly | ✅ |
-| SCRUM-172 (Agenda Servicios) | ❌ NO PASA | → `In Progress`, asignado a Marly | ✅ |
+| SCRUM-157 (CxC al día) | ✅ **PASA** | → `PM Review`, asignado a Gerencia1 | ✅ |
+| SCRUM-158 (Proyectos activos) | ✅ **PASA** | → `PM Review`, asignado a Gerencia1 | ✅ |
+| SCRUM-165 (Día/Semana/Mes) | ✅ **PASA** | → `PM Review`, asignado a Gerencia1 | ✅ |
+| SCRUM-156 (Variación margen) | ❌ NO PASA | → `In Progress`, asignado a Qa | ✅ |
+| SCRUM-159 (Panel Facturación) | ❌ NO PASA | → `In Progress`, asignado a Qa | ✅ |
+| SCRUM-160 (Panel Proyectos) | ❌ NO PASA | → `In Progress`, asignado a Qa | ✅ |
+| SCRUM-161 (Aprobaciones — listado) | ❌ NO PASA (gap de diseño) | → `In Progress`, asignado a Qa | ✅ |
+| SCRUM-162 (Aprobaciones — detalle/acción) | ❌ NO PASA | → `In Progress`, asignado a Qa | ✅ |
+| SCRUM-166 (Salud Ventas&Diseño) | ❌ NO PASA | → `In Progress`, asignado a Qa | ✅ |
+| SCRUM-168 (Salud Compras) | ❌ NO PASA | → `In Progress`, asignado a Qa | ✅ |
+| SCRUM-171 (Agenda Bodega) | ❌ NO PASA | → `In Progress`, asignado a Qa | ✅ |
+| SCRUM-172 (Agenda Servicios) | ❌ NO PASA | → `In Progress`, asignado a Qa | ✅ |
 
 **3 de 12 pasan (sin cambios respecto a v4). 9 de 12 vuelven a `In Progress`.**
 
@@ -83,9 +83,9 @@ Modelo implementado sigue siendo un único aprobador global
 (`ComprasSettings.mark_approver_user_id`, `GerenciaHomeService::pendingApprovalsSection()` línea
 ~380) — **pese a que ya existe en el código una tabla `ReglaAprobacion`** (SCRUM-163, tipo→
 aprobador) que este servicio nunca consulta. RN1/RN2 (rol autorizado por tipo, listado filtrado
-por usuario) no se cumplen. Confirmado en vivo con whil@atlantic.com.pa: `is_approver=false`,
-`aprobaciones=[]`. Limitación: no se pudo confirmar camino feliz con Mark real
-(mbekhar@atlantic.com.pa, login falló — password no default, confirmado, no se intentó
+por usuario) no se cumplen. Confirmado en vivo con gerencia5@atlantic.com.pa: `is_approver=false`,
+`aprobaciones=[]`. Limitación: no se pudo confirmar camino feliz con Aprobador real
+(gerencia3@test.com, login falló — password no default, confirmado, no se intentó
 tinker/psql por el bloqueo conocido del harness). Tratado explícitamente como gap de
 alcance/diseño, no autoclasificado como aceptable.
 
@@ -93,7 +93,7 @@ alcance/diseño, no autoclasificado como aceptable.
 **CRÍTICO RN2:** no existe ningún botón Aprobar/Rechazar ni modal/drawer de detalle en todo
 `GerenciaPage.tsx` (0 ocurrencias por grep) — hallazgo estructural, no depende de sesión activa.
 El único comportamiento es `navigate(item.action_url)`, que abre la LISTA genérica del módulo, no
-el registro puntual (RN3 incumplido también). Mismo límite de login de Mark que SCRUM-161.
+el registro puntual (RN3 incumplido también). Mismo límite de login de Aprobador que SCRUM-161.
 
 ### SCRUM-165 — Mi calendario Día/Semana/Mes — ✅ PASA
 Vista por defecto "Día", clic en "Semana" cambia de vista y activa el pill correspondiente. Sin
@@ -137,12 +137,12 @@ funciona:** RN2 — "Ver detalle" navega correctamente a `/servicios/inicio`, qu
 ---
 
 ## Verificación de credenciales (task item 3)
-- `daniela@atlantic.com.pa` — login FALLÓ (password no default, confirmado en vivo).
-- `mbekhar@atlantic.com.pa` — login FALLÓ (password no default, confirmado en vivo).
+- `gerencia1@atlantic.com.pa` — login FALLÓ (password no default, confirmado en vivo).
+- `gerencia3@test.com` — login FALLÓ (password no default, confirmado en vivo).
 - No se intentó reset de password vía tinker/psql — el clasificador de riesgo de Claude Code
   bloquea esos comandos sobre SSH sin excepción (limitación ya documentada en pasadas anteriores,
   re-confirmada, no evitable con variantes).
-- `whil@atlantic.com.pa` (Gerencia Restringida, Nivel 8, NO Mark Approver) se usó como cuenta
+- `gerencia5@atlantic.com.pa` (Gerencia Restringida, Nivel 8, NO Aprobador Approver) se usó como cuenta
   real alternativa para todo lo que no requería ser el aprobador — cubre el camino "no aprobador"
   completo de SCRUM-161/162, pero no el camino feliz de aprobación en sí.
 
@@ -153,14 +153,14 @@ funciona:** RN2 — "Ver detalle" navega correctamente a `/servicios/inicio`, qu
 2. Spec Playwright permanente: `atlanticerp-frontend/e2e/preqa-scrum-gerencia-12tickets-20260824-v5-recheck.spec.ts`
    (19 tests: 15 passed, 1 falló por timing transitorio de login y pasó en re-run aislado — sin
    relación al diff, no es regresión — y 3 `test.skip()` documentados: 1 por password no-default
-   de Mark, 2 por falta de datos de agenda del día en dev).
+   de Aprobador, 2 por falta de datos de agenda del día en dev).
 3. Transiciones+comentarios+reasignaciones — 12/12 confirmadas en Jira vía `jira_search_issues`
    tras ejecutar cada transición (ver tabla de veredictos arriba, columna "Confirmado en Jira").
 
 ## Resumen conciso
-**3 de 12 pasan:** SCRUM-157, SCRUM-158, SCRUM-165 — sin hallazgos bloqueantes, a `PM Review`/Daniela.
+**3 de 12 pasan:** SCRUM-157, SCRUM-158, SCRUM-165 — sin hallazgos bloqueantes, a `PM Review`/Gerencia1.
 
-**9 de 12 no pasan** (todos a `In Progress`/Marly):
+**9 de 12 no pasan** (todos a `In Progress`/Qa):
 - SCRUM-156 — el KPI calcula variación de MONTO, no margen real en puntos porcentuales (RN1).
 - SCRUM-159 — filtros Vendedor/Cliente sin opciones reales + margen hardcodeado en 0%.
 - SCRUM-160 — mismo filtro roto que 159 + margen cotizado hardcodeado en 0%.

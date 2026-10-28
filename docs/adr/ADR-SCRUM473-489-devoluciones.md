@@ -9,7 +9,7 @@
 partir de una Guía de Entrega real de un Pedido ya despachado), carga de documento firmado,
 confirmación de recepción física (que suma al inventario y "notifica" a Administración &
 Contabilidad — módulo que no existe todavía, mismo criterio de stub que `Order.invoice_ready`),
-rechazo (potestad exclusiva de Bodega, sin aprobación de Mark — a diferencia de todos los demás
+rechazo (potestad exclusiva de Bodega, sin aprobación de Aprobador — a diferencia de todos los demás
 flujos de rechazo del módulo), y finalización simulada (nota de crédito).
 
 Depende de Batch A3 (Guía de Entrega de Pedidos), ya completo — `OrderDocumentService` ya genera

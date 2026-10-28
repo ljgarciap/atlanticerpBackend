@@ -40,11 +40,11 @@ concurrente tocando el Postgres compartido de dev), como pide la nota de la tare
   de validación independientes (`test_store_con_bodega_destino_igual_a_origen_retorna_422`,
   `test_store_sin_cantidad_retorna_422`, `test_store_sin_motivo_retorna_422`,
   `test_store_sin_bodega_destino_retorna_422`).
-- **Gate "exclusivo de Mark" robusto y no bypasseable por rol.** `resolveMarkAccess()` reutiliza
+- **Gate "exclusivo de Aprobador" robusto y no bypasseable por rol.** `resolveMarkAccess()` reutiliza
   exactamente `ComprasSettings::current()->mark_approver_user_id`, mismo mecanismo palabra por
   palabra que `AdjustmentRequestController::resolveMarkAccess()` — una sola fuente de verdad de
-  quién es Mark. Verificado con `test_aprobar_no_siendo_mark_retorna_403`: un segundo usuario con
-  `bodega.approve` pero que no es Mark recibe 403 y el estado permanece `pendiente`. Los permisos de
+  quién es Aprobador. Verificado con `test_aprobar_no_siendo_mark_retorna_403`: un segundo usuario con
+  `bodega.approve` pero que no es Aprobador recibe 403 y el estado permanece `pendiente`. Los permisos de
   ruta (`bodega.read`/`write`/`approve` en `routes/bodega.php` líneas 61–65) son defensa en
   profundidad correcta sobre el gate de negocio, no lo sustituyen.
 - **`AuthenticateJwt` aplicado globalmente** vía el grupo `api` en `bootstrap/app.php` (línea 45) —
@@ -86,7 +86,7 @@ concurrente tocando el Postgres compartido de dev), como pide la nota de la tare
 1. **`resolveMarkAccess()` duplicado palabra por palabra en `AdjustmentRequestController` y
    `RelocationRequestController`.** La ADR ya lo señala como decisión aceptada de Backend Dev
    ("puede extraer a un trait compartido si lo prefiere, no es bloqueante"). Con dos controllers
-   ya en el mismo estado, y aparentemente un tercer módulo (`purchase-order`, gate de Mark también
+   ya en el mismo estado, y aparentemente un tercer módulo (`purchase-order`, gate de Aprobador también
    mencionado en `routes/compras.php`) usando el mismo patrón, sugiero extraerlo a un trait
    (`App\Modules\Compras\Support\MarkApprovalGate` o similar) la próxima vez que se toque
    cualquiera de los dos controllers — no amerita un ticket propio todavía.
@@ -128,7 +128,7 @@ Ninguno.
 
 - Backend: PHPStan limpio, 231/231 tests de Bodega en verde, el fix de concurrencia del incidente
   de `AdjustmentRequestController` se replicó correctamente y está cubierto por test real
-  (doble-approve concurrente), RN1/RN2 validadas server-side, gate de Mark robusto y consistente
+  (doble-approve concurrente), RN1/RN2 validadas server-side, gate de Aprobador robusto y consistente
   con el patrón ya aprobado.
 - Frontend: `tsc --noEmit` limpio, 545/545 tests (61 archivos) en verde, sin emojis ni
   `window.alert/confirm/prompt`, patrón visual consistente con `SolicitudAjustePage.tsx`.

@@ -2,13 +2,13 @@
 
 **Fecha:** 2026-07-28
 **Entorno:** dev.atlanticerp.ai
-**Usuario de prueba:** almacen@atlantic.com.pa (Esteban, rol Bodega/Líder de Bodega)
+**Usuario de prueba:** almacen@atlantic.com.pa (Liderbodega, rol Bodega/Líder de Bodega)
 **Mockup:** `3F__Bodega_Bodegas.html` (Jira attachment 10981)
 **Spec:** `3__Requerimientos_Bodega.xlsx` (Jira attachment 10982) — HU-382/REQ-382
 
 ## Contexto
 
-Ticket rechazado por QA (marly.rangel) el 2026-07-22:
+Ticket rechazado por QA (qa.qa) el 2026-07-22:
 1. CRÍTICO — "% de capacidad usada" mostraba un número (68%/40%/25%/12%) mientras "Total de
    productos" mostraba 0 en la misma bodega.
 2. MEDIO — "Responsable" siempre "—" en las 7 bodegas.

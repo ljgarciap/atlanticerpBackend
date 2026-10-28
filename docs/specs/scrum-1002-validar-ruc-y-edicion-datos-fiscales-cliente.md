@@ -38,7 +38,7 @@
 
 ## Decisiones que necesito de Luis
 - **D1 — Interruptor "Apagado":** ¿la validación de RUC también se apaga? Recomendado: **sí** (mantiene la garantía "apagado = cero llamadas a MSL"); el botón muestra "Validación no disponible".
-- **D2 — ¿Quién puede editar RUC/DV/razón social?** Propongo el permiso angosto `ventas_diseno.edit.client_tax_data` y concederlo a: Mark y Felix (`contabilidad@test.com`). ¿Otros (Vendedores/Diseñadores sí o no)?
+- **D2 — ¿Quién puede editar RUC/DV/razón social?** Propongo el permiso angosto `ventas_diseno.edit.client_tax_data` y concederlo a: Aprobador y Contabilidad (`contabilidad@test.com`). ¿Otros (Vendedores/Diseñadores sí o no)?
 - **D3 — Regla de bloqueo:** ¿409 solo con documentos certificados/pendientes (recomendado), o con cualquier factura emitida, o edición libre con bitácora?
 - **D4 — Dos RUC reales de clientes de Atlantic (uno jurídico, uno persona natural con cédula)** para probar el sandbox de MSL antes de construir; y confirmar con MSL: qué significa `estado="I"`, si el sandbox conoce RUC reales, y cómo se calcula el DV de una cédula (hoy el DV es obligatorio).
 - **D5 — ¿Ticket aparte para revalidar los clientes existentes?** (solo lectura, con reporte de discrepancias; no modifica datos).
@@ -54,7 +54,7 @@
 
 ## Decisiones tomadas (Luis, 2026-09-29)
 - **D1 — La validación respeta "Apagado":** en ese modo no se llama a MSL; el botón muestra "Validación no disponible".
-- **D2 — Quién edita RUC/DV/razón social: Mark, Felix y Ventas & Diseño** (distinto de la propuesta original, que era solo Mark y Felix).
+- **D2 — Quién edita RUC/DV/razón social: Aprobador, Contabilidad y Ventas & Diseño** (distinto de la propuesta original, que era solo Aprobador y Contabilidad).
   *Implicaciones a resolver por Backend Dev/Arquitecto al implementar:* (a) "Ventas & Diseño" es un módulo/rol amplio, no una persona: los permisos angostos por persona van a `SpecialPermissionSeeder`, pero un grupo de roles se concede en el catálogo de permisos del rol (mecanismo v2, ADR-006); definir cuál, sin dar el permiso a niveles que no lo necesitan. (b) Más editores = más superficie de error fiscal: se mantienen como mitigaciones el bloqueo 409 (D3), la auditoría antes/después y el aviso visible de "esto cambia el RUC con el que se factura". (c) Reflejarlo en el JWT/`modules` y en `Sidebar`/UI solo donde aplique.
 - **D3 — Bloqueo (409) solo si el cliente tiene facturas o NC con `fe_estado` certificado o pendiente.** Con facturas en Apagado/rechazadas se puede editar.
 - **D4 (parcial) — Se arranca con el RUC de la guía de MSL** (`155704849-2-2021`, Digifact) para desarrollo y pruebas en dev. **Pendiente de Luis:** dos RUC reales de clientes de Atlantic (uno jurídico, una cédula) antes del Pre-QA, para confirmar si el sandbox de MSL conoce RUC reales; y las preguntas a MSL (`estado="I"`, DV de cédula, si el sandbox conoce RUC reales).

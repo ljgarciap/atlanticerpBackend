@@ -22,7 +22,7 @@ class CrmPermissionMigrationTest extends FeatureTestCase
 
     private const LIDERSERVICIOS = 'liderservicios@test.com'; // lider_servicios — ajeno a ventas_diseno/crm
 
-    private const MILENA = 'vendedor@test.com'; // vendedor — can_view_team=false
+    private const VENDEDOR = 'vendedor@test.com'; // vendedor — can_view_team=false
 
     protected function setUp(): void
     {
@@ -80,7 +80,7 @@ class CrmPermissionMigrationTest extends FeatureTestCase
         // vendedor SÍ tiene fila en role_module_visibility para ventas_diseno
         // (can_view=FULL) pero con can_view_team=false explícito — caso más estricto que un rol
         // sin ninguna fila (como lider_servicios en el test de arriba).
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::MILENA, 'vendedor')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::VENDEDOR, 'vendedor')))
             ->getJson('/api/crm/reports/team')
             ->assertStatus(403);
     }

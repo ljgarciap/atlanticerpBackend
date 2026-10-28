@@ -8,7 +8,7 @@ Sin mockup adjunto en Jira — Visual Review no aplica (confirmado).
 Stack local Docker (no `dev.atlanticerp.ai`), Playwright CLI contra `http://localhost:5173`
 (frontend, vía `webServer` de `playwright.config.ts`) y `http://localhost:8090` (API vía nginx —
 puerto real del mapeo actual del compose local, no el 80 documentado en la skill). Login real:
-Felix (`lider_admin_contab`, `contabilidad@test.com` / misma contraseña, `password=email`).
+Contabilidad (`lider_admin_contab`, `contabilidad@test.com` / misma contraseña, `password=email`).
 
 ## Fixtures sembrados (dato real insuficiente en el entorno local)
 
@@ -76,7 +76,7 @@ payload salió exactamente como predice el ADR en los 8 casos de arriba.
 para el rol que realmente usa esta pantalla.**
 
 Repro:
-1. Login como `contabilidad@test.com` (Felix, `lider_admin_contab` — uno de los 4 roles con
+1. Login como `contabilidad@test.com` (Contabilidad, `lider_admin_contab` — uno de los 4 roles con
    acceso completo a Admin&Contab, `ADMIN_CONTAB_FULL_ACCESS_ROLES` en
    `atlanticerp-frontend/src/components/Sidebar.tsx:392`).
 2. Estado de Cuenta → cliente con una factura que tiene guía de entrega → clic en el número de
@@ -91,7 +91,7 @@ Repro:
   `useOrderDetail(orderId)` (`atlanticerp-frontend/src/hooks/useBodega.ts:220-226`), que pega contra
   `GET /api/bodega/orders/{id}` → `OrderBoardController::show()`
   (`atlanticerp-backend/routes/bodega.php:113`, `Route::get('/{id}', ...)->middleware('permission:bodega.read')`).
-  Felix (y `asistente_administrativa`, el otro rol no-management con acceso completo a Admin&Contab)
+  Contabilidad (y `asistente_administrativa`, el otro rol no-management con acceso completo a Admin&Contab)
   **no tienen `bodega.read`** en su JWT (confirmado: su payload de login no incluye ningún
   `bodega.*`).
 - `GuiaEntregaModal.tsx:85-86` — `{isLoading || !order ? <p>Cargando...</p> : ...}` — cuando
@@ -133,7 +133,7 @@ one-liner. Necesita al Arquitecto/PM antes de tocarlo.
 **Impacto:** bloquea el criterio de aceptación 4 del ticket ("El número de Guía de Entrega... es
 clickeable y al hacer clic abre el modal de detalle de esa Guía de Entrega") para el usuario real
 de esta pantalla. No bloquea los otros 3 documentos (Factura/Nota Crédito/Cotización), que sí
-abren correctamente para Felix.
+abren correctamente para Contabilidad.
 
 ## Lo que sí funciona (confirmado en vivo, no solo leído)
 
@@ -182,7 +182,7 @@ Volví a correr el checklist **completo**, no solo el punto 4:
   `atlanticerp-local-dev`, "no es fresh vs. dev... sembrar fixtures manuales SIEMPRE después del último
   `test.sh`") y se llevó los fixtures de la primera pasada. Reconstruidos con un cliente/familia
   nuevos (`master_client_id` nuevo), mismos 8 escenarios que la primera vez.
-- **6/6 specs Playwright en verde** contra `localhost:5173`/`8090`, login real como Felix — incluida
+- **6/6 specs Playwright en verde** contra `localhost:5173`/`8090`, login real como Contabilidad — incluida
   la prueba específica que antes fallaba: clic en Guía de Entrega ahora carga y muestra el pedido
   CORRECTO de la familia (confirmado por texto distintivo del pedido hermano, no solo "un modal se
   abrió"). Los otros 5 puntos siguen limpios.
@@ -190,7 +190,7 @@ Volví a correr el checklist **completo**, no solo el punto 4:
   - `docker exec infra-laravel-1 vendor/bin/phpstan analyse app/Modules/Bodega/Http/Controllers/OrderBoardController.php --level=8` → `[OK] No errors`.
   - `infra/test.sh` completo (sin nada más corriendo en paralelo) → **3599/3599 verde**.
   - `npx tsc --noEmit` → limpio. `npx vitest run` completo → **1899/1899 verde**.
-  - `GET /api/bodega/orders/{orderId}` con el token de Felix → `200` (antes `403`), confirmado por
+  - `GET /api/bodega/orders/{orderId}` con el token de Contabilidad → `200` (antes `403`), confirmado por
     curl directo antes de tocar el navegador.
   - Re-corridos también los 2 specs permanentes que Senior Review había ajustado por la colisión de
     nombre accesible del Sidebar (`preqa-batch-895-897-550-881-882-20260911.spec.ts`,
