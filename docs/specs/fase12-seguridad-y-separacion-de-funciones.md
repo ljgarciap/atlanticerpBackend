@@ -1,6 +1,6 @@
 # Spec — Fase 12: seguridad y separación de funciones
 
-**Estado**: BORRADOR — decisiones de Luis pendientes (§5).
+**Estado**: decisiones de Luis registradas (§5, 2026-10-29); implementación por sub-fases, un PR por entrega.
 **Origen**: Grupo 1 de `docs/flujos/candidatos-priorizados.md` (Fase 11).
 
 ## 1. Hechos verificados (ejecutados el 2026-10-29)
@@ -32,9 +32,9 @@ MFA, recuperación de clave por correo (ya existe), roles/módulos, las otras fa
 3. Ninguna migración destructiva; los tickets y aprobadores existentes siguen funcionando.
 4. Textos de commits, PR y datos de prueba sin nombres reales.
 
-## 5. Decisiones de Luis
-1. Permisos adicionales de quien no es superadmin: ¿403 si el valor cambia (recomendado), solo ocultar en pantalla, o dejarlo?
-2. Transiciones de ticket: ¿matriz estricta (recomendado), mínima (solo cancelado y cerrado finales), o dejar libre?
-3. Sustituciones: ¿se mantiene que decida el responsable del proyecto, o decide otra persona (Gerencia/Compras) cuando el responsable es quien la reportó?
-4. Aprobador suplente: ¿entra en esta fase (12b) y como lista de suplentes?
-5. Clave inicial: ¿enlace de activación (12c) ahora, o se mantiene hasta tener correo real?
+## 5. Decisiones de Luis (2026-10-29)
+1. Permisos adicionales de quien no es superadmin: **403 si el valor cambia**; el mismo valor se acepta; la pantalla oculta el selector a quien no puede usarlo. ✅
+2. Tickets de Servicios: **matriz estricta** (destinos válidos por estado; `on_site` exige técnico y agenda; `closed`/`cancelled` finales salvo reapertura con permiso y motivo; los tickets existentes no se tocan). ✅
+3. Sustituciones: **decide otra persona** cuando el responsable del proyecto es quien la reportó (Gerencia o Compras); rechazar pide motivo. ✅
+4. Alcance: **12a, 12b y 12c** (aprobador suplente en lista; enlace de activación de cuenta, con el correo registrado en el log mientras no haya proveedor de correo). ✅
+5. Entrega: 12a primero (un PR por ítem), después 12b y 12c; cada una con su informe de revisión y aprobación de Luis para mezclar.
