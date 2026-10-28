@@ -48,7 +48,7 @@ final class VentasDisenoCleanupTestDataCommand extends Command
     {
         if (! app()->environment('qa') && ! $this->option('env-override')) {
             $this->error(
-                'Este comando solo corre en el entorno "qa" (test.atlanticerp.ai). '
+                'Este comando solo corre en el entorno "qa". '
                 .'Usá --env-override para correrlo en local/testing — nunca contra dev/production.'
             );
 

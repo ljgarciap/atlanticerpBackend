@@ -13,16 +13,16 @@
 #      No corre en `dev` ni `test`, ni cuando el push solo toca docs/ o archivos .md.
 #
 # CD:  Deploy vía SSH al EC2 correspondiente (el deploy en sí tarda ~40 s).
-#      dev    → EC2_DEV_HOST  (dev.atlanticerp.ai)   — push a `dev`, SIN CI (el gate local ya corrió)
-#      test   → EC2_TEST_HOST (test.atlanticerp.ai)  — push a `test`, SIN CI
-#      master → EC2_PROD_HOST (atlanticerp.ai)        — push a `master`, DESPUÉS del CI completo
+#      dev    → EC2_DEV_HOST  (vars.APP_URL del Environment)   — push a `dev`, SIN CI (el gate local ya corrió)
+#      test   → EC2_TEST_HOST (vars.APP_URL del Environment)  — push a `test`, SIN CI
+#      master → EC2_PROD_HOST (vars.APP_URL del Environment)        — push a `master`, DESPUÉS del CI completo
 #      Cada deploy termina verificando /up y que la API responda (401 sin token).
 #      Si Actions no tiene minutos: infra/deploy-manual.sh <dev|test|prod> (reutiliza el recibo del gate).
 #
 # Secrets requeridos (GitHub → Settings → Secrets and variables → Actions):
-#   EC2_DEV_HOST    — IP del EC2 de dev   (dev.atlanticerp.ai)
-#   EC2_TEST_HOST   — IP del EC2 de test  (test.atlanticerp.ai)
-#   EC2_PROD_HOST   — IP del EC2 de prod  (atlanticerp.ai)
+#   EC2_DEV_HOST    — IP del EC2 de dev   (vars.APP_URL del Environment)
+#   EC2_TEST_HOST   — IP del EC2 de test  (vars.APP_URL del Environment)
+#   EC2_PROD_HOST   — IP del EC2 de prod  (vars.APP_URL del Environment)
 #   EC2_SSH_KEY     — Clave privada SSH (PEM); el par público debe estar
 #                     en /home/ubuntu/.ssh/authorized_keys de cada EC2.
 #   DB_ADMIN_PASSWORD_DEV/TEST/PROD — password del rol superuser `atlanticerp` de Postgres en
@@ -233,10 +233,10 @@ jobs:
           retention-days: 14
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # JOB 2 — CD dev: Deploy a dev.atlanticerp.ai (solo en push a `dev`)
+  # JOB 2 — CD dev: Deploy al host del Environment (solo en push a `dev`)
   # ─────────────────────────────────────────────────────────────────────────────
   deploy-dev:
-    name: CD — Deploy dev.atlanticerp.ai
+    name: CD — Deploy dev
     runs-on: ubuntu-22.04
     # Fase 5a — desactivado hasta tener infraestructura real (sin EC2/dominio ni secretos, el job solo falla). Reactivar: quitar `false && `.
     if: false && github.event_name == 'push' && github.ref == 'refs/heads/dev'
@@ -245,7 +245,7 @@ jobs:
       cancel-in-progress: false
     environment:
       name: dev
-      url: https://dev.atlanticerp.ai
+      url: ${{ vars.APP_URL }}
 
     steps:
       - name: Preparar clave SSH
@@ -363,14 +363,14 @@ jobs:
       - name: Verificar el sitio tras el deploy (/up y API)
         run: |
           for i in 1 2 3 4 5 6; do
-            UP=$(curl -s -o /dev/null -w '%{http_code}' "https://dev.atlanticerp.ai/up" || true)
-            API=$(curl -s -o /dev/null -w '%{http_code}' "https://dev.atlanticerp.ai/api/compras/orders" || true)
-            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "https://dev.atlanticerp.ai/api/health/deep" || true)
+            UP=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/up" || true)
+            API=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/api/compras/orders" || true)
+            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/api/health/deep" || true)
             echo "intento $i: /up=$UP  /api/compras/orders=$API  /api/health/deep=$DEEP (se espera 200, 401 y 200)"
             if [ "$UP" = "200" ] && [ "$API" = "401" ] && [ "$DEEP" = "200" ]; then exit 0; fi
             sleep 10
           done
-          echo "ERROR: dev.atlanticerp.ai no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
+          echo "ERROR: ${{ vars.APP_URL }} no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
           exit 1
 
       - name: Limpiar clave SSH
@@ -378,10 +378,10 @@ jobs:
         run: rm -f ~/.ssh/deploy_key
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # JOB 3 — CD test: Deploy a test.atlanticerp.ai (solo en push a `test`)
+  # JOB 3 — CD test: Deploy al host del Environment (solo en push a `test`)
   # ─────────────────────────────────────────────────────────────────────────────
   deploy-test:
-    name: CD — Deploy test.atlanticerp.ai
+    name: CD — Deploy test
     runs-on: ubuntu-22.04
     # Fase 5a — desactivado hasta tener infraestructura real (sin EC2/dominio ni secretos, el job solo falla). Reactivar: quitar `false && `.
     if: false && github.event_name == 'push' && github.ref == 'refs/heads/test'
@@ -390,7 +390,7 @@ jobs:
       cancel-in-progress: false
     environment:
       name: test
-      url: https://test.atlanticerp.ai
+      url: ${{ vars.APP_URL }}
 
     steps:
       - name: Preparar clave SSH
@@ -487,14 +487,14 @@ jobs:
       - name: Verificar el sitio tras el deploy (/up y API)
         run: |
           for i in 1 2 3 4 5 6; do
-            UP=$(curl -s -o /dev/null -w '%{http_code}' "https://test.atlanticerp.ai/up" || true)
-            API=$(curl -s -o /dev/null -w '%{http_code}' "https://test.atlanticerp.ai/api/compras/orders" || true)
-            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "https://test.atlanticerp.ai/api/health/deep" || true)
+            UP=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/up" || true)
+            API=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/api/compras/orders" || true)
+            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/api/health/deep" || true)
             echo "intento $i: /up=$UP  /api/compras/orders=$API  /api/health/deep=$DEEP (se espera 200, 401 y 200)"
             if [ "$UP" = "200" ] && [ "$API" = "401" ] && [ "$DEEP" = "200" ]; then exit 0; fi
             sleep 10
           done
-          echo "ERROR: test.atlanticerp.ai no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
+          echo "ERROR: ${{ vars.APP_URL }} no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
           exit 1
 
       - name: Limpiar clave SSH
@@ -502,12 +502,12 @@ jobs:
         run: rm -f ~/.ssh/deploy_key
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # JOB 4 — CD prod: Deploy a atlanticerp.ai (solo en push a `master`)
+  # JOB 4 — CD prod: Deploy al host del Environment (solo en push a `master`)
   # ─────────────────────────────────────────────────────────────────────────────
   # IMPORTANTE: antes de activar deploys a prod, configurar el Environment `prod`
   # en GitHub con "Required reviewers: Luis" para exigir aprobación manual.
   deploy-prod:
-    name: CD — Deploy atlanticerp.ai (PRODUCCIÓN)
+    name: CD — Deploy prod (PRODUCCIÓN)
     needs: ci
     runs-on: ubuntu-22.04
     # Fase 5a — desactivado hasta tener infraestructura real (sin EC2/dominio ni secretos, el job solo falla). Reactivar: quitar `false && `.
@@ -517,7 +517,7 @@ jobs:
       cancel-in-progress: false
     environment:
       name: prod
-      url: https://atlanticerp.ai
+      url: ${{ vars.APP_URL }}
 
     steps:
       - name: Preparar clave SSH
@@ -614,14 +614,14 @@ jobs:
       - name: Verificar el sitio tras el deploy (/up y API)
         run: |
           for i in 1 2 3 4 5 6; do
-            UP=$(curl -s -o /dev/null -w '%{http_code}' "https://atlanticerp.ai/up" || true)
-            API=$(curl -s -o /dev/null -w '%{http_code}' "https://atlanticerp.ai/api/compras/orders" || true)
-            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "https://atlanticerp.ai/api/health/deep" || true)
+            UP=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/up" || true)
+            API=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/api/compras/orders" || true)
+            DEEP=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/api/health/deep" || true)
             echo "intento $i: /up=$UP  /api/compras/orders=$API  /api/health/deep=$DEEP (se espera 200, 401 y 200)"
             if [ "$UP" = "200" ] && [ "$API" = "401" ] && [ "$DEEP" = "200" ]; then exit 0; fi
             sleep 10
           done
-          echo "ERROR: atlanticerp.ai no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
+          echo "ERROR: ${{ vars.APP_URL }} no quedó sano tras el deploy (/up 200, la API 401 sin token y /api/health/deep 200: base y Redis responden)." >&2
           exit 1
 
       - name: Limpiar clave SSH

@@ -25,10 +25,18 @@ if [[ "$ENV" != "dev" && "$ENV" != "test" && "$ENV" != "prod" ]]; then
 fi
 
 case "$ENV" in
-  dev)  HOST="dev.atlanticerp.ai";  BRANCH="dev";  COMPOSE_FILE="infra/docker-compose.qa.yml" ;;
-  test) HOST="test.atlanticerp.ai"; BRANCH="test"; COMPOSE_FILE="infra/docker-compose.qa.yml" ;;
-  prod) HOST="atlanticerp.ai";      BRANCH="master"; COMPOSE_FILE="infra/docker-compose.prod.yml" ;;
+  dev)  BRANCH="dev";  COMPOSE_FILE="infra/docker-compose.qa.yml" ;;
+  test) BRANCH="test"; COMPOSE_FILE="infra/docker-compose.qa.yml" ;;
+  prod) BRANCH="master"; COMPOSE_FILE="infra/docker-compose.prod.yml" ;;
 esac
+
+# El host sale del ambiente (nunca va fijo en el script): DEPLOY_HOST_DEV, DEPLOY_HOST_TEST o DEPLOY_HOST_PROD.
+HOST_VAR="DEPLOY_HOST_$(echo "$ENV" | tr '[:lower:]' '[:upper:]')"
+HOST="${!HOST_VAR:-}"
+if [[ -z "$HOST" ]]; then
+  echo "ERROR: define $HOST_VAR con el host del ambiente $ENV (todavía no hay infraestructura asignada)." >&2
+  exit 1
+fi
 
 SSH_KEY="$HOME/.ssh/atlanticerp/atlanticerp-key.pem"
 SSH="ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@$HOST"
