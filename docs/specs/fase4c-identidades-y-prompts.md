@@ -34,4 +34,4 @@ Categorías de producto y almacenes (fases nuevas aún sin confirmar), moneda fi
 
 ## 5. Riesgos
 - Renombre masivo (~190 archivos de test): mitigado con reemplazo exacto y suites completas, como en las Fases 3 y 4b.
-- Un valor de `descripcion_corta` malicioso entra al prompt de sistema: solo lo edita superadmin (permiso ya existente) y se acota a 500 caracteres.
+- Un valor de `descripcion_corta` malicioso entra al prompt de sistema: solo lo editan Gerencia y superadmin (gate exclusivo de «Datos de la Empresa») y se acota a 500 caracteres.

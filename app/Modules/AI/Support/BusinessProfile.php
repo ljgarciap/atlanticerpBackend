@@ -20,7 +20,7 @@ final class BusinessProfile
 
     public static function description(): string
     {
-        $text = trim(AdminContCompanyProfile::current()->descripcion_corta);
+        $text = trim((string) AdminContCompanyProfile::find(1)?->descripcion_corta);
 
         return $text === '' ? self::FALLBACK : Str::limit($text, 500, '');
     }
