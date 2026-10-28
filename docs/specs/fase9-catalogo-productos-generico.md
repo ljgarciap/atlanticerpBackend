@@ -1,6 +1,6 @@
 # Spec — Fase 9: catálogo de productos genérico (retira la última excepción del contrato de neutralidad)
 
-**Estado**: decisiones de Luis registradas (§6, 2026-10-29) — pendiente de su «adelante» para implementar.
+**Estado**: IMPLEMENTADA (9a, 9b, 9c) — informe `docs/reviews/fase9-catalogo-productos-2026-10-28.md`. Decisiones de Luis en §6.
 **Origen**: excepciones temporales con dueño «catálogo de productos genérico» en `tests/Support/TerminosDelClienteAnterior::PERMITIDOS` y su espejo en `neutralidadDelRepo.test.ts`.
 
 ## 1. Hechos verificados (medidos hoy en `master`)

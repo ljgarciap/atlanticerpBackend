@@ -156,6 +156,14 @@ final class CatalogService
 
     private function inUse(CatalogEntry $entry): bool
     {
+        // Fase 9c — la clave vive DENTRO de una columna JSONB (p. ej. los campos de la ficha técnica del producto).
+        $usageJson = self::domains()[$entry->domain]['usage_json'] ?? null;
+        if ($usageJson !== null) {
+            [$model, $column] = $usageJson;
+
+            return $model::query()->whereRaw("jsonb_exists({$column}, ?)", [$entry->key])->exists();
+        }
+
         $usage = self::domains()[$entry->domain]['usage'] ?? null;
         if ($usage === null) {
             return false;

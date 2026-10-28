@@ -37,12 +37,9 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  * `costTotal()` es la única fuente de verdad del margen — no volver a copiar la fórmula
  * `(price_full - cost) / price_full` en otro lugar, usar este método.
  *
- * `technical_spec` (SCRUM-425/426, REQ-355/356): ficha técnica de 12 campos libres (voltage,
- * power, socket_type, color_temperature, luminous_flux, dimensions, weight, material_finish,
- * ip_rating, estimated_lifespan, warranty, certifications), persistidos juntos como un solo JSONB.
- * Nullable — productos creados antes de este ticket no la tienen y no se backfillea con datos
- * falsos; `StoreInventoryProductRequest` la exige completa (los 12 sub-campos) solo al CREAR un
- * producto nuevo desde Compras (REQ-356 RN1/RN2), nunca retroactivo.
+ * `technical_spec` (SCRUM-425/426, REQ-355/356): ficha técnica estructurada, un solo JSONB clave → valor. Fase 9c: las claves son las del
+ * catálogo por empresa `technical_spec_field` (etiqueta y orden se administran en Ajustes); ya no hay una lista fija en el código. Nullable —
+ * los productos nuevos no la traen (la ficha es el documento de abajo) y no se backfillea con datos falsos.
  *
  * `technical_sheet_key`/`technical_sheet_filename`/`technical_sheet_uploaded_at` (SCRUM-698,
  * REQ-618): ficha técnica de la pantalla Catálogo — un ARCHIVO real (PDF/PNG/JPG) en S3, concepto
@@ -104,18 +101,6 @@ class CatalogProduct extends Model
     /** @var list<string> */
     public const ROTATIONS = [
         self::ROTATION_ALTA, self::ROTATION_MEDIA, self::ROTATION_BAJA, self::ROTATION_UNICA,
-    ];
-
-    /**
-     * SCRUM-425/426 (REQ-355/356) — los 12 sub-campos de `technical_spec`, fuente única de verdad
-     * para la validación de `StoreInventoryProductRequest` y para el modal de solo lectura de
-     * SCRUM-425 — no repetir esta lista en otro lugar.
-     *
-     * @var list<string>
-     */
-    public const TECHNICAL_SPEC_FIELDS = [
-        'voltage', 'power', 'socket_type', 'color_temperature', 'luminous_flux', 'dimensions',
-        'weight', 'material_finish', 'ip_rating', 'estimated_lifespan', 'warranty', 'certifications',
     ];
 
     /** @var list<string> */

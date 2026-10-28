@@ -31,12 +31,14 @@ final class TerminosDelClienteAnterior
     /** Vocabulario del sector del cliente anterior (iluminación). */
     public const SECTOR = [
         'iluminaci', 'iluminacon', 'luminaria', 'l[aá]mpara', 'lamparas', 'downlight', 'candelabro', 'bombill', '\bLED\b', 'chandelier', 'luminaire', 'dialux',
+        // Fase 9c — campos de la ficha técnica de iluminación (ahora un catálogo por empresa).
+        'luminous', 'lum[ií]nic', 'flujo luminoso', 'casquillo', 'color_temperature', 'temperatura de color', 'ip_rating', 'socket_type',
         '(?<![A-Za-z])LAMP(?![A-Za-z])',
     ];
 
     /**
      * Excepciones TEMPORALES (patrón => dueño). Son términos del modelo, no del dato:
-     * Vacía desde la Fase 9b (categorías y `dialux`). La Fase 9c agrega los campos de la ficha técnica y retira lo que quede.
+     * Vacía desde la Fase 9 (categorías, `dialux` y campos de la ficha técnica pasaron a catálogos por empresa).
      *
      * @var array<string, string>
      */
