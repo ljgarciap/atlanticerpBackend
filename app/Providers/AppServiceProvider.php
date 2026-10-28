@@ -52,6 +52,16 @@ class AppServiceProvider extends ServiceProvider
         // SCRUM-1178 — SES con el rol de la instancia (ver SesRoleTransport).
         \Illuminate\Support\Facades\Mail::extend('ses-role', fn (array $config) => \App\Shared\Mail\SesRoleTransport::make());
 
+        // Los parámetros de ruta que son ids deben ser numéricos: con un id como «abc» el controlador (`int $id`) lanzaba TypeError y la API
+        // respondía 500 (218 de 353 rutas con parámetro). Con el patrón la ruta simplemente no coincide y responde 404.
+        foreach ([
+            'id', 'userId', 'productId', 'documentId', 'warehouseId', 'lineId', 'orderId', 'contactId', 'projectId', 'actId', 'remId',
+            'masterClientId', 'subClientId', 'attachmentId', 'itemId', 'quoteId', 'cardId', 'architectId', 'fileId', 'partId', 'cohortId',
+            'pipelineCardId', 'vendedorId', 'expenseId',
+        ] as $parametro) {
+            \Illuminate\Support\Facades\Route::pattern($parametro, '[0-9]{1,18}');
+        }
+
         // Desarrollo local (stack de Docker): nginx pasa HTTP_HOST sin puerto, así que las URLs que arma la app (p. ej. las firmadas del
         // almacenamiento local) saldrían sin el puerto publicado. En `local` la raíz canónica es APP_URL.
         if (app()->isLocal() && ! app()->runningInConsole()) {
