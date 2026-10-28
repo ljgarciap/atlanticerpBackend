@@ -44,7 +44,7 @@ ese mismo día) — sin sembrar datos nuevos ahí, solo lectura (`GET /payments`
 
 - **RN1 (folio REC-XXX consecutivo, nunca a mano):** verificado en vivo — 2 registros
   consecutivos del mismo cliente dieron `REC-001`/`REC-002` (ver `07-detalle-cobro.png`, título del
-  modal `REC-002 — Felix Campos`). Test dedicado (`test_register_asigna_folio_rec_consecutivo`)
+  modal `REC-002 — Contabilidad Test`). Test dedicado (`test_register_asigna_folio_rec_consecutivo`)
   fija el formato `/^REC-\d{3}$/` y que 2 cobros nunca colisionan.
 - **RN2/RN3 (estado real por método) — probado con los 9 métodos, no solo el camino feliz:**
   `test_register_metodos_bancarios_arrancan_esperando_confirmacion` (Transferencia/Cheque/
@@ -115,7 +115,7 @@ ese mismo día) — sin sembrar datos nuevos ahí, solo lectura (`GET /payments`
 
 Mismo gate de permisos que el resto de Cobros (`role:superadmin,lider_admin_contab,
 asistente_administrativa,management`) reusado tal cual para `index`/`show` — sin gate nuevo que
-verificar, coincide con "Disponible para Felix, Yaneth, Mark y Gerencia" de los 4 tickets. No se
+verificar, coincide con "Disponible para Contabilidad, Asistente, Aprobador y Gerencia" de los 4 tickets. No se
 re-probó negativo por separado porque no hay lógica de permisos nueva (mismo middleware ya
 verificado en el Pre-QA de Batch 5).
 

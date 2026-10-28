@@ -20,7 +20,7 @@ permite confirmar manualmente una línea "Por ingresar" y acreditar stock en cua
 
 **El problema real no era de backend, era de UX/alcance de endpoint:** ese botón manual solo vive
 en la pantalla genérica `/inventario` (`InventarioPage.tsx`), acotado por PRODUCTO a través de
-TODAS las órdenes — desconectado del contexto de Ver Órdenes/Logística donde Daniela realmente
+TODAS las órdenes — desconectado del contexto de Ver Órdenes/Logística donde Gerencia1 realmente
 trabaja, y sin forma de acotarlo a UNA orden puntual (riesgo real: confirmar de más si el mismo
 producto tiene líneas pendientes en otra orden). Eso explica su reporte — no que la plataforma no
 pudiera acreditar el stock, sino que no había ninguna forma descubrible de hacerlo desde donde ella
@@ -44,10 +44,10 @@ remanente", dentro del mismo aviso ámbar. Verificado en vivo (no solo tests moc
 stack local real: orden de prueba con remanente pendiente + línea de recepción sin confirmar,
 clic en "Ingresar a Inventario" desde el detalle de la orden →
 `stock_quantity` 0→1, exactamente 1 movimiento de Kardex (sin duplicar), `status` de la orden
-nunca tocó "Recibido" — el escenario exacto que Daniela reportó. Datos de prueba limpiados al
+nunca tocó "Recibido" — el escenario exacto que Gerencia1 reportó. Datos de prueba limpiados al
 terminar. Ver memoria del equipo para el detalle completo de la sesión.
 
-## Problema (rebote real de Daniela Amaya, 2026-08-12)
+## Problema (rebote real de Gerencia1 Test, 2026-08-12)
 
 Orden de 10 unidades, llegan 1. Esperado:
 - La unidad recibida queda `Recibido` de forma INDEPENDIENTE — disponible como stock real en
@@ -146,7 +146,7 @@ carrera ya resuelta ahí, reusar el patrón, no reinventar).
 
 No requiere cambio de modelo (el remanente sigue siendo el mismo campo, solo se reduce la cantidad
 pendiente real vía `receptionSummary()`, que ya calcula por diferencia contra lo recibido
-acumulado). **Sí requiere decisión de producto a confirmar con Daniela**: si el remanente ya
+acumulado). **Sí requiere decisión de producto a confirmar con Gerencia1**: si el remanente ya
 avanzó manualmente a, por ejemplo, "En tránsito", y llega una NUEVA recepción parcial que cubre
 solo una parte de lo que quedaba — ¿la etapa del remanente se mantiene donde estaba, o el usuario
 puede/debe re-declararla? Asunción de este diseño: se mantiene donde estaba (el remanente es
@@ -180,7 +180,7 @@ batch, no asumir en silencio.
 - Bug real encontrado y corregido de paso en `LogisticsPage.tsx` (no dependía del endpoint nuevo):
   el botón principal "Completar etapa" nunca chequeaba `blockedFromReceivingByRemainder` (a
   diferencia de `OrderDetailPage.tsx`, que sí lo hacía desde el fix del 2026-08-12) NI renderizaba
-  `advance.isError` en ningún lado — por eso el video de Daniela mostraba el botón "clickeable pero
+  `advance.isError` en ningún lado — por eso el video de Gerencia1 mostraba el botón "clickeable pero
   sin generar ninguna acción": el 422 llegaba y no había forma de verlo. Ya corregido (mismo
   patrón que OrderDetailPage: disabled + banner rojo condicional).
 - Inventario: sin cambios de frontend — el dato ya viene de `stock_quantity`/
@@ -237,9 +237,9 @@ porque el endpoint funcione.
 
 ### Antes de pasar a Pre-QA/QA
 
-- Confirmar con Daniela/Luis la asunción de la sección "2+ recepciones parciales sucesivas"
+- Confirmar con Gerencia1/Luis la asunción de la sección "2+ recepciones parciales sucesivas"
   (mantener etapa del remanente vs. permitir re-declararla).
 - Senior Review real (cambio de modelo de datos — regla dura del CLAUDE.md de AtlanticERP, no saltar
   esta vez).
-- Reproducir en vivo el escenario exacto de las capturas de Daniela (orden 10 unidades, 1
+- Reproducir en vivo el escenario exacto de las capturas de Gerencia1 (orden 10 unidades, 1
   recibida) contra dev.atlanticerp.ai antes de dar el ticket por cerrado.

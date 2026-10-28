@@ -6,7 +6,7 @@ de transición a QA fue bloqueado por el gate — faltaban los marcadores de Pre
 Review; este review es retroactivo, corrido a pedido de Luis para cerrar el gap).
 **Mockup:** `3__Bodega_Home.html` — adjunto en el ticket, attachment id 10791 (único adjunto,
 sin ambigüedad de versión).
-**Entorno:** `https://dev.atlanticerp.ai`, usuario `almacen@atlantic.com.pa` (Esteban Cárdenas,
+**Entorno:** `https://dev.atlanticerp.ai`, usuario `almacen@atlantic.com.pa` (Liderbodega Liderbodega,
 Jefe de Bodega — perfil correcto para poder alternar entre scope Inicio/Equipo).
 **Herramienta:** Playwright CLI (`atlanticerp-frontend/e2e/visual-review-scrum368-calendario.spec.ts`,
 script descartable, no se promueve a smoke test permanente).
@@ -22,7 +22,7 @@ descripción del propio ticket que detalla el contenido esperado del panel)
 | 4 | Cada evento (vista Día): hora + tipo de evento con color distintivo (Recepción/Entrega/Conteo/Almuerzo) + descripción + ubicación/detalle | Solo muestra hora + título. Sin color/tag de tipo de evento en ningún punto de la feature (ni Home ni modal completo). Ubicación/detalle solo visible abriendo el modal "Calendario completo", no en el panel de Inicio | 🔴 **CRÍTICO** |
 | 5 | Vista individual: solo eventos propios, sin nombre (implícito) | Correcto — scope "Inicio" solo trae eventos propios | ✅ presente y correcto |
 | 6 | Vista de equipo: lista combinada, cada evento indica a quién pertenece (nombre de la persona) — RN2 explícito + Escenario 2 de aceptación | Confirmado en vivo: con scope "Equipo" activo apareció un evento real ("14:30 GLF Systems Standups") sin ninguna atribución de nombre. Revisando código (`MiniCalendarCard.tsx`, `CalendarModal.tsx`), el campo `owner_email` de `OutlookCalendarEvent` se trae del backend pero **nunca se renderiza** en ningún lado de la UI | 🔴 **CRÍTICO** |
-| 7 | Estado vacío "Sin eventos" | Presente y correcto, confirmado en vivo (Esteban sin eventos hoy en scope Inicio) | ✅ presente y correcto |
+| 7 | Estado vacío "Sin eventos" | Presente y correcto, confirmado en vivo (Liderbodega sin eventos hoy en scope Inicio) | ✅ presente y correcto |
 
 ## Evidencia (capturas, `atlanticerp-frontend/e2e/.tmp/`)
 - `visual-review-scrum368-home-full.png` — scope Inicio, "Mi calendario", "Sin eventos", pill Día/Semana/Mes, botón "Ver calendario completo"

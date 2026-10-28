@@ -214,7 +214,7 @@ sudo apt install -y git awscli curl unzip certbot
 
 ```bash
 # Generar SSH key para GitHub
-ssh-keygen -t ed25519 -C "desarrollo@grupolafayette.com" -f ~/.ssh/github_key -N ""
+ssh-keygen -t ed25519 -C "desarrollo@example.test" -f ~/.ssh/github_key -N ""
 
 # Ver la clave pública
 cat ~/.ssh/github_key.pub
@@ -231,7 +231,7 @@ EOF
 
 # Probar conexión
 ssh -T git@github.com
-# Respuesta esperada: Hi desarrollo@grupolafayette.com! You've successfully authenticated...
+# Respuesta esperada: Hi desarrollo@example.test! You've successfully authenticated...
 ```
 
 ---
@@ -304,7 +304,7 @@ docker compose -f infra/docker-compose.prod.yml stop nginx
 sudo certbot certonly --standalone \
   -d atlanticerp.ai \
   -d www.atlanticerp.ai \
-  --email desarrollo@grupolafayette.com \
+  --email desarrollo@example.test \
   --agree-tos \
   --non-interactive
 # Certificados en: /etc/letsencrypt/live/atlanticerp.ai/
@@ -314,7 +314,7 @@ sudo certbot certonly --standalone \
 ```bash
 sudo certbot certonly --standalone \
   -d test.atlanticerp.ai \
-  --email desarrollo@grupolafayette.com \
+  --email desarrollo@example.test \
   --agree-tos \
   --non-interactive
 # Certificados en: /etc/letsencrypt/live/test.atlanticerp.ai/
@@ -324,7 +324,7 @@ sudo certbot certonly --standalone \
 ```bash
 sudo certbot certonly --standalone \
   -d dev.atlanticerp.ai \
-  --email desarrollo@grupolafayette.com \
+  --email desarrollo@example.test \
   --agree-tos \
   --non-interactive
 # Certificados en: /etc/letsencrypt/live/dev.atlanticerp.ai/

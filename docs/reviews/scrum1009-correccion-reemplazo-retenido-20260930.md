@@ -38,7 +38,7 @@ el resultado es irrecuperable. Fix barato: tras guardar `en_espera_nc`, releer l
 ### S2. Sin salida manual para un reemplazo retenido
 `accionDisponible()` devuelve null para `en_espera_nc`. Casos residuales sin salida: NC que MSL ya tiene (9022; `reenviar` deja el estado
 sin cambiar a propósito, así la NC no llega a `certificado`), excepción inesperada en el listener tras el CAS (F2 queda `fe_estado = null`, sin
-badge ni botón), y el S1. Proponer una acción auditada para Mark/superadmin "liberar reemplazo" (o "certificar reemplazo") que reponga el CAS,
+badge ni botón), y el S1. Proponer una acción auditada para Aprobador/superadmin "liberar reemplazo" (o "certificar reemplazo") que reponga el CAS,
 o al menos registrar el riesgo residual como ticket. La spec ya reconoce el riesgo pero no cubre estos casos.
 
 ### S3. NC `no_aplica` con la factura habilitada => doble facturación
@@ -55,7 +55,7 @@ deshabilitada/FE apagada); si la factura está habilitada y la NC no, retener.
 - Tests: no hay caso de original sin CUFE (B1), ni de camino por polling job, ni de carrera S1. `test_la_liberacion_..._idempotente` con `Event::fake`
   verifica el CAS de forma secuencial (suficiente para probar la semántica del `UPDATE ... WHERE`, no es concurrencia real). Los tests nuevos fallarían con el
   código viejo (esperan `en_espera_nc`, 422 y monto original). Sin flakiness evidente (`Http::sequence`, `Carbon::setTestNow` restaurado).
-- D1 (`correccionContext`): correcto. NC `rechazada` por Mark no bloquea; `aplicada` sí (incluye las rechazadas por la DGI, como pide la spec);
+- D1 (`correccionContext`): correcto. NC `rechazada` por Aprobador no bloquea; `aplicada` sí (incluye las rechazadas por la DGI, como pide la spec);
   `pendiente_aprobacion` ya lo cubre `$yaPendiente` con otro mensaje (dice "corrección pendiente" aunque sea un descuento; y con voseo "resolvé", preexistente).
   Correcciones encadenadas OK: la NC de F1 no bloquea corregir F2.
 - Frontend: el aviso se muestra también si la original nunca se certificó (B1) y usa `IcoAlertTriangle` en tono informativo sky; correcto en i18n es/en, sin

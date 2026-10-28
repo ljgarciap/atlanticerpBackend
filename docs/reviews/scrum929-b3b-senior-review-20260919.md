@@ -115,18 +115,18 @@ código revisado ni se dejó en ningún branch):
    comportamiento normal cuando el monto de la corrección supera el umbral configurado — con el default
    real de 5000.00 esto pasa igual en pedidos más grandes), se registra una Corrección de datos #1
    (motivo ITBMS, 7%→3.5%) sobre F-0001. Queda `pendiente_aprobacion`; F-0001 **sigue activa**
-   (`anulada_at` null) porque `executeCorreccion()` todavía no corrió — se difiere hasta que Mark
+   (`anulada_at` null) porque `executeCorreccion()` todavía no corrió — se difiere hasta que Aprobador
    apruebe.
-3. **Antes de que Mark decida sobre la corrección #1**, se registra una Corrección de datos #2 (motivo
+3. **Antes de que Aprobador decida sobre la corrección #1**, se registra una Corrección de datos #2 (motivo
    fecha) contra la MISMA `factura_origen_id` (F-0001) — el request lo permite: `correccionContext()`
    sólo exige `whereNull('anulada_at')`, y F-0001 todavía lo está. Queda también `pendiente_aprobacion`.
    No hay ningún guard (ni en `PreviewCreditNoteCorreccionRequest`, ni en `correccionContext()`, ni en
    `registerCorreccion()`) que impida registrar una segunda corrección contra una factura que ya tiene
    una corrección pendiente de aprobación.
-4. Mark aprueba la corrección #1 (`PUT /notas-credito/{id}/decision`, `approve:true`) → **200 OK**.
+4. Aprobador aprueba la corrección #1 (`PUT /notas-credito/{id}/decision`, `approve:true`) → **200 OK**.
    `executeCorreccion()` anula F-0001 y crea F-0002 (reemplazo, `order_id=2`, `tipo=parcial`) — ahora es
    la única activa con `(order_id=2, tipo=parcial)`.
-5. Mark aprueba la corrección #2 (misma ruta, mismo `note.factura_origen_id` = F-0001, que ya está
+5. Aprobador aprueba la corrección #2 (misma ruta, mismo `note.factura_origen_id` = F-0001, que ya está
    anulada) → **HTTP 500** (`Server Error`). El log real:
    ```
    SQLSTATE[23505]: Unique violation: 7 ERROR: duplicate key value violates unique constraint
@@ -141,7 +141,7 @@ código revisado ni se dejó en ningún branch):
 
 **Efecto real**: la transacción de `decide()` hace rollback (gracias al `DB::transaction()` — no hay
 doble cobro ni dato corrupto, la integridad de dinero la protege el índice único), pero:
-- Mark recibe un 500 sin mensaje útil ("Server Error" genérico, no una `CreditNoteStateException` en
+- Aprobador recibe un 500 sin mensaje útil ("Server Error" genérico, no una `CreditNoteStateException` en
   español como el resto de este mismo método).
 - La nota #2 queda **permanentemente** en `pendiente_aprobacion`: cualquier reintento de aprobarla vuelve
   a chocar con el MISMO índice, siempre — no es una condición transitoria de carrera, es determinístico
@@ -152,8 +152,8 @@ doble cobro ni dato corrupto, la integridad de dinero la protege el índice úni
 de Luis del Punto 4, corregir la TASA de ITBMS de una `parcial` estaba bloqueada con 422
 (`MSG_CORRECCION_TASA_PARCIAL`) — la única corrección permitida sobre una parcial era por FECHA. Ahora
 que el Punto 4 desbloquea correcciones de ITBMS sobre parciales (el caso de uso central del punto), el
-volumen de correcciones sobre facturas parciales va a subir, y con eso la probabilidad de que Felix/
-Yaneth registren una segunda corrección (p. ej. "me equivoqué también en la fecha") antes de que Mark
+volumen de correcciones sobre facturas parciales va a subir, y con eso la probabilidad de que Contabilidad/
+Asistente registren una segunda corrección (p. ej. "me equivoqué también en la fecha") antes de que Aprobador
 revise la primera dentro de este mismo flujo recién habilitado.
 
 **Severidad**: ALTO (no CRÍTICO — el índice único evita cualquier duplicado de dinero real; la app no
@@ -168,7 +168,7 @@ generalizar — en `correccionContext()` (o en el Form Request), rechazar con 42
 re-verificar `facturaOrigen->anulada_at === null` antes de llamar `executeCorreccion()` y lanzar una
 `CreditNoteStateException` legible ("La factura de origen de esta corrección ya fue reemplazada por otra
 corrección — rechace esta nota y regístrela de nuevo contra la factura vigente.") en vez de dejar
-propagar el `QueryException`. Cualquiera de las dos cierra el hueco; la primera además evita que Mark
+propagar el `QueryException`. Cualquiera de las dos cierra el hueco; la primera además evita que Aprobador
 llegue a acumular notas condenadas a fallar.
 
 ### Otros puntos menores del Punto 4

@@ -6,8 +6,8 @@
 Spec de referencia: 5 tickets de Jira (SCRUM-607→611) + mockup adjunto en SCRUM-607
 (`4H__Admin_Contabilidad_CuentasBancarias.html`, attachment 11315).
 
-Primera pantalla del cuerpo principal de Admin&Cont con roles múltiples (Mark/Gerencia, Felix
-`lider_admin_contab`, Yaneth `asistente_administrativa`) en vez del gate exclusivo de Mark de los
+Primera pantalla del cuerpo principal de Admin&Cont con roles múltiples (Aprobador/Gerencia, Contabilidad
+`lider_admin_contab`, Asistente `asistente_administrativa`) en vez del gate exclusivo de Aprobador de los
 2 batches anteriores.
 
 ---
@@ -28,13 +28,13 @@ existentes que hacían match exacto contra el texto viejo de la tab.
 
 ## Verificado en vivo (curl real + Playwright real) — sin más hallazgos
 
-- Gate exclusivo de Mark NO aplica acá (a propósito) — verificado que Felix y Mark ambos acceden a
-  la pantalla general, pero solo Felix/Yaneth pueden `PUT .../assign-account` (REQ-534) — Mark real
-  → 403; Mark → `POST /bank-accounts` → 201 (sí incluido en el gate general, correcto).
+- Gate exclusivo de Aprobador NO aplica acá (a propósito) — verificado que Contabilidad y Aprobador ambos acceden a
+  la pantalla general, pero solo Contabilidad/Asistente pueden `PUT .../assign-account` (REQ-534) — Aprobador real
+  → 403; Aprobador → `POST /bank-accounts` → 201 (sí incluido en el gate general, correcto).
 - RN4 REQ-530 (nunca número completo): confirmado en código y en la respuesta real de la API.
 - Defaults al crear (tipo_cuenta=corriente, moneda=USD, activa=true) — verificado con `POST` real.
 - RN1 REQ-534 (solo comisión sin cuenta): reintentar asignar sobre un movimiento ya asignado → 422
-  real, verificado con Felix.
+  real, verificado con Contabilidad.
 - RN2 REQ-534 (solo cuenta activa): asignar una cuenta `activa:false` → 422 real.
 - `GET /bank-accounts?activa=true` excluye cuentas inactivas — verificado real.
 - Tras el fix: creación real de cuenta vía UI en Playwright → tab muestra la moneda, auto-switch a

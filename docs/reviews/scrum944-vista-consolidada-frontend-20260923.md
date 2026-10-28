@@ -29,10 +29,10 @@ Ninguna.
   duplicar formularios, la vista nueva reusa exactamente los mismos hooks/mutations/endpoints que
   ya usa cada pantalla existente. Ningún storage paralelo, ningún riesgo de que un valor quede
   desincronizado entre la vista vieja y la nueva.
-- **Fiscal (exclusiva de Mark) accesible desde acá sin cambios de backend** — verificado que
+- **Fiscal (exclusiva de Aprobador) accesible desde acá sin cambios de backend** — verificado que
   `EnsureIsPrimaryApprover` (middleware del backend) ya trata `superadmin.all` como bypass
   (decisión de Luis, 2026-08-22, documentada en el propio middleware) — un superadmin que no sea
-  Mark puede ver/editar Fiscal desde `GlobalSettingsPage` sin tocar el gate de esa pantalla.
+  Aprobador puede ver/editar Fiscal desde `GlobalSettingsPage` sin tocar el gate de esa pantalla.
 - **Solo la tab activa monta su panel** (no las 9 a la vez) — evita 9 requests innecesarios por
   visita, con test explícito que verifica que cambiar de tab desmonta el panel anterior.
 - **Test de `GlobalSettingsPage` mockea los 9 Panels a propósito** — el docstring del test explica

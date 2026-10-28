@@ -1,7 +1,7 @@
 # Pre-QA — SCRUM-416 (REQ-346) + SCRUM-420 (REQ-350) — "En atención" no respeta rotación
 
 Fecha: 2026-07-28
-Batch: rebote de marly.rangel (QA) del 2026-07-24, mismo defecto de raíz en ambos tickets.
+Batch: rebote de qa.qa (QA) del 2026-07-24, mismo defecto de raíz en ambos tickets.
 
 ## Contexto y por qué el premise inicial era incorrecto
 
@@ -11,7 +11,7 @@ rotación baja para poder observar la exclusión.
 
 Paso 1 del protocolo (leer el criterio exacto en Jira, no lo que ya se investigó) invalida
 esa premisa: **la exclusión de `rotation='baja'` ya funciona correctamente hoy** (verificado
-abajo). El bug real de marly es otro y es más grave: productos con `rotation = NULL`
+abajo). El bug real de qa es otro y es más grave: productos con `rotation = NULL`
 (que el frontend etiqueta "Compra única", ver `atlanticerp-frontend/src/types/bodega.ts:613-621`)
 se están contando en "En atención" cuando no deberían.
 
@@ -35,12 +35,12 @@ enum válido en backend, `CatalogProduct::ROTATIONS = ['alta','media','baja']`, 
 `app/Modules/VentasDiseno/Models/CatalogProduct.php:66-71` — es una interpretación
 client-side documentada como pendiente de confirmar con Analista, REQ-419). Con el blocklist
 actual, cada uno de esos productos con `rotation=NULL` y stock bajo/sin stock cuenta en "En
-atención" — exactamente lo que marly reportó ("En atención" = "Bajo stock" + "Sin stock" sin
+atención" — exactamente lo que qa reportó ("En atención" = "Bajo stock" + "Sin stock" sin
 descontar nada).
 
 ## Verificación en vivo (Docker local, `atlantic_ventas_diseno.catalog_products`)
 
-Local tiene 13 productos, los 13 con `rotation = NULL` (mismo patrón que dev, donde marly
+Local tiene 13 productos, los 13 con `rotation = NULL` (mismo patrón que dev, donde qa
 reportó 43/43 en "Compra única"). Con ese dataset `kpis()` da `in_attention=0` porque
 ninguno está en bajo/sin stock — así que se probó la lógica pura de `isInAttention()`
 vía `artisan tinker` (instancias en memoria, sin persistir):
@@ -51,7 +51,7 @@ rotation=baja,  sin_stock (stock=0, reorder=5) -> isInAttention: FALSE  ← corr
 rotation=media, sin_stock (stock=0, reorder=5) -> isInAttention: TRUE   ← correcto
 ```
 
-Confirma exactamente el reporte de marly: no es la exclusión de `baja` la que falla (esa
+Confirma exactamente el reporte de qa: no es la exclusión de `baja` la que falla (esa
 funciona), es que `NULL`/"Compra única" no debería contar bajo la RN1 de REQ-346 y hoy cuenta.
 
 ## Por qué esto NO se corrige acá mismo (regla dura del loop, "fix grande o toca diseño")
@@ -80,8 +80,8 @@ Esto requiere una decisión de Arquitecto/Analista, no una resolución unilatera
   el resto del sistema (`stockState()` usa el mismo operador). OK.
 - Chip "Atención" (SCRUM-420) y KPI "En atención" (SCRUM-416) confirmado que llaman al MISMO
   `isInAttention()` (`BodegaInventoryController.php:99`, `BodegaInventoryKpiService.php:57`) —
-  un solo fix resuelve ambos tickets, como ya había notado marly.
-- Chip "Por ingresar" e "Inactivos" de SCRUM-420: sin cambios de código, marly ya los aprobó
+  un solo fix resuelve ambos tickets, como ya había notado qa.
+- Chip "Por ingresar" e "Inactivos" de SCRUM-420: sin cambios de código, qa ya los aprobó
   explícitamente ("Lo que SI funciona") — no forman parte del hallazgo.
 
 ## Veredicto

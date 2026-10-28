@@ -38,12 +38,12 @@ Fix: en `validationErrorsForGenerating` (y el equivalente de ServiceQuoteService
 ---
 
 ---
-# Permiso Consumidor Final (decisión de Luis 2026-09-30: solo Mark y Felix) — VEREDICTO: APROBADO
+# Permiso Consumidor Final (decisión de Luis 2026-09-30: solo Aprobador y Contabilidad) — VEREDICTO: APROBADO
 
 1. Bypass: `receptor_tipo` solo se escribe en 4 sitios, todos cubiertos: `ClientsController::store`/`::storeSubClient` (-> `ClientsService::createClient/addSubClient`), `ClientController::storeSubClient` (Pipeline, `SubClient::create(normalizar($validated))`) y `SubClientTaxDataService::update` vía `ClientTaxDataController::updateTaxData`. Revisados y sin vía de escritura de `receptor_tipo`: PATCH category (`$subClient->update(['category' => ...])`), `ClienteFusionLoader::promoteOne` (ICG; crea con tipo NULL = 01), QuoteService (no crea subclientes), comandos/seeders de demo (NULL), y no hay `fill($request->all())`; la API solo alcanza el modelo con datos de FormRequest ya validados. Superadmin pasa por `hasPermission`.
 2. Orden validación -> permiso: un 03 o datos inválidos dan 422, un 02 válido sin permiso da 403. Lo único que se puede sondear es que el 02 existe como opción, que ya es público en el selector; sin fuga de datos.
-3. `User::hasPermission` usa `effectivePermissions()` (security level + `extra_permissions`) y `superadmin.all`; es el mismo mecanismo del Precio Socio y el permiso angosto de Mark/Felix lo siembra `SpecialPermissionSeeder`. El frontend lee la misma fuente vía el JWT (`usePermission`, con bypass de superadmin).
-4. Coherencia 02 -> 01 -> 02: un vendedor puede dejar de ser consumidor final (ya había identificación que ingresar) pero no volver a marcarlo; no es una escalada, es la regla ("solo Mark/Felix marcan 02") aplicada a la transición. Editar la razón social de un 02 existente no cambia el tipo y queda abierto.
+3. `User::hasPermission` usa `effectivePermissions()` (security level + `extra_permissions`) y `superadmin.all`; es el mismo mecanismo del Precio Socio y el permiso angosto de Aprobador/Contabilidad lo siembra `SpecialPermissionSeeder`. El frontend lee la misma fuente vía el JWT (`usePermission`, con bypass de superadmin).
+4. Coherencia 02 -> 01 -> 02: un vendedor puede dejar de ser consumidor final (ya había identificación que ingresar) pero no volver a marcarlo; no es una escalada, es la regla ("solo Aprobador/Contabilidad marcan 02") aplicada a la transición. Editar la razón social de un 02 existente no cambia el tipo y queda abierto.
 5. Tests: los dos nuevos (3 altas y el PATCH) fallan sin la regla (esperan 403 y que nada se haya creado) y los existentes se adaptaron otorgando el permiso. Faltaría cubrir explícitamente la secuencia 02 -> 01 -> 02 -> 403 y superadmin sin extra_permissions (cobertura menor).
 
 ## Sugerencias menores

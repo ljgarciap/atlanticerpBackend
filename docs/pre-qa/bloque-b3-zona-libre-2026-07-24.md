@@ -9,7 +9,7 @@ en `atlanticerp-frontend`, 0 CRÍTICOs).
 **Método:** app real, Docker local (`infra-*`) + Vite dev server (`localhost:5173`). Backend:
 `infra/test.sh --filter=ZonaLibre` (22 tests) + `curl` directo contra la API real con JWT de
 `almacen@atlantic.com.pa` (lider_bodega) y `gerencia2@atlantic.com.pa` (lider_compras,
-Yirena) para los caminos de ruptura que el feature-test no puede ejercitar en el entorno real
+Lidercompras) para los caminos de ruptura que el feature-test no puede ejercitar en el entorno real
 (rutas HTTP method-not-allowed, 403 en runtime). Frontend: `npx vitest run` (18 tests, incl. 2
 nuevos de esta sesión) + `npx playwright test e2e/preqa-bloque-b3-zona-libre.spec.ts` (4 specs,
 promovido a permanente en `atlanticerp-frontend/e2e/`) contra la app real. Fixtures sembradas a mano vía
@@ -21,8 +21,8 @@ corrida de tests backend, ver nota de memoria `feedback_local_test_db_no_es_fres
 ## Paso 0 — permisos angostos y valores paramétricos
 
 - `compras.zona-libre.approve` (aprobar/rechazar) es un grant individual vía `extra_permissions`
-  a `gerencia2@atlantic.com.pa` (Yirena), **ya presente en `SpecialPermissionSeeder.php`**
-  — no hace falta grant manual. Confirmado que Yirena tiene también `role_key = lider_compras`
+  a `gerencia2@atlantic.com.pa` (Lidercompras), **ya presente en `SpecialPermissionSeeder.php`**
+  — no hace falta grant manual. Confirmado que Lidercompras tiene también `role_key = lider_compras`
   (`BusinessRoleUserSeeder`), que es el rol que usa `remind()` para resolver la audiencia del
   recordatorio — hoy ambos mecanismos apuntan a la misma persona, camino feliz funciona sin
   fricción. Ver nota ACEPTABLE abajo — riesgo de desincronización si el rol cambia de manos, no es
@@ -42,7 +42,7 @@ corrida de tests backend, ver nota de memoria `feedback_local_test_db_no_es_fres
 | SCRUM-437 ver bodegas | Modal con desglose real | Código: `warehouseRows()` filtra `quantity > 0` server-side — nunca fabrica bodegas sin stock. Confirmado con 2 bodegas reales |
 | SCRUM-438 detalles de envío | Terrestre default, editable | Modalidad: `<select disabled>` — genuinamente bloqueada (no solo visualmente gris), confirmado en código y en DOM real |
 | SCRUM-439 guardar orden | Folio + estado inicial correcto | Carrito vacío → panel completo ni se renderiza (doble bloqueo, botón tampoco existe). Folio: consecutivo confirmado con 2 solicitudes seguidas vía curl real (3, 4) además del feature test |
-| SCRUM-440 ciclo de vida | Aprobar genera PurchaseOrder normal | **RN3 (Bodega no edita orden enviada): confirmado con `php artisan route:list` — CERO rutas PUT/PATCH/DELETE para `zona-libre/requests`, cualquier intento devuelve 405 real (probado con curl+JWT real de Bodega, incluso sobre una ya aprobada). PERMISOS: `approve`/`reject` de Bodega vía API real → 403 confirmado (no solo oculto en UI); Yirena vía API real → 200, genera `PurchaseOrder` real (`modality=zona_libre`)** |
+| SCRUM-440 ciclo de vida | Aprobar genera PurchaseOrder normal | **RN3 (Bodega no edita orden enviada): confirmado con `php artisan route:list` — CERO rutas PUT/PATCH/DELETE para `zona-libre/requests`, cualquier intento devuelve 405 real (probado con curl+JWT real de Bodega, incluso sobre una ya aprobada). PERMISOS: `approve`/`reject` de Bodega vía API real → 403 confirmado (no solo oculto en UI); Lidercompras vía API real → 200, genera `PurchaseOrder` real (`modality=zona_libre`)** |
 | SCRUM-441 panel confirmación | Folio + navegación | "Crear una nueva" resetea sin navegar — confirmado en vivo, formulario limpio, sin residuo del carrito anterior |
 | SCRUM-442 bandeja/tabla | 8 columnas correctas | Multi-producto → "2 productos" (no el nombre), confirmado con fixture real de 2 líneas |
 | SCRUM-443 chips filtro | Filtrado por status | Mutuamente excluyentes confirmado en vivo: cada chip reemplaza al anterior, sin combinación — server-side (`?status=`) |
@@ -74,7 +74,7 @@ Commit `ec6511d` en `atlanticerp-frontend`, rama `dev`, **local, sin pushear** �
 
 ## ACEPTABLE (no bloquea)
 
-- `compras.zona-libre.approve` es un grant por persona (Yirena), no por rol — ver Paso 0. Riesgo
+- `compras.zona-libre.approve` es un grant por persona (Lidercompras), no por rol — ver Paso 0. Riesgo
   latente si el rol `lider_compras` cambia de titular (quien reciba el recordatorio vía
   `remind()` no necesariamente tendría el permiso de aprobar), pero sigue el mismo patrón ya
   aprobado del proyecto y está correctamente seedeado — no es el hardcode de email que el encargo
@@ -91,7 +91,7 @@ Commit `ec6511d` en `atlanticerp-frontend`, rama `dev`, **local, sin pushear** �
 Los 13 tickets del batch, incluyendo explícitamente los 3 caminos de ruptura más sensibles del
 lote: RN3 (Bodega no puede editar/eliminar una solicitud ya enviada — ni siquiera existe la ruta,
 405 real), el gate de permisos aprobar/rechazar exclusivo de Compras (403 real para Bodega, 200
-real para Yirena), y el recordatorio resuelto dinámicamente por rol sin ningún hardcode. Folio
+real para Lidercompras), y el recordatorio resuelto dinámicamente por rol sin ningún hardcode. Folio
 consecutivo sin colisiones. Sincronía disponible↔carrito bidireccional. Recalculo de totales
 correcto. Modal "Ver bodegas" sin inventar stock. Chips de filtro mutuamente excluyentes
 server-side. Las 3 variantes de acción por estado con el motivo real del rechazo.
@@ -101,7 +101,7 @@ server-side. Las 3 variantes de acción por estado con el motivo real del rechaz
 **Pasada limpia — listo para pasar a QA.** Un hallazgo MEDIO encontrado y corregido en la misma
 sesión, checklist completo re-corrido tras el fix sin nuevos hallazgos (regla dura cumplida, loop
 cerrado). Pendiente únicamente el push de `atlanticerp-frontend` (`1bf08b4` + `ec6511d`) a `dev` antes de
-que QA (marly) pueda probar en `dev.atlanticerp.ai` — acción coordinada por el hilo principal, no
+que QA (qa) pueda probar en `dev.atlanticerp.ai` — acción coordinada por el hilo principal, no
 ejecutada acá.
 
 **⚠️ Este archivo vive en `atlanticerp-backend/docs/`, que está completo en `.gitignore` (ver memoria

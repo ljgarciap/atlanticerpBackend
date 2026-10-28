@@ -3,14 +3,14 @@
 **Fecha:** 2026-08-23
 **Ambiente:** `dev.atlanticerp.ai` (deploy real verificado — commit `9b14ad8`, dashboard ejecutivo
 mergeado en `57d22eb`)
-**Cuentas usadas:** `whil@atlantic.com.pa` (Gerencia Restringida, Nivel 8 — persona real
-nombrada en los tickets: "Como Mark, David o Whil"), `andres.loi@atlantic.com.pa` /
-`daniela@atlantic.com.pa` (spec previo de SCRUM-163/164), `neil.quiel@atlantic.com.pa`
+**Cuentas usadas:** `gerencia5@atlantic.com.pa` (Gerencia Restringida, Nivel 8 — persona real
+nombrada en los tickets: "Como Aprobador, Gerencia2 o Gerencia5"), `usuario@example.test` /
+`gerencia1@atlantic.com.pa` (spec previo de SCRUM-163/164), `[persona].[persona]@atlantic.com.pa`
 (Vendedor/Diseñador, para el negativo de permisos).
 
 **Nota de alcance:** el epic Gerencia (SCRUM-325) es de otro equipo — esta pasada es el pedido
 puntual de Luis del 2026-08-23. No se transicionó ningún ticket de Jira ni se tocó código; esto es
-reporte puro. `mbekhar@atlantic.com.pa` (Mark) y `andres.loi`/`marly.rangel` con password =
+reporte puro. `gerencia3@test.com` (Aprobador) y `andres.loi`/`qa.qa` con password =
 email por defecto dieron "Credenciales inválidas" — ya deben tener password propio, no es hallazgo
 de Pre-QA.
 
@@ -89,7 +89,7 @@ hallazgos reales**, de los cuales **6 son CRÍTICOS**.
 
 9. **Las 14 fichas (permiso transversal) — `/gerencia` no bloquea la ruta a un rol sin acceso, se
    apoya solo en que el backend devuelve 403.** Logueado como Vendedor/Diseñador
-   (`neil.quiel@atlantic.com.pa`), navegar directo a `/gerencia` NO redirige a otra pantalla:
+   (`[persona].[persona]@atlantic.com.pa`), navegar directo a `/gerencia` NO redirige a otra pantalla:
    la URL se queda en `/gerencia` y se ve el mensaje genérico **"Error al cargar los datos. Intenta
    recargar la página."** — sin ningún indicio de que es un tema de permisos. Verificado por
    network que el backend sí protege el dato real (`GET /api/gerencia/home` y `/api/gerencia/

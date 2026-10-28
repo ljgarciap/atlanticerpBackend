@@ -140,7 +140,7 @@ solo en la UI, como pedía explícitamente el encargo.**
 **Escenarios de ruptura intentados:**
 - Sembrada una `AdjustmentRequestLine` pendiente sobre el mismo producto+bodega. Evaluada +
   reevaluada la línea del conteo para traer de vuelta la diferencia que cruza. **Verificado en
-  tinker INMEDIATAMENTE DESPUÉS de `submit()` (antes de que Mark tocara nada)**: la
+  tinker INMEDIATAMENTE DESPUÉS de `submit()` (antes de que Aprobador tocara nada)**: la
   `AdjustmentRequestLine` y su `AdjustmentRequest` contenedora YA estaban borradas, con
   `GeneralCountRequest.resuelto_at` todavía `NULL` (prueba de que el borrado ocurrió en el envío,
   no en la aprobación). ✅ **RN1 confirmado con evidencia de base de datos, no solo de API.**
@@ -148,11 +148,11 @@ solo en la UI, como pedía explícitamente el encargo.**
     del conteo) → `submit()` NO la tocó (existe test unitario para esto, no re-verificado en vivo
     por redundancia).
 
-**Observación de diseño (no bloqueante para este ticket, informar a Luis/Arquitecto):** si Mark
+**Observación de diseño (no bloqueante para este ticket, informar a Luis/Arquitecto):** si Aprobador
 **rechaza** un conteo general que ya consumió (borró) una `AdjustmentRequestLine` cruzada, esa
 solicitud cíclica queda perdida de forma permanente — no hay manera de recuperarla ni de saber
 que existió (se verificó en vivo: tras rechazar el conteo #26 de la sesión, la línea de ajuste que
-había cruzado seguía borrada). El RN1 de REQ-394 dice explícitamente que el propósito es "que Mark
+había cruzado seguía borrada). El RN1 de REQ-394 dice explícitamente que el propósito es "que Aprobador
 nunca vea dos pendientes contradictorios al mismo tiempo" — el ADR (`Decidido, Luis 2026-07-25`)
 no contempla qué pasa si el conteo que reemplazó la solicitud es luego rechazado. Ninguno de los 7
 tickets pide reversión en ese caso, así que no lo trato como hallazgo bloqueante de este batch —
@@ -192,7 +192,7 @@ número, no el placeholder.
      bloquea antes de llegar al controller). ✅
   2. Usuario CON `bodega.approve` concedido pero que NO es el `mark_approver_user_id` configurado
      (grant temporal a `gerencia@atlantic.test`, revertido al cierre) → pasa el middleware,
-     pero `resolveMarkAccess()` responde 403 "Solo Mark puede aprobar o rechazar esta solicitud".
+     pero `resolveMarkAccess()` responde 403 "Solo Aprobador puede aprobar o rechazar esta solicitud".
      ✅ Esta es la variante que realmente prueba el gate de negocio (no solo el de permisos), y
      coincide con el mismo mecanismo de `AdjustmentRequestController`/`RelocationRequestController`.
   3. Confirmado además que el candado (`IcoLock`) es SVG propio, nunca el emoji `🔒` del mockup
@@ -206,8 +206,8 @@ número, no el placeholder.
 `CountsTrayPanel` existe también en `BodegasPage.tsx`/reubicación — no es una regresión de B5,
 es consistente con el resto de Bodega; no lo elevo como hallazgo de este batch).
 **Lo que sí funciona (tras el fix):** las 7 columnas de RN3 completas y con datos reales; 4 chips
-(RN4); acción por fila según estado (RN5); gate de Mark verificado en sus DOS variantes (sin el
-permiso, y con el permiso pero sin ser Mark).
+(RN4); acción por fila según estado (RN5); gate de Aprobador verificado en sus DOS variantes (sin el
+permiso, y con el permiso pero sin ser Aprobador).
 
 ---
 
@@ -272,5 +272,5 @@ como pendiente explícito para escalar a Luis/Arquitecto.
 - Sin `alert()`/`confirm()`/`prompt()` nativos — el modal de cruce y el de rechazo son componentes
   React propios.
 - Sin umbral/margen de negocio hardcodeado en el controller (solo constantes de enum de estado).
-- Gate de Mark verificado en sus dos variantes reales (sin permiso / con permiso pero no-Mark),
+- Gate de Aprobador verificado en sus dos variantes reales (sin permiso / con permiso pero no-Aprobador),
   igual que `AdjustmentRequestController`/`RelocationRequestController`.

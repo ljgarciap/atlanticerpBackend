@@ -81,7 +81,7 @@ class ServiciosDemoSeeder extends Seeder
             ->pluck('id')
             ->all();
 
-        [$carlos, $pedro, $agustin, $miguel] = [
+        [$tecnico1, $tecnico2, $tecnico3, $tecnico4] = [
             $technicianIds[0] ?? null, $technicianIds[1] ?? null,
             $technicianIds[2] ?? null, $technicianIds[3] ?? null,
         ];
@@ -96,12 +96,12 @@ class ServiciosDemoSeeder extends Seeder
                 null, DemoDataset::sitio(1)],
             [Ticket::TIPO_INSTALLATION, Ticket::SUBTIPO_INSPECTION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_SCHEDULED, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                $carlos, DemoDataset::sitio(2)],
+                $tecnico1, DemoDataset::sitio(2)],
             // GATE CASE — on_site, informe todavía pendiente: intentar mover a "Resuelto" debe
             // bloquear con el mensaje de informe (REQ-218 RN1a/RN4).
             [Ticket::TIPO_INSTALLATION, Ticket::SUBTIPO_INSPECTION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_ON_SITE, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                $pedro, DemoDataset::sitio(3)],
+                $tecnico2, DemoDataset::sitio(3)],
             [Ticket::TIPO_INSTALLATION, Ticket::SUBTIPO_INSTALLATION, Ticket::TIPO_INSTALACION_SUBCONTRACTED,
                 Ticket::ESTADO_RESOLVED, Ticket::QUOTE_STATUS_APPROVED, Ticket::INSPECTION_STATUS_COMPLETED,
                 null, DemoDataset::sitio(4)],
@@ -111,22 +111,22 @@ class ServiciosDemoSeeder extends Seeder
                 null, DemoDataset::sitio(5)],
             [Ticket::TIPO_WARRANTY, Ticket::SUBTIPO_REPLACEMENT_INSPECTION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_SCHEDULED, Ticket::QUOTE_STATUS_DRAFT, Ticket::INSPECTION_STATUS_PENDING,
-                $agustin, DemoDataset::sitio(6)],
+                $tecnico3, DemoDataset::sitio(6)],
             // GATE CASE — informe completo pero cotización solo "Enviada" (no Aprobada): intentar
             // cerrar debe bloquear con el mensaje de cotización (REQ-218 RN1b/RN4).
             [Ticket::TIPO_WARRANTY, Ticket::SUBTIPO_WARRANTY_GENERIC, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_ON_SITE, Ticket::QUOTE_STATUS_SENT, Ticket::INSPECTION_STATUS_COMPLETED,
-                $miguel, DemoDataset::sitio(7)],
+                $tecnico4, DemoDataset::sitio(7)],
             [Ticket::TIPO_WARRANTY, Ticket::SUBTIPO_REPLACEMENT_INSPECTION, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_CLOSED, Ticket::QUOTE_STATUS_APPROVED, Ticket::INSPECTION_STATUS_COMPLETED,
-                $carlos, DemoDataset::sitio(8)],
+                $tecnico1, DemoDataset::sitio(8)],
 
             [Ticket::TIPO_CLAIM, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_REPORTED, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
                 null, DemoDataset::sitio(9)],
             [Ticket::TIPO_CLAIM, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_SCHEDULED, Ticket::QUOTE_STATUS_DRAFT, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
-                $pedro, DemoDataset::sitio(10)],
+                $tecnico2, DemoDataset::sitio(10)],
             [Ticket::TIPO_CLAIM, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_CANCELLED, Ticket::QUOTE_STATUS_REJECTED, Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
                 null, DemoDataset::sitio(11)],
@@ -136,10 +136,10 @@ class ServiciosDemoSeeder extends Seeder
                 null, DemoDataset::sitio(12)],
             [Ticket::TIPO_RETROFIT, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_ON_SITE, Ticket::QUOTE_STATUS_PENDING, Ticket::INSPECTION_STATUS_PENDING,
-                $agustin, DemoDataset::sitio(13)],
+                $tecnico3, DemoDataset::sitio(13)],
             [Ticket::TIPO_RETROFIT, null, Ticket::TIPO_INSTALACION_INTERNAL,
                 Ticket::ESTADO_RESOLVED, Ticket::QUOTE_STATUS_APPROVED, Ticket::INSPECTION_STATUS_COMPLETED,
-                $miguel, DemoDataset::sitio(14)],
+                $tecnico4, DemoDataset::sitio(14)],
         ];
 
         foreach ($rows as [$tipo, $subtipo, $tipoInstalacion, $estado, $quoteStatus, $inspectionStatus, $technicianId, $cliente]) {

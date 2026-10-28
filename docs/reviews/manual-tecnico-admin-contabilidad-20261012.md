@@ -14,7 +14,7 @@ Estado de comisiones internas y externas, monto y régimen de la comisión exter
 | 1 | El evento se llama `admincont.invoice.created` | Es `admin_contab.invoice.created`. |
 | 2 | Una nota pasa a aprobación si supera el umbral o es corrección | Pasa si el monto supera el umbral **o** es anulación completa; la corrección, si el total de la factura nueva supera el umbral. |
 | 3 | Un gasto rechazado puede reabrirse hasta el máximo de intentos | Cada rechazo suma un intento; solo uno `rechazado_permanente` se reabre, y la reapertura pone el contador en 0. |
-| 4 | Mark decide notas, incobrables y % | También aprueba el arqueo y la caja chica, y es el único que edita tramos de comisión (grupos `primary_approver_only`). |
+| 4 | Aprobador decide notas, incobrables y % | También aprueba el arqueo y la caja chica, y es el único que edita tramos de comisión (grupos `primary_approver_only`). |
 | 5 | `MarkOrderInvoiceReady` marca el pedido como facturado | Está registrado pero sin efecto: Bodega calcula "facturado" en vivo (ver manual de Bodega). |
 
 ## Hallazgos de contenido que el manual deja registrados (no se corrigieron)

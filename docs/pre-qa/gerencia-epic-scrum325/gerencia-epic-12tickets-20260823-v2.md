@@ -4,7 +4,7 @@
 **Ambiente:** `dev.atlanticerp.ai` — backend `9676a3a0f578...` (verificado idéntico al HEAD local de
 `dev`, ver sesión), frontend en sync con `origin/dev` (`a878725...`), **cero commits relacionados
 a Gerencia entre la primera pasada y esta**.
-**Cuenta usada:** `whil@atlantic.com.pa` (Gerencia Restringida, Nivel 8). `daniela@
+**Cuenta usada:** `gerencia5@atlantic.com.pa` (Gerencia Restringida, Nivel 8). `gerencia1@
 atlantic.com.pa` ya no acepta password por defecto (401) — no se pudo repetir la comparación
 cruzada de usuarios que sí funcionó el 2026-08-22; no fue necesaria para el hallazgo principal (ver
 abajo, confirmado por código).
@@ -74,7 +74,7 @@ backend como en frontend, no solo por comportamiento en pantalla:
 **Consecuencia para cada criterio:**
 - SCRUM-161 RN1/RN2 (listado personalizado por usuario, según el tipo de solicitud que le
   corresponde a cada uno) — **imposible de ejercitar**: el backend devuelve `[]` incondicional
-  para cualquier usuario, confirmado en vivo con Whil (`GET /api/gerencia/home` → `aprobaciones:
+  para cualquier usuario, confirmado en vivo con Gerencia5 (`GET /api/gerencia/home` → `aprobaciones:
   []`, `status: 200`).
 - SCRUM-161 RN3 (cada fila muestra descripción/módulo/motivo) — **no implementado**, solo hay un
   placeholder `—`.

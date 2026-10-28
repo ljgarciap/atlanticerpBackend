@@ -80,7 +80,7 @@ o cualquier cambio futuro de UI que reintroduzca el link — le daba acceso real
 incluyendo el campo `tarifa_dia` (costo/día de cada subcontratista) que el diseño nunca le asignó.
 
 **Verificado en vivo antes del fix:** `GET /api/servicios/external-technicians` con el usuario real
-`milena.e@grupolafayette.com` (`vendedor_disenador`) → `200`, listado completo con tarifas
+`usuario@example.test` (`vendedor_disenador`) → `200`, listado completo con tarifas
 visibles.
 
 **Fix aplicado** (mismo día, este pase): `atlanticerp-backend/routes/servicios.php` — ambas rutas GET de
@@ -88,7 +88,7 @@ visibles.
 `role:superadmin,lider_servicios,management,tecnico_servicios,garantias_servicios` (mismo
 mecanismo `role:` ya usado en el resto del archivo para restricciones más angostas que el permiso
 de módulo). Re-verificado en vivo tras el fix:
-- `vendedor_disenador` (`milena.e@grupolafayette.com`) → `403` en index y show.
+- `vendedor_disenador` (`usuario@example.test`) → `403` en index y show.
 - `vendedor_disenador` conserva `200` en `GET /api/servicios/tickets` (módulo no afectado).
 - `tecnico_servicios` (`carlos@atlantic.com.pa`) y `garantias_servicios`
   (`garantias@atlantic.com.pa`) conservan `200` (RN5 — técnico interno solo-consulta).
@@ -181,7 +181,7 @@ de endurecimiento transversal del módulo (decisión de Arquitecto, no de Pre-QA
 | Sin proyectos asignados → mensaje "Aún no tiene proyectos asignados" (RN3) | OK — API y Playwright |
 | `puede_ver_costos` gateado por rol (RN2: Aaron/Gerencia sí, técnico interno no) | OK — test existente + verificado en vivo (`lider_servicios`/`management` → `true`, `tecnico_servicios` → `false`) |
 | Tabla se actualiza automáticamente desde ítems Subcontratado de Cotización (RN1) | No ejercitable — depende de REQ-232 (Batch 11-12), no existe todavía. Contrato (`proyectos_asignados: []`) verificado |
-| Nota de mapeo de roles: Excel dice "Aaron, Mark, David y Whil" (RN2); implementación usa `role:superadmin,lider_servicios,management` | Consistente con el mapeo ya usado en el resto del proyecto ("Gerencia" = Mark/David/Whil, confirmado en la hoja "Matriz de Permisos por Rol" del mismo Excel, fila 5 header). No es un hallazgo — mismo patrón que REQ-264/265/266 |
+| Nota de mapeo de roles: Excel dice "Aaron, Aprobador, Gerencia2 y Gerencia5" (RN2); implementación usa `role:superadmin,lider_servicios,management` | Consistente con el mapeo ya usado en el resto del proyecto ("Gerencia" = Aprobador/Gerencia2/Gerencia5, confirmado en la hoja "Matriz de Permisos por Rol" del mismo Excel, fila 5 header). No es un hallazgo — mismo patrón que REQ-264/265/266 |
 
 ---
 

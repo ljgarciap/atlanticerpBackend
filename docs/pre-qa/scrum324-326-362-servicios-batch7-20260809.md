@@ -33,7 +33,7 @@ cambios de este batch **no commiteados todavía**. No se corrió contra `dev.atl
   cubierto en cambio por los 3 tests automatizados con `Carbon::setTestNow()` (dentro y fuera de
   horario, con y sin visitas), corridos en vivo (`infra/test.sh`, 13/13 verdes).
 - RN2 "visitas hoy" suma del equipo — cubierto por test automatizado con un ticket agendado hoy
-  para Carlos Vergara (`test_stats_suma_visitas_de_todo_el_equipo`), corrido en vivo.
+  para Tecnico Test (`test_stats_suma_visitas_de_todo_el_equipo`), corrido en vivo.
 - RN3 "promedio 1ra visita excluye técnicos sin historial" — hoy siempre `null` porque
   `pct_resuelto_primera_visita` es un placeholder documentado (REQ-211/Batch 15 no existe
   todavía) — UI muestra "—", nunca "0%" ni "NaN%". Confirmado en pantalla y por test
@@ -50,7 +50,7 @@ son puramente de cálculo, visibles para todos los roles del módulo (confirmado
 ### Camino feliz + ruptura ejercitados
 - Escenario 1 literal — cambiar de Equipo a Agenda y volver, sin recarga visible ni pérdida de
   datos. Verificado en vivo con Playwright: al volver a "Equipo" tras pasar por "Agenda equipo",
-  "Carlos Vergara" es visible con timeout de 1000ms (sin `waitFor`/loading intermedio) — confirma
+  "Tecnico Test" es visible con timeout de 1000ms (sin `waitFor`/loading intermedio) — confirma
   que TanStack Query sirve el dato cacheado de inmediato (stale-while-revalidate), no un
   refetch-then-render.
 - RN1 "ambas vistas leen de los mismos datos" — el código de este batch no agrega lógica nueva acá
@@ -65,7 +65,7 @@ son puramente de cálculo, visibles para todos los roles del módulo (confirmado
 ### Escenarios literales de Jira — los 3 pasan
 - Escenario 1 (conversión automática al guardar) — verificado end-to-end (API + UI): 4.7→100%,
   0 incidencias→100%; también verificado en valores boundary exactos (ver abajo).
-- Escenario 2 (SLA configurable) — Gerencia (`daniela@atlantic.com.pa`) ajusta `warranty` de
+- Escenario 2 (SLA configurable) — Gerencia (`gerencia1@atlantic.com.pa`) ajusta `warranty` de
   3→4 vía `PATCH .../sla-settings`, el resto de los tipos no cambia (confirmado con
   `assertJsonPath('data.claim', 2)` en el mismo request).
 - Escenario 3 (mes sin capturar → "Pendiente de captura") — verificado en UI (captura de pantalla)
@@ -79,14 +79,14 @@ Probado en vivo vía API y UI (no solo con valores "cómodos" alejados del lími
 - Actitud `2.5` → 50% (fórmula lineal `(2.5/5)*100`), `4.5` → 90%.
 Los 3 boundary suman evidencia consistente con `CommissionCalculationService` — sin off-by-one.
 
-### RN1/RN5 — `has_bonus_plan` (solo Carlos Vergara) + rol (Aaron/Gerencia/superadmin)
-- Botón "Comisión del mes" solo visible en la tarjeta de Carlos Vergara — ausente en Miguel
-  Castillo, Pedro Santos, Agustín Rodríguez (los 3 sin plan activo), confirmado en pantalla y con
+### RN1/RN5 — `has_bonus_plan` (solo Tecnico Test) + rol (Aaron/Gerencia/superadmin)
+- Botón "Comisión del mes" solo visible en la tarjeta de Tecnico Test — ausente en Miguel
+  [persona], Pedro [persona], [persona] [persona] (los 3 sin plan activo), confirmado en pantalla y con
   Playwright (`getByText('Comisión del mes')` cuenta exactamente 1 en toda la grilla).
 - `tecnico_servicios` (Carlos, viendo su propia tarjeta) NO ve el botón aunque su propio plan esté
   activo — el gate es de ROL, no "es el dueño del plan".
 - Backend, camino de ruptura primero (antes del camino feliz):
-  - `GET`/`PUT .../commission-capture` sobre Miguel Castillo (sin plan) → **422** en ambos casos,
+  - `GET`/`PUT .../commission-capture` sobre Miguel [persona] (sin plan) → **422** en ambos casos,
     con `lider_servicios` autenticado (rol correcto, pero técnico sin plan — confirma que el gate
     de elegibilidad es independiente del gate de rol).
   - `PUT .../commission-capture` sobre Carlos como `tecnico_servicios` → **403** (rol sin permiso,
@@ -107,8 +107,8 @@ Los 3 boundary suman evidencia consistente con `CommissionCalculationService` �
 ### RN5 — trazabilidad de auditoría en edición
 Verificado en vivo con 2 requests reales, no solo por inspección de código:
 1. Aaron crea la captura de agosto → `captured_by: Aaron`, `updated_by: null`.
-2. Daniela (Gerencia) edita la misma captura → `captured_by` **se mantiene** "Aaron" (no se pisa),
-   `updated_by` pasa a "Daniela". Confirmado también contra la tabla directamente
+2. Gerencia1 (Gerencia) edita la misma captura → `captured_by` **se mantiene** "Aaron" (no se pisa),
+   `updated_by` pasa a "Gerencia1". Confirmado también contra la tabla directamente
    (`captured_by`/`updated_by` por id de usuario, no solo por nombre de la respuesta JSON).
 3. Aaron vuelve a editar 3s después → `updated_at` cambia de verdad (`02:12:15` → `02:12:30`),
    `created_at` no se toca — descarta que el primer chequeo (mismo segundo) fuera un falso
@@ -169,7 +169,7 @@ ya cerrado (verificado).
 calcula `year`/`month` con `new Date()` del navegador en cada apertura, tanto para el `GET` como
 para el `PUT` — no hay selector de mes/año, ni siquiera una **etiqueta visible** que diga qué
 período se está viendo/editando (el título del modal es literalmente "Comisión del mes — Carlos
-Vergara", sin año ni mes). Confirmado visualmente (captura de pantalla adjunta al comentario de
+Tecnico", sin año ni mes). Confirmado visualmente (captura de pantalla adjunta al comentario de
 Jira) e inspeccionando el componente.
 
 **Impacto concreto:** si Aaron/Gerencia abre el modal el día 1 de un mes nuevo para cargar los
@@ -235,15 +235,15 @@ Paso 1-4 entero para SCRUM-362, no solo el selector.
   pasado (junio 2026: 3.5→60%, 1→50%, 2.5→50%) y contra la respuesta de la API — mismos resultados
   que la 1ra pasada, sin regresión.
 - **RN1/RN5 — gate `has_bonus_plan` + rol** — repetido: botón "Comisión del mes" solo en la tarjeta
-  de Carlos Vergara (Playwright, conteo exacto 1), ausente para `tecnico_servicios` viendo su
+  de Tecnico Test (Playwright, conteo exacto 1), ausente para `tecnico_servicios` viendo su
   propia tarjeta. Sin regresión.
 - **RN2 — SLA solo-Gerencia** — repetido: Aaron ve los 4 campos deshabilitados, Gerencia puede
   editar. Sin regresión.
 - **RN6 — "Pendiente de captura"** — repetido para el mes en curso sin captura. Sin regresión.
 - **RN5 — auditoría `captured_by`/`updated_by`** — re-verificado, ahora explícitamente **cruzando
   períodos** (no solo el mes en curso, que era el único caso cubierto en la 1ra pasada): Aaron creó
-  la captura de junio 2026 (2 meses atrás) vía API directa, Daniela la editó después — resultado
-  `captured_by: "Aaron"` (se mantiene), `updated_by: "Daniela"`. Confirmado también que julio 2026
+  la captura de junio 2026 (2 meses atrás) vía API directa, Gerencia1 la editó después — resultado
+  `captured_by: "Aaron"` (se mantiene), `updated_by: "Gerencia1"`. Confirmado también que julio 2026
   (nunca tocado) sigue devolviendo `data: null` y que agosto 2026 (mes en curso, tocado por otra
   parte del checklist) es independiente — sin bleed-through entre columnas de la tabla por
   período. Ver curls de evidencia abajo.
@@ -263,7 +263,7 @@ Paso 1-4 entero para SCRUM-362, no solo el selector.
   confirmado deshabilitado apenas se abre el modal (mes actual); tras retroceder 2 meses, queda
   habilitado y avanza mes a mes correctamente hasta volver a deshabilitarse en el mes actual.
 - **Trazabilidad cruzando períodos** — ver RN5 arriba, verificado también desde la UI (el
-  formulario muestra el valor editado por Daniela, no el original de Aaron, al navegar a junio).
+  formulario muestra el valor editado por Gerencia1, no el original de Aaron, al navegar a junio).
 - **Label coincide con el período mostrado, en ambos locales**: `es` → "agosto de 2026" / "junio de
   2026" (formato real de `toLocaleDateString('es', ...)`, con "de" — la primera versión de este
   chequeo tenía una regex de test equivocada sin "de", corregida); `en` → "August 2026" / "June
@@ -296,8 +296,8 @@ querer reutilizaba un período ya cacheado por `staleTime: 30_000`, nunca dispar
 ```
 PUT .../internal-technicians/1/commission-capture {"year":2026,"month":6,...} (Aaron)
   → captured_by: "Aaron", updated_by: null
-PUT .../internal-technicians/1/commission-capture {"year":2026,"month":6,...} (Daniela)
-  → captured_by: "Aaron", updated_by: "Daniela"
+PUT .../internal-technicians/1/commission-capture {"year":2026,"month":6,...} (Gerencia1)
+  → captured_by: "Aaron", updated_by: "Gerencia1"
 GET .../internal-technicians/1/commission-capture?year=2026&month=7 → data: null (nunca tocado)
 GET .../internal-technicians/1/commission-capture?year=2026&month=8 → data: null (independiente)
 ```
@@ -309,7 +309,7 @@ GET .../internal-technicians/1/commission-capture?year=2026&month=8 → data: nu
 - Ningún cambio de código de producto por parte de Pre-QA en este re-check — el fix del selector
   de período ya lo había implementado el Arquitecto antes de este re-check; el checklist completo
   no encontró regresiones ni hallazgos nuevos.
-- Datos de prueba (capturas de comisión de junio/julio/agosto 2026 para Carlos Vergara, creadas
+- Datos de prueba (capturas de comisión de junio/julio/agosto 2026 para Tecnico Test, creadas
   vía curl/UI durante la verificación) limpiados de la base de dev local al terminar — no quedan
   residuos.
 

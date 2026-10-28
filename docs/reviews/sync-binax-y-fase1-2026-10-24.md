@@ -34,7 +34,7 @@ Ninguno.
 1. **`config/database.php:192`, `.env.example:268`** — `LAFAYETTE_DB_HOST` apunta por defecto a `app.grupolafayette.com`, un host de otra empresa.
    Si alguien activa el módulo Legacy con el `.env.example` copiado, intenta conectarse a esa infra.
    Sugerencia: default vacío/`null` y fallar claro si falta; se resuelve naturalmente en la Fase 5.
-2. **`ReportsController::comisionCarlosVergara`, ruta `/comision-carlos-vergara`, tipos/componentes del frontend** — nombre de persona en una URL de API y en identificadores (~18 ocurrencias en frontend, 5 en backend).
+2. **`ReportsController::comisionCarlosPersona`, ruta `/comision-carlos-tecnico`, tipos/componentes del frontend** — nombre de persona en una URL de API y en identificadores (~18 ocurrencias en frontend, 5 en backend).
    Esto escapó a `depersonalize.py`, que cubrió datos y mensajes pero no identificadores de código.
    El gate en sí es correcto (permiso `...commission.view_own`, no un ID hardcodeado).
    Aparte, el técnico se resuelve con `InternalTechnician::where('has_bonus_plan', true)->first()`: supone **uno solo** con plan de bonificación; con dos, el reporte devuelve uno arbitrario.

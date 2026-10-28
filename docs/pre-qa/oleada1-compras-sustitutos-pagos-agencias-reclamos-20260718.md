@@ -70,9 +70,9 @@ los tickets — "camino de ruptura que el ticket no previó" (Paso 3 del protoco
 | Historial acumula cada registro por separado | ✅ `[60, 40]`, no se mezclan |
 | Cambiar monto con pagos ya registrados (RN7) | ✅ 422 |
 | "Enviar a pago" no bloquea el registro real | ✅ ambos flujos coexisten |
-| Cambio de monto sin pagos → pendiente de Mark | ✅ `total_amount` no cambia hasta aprobar |
-| No-Mark intenta aprobar | ✅ 403 |
-| Mark aprueba (sin pagos en el medio) | ✅ `total_amount` se actualiza |
+| Cambio de monto sin pagos → pendiente de Aprobador | ✅ `total_amount` no cambia hasta aprobar |
+| No-Aprobador intenta aprobar | ✅ 403 |
+| Aprobador aprueba (sin pagos en el medio) | ✅ `total_amount` se actualiza |
 | **Aprobar cambio obsoleto (pago registrado en el medio)** | ✅ 422 tras fix #3, `total_amount` queda intacto, `pending_amount_change` se limpia |
 | UI: panel de pagos en detalle de orden | ✅ verificado en navegador — estado/pagado/saldo/botones/historial |
 

@@ -31,7 +31,7 @@ Investigación de código confirmada archivo por archivo (no asumida):
   lado del código** — Batch 11 (`anulacion_completa` subtipo `cancelado`) reduce saldo vía
   `saldo_aplicado`, no marca `anulada_at`. Este batch es el primer escritor real de ese campo.
 - No existe ningún método `approve()`/`reject()` de notas pendientes de aprobación todavía — eso es
-  Batch 13 (REQ-494, exclusivo Mark) explícito en comentario de `CreditNoteService.php:183`. El
+  Batch 13 (REQ-494, exclusivo Aprobador) explícito en comentario de `CreditNoteService.php:183`. El
   mismo patrón aplica a `correccion`: Batch 12 registra y, si califica, ejecuta de inmediato; si
   queda pendiente, Batch 13 la ejecuta al aprobar — mismo contrato que los otros 3 tipos.
 - `AdminContInvoiceFolioService::next()` ya existe y es el mismo folio usado por Facturación

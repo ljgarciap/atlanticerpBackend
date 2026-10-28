@@ -12,7 +12,7 @@ use Illuminate\Database\Seeder;
 /**
  * Fase 4 — Servicios, Batch 6 (REQ-255→260) — backfill de `internal_technicians` para los 4
  * técnicos internos reales que ya existen como `User` desde `BusinessRoleUserSeeder`/
- * `CoreUserSeeder` (Tecnico Test, Tecnico Test 2, Agustín Rodríguez, Tecnico Garantias Test). Corre en
+ * `CoreUserSeeder` (Tecnico Test, Tecnico Test 2, Test 3, Tecnico Garantias Test). Corre en
  * TODOS los entornos — son personas reales, no datos demo. Create-only-if-not-exists por
  * `user_id`, nunca pisa un color/especialidad ya asignados a mano.
  *

@@ -55,7 +55,7 @@ subir el pool no es una garantía, el generador por texto sí (con él ese caso 
 `SubstituteSimilarityService::closenessScore()` calcula `100 − |Δ| / original × 100`; con un original de margen negativo (costo mayor que el precio, p. ej. el 691: precio 62,57,
 costo 113,04, margen −80,7 %) el divisor es negativo y el "descuento" se suma: `similarity_percent` sale > 100 (117,3 % medido) y el término de margen premia a los candidatos
 LEJANOS al margen del original. La preselección replica la fórmula tal cual (paridad exacta con `rank()`); corregirla es una decisión de regla de negocio (la fórmula la
-especificó Daniela, SCRUM-246) y va en un ticket aparte, no en este.
+especificó Gerencia1, SCRUM-246) y va en un ticket aparte, no en este.
 
 ## Criterios de aceptación
 1. El endpoint responde 200 en < 500 ms (p95 por HTTP) con pico < 64 MB para un proveedor de ~26K productos, con y sin `search`.

@@ -128,12 +128,12 @@ La decisión de "¿puede este usuario actuar sobre este tipo?" es siempre `Aprob
 
 | Tipo | Quién puede |
 |---|---|
-| `purchase_order` | Solo Mark (`primary_approver_user_id` de `ComprasSettings`); sin override por regla. |
-| `relocation`, `adjustment`, `general_count` | Mark, o cualquier usuario con una regla activa para ese tipo. |
+| `purchase_order` | Solo Aprobador (`primary_approver_user_id` de `ComprasSettings`); sin override por regla. |
+| `relocation`, `adjustment`, `general_count` | Aprobador, o cualquier usuario con una regla activa para ese tipo. |
 | `zona_libre` | El permiso `compras.zona-libre.approve`, o una regla activa para ese tipo. |
 | (cualquiera) | `superadmin.all` siempre. |
 
-Si `primary_approver_user_id` es nulo, el gate no bloquea a nadie por ser Mark.
+Si `primary_approver_user_id` es nulo, el gate no bloquea a nadie por ser Aprobador.
 
 - **Bandeja:** `pendingApprovalsSection()` solo muestra las secciones para las que el usuario pasa el gate. Lo que aparece es exactamente lo que puede accionar. Cada módulo se limita a 20 ítems por bandeja en este agregador.
 - **Aprobar:** para los cuatro tipos que no son orden de compra, **delega** en el controlador del módulo dueño (`RelocationRequestController`, `AdjustmentRequestController`, `GeneralCountController`, `ComprasZonaLibreRequestController`), de modo que se reutilizan sus constantes, sus bloqueos de concurrencia y sus reglas. La orden de compra mantiene una lógica propia y mínima.
@@ -237,7 +237,7 @@ Base: `/api/gerencia` (dev: `https://dev.atlanticerp.ai/api/gerencia`). Generada
 | Qué | Permiso o rol |
 |---|---|
 | Ver todo el tablero y aprobar o rechazar | `gerencia.view` (rol `management`) |
-| Decidir cada tipo concreto | `AprobacionGate` (Mark, regla activa o permiso específico) |
+| Decidir cada tipo concreto | `AprobacionGate` (Aprobador, regla activa o permiso específico) |
 | Reglas de aprobación | `role:superadmin` |
 
 **Trampa v1/v2:** los permisos efectivos del JWT (`permissions`) pueden diferir de `$user->hasPermission()`. `GerenciaHomeController` pasa los del JWT a `ApprovalsPendingService`; `AprobacionGate::canAct()` usa `hasPermission()` para `zona_libre`. Si tocas esto, léelo del JWT y revisa el documento `ApprovalsPendingService` (explica por qué `zona_libre` mantiene la unión de ambos).
@@ -329,7 +329,7 @@ Regla en el `validate` de `home` y `export`, parámetro en `GerenciaHomeService:
 
 **Rendimiento.** `saludModulos()` carga todas las órdenes de compra no recibidas en PHP para contar las críticas; `GerenciaHomeService` calcula todo en cada carga, sin caché.
 
-**Aprobación de órdenes de compra desde Gerencia.** Es una implementación mínima y propia que fija `approved_by` sin comprobar si la orden requería aprobación (el gate ya limita a Mark). Está fuera del rediseño a propósito (es el flujo de dinero real), pero duplica `PurchaseOrderController::approve()`.
+**Aprobación de órdenes de compra desde Gerencia.** Es una implementación mínima y propia que fija `approved_by` sin comprobar si la orden requería aprobación (el gate ya limita a Aprobador). Está fuera del rediseño a propósito (es el flujo de dinero real), pero duplica `PurchaseOrderController::approve()`.
 
 **Reglas de aprobación.**
 - `tipo` es texto libre: se puede crear una regla con un tipo que ningún gate reconoce y no tendría efecto.
@@ -359,7 +359,7 @@ Regla en el `validate` de `home` y `export`, parámetro en `GerenciaHomeService:
 | **CxC** | Cuentas por cobrar. "Al día" = no vencidas. |
 | **Margen real / cotizado** | Margen de lo facturado / de lo aprobado en el período. |
 | **Salud por módulo** | Tarjeta resumen de un módulo en el Home. |
-| **Mark** | Aprobador configurado en `ComprasSettings.primary_approver_user_id`. |
+| **Aprobador** | Aprobador configurado en `ComprasSettings.primary_approver_user_id`. |
 | **Pipeline** | Embudo de proyectos de Ventas & Diseño (`PipelineCard`). |
 
 <!-- nav-manuales:inicio -->

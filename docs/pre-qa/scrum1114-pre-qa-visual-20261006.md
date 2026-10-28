@@ -1,6 +1,6 @@
 # SCRUM-1114 — Pre-QA + Visual Review fusionados (2026-10-06)
 
-Entorno: https://dev.atlanticerp.ai (backend 231d8816, frontend 03ecb67). Cuentas: superadmin luis.garcia@ (login con su password por defecto, sin cambiar nada), no superadmin fefi@ (vendedor_disenador) y daniela@ (management).
+Entorno: https://dev.atlanticerp.ai (backend 231d8816, frontend 03ecb67). Cuentas: superadmin luis.garcia@ (login con su password por defecto, sin cambiar nada), no superadmin [persona]@ (vendedor_disenador) y gerencia1@ (management).
 Evidencia: capturas en `docs/pre-qa/scrum1114-20261006/` y specs temporales sin commitear `atlanticerp-frontend/e2e/_preqa_scrum1114*.spec.ts`.
 SMTP de dev = Mailpit (`MAIL_HOST=mailpit`), nunca llega a personas reales. No se ejecutó ninguna corrida real, --force, reversa ni init-baseline. Estado de ajustes restaurado al final (activo=false, umbrales 30/2000/30000/80/48, correos []). Sin ban de CrowdSec.
 
@@ -36,12 +36,12 @@ Extras de la spec:
 | Interruptor activo: guardar → "activas"; revertir | PASA |
 | Validaciones de cliente: % 51/-1/vacío/"12,5" bloquean; 50 permite; por producto 50001/0/1,5 bloquean, 50000 permite; total 500001/abc bloquean, 500000 permite; correos "foo"/"a@x" bloquean, 21 correos bloquean; el botón "Guardar ajustes" queda deshabilitado | PASA (ver M1) |
 | Doble clic en Guardar | PASA: 1 solo PUT |
-| NO superadmin (fefi): sin ítem Migración en el menú; `/migracion/dashboard` redirige a `/ventas-diseno/home`, sin panel | PASA |
+| NO superadmin ([persona]): sin ítem Migración en el menú; `/migracion/dashboard` redirige a `/ventas-diseno/home`, sin panel | PASA |
 | Emojis / ortografía / truncados | PASA: sin emojis, textos en español correctos, sin cortes |
 | Responsive 390 px y 820 px: sin scroll horizontal de página; modo oscuro: legible, contraste correcto | PASA |
 
 ## B) API
-- 403 para fefi (vendedor_disenador) y daniela (management) en GET y PUT; 401 sin token. PASA.
+- 403 para [persona] (vendedor_disenador) y gerencia1 (management) en GET y PUT; 401 sin token. PASA.
 - 422 (mensaje en español): pct 51/-1/"abc", por producto 50001/0/10,5, total 500001, min_filas 0, horas 721, activo "maybe", correos repetidos distinguiendo mayúsculas (A@X.com vs a@x.com), correo inválido, "", null, no-array. PASA.
 - `baseline_inicializada_at` enviado en el PUT: 200 pero ignorado (no cambió). PASA (ver m2).
 - PUT activo=true con base inicializada: 200; vuelto a false. Cambios parciales no pisan otros campos. PASA.
@@ -54,7 +54,7 @@ Ningún Bloqueante.
 
 | ID | Sev. | Hallazgo | Reproducir |
 |---|---|---|---|
-| M1 | Mayor (UX, no bloqueante, recomiendo corregir antes de QA/marly) | Cuando un valor es inválido, el botón "Guardar ajustes" queda deshabilitado SIN mensaje alguno que diga qué campo y por qué (el único `role="alert"` es para errores del servidor). Un superadmin que escribe `12,5` (coma decimal, normal en español) o un correo mal escrito no sabe por qué no puede guardar. | Panel: poner `51`, `12,5` o `foo` en correos; 0 alertas visibles, botón gris |
+| M1 | Mayor (UX, no bloqueante, recomiendo corregir antes de QA/qa) | Cuando un valor es inválido, el botón "Guardar ajustes" queda deshabilitado SIN mensaje alguno que diga qué campo y por qué (el único `role="alert"` es para errores del servidor). Un superadmin que escribe `12,5` (coma decimal, normal en español) o un correo mal escrito no sabe por qué no puede guardar. | Panel: poner `51`, `12,5` o `foo` en correos; 0 alertas visibles, botón gris |
 | m1 | Menor | `a@x` (sin punto) lo rechaza la pantalla pero el servidor lo acepta (`email:rfc`), quedó guardado en la BD vía API; las dos validaciones no coinciden. Un destinatario así hace fallar el envío de alertas. | PUT `{"correos_alerta":["a@x"]}` → 200 |
 | m2 | Menor | El PUT con `baseline_inicializada_at` o campos desconocidos responde 200 ignorándolos en silencio (no 422). Seguro (no cambia nada) pero engañoso para un cliente de la API. | PUT `{"baseline_inicializada_at":null}` |
 | m3 | Menor | En PUT concurrentes, el correo de evento muestra diffs `30002 -> 30004` (lectura-modificación-escritura sin bloqueo): el rastro de "valor anterior" puede no ser fiel. El valor final y `audit_logs` son correctos. Además, la pantalla envía los 7 campos en cada guardado (puede pisar un cambio hecho por otra vía entre la carga y el guardado). | 5 PUT simultáneos |

@@ -36,10 +36,10 @@ Ver "Siguiente paso" al final.
 | **SCRUM-159** — filtros Vendedor/Cliente | 🟡 Los `<select>` ya existen (RN1 estructural), pero cada uno solo tiene la opción "Todos los..." — sin lista real, no se puede filtrar por una persona específica todavía |
 | **SCRUM-160** — margen del año/mes | 🟡 Etiquetas correctas, pero `margen_anio_pct`/`margen_mes_pct` siguen en `0` fijo — confirmado por la respuesta cruda de `/api/gerencia/home`, coincide con el TODO que dejó el propio autor en el código |
 | **SCRUM-156/159/160** navegación | 🟡 Navegan, pero al módulo raíz sin filtro — RN3 pide "detalle filtrado", no solo "navega a algún lado" |
-| **SCRUM-161 RN1/RN2** — personalización por usuario ("Mark, David o Whil, cada uno ve sus propios tipos autorizados") | ❌ **Gap de diseño, no de bug.** Lo implementado es un único `mark_approver_user_id` global (hoy: Mark/`mbekhar`) — todo el que no sea esa persona ve "Solo para aprobadores", confirmado en vivo con Whil. El modelo del ticket (varios aprobadores, uno por tipo de solicitud) no está — sería necesario rediseñar, no es un ajuste menor |
+| **SCRUM-161 RN1/RN2** — personalización por usuario ("Aprobador, Gerencia2 o Gerencia5, cada uno ve sus propios tipos autorizados") | ❌ **Gap de diseño, no de bug.** Lo implementado es un único `mark_approver_user_id` global (hoy: Aprobador/`mbekhar`) — todo el que no sea esa persona ve "Solo para aprobadores", confirmado en vivo con Gerencia5. El modelo del ticket (varios aprobadores, uno por tipo de solicitud) no está — sería necesario rediseñar, no es un ajuste menor |
 | **SCRUM-162 RN2** — Aprobar/Rechazar sin salir de Gerencia | ❌ **No implementado.** Solo existe "ir al módulo de origen" (navega a la lista, ej. `/compras/ordenes` — tampoco abre el registro puntual como pide RN3 literal) |
 
-**No verificado en vivo:** el camino feliz completo de aprobar/rechazar como Mark (`mbekhar@atlantic.com.pa`) — su password ya no es el default, no hay credencial disponible en esta sesión para loguearlo. Confirmado por consulta directa a BD que `mark_approver_user_id = 16` (mbekhar) en `atlantic_compras.settings`.
+**No verificado en vivo:** el camino feliz completo de aprobar/rechazar como Aprobador (`gerencia3@test.com`) — su password ya no es el default, no hay credencial disponible en esta sesión para loguearlo. Confirmado por consulta directa a BD que `mark_approver_user_id = 16` (mbekhar) en `atlantic_compras.settings`.
 
 ## SCRUM-165 (Día/Semana/Mes)
 Sin cambios — el PR no tocó código de calendario. Sigue limpio (pasada de la sesión anterior).

@@ -7,7 +7,7 @@ condiciones bloquean el arranque, marcadas explícitamente, el resto bloquea el 
 
 ## Contexto
 
-Paso 1 del wizard de Ingreso de Mercancía: Yirena adjunta la factura/proforma real que llegó del
+Paso 1 del wizard de Ingreso de Mercancía: Lidercompras adjunta la factura/proforma real que llegó del
 proveedor, y el sistema debe **detectar automáticamente a qué orden de compra real corresponde y
 qué productos esperados confirma** — precargando el Paso 1 (orden) y Paso 2 (líneas) del wizard ya
 construido (`GoodsReceiptWizardPage.tsx`).
@@ -83,7 +83,7 @@ hechos observables en el documento, no un ID de la base de datos:
 **Por qué esto y no pasarle la lista de órdenes abiertas para que "elija":** si el modelo recibe
 una lista de órdenes reales (IDs, proveedores, montos) como contexto y el documento adjunto
 contiene texto manipulado, el peor caso de SCRUM-211 es `matches_order: true` incorrecto sobre
-la ÚNICA orden ya conocida (bajo impacto, Yirena la revisa). Acá, si el modelo "elige" un ID de
+la ÚNICA orden ya conocida (bajo impacto, Lidercompras la revisa). Acá, si el modelo "elige" un ID de
 una lista de órdenes reales, un documento manipulado podría inducirlo a apuntar a una orden
 distinta de la real con más confianza aparente. Extraer solo hechos del documento (texto/números
 visibles) y hacer el matching en PHP contra la base de datos real elimina esa superficie por

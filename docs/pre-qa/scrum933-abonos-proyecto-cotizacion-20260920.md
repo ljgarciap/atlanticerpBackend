@@ -27,7 +27,7 @@ estrategia mixta, no solo lectura de código:
    Senior Review. Además, verificación directa por curl contra el endpoint real (ver abajo) para
    los casos negativos/inválidos que el test unitario no cubre.
 2. **Frontend real, con `page.route` mockeando solo el endpoint nuevo** — Playwright contra
-   `localhost:5173` con login real (`contabilidad@test.com`, Felix, `lider_admin_contab`),
+   `localhost:5173` con login real (`contabilidad@test.com`, Contabilidad, `lider_admin_contab`),
    ejecutando el componente `RegistrarAbonoModal.tsx` compilado de verdad; solo la respuesta de
    `GET .../facturas-por-subcliente` está controlada, para poder ejercitar 2 Sub-clientes con
    proyectos/cotizaciones cruzadas sin sembrar datos reales. Esto corre el código real de cruce

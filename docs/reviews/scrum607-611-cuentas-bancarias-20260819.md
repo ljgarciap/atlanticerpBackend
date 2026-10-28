@@ -5,7 +5,7 @@
 
 Batch 1 del cuerpo principal de la épica Admin&Cont (ver `docs/architecture/admin-contab-batches.md`)
 — primera pantalla que usa el sistema estándar de roles del proyecto en vez del gate exclusivo de
-Mark de Configuración Fiscal/Datos de la Empresa.
+Aprobador de Configuración Fiscal/Datos de la Empresa.
 
 ## Gate real (suite completa)
 
@@ -17,7 +17,7 @@ Mark de Configuración Fiscal/Datos de la Empresa.
 
 - Gates `role:` correctos en `routes/admin-contab.php`: general
   (`superadmin,lider_admin_contab,asistente_administrativa,management`) vs. el más angosto de
-  REQ-534 (sin `management` — "Disponible para Felix y Yaneth" únicamente, textual del ticket).
+  REQ-534 (sin `management` — "Disponible para Contabilidad y Asistente" únicamente, textual del ticket).
 - RN4 de REQ-530 (nunca capturar número de cuenta completo): confirmado, no existe ningún
   campo/columna para eso en ningún lado del código.
 - RN2 de REQ-534 (solo cuentas activas asignables): reforzado a nivel de validación server-side

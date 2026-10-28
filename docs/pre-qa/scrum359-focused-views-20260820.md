@@ -1,4 +1,4 @@
-# Pre-QA — SCRUM-359 (REQ-289), fix del rebote de QA (Marly, 2026-08-20)
+# Pre-QA — SCRUM-359 (REQ-289), fix del rebote de QA (Qa, 2026-08-20)
 
 Rebote real: "Movimiento de Herramientas" (Kardex) mostraba la barra de navegación completa,
 violando RN1 (vista secundaria de apoyo, solo debe tener un control de cerrar/volver, no el menú

@@ -10,7 +10,7 @@ nuevos (no hay backend previo, a diferencia de otros bloques):
 - SCRUM-460 (REQ-390) — iniciar conteo: selector de bodega, precarga productos registrados.
 - SCRUM-461 (REQ-391) — aviso de cruce con solicitud de ajuste pendiente sobre el mismo producto.
 - SCRUM-462 (REQ-392) — "Evaluar": calcula diferencia (contada − sistema) por producto.
-- SCRUM-463 (REQ-393) — "Enviar a aprobación de Mark": valida que se evaluó, confirma el cruce.
+- SCRUM-463 (REQ-393) — "Enviar a aprobación de Aprobador": valida que se evaluó, confirma el cruce.
 - SCRUM-464 (REQ-394) — al enviar (no al aprobar), la solicitud de ajuste cruzada se elimina.
 - SCRUM-465 (REQ-395) — bandeja/historial con filtros, aprobar/rechazar (motivo obligatorio).
 - SCRUM-466 (REQ-396) — "Realizar ajuste": botón separado, solo tras aprobación, aplica al Kardex.
@@ -59,7 +59,7 @@ general_count_request_lines(
   pero SÍ ejecuta la eliminación de las líneas cruzadas de `AdjustmentRequestLine` en la misma
   transacción (RN de REQ-394, ver abajo). Pasa a `estado=pendiente_aprobacion`.
 - `approve()`/`reject()`: mismo patrón que `RelocationRequestController` — `lockForUpdate()`,
-  gate exclusivo de Mark vía `ComprasSettings::current()->mark_approver_user_id` (no
+  gate exclusivo de Aprobador vía `ComprasSettings::current()->mark_approver_user_id` (no
   `bodega_settings`, corrección respecto al supuesto inicial). `reject()` exige `motivo_rechazo`
   (RN2 REQ-395). **Ninguno de los dos toca el Kardex** — es la diferencia real de este bloque
   respecto a Ajustes/Reubicaciones.
@@ -113,7 +113,7 @@ Route::prefix('general-counts')->group(function (): void {
 ```
 
 Sin permiso de rol nuevo — mismo criterio que Ajustes/Reubicación (`bodega.read/write/approve`
-existentes, exclusividad de Mark resuelta en controller, no en middleware).
+existentes, exclusividad de Aprobador resuelta en controller, no en middleware).
 
 ## Consecuencias
 
@@ -121,6 +121,6 @@ existentes, exclusividad de Mark resuelta en controller, no en middleware).
 - 1 constante nueva en `InventoryMovement`: `TIPO_CONTEO`.
 - Ningún cambio a `AdjustmentRequest`/`AdjustmentRequestLine` existentes, salvo el `delete()` que
   dispara `submit()` sobre las líneas cruzadas (decisión abierta 2).
-- Primer flujo del proyecto donde "Mark aprueba" y "se aplica al inventario" son dos pasos
+- Primer flujo del proyecto donde "Aprobador aprueba" y "se aplica al inventario" son dos pasos
   desacoplados — documentado explícitamente porque rompe el patrón que synthesized Ajustes y
   Reubicaciones (aprobación = aplicación inmediata).

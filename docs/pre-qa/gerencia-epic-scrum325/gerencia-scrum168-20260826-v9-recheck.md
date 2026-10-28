@@ -39,7 +39,7 @@ tickets de la épica Gerencia (SCRUM-325) ya están en `QA` desde v8, sin cambio
   (`status != recibido`). Ya no hay una segunda definición divergente de "orden crítica" — el
   riesgo de desalinearse en los límites de día/hora que causó el hallazgo de v8 queda cerrado de
   raíz (misma llamada a método, no dos queries independientes que puedan divergir).
-- **Confirmado en vivo (curl autenticado, Whileyner Contreras):**
+- **Confirmado en vivo (curl autenticado, Gerencia5 [persona]):**
   `GET /api/gerencia/home` → `salud_modulos.compras.ordenes_criticas = 43`
   `GET /api/compras/orders?chip=critical` → `meta.total = 43` — **coinciden**.
 - **Confirmado con Playwright real** (`preqa-scrum168-v9-recheck.spec.ts`, test "RN1"): clic real
@@ -109,7 +109,7 @@ respuesta real interceptada del backend, y captura de pantalla mostrando datos r
 ## Transición de Jira
 
 - `SCRUM-168`: comentario con el veredicto y evidencia (curl + Playwright + capturas), transición
-  `In Progress` → `QA`, reasignado de vuelta a `marly.rangel` (estaba temporalmente en el
+  `In Progress` → `QA`, reasignado de vuelta a `qa.qa` (estaba temporalmente en el
   implementador tras el hallazgo de v8). Marcadores creados:
   `~/.claude-preqa-markers/SCRUM-168`, `~/.claude-visual-review-markers/SCRUM-168`.
 

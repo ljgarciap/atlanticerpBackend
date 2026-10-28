@@ -104,6 +104,14 @@ final class TerminosDelClienteAnterior
         'eda06e5e9f54890e4c81e034081887a708f66c0fdbbfbd17c1356bf4e57835f9',
         'ef5df1b59629f73ea70216000670e7454cc6b5779e805d68952d634e1e203b81',
         'f037578e00aebc82d7ed47b23e5f4690c48578aeba1a3fa4df58f92af5e75840',
+        'b27efa31a25a8ec090058f211f2ddfdeb485903104a2e18dd4976d77d5196060',
+        'aeddd4f60ed666e9e80e9a1faf07c116291fd350b0a314a340642892b8eccda9',
+        '21dfc18dd04cd6a356e2f1e36e8285bc060a5d589d3ac707e56ac9654903b589',
+        'b6e81b71ac210e45b216fccb3302f1ebc798947ba9ddca6b83ed1ddc63b2ff70',
+        'cffdd87c9d5a2e40d4131c922daeeeb8abd63742437104bd7d6b6cdd8a5c29b6',
+        'c17323fc0b1bab00dda3764def32f1432d0af144bfd5f7f8c87e719696430559',
+        'b59a2aa4cfb38f4a6dfb1ebe4ef42c1b321afb7543086910c06e8c74f115d1e9',
+        '0df2b318462f5a520d9afa4cc3de851e08302a52ebf0b9789a13132f34e2ab3a',
     ];
 
     /** Devuelve «[nombre de persona]» si alguna palabra de la línea es un nombre prohibido (sin revelar cuál). */

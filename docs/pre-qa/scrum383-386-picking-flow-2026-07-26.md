@@ -29,13 +29,13 @@ spec `e2e/preqa-scrum383-386-picking-flow.spec.ts` escrito por Frontend Dev), se
 | Fixture | order_number | Etapa inicial | Detalle |
 |---|---|---|---|
 | Order (temporal, borrado al cerrar) | `PED-PREQA-RN3` | asignado | 1 ítem — intento de asignar picker con rol no autorizado |
-| Order (temporal, borrado al cerrar) | `PED-PREQA-PARTIAL` | en_picking, picker=Apolonio | 3 ítems, ubicaciones D-01/D-02/D-03 — picking parcial → Revisión de Inventario + edición "Alistada" |
-| Order (temporal, borrado al cerrar) | `PED-PREQA-READONLY` | packing, picker=Apolonio | 1 ítem ya completo — modo solo consulta |
-| Order (temporal, borrado al cerrar) | `PED-PREQA-COURIER` | picking_pendiente, picker=Apolonio | 1 ítem — verificación de autorización cruzada (courier operando el pedido de otro) |
+| Order (temporal, borrado al cerrar) | `PED-PREQA-PARTIAL` | en_picking, picker=Auxiliarbodega | 3 ítems, ubicaciones D-01/D-02/D-03 — picking parcial → Revisión de Inventario + edición "Alistada" |
+| Order (temporal, borrado al cerrar) | `PED-PREQA-READONLY` | packing, picker=Auxiliarbodega | 1 ítem ya completo — modo solo consulta |
+| Order (temporal, borrado al cerrar) | `PED-PREQA-COURIER` | picking_pendiente, picker=Auxiliarbodega | 1 ítem — verificación de autorización cruzada (courier operando el pedido de otro) |
 
 Todos los fixtures y los `CatalogProduct` de prueba (`PREQA-*`) se borraron al cerrar la sesión
 (`docker compose exec laravel php artisan tinker`, ver reporte de la tarea para el script exacto).
-Es un entorno Docker local, no `dev.atlanticerp.ai` — no afecta lo que verifica marly.
+Es un entorno Docker local, no `dev.atlanticerp.ai` — no afecta lo que verifica qa.
 
 Test permanente agregado (sigue la convención `preqa-*.spec.ts` + patrón "salta si el fixture no
 está sembrado" del resto del proyecto): `atlanticerp-frontend/e2e/preqa-scrum383-386-adversarial.spec.ts`
@@ -66,7 +66,7 @@ test, la tarjeta no avanza hasta seleccionar un picker real).
 
 El backend (`PickingService::assignPicker()`) responde `403` con el mensaje real ("Solo el Jefe de
 Bodega o los Asistentes de Bodega pueden asignar el picking.") — verificado con `curl` directo
-usando el token real de Apolonio González (Picker). **Esta parte del criterio está bien.**
+usando el token real de Auxiliarbodega [persona] (Picker). **Esta parte del criterio está bien.**
 
 **Hallazgo MEDIO:** `OrderCardTile.tsx` muestra el botón "Asignar Picker" a CUALQUIER usuario con
 `bodega.write` (sin gate de rol client-side), incluidos Picker/Repartidor. Al abrir el
@@ -82,7 +82,7 @@ Pedidos y pruebe el botón. No bloqueante para el flujo del Jefe/Asistente (que 
 poblado), pero sí un hallazgo de UX real que vale la pena corregir: ocultar el botón para roles sin
 `CAN_OPERATE`, o al menos no ofrecer un selector vacío sin explicación.
 
-Repro: login como `apolonio.gonzalez@atlantic.com.pa`, ir a Pedidos, abrir "Asignar Picker" en
+Repro: login como `auxiliarbodega@test.com`, ir a Pedidos, abrir "Asignar Picker" en
 cualquier tarjeta en Asignado → selector solo con "Selecciona un picker...". Test:
 `preqa-scrum383-386-adversarial.spec.ts:36`.
 
@@ -175,17 +175,17 @@ Nivel 3) a **los 3 roles operativos** (`asistente_bodega`, `ayudante_general_bod
 `transporte` = Courier), cualquiera de ellos pasa el gate de la ruta (`permission:bodega.write`) sin
 más chequeo.
 
-**Reproducido en vivo con `curl` real** (Gary Arrocha, rol `transporte`/Courier — cuyo trabajo real
-es despachar, no hacer picking — actuando sobre un pedido con `picker_id` = Apolonio González, NO
-Gary):
+**Reproducido en vivo con `curl` real** ([persona] [persona], rol `transporte`/Courier — cuyo trabajo real
+es despachar, no hacer picking — actuando sobre un pedido con `picker_id` = Auxiliarbodega [persona], NO
+[persona]):
 
 ```
-POST /api/bodega/orders/188/start-picking       (token de Gary) → 200 {"stage":"en_picking"}
-PATCH /api/bodega/orders/188/picking-sheet       (token de Gary) → 200 (edita qty_picked de otro)
-POST /api/bodega/orders/184/complete-picking     (token de Gary) → 200 (avanza a Packing)
+POST /api/bodega/orders/188/start-picking       (token de [persona]) → 200 {"stage":"en_picking"}
+PATCH /api/bodega/orders/188/picking-sheet       (token de [persona]) → 200 (edita qty_picked de otro)
+POST /api/bodega/orders/184/complete-picking     (token de [persona]) → 200 (avanza a Packing)
 ```
 
-Ningún endpoint devolvió `403`. Gary pudo mover a Packing un pedido que ni siquiera tiene asignado
+Ningún endpoint devolvió `403`. [persona] pudo mover a Packing un pedido que ni siquiera tiene asignado
 a sí mismo. Esto contradice el espíritu documentado de `BodegaRoles::CAN_OPERATE` (el propio
 docblock de la clase dice "Roles que pueden asignar picker y **operar el flujo general de
 Bodega**" — dos roles, no cuatro) y del docblock de `PickingService` (que solo defiende el gate de
@@ -234,13 +234,13 @@ Recomiendo pasar SCRUM-383→386 a `QA`.
   `..._es_permitido`, mismo par para `actualizar_picking_sheet` y `completar_picking`).
   `npx vitest run` completo del frontend → 625/625. `npx tsc --noEmit` limpio.
 - **Punto 4 (CRÍTICO #1, gate de autorización) — CONFIRMADO CORREGIDO.** `curl` directo con el
-  token real de Gary Arrocha (`transporte`/Courier) contra un pedido asignado a Apolonio González
+  token real de [persona] [persona] (`transporte`/Courier) contra un pedido asignado a Auxiliarbodega [persona]
   (otro picker): `start-picking` → 403, `PATCH picking-sheet` → 403, `complete-picking` → 403, los
   3 con el mensaje real ("Solo el Jefe de Bodega, los Asistentes de Bodega o el Picker asignado
   pueden operar el flujo de picking."), no un 500 ni un 200 silencioso.
-- **Punto 3 (MEDIO, selector vacío engañoso) — CONFIRMADO CORREGIDO.** Login como Apolonio
+- **Punto 3 (MEDIO, selector vacío engañoso) — CONFIRMADO CORREGIDO.** Login como Auxiliarbodega
   (Picker): el botón "Asignar Picker" ya NO se renderiza en la tarjeta (antes aparecía con selector
-  vacío). Regresión verificada: el mismo botón SIGUE visible para Esteban (Jefe de Bodega,
+  vacío). Regresión verificada: el mismo botón SIGUE visible para Liderbodega (Jefe de Bodega,
   `view_team=true`). El backend sigue respondiendo 403 real por API directa (defensa en
   profundidad, sin depender solo del gate de UI).
 - **Punto 7 (CRÍTICO #2, sin entry point) — CONFIRMADO CORREGIDO.** `OrderDetailModal` ahora
@@ -277,15 +277,15 @@ Recomiendo pasar SCRUM-383→386 a `QA`.
 ### Fixtures de esta pasada
 
 Sembrados vía `tinker` (`atlantic_bodega.orders`, todos borrados al cerrar la sesión, entorno
-Docker local — no afecta lo que verifica marly en `dev.atlanticerp.ai`):
+Docker local — no afecta lo que verifica qa en `dev.atlanticerp.ai`):
 
 | Fixture | Etapa | Detalle |
 |---|---|---|
 | `PED-E2E-PICK-01` (recreado) | asignado → ... | 2 ítems (Foco LED E2E / A-01, Lampara colgante E2E / B-02) — mismo fixture del spec original de Frontend Dev, recreado porque `infra/test.sh` resetea el schema de tenant compartido con Docker local |
 | `PED-PREQA2-A` | asignado | RN3 — visibilidad del botón "Asignar Picker" |
-| `PED-PREQA2-D` | en_picking, picker=Apolonio | 3 ítems (3/A-01, 2/B-02, 4/C-03) — picking parcial + clamp de "Alistada" |
-| `PED-PREQA2-E` | en_picking, picker=Apolonio | 1 ítem, qty=5 — bypass de frontend (curl directo), Excel/Imprimir |
-| `PED-PREQA2-G` | packing, picker=Apolonio | 1 ítem completo — reentrada en modo solo lectura |
+| `PED-PREQA2-D` | en_picking, picker=Auxiliarbodega | 3 ítems (3/A-01, 2/B-02, 4/C-03) — picking parcial + clamp de "Alistada" |
+| `PED-PREQA2-E` | en_picking, picker=Auxiliarbodega | 1 ítem, qty=5 — bypass de frontend (curl directo), Excel/Imprimir |
+| `PED-PREQA2-G` | packing, picker=Auxiliarbodega | 1 ítem completo — reentrada en modo solo lectura |
 | `PED-PREQA2-H` | packing, picker=NULL (sintético) | confirma ausencia del botón "Ver hoja de picking" |
 
 Test permanente `e2e/preqa-scrum383-386-adversarial.spec.ts` reescrito para reflejar el estado

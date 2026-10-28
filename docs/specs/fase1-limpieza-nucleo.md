@@ -49,17 +49,17 @@ Cuatro bloques independientes sobre la rama que parte del merge de la sincroniza
 
 ### B. Personas
 Regla de clasificación de tests (ejemplos reales; total medido: 155 métodos `test_*` con nombre de persona en 70+ archivos):
-- **Se borran** (el asunto es una persona o una concesión por persona): `FelixComoMarkVentasDisenoTest`, `JwtClaimsMarkApproverFlagTest`,
+- **Se borran** (el asunto es una persona o una concesión por persona): `ContabilidadComoMarkVentasDisenoTest`, `JwtClaimsMarkApproverFlagTest`,
   `SpecialPermissionSeederTest` (casos por persona), `UserModuleVisibilityGrantSeederTest` (concesiones por persona), tests de
   `BusinessRoleUserSeederTest` sobre personas concretas.
-- **Se renombran al rol** (verifican comportamiento de un rol y la persona solo está en el nombre): p. ej. `test_felix_puede_…`
+- **Se renombran al rol** (verifican comportamiento de un rol y la persona solo está en el nombre): p. ej. `test_contabilidad_puede_…`
   → `test_lider_admin_contab_puede_…`; en `PipelineEditPermissionTest`, `AdminContInvoiceControllerTest`, `AdminContReportsControllerTest`, etc.
 - `FixtureSpecialPermissionSeeder` se **reduce** a concesiones por rol/identidad genérica estrictamente necesarias; si un test solo necesitaba
   una concesión "de persona", el test pasa a crear su propio usuario con el permiso.
 - Seeders, e2e (`e2e/*.spec.ts`, 88 archivos con nombres) y cadenas de i18n (es/en) quedan sin nombres; prosa de documentos históricos y
   migraciones ya aplicadas **fuera de alcance**.
 - Denylist de verificación (insensible a mayúsculas, palabra completa): los nombres de pila y apellidos de `scripts/upstream-sync/idmap.json`
-  más `Daniela Amaya` y las variantes «Mark/Félix» como persona.
+  más `Gerencia1 Test` y las variantes «Aprobador/Contabilidad» como persona.
 
 ### C. Umbrales de negocio a tablas
 | Constante hoy | Destino |

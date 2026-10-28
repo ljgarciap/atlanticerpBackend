@@ -19,7 +19,7 @@ corriendo), no solo lectura de código:
    luego la suite completa del repo (`infra/test.sh`, 1080/1080 verde, 4391 assertions) + PHPStan
    Level 8 dentro del contenedor `laravel` (`0 errores`).
 2. Flujo real vía API HTTP contra el stack local (`http://localhost:8090`), no PHPUnit: login real
-   (`POST /api/auth/login`) con `annie@atlantic.com.pa` (password = email, patrón del
+   (`POST /api/auth/login`) con `usuario@atlantic.com.pa` (password = email, patrón del
    seeder), fixtures de tarjeta/cotización armados vía `artisan tinker` sobre la BD real (mismo
    shape que usa el módulo, no inventado), y la transición de etapa real
    (`PATCH /api/ventas-diseno/pipeline/{id}/stage`) — el único punto de disparo real de todo este
@@ -40,12 +40,12 @@ requirió limpieza manual.
 - **Escenario "falta de mapeo" (prioridad 1):** los 10 vendedores reales sembrados por
   `BusinessRoleUserSeeder` están los 10 cubiertos por `WarehouseAssistantMappingSeeder` (verificado
   contra la BD real, ver tabla abajo) — no hay ningún vendedor real sin mapeo hoy. Se desactivó
-  temporalmente el mapeo de Annie (`UPDATE atlantic_bodega.warehouse_assistant_mapping SET
+  temporalmente el mapeo de Usuario (`UPDATE atlantic_bodega.warehouse_assistant_mapping SET
   is_active=false WHERE id=5`, `seller_user_id=27`) solo para la duración de esta prueba. Restaurado
   automáticamente por el reset de `infra/test.sh` al final de la sesión (confirmado: `is_active=t`
   después de correr la suite).
 - **Escenario "re-aprobar con permiso restringido":** se otorgó temporalmente
-  `extra_permissions=["ventas_diseno.edit.approved"]` a Annie vía SQL directo (necesario para que
+  `extra_permissions=["ventas_diseno.edit.approved"]` a Usuario vía SQL directo (necesario para que
   el mismo usuario pueda volver a hacer `PATCH .../stage` sobre una tarjeta ya en `approved`,
   gate `PipelineCard::RESTRICTED_EDIT_PERMISSION`). Restaurado igual por el reset de `infra/test.sh`
   (confirmado: `extra_permissions=[]` después).
@@ -62,8 +62,8 @@ requirió limpieza manual.
 
   | Asistente | Vendedores mapeados (confirmado en BD) |
   |---|---|
-  | Mariano Sandoval (`almacen2@atlantic.com.pa`, id 14) | Juan Manuel, Fefi, Neil, Bernardo, Annie |
-  | Osvaldo Santos (`logistica@atlantic.com.pa`, id 13) | Idmar, Vanessa, Paola, Milena, Maribel |
+  | Asistentebodega2 [persona] (`almacen2@atlantic.com.pa`, id 14) | Juan Manuel, [persona], [persona], [persona], Usuario |
+  | Asistentebodega [persona] (`logistica@atlantic.com.pa`, id 13) | [persona], [persona], Vendedor5, [persona], [persona] |
 
 - Audiencia de la notificación de "pedido sin asignar" es un ROL (`lider_bodega`), no una persona
   hardcodeada — resuelto vía `Role::where('key', 'lider_bodega')` + `User::where('role_id', ...)`,
@@ -74,7 +74,7 @@ requirió limpieza manual.
 
 ### 1. Falta de mapeo vendedor→asistente (CRÍTICO potencial si fallara) — PASA
 
-Con el mapeo de Annie desactivado, aprobé una cotización real de Annie
+Con el mapeo de Usuario desactivado, aprobé una cotización real de Usuario
 (`pipeline_card_id=8`, `PATCH .../stage {"stage":"approved"}` → `200`). Verificado contra BD real:
 
 ```
@@ -83,14 +83,14 @@ orders: id=8, order_number=PED-2026-0003, pipeline_card_id=8, stage=asignado, as
 
 Notificación real disparada — verificado en las 3 tablas del módulo Notifications:
 - `notification_sends`: `source=bodega_order_unassigned`, `source_ref=order:8`,
-  `channels=["in_app","email"]`, `audience=[12]` (id de Esteban Cardenas,
+  `channels=["in_app","email"]`, `audience=[12]` (id de Lider Bodega Test,
   `almacen@atlantic.com.pa`, rol `lider_bodega`).
 - `notifications`: fila in-app real para `user_id=12`, `subject="Pedido PED-2026-0003 sin
   asistente asignado"`.
 - `notification_deliveries`: canal `email`, `status=sent` — el SMTP local es real (Office365, ver
   `memory/feedback_no_real_emails_verification.md`), así que esta prueba disparó un email real a
-  `almacen@atlantic.com.pa` con datos de prueba obvios ("PED-2026-0003 (vendedor: Anelhys
-  Nuez)... Requiere asignación manual") — señalado acá para que Esteban/Luis lo descarten si lo ven,
+  `almacen@atlantic.com.pa` con datos de prueba obvios ("PED-2026-0003 (vendedor: Usuario
+  [persona])... Requiere asignación manual") — señalado acá para que Liderbodega/Luis lo descarten si lo ven,
   no hay forma de verificar el canal de email real sin disparar el envío real dado que el listener
   no usa `Mail::fake()` en producción.
 
@@ -98,7 +98,7 @@ El pedido NO se pierde y el Jefe de Bodega queda notificado, tal como pide la de
 
 ### 2. Doble aprobación / condición de carrera (CRÍTICO potencial si fallara) — PASA
 
-Tarjeta fresca (`pipeline_card_id=7`, vendedor Annie con mapeo activo), dos requests `PATCH
+Tarjeta fresca (`pipeline_card_id=7`, vendedor Usuario con mapeo activo), dos requests `PATCH
 .../7/stage {"stage":"approved"}` disparados en paralelo real (`curl ... & curl ... & wait`, mismo
 token). Ambos respondieron `200 stage=approved`. Verificado contra BD:
 
@@ -112,11 +112,11 @@ PHPUnit.
 
 ### 3. Camino feliz completo — PASA
 
-Vendedor con mapeo real (Annie → Mariano Sandoval), `pipeline_card_id=6`. Verificado contra BD:
+Vendedor con mapeo real (Usuario → Asistentebodega2 [persona]), `pipeline_card_id=6`. Verificado contra BD:
 
 ```
 orders: id=6, order_number=PED-2026-0001, stage=asignado, assistant_id=14 (almacen2@atlantic.com.pa)
-customer_name="PreQA Subcliente Annie", delivery_address="Av PreQA 123, Ciudad de Panamá"
+customer_name="PreQA Subcliente Usuario", delivery_address="Av PreQA 123, Ciudad de Panamá"
 customer_contact="PreQA Contacto (6000-9999)"
 order_items: 1 fila, qty_requested=4, description_snapshot="Lampara PreQA" (coincide con la cotización real generada)
 order_stage_history: from_stage=NULL, to_stage=asignado
@@ -128,7 +128,7 @@ coinciden exactamente con la cotización aprobada real, no solo "algo se creó".
 ### 4. Re-aprobar una tarjeta ya en "approved" (no-op) — PASA
 
 Misma tarjeta 6, segundo `PATCH .../stage {"stage":"approved"}` (con permiso
-`ventas_diseno.edit.approved` otorgado temporalmente a Annie para poder ejecutar la segunda
+`ventas_diseno.edit.approved` otorgado temporalmente a Usuario para poder ejecutar la segunda
 llamada) → `200 stage=approved`. Verificado: `orders` sigue con 1 sola fila para
 `pipeline_card_id=6` — no se disparó una segunda creación.
 

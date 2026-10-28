@@ -25,9 +25,9 @@ que Batch 5+ reemplaza).
 1. **Contrato de API incompleto** (detectado porque Frontend Dev, sin coordinación en vivo,
    documentó explícitamente el desvío en su reporte): `detail()` no exponía `master_client_id`
    (necesario para preseleccionar cliente en REQ-451 RN3) ni `puede_decidir_incobrable` (gate de
-   Mark para Aprobar/Rechazar, REQ-448). Agregado en el controller (dependiente del actor vía JWT
+   Aprobador para Aprobar/Rechazar, REQ-448). Agregado en el controller (dependiente del actor vía JWT
    vs. `AdminContFiscalSettings::mark_approver_user_id`, no en el service) + test dedicado
-   verificando que Felix nunca lo ve en `true` aunque haya una propuesta pendiente, y Mark sí.
+   verificando que Contabilidad nunca lo ve en `true` aunque haya una propuesta pendiente, y Aprobador sí.
 2. **RN1 de REQ-449 incompleta** (encontrado leyendo el diff, no reportado por ninguno de los 2
    forks): el documento fiscal solo mostraba "Pago a", faltaban "Cuenta número" y "Responsable" —
    ambos explícitos en el AC del ticket. Agregado `pagoBlock()`: cuenta = primera cuenta bancaria

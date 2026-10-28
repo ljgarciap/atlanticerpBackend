@@ -40,7 +40,7 @@ detectado independientemente por Senior Review y por este gate). **Fix aplicado*
   toggle, sin importar cuántas ubicaciones administrativas se creen.
 - Test unitario de regresión (`CompanyProfilePage.test.tsx`, ids colisionantes 1/1 entre fuentes)
   → 11/11 en el archivo.
-- Sin regresión: gate de Mark (403 GET/PUT real para no-Mark), defensa en profundidad
+- Sin regresión: gate de Aprobador (403 GET/PUT real para no-Aprobador), defensa en profundidad
   (`razon_social`/`nombre_comercial`/`moneda`/`anio_fiscal` ignorados en PUT), `zona_horaria`
   rechaza cualquier valor ≠ `America/Panama`, alta de ubicación con `tipo:'bodega'` → 422 real,
   `PUT /locations/{warehouse_id}` → 404 real (no se puede togglear una fila de Bodega desde acá).

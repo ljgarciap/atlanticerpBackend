@@ -50,7 +50,7 @@ inconsistencia latente que ya existía en la Facturación ya desplegada (el PDF 
 un "responsable" distinto por factura, nunca revisado hasta ahora porque ningún ticket anterior
 comparaba explícitamente 2 pantallas del mismo dato). Test existente de Facturación actualizado
 (`test_detail_muestra_trazabilidad_completa_con_guia_de_entrega`) para reflejar el nuevo
-comportamiento — antes esperaba `'Felix'` (el creador de la factura de prueba), ahora `null` porque
+comportamiento — antes esperaba `'Contabilidad'` (el creador de la factura de prueba), ahora `null` porque
 la factura de prueba no setea `responsable_administracion_user_id` en `fiscal_settings`.
 
 ## Diseño de `AccountStatementService::detail()` — un solo cómputo server-side

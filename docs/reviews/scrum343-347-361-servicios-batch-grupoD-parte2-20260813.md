@@ -55,7 +55,7 @@ directamente (correcto), nunca contra la respuesta HTTP que consume el usuario r
 ## Verificación end-to-end real (no solo HTTP síntetico)
 
 Flujo completo ejecutado contra el stack local real (Docker, Postgres compartido con dev), no solo
-vía PHPUnit: Aaron solicita un insumo → Yirena avanza la orden real por los 5 estados de un
+vía PHPUnit: Aaron solicita un insumo → Lidercompras avanza la orden real por los 5 estados de un
 proveedor internacional (LightCorp, único proveedor demo con `provider_id` real) → Ingreso de
 Mercancía real → "Recibido" → verificado por consulta directa a `inventory_movements` que se
 generaron los 2 movimientos `Reubicación` esperados (`Bodega Central: -5`, `Reserva Servicios:

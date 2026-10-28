@@ -3,7 +3,7 @@
 **Date**: 2026-10-06
 **Ticket**: SCRUM-1116 (Story, épica SCRUM-331 Admin&Cont, prioridad Highest, reportado por Gerencia Test, asignado a Luis)
 **Status**: spec del Analista + diseño del Arquitecto. Decisiones de negocio D1-D4 **resueltas por Luis el 2026-10-06** (sección 6); diseño **APROBADO por Luis el 2026-10-06**; desglose del PM al final. Sin código.
-**Relacionada**: SCRUM-1060 (notas de crédito, mismo módulo), REQ-482→487 y REQ-484 RN4 (Batch 11), REQ-494 (aprobación de Mark)
+**Relacionada**: SCRUM-1060 (notas de crédito, mismo módulo), REQ-482→487 y REQ-484 RN4 (Batch 11), REQ-494 (aprobación de Aprobador)
 
 ## 1. Problema
 
@@ -62,10 +62,10 @@ Nota de la última fila: el saldo por cobrar previo es 1.000 − (500 cobrados +
 - **RN3 — VAR = 0.** No se permite registrar una anulación completa: 422 con mensaje claro ("La factura ya está completamente acreditada por notas previas").
 - **RN4 — Invariante global.** Para **cualquier tipo**, `Σ notas previas + monto nuevo ≤ factura.monto`; si no, 422 indicando el disponible. Es la regla "en ningún escenario el total acumulado supera el valor de la factura". *(D2 resuelta: aplica a los 3 tipos.)*
 - **RN5 — Excedente sin cambios.** `excedente = monto − saldo por cobrar` solo existe cuando hay cobros por devolver; se mantienen `resultado` (devuelto / saldo a favor) y la cuenta de salida exactamente como hoy.
-- **RN6 — Aprobación (`decide`).** Las anulaciones siempre pasan por Mark. Al aprobar se **revalida bajo bloqueo**: una anulación se aprueba solo si su monto sigue igual al VAR vigente (excluyendo la propia nota); cualquier otro tipo solo si `Σ aplicadas (sin ella) + monto ≤ factura.monto`. Si no, 422 pidiendo rechazar y registrar de nuevo. Evita que el rechazo de una nota previa deje una "anulación completa" a medias.
+- **RN6 — Aprobación (`decide`).** Las anulaciones siempre pasan por Aprobador. Al aprobar se **revalida bajo bloqueo**: una anulación se aprueba solo si su monto sigue igual al VAR vigente (excluyendo la propia nota); cualquier otro tipo solo si `Σ aplicadas (sin ella) + monto ≤ factura.monto`. Si no, 422 pidiendo rechazar y registrar de nuevo. Evita que el rechazo de una nota previa deje una "anulación completa" a medias.
 - **RN7 — Concurrencia.** El cálculo y la validación se hacen dentro de la transacción de `register()`, con la factura ya bloqueada (`lockForUpdate`), como ya se hace con el saldo.
 - **RN8 — "Corrección de datos".** Anula la factura y emite una de reemplazo; su monto sale del desglose de la cotización, no del total de la factura (`registerCorreccion`, ~1051). Con notas previas aparece el mismo exceso. *(D3 resuelta: se bloquea con un mensaje claro.)*
-- **RN9 — Sin migración de datos.** No se modifican notas ya emitidas (son documentos contables y posiblemente certificados). Las 2 facturas de test que ya exceden quedan como evidencia; el cambio es hacia adelante. *(D4 resuelta: no se tocan; Mark rechaza la NC-0027 pendiente.)*
+- **RN9 — Sin migración de datos.** No se modifican notas ya emitidas (son documentos contables y posiblemente certificados). Las 2 facturas de test que ya exceden quedan como evidencia; el cambio es hacia adelante. *(D4 resuelta: no se tocan; Aprobador rechaza la NC-0027 pendiente.)*
 
 ## 4. Criterios de aceptación
 
@@ -119,15 +119,15 @@ Backend primero (el campo nuevo es aditivo y la regla es más estricta), luego e
 
 ### Riesgos
 - **Regresión de REQ-484** (cobros + anulación): cubierta por A1 y la suite existente.
-- **Notas pendientes** que reservan valor: una nota olvidada sin aprobar bloquea valor; mitigado porque Mark puede rechazarla.
+- **Notas pendientes** que reservan valor: una nota olvidada sin aprobar bloquea valor; mitigado porque Aprobador puede rechazarla.
 - **Urgencia en prod:** la factura de 137,77 con devolución de 128,76 está expuesta hasta que se despliegue.
 
 ## 6. Decisiones de negocio (resueltas por Luis, 2026-10-06 — todas con la opción recomendada)
 
-- **D1 — Las notas pendientes de aprobación SÍ cuentan como valor reservado.** Evita que dos notas pendientes se aprueben y sumen más que la factura; si Mark rechaza una, el valor se libera solo (RN1, RN6).
+- **D1 — Las notas pendientes de aprobación SÍ cuentan como valor reservado.** Evita que dos notas pendientes se aprueben y sumen más que la factura; si Aprobador rechaza una, el valor se libera solo (RN1, RN6).
 - **D2 — "El acumulado nunca supera el valor de la factura" aplica a los 3 tipos** (descuento, devolución y anulación), no solo a la anulación completa (RN4).
 - **D3 — "Corrección de datos" con notas previas se BLOQUEA con un mensaje claro** (no se permite corregir datos de una factura que ya tiene notas; se indica anular por el saldo y refacturar a mano). No se inventa una regla fiscal nueva (RN8). Implica además: `previewCorreccion` y `registerCorreccion` validan lo mismo, y el botón del frontend muestra el motivo.
-- **D4 — Datos de test que ya exceden (F-0036, F-0037): no se tocan.** Son evidencia del defecto y datos de prueba de Daniela. Mark debe **rechazar la NC-0027 pendiente** (acreditaría 128,76 de más); con el arreglo desplegado, aprobarla quedaría bloqueado por la revalidación de RN6 (RN9).
+- **D4 — Datos de test que ya exceden (F-0036, F-0037): no se tocan.** Son evidencia del defecto y datos de prueba de Gerencia1. Aprobador debe **rechazar la NC-0027 pendiente** (acreditaría 128,76 de más); con el arreglo desplegado, aprobarla quedaría bloqueado por la revalidación de RN6 (RN9).
 
 ### Criterios de aceptación añadidos por D3
 | # | Criterio | Cómo se prueba |
@@ -155,7 +155,7 @@ Roles: **BE** Backend Dev, **FE** Frontend Dev, **QA** Senior Review + Pre-QA, *
 | P10 | **Pre-QA en dev** con los casos de la spec (T1-T9, A1-A6, C1-C3) sobre los endpoints reales. **Riesgo a verificar antes de crear notas:** al quedar `aplicada` cada nota llama a `certificarNotaCredito`; confirmar que en dev la facturación electrónica no envía nada real (`fe_estado = no_aplica`/sandbox) y usar solo datos de prueba | QA | P9 | todos |
 | P11 | **Despliegue**: dev → test → prod, cada uno con gate y aprobación de Luis; backend primero y frontend después. En prod, **verificación en solo lectura** del caso real: el VAR de la factura de 137,77 con devolución de 128,76 debe dar 9,01 (sin crear notas) | DO | P10 | A6 |
 | P12 | **Documentación**: spec final, runbook breve de la regla, línea en el `CLAUDE.md` del módulo y entrada en `docs/changelog.md` | TW | en paralelo | — |
-| P13 | **Seguimiento fuera del código**: Mark rechaza la NC-0027 pendiente en test (D4); comentario en SCRUM-1116 con el avance | Luis / PM | — | D4 |
+| P13 | **Seguimiento fuera del código**: Aprobador rechaza la NC-0027 pendiente en test (D4); comentario en SCRUM-1116 con el avance | Luis / PM | — | D4 |
 
 **Camino crítico:** P0 → P1 → P2/P3 → P4 → P6 → P5 → P9 → P10 → P11. El frontend (P7-P8) corre en paralelo desde que el contrato de P5 está fijado, y converge en P9.
 

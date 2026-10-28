@@ -11,8 +11,8 @@ workspace-wide en `.claude/agents/pm.md`, ver
 
 ## 0. Contexto
 
-87 requerimientos (REQ-206→REQ-292, épica **SCRUM-330 "Servicios"**), especificados por Daniela
-Amaya desde el 16/07/2026 con criterios de aceptación reales, mockup (`5__Servicios_Home.html`) y
+87 requerimientos (REQ-206→REQ-292, épica **SCRUM-330 "Servicios"**), especificados por Gerencia1
+Gerencia1 desde el 16/07/2026 con criterios de aceptación reales, mockup (`5__Servicios_Home.html`) y
 Excel (`5__Requerimientos_Servicios.xlsx`) adjuntos por ticket. Cubre: gestión de visitas técnicas
 de instalación/garantía/reclamo/retrofit, cotización de servicio, informe de inspección
 (desktop+móvil+firma), equipo técnico (interno/externo), herramientas e insumos, reportes.
@@ -55,7 +55,7 @@ infraestructura necesaria**, construida para Compras/Bodega (SCRUM-244, SCRUM-45
 | Tabla maestra por producto+ubicación | `ProductWarehouseStock` (`catalog_product_id`, `warehouse_id`, `ubicacion`, `quantity`) |
 | Catálogo de ubicaciones físicas | `Warehouse` (catálogo fijo de 7 bodegas, sembrado por migración) |
 | Kardex inmutable de movimientos (Entrada/Reubicación/Consumo) | `InventoryMovement` (`tipo`, `referencia_entidad_tipo`, `referencia_entidad_id` — **ya polimórfico**, pensado para que otros módulos referencien su propio origen) |
-| Traslado con aprobación (Bodega Central → Reserva Servicios, REQ-277 RN2) | `RelocationRequest` (flujo Bodega solicita → Mark aprueba/rechaza, ya construido) |
+| Traslado con aprobación (Bodega Central → Reserva Servicios, REQ-277 RN2) | `RelocationRequest` (flujo Bodega solicita → Aprobador aprueba/rechaza, ya construido) |
 | Escritura atómica del kardex | `KardexService::registrar()` — único punto de escritura, inmutable |
 
 **Decisión: Servicios NO tiene tabla de inventario propia.** Se agrega:
@@ -190,7 +190,7 @@ inspection_report_materials(     -- REQ-240 RN1/RN2 — texto libre, SIN FK a ca
 -- real) — contradicción real del requerimiento, no solo de secuenciación. Batch 8 implementa
 -- solo el registro informativo (RN1/RN2); cuando Batch 14 resuelva la bodega, ahí se decide cómo
 -- resolver el material de texto libre a un producto real del catálogo (o si se reemplaza RN1 por
--- un buscador, a confirmar con Daniela/cliente en ese momento).
+-- un buscador, a confirmar con Gerencia1/cliente en ese momento).
 
 inspection_report_photos(id, inspection_report_id, categoria, storage_key, uploaded_by, created_at)
 -- categoria: antes | despues (REQ-241 RN1 — dos categorías separadas, no un solo listado)
@@ -238,7 +238,7 @@ internal_technicians(
 -- Estado (Disponible/En ruta/Ocupado/Fuera) NUNCA se persiste — se calcula en cada request
 -- desde tickets.scheduled_at/scheduled_ends_at + hora actual en America/Panama (working_hours es
 -- hora local de negocio) vía TechnicianStatusService (REQ-256 RN5). Los 4 técnicos reales
--- existentes (Tecnico Servicios Test, Tecnico Servicios Test, Agustín Rodríguez, Garantias Servicios Test) están linkeados
+-- existentes (Tecnico Servicios Test, Tecnico Servicios Test, [persona] [persona], Garantias Servicios Test) están linkeados
 -- vía user_id por InternalTechnicianSeeder.
 
 external_technicians(
@@ -319,12 +319,12 @@ no hace falta tocar el catálogo de permisos en sí, solo sembrar filas de
 2026-07-30) ya tiene estas personas/roles:
 - **Aaron / Líder de Servicios** = Aaron Leis (`servicio@atlantic.com.pa`), rol
   `lider_servicios`, Nivel 4 — coincide exacto.
-- **Técnico interno (general)** = Tecnico Servicios Test, Tecnico Servicios Test, Agustín Rodríguez, rol
+- **Técnico interno (general)** = Tecnico Servicios Test, Tecnico Servicios Test, [persona] [persona], rol
   `tecnico_servicios`, hoy Nivel 1 (Solo lectura).
 - **Técnico interno (Garantías)** = Garantias Servicios Test (`garantias@atlantic.com.pa`), rol
   `garantias_servicios` — coincide con la distinción "General vs Garantías" de REQ-256 RN2; Miguel
-  Castillo es literalmente el técnico usado como ejemplo en varios criterios de aceptación (REQ-238).
-- **Gerencia** = rol `management` ya existente (Daniela, David, Mark).
+  [persona] es literalmente el técnico usado como ejemplo en varios criterios de aceptación (REQ-238).
+- **Gerencia** = rol `management` ya existente (Gerencia1, Gerencia2, Aprobador).
 - **Vendedor/Diseñador** = rol ya existente (10 personas) — solo necesita alcance de solo-lectura
   agregado sobre `servicios` (ver REQ-279 RN6, REQ-308 RN4).
 
@@ -344,7 +344,7 @@ subir de nivel globalmente). Tarea de seeding en Batch 1 (Backend Dev), no decis
    tenga contexto de Bodega (posible Backend Dev que construyó SCRUM-451), no es unilateral de
    Servicios. Bloquea Batch 14.
 3. ~~Catálogo exacto de estados de herramienta~~ — **resuelto** 2026-08-12 al implementar Grupo D
-   parte 1 (REQ-268→272): el texto real de REQ-269 (Jira, Daniela) da los 4 estados completos —
+   parte 1 (REQ-268→272): el texto real de REQ-269 (Jira, Gerencia1) da los 4 estados completos —
    **buen_estado | dañada | desgaste | perdida** — ver `tools.estado` arriba.
 4. **Reportes (REQ-280→286)** — para el MVP los trato como queries agregadas sobre las tablas de
    arriba, sin tabla propia, salvo "Biblioteca de reportes" (REQ-286) que puede necesitar una tabla

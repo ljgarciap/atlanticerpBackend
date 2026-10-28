@@ -16,7 +16,7 @@ administración") pero con dos gaps reales, relevados por Luis en la descripció
 2. Los valores que SÍ están parametrizados están repartidos en ≥8 pantallas de configuración
    distintas (Fiscal, Fraude, Compras, Pricing, Orders, Conditions, Reports, Bodega, Servicios)
    más el key/value genérico `GlobalSetting`, sin ninguna vista que los agregue — y con gating de
-   permisos inconsistente (Fiscal es exclusiva de Mark, no de superadmin).
+   permisos inconsistente (Fiscal es exclusiva de Aprobador, no de superadmin).
 
 Este ticket (SCRUM-945) es la fase de Analista: clarificar el alcance real antes de que el
 Arquitecto diseñe la solución. No autoriza implementar todavía.
@@ -32,7 +32,7 @@ Dos entregables, ambos de la épica SCRUM-944:
    default hardcodeado "razonable" en el código.
 2. **Vista consolidada NUEVA, exclusiva de superadmin**, que agrega/expone en un solo lugar todos
    los valores de negocio parametrizados de todos los módulos — sin reemplazar, ocultar ni
-   re-gatear ninguna de las 8 pantallas existentes. Mark conserva su acceso exclusivo a Fiscal tal
+   re-gatear ninguna de las 8 pantallas existentes. Aprobador conserva su acceso exclusivo a Fiscal tal
    como hoy; la vista nueva es adicional, no sustitutiva.
 
 ## Alcance de la auditoría (decidido por Luis, 2026-09-23)
@@ -61,7 +61,7 @@ vista, no una violación masiva.
 **Nueva vista agregadora**, exclusiva de superadmin (permiso `superadmin.all`). Expone y permite
 editar TODOS los valores de negocio parametrizados, agrupados por módulo, escribiendo siempre a la
 MISMA tabla que ya usa la pantalla existente de ese módulo (nunca un storage paralelo/duplicado).
-Ninguna de las 8 pantallas actuales se elimina, oculta ni cambia su gating — Mark sigue con acceso
+Ninguna de las 8 pantallas actuales se elimina, oculta ni cambia su gating — Aprobador sigue con acceso
 exclusivo a Fiscal igual que hoy. `superadmin.all` ya bypassa toda restricción de permisos en el
 modelo actual, así que esto no requiere ningún permiso nuevo.
 
@@ -69,7 +69,7 @@ modelo actual, así que esto no requiere ningún permiso nuevo.
 
 - **Superadmin** — único rol con acceso a la vista consolidada nueva. Puede ver y editar cualquier
   valor de negocio parametrizado de cualquier módulo desde un solo lugar.
-- **Mark / otros roles con acceso a una pantalla de configuración específica** (ej. Fiscal) — sin
+- **Aprobador / otros roles con acceso a una pantalla de configuración específica** (ej. Fiscal) — sin
   cambios: siguen viendo/editando solo lo que ya ven hoy, por la pantalla que ya usan hoy.
 - Cualquier otro rol → 403 en la vista consolidada, igual que hoy en cada pantalla existente.
 
@@ -91,20 +91,20 @@ modelo actual, así que esto no requiere ningún permiso nuevo.
 - [ ] Ruta nueva, exclusiva de `superadmin.all`, lista TODOS los valores de negocio parametrizados
       de todos los módulos (Fiscal, Fraude, Compras, Pricing, Orders, Conditions, Reports, Bodega,
       Servicios + lo que la auditoría haya migrado), agrupados por módulo.
-- [ ] Un usuario sin `superadmin.all` (incluido Mark con rol `management`) recibe 403 al acceder a
+- [ ] Un usuario sin `superadmin.all` (incluido Aprobador con rol `management`) recibe 403 al acceder a
       la ruta/vista nueva.
 - [ ] Editar un valor desde la vista consolidada escribe en la MISMA tabla que ya usa la pantalla
       existente de ese módulo — un cambio hecho desde la vista nueva se refleja de inmediato en la
       pantalla existente correspondiente, y viceversa (sin storage paralelo).
 - [ ] Ninguna de las 8 pantallas existentes cambia su gating de permisos actual por este ticket
-      (Fiscal sigue exclusiva de Mark, etc.).
+      (Fiscal sigue exclusiva de Aprobador, etc.).
 - [ ] Cambios hechos desde la vista consolidada quedan capturados por `audit_logs` (SCRUM-788,
       trait `LogsAuditTrail` o `AuditService::log()` según corresponda) — mismo nivel de trazabilidad
       que ya tienen los cambios hechos desde cada pantalla existente.
 
 ## Edge cases and error scenarios
 
-- Un usuario sin `superadmin.all` pero con varios `extra_permissions` individuales (ej. Mark) →
+- Un usuario sin `superadmin.all` pero con varios `extra_permissions` individuales (ej. Aprobador) →
   403 en la vista nueva, igual que cualquier otro rol no-superadmin.
 - Un valor genuinamente transversal a ≥2 módulos (no específico de uno solo) → va a
   `GlobalSetting`, no se duplica por módulo.

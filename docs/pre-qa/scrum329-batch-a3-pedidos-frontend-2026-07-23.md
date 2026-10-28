@@ -18,7 +18,7 @@ firmada-sin firmar/contacto y dirección poblados/ETA de proveedor. Suite promov
 Los 16 tickets corren detrás de `permission:bodega.read` (lectura, todo el batch es solo-lectura).
 No hay `extra_permissions` angostos involucrados — es permiso de rol (`bodega.view`/`bodega.read`),
 ya concedido de verdad vía `RoleBackfillSeeder`/roster real (`CoreUserSeeder`), confirmado con login
-real de Esteban (`lider_bodega`, `almacen@atlantic.com.pa`) trayendo `bodega.view/read/view_team/edit`
+real de Liderbodega (`lider_bodega`, `almacen@atlantic.com.pa`) trayendo `bodega.view/read/view_team/edit`
 en el JWT. Nada que agregar a `SpecialPermissionSeeder`.
 
 ## Veredicto global: 🔴 Rebota — 1 hallazgo CRÍTICO real en SCRUM-400, resto limpio
@@ -42,9 +42,9 @@ espacio."
 **Lo que pasa de verdad** (verificado con PED-2026-0009, `entregado`, guía ya firmada, navegador
 real — ver `e2e/.tmp` del run, texto capturado por el test):
 
-> Firma: **"Firmado y recibido por: Gary Arrocha"**
+> Firma: **"Firmado y recibido por: [persona] [persona]"**
 
-Gary Arrocha es el **repartidor** (courier) de ese pedido, no el cliente/persona que recibió y
+[persona] [persona] es el **repartidor** (courier) de ese pedido, no el cliente/persona que recibió y
 firmó. El frontend (`GuiaEntregaModal.tsx`) muestra `order.repartidor` en el área de firma — pero
 el backend (`DeliveryService::registerSignedGuide()`, Batch A2) **nunca captura un nombre de
 receptor**: el único dato que persiste sobre quién recibió es el archivo adjunto (foto/PDF de la
@@ -81,7 +81,7 @@ para cuando se parta `customer_contact` en columnas reales.
 
 - **SCRUM-375** — contador real (`10 pedidos activos`, no fijo), ambos botones de encabezado
   presentes y funcionales.
-- **SCRUM-376** — panel de carga por asistente correcto (Mariano/Osvaldo, 50/50 con mis fixtures).
+- **SCRUM-376** — panel de carga por asistente correcto (Asistentebodega2/Asistentebodega, 50/50 con mis fixtures).
   Forcé un desbalance real (70/30 vía `tinker`) y la advertencia
   "Reparto desbalanceado entre asistentes — considera reasignar algunos pedidos." apareció
   correctamente; revertido después a 50/50.

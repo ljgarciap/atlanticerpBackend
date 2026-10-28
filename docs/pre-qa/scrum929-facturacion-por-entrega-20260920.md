@@ -87,7 +87,7 @@ contra la app real corriendo (servicios reales del contenedor `laravel`, no lect
 factura entrega 1 (321.00) y entrega 2 (321.00) como parciales; se corrige el ITBMS de la entrega 2
 a 3.5% vía `CreditNoteService::registerCorreccion()` (mismo código que ejecuta el endpoint
 `POST /notas-credito/correccion`, el monto de la corrección — 310.50 — cae bajo el umbral de
-aprobación de Mark así que se ejecuta de inmediato, igual que lo haría un usuario real desde la UI
+aprobación de Aprobador así que se ejecuta de inmediato, igual que lo haría un usuario real desde la UI
 de Notas de Crédito sin necesitar aprobación); se factura la entrega 3, que **cierra el pedido**.
 
 Resultado: la entrega 3 cobra exactamente **321.00**, no 331.50 — la corrección de ITBMS ya NO se

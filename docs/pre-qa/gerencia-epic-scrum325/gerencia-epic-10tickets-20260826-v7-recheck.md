@@ -30,7 +30,7 @@
 ## Hallazgo transversal #1 (nuevo) — "querystring que el destino no consume", ahora en 3 pantallas más
 
 Ya documentado para SCRUM-166 desde v5 (Pipeline). Esta pasada confirma el MISMO patrón en las 3
-redefiniciones que hizo Daniela el 2026-08-25 para "Salud por módulo": el fix agregó correctamente
+redefiniciones que hizo Gerencia1 el 2026-08-25 para "Salud por módulo": el fix agregó correctamente
 el indicador y la navegación de ORIGEN (Gerencia → URL con querystring correcto), pero ninguna de
 las 3 pantallas DESTINO lee ese parámetro:
 
@@ -56,13 +56,13 @@ replicado 3 veces.
 ## Hallazgo transversal #2 (nuevo, más grave) — Aprobar/Rechazar desde Gerencia no respeta la autoridad real de cada módulo
 
 **SCRUM-161** — Confirmado EN VIVO (no solo lectura de código): se creó una `ReglaAprobacion` real
-de prueba (`tipo=adjustment`, aprobador=Whileyner Contreras, id=1, ELIMINADA al terminar la
-prueba) y se inició sesión como Whil. Resultado: Whil vio los 23 pendientes de **TODOS** los tipos
+de prueba (`tipo=adjustment`, aprobador=Gerencia5 [persona], id=1, ELIMINADA al terminar la
+prueba) y se inició sesión como Gerencia5. Resultado: Gerencia5 vio los 23 pendientes de **TODOS** los tipos
 (`purchase_order`, `zona_libre`, `general_count`), no solo `adjustment` — con `can_approve: true`
 en cada uno. `GerenciaHomeService::pendingApprovalsSection()` solo verifica "¿es aprobador de
 ALGÚN tipo?" (booleano), nunca filtra la lista ni el flag `can_approve` por el `tipo` real de la
 regla. Esto incumple RN2 del propio ticket ("cada tipo tiene un rol autorizado — el listado se
-filtra según quién inició sesión") y el Escenario 2 ("David... ve un listado DISTINTO, según sus
+filtra según quién inició sesión") y el Escenario 2 ("Gerencia2... ve un listado DISTINTO, según sus
 propios tipos autorizados").
 
 **SCRUM-162 — mismo gap, con impacto de autorización real:** `GerenciaAprobacionController::isApprover()`
@@ -72,12 +72,12 @@ tiene el mismo defecto — no valida que el `$type` de la solicitud coincida con
 `$user->id === $markApproverId` (con bypass solo para `superadmin.all` — gate agregado en SCRUM-206
 tras un hallazgo de QA), el endpoint de Gerencia **no replica ese gate**: cualquier usuario en
 cualquier `ReglaAprobacion` activa (de cualquier tipo) podría aprobar una Orden de Compra vía
-Gerencia aunque `PurchaseOrderController` se lo hubiera rechazado con 403 "Solo Mark puede aprobar
+Gerencia aunque `PurchaseOrderController` se lo hubiera rechazado con 403 "Solo Aprobador puede aprobar
 esta orden" si lo intentara por la vía normal. Es un bypass real de una regla de autorización ya
 endurecida una vez (SCRUM-206).
 
 **SCRUM-162 RN4 — CONFIRMADO EN VIVO con mutación real:** se aprobó el conteo general `CNT-5`
-(`GeneralCountRequest` id=5) desde Gerencia con la sesión real de Mark. Resultado:
+(`GeneralCountRequest` id=5) desde Gerencia con la sesión real de Aprobador. Resultado:
 - Bandeja de Gerencia: `pending_total` 23→22, CNT-5 desaparece — mitad de RN4 cumple.
 - Origen real (`GET /api/bodega/general-counts/5`): `estado` quedó en `"aprobado"`.
 - Pero la constante real del modelo es `GeneralCountRequest::ESTADO_APROBADA = 'aprobada'` (con
@@ -99,7 +99,7 @@ del modelo) se repite en los 4 helpers de `GerenciaAprobacionController` que no 
 Además, el motivo (`razon`) que el endpoint `rechazar()` sí valida (`nullable|string|max:500`)
 **nunca se pasa** a ninguno de los métodos privados `rechazar*()` — se descarta siempre, incluso
 para tipos cuyo propio módulo exige motivo obligatorio (ver comentario SCRUM-465 en
-`GeneralCountController::reject()`, "Mark rechaza, motivo obligatorio").
+`GeneralCountController::reject()`, "Aprobador rechaza, motivo obligatorio").
 
 **Impacto de esta sesión en datos reales de dev.atlanticerp.ai:** el registro `general_counts` id=5
 ("CNT-5") quedó con `estado='aprobado'` (inválido) como evidencia directa de este hallazgo — no se
@@ -143,7 +143,7 @@ propia bandeja (SCRUM-161).
 
 - **RN1 (mismos filtros que Facturación) — CORREGIDO Y CONFIRMADO EN VIVO.** A diferencia de
   Facturación, Proyectos SÍ tiene relación real con vendedor (`PipelineCard.owner_id`). Se
-  seleccionó un vendedor real (Anelhys Nuez) y "Proyectos cerrados este año" cambió de $769,441 a
+  seleccionó un vendedor real (Usuario [persona]) y "Proyectos cerrados este año" cambió de $769,441 a
   $55,000 — filtro real, confirmado por el network request (`vendedor_id=39`) y por el cambio del
   valor renderizado.
 - **RN3 (margen cotizado año/mes) — CORREGIDO.** Valor real: `margen_anio_pct=57.47`,
@@ -157,16 +157,16 @@ propia bandeja (SCRUM-161).
 ### SCRUM-161 — REQ-099: Panel "Aprobaciones por validar" (listado) — ❌ NO PASA
 
 Ver "Hallazgo transversal #2" arriba para el detalle completo y la evidencia. Resumen: el fix
-conectó `ReglaAprobacion` como fuente de autorización (mejora real sobre v6, donde solo Mark podía
+conectó `ReglaAprobacion` como fuente de autorización (mejora real sobre v6, donde solo Aprobador podía
 ser aprobador), pero el filtrado es binario ("¿sos aprobador de algo?"), no por tipo — RN2 y el
 Escenario 2 del propio ticket siguen sin cumplirse. Sin ninguna `ReglaAprobacion` activa hoy en
-dev.atlanticerp.ai, David y Whil siguen sin forma de aparecer como `is_approver=true` en el estado
-actual del entorno (confirmado: `is_approver=false`, `aprobaciones=[]` para Whil sin reglas).
+dev.atlanticerp.ai, Gerencia2 y Gerencia5 siguen sin forma de aparecer como `is_approver=true` en el estado
+actual del entorno (confirmado: `is_approver=false`, `aprobaciones=[]` para Gerencia5 sin reglas).
 
 ### SCRUM-162 — REQ-100: Detalle + Aprobar/Rechazar — ❌ NO PASA
 
 - **RN1/RN2/RN3 — CORREGIDOS Y CONFIRMADOS EN VIVO.** El modal de detalle existe, muestra
-  descripción/monto/fecha; botones "Aprobar"/"Rechazar" renderizan para un aprobador real (Mark,
+  descripción/monto/fecha; botones "Aprobar"/"Rechazar" renderizan para un aprobador real (Aprobador,
   con PO-8 y CNT-5); "Rechazar" correctamente ausente para `purchase_order` (regla de negocio ya
   documentada en el código: el rechazo de PO se gestiona en Compras). "Ver en [módulo]" navega con
   el ID puntual preseleccionado: `/bodega/inventario-general?count=5`, `/compras/ordenes?order=8`
@@ -186,9 +186,9 @@ actual del entorno (confirmado: `is_approver=false`, `aprobaciones=[]` para Whil
 - **RN3/RN4 (filtro de mes en Cotizaciones/Pedidos) — SIGUE ROTO, sin cambios.** Ambos
   `onClick` siguen navegando sin ningún querystring de mes.
 
-### SCRUM-167 — REQ-105: Salud Admin & Contab (redefinido por Daniela 2026-08-25) — ❌ NO PASA
+### SCRUM-167 — REQ-105: Salud Admin & Contab (redefinido por Gerencia1 2026-08-25) — ❌ NO PASA
 
-Contexto: el ticket de Jira original decía "PENDIENTE DE DEFINIR" — Daniela definió el
+Contexto: el ticket de Jira original decía "PENDIENTE DE DEFINIR" — Gerencia1 definió el
 comportamiento real en un comentario del 2026-08-25 (2 indicadores: CxC Total → Cobros filtrado
 "Esperando confirmación"; Cuentas al día → Cobros sin filtro; CxP Total eliminado).
 
@@ -215,7 +215,7 @@ comportamiento real en un comentario del 2026-08-25 (2 indicadores: CxC Total �
   corrigió. Transicioné a `In Progress` de todas formas dado que Escenario 1 del Gherkin no puede
   ejecutarse — ver sección de transiciones.
 
-### SCRUM-169 — REQ-107: Salud Bodega (redefinido por Daniela 2026-08-25) — ❌ NO PASA
+### SCRUM-169 — REQ-107: Salud Bodega (redefinido por Gerencia1 2026-08-25) — ❌ NO PASA
 
 - **CA3 ("Despachado a tiempo" sin navegación) — CORRECTO.** Confirmado en vivo: clic no navega
   a ningún lado (permanece en `/gerencia`), tal como exige RN3 de la redefinición.
@@ -226,7 +226,7 @@ comportamiento real en un comentario del 2026-08-25 (2 indicadores: CxC Total �
   la URL (`useState<Chip>('all')` hardcodeado) — confirmado empíricamente, ambas URLs renderizan
   contenido idéntico.
 
-### SCRUM-170 — REQ-108: Salud Servicios (redefinido por Daniela 2026-08-25) — ❌ NO PASA
+### SCRUM-170 — REQ-108: Salud Servicios (redefinido por Gerencia1 2026-08-25) — ❌ NO PASA
 
 - **CA2/CA5 ("Resuelto en 1ra visita" eliminado) — CORRECTO.** Confirmado: 0 ocurrencias en
   pantalla, quedan solo 2 indicadores.
@@ -265,7 +265,7 @@ Luis.
    RN1 para excluir Facturación explícitamente (ya es el comportamiento de facto)?
 2. **SCRUM-161 + SCRUM-162 (hallazgo transversal #2)** — el mecanismo de aprobación desde Gerencia
    necesita rediseño: no filtra por tipo de solicitud (SCRUM-161 RN2), no reutiliza las
-   validaciones/autorización de cada módulo de origen (bypass del gate "solo Mark" de
+   validaciones/autorización de cada módulo de origen (bypass del gate "solo Aprobador" de
    `PurchaseOrderController`, SCRUM-206), y escribe valores de enum inválidos en 4 de 5 tipos
    (confirmado en vivo con datos reales en dev.atlanticerp.ai). Recomendado: decidir si Gerencia debe
    delegar a los controllers/servicios reales de cada módulo en vez de duplicar lógica.

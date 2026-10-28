@@ -495,7 +495,7 @@ Frontend: `npx vitest run src/components/servicios src/pages/servicios`.
 | **Kardex** | Historial de movimientos de herramientas. |
 | **SLA** | Días hábiles máximos para resolver según el tipo. |
 | **Licencia médica** | Excluye puntualidad de la comisión y reparte su monto. |
-| **Lider de Servicios** | Rol `lider_servicios`, hoy Aldo (antes Aaron). |
+| **Lider de Servicios** | Rol `lider_servicios`, hoy Liderservicios (antes Aaron). |
 
 <!-- nav-manuales:inicio -->
 ---

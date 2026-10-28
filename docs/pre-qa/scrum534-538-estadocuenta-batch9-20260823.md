@@ -14,9 +14,9 @@ MasterClient "Playwright EC Batch9" (id 670), 2 SalesProject (Norte id 604, Sur 
 `AdminContInvoice` (F-338600 $4,000 pagada en su totalidad, F-922846 $2,200 abierta en Norte,
 F-190237 $1,500 abierta en Sur), 1 `AdminContPayment` confirmado de $4,000 aplicado a F-338600,
 1 `AdminContBankAccount` activa (Banco General/Corriente ****8901),
-`fiscal_settings.responsable_administracion_user_id` apuntando a Felix. 6 escenarios corridos con
+`fiscal_settings.responsable_administracion_user_id` apuntando a Contabilidad. 6 escenarios corridos con
 **Playwright CLI** (regla dura del proyecto) contra una cuenta real (`conta@atlantic.com.pa`,
-Felix, `lider_admin_contab`, password = email).
+Contabilidad, `lider_admin_contab`, password = email).
 
 ## 1. SCRUM-534 / REQ-457 — Tarjeta de saldo
 
@@ -37,7 +37,7 @@ Felix, `lider_admin_contab`, password = email).
 ## 2. SCRUM-535 / REQ-458 — Bloque de datos de pago
 
 - **Escenario 1:** verificado en vivo — "Cuenta número: Banco General ****8901" y
-  "Responsable: Felix Campos" visibles siempre, incluso sin filtrar por proyecto. Captura
+  "Responsable: Contabilidad Test" visibles siempre, incluso sin filtrar por proyecto. Captura
   `01-resultado-todos-proyectos.png`.
 - **RN3 (idéntico entre Facturación y Estado de Cuenta):** verificado por diseño, no solo por
   observación — ambas pantallas llaman al mismo `InvoiceService::paymentBlock()` estático (ver

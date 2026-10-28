@@ -11,7 +11,7 @@ aprobación explícita de Luis. Gate real ya corrido y verificado en
 
 ## 0. Ambiente de prueba
 
-Local (`localhost:5173` vía Vite dev, proxy a `localhost:8090`), sesión real con Felix
+Local (`localhost:5173` vía Vite dev, proxy a `localhost:8090`), sesión real con Contabilidad
 (`conta@atlantic.com.pa`, `lider_admin_contab`) y con `designer@atlantic.test` para el
 chequeo negativo de permisos. Sin sembrar fixtures nuevos — el roster real de 40 usuarios y el
 catálogo de 3 tasas de ITBMS (Configuración Fiscal) ya estaban en la BD local. `credit_notes` queda

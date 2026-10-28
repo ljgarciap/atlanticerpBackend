@@ -80,7 +80,7 @@ aparece al correr el módulo entero.
 `AdminContBankAccountSeeder.php:93-98` identifica "la misma cuenta" por `lower(banco)` + `tipo_cuenta` + `ultimos_4_digitos`.
 `UpdateBankAccountRequest.php:29-40` permite editar los tres (`sometimes`), y no existe endpoint para borrar
 (`routes/admin-contab.php:66-73`: solo index/store/update/deactivate/reactivate). Escenario realista: tras el primer
-deploy en producción Felix/Daniela corrigen "Banco General" → "Banco General S.A.", o cambian el tipo, o el banco
+deploy en producción Contabilidad/Gerencia1 corrigen "Banco General" → "Banco General S.A.", o cambian el tipo, o el banco
 con trailing space; el siguiente `db:seed --force` (corre en cada deploy) no encuentra la cuenta y **crea otra
 activa** con el nombre/tipo/terminación originales. Efectos: (a) aparece duplicada en los selectores de Cobros y
 Comisiones sin forma de eliminarla (solo desactivar); (b) `PaymentService::defaultBankAccountFor()`

@@ -18,7 +18,7 @@
 ## Diseño
 
 ### A. D1 — bloquear la corrección si la factura ya tiene NC
-- En `correccionContext()` (lo usan `previewCorreccion` y `registerCorreccion`): si existe alguna `credit_notes` con `factura_origen_id = factura` y `estado ∈ {aplicada, pendiente_aprobacion}` (excluye las `rechazada` por Mark; una NC aplicada en AtlanticERP pero rechazada por la DGI SÍ bloquea, y el usuario debe resolverla primero con "Reintentar certificación" de SCRUM-1007) ⇒ excepción de dominio ⇒ **422** con mensaje: *"Esta factura ya tiene notas de crédito (NC-XXXX). No se puede corregir; resuélvelas primero o acredita el saldo y emite una factura nueva."*
+- En `correccionContext()` (lo usan `previewCorreccion` y `registerCorreccion`): si existe alguna `credit_notes` con `factura_origen_id = factura` y `estado ∈ {aplicada, pendiente_aprobacion}` (excluye las `rechazada` por Aprobador; una NC aplicada en AtlanticERP pero rechazada por la DGI SÍ bloquea, y el usuario debe resolverla primero con "Reintentar certificación" de SCRUM-1007) ⇒ excepción de dominio ⇒ **422** con mensaje: *"Esta factura ya tiene notas de crédito (NC-XXXX). No se puede corregir; resuélvelas primero o acredita el saldo y emite una factura nueva."*
 - Tanto el preview como el submit devuelven el mismo error; el modal de "Corrección de datos" lo muestra antes de confirmar (sin llegar a anular nada).
 - **A confirmar:** ¿una corrección previa ya ejecutada bloquea a la factura de reemplazo? No: su NC de anulación quedó ligada a la ORIGINAL, y el reemplazo es una factura nueva sin NC.
 
@@ -33,14 +33,14 @@
   - `no_aplica` (FE apagada / tipo deshabilitado) ⇒ despacha `InvoiceCreated` (el listener lo deja `no_aplica`; sin cambios visibles).
   - cualquier otro (`rechazado`, `error_configuracion`, `pendiente`) ⇒ **no despacha**; deja el reemplazo en `en_espera_nc`.
 - **Liberación:** en `persistirResultado()`, cuando una NC con `subtipo_anulacion = correccion` y `factura_nueva_id` pasa a `certificado`, y el reemplazo está en `en_espera_nc`, se libera con un *compare-and-set* atómico (`UPDATE … SET fe_estado = NULL WHERE id = ? AND fe_estado = 'en_espera_nc'`, si afecta 1 fila ⇒ despacha `InvoiceCreated`). Idempotente: dos caminos simultáneos (polling y reintento manual) certifican el reemplazo una sola vez.
-- **Visibilidad:** en el detalle de la NC de corrección, mientras no esté certificada, un aviso: *"La factura original figura anulada en AtlanticERP pero sigue vigente ante la DGI hasta que esta nota se certifique. La factura de reemplazo se emitirá automáticamente al certificarse."* (solo Mark/superadmin ven además el botón de reintento de SCRUM-1007). En el detalle del reemplazo, el badge "En espera de la nota de anulación".
+- **Visibilidad:** en el detalle de la NC de corrección, mientras no esté certificada, un aviso: *"La factura original figura anulada en AtlanticERP pero sigue vigente ante la DGI hasta que esta nota se certifique. La factura de reemplazo se emitirá automáticamente al certificarse."* (solo Aprobador/superadmin ven además el botón de reintento de SCRUM-1007). En el detalle del reemplazo, el badge "En espera de la nota de anulación".
 - **Riesgo residual (decisión de Luis pendiente, fuera de este ticket):** si la NC de anulación nunca certifica, el original queda anulado en AtlanticERP y vigente en la DGI y el reemplazo retenido. No hay "revertir corrección"; se propone un ticket aparte si ocurre.
 
 ## Fuera de alcance
 - Revertir una corrección en AtlanticERP; corregir facturas con NC previas (D1 las bloquea); cambios de numeración; el reemplazo de una factura parcial ya tiene el mismo tratamiento (hereda `order_id`/`tipo`).
 
 ## Criterios de aceptación
-1. Corrección sobre una factura con NC `aplicada`/`pendiente_aprobacion` ⇒ 422 con el mensaje, en preview y en submit; nada se anula. Con NC `rechazada` (Mark) sí procede.
+1. Corrección sobre una factura con NC `aplicada`/`pendiente_aprobacion` ⇒ 422 con el mensaje, en preview y en submit; nada se anula. Con NC `rechazada` (Aprobador) sí procede.
 2. Con la NC de anulación rechazada por la DGI, el reemplazo NO se certifica y queda `en_espera_nc`; nunca hay dos facturas vigentes ante la DGI por el mismo hecho (verificado en sandbox con un par).
 3. Al certificarse la NC (inicial, reintento manual o polling) el reemplazo se certifica **una sola vez**, automáticamente; test de concurrencia del compare-and-set.
 4. FE apagada: comportamiento idéntico al actual (reemplazo `no_aplica`).

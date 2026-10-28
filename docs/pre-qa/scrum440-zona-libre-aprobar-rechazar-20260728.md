@@ -10,7 +10,7 @@ misma sesión, y quedó pendiente de este Pre-QA propio antes de pasar a QA.
 
 ## Paso 0 — permisos angostos
 `compras.zona-libre.approve`, `bodega.read`, `compras.settings.configure` ya están en
-`SpecialPermissionSeeder.php` para `gerencia2@atlantic.com.pa` (Yirena) — no es grant manual.
+`SpecialPermissionSeeder.php` para `gerencia2@atlantic.com.pa` (Lidercompras) — no es grant manual.
 No hay hallazgo.
 
 ## Criterios de aceptación
@@ -33,7 +33,7 @@ No hay hallazgo.
 
 ## Visual Review (mockup adjunto)
 `3D__Bodega_OrdenesZL.html` — la vista de Bodega coincide elemento a elemento (chips, badges,
-acciones). El mockup nunca modeló la acción de Yirena (solo cubre la vista de lectura de Bodega),
+acciones). El mockup nunca modeló la acción de Lidercompras (solo cubre la vista de lectura de Bodega),
 así que Aprobar/Rechazar es funcionalidad nueva mandatada por el texto del ticket, no una
 desviación. El 🔔 del mockup se tradujo correctamente a `IcoBell` (SVG), no emoji — cumple SCRUM-56.
 

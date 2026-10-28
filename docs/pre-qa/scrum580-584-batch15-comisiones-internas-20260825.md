@@ -11,14 +11,14 @@ Playwright CLI (config descartable apuntando `baseURL: https://dev.atlanticerp.a
 `playwright.config.ts` del repo apunta a `localhost:5173` por defecto, así que una corrida sin
 ese override real prueba el stack local, no dev; se detectó esto en el camino cuando los ids de
 usuario del DOM no coincidían con los reales de `dev.atlanticerp.ai`) + curl directo contra la API real
-con tokens de Felix/Mark/Milena (vendedora real) + SSH/tinker de solo lectura para inspeccionar
+con tokens de Contabilidad/Aprobador/[persona] (vendedora real) + SSH/tinker de solo lectura para inspeccionar
 datos reales y sembrar temporalmente un `compartido_con` de prueba (despoblado al terminar).
-Usuarios reales, nunca demo — Felix (`conta@atlantic.com.pa`), Mark
-(`mbekhar@atlantic.com.pa`), Milena (`milena.e@grupolafayette.com`, vendedora real).
+Usuarios reales, nunca demo — Contabilidad (`conta@atlantic.com.pa`), Aprobador
+(`gerencia3@test.com`), [persona] (`usuario@example.test`, vendedora real).
 
 ## SCRUM-580 (REQ-503) — Notas de crédito restan la base de comisión — LIMPIO
 
-Datos reales en dev (sin fabricar nada): vendedor Neil Quiel (id 35) tiene 3 pedidos comisionables
+Datos reales en dev (sin fabricar nada): vendedor [persona] [persona] (id 35) tiene 3 pedidos comisionables
 en agosto 2026 con NC reales aplicadas:
 - Pedido 215 / factura F-0002: NC-0002 por USD 3,293.65 sobre una base de USD 3,293.65 → comisión
   USD 0.00 (NC cubre el 100%).
@@ -26,7 +26,7 @@ en agosto 2026 con NC reales aplicadas:
   comisión USD 86.06.
 - Pedido 215 / factura F-0003 (sin NC): comisión normal USD 49.40.
 
-Verificado en UI (Felix, filtrado a Neil Quiel, fila expandida): la columna "Nota crédito" muestra
+Verificado en UI (Contabilidad, filtrado a [persona] [persona], fila expandida): la columna "Nota crédito" muestra
 en rojo `-USD 3,293.65 (NC-0002)` y `-USD 850.00 (NC-0003)`, tal como pide RN3. Solo notas
 `estado='aplicada'` restan — confirmado por lectura de código (`CommissionOrderService::rawOrders()`
 filtra `cn.estado = 'aplicada'` en la subquery) y por los tests explícitos del batch
@@ -41,7 +41,7 @@ número de nota, mismo criterio en la tabla principal y en el estado de cuenta (
 ## SCRUM-581 (REQ-504) — Arrastre de pedidos de meses cerrados aún sin cobrar — LIMPIO (con 1 limitación de datos documentada, no bloqueante)
 
 Escenario 1 (arrastre visible) verificado con datos reales: viendo agosto 2026 (mes en curso),
-Neil Quiel muestra 3 grupos — agosto (actual), julio arrastrado (2% fijo), abril arrastrado (2%
+[persona] [persona] muestra 3 grupos — agosto (actual), julio arrastrado (2% fijo), abril arrastrado (2%
 fijo) — los pedidos de julio/abril siguen `pendiente_cobro`, nunca se cobraron, y siguen
 apareciendo correctamente marcados como arrastrados.
 
@@ -55,8 +55,8 @@ según el criterio acordado con Luis para esta pasada.
 ## SCRUM-582 (REQ-505) — Tabla de vendedores: expandir/colapsar y detalle por pedido — **CRÍTICO encontrado y corregido**
 
 ### Hallazgo (antes del fix)
-Escenario 1 (expandir, agrupar por mes) — limpio, verificado con Neil Quiel (3 grupos) e Idmar
-Hernandez.
+Escenario 1 (expandir, agrupar por mes) — limpio, verificado con [persona] [persona] (3 grupos) e [persona]
+[persona].
 
 Escenario 2 ("un vendedor sin ningún pedido registrado, al expandir muestra 'Sin pedidos
 registrados todavía.'") — **CRÍTICO**. `vendedor_disenador` real "Designer Demo" (id 48, sin
@@ -100,14 +100,14 @@ no sea `vendedor_disenador`, sin quitar nada que ya se veía) con el roster comp
 ## SCRUM-583 (REQ-506) — Proyectos compartidos entre 2+ vendedores — LIMPIO
 
 Sin datos reales de `compartido_con` en dev (campo sin UI de asignación, por diseño — ver ADR §4).
-Sembrado temporalmente vía tinker (`pipeline_cards.id=184`, owner Idmar Hernandez, `amount=549.27`,
-`compartido_con=[42]` → Bernardo Gomez), verificado end-to-end en UI real y despoblado al terminar
+Sembrado temporalmente vía tinker (`pipeline_cards.id=184`, owner [persona] [persona], `amount=549.27`,
+`compartido_con=[42]` → [persona] Gomez), verificado end-to-end en UI real y despoblado al terminar
 (`compartido_con=null` de vuelta).
 
-Verificado con Felix, ambos responsables por separado:
-- Idmar Hernandez ve `total_pedido = USD 274.64`, badge "↔ Compartido con Bernardo Gomez · USD
+Verificado con Contabilidad, ambos responsables por separado:
+- [persona] [persona] ve `total_pedido = USD 274.64`, badge "↔ Compartido con [persona] Gomez · USD
   549.27 total del proyecto".
-- Bernardo Gomez ve `total_pedido = USD 274.64`, badge "↔ Compartido con Idmar Hernandez · USD
+- [persona] Gomez ve `total_pedido = USD 274.64`, badge "↔ Compartido con [persona] [persona] · USD
   549.27 total del proyecto".
 - Comisión de cada uno calculada sobre su parte ($274.64 × 1.5% = $4.12), nunca sobre el total del
   proyecto — confirmado por API y por UI.
@@ -118,7 +118,7 @@ División en partes iguales entre 2 y 3 responsables ya cubierta por tests expl�
 ## SCRUM-584 (REQ-507) — Estado de cuenta de comisiones (documento) — LIMPIO
 
 Verificado en UI real (modal "Estado de cuenta de comisiones", botón "Ver estado de cuenta" desde
-la fila expandida de Neil Quiel):
+la fila expandida de [persona] [persona]):
 - **Mes en curso (agosto):** 3 grupos (agosto/julio arrastrado/abril arrastrado), 3 totales
   (Pagada/Por pagar/Pendiente de cobro), línea "Descuento total por notas crédito -USD 62.15"
   (= NC total USD 4,143.65 × 1.5%). Coincide con la API (`descuento_nota_credito: 62.15`).
@@ -129,14 +129,14 @@ la fila expandida de Neil Quiel):
 - **Botón "Ver/Imprimir PDF":** dispara descarga real sin error (confirmado con Playwright
   `waitForEvent('download')` y por curl directo — `Content-Type: application/pdf`, 1 página válida,
   `pdfinfo` la confirma bien formada).
-- **Permisos (server-side, no solo UI):** Milena (vendedora, id 34) — `GET
+- **Permisos (server-side, no solo UI):** [persona] (vendedora, id 34) — `GET
   .../35/account-statement` (otro vendedor) → 403. `GET .../34/account-statement` (propio) → 200.
-  `GET .../35/account-statement/pdf` (PDF de otro) → 403. Felix/Mark de cualquier vendedor → 200.
+  `GET .../35/account-statement/pdf` (PDF de otro) → 403. Contabilidad/Aprobador de cualquier vendedor → 200.
 
 ## Iconografía (regla SCRUM-56)
 
 Confirmado por barrido de texto (regex de rangos Unicode de emoji sobre `body.innerText()`, login
-Mark) — sin ningún emoji en toda la pantalla de Comisiones Internas, incluidos el modal de estado
+Aprobador) — sin ningún emoji en toda la pantalla de Comisiones Internas, incluidos el modal de estado
 de cuenta y el modal de tramos. Solo iconos SVG del set propio (`IcoBarChart`, `IcoDownload`,
 `IcoChevronDown/Left/Right`, `IcoPrinter`, `IcoClose`).
 

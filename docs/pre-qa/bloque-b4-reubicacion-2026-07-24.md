@@ -3,13 +3,13 @@
 **Fecha:** 2026-07-24/25
 **Reviewer:** Pre-QA (subagente adversarial)
 **Alcance:** SCRUM-454 (REQ-384, chip Espacio libre), SCRUM-457 (REQ-387, botón/modal Reubicar),
-SCRUM-458 (REQ-388, aprobación de Mark), SCRUM-459 (REQ-389, bandeja de solicitudes).
+SCRUM-458 (REQ-388, aprobación de Aprobador), SCRUM-459 (REQ-389, bandeja de solicitudes).
 **Precedido por:** Senior Reviewer (aprobado sin blockers) y Visual Reviewer (pasada limpia,
 docs/visual-review/bloque-b4-reubicacion-2026-07-24.md).
 **Entorno:** local, Docker Compose (`infra-nginx-1`, puerto 8090) + frontend build estático
 (`npm run build` confirmado más nuevo que el código fuente antes de arrancar).
 **Herramientas:** `curl` directo contra el backend (bypaseando la UI, para las validaciones
-server-side y el gate de Mark) + Playwright CLI contra `http://localhost:5173` (dev server con
+server-side y el gate de Aprobador) + Playwright CLI contra `http://localhost:5173` (dev server con
 proxy `/api` → `:8090`, mismo patrón que el resto de specs en `e2e/`).
 **Commits en alcance:** backend `b07b9a9`/`c7b6795`/`29c03a2`, frontend `7b02819`/`f61f5d0`/
 `c850007`/`26f6049` — más el fix de esta sesión, frontend `b60e8fb`.
@@ -20,16 +20,16 @@ proxy `/api` → `:8090`, mismo patrón que el resto de specs en `e2e/`).
 
 `ComprasSettings::mark_approver_user_id` estaba **NULL** en este entorno pese a que la migración
 `2026_07_20_100009_add_mark_approver_to_compras_settings_table.php` intenta backfillearlo
-buscando a `mbekhar@atlantic.com.pa`. Causa raíz: el orden real de deploy es
+buscando a `gerencia3@test.com`. Causa raíz: el orden real de deploy es
 `migrate` → `tenants:artisan migrate` → `db:seed --force` (ver CLAUDE.md, sección
 "Infraestructura AWS" / CI-CD) — en cualquier entorno reprovisionado desde cero, la migración
-corre **antes** de que exista el usuario de Mark, así que el `DB::table(...)->where('email', ...)
+corre **antes** de que exista el usuario de Aprobador, así que el `DB::table(...)->where('email', ...)
 ->first()` de la migración siempre devuelve `null` y el backfill es un no-op silencioso. Esto no
 es un bug introducido por Bloque B4 (el mismo mecanismo lo usa `AdjustmentRequestController` desde
 SCRUM-206), pero es la primera vez que se confirma en vivo que efectivamente queda en `NULL` tras
 un reseed — con el valor en `NULL`, el gate del código (`if ($markApproverId !== null && ...)`) se
 salta por completo y **cualquier usuario con permiso `bodega.approve`** (todo el rol `management`:
-Daniela, David, Whil, Mark — no solo Mark) puede aprobar/rechazar.
+Gerencia1, Gerencia2, Gerencia5, Aprobador — no solo Aprobador) puede aprobar/rechazar.
 
 **No lo traté como bloqueante de estos 4 tickets** porque el código del gate en sí es correcto (lo
 verifiqué explícitamente más abajo, sección 3) y el problema es de aprovisionamiento, no de este
@@ -41,11 +41,11 @@ levantar el entorno (esto es dato, no código).
 recomiendo mover el backfill de la migración a un seeder que corra DESPUÉS de `db:seed` (mismo
 patrón que `SpecialPermissionSeeder`), porque tal como está hoy, cualquier reprovisión de
 dev.atlanticerp.ai/test.atlanticerp.ai (o un `docker compose down -v` + `up` local) puede dejar el gate de
-Mark abierto a todo el rol Gerencia sin que nadie lo note — ni `AdjustmentRequestController` ni
+Aprobador abierto a todo el rol Gerencia sin que nadie lo note — ni `AdjustmentRequestController` ni
 `RelocationRequestController` fallarían de forma visible, simplemente dejarían de exigir que sea
-Mark específicamente. **Recomendación operativa inmediata: verificar el valor real de
-`mark_approver_user_id` en dev.atlanticerp.ai y test.atlanticerp.ai antes de que QA (marly) pruebe SCRUM-458**
-— si está NULL ahí también, su prueba de "solo Mark aprueba" puede dar falso positivo (cualquier
+Aprobador específicamente. **Recomendación operativa inmediata: verificar el valor real de
+`mark_approver_user_id` en dev.atlanticerp.ai y test.atlanticerp.ai antes de que QA (qa) pruebe SCRUM-458**
+— si está NULL ahí también, su prueba de "solo Aprobador aprueba" puede dar falso positivo (cualquier
 cuenta de Gerencia que use aprobaría igual, sin que el 403 se dispare).
 
 ---
@@ -111,19 +111,19 @@ nginx antes de la re-corrida completa del checklist.
   la corrida anterior, commit `29c03a2`) — reconfirmado con `curl`: 422,
   "No se puede reubicar producto desde una bodega sin ubicación física confirmada."
 
-### SCRUM-458 (REQ-388) — Aprobación de Mark
+### SCRUM-458 (REQ-388) — Aprobación de Aprobador
 
 - **Usuario de Bodega sin `bodega.approve`** (`almacen@atlantic.com.pa`, lider_bodega)
   intenta aprobar/rechazar por API directa → 403 del middleware `permission:bodega.approve`,
   nunca llega al controller.
-- **Usuario de Gerencia CON `bodega.approve` pero que NO es Mark** (`daniela@atlantic.com.pa`,
-  mismo rol `management` que Mark) intenta aprobar/rechazar por API directa → 403,
-  "Solo Mark puede aprobar o rechazar esta solicitud." — el gate específico de persona (no de rol)
+- **Usuario de Gerencia CON `bodega.approve` pero que NO es Aprobador** (`gerencia1@atlantic.com.pa`,
+  mismo rol `management` que Aprobador) intenta aprobar/rechazar por API directa → 403,
+  "Solo Aprobador puede aprobar o rechazar esta solicitud." — el gate específico de persona (no de rol)
   funciona correctamente **una vez configurado** (ver Paso 0 arriba: en este entorno tuve que
   setearlo yo mismo, estaba en NULL).
-- **Escenario 1 (Central→Obarrio, 2u)** — Mark aprueba, verificado directo en base de datos:
+- **Escenario 1 (Central→Obarrio, 2u)** — Aprobador aprueba, verificado directo en base de datos:
   Central pasó de 50→48 (-2), Obarrio de 5→7 (+2). Exacto, sin efectos secundarios.
-- **Escenario 2 (rechazo)** — Mark rechaza, motivo persistido, inventario sin cambios en ninguna
+- **Escenario 2 (rechazo)** — Aprobador rechaza, motivo persistido, inventario sin cambios en ninguna
   bodega (no se llamó Kardex).
 - **Concurrencia — 2 approves simultáneos sobre la misma solicitud** (2 `curl` en paralelo,
   `wait`): una devolvió 200, la otra 422 "Esta solicitud ya fue resuelta." Verificado en BD que el
@@ -167,7 +167,7 @@ nginx antes de la re-corrida completa del checklist.
 
 - Las 3 capas de validación de RN2 (cliente, servidor, tipos) sin huecos.
 - RN1 (destino ≠ origen) blindado en las 2 capas (selector + validador server-side).
-- Gate "solo Mark" funciona correctamente a nivel de código — el hallazgo de Paso 0 es de dato de
+- Gate "solo Aprobador" funciona correctamente a nivel de código — el hallazgo de Paso 0 es de dato de
   entorno, no de lógica.
 - Fix de concurrencia (mismo patrón que `AdjustmentRequestController`) replicado correctamente,
   probado con carga real en paralelo, sin duplicar el ajuste de inventario.
@@ -199,6 +199,6 @@ en Central/Obarrio + ~9 `RelocationRequest` de prueba — **todo limpiado al cie
 `InventoryMovement` generados por los approves de prueba), verificado con
 `CatalogProduct::where('reference','PREQA-B4-001')->exists()` devolviendo `false` y
 `RelocationRequest::where('catalog_product_id',346)->count()` devolviendo `0`.
-`ComprasSettings::mark_approver_user_id` quedó **seteado a 6 (Mark)** intencionalmente — no se
+`ComprasSettings::mark_approver_user_id` quedó **seteado a 6 (Aprobador)** intencionalmente — no se
 revirtió a NULL, porque revertirlo dejaría el entorno local en el mismo estado roto que causó el
 hallazgo de Paso 0.

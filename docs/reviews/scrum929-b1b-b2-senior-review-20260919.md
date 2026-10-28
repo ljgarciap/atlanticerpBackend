@@ -56,7 +56,7 @@ Sin ediciones de producción/tests. Estado del reporte: se agregan hallazgos a m
 ### A-7 [BAJO — decisión de negocio] `reasociarAlFacturar()` entrega el abono de nivel Proyecto a la PRIMERA factura del proyecto, que ahora puede ser una parcial pequeña
 
 - Archivos: `InvoiceService.php:667-669` → `AbonoService.php:214-225`. Estado: VERIFICADO por lectura; el efecto de negocio es SOSPECHADO.
-- `reasociarAlFacturar` asocia TODO abono confirmado con `invoice_id IS NULL` de ese proyecto a la factura recién creada. Con facturación por entrega, el anticipo de todo el proyecto queda atado a la 1ª parcial (p. ej. anticipo 500 sobre una parcial de 321); cuando se cobra, `registrarUsoObligatorio` extrae el excedente (179) como abono de nivel Cliente, perdiendo la afinidad al proyecto. No hay pérdida de dinero, pero la 2ª y 3ª factura no ven el anticipo. Confirmar con Luis/Daniela si el anticipo debe repartirse por factura o seguir atado a la primera.
+- `reasociarAlFacturar` asocia TODO abono confirmado con `invoice_id IS NULL` de ese proyecto a la factura recién creada. Con facturación por entrega, el anticipo de todo el proyecto queda atado a la 1ª parcial (p. ej. anticipo 500 sobre una parcial de 321); cuando se cobra, `registrarUsoObligatorio` extrae el excedente (179) como abono de nivel Cliente, perdiendo la afinidad al proyecto. No hay pérdida de dinero, pero la 2ª y 3ª factura no ven el anticipo. Confirmar con Luis/Gerencia1 si el anticipo debe repartirse por factura o seguir atado a la primera.
 
 ## Lo que se verificó y está bien (PARTE A)
 

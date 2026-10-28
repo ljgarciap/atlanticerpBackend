@@ -57,7 +57,7 @@ Observaciones (BAJO, no bloquean): (a) el alta con campo `maxLength=2` trunca si
 ## SCRUM-1015 — Técnicos internos: Editar y Eliminar
 | Criterio / ruptura | Resultado |
 |---|---|
-| Líder de servicios y superadmin ven Editar/Eliminar en cada tarjeta; técnico, garantías, gerencia y compras NO (compras ni entra a la pantalla). API PUT/DELETE: 403 para técnico, garantías, gerencia (Daniela, Líder compras), vendedor | PASA |
+| Líder de servicios y superadmin ven Editar/Eliminar en cada tarjeta; técnico, garantías, gerencia y compras NO (compras ni entra a la pantalla). API PUT/DELETE: 403 para técnico, garantías, gerencia (Gerencia1, Líder compras), vendedor | PASA |
 | Editar abre el mismo formulario ("Editar técnico interno") con datos precargados; cancelar no persiste; nombre en blanco deshabilita Guardar; email inválido -> toast "Ingresa un correo electrónico válido" y el modal sigue abierto; doble clic guarda una vez; el cambio se ve en la tarjeta sin recargar y tras F5; editar sin cambios cierra | PASA |
 | Alta ("+ Nuevo técnico") sigue igual: modal vacío, crea y aparece | PASA |
 | Eliminar pide confirmación; cancelar no elimina; confirmar (doble clic) elimina; sigue eliminado tras F5; sale del filtro de la Agenda equipo y de `/servicios/technicians/internal`; 404 al borrar/editar dos veces | PASA |
@@ -73,9 +73,9 @@ Reproducción: login `liderservicios@test.com` -> /servicios/tecnicos (tarjeta "
 
 **BAJO — la API permite asignar una herramienta a un técnico eliminado** (`ToolController::updateAsignacion`, `Rule::exists('internal_technicians','id')` ignora `deleted_at`): `PATCH /servicios/tools/{id}/asignacion {"assigned_to_technician_id":<id eliminado>}` -> 200. La UI no lo ofrece, solo por API directa. Sugerido: `Rule::exists(...)->whereNull('deleted_at')`.
 
-**BAJO — reportes:** `ReportsService::distribucionTecnico` (línea ~189) y `ReportsController::comisionCarlosVergara` (`has_bonus_plan` first) usan el scope por defecto: un técnico eliminado desaparece de la distribución por técnico incluso de meses pasados, y si se eliminase al técnico con plan de bonificación (Carlos, sin servicios/herramientas abiertos) la comisión daría 404. Revisar si "historial intacto" debe incluir reportes (`withTrashed()` en el reporte histórico).
+**BAJO — reportes:** `ReportsService::distribucionTecnico` (línea ~189) y `ReportsController::comisionCarlosPersona` (`has_bonus_plan` first) usan el scope por defecto: un técnico eliminado desaparece de la distribución por técnico incluso de meses pasados, y si se eliminase al técnico con plan de bonificación (Carlos, sin servicios/herramientas abiertos) la comisión daría 404. Revisar si "historial intacto" debe incluir reportes (`withTrashed()` en el reporte histórico).
 
-**BAJO — el usuario (`auth.users`) del técnico eliminado sigue activo** (puede loguearse y mantiene su rol); la eliminación solo afecta al perfil `internal_technicians`. Confirmar con Daniela que es lo esperado.
+**BAJO — el usuario (`auth.users`) del técnico eliminado sigue activo** (puede loguearse y mantiene su rol); la eliminación solo afecta al perfil `internal_technicians`. Confirmar con Gerencia1 que es lo esperado.
 
 ## Lo que sí funciona (resumen)
 Los cuatro tickets cumplen su camino feliz y casi todos los de ruptura en navegador real y API. Único bloqueante: el MEDIO de SCRUM-1015 de arriba. No se tocó Jira, ni se creó marker, ni se commiteó/pusheó nada.
@@ -97,7 +97,7 @@ Fixture re-sembrada y borrada al terminar (técnicos PreQA, tickets PQA-*, herra
 ## SCRUM-1015 — checklist completo
 | Prueba | Resultado |
 |---|---|
-| Roles UI: lider_servicios y superadmin ven Editar/Eliminar/Nuevo; técnico, garantías, gerencia no; compras no entra a la pantalla. API PUT/DELETE: 403 para técnico, garantías, Líder compras, Daniela y vendedor | PASA |
+| Roles UI: lider_servicios y superadmin ven Editar/Eliminar/Nuevo; técnico, garantías, gerencia no; compras no entra a la pantalla. API PUT/DELETE: 403 para técnico, garantías, Líder compras, Gerencia1 y vendedor | PASA |
 | Precarga al editar, cancelar sin persistir, nombre en blanco (Guardar deshabilitado), email inválido (toast), doble clic, editar sin cambios | PASA |
 | Alta sigue igual | PASA |
 | Eliminar: confirmación, cancelar no elimina, doble clic, no reaparece tras F5 | PASA |

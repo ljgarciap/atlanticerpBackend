@@ -38,7 +38,7 @@ No se corrió contra `dev.atlanticerp.ai`.
 
 ### REQ-259 (Registrar técnico)
 - **Gate de rol, camino de ruptura primero:** `tecnico_servicios` (Carlos) y `vendedor_disenador`
-  (Milena) → 403 real de API (`role:superadmin,lider_servicios` en la ruta) y botón "+ Nuevo
+  ([persona]) → 403 real de API (`role:superadmin,lider_servicios` en la ruta) y botón "+ Nuevo
   técnico" ausente del DOM (no solo `display:none`, no está montado). Sin auth → 401.
   `superadmin` y `lider_servicios` → 201, confirmados ambos.
 - Validación campo por campo con `Accept: application/json` (nota: sin ese header Laravel
@@ -48,7 +48,7 @@ No se corrió contra `dev.atlanticerp.ai`.
   `TrimStrings`), especialidad ausente, especialidad inválida, email con formato inválido → 422 con
   mensaje específico por campo, en los 5 casos.
 - **Unicidad de color (RN3):** creados 5 técnicos nuevos de especialidad `warranty` (la misma que
-  Miguel Castillo, ya con ámbar) — los primeros 4 recibieron los 4 colores restantes de la paleta
+  Miguel [persona], ya con ámbar) — los primeros 4 recibieron los 4 colores restantes de la paleta
   de 8, sin colisión con ninguno de los 4 técnicos ya seedeados; el 5º (9º técnico total, paleta de
   8 agotada) reutilizó correctamente el color menos usado en vez de fallar o repetir arbitrariamente.
   Limpiado tras la verificación.
@@ -67,7 +67,7 @@ No se corrió contra `dev.atlanticerp.ai`.
 - Vista agrupada por técnico con bloques de color propio, verificado.
 - Filtro "Todos" vs. un técnico específico, verificado (oculta correctamente los demás bloques).
 - Estado vacío por técnico ("Sin visitas hoy — se puede asignar carga"), verificado.
-- **RN5 — acceso de Vendedor/Diseñador:** `milena.e@grupolafayette.com` puede ver Agenda equipo
+- **RN5 — acceso de Vendedor/Diseñador:** `usuario@example.test` puede ver Agenda equipo
   (API 200 + UI renderiza) pero el botón "+ Nuevo técnico" permanece ausente — solo-vista real, no
   solo un permiso de lectura que además esconde mal un botón de escritura.
 

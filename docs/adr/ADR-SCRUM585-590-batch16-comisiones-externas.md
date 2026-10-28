@@ -88,15 +88,15 @@ de camino.
 
 Lectura (`GET /`, `/architects`, `/projects/{id}/cuenta-cobro`): `permission:admin_contab.read` —
 a diferencia de Comisiones Internas, la audiencia de este batch es exclusivamente
-Felix/Yaneth/Mark/Gerencia (REQ-508→512, ningún vendedor ni arquitecto la consulta), así que
+Contabilidad/Asistente/Aprobador/Gerencia (REQ-508→512, ningún vendedor ni arquitecto la consulta), así que
 `role_module_visibility` ya cubre a los 4 sin permiso angosto adicional (mismo criterio que
 `bank-accounts` GET).
 
 Escritura, 2 grupos separados a propósito porque los REQ difieren:
-- Datos fiscales (REQ-510, "Felix y Yaneth **y Mark/Gerencia si lo necesitan**" — texto explícito
+- Datos fiscales (REQ-510, "Contabilidad y Asistente **y Aprobador/Gerencia si lo necesitan**" — texto explícito
   del REQ): `role:superadmin,lider_admin_contab,asistente_administrativa,management`.
-- Cuenta de cobro (REQ-513, "Disponible para Felix y Yaneth" **sin** el carve-out de Mark):
-  `role:superadmin,lider_admin_contab,asistente_administrativa` — Mark recibe 403 si lo intenta,
+- Cuenta de cobro (REQ-513, "Disponible para Contabilidad y Asistente" **sin** el carve-out de Aprobador):
+  `role:superadmin,lider_admin_contab,asistente_administrativa` — Aprobador recibe 403 si lo intenta,
   verificado con test dedicado.
 
 ## 6. Senior Review — 2 hallazgos de reuso corregidos antes de Dev Testing
@@ -113,11 +113,11 @@ Escritura, 2 grupos separados a propósito porque los REQ difieren:
   `comision_externa_default_percent` al singleton `AdminContFiscalSettings` (migración
   `2026_08_25_100008`) en vez de una constante — regla dura del workspace contra hardcodear
   porcentajes de negocio. Sin pantalla de edición propia todavía (mismo patrón que
-  `client_billing_profiles`) — el override real con aprobación de Mark es REQ-514 (Batch 17).
+  `client_billing_profiles`) — el override real con aprobación de Aprobador es REQ-514 (Batch 17).
 
 ## 7. Fuera de alcance de este batch (Batch 17, SCRUM-591→596)
 
-- REQ-514 — editar el % de comisión por proyecto (con aprobación de Mark) — columna
+- REQ-514 — editar el % de comisión por proyecto (con aprobación de Aprobador) — columna
   `porcentaje_override` a agregar entonces, mismo patrón incremental que `compartido_con`.
 - REQ-515 — acción real de "marcar como pagada" (`fecha_pago`, columna ya modelada acá).
 - Comprobante de retención (régimen 50%), cuenta de pago editable, recordatorio al arquitecto,

@@ -5,7 +5,7 @@
 **Alcance:** Senior Review (lectura del diff backend `d6555a2` + frontend `b3e9766`/`8318ed3`) +
 Pre-QA adversarial en vivo (Docker local, Playwright contra `localhost:5173`/`8090`, tinker para
 fixtures/verificación DB, PHPUnit para el módulo Bodega).
-**Por qué existe este batch:** marly.rangel rebotó SCRUM-387/388 el 2026-07-26 ("no puedo probarlo
+**Por qué existe este batch:** qa.qa rebotó SCRUM-387/388 el 2026-07-26 ("no puedo probarlo
 por UI, el botón está DESHABILITADO"). La causa real era más profunda que "deshabilitado":
 `OrderCardTile.tsx` llamaba SIEMPRE `start-picking` para toda tarjeta `picking_pendiente`, incluso
 las de `order_type=revision_inventario` — habría disparado la mutación equivocada de haber estado
@@ -125,7 +125,7 @@ los volverá a borrar en la próxima corrida de la suite de PHPUnit.
 
 ## Decisión
 
-**SCRUM-387 y SCRUM-388 → `QA`** (vuelven a QA, ya habían estado ahí y marly los rebotó).
+**SCRUM-387 y SCRUM-388 → `QA`** (vuelven a QA, ya habían estado ahí y qa los rebotó).
 **SCRUM-385 → se reabre el hallazgo vía comentario** (el ticket ya estaba en `QA`/cerrado con las
 columnas faltantes — Pre-QA lo corrigió en el momento, no hace falta reabrir el status en Jira si
 ya está en un estado posterior a Dev Testing, pero se deja comentario explícito documentando el

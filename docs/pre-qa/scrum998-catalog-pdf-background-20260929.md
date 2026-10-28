@@ -5,7 +5,7 @@ Commits bajo prueba: `91832d4` (feature), `007a791` (máximo de fotos, 20 en par
 Catálogo real de dev: 29.630 activos; 10.928 con `photo_url` (8.441 de `lafayette.app.enxcloud.com`, proveedor externo, y 2.483 del bucket S3 propio).
 Diseño y decisiones de Luis: `docs/specs/scrum998-catalog-pdf-background.md`. Alcance del Pre-QA acordado con Luis: exportación completa **sin fotos** y las fotos aparte con una muestra.
 
-Método: JWT temporales por tinker (usuarios reales `fefi@` dueño, `mbekhar@` ajeno, `luis.garcia@` superadmin, `almacen@` sin permiso); peticiones HTTPS por nginx local del EC2; el job REAL de Horizon en la cola `pdf` de la conexión `redis-long` con S3 real (bucket privado de dev); exportación completa por CLI con `Http::fake` para las fotos e instrumentación por volumen (memoria, disco temporal, tiempo); Playwright CLI headless (NO Claude in Chrome); suite completa en una base aislada; todo lo creado se borró al terminar.
+Método: JWT temporales por tinker (usuarios reales `[persona]@` dueño, `mbekhar@` ajeno, `luis.garcia@` superadmin, `almacen@` sin permiso); peticiones HTTPS por nginx local del EC2; el job REAL de Horizon en la cola `pdf` de la conexión `redis-long` con S3 real (bucket privado de dev); exportación completa por CLI con `Http::fake` para las fotos e instrumentación por volumen (memoria, disco temporal, tiempo); Playwright CLI headless (NO Claude in Chrome); suite completa en una base aislada; todo lo creado se borró al terminar.
 
 ## Paso 0
 - Permisos angostos: ninguno. Gate `ventas_diseno.read` para pedir y consultar; la consulta es además solo del solicitante o de un superadmin. Editar umbrales: `superadmin.all`.
@@ -42,7 +42,7 @@ Otra persona con permiso de lectura → **404** (igual que inexistente); superad
 ## (e) Purga programada
 `catalog-pdf:purge-exports` sobre una exportación vencida: fila y objeto de S3 borrados; también cerró las 2 exportaciones restantes de la limpieza final (S3 en 0 objetos). Agendado a las 04:00 (`schedule:list`).
 
-## (f) UI real (Playwright, `fefi@`/`mbekhar@`) — 4 de 4
+## (f) UI real (Playwright, `[persona]@`/`mbekhar@`) — 4 de 4
 Spec permanente `atlanticerp-frontend/e2e/preqa-scrum998-catalogo-zip-20260929.spec.ts` (necesita `E2E_EXPORT_ID` de una exportación terminada; se salta sin ella): el enlace del aviso abre el Catálogo con el banner "Tu catálogo está listo: 600 productos en 2 volúmenes (2.4 MB en un ZIP)" y el botón descarga el **ZIP real de S3** (`Catalogo-Atlantic-…zip`); pedir el catálogo completo con 202 muestra el aviso "demasiado grande para un solo PDF" y el banner sin descargar ningún PDF; el aviso in-app está en la campana y su enlace abre la descarga; una exportación ajena se muestra como no encontrada. Sin 5xx.
 
 ## (g) Backend y frontend

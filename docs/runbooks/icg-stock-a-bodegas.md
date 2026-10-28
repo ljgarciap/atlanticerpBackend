@@ -18,7 +18,7 @@ Reglas de la carga: cantidad = Σ `stock` por producto de catálogo, redondeada 
 o `solo_consulta`. El descatalogado equivalente (F5) suma sobre el producto del activo. Artículos que no resuelven a catálogo se LISTAN y no se cargan.
 
 ## Orden por entorno (dev → test → prod, un entorno a la vez; el `--apply` lo corre Luis)
-1. Backup (prod obligatorio; ver abajo). Avisar a Bodega/QA y a Daniela/Mark: el valor a costo fuera de Bodega Central (~1,1 M) aparecerá en reportes de inventario/Gerencia.
+1. Backup (prod obligatorio; ver abajo). Avisar a Bodega/QA y a Gerencia1/Aprobador: el valor a costo fuera de Bodega Central (~1,1 M) aparecerá en reportes de inventario/Gerencia.
 2. `db:seed --class=AlmacenEquivalenciaSeeder --force`.
 3. F5 si el entorno aún no lo tiene (`legacy:crear-descatalogados-inactivos`) y `legacy:crear-articulos-sin-catalogo` (dry-run → revisión → `--apply`).
 4. `legacy:cargar-stock-bodegas` dry-run → revisión de Luis (filas, unidades, valor, sin catálogo, excluidos) → `--apply --operador="…"`.

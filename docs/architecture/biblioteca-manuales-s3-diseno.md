@@ -8,7 +8,7 @@ Alcance: solo diseño. No se creó ni modificó ningún recurso AWS. DevOps ejec
 - Un solo bucket S3 nuevo compartido por dev.atlanticerp.ai, test.atlanticerp.ai y atlanticerp.ai (us-east-1, una EC2 t3.small por entorno).
 - Catálogo sin tabla de BD: clave `library/{modulo}/{tipo}/{uuid}.{ext}` + JSON sidecar por archivo. Listado por prefijo (ListObjectsV2), caché ~60 s en Redis por entorno.
 - Video hasta 500 MB, subida directa del navegador con URL prefirmada, reproducción con `<video>` + Range, descarga permitida en PDF y video.
-- Escritura: superadmin + Daniela (`manuales.manage`). Lectura: cualquier usuario autenticado (autorización siempre en el backend, que emite las URLs).
+- Escritura: superadmin + Gerencia1 (`manuales.manage`). Lectura: cualquier usuario autenticado (autorización siempre en el backend, que emite las URLs).
 - Módulos: crm, ventas_diseno, compras, bodega, servicios, admin_contabilidad, gerencia. `AWS_AUDIT_IMMUTABLE_BUCKET` no se toca.
 
 ## 1. Bucket
@@ -57,7 +57,7 @@ Luis decidió **aceptar y mitigar** (no cambiar a presigned POST). Lo que hace c
 1. **`finalize`** re-verifica con `HeadObject` que el tamaño real coincida con el declarado y no supere el tope; si no, borra el pending y rechaza. Además lee los magic bytes y escanea contenido activo atado a la `VersionId` validada (nada re-subido después se publica).
 2. **Lifecycle de `library/_pending/`**: el objeto expira a los 2 días (regla `pending-staging-2d`), así que un objeto enorme que nunca se finaliza desaparece solo.
 3. **Cuota de pendientes por usuario** (`library_max_pending_uploads`, default 5, reserva atómica) y **rate limit por usuario** acotan cuántos objetos pendientes puede acumular una cuenta.
-4. Solo 2 personas (superadmin + Daniela) tienen el permiso `manuales.manage`, y cada subida/borrado queda en `audit_logs`.
+4. Solo 2 personas (superadmin + Gerencia1) tienen el permiso `manuales.manage`, y cada subida/borrado queda en `audit_logs`.
 5. **Alarma de tamaño del bucket** (CloudWatch `BucketSizeBytes`, ver runbook §12) para detectar el residuo de subidas sin finalizar.
 
 El Content-Type que el cliente fije en el PUT tampoco es de fiar: al copiar a la clave final, `finalize` lo reemplaza (`MetadataDirective=REPLACE`) por el tipo canónico de la extensión validada, y las descargas igual fuerzan `ResponseContentType`. Alternativa descartada por ahora: presigned POST con `content-length-range 1..N` (S3 sí lo haría cumplir, pero cambia el flujo de subida en backend y frontend); se reconsidera si el riesgo residual deja de ser aceptable.
@@ -119,7 +119,7 @@ Es inherente al bucket compartido (decisión tomada). Mitigación en capas:
 1. Versionado: el DeleteObject solo deja un delete marker, recuperable 90 días.
 2. Bucket policy: Deny `s3:DeleteObjectVersion` y `s3:PutBucketVersioning`/`PutLifecycleConfiguration`/`DeleteBucket*` para todo principal excepto el usuario/rol admin de DevOps (`Condition: StringNotEquals aws:PrincipalArn`). Así ningún usuario de aplicación puede borrar definitivamente ni apagar el versionado.
 3. Usuarios separados por entorno: CloudTrail (eventos de administración no cubren objetos; ver punto 5) y `audit_logs` de la app registran quién borró y desde qué entorno.
-4. Borrado solo con permiso `manuales.manage` (superadmin + Daniela) en los 3 entornos; el QA de dev/test no borra por accidente contenido de prod salvo que esas dos personas lo hagan.
+4. Borrado solo con permiso `manuales.manage` (superadmin + Gerencia1) en los 3 entornos; el QA de dev/test no borra por accidente contenido de prod salvo que esas dos personas lo hagan.
 5. Opcional, recomendado si Luis quiere más control: CloudTrail data events solo para este bucket (~$0.10 por 100k eventos, centavos al mes) para reconstruir borrados.
 6. Alternativa más estricta (decisión de Luis): quitar `s3:DeleteObject` a `atlanticerp-library-dev` y `-test`, de modo que borrar solo se pueda desde prod. Costo: el borrado no se puede probar en dev/test (la UI debe manejar AccessDenied con un mensaje claro). Mi recomendación: aceptar el riesgo residual con capas 1-4 (el delete lógico basta para este caso: el impacto es recuperable) y activar esta opción solo si Luis prefiere cero riesgo.
 

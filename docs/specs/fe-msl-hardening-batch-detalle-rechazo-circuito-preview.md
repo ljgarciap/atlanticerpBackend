@@ -10,7 +10,7 @@
 **Cambio:**
 - Migración tenant aditiva/nullable en `admin_contab.invoices` y `credit_notes`: `fe_detalle` TEXT NULL (patrón de `2026_09_17_190002/3`). **Revisión del Arquitecto requerida (regla de migraciones).**
 - `FiscalCertificationService::persistirResultado()`: en la rama no-certificado guardar `fe_detalle` = errores (`extractErrores`) + `rawResponse['error']` truncado a 2000 chars; en certificado, limpiar a NULL (reintento exitoso no arrastra el rechazo viejo). Único punto de escritura, cubre certificación inicial y polling.
-- Exponer `fe_detalle` en el payload de factura/NC (`InvoiceService` ~L1035 y equivalente de NC) y mostrarlo en `InvoiceDetailModal` / `DetalleNotaCreditoModal` junto al badge, **solo** para usuarios con permiso de ver Configuración Fiscal (hoy exclusivo de Mark/superadmin) — el texto de la DGI no se muestra a roles operativos.
+- Exponer `fe_detalle` en el payload de factura/NC (`InvoiceService` ~L1035 y equivalente de NC) y mostrarlo en `InvoiceDetailModal` / `DetalleNotaCreditoModal` junto al badge, **solo** para usuarios con permiso de ver Configuración Fiscal (hoy exclusivo de Aprobador/superadmin) — el texto de la DGI no se muestra a roles operativos.
 - Sin iconografía emoji; texto plano, sin HTML (escapar).
 **Criterios de aceptación:**
 1. Factura rechazada por el PAC → `fe_detalle` contiene el código y la regla; visible en el detalle para el rol autorizado, oculto para los demás (probado con 2 roles).

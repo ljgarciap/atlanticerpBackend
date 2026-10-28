@@ -4,7 +4,7 @@ Insumos aprobados por Luis: diseño AWS (`biblioteca-manuales-s3-diseno.md`), di
 (módulo `App\Modules\Biblioteca`, catálogo en S3 sin tabla), spec visual (`docs/specs/manuales-usuario-ux.md`).
 
 Decisiones de negocio: video hasta 500 MB, descarga permitida, PDF 50 MB, mp4/webm, carga solo
-superadmin + Daniela (`manuales.manage`). Topes, formatos y TTL en `auth.system_settings`, nunca constantes.
+superadmin + Gerencia1 (`manuales.manage`). Topes, formatos y TTL en `auth.system_settings`, nunca constantes.
 
 ## Contrato API (fijado por el PM, lo confirma el Arquitecto)
 - `GET /api/biblioteca?modulo=&tipo=` -> `[{id, name, module, type, size_bytes, created_at}]`, cualquier autenticado.
@@ -19,7 +19,7 @@ superadmin + Daniela (`manuales.manage`). Topes, formatos y TTL en `auth.system_
 | D1 | DevOps / AWS | Crear bucket `atlanticerp-library`, 3 usuarios IAM, policy, CORS, lifecycle (ejecuta Luis o con aprobación nativa por comando; nunca en modo autónomo) | aprobación de Luis |
 | D2 | DevOps | Variables `AWS_LIBRARY_*` en .env de dev, luego test y prod (archivo sensible, prompt nativo) | D1 |
 | D3 | DevOps | CloudTrail data events del bucket | D1 |
-| B1 | Backend | Permiso `manuales.manage` en catálogo + grant a Daniela en `SpecialPermissionSeeder` + claves en `system_settings` (seeder) | — |
+| B1 | Backend | Permiso `manuales.manage` en catálogo + grant a Gerencia1 en `SpecialPermissionSeeder` + claves en `system_settings` (seeder) | — |
 | B2 | Backend | Disco `s3-library`, `LibraryService` (listar por prefijo, sidecar JSON, caché Redis 60 s) | B1 |
 | B3 | Backend | Endpoints de lectura: listado, URL prefirmada, config | B2 |
 | B4 | Backend | Uploads + finalize (HeadObject, magic bytes, `S3Client::copyObject`) + delete lógico + `AuditService` + rate limit | B2 |

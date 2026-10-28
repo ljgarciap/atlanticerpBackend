@@ -87,7 +87,7 @@ internal_technicians(           -- Batch 6 — perfil de técnico interno
 )
 -- Estado (Disponible/En ruta/Ocupado/Fuera) NUNCA se persiste — calculado en cada request desde
 -- tickets.scheduled_at/scheduled_ends_at vs hora actual en America/Panama (TechnicianStatusService).
--- Los 4 técnicos reales (Tecnico Test, Tecnico Test, Agustín Rodríguez, Tecnico Garantias Test) están
+-- Los 4 técnicos reales (Tecnico Test, Tecnico Test, Test 3, Tecnico Garantias Test) están
 -- linkeados vía user_id por InternalTechnicianSeeder (idempotente, todos los entornos).
 ```
 

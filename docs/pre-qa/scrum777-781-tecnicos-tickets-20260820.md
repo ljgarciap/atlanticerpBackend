@@ -9,7 +9,7 @@ completo de SCRUM-781 (9 puntos), no solo el resumen de 7 puntos que traía el b
 
 Cuentas reales (password = email): `servicio@atlantic.com.pa` (Aaron Leis, lider_servicios —
 `can_view_cost_breakdown=true`, cubre el gate de Gerencia para costo/margen de cotización),
-`carlos@atlantic.com.pa` (Carlos Vergara, tecnico_servicios).
+`carlos@atlantic.com.pa` (Tecnico Test, tecnico_servicios).
 
 Spec Playwright: `atlanticerp-frontend/e2e/preqa-scrum777-781-tecnicos-tickets-20260820.spec.ts` (14 tests,
 screenshots en `atlanticerp-frontend/e2e/.tmp/preqa-scrum777-781-20260820/`).
@@ -27,8 +27,8 @@ screenshots en `atlanticerp-frontend/e2e/.tmp/preqa-scrum777-781-20260820/`).
 
 ## SCRUM-777 — Técnicos Internos (LIMPIO)
 
-**REQ-255 (Herramientas asignadas):** se asignó una herramienta libre a Carlos Vergara desde
-Insumos y Herramientas (select inline "En bodega de herramientas" → "Carlos Vergara"). El conteo
+**REQ-255 (Herramientas asignadas):** se asignó una herramienta libre a Tecnico Test desde
+Insumos y Herramientas (select inline "En bodega de herramientas" → "Tecnico Test"). El conteo
 `herramientas_asignadas` en su tarjeta de Técnicos Internos pasó de 1 a 2 dentro de la ventana de
 polling real de 30s (`refetchInterval: 30_000`, `InternalTechniciansPage.tsx:69`), sin recargar la
 página. Confirmado por API y en pantalla real (test 1).

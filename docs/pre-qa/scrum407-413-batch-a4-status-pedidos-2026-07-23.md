@@ -27,15 +27,15 @@ Ventas & Diseño, filtro por `owner_id`) sí depende de permisos por rol — ver
 ya están realmente concedidos en el entorno** vía `RoleModuleVisibility` (rol `lider_bodega` →
 `bodega.view/.read/.view_team`, rol `vendedor_disenador` → `ventas_diseno.view/.read`), confirmado
 con un login real (no grant manual, no `extra_permissions` ad-hoc) contra `almacen@atlantic.com.pa`
-y `neil.quiel@atlantic.com.pa`. No hay hallazgo acá.
+y `[persona].[persona]@atlantic.com.pa`. No hay hallazgo acá.
 
 ## Datos sembrados para esta pasada (vía tinker, `Order`/`PipelineCard` reales)
 
 | Fixture | order_number | owner | Detalle |
 |---|---|---|---|
-| Familia A (2 tarjetas) | `PREQA-FAM2-9247` (root id 128, hija id 129) | Neil Quiel (`neil.quiel@atlantic.com.pa`) | Root: producto compartido 6/6 entregado. Hija: mismo producto 4/0 + producto propio 2/2. Total esperado: solicitada 10, entregado 6, pendiente 4 (producto compartido) — sin duplicar el producto compartido en 2 líneas. |
-| Familia B (3 tarjetas) | `PREQA-FAM3-7805` (root id 130, hijas 131/132) | Neil Quiel | 3 tarjetas, mismo producto, 3+3+4 solicitadas = 3+3+4 entregadas → 100% entregado, pendiente debe ser 0. |
-| Pedido de otro vendedor | `PREQA-FEFI-8660` (id 133) | Maria F. Bonvini (`fefi@atlantic.com.pa`) | Para el escenario adversarial de ownership cruzado. |
+| Familia A (2 tarjetas) | `PREQA-FAM2-9247` (root id 128, hija id 129) | [persona] [persona] (`[persona].[persona]@atlantic.com.pa`) | Root: producto compartido 6/6 entregado. Hija: mismo producto 4/0 + producto propio 2/2. Total esperado: solicitada 10, entregado 6, pendiente 4 (producto compartido) — sin duplicar el producto compartido en 2 líneas. |
+| Familia B (3 tarjetas) | `PREQA-FAM3-7805` (root id 130, hijas 131/132) | [persona] [persona] | 3 tarjetas, mismo producto, 3+3+4 solicitadas = 3+3+4 entregadas → 100% entregado, pendiente debe ser 0. |
+| Pedido de otro vendedor | `PREQA-[persona]-8660` (id 133) | Maria F. [persona] (`[persona]@atlantic.com.pa`) | Para el escenario adversarial de ownership cruzado. |
 
 ## Resultado real de verificación (corrido yo mismo)
 
@@ -46,7 +46,7 @@ y `neil.quiel@atlantic.com.pa`. No hay hallazgo acá.
 - "← Volver a Pedidos" regresa a `/bodega/pedidos` — confirmado, misma prueba.
 - Extra (no pedido en el ticket original, pero mencionado en el batch): botón nuevo en
   `PipelinePage` (Ventas & Diseño) navega al **mismo** `/bodega/pedidos/status` — confirmado con
-  Playwright real, login como Neil (vendedor real), prueba separada.
+  Playwright real, login como [persona] (vendedor real), prueba separada.
 - La pantalla no tiene entrada en el Sidebar — confirmado por inspección de `Sidebar.tsx`/`App.tsx`
   (ninguna ruta bajo `/bodega/pedidos/status` aparece en la navegación).
 
@@ -113,15 +113,15 @@ dejo anotado para que PM decida si vale la pena una mejora futura transversal a 
 ### SCRUM-412 (REQ-342) — Acceso compartido con Ventas & Diseño
 
 - **Ownership real, verificado con usuarios reales, no solo escondido en la UI:**
-  - Neil (vendedor real, `ventas_diseno.read`) — su lista solo trae sus 2 pedidos (Familia A y B),
-    **nunca** el pedido de Fefi (otro vendedor) — confirmado por API y Playwright.
-  - Neil intenta acceder al pedido de Fefi por **id directo** (manipulando la URL de la API, no
+  - [persona] (vendedor real, `ventas_diseno.read`) — su lista solo trae sus 2 pedidos (Familia A y B),
+    **nunca** el pedido de [persona] (otro vendedor) — confirmado por API y Playwright.
+  - [persona] intenta acceder al pedido de [persona] por **id directo** (manipulando la URL de la API, no
     solo el botón) → **403 real** (`show()` y también `document()`, este último cierra
     explícitamente el gap S1 que el Senior Review de backend había dejado como sugerencia de
     cobertura de test) — no un 404 que filtre existencia, un 403 real después de resolver el
     pedido.
-  - Prueba inversa: Fefi intenta acceder al pedido de Neil por id directo → también 403.
-  - Bodega (Esteban, `bodega.read`) ve **todos** los pedidos sin filtrar, incluyendo el de Fefi, y
+  - Prueba inversa: [persona] intenta acceder al pedido de [persona] por id directo → también 403.
+  - Bodega (Liderbodega, `bodega.read`) ve **todos** los pedidos sin filtrar, incluyendo el de [persona], y
     puede generar el documento de un pedido que no es "suyo" (Bodega no tiene owner) — confirmado.
 - RN3 (solo consulta): confirmado en UI real que no hay ningún control de edición visible para
   Ventas & Diseño (ni inputs de texto editables fuera del buscador, ni palabras

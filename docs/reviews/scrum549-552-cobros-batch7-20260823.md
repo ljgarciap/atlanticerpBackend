@@ -76,6 +76,6 @@ Playwright real contra ese entorno (spec ephemeral, no promovida a permanente �
 Batch 6, no guarda ningún gate previamente roto): detalle muestra los 3 botones nuevos, "Ver
 comprobante" sin adjunto muestra el mensaje RN2 (no error), "Ver recibo" descarga
 `recibo-REC-001.pdf` real, "Marcar como confirmado" pasa el cobro a `confirmado`, oculta el botón,
-y deja visible "CONF-001 — confirmado por Felix Campos el 23 ago 2026". PDF verificado con
+y deja visible "CONF-001 — confirmado por Contabilidad Test el 23 ago 2026". PDF verificado con
 contenido real (RUC vacío es dato del entorno local — `fiscal_settings` sin poblar en esta BD, no
 un bug del código; mismo campo que ya usa el PDF de Facturación).

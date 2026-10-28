@@ -10,9 +10,9 @@ Mockup: `4G__Admin_Contabilidad_ArqueoCaja.html` (mismo mockup que Batch 18 — 
 que Batch 18 dejó fuera: cerrar, cola de atrasados, historial+aprobación, retención, ver/descargar).
 
 Credenciales usadas — **LOCAL**, password = email para todos (distinto de dev/test.atlanticerp.ai, donde
-Mark/Daniela usan `B1n4X_2026?`): Felix (`conta@atlantic.com.pa`), Yaneth
-(`asistente@atlantic.com.pa`), Mark (`mbekhar@atlantic.com.pa`), Daniela
-(`daniela@atlantic.com.pa`).
+Aprobador/Gerencia1 usan `B1n4X_2026?`): Contabilidad (`conta@atlantic.com.pa`), Asistente
+(`asistente@atlantic.com.pa`), Aprobador (`gerencia3@test.com`), Gerencia1
+(`gerencia1@atlantic.com.pa`).
 
 ## Resumen ejecutivo
 
@@ -34,7 +34,7 @@ recheck limpio confirmado. Suite automatizada completa (backend + frontend, scop
 Automatizado (ya existente en el repo, corrido de nuevo para confirmar el estado real del batch):
 - `infra/test.sh --filter=AdminContCashPositionControllerTest` → 31/31 OK (incluye 15 tests
   específicos de Batch 19: retención en el arqueo, cerrar, doble cierre, guard de inmutabilidad,
-  bloqueo secuencial ×2, historial+contador, gate de management, approve exclusivo Mark, doble
+  bloqueo secuencial ×2, historial+contador, gate de management, approve exclusivo Aprobador, doble
   aprobación, `puede_aprobar` en sus 3 variantes, export PDF activo+historial).
 - `infra/test.sh --filter=AdminContPaymentControllerTest` → 35/35 OK (incluye
   `test_retention_attachment_sube_y_permite_reemplazar` y
@@ -67,14 +67,14 @@ fechado ayer para poder forzar los escenarios de REQ-527/525/526/528, y se limpi
    bytes, no vacío/corrupto).
 8. **REQ-528** — el panel de historial muestra el arqueo recién cerrado con el aviso "1 arqueo(s)
    pendiente(s) de aprobación de Gerencia" (contador correcto).
-9. **REQ-528 RN2 — negativo, UI + API**: Yaneth (`asistente_administrativa`) no ve el botón
+9. **REQ-528 RN2 — negativo, UI + API**: Asistente (`asistente_administrativa`) no ve el botón
    "Aprobar" en el detalle, y `POST /cash-position/history/{id}/approve` contra ese mismo id
    devuelve **403** con su token real.
-10. **REQ-528 RN2 — negativo, API**: Daniela (`management`, Gerencia pero no es Mark) también
-    recibe **403** al intentar aprobar vía API directa — confirma que el gate es "Mark
+10. **REQ-528 RN2 — negativo, API**: Gerencia1 (`management`, Gerencia pero no es Aprobador) también
+    recibe **403** al intentar aprobar vía API directa — confirma que el gate es "Aprobador
     específicamente", no "cualquier rol management".
-11. **REQ-528 Escenario 2** — Mark ve el botón "Aprobar" (los otros 3 roles no lo ven, incluida
-    Gerencia-no-Mark), lo usa, y el arqueo queda "Aprobado por Mark Bekhar" tanto en la fila del
+11. **REQ-528 Escenario 2** — Aprobador ve el botón "Aprobar" (los otros 3 roles no lo ven, incluida
+    Gerencia-no-Aprobador), lo usa, y el arqueo queda "Aprobado por Gerencia3 Test" tanto en la fila del
     historial como en el detalle.
 12. **REQ-528 RN** — doble aprobación vía API (sobre un arqueo ya `aprobado`) → **409**, no
     aprueba silenciosamente dos veces.
@@ -90,10 +90,10 @@ fechado ayer para poder forzar los escenarios de REQ-527/525/526/528, y se limpi
   arriba, pero no se forzó una carrera real de dos conexiones concurrentes — no se considera
   necesario dado el volumen (1 cierre/día, acción humana explícita, mismo criterio que el ADR usa
   para justificar no usar una tabla de folio dedicada).
-- **`arqueo_tracking_start_date` editable por Mark** (el piso del escaneo de `activeDate()`): no
+- **`arqueo_tracking_start_date` editable por Aprobador** (el piso del escaneo de `activeDate()`): no
   se tocó `PUT /fiscal-settings` en esta sesión — la lógica de `activeDate()` en sí se ejerció
   indirectamente (el piso resolvió correctamente a la fecha más vieja con fila `abierto`), pero el
-  camino de "Mark fija el piso a mano" no se probó de punta a punta.
+  camino de "Aprobador fija el piso a mano" no se probó de punta a punta.
 - **Múltiples arqueos atrasados en cadena** (3+ días sin cerrar seguidos): se probó con exactamente
   1 día atrasado. El código escanea día por día sin tope explícito documentado más que "semanas
   desde el go-live" (ver ADR) — razonable para el volumen real, no se forzó el caso extremo.
@@ -125,7 +125,7 @@ checkmark — el SVG).
 **Verificación del fix:**
 - `npx vitest run ArqueoCajaPage` → 18/18 OK (sin dependencia del string viejo).
 - `npx tsc --noEmit` → limpio.
-- Recheck en vivo del escenario 11 (Mark aprueba) — el badge/párrafo ahora muestra un solo
+- Recheck en vivo del escenario 11 (Aprobador aprueba) — el badge/párrafo ahora muestra un solo
   checkmark (el SVG `IcoCheck`), sin duplicado. Test de iconografía de Playwright, que había
   fallado por este mismo motivo antes del fix, pasa limpio después.
 - Se escaneó el resto del subárbol `arqueoCaja` de ambos locales por el mismo patrón (regex sobre
@@ -135,8 +135,8 @@ checkmark — el SVG).
 
 Se verificó en vivo que el gate asimétrico documentado en el ADR es real y funciona como está
 descrito, no es un bug: `GET /cash-position/daily-count/export` (arqueo activo) usa el gate
-angosto de REQ-524 (Felix+Yaneth), y `GET /cash-position/history/{id}/export` (historial) usa el
-gate amplio (+Mark/Gerencia) — confirmado indirectamente porque Mark nunca ve el arqueo activo en
+angosto de REQ-524 (Contabilidad+Asistente), y `GET /cash-position/history/{id}/export` (historial) usa el
+gate amplio (+Aprobador/Gerencia) — confirmado indirectamente porque Aprobador nunca ve el arqueo activo en
 absoluto (REQ-524 lo excluye de la pantalla completa, no solo del botón), y sí pudo descargar el
 resumen desde el historial (test 13). Sigue marcado en el ADR como "pendiente de confirmar con
 Luis" — no se tocó, es una decisión de diseño explícita, no un hallazgo.
@@ -152,7 +152,7 @@ Luis" — no se tocó, es una decisión de diseño explícita, no un hallazgo.
 - **REQ-527:** banner de atrasado con ambas fechas cuando el arqueo activo no es hoy; avance
   automático tras cerrar.
 - **REQ-528:** panel "Historial de arqueos cerrados" (N°/Fecha/Total neto/Aprobación/Realizado
-  por/Ver); badge de contador de pendientes; botón "Aprobar" exclusivo de Mark dentro del detalle.
+  por/Ver); badge de contador de pendientes; botón "Aprobar" exclusivo de Aprobador dentro del detalle.
 - **REQ-529:** modal de detalle de solo lectura (totales, observación general, retenciones, estado
   de aprobación); botón "Descargar resumen" tanto en el arqueo activo como en el detalle del
   historial.
@@ -177,5 +177,5 @@ Batch 18, sin pérdida de funcionalidad ni de campos).
 
 Sin bloqueantes. Los 5 tickets (SCRUM-602→606) están en condición de pasar de `Dev Testing` a
 `QA` — falta transicionarlos en Jira (fuera del alcance de este gate) y, dado que el batch no está
-desplegado a `dev.atlanticerp.ai` todavía, coordinar el deploy antes de que QA formal (marly) pueda
+desplegado a `dev.atlanticerp.ai` todavía, coordinar el deploy antes de que QA formal (qa) pueda
 probarlo en el entorno real.

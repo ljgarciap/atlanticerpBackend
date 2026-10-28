@@ -127,7 +127,7 @@ Detalle. `bodega.read`.
   "notes": "Opcional",
   "rejection_reason": "Precio fuera de rango",
   "approved_by_name": null,
-  "rejected_by_name": "Yirena Teng",
+  "rejected_by_name": "Lider Compras Test",
   "lines": [
     {
       "id": 15,
@@ -148,7 +148,7 @@ este campo directo del detalle, no hace falta un endpoint aparte.
 ### `POST /api/bodega/zona-libre/requests/{id}/remind`
 
 Botón "Recordar" (3D). `bodega.write`. Sin body. Envía email + notificación in-app al rol
-`lider_compras` (Yirena) vía el `NotificationService` ya existente del proyecto.
+`lider_compras` (Lidercompras) vía el `NotificationService` ya existente del proyecto.
 
 - **200** — `{ "message": "Recordatorio enviado." }`
 - **422** — la solicitud ya no está `pendiente`, o no hay ningún usuario activo con el rol
@@ -159,7 +159,7 @@ Botón "Recordar" (3D). `bodega.write`. Sin body. Envía email + notificación i
 ## Endpoints — lado Compras (`/api/compras/zona-libre/requests`)
 
 Requieren el permiso angosto **`compras.zona-libre.approve`** (nunca `compras.approve`, que es un
-concepto distinto — aprobación de flete aéreo de Mark).
+concepto distinto — aprobación de flete aéreo de Aprobador).
 
 ### `POST /api/compras/zona-libre/requests/{id}/approve`
 
@@ -229,7 +229,7 @@ en Solicitud de Ajuste (SCRUM-403).
 ## Permiso nuevo
 
 `compras.zona-libre.approve` — angosto, individual vía `extra_permissions` (no atado a ningún
-`security_level`). Ya concedido a Yirena Teng (`gerencia2@atlantic.com.pa`) vía
+`security_level`). Ya concedido a Lider Compras Test (`gerencia2@atlantic.com.pa`) vía
 `SpecialPermissionSeeder`, corre en todos los entornos.
 
 ## Modelo de datos (referencia)

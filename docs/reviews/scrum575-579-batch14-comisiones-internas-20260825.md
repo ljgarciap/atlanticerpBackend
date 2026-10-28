@@ -31,7 +31,7 @@ Mismo bug, mismo fix, que SCRUM-771 ya encontró y corrigió para Compras
   10 vendedores reales vía `SpecialPermissionSeeder` (mismo criterio que `compras.limited.view` →
   `operaciones@atlantic.com.pa`).
 - Rutas `/tiers` y `/` (summary) con OR (`permission:admin_contab.read,admin_contab.commissions_internal.view`);
-  `/export` y `/vendors` quedan estrictos en `admin_contab.read` (Felix/Mark/Gerencia únicamente).
+  `/export` y `/vendors` quedan estrictos en `admin_contab.read` (Contabilidad/Aprobador/Gerencia únicamente).
 
 3 tests preexistentes actualizados para reflejar el nuevo estado real (no bugs, expectativas
 desactualizadas): `PermissionCatalogTest` (10→11 módulos, 29→30 permisos), `RoleControllerTest`,
@@ -52,14 +52,14 @@ correcto y testeado — se tocó solo la serialización):
   `fecha_cobro_completo` — este último un proxy razonable, el cobro que llevó a 100% de esa
   factura, no trackeado como evento propio en ningún lado; `es_abono_parcial`, `monto_comision`,
   `es_estimado`) — antes solo traía las columnas crudas del join.
-- Endpoint nuevo `GET .../vendors` (Felix/Mark/Gerencia) — el frontend ya lo esperaba para el
+- Endpoint nuevo `GET .../vendors` (Contabilidad/Aprobador/Gerencia) — el frontend ya lo esperaba para el
   selector de vendedor, no existía en el backend original.
 - `export`: el backend leía `formato`, el frontend manda `format` — nunca matcheaba, exportaba
   PDF siempre sin importar el formato elegido.
 - **`CommissionExportService::toExcel()` y la vista `commissions-internal-pdf.blade.php` seguían
   con los nombres de campo viejos tras el reshape — se corrigieron en el mismo pase. Sin
   cobertura propia de test para el camino feliz de exportar (solo el 403 del vendedor) — agregada
-  (`test_export_pdf_exitoso_para_felix`/`test_export_excel_exitoso_para_felix`), habría llegado a
+  (`test_export_pdf_exitoso_para_contabilidad`/`test_export_excel_exitoso_para_contabilidad`), habría llegado a
   Pre-QA como un 500 en el primer export real.**
 
 ### 3. Menor — 2 bugs de PHPStan Level 8 y typing

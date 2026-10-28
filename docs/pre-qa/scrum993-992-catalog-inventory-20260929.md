@@ -176,7 +176,7 @@ colateral esperado: las filas de `audit_logs` que genera el trait de auditoría 
 - Excel/mockup de los REQ: no aplica (tickets técnicos de rendimiento, sin filas de Excel asociadas); tampoco hay permisos angostos
   ni umbrales de negocio nuevos (los parámetros de búsqueda `0.5`/100/6/2 caracteres son técnicos y están como constantes).
 
-## Recomendaciones para QA (marly.rangel)
+## Recomendaciones para QA (qa.qa)
 1. Inventario de Compras en dev.atlanticerp.ai: los 7 chips, cambiar orden por cada columna en ambos sentidos y paginar; anotar que "Por
    ingresar" tiene 5, "Bajo stock" 2, "Sin stock" ~26.280 (dato real de dev, casi todo Lafayette sin stock cargado).
 2. Combinar búsqueda + chip + filtro de bodega (bodegas 8 y 13 son las que tienen pocos productos) y verificar que el total del

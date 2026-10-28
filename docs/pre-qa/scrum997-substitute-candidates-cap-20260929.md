@@ -12,11 +12,11 @@ Spec y mediciones por variante: `docs/specs/scrum997-substitute-candidates-cap.m
 | Permisos y forma | 401 sin token; 403 sin permiso (4 usuarios); vendedor no ve `cost` pero sí `similarity_percent`; original excluido; umbral ≥ 25 % |
 | Entradas hostiles | sin 5xx; original inactivo OK; proveedor sin productos → `[]`; sin `provider_id` (29,6 K) 200 en 334 ms |
 | Concurrencia | 40 peticiones / 20 hilos, todas 200 (p50 ~6 s por la cola de FPM) |
-| UI (Playwright, `fefi@`) | `/compras/sustitutos`: selección del original y método "Buscar en catálogo" cargan sin 5xx. La UI siempre envía `search`; el camino sin texto solo se alcanza por API |
+| UI (Playwright, `[persona]@`) | `/compras/sustitutos`: selección del original y método "Buscar en catálogo" cargan sin 5xx. La UI siempre envía `search`; el camino sin texto solo se alcanza por API |
 
 ## Hallazgos
 1. **MEDIO — corregido:** la preselección solo por precio/margen (pool 4.000) perdió el candidato puesto 4 del ranking completo (nombre casi idéntico) para el original 691. Se agregó el generador por texto (trigram, 1.000) y el recall volvió a 100 %; test de regresión incluido.
-2. **BAJO — fuera de alcance, ticket aparte:** `SubstituteSimilarityService::closenessScore()` con margen original negativo produce `similarity_percent` > 100 (117,3 % medido) y premia candidatos lejanos. La preselección replica la fórmula exacta. Es regla de negocio (SCRUM-246, Daniela).
+2. **BAJO — fuera de alcance, ticket aparte:** `SubstituteSimilarityService::closenessScore()` con margen original negativo produce `similarity_percent` > 100 (117,3 % medido) y premia candidatos lejanos. La preselección replica la fórmula exacta. Es regla de negocio (SCRUM-246, Gerencia1).
 
 ## Observaciones
 - p95 de 476 ms está dentro del criterio pero sin holgura (5 % de peticiones > 500 ms; con la máquina cargada 419-762 ms). Palancas si se quiere margen: bajar `MAX_CANDIDATES` (~300) o el costo de hidratar/rankear en PHP. La latencia en EC2 dedicado no se midió bajo carga externa.

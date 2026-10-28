@@ -7,7 +7,7 @@ Verificación: `infra/test.sh --filter='Biblioteca|PermissionCatalogTest'` 43 te
 Veredicto parcial backend: **APROBADO** (sin CRÍTICO/ALTO).
 
 ### Lo verificado OK
-- Gate en ruta: `manuales.manage` en /config, /uploads, /finalize, DELETE; PUT /config con `permission:superadmin.all`; lectura/URL para cualquier autenticado (grupo `api` aplica JWT). `manuales.manage` está en catálogo (migración, sort 102) y Daniela (`gerencia@test.com`, existe en CoreUserSeeder) en SpecialPermissionSeeder.
+- Gate en ruta: `manuales.manage` en /config, /uploads, /finalize, DELETE; PUT /config con `permission:superadmin.all`; lectura/URL para cualquier autenticado (grupo `api` aplica JWT). `manuales.manage` está en catálogo (migración, sort 102) y Gerencia1 (`gerencia@test.com`, existe en CoreUserSeeder) en SpecialPermissionSeeder.
 - Topes/formatos/TTL/cuota en `auth.system_settings` (LibrarySettings + migración con seeds; `library_max_pending_uploads=5`); constantes en config/biblioteca.php son solo técnicas (módulos, mime, catálogo 60 s). Cambios de config quedan auditados por los triggers DB de `system_settings`.
 - `copyObject` del SDK directo (S3LibraryStore::copy), nunca `Storage::copy`. Claves generadas por el servidor (uuid + ext de lista blanca), nombre saneado solo en sidecar, Content-Type derivado de la extensión, Content-Disposition con filename ASCII + filename*. HeadObject + tamaño + magic bytes en finalize, pending descartado en rechazo. 503 sin bucket vía middleware. Auditoría de subida/borrado/descarga (entity_id string 100, uuid cabe).
 - Listado S3: paginador `ListObjectsV2`, prefijo por módulo validado con `Rule::in`; sin `get()` de catálogo de productos. Sin emojis.

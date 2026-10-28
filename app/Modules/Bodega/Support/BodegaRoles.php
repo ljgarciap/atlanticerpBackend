@@ -14,7 +14,7 @@ use App\Modules\Auth\Support\RoleKeys;
  * (Jefe, Asistentes, Picker, Repartidor), no solo uno.
  *
  * No hay un modelo de "picker"/"repartidor" nuevo — REQ-313/326 ya hablan de personas reales
- * sembradas por `BusinessRoleUserSeeder` con estos `role_key` (Auxiliar Bodega González =
+ * sembradas por `BusinessRoleUserSeeder` con estos `role_key` (Auxiliar Bodega Test =
  * `auxiliar_bodega`, Transporte Test = `transporte`), confirmado contra Jira y el seeder
  * antes de escribir código nuevo (regla del proyecto).
  */

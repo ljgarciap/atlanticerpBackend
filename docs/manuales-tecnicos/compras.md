@@ -30,7 +30,7 @@ Compras gestiona todo lo que Atlantic le compra a sus proveedores, de punta a pu
 | **Zona Libre de Colón** | Decidir las solicitudes de orden que genera Bodega. |
 | **Reportes e Inicio** | Seis paneles de reportes y la pantalla de inicio. |
 
-**Quiénes lo usan.** `lider_compras` (Yirena) es el rol operativo. "Mark" aprueba lo que requiere su visto bueno y se configura en `ComprasSettings.primary_approver_user_id`, no por correo ni por nombre. Gerencia (`gerencia.view`) decide sustitutos de bajo margen. `lider_operaciones` tiene acceso angosto (sustitutos y lectura). El vendedor/diseñador entra solo a Logística, a sus propios sustitutos y a inventario restringido.
+**Quiénes lo usan.** `lider_compras` (Lidercompras) es el rol operativo. "Aprobador" aprueba lo que requiere su visto bueno y se configura en `ComprasSettings.primary_approver_user_id`, no por correo ni por nombre. Gerencia (`gerencia.view`) decide sustitutos de bajo margen. `lider_operaciones` tiene acceso angosto (sustitutos y lectura). El vendedor/diseñador entra solo a Logística, a sus propios sustitutos y a inventario restringido.
 
 **Qué no es Compras.** El catálogo de productos (`CatalogProduct`) vive en el módulo Ventas & Diseño; Compras lo reutiliza y le agrega campos. Las bodegas y el stock físico viven en Bodega; Compras llama a `KardexService` de Bodega para mover stock. La facturación a clientes es de Admin & Contabilidad.
 
@@ -101,7 +101,7 @@ Esquema PostgreSQL por tenant: `{tenant}_compras` (para el tenant `atlantic`, `a
 | Tabla | Modelo | Qué guarda |
 |---|---|---|
 | `providers` | `Provider` | Proveedor. Único campo obligatorio de dominio: `name`. `category` (locales, zona_libre, china, europa, online, latinoamerica) determina `origin` (`local` solo para "locales"; el resto `internacional`). Bloques planos de contacto (`contact_*`, `whatsapp`, `phone`, `email`) y bancarios (`bank_*`, más la imagen de respaldo `bank_image_*`). `tax_id` y `tax_id_dv` (RUC y dígito verificador). |
-| `purchase_orders` | `PurchaseOrder` | Cabecera de la orden. `status`, `modality` (`directo`/`zona_libre`), envío (`shipping_type`, `who_pays_shipping`, `shipping_cost`), fechas estimada y real, contenedor y naviera, aprobación de Mark (`requires_primary_approval`, `approved_by`, `approved_at`), pagos (`payment_requested_at`, `pending_amount_change`, `amount_change_requested_by`), remanente (`pending_remainder_status`), fechas por etapa (`ordenado_at`, `en_transito_at`, `en_aduana_at`, `en_transito_local_at` y las `remainder_*_at`), `origin_module`, `liquidation_agency_id`. |
+| `purchase_orders` | `PurchaseOrder` | Cabecera de la orden. `status`, `modality` (`directo`/`zona_libre`), envío (`shipping_type`, `who_pays_shipping`, `shipping_cost`), fechas estimada y real, contenedor y naviera, aprobación de Aprobador (`requires_primary_approval`, `approved_by`, `approved_at`), pagos (`payment_requested_at`, `pending_amount_change`, `amount_change_requested_by`), remanente (`pending_remainder_status`), fechas por etapa (`ordenado_at`, `en_transito_at`, `en_aduana_at`, `en_transito_local_at` y las `remainder_*_at`), `origin_module`, `liquidation_agency_id`. |
 | `purchase_order_lines` | `PurchaseOrderLine` | Línea: `catalog_product_id`, `quantity`, `unit_cost`, `subtotal`, costo adicional (`additional_cost_percent`/`_amount`/`_type`), `sales_project_id` (nulo = "Ninguno (stock)", se asigna **por línea**, nunca se hereda de la orden), `stock_state_at_order` (estado de stock del producto en el momento de crear la orden; alimenta el reporte "Oportunidad de compra"). |
 | `purchase_order_documents` | `PurchaseOrderDocument` | Checklist de documentos del envío. `category` es un catálogo fijo: factura_comercial, declaracion_nacionalizacion, permiso_importacion, bl, confirmacion_proveedor, otro. Archivo en S3. |
 | `purchase_order_payments` | `PurchaseOrderPayment` | Pago registrado. **Inmutable**: sin `updated_at`, nunca se edita ni se borra; con comprobante en S3. |
@@ -131,7 +131,7 @@ Proveedor local:          por_aprobar → pendiente_liquidar → ordenado → en
 
 - La secuencia la calcula `statusSequence()` según `provider.origin`; `nextStatus()` devuelve la siguiente y `hasReachedStage($etapa)` dice si ya se pasó por ella (devuelve `false`, nunca lanza, si la etapa no aplica).
 - `pendiente_liquidar` es **un solo estado interno**, pero su texto cambia: "Pendiente" si la modalidad es `directo` y "Por liquidar" si es `zona_libre`. Esa traducción vive solo en el frontend (`utils/orderStatusLabel.ts`); no hay equivalente en PHP.
-- Una orden nace en `por_aprobar` solo si requiere aprobación de Mark (envío aéreo pagado por Atlantic). Si no, nace directo en `pendiente_liquidar`.
+- Una orden nace en `por_aprobar` solo si requiere aprobación de Aprobador (envío aéreo pagado por Atlantic). Si no, nace directo en `pendiente_liquidar`.
 - Ejes aparte del estado: estado de pago (`pendiente`/`parcial`/`completo`, calculado por `paymentStatus()` contra `total_amount`), recepción (`pendiente`/`parcial`/`completo`, por `receptionSummary()`), y remanente (`ordenado`, `salio_de_origen`, `en_transito`, `en_aduana`, `en_transito_local`).
 - Las fechas de cada etapa se guardan en las columnas de `STAGE_DATE_COLUMNS` (y `REMAINDER_STAGE_DATE_COLUMNS` para el remanente). `recibido` no tiene columna propia: reutiliza `actual_arrival_date`, que se llena sola con la fecha de hoy y **nunca se escribe a mano**.
 
@@ -157,19 +157,19 @@ Se editan en `PUT /compras/settings` (permiso `compras.settings.configure`) y se
 | Parámetro | Para qué | Rango |
 |---|---|---|
 | `low_rating_threshold` | Umbral de "calificación baja" de proveedores | 0–100 |
-| `primary_approver_user_id` | Quién es "Mark" para aprobar órdenes y cambios de monto | usuario existente o nulo |
+| `primary_approver_user_id` | Quién es "Aprobador" para aprobar órdenes y cambios de monto | usuario existente o nulo |
 | `claim_attention_days` | Días a partir de los cuales un reclamo abierto pide atención | 1–365 |
 | `replacement_margin_threshold` | Margen mínimo (%) para que un sustituto no escale a Gerencia | 0–100 |
 | `zona_libre_provider_id` | Proveedor fijo "Zona Libre de Colón" | proveedor existente |
 | `similarity_weight_text`, `similarity_weight_price`, `similarity_weight_margin` | Pesos de la fórmula de similitud de sustitutos | 0–100 |
 | `similarity_other_category_penalty`, `similarity_min_threshold` | Penalización por otra categoría y umbral mínimo | 0–100 |
 
-Se obtienen con `ComprasSettings::current()`. Si `primary_approver_user_id` es nulo, **nadie queda bloqueado**: el chequeo de "solo Mark" se omite.
+Se obtienen con `ComprasSettings::current()`. Si `primary_approver_user_id` es nulo, **nadie queda bloqueado**: el chequeo de "solo Aprobador" se omite.
 
 ### 4.2 Reglas por área
 
 **Orden de compra**
-- Requiere aprobación de Mark si `shipping_type = aereo` **y** `who_pays_shipping = atlantic` (`computeRequiresPrimaryApproval()`).
+- Requiere aprobación de Aprobador si `shipping_type = aereo` **y** `who_pays_shipping = atlantic` (`computeRequiresPrimaryApproval()`).
 - `who_pays_shipping` y `shipping_cost` solo existen para envío aéreo; el servidor los anula en cualquier otro tipo aunque el payload los traiga (`normalizeShippingFields()`).
 - Mientras la orden esté `por_aprobar` con aprobación requerida y sin aprobar, **no avanza** (`isBlockedByPrimaryApproval()`).
 - Solo se puede editar antes de "Ordenado" (estados `por_aprobar` y `pendiente_liquidar`). Editar reemplaza todas las líneas.
@@ -180,7 +180,7 @@ Se obtienen con `ComprasSettings::current()`. Si `primary_approver_user_id` es n
 **Pagos**
 - Registrar un pago exige comprobante, no puede exceder el saldo, y **no depende de "Enviar a pago" ni de ninguna aprobación**.
 - "Enviar a pago" es informativo: marca `payment_requested_at` y dispara `PaymentRequested`.
-- Cambiar el monto antes del primer pago queda pendiente de aprobación de Mark. Mientras exista un cambio pendiente, **registrar pago y enviar a pago están bloqueados** (422). Si ya hay pagos, no se puede pedir el cambio; y si se registra un pago entre la solicitud y la aprobación, la solicitud queda obsoleta y se descarta.
+- Cambiar el monto antes del primer pago queda pendiente de aprobación de Aprobador. Mientras exista un cambio pendiente, **registrar pago y enviar a pago están bloqueados** (422). Si ya hay pagos, no se puede pedir el cambio; y si se registra un pago entre la solicitud y la aprobación, la solicitud queda obsoleta y se descarta.
 
 **Ingreso de mercancía**
 - Ninguna línea, sumada a lo ya recibido de esa orden y producto, puede superar lo pedido.
@@ -219,8 +219,8 @@ Los límites de uso de la IA (5 validaciones de confirmación por orden por hora
 
 ```mermaid
 sequenceDiagram
-  participant Y as Compras (Yirena)
-  participant M as Mark
+  participant Y as Compras (Lidercompras)
+  participant M as Aprobador
   participant API as PurchaseOrderController
   participant L as Logística / Ingreso
   Y->>API: POST /orders (store)
@@ -499,7 +499,7 @@ Los ingresos de mercancía, la liquidación, el cambio de monto y el contenedor/
 | `compras.read` | Leer el módulo completo. |
 | `compras.write` | Crear (proveedores, órdenes, reclamos, solicitudes, productos). |
 | `compras.edit` | Modificar y operar (avanzar órdenes, pagos, documentos, ingresos, agencias). |
-| `compras.approve` | Aprobar una orden (además, el gate de Mark; ver 7.2). |
+| `compras.approve` | Aprobar una orden (además, el gate de Aprobador; ver 7.2). |
 | `compras.settings.configure` | Ajustes de Compras. |
 | `compras.zona-libre.approve` | Aprobar o rechazar solicitudes de Zona Libre de Bodega. Es un permiso **angosto** a propósito; no reutiliza `compras.approve`. |
 | `compras.sustitutos.manage` | Pantalla de Sustitutos completa; permiso angosto de Líder de Operaciones. |
@@ -509,9 +509,9 @@ Los ingresos de mercancía, la liquidación, el cambio de monto y el contenedor/
 | `ventas_diseno.edit` / `ventas_diseno.read` | Vendedor/diseñador: sustitutos de sus propios proyectos e inventario restringido. |
 | `gerencia.view` | Decidir sustitutos de bajo margen. |
 
-Los permisos angostos asignados a una persona concreta van en el seeder `SpecialPermissionSeeder` (nunca como concesión manual descubierta durante QA): por ejemplo `lidercompras@test.com` (Yirena) recibe `compras.settings.configure` y `compras.zona-libre.approve`, y `lideroperaciones@test.com` recibe `compras.sustitutos.manage` y `compras.limited.view`.
+Los permisos angostos asignados a una persona concreta van en el seeder `SpecialPermissionSeeder` (nunca como concesión manual descubierta durante QA): por ejemplo `lidercompras@test.com` (Lidercompras) recibe `compras.settings.configure` y `compras.zona-libre.approve`, y `lideroperaciones@test.com` recibe `compras.sustitutos.manage` y `compras.limited.view`.
 
-### 7.2 El gate de Mark
+### 7.2 El gate de Aprobador
 
 `approve`, `approve-amount-change` y `reject-amount-change` comparan `request.user.id` con `ComprasSettings.primary_approver_user_id`. Solo ese usuario (o `superadmin.all`) puede resolver; los demás reciben 403. Nótese que `approve-amount-change` y `reject-amount-change` pasan el middleware con `compras.edit`, y la restricción real vive dentro del método.
 
@@ -753,7 +753,7 @@ Esta lista es una fotografía de lo observado al escribir el manual (2026-10-12)
 
 **Reglas fijas en el código** (viola la regla de parametrización; ver 4.3): umbral de 3 días de orden crítica, 7 % de ITBMS de proveedor local, pesos de la calificación del proveedor y 50 % del aviso de oportunidad de compra.
 
-**Avisos prometidos y no implementados.** SCRUM-252 dice que "Compras notifica a Mark que hay que pagar", pero `PaymentRequested` no tiene ningún consumidor, y tampoco hay una regla de notificación que lo cubra (el motor de reglas de CRM solo observa `Project`, `ProjectActivity` y `ProjectDocument`). Los otros cuatro eventos sin consumidor (`PaymentRegistered`, `PaymentAmountChangeApproved`, `ClaimCreated`, `ClaimStatusChanged`) no tienen un aviso prometido en los tickets revisados. Corregirlo requiere un ticket nuevo.
+**Avisos prometidos y no implementados.** SCRUM-252 dice que "Compras notifica a Aprobador que hay que pagar", pero `PaymentRequested` no tiene ningún consumidor, y tampoco hay una regla de notificación que lo cubra (el motor de reglas de CRM solo observa `Project`, `ProjectActivity` y `ProjectDocument`). Los otros cuatro eventos sin consumidor (`PaymentRegistered`, `PaymentAmountChangeApproved`, `ClaimCreated`, `ClaimStatusChanged`) no tienen un aviso prometido en los tickets revisados. Corregirlo requiere un ticket nuevo.
 
 **Rendimiento.** Varios listados cargan todo en PHP y paginan después: el chip `critical` y los filtros de estado de pago de `PurchaseOrderController::index()`, y los listados de reclamos y de solicitudes de sustitutos (`Pagination::ofArray`). Con volumen alto habrá que moverlos a SQL. `InventoryKpiService` ya pasó a SQL con agregados para no hidratar el catálogo (~30 000 productos).
 
@@ -788,8 +788,8 @@ Esta lista es una fotografía de lo observado al escribir el manual (2026-10-12)
 | Término | Significado |
 |---|---|
 | **OC** | Orden de compra. |
-| **Mark** | Usuario aprobador configurado en `primary_approver_user_id`. |
-| **Yirena** | Líder de Compras (`lider_compras`). |
+| **Aprobador** | Usuario aprobador configurado en `primary_approver_user_id`. |
+| **Lidercompras** | Líder de Compras (`lider_compras`). |
 | **Zona Libre** | Modalidad de orden y proveedor fijo "Zona Libre de Colón"; pasa por aduana y liquidación. |
 | **Liquidación / agencia de liquidación** | Gestión aduanal de una orden de Zona Libre. Una orden está "liquidada" al llegar a Recibido. |
 | **Remanente** | Lo que falta recibir tras un ingreso parcial, con su propia etapa. |

@@ -77,7 +77,7 @@ a mano en Cuentas Bancarias, el criterio "el PDF muestra el número completo" de
 cumple y, peor, el PDF pierde información que hoy sí muestra (banco + últimos 4). Además el seeder
 escribe en la cuenta activa más antigua (`oldest('id')`, coherente con `paymentBlock()`), que puede
 no ser la cuenta a la que corresponde el número entregado si hay varias activas.
-Acción: pedir el número a Luis/Daniela, ponerlo en el `.env` de dev/test/prod (o cargarlo desde
+Acción: pedir el número a Luis/Gerencia1, ponerlo en el `.env` de dev/test/prod (o cargarlo desde
 Cuentas Bancarias) ANTES de promover, y confirmar que la cuenta activa más antigua es la correcta.
 Esto no es un defecto de código.
 
@@ -237,7 +237,7 @@ Pre-QA son correctos; 0 hallazgos nuevos de severidad CRÍTICO/ALTO/MEDIO (2 BAJ
 | # | Hallazgo | Estado | Evidencia |
 |---|---|---|---|
 | MEDIO-1 | Backfill vinculaba a la versión equivocada de la cotización | **CORREGIDO** | `BodegaBackfillOrderItemQuoteLinksCommand.php:135-146` (`quoteAsOfOrder`): cotización con folio más reciente cuyo `generated_at <= created_at` de la raíz de la familia (`:86-88`, `Order::familyRoot()`); `generated_at` nulo queda excluido (comparación falsa) => se omite. `:160` exige `qty_requested <= round(cantidad cotizada)`; `:162-168` exige precio efectivo dentro de ±0.01 si el ítem ya trae `unit_price`; `:100` solo vincula con exactamente 1 candidato. |
-| MEDIO-2 | Prerrequisito de despliegue: número de cuenta | **ACEPTADO** (sin cambio de código, como se esperaba) | Sigue siendo acción de Luis/Daniela (`ADMIN_CONTAB_BANK_ACCOUNT_NUMBER` o carga manual en Cuentas Bancarias) antes de promover; el Pre-QA lo registra como INFO-2 pendiente. `.env.example` ahora documenta el comportamiento ("Sin valor = no-op, los documentos muestran —"). Falta solo ejecutar la acción; recomiendo dejarla como ítem explícito del checklist de promoción a test/prod. |
+| MEDIO-2 | Prerrequisito de despliegue: número de cuenta | **ACEPTADO** (sin cambio de código, como se esperaba) | Sigue siendo acción de Luis/Gerencia1 (`ADMIN_CONTAB_BANK_ACCOUNT_NUMBER` o carga manual en Cuentas Bancarias) antes de promover; el Pre-QA lo registra como INFO-2 pendiente. `.env.example` ahora documenta el comportamiento ("Sin valor = no-op, los documentos muestran —"). Falta solo ejecutar la acción; recomiendo dejarla como ítem explícito del checklist de promoción a test/prod. |
 | BAJO-1 | `assertEquals(0.0, null)` vacuo | **CORREGIDO** | `AdminContCashPositionControllerTest.php` (test `..._parten_en_cero_...`): `assertIsNumeric` sobre ambas claves + `assertEqualsWithDelta`. |
 | BAJO-2 | Test de congelamiento no distinguía snapshot de reconstrucción | **CORREGIDO** | Mismo archivo, `test_934_close_congela_...`: lee `AdminContDailyCashCount::findOrFail($id)->snapshot` y afirma `assertArrayHasKey` de ambos indicadores y sus valores (100.00 / 300.00) sobre lo PERSISTIDO; sin las claves en el snapshot ese test falla. |
 | BAJO-3 | `.env.example` mal ubicado | **CORREGIDO** | `.env.example:160-176`: `ANTHROPIC_API_KEY` conserva su comentario; la variable nueva quedó en su propia sección "Admin & Contabilidad" con la descripción completa. |

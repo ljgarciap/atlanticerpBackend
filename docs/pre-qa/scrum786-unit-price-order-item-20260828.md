@@ -41,7 +41,7 @@ primera vez); comando de backfill (match único, match ambiguo omitido, `--dry-r
 `--dry-run` primero (7 backfilleables, 29 sin cotización resoluble, 0 ambiguos), luego real —
 mismo resultado, más 1 `CustomerReturnLine` heredado. Sin errores.
 
-**Verificación adversarial en vivo con Playwright** (login real Felix, dev.atlanticerp.ai recién
+**Verificación adversarial en vivo con Playwright** (login real Contabilidad, dev.atlanticerp.ai recién
 desplegado): sembrado un caso real vía tinker (pedido con `unit_price=45.50`, devolución de 2
 unidades en `esperando_nota_credito`, factura real vinculada por `order_id`) — la cola de Notas de
 Crédito muestra la fila, el clic abre el formulario, y el monto sugerido por producto muestra

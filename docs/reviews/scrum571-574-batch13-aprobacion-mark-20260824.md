@@ -6,14 +6,14 @@ esperables al despachar Backend Dev y Frontend Dev como forks paralelos sobre el
 verse entre sí durante la implementación) — gate completo re-corrido después de corregirlos.**
 
 Batch 13 de Notas Crédito y Devoluciones (ver `docs/architecture/admin-contab-batches.md`) —
-aprobar/rechazar una nota pendiente exclusivo de Mark (REQ-494), ver comprobante de soporte
+aprobar/rechazar una nota pendiente exclusivo de Aprobador (REQ-494), ver comprobante de soporte
 (REQ-495), ver documento formal de la nota con enlace a la factura relacionada (REQ-496), ver esa
 factura relacionada con el mismo formato que cualquier otra (REQ-497) + `parseDateOnly()`
 compartido bundleado (SCRUM-787). Ver
 `docs/adr/ADR-SCRUM571-574-batch13-aprobacion-mark-comprobante-documento.md` para el diseño
 completo, aprobado por Luis antes de dispatchar, incluida la confirmación explícita de que
 `register()` debía corregirse para que **toda** Anulación completa quede pendiente de aprobación
-de Mark sin importar el monto (no solo por superar el umbral, gap real de Batch 11 encontrado al
+de Aprobador sin importar el monto (no solo por superar el umbral, gap real de Batch 11 encontrado al
 diseñar este batch).
 
 ## Defectos reales encontrados y corregidos en este review

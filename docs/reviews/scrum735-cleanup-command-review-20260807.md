@@ -21,7 +21,7 @@ un `audit_logs` que crece con el tiempo, considerar un índice compuesto `(user_
 herramienta operativa de uso puntual; solo vale la pena si se vuelve rutina.
 
 ## Verificación del diseño contra la spec del Arquitecto
-- Candidatos = `audit_logs` con `user_id=Daniela`, `action='...created'` (nunca `updated`/`deleted`) ✅
+- Candidatos = `audit_logs` con `user_id=Gerencia1`, `action='...created'` (nunca `updated`/`deleted`) ✅
 - `SalesProject` inferido por `sub_client_id` candidato + ventana `created_at` ✅
 - Marcadores `[DEMO-711]`/`[QA-VD]`/`[QA-VD-409]` protegidos, heredados por cadena de FKs hacia arriba ✅
 - Guards de referencia activa para `MasterClient`/`SubClient`/`SalesProject` **y `CatalogProduct`**
