@@ -37,6 +37,13 @@ return [
                 'color' => ['type' => 'string', 'max' => 7, 'pattern' => '/^#[0-9a-fA-F]{6}$/', 'default' => null],
             ],
         ],
+        // Fase 9c — campos de la ficha técnica estructurada del producto (`technical_spec`, JSONB clave → valor). `usage_json` = columna JSONB cuyas
+        // claves son las del dominio (una entrada con datos no se borra). La lógica nunca pregunta por un campo concreto: solo lista, etiqueta y ordena.
+        'technical_spec_field' => [
+            'label' => 'Campos de la ficha técnica',
+            'usage_json' => [CatalogProduct::class, 'technical_spec'],
+            'props' => [],
+        ],
         // Fase 7c — etapas del pipeline de Ventas & Diseño. La lógica pregunta por `categoria`, no por la clave. Las 6 de sistema no se
         // reordenan ni cambian de categoría (las compuertas, las comisiones y «pasar a pedido» dependen de ellas); las propias van entre
         // Lead y Aprobado y son siempre `abierta` (ganada/perdida son `system_only`).

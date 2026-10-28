@@ -109,19 +109,12 @@ class BodegaInventoryControllerTest extends FeatureTestCase
      * de `Compras\Http\Controllers\InventoryController::format()`, que sí lo expone desde
      * SCRUM-425/426. Mismo campo/shape en ambos endpoints, misma columna JSONB de `CatalogProduct`.
      */
-    public function test_show_expone_technical_spec_con_los_12_campos_cuando_el_producto_lo_tiene(): void
+    public function test_show_expone_technical_spec_cuando_el_producto_lo_tiene(): void
     {
         $spec = [
-            'voltage' => '110V - 220V',
-            'power' => '12 W',
-            'socket_type' => 'E27',
-            'color_temperature' => '3000K (cálida)',
-            'luminous_flux' => '1050 lúmenes',
             'dimensions' => '40 x 40 x 55 cm',
             'weight' => '2.3 kg',
             'material_finish' => 'Metal pintado, difusor en vidrio',
-            'ip_rating' => 'IP20 (interior)',
-            'estimated_lifespan' => '25000 horas',
             'warranty' => '2 años',
             'certifications' => 'CE, RoHS',
         ];
@@ -149,10 +142,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
     public function test_index_tambien_expone_technical_spec_por_fila(): void
     {
-        $spec = ['voltage' => '110V'] + array_fill_keys(
-            array_diff(CatalogProduct::TECHNICAL_SPEC_FIELDS, ['voltage']),
-            'N/A',
-        );
+        $spec = ['dimensions' => '10 x 10 cm'] + array_fill_keys(['weight', 'material_finish', 'warranty', 'certifications'], 'N/A');
         $this->makeCatalogProduct(['technical_spec' => $spec]);
 
         $response = $this->withHeaders($this->readerHeaders())->getJson('/api/bodega/inventory');

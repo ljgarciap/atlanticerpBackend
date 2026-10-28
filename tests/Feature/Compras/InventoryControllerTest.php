@@ -65,31 +65,6 @@ class InventoryControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-425/426 — payload de ficha técnica completo (los 12 campos de
-     * CatalogProduct::TECHNICAL_SPEC_FIELDS), usado por los POST de creación que ya exigen
-     * `technical_spec` completo (StoreInventoryProductRequest, REQ-356 RN1/RN2).
-     *
-     * @return array<string, string>
-     */
-    private function makeTechnicalSpec(): array
-    {
-        return [
-            'voltage' => '110V - 220V',
-            'power' => '12 W',
-            'socket_type' => 'E27',
-            'color_temperature' => '3000K (cálida)',
-            'luminous_flux' => '1050 lúmenes',
-            'dimensions' => '40 x 40 x 55 cm',
-            'weight' => '2.3 kg',
-            'material_finish' => 'Metal pintado, difusor en vidrio',
-            'ip_rating' => 'IP20 (interior)',
-            'estimated_lifespan' => '25,000 horas',
-            'warranty' => '12 meses',
-            'certifications' => 'CE, RoHS',
-        ];
-    }
-
-    /**
      * SCRUM-240 (corrección de Gerencia Test 2026-08-09) — payload mínimo válido para
      * POST /api/compras/inventory tras la reescritura de StoreInventoryProductRequest: todos los
      * campos que antes eran opcionales (provider_id/factory_reference/brand/barcode/category/

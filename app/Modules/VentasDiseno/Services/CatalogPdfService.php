@@ -36,23 +36,6 @@ use Illuminate\Support\Facades\Http;
  */
 final class CatalogPdfService
 {
-    /** Mismos 12 sub-campos de `CatalogProduct::TECHNICAL_SPEC_FIELDS`, en el mismo orden, con la
-     *  etiqueta en español ya usada en `StoreInventoryProductRequest::attributes()`. */
-    private const SPEC_LABELS = [
-        'voltage'            => 'Voltaje',
-        'power'              => 'Potencia',
-        'socket_type'        => 'Tipo de casquillo',
-        'color_temperature'  => 'Temperatura de color',
-        'luminous_flux'      => 'Flujo luminoso',
-        'dimensions'         => 'Dimensiones',
-        'weight'             => 'Peso',
-        'material_finish'    => 'Material / acabado',
-        'ip_rating'          => 'Índice de protección (IP)',
-        'estimated_lifespan' => 'Vida útil estimada',
-        'warranty'           => 'Garantía',
-        'certifications'     => 'Certificaciones',
-    ];
-
     /**
      * SCRUM-998 — tope duro del camino síncrono, independiente del umbral configurable (`catalog_pdf_max_single_products`,
      * que `CrmSettingsRequest` limita a 1.000): dompdf mantiene todo el árbol en memoria y con ~2.000 productos ya pasa de
@@ -288,6 +271,10 @@ final class CatalogPdfService
     }
 
     /**
+     * Fase 9c — los campos y su orden salen del catálogo `technical_spec_field` (vocabulario de la empresa): se imprimen los ACTIVOS en su
+     * orden con la etiqueta del catálogo, y después cualquier clave con valor que el catálogo no conozca (con su clave legible), para no ocultar datos.
+     * Una entrada desactivada se omite a propósito.
+     *
      * @param array<string, string>|null $technicalSpec
      * @return list<array{label: string, value: string}>
      */
@@ -297,14 +284,21 @@ final class CatalogPdfService
             return [];
         }
 
+        $all = \App\Shared\Catalogs\CatalogService::entries('technical_spec_field', onlyActive: false);
+        $known = $all->pluck('key')->map(strval(...))->all();
+        $fields = $all->filter(static fn ($e): bool => $e->is_active)->map(static fn ($e): array => ['key' => (string) $e->key, 'label' => (string) $e->label])->values()->all();
+        foreach (array_diff(array_keys($technicalSpec), $known) as $extra) {
+            $fields[] = ['key' => (string) $extra, 'label' => ucfirst(str_replace('_', ' ', (string) $extra))];
+        }
+
         $result = [];
-        foreach (CatalogProduct::TECHNICAL_SPEC_FIELDS as $field) {
-            $value = $technicalSpec[$field] ?? null;
+        foreach ($fields as $field) {
+            $value = $technicalSpec[$field['key']] ?? null;
             if ($value === null || $value === '') {
                 continue;
             }
 
-            $result[] = ['label' => self::SPEC_LABELS[$field], 'value' => $value];
+            $result[] = ['label' => $field['label'], 'value' => (string) $value];
         }
 
         return $result;
