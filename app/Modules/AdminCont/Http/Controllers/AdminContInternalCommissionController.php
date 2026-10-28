@@ -101,7 +101,7 @@ class AdminContInternalCommissionController
 
     /**
      * GET /api/admin-contab/commissions/internal/vendors — opciones del selector de vendedor
-     * (Contabilidad/Mark/Gerencia, REQ-500). Todo `vendedor`, tenga o no pedidos en el mes
+     * (Contabilidad/Aprobador/Gerencia, REQ-500). Todo `vendedor`, tenga o no pedidos en el mes
      * filtrado — un vendedor sin pedidos este mes igual debe poder elegirse para revisar su
      * historial de meses anteriores.
      */
@@ -143,7 +143,7 @@ class AdminContInternalCommissionController
 
     /**
      * GET /api/admin-contab/commissions/internal/{vendedorId}/account-statement?mes=YYYY-MM —
-     * REQ-507. Contabilidad/Mark/Gerencia de cualquier vendedor; un vendedor solo el propio, verificado
+     * REQ-507. Contabilidad/Aprobador/Gerencia de cualquier vendedor; un vendedor solo el propio, verificado
      * server-side (nunca solo ocultando el botón en la UI, mismo criterio que el resto del
      * módulo).
      */
@@ -202,7 +202,7 @@ class AdminContInternalCommissionController
         $actor = $this->resolveUser($request);
         if ($actor === null || ! $actor->canViewTeamV2('admin_contab')) {
             // RN de REQ-498: cada vendedor consulta la tabla de tramos, pero no exporta el
-            // reporte completo — exportar es exclusivo de Contabilidad/Mark/Gerencia (view_team).
+            // reporte completo — exportar es exclusivo de Contabilidad/Aprobador/Gerencia (view_team).
             abort(403, 'No autorizado para exportar este reporte.');
         }
 

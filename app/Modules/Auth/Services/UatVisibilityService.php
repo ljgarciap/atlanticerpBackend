@@ -39,7 +39,7 @@ final class UatVisibilityService
     /**
      * SCRUM-741 — usado por InventoryController/OrderStatusController para cortar TODO acceso no-
      * superadmin a un módulo oculto por la etapa de rollout actual, sin excepción por permiso:
-     * ni la rama de permiso real (compras.read/bodega.read — hallazgo real de Pre-QA, Gerencia/Mark
+     * ni la rama de permiso real (compras.read/bodega.read — hallazgo real de Pre-QA, Gerencia/Aprobador
      * la tienen vía su rol Gerencia) ni la rama restringida (ventas_diseno.read) dan acceso
      * mientras el módulo esté en `hiddenModules()`. La máscara UAT es cosmética para el resto de
      * la app a propósito (ver docblock de clase) — estos 2 endpoints son la única excepción

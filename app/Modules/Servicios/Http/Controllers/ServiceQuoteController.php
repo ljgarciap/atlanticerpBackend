@@ -304,7 +304,7 @@ final class ServiceQuoteController extends Controller
             'description'             => $item->description,
             'quantity'                => $item->quantity,
             'unit_price'              => $item->unit_price,
-            // REQ-232 — desglose de costo real/margen SOLO para Lider Servicios/Mark/Gerencia2/Gerencia5
+            // REQ-232 — desglose de costo real/margen SOLO para Lider Servicios/Aprobador/Gerencia2/Gerencia5
             // (`servicios.quotes.view_cost_breakdown`). `margin_percent` va gateado igual que
             // `cost_reference` (abajo): con `unit_price` ya visible para todos, exponer el margen
             // sin el gate permite recalcular `cost_reference` (tarifa_dia = unit_price / (1 +

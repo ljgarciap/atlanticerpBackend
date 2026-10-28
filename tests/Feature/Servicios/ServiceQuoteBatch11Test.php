@@ -548,7 +548,7 @@ class ServiceQuoteBatch11Test extends FeatureTestCase
      * SCRUM-337 (rebote QA 2026-08-13, BUG medio) — la tarifa/día del técnico externo dependía
      * SOLO de `tarifa_visible`, sin importar el rol de quien mira la ficha: Tecnico (sin
      * `puede_ver_costos`) veía la tarifa real con el toggle activado, aunque RN2 la reserva a
-     * Lider Servicios/Mark/Gerencia2/Gerencia5. Decisión de Luis (daily 2026-08-18): es un bug, se gatea por RN2.
+     * Lider Servicios/Aprobador/Gerencia2/Gerencia5. Decisión de Luis (daily 2026-08-18): es un bug, se gatea por RN2.
      */
     public function test_tarifa_visible_no_expone_costo_a_quien_no_puede_verlo(): void
     {

@@ -546,7 +546,7 @@ class ReplacementRequestControllerTest extends FeatureTestCase
     /**
      * Hallazgo 1 — a diferencia de `test_gerencia_puede_aprobar_solicitud_pendiente_gerencia`
      * (que simula el caso "ya arreglado" otorgando `gerencia.view` manualmente vía
-     * `grantCompras()`, un permiso v1), este reproduce la cuenta REAL de Gerencia/Mark: acceso a
+     * `grantCompras()`, un permiso v1), este reproduce la cuenta REAL de Gerencia/Aprobador: acceso a
      * Compras/Gerencia solo vía su ROL `management` (`RoleModuleVisibility`, v2) — nunca tuvieron
      * `gerencia.view`/`compras.read` cargado en `extra_permissions`. Antes del fix,
      * `hasFullComprasReadAccess()` usaba `$user->hasPermission()` (v1) y los trataba como si no

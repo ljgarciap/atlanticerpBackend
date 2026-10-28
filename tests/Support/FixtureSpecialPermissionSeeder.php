@@ -50,7 +50,7 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // de facturar y `receptor_fiscal` (ver docs/runbooks/alta-de-facturador.md).
         // Gerencia — SCRUM-725 (excepción de margen mínimo, junto con Gerencia; el ticket los nombra a
         // los dos por email explícitamente, no es un grant de rol) + SCRUM-295 (desglose de costo
-        // del ítem Subcontratado, junto con Lider Servicios/Mark/Gerencia5) + SCRUM-925 (LUMO, junto con Gerencia/Contabilidad)
+        // del ítem Subcontratado, junto con Lider Servicios/Aprobador/Gerencia5) + SCRUM-925 (LUMO, junto con Gerencia/Contabilidad)
         'gerencia2@test.com' => ['ventas_diseno.override_min_margin', 'servicios.quotes.view_cost_breakdown'],
         // Lider Servicios (lider_servicios) — SCRUM-295: aunque lidera el módulo, ver el desglose de
         // costo/margen del ítem Subcontratado es un grant angosto por persona (el ticket lo nombra

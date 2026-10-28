@@ -53,7 +53,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     {
         // `management@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
         // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
-        // simular un management genuino, no-Mark y no-superadmin.
+        // simular un management genuino, no-aprobador y no-superadmin.
         $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
@@ -184,7 +184,7 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     {
         // `management@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
         // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
-        // simular un management genuino, no-Mark y no-superadmin.
+        // simular un management genuino, no-aprobador y no-superadmin.
         $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token) + ['Accept' => 'application/json'])

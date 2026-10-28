@@ -290,7 +290,7 @@ Route::middleware('permission:admin_contab.read,admin_contab.commissions_interna
         Route::get('/', [AdminContInternalCommissionController::class, 'summary']);
     });
 
-// Exportar reporte + opciones del selector de vendedor — exclusivo Contabilidad/Mark/Gerencia (REQ-498
+// Exportar reporte + opciones del selector de vendedor — exclusivo Contabilidad/Aprobador/Gerencia (REQ-498
 // RN, "cada vendedor... no exportar el reporte completo"; el selector de vendedor tampoco aplica
 // a un vendedor, que ya ve solo su propia fila auto-filtrada). Deliberadamente FUERA del OR de
 // arriba, defensa en profundidad — el controller también aborta 403 en export() vía
@@ -338,7 +338,7 @@ Route::middleware('permission:admin_contab.operations.manage')
     });
 
 // Marcar pagado (REQ-515) y proponer % (REQ-516 RN3) — mismo roster amplio que REQ-510
-// (Contabilidad/Asistente/Mark/Gerencia, el REQ lo dice explícito para ambos).
+// (Contabilidad/Asistente/Aprobador/Gerencia, el REQ lo dice explícito para ambos).
 Route::middleware('permission:admin_contab.records.manage')
     ->prefix('commissions/external')->group(function (): void {
         Route::post('/projects/{pipelineCardId}/mark-paid', [AdminContArchitectCommissionController::class, 'markPaid'])->whereNumber('pipelineCardId');
@@ -354,7 +354,7 @@ Route::middleware('primary_approver_only')->prefix('commissions/external')->grou
 
 // SCRUM-597→601 (REQ-520→524), Batch 18 — Arqueo / Flujo de Caja, parte 1 (ver
 // docs/adr/ADR-SCRUM597-601-batch18-arqueo-caja.md, gates exactos en la tabla "Contrato de API").
-// REQ-520/522 (encabezado, toggle) — Contabilidad/Asistente/Mark/Gerencia, mismo grupo amplio que
+// REQ-520/522 (encabezado, toggle) — Contabilidad/Asistente/Aprobador/Gerencia, mismo grupo amplio que
 // bank-accounts/facturación/cobros/notas-credito.
 Route::middleware('permission:admin_contab.records.manage')
     ->prefix('cash-position')->group(function (): void {
@@ -456,7 +456,7 @@ Route::middleware('primary_approver_only')->prefix('petty-cash')->group(function
     Route::put('/reports/{numero}/reject', [AdminContPettyCashController::class, 'rejectReport']);
 });
 
-// Batch 22 (SCRUM-643→647, REQ-566→570) — home de Reportes. Roster amplio Contabilidad/Asistente/Mark/
+// Batch 22 (SCRUM-643→647, REQ-566→570) — home de Reportes. Roster amplio Contabilidad/Asistente/Aprobador/
 // Gerencia (Excel de requerimientos, hoja "Matriz de Permisos por Rol", fila "Ver pantalla
 // Reportes" — el cliente había confirmado que Asistente Administrativa ve el dashboard completo, solo lectura), mismo
 // grupo ya usado en `cash-position`/`petty-cash/summary`. Ninguno de estos endpoints acepta

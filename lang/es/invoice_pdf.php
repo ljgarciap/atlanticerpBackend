@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * SCRUM-1156 — textos del PDF de factura. Los literales de los rótulos fiscales (título, leyendas, motivos) viven acá y no en
- * la plantilla para poder ajustarlos sin tocar lógica (Contabilidad/Mark definen la redacción final). Sin emojis ni glifos.
+ * la plantilla para poder ajustarlos sin tocar lógica (Contabilidad/Aprobador definen la redacción final). Sin emojis ni glifos.
  */
 return [
     'titulo'             => 'Factura de Operación Interna',

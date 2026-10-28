@@ -210,7 +210,7 @@ class AdminContInvoiceController
 
     /** GET /api/admin-contab/invoices/{order}/detail — REQ-447, modal de detalle/trazabilidad.
      *  `puede_decidir_incobrable` (REQ-448) es dependiente del actor, no de la factura — se calcula
-     *  acá en vez de en el service, ya que este endpoint es de acceso general (Contabilidad/Mark/Gerencia),
+     *  acá en vez de en el service, ya que este endpoint es de acceso general (Contabilidad/Aprobador/Gerencia),
      *  no gateado por `primary_approver_only`; el frontend lo usa para mostrar Aprobar/Rechazar solo a Gerencia. */
     public function detail(int $order, Request $request): JsonResponse
     {
@@ -280,7 +280,7 @@ class AdminContInvoiceController
         return $this->invoicePdf->generate($detail)->stream("factura-{$numero}.pdf");
     }
 
-    /** POST /api/admin-contab/invoices/{order}/mark-uncollectible — REQ-448, propone (Contabilidad/Mark/Gerencia).
+    /** POST /api/admin-contab/invoices/{order}/mark-uncollectible — REQ-448, propone (Contabilidad/Aprobador/Gerencia).
      *  SCRUM-929 (B3a) — `invoice_id` opcional: obligatorio (422) si el pedido tiene varias facturas activas;
      *  una factura de otro pedido → 404. Ver ADR-SCRUM929 §4.8. */
     public function markUncollectible(int $order, Request $request): JsonResponse

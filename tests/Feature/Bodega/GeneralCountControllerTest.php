@@ -961,7 +961,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $this->markUp('management@atlantic.test');
         // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
         // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
-        // simular un management genuino, no-Mark y no-superadmin.
+        // simular un management genuino, no-aprobador y no-superadmin.
         $this->grantBodega('nivel8@atlantic.test', ['bodega.approve']);
 
         $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');

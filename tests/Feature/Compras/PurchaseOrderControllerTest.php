@@ -730,7 +730,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-206 (hallazgo QA 2026-07-16): cualquier usuario con `compras.approve` podía aprobar,
-     * no solo Gerencia — usa `gerencia@atlantic.test` como "no-Mark" en vez de la cuenta real de
+     * no solo Gerencia — usa `gerencia@atlantic.test` como "no-aprobador" en vez de la cuenta real de
      * Gerencia (CoreUserSeeder, password no fijo en testing) para no depender de esa credencial.
      */
     public function test_aprobar_orden_no_siendo_el_aprobador_configurado_retorna_403(): void
@@ -738,7 +738,7 @@ class PurchaseOrderControllerTest extends FeatureTestCase
         $this->grantCompras('management@atlantic.test', ['compras.approve']);
         // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
         // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
-        // simular un management genuino, no-Mark y no-superadmin.
+        // simular un management genuino, no-aprobador y no-superadmin.
         $this->grantCompras('nivel8@atlantic.test', ['compras.approve']);
 
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');

@@ -316,7 +316,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
         $this->assertContains('Proyecto De Otro Vendedor', $names);
     }
 
-    /** Mismo caso que arriba, pero para Gerencia (Gerencia/Mark) — rol `management`, sin `gerencia.view` en v1. */
+    /** Mismo caso que arriba, pero para Gerencia (Gerencia/Aprobador) — rol `management`, sin `gerencia.view` en v1. */
     public function test_gerencia_ve_proyectos_solo_con_acceso_de_rol_sin_permiso_v1_extra(): void
     {
         $role = Role::where('key', 'management')->firstOrFail();
