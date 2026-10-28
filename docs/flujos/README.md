@@ -22,6 +22,9 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | [Servicios: tickets](servicios-tickets.md) | Servicios | verificado (instalación, garantía con compuertas de cierre, cotización de servicio, cancelación); pendiente: técnicos externos, herramientas, insumos, hoja de reclamo, reportes (11e) |
 | [Transversales: usuarios, acceso, permisos, «Ver como usuario», niveles y notificaciones](transversales.md) | varios | verificado; pendiente: MFA, recuperación de clave por correo, perfil, departamentos, roles/módulos, reglas de aprobación y de notificación, ajustes globales, IA (11f) |
 
+## Cierre
+[Lista priorizada de candidatos](candidatos-priorizados.md): qué conviene convertir en fases, con impacto y esfuerzo.
+
 ## Prerrequisitos del entorno local (hallazgos de esta fase)
 Sin esto los flujos no corren; ninguno está en el seed demo.
 1. **Archivos**: `STORAGE_DRIVER=local` en `.env` (los archivos del pipeline, guías y adjuntos van a `s3-private`/`s3-public`; sin credenciales de S3 toda subida fallaba con 500). [E]
