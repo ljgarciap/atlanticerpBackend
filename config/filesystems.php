@@ -1,6 +1,6 @@
 <?php
 
-return [
+$filesystems = [
 
     /*
     |--------------------------------------------------------------------------
@@ -119,3 +119,30 @@ return [
     ],
 
 ];
+
+// Desarrollo local sin S3: STORAGE_DRIVER=local guarda los archivos de `s3-private` y `s3-public` en storage/app/s3 y los sirve la propia
+// app (URLs firmadas para lo privado). La misma ruta de código que producción: solo cambia el disco. Sin la variable, S3.
+if (env('STORAGE_DRIVER', 's3') === 'local') {
+    $appUrl = rtrim((string) env('APP_URL', 'http://localhost'), '/');
+
+    $filesystems['disks']['s3-private'] = [
+        'driver' => 'local',
+        'root'   => storage_path('app/s3/private'),
+        'url'    => $appUrl.'/storage-private',
+        'serve'  => true,
+        'throw'  => false,
+        'report' => false,
+    ];
+
+    $filesystems['disks']['s3-public'] = [
+        'driver'     => 'local',
+        'root'       => storage_path('app/s3/public'),
+        'url'        => $appUrl.'/storage-public',
+        'visibility' => 'public',
+        'serve'      => true,
+        'throw'      => false,
+        'report'     => false,
+    ];
+}
+
+return $filesystems;

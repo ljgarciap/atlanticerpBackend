@@ -11,6 +11,7 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Multitenancy\TenantRegion;
 use App\Shared\Support\CircuitBreaker;
+use App\Shared\Support\PublicFileUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -69,8 +70,7 @@ class AdminContCompanyProfileController
             }
         });
 
-        $base = rtrim((string) (config('filesystems.disks.s3-public.cdn_url') ?: config('filesystems.disks.s3-public.url', '')), '/');
-        $publicUrl = $base !== '' ? "{$base}/public/{$key}" : null;
+        $publicUrl = PublicFileUrl::for($key);
 
         $previousKey = $profile->logo_key;
 

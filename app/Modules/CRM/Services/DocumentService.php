@@ -10,6 +10,7 @@ use App\Modules\CRM\Models\ProjectDocument;
 use App\Shared\Services\AuditService;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\CircuitBreaker;
+use App\Shared\Support\PublicFileUrl;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -49,8 +50,7 @@ final class DocumentService
         // Build public_url for public zone — CDN_URL (s3-public.cdn_url) or AWS_URL + '/public/' + key
         $publicUrl = null;
         if ($zone === ProjectDocument::ZONE_PUBLIC) {
-            $base      = rtrim((string) (config('filesystems.disks.s3-public.cdn_url') ?: config('filesystems.disks.s3-public.url', '')), '/');
-            $publicUrl = $base !== '' ? "{$base}/public/{$key}" : null;
+            $publicUrl = PublicFileUrl::for($key);
         }
 
         $document = DB::transaction(function () use (
