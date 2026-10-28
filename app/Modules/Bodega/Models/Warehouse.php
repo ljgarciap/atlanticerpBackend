@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool         $permite_venta SCRUM-1196 — puede surtir pedidos de venta (Central y Sala de exhibición 1). Editable por superadmin.
  * @property string|null  $funcion Fase 8 — función de sistema (única): `reserva_servicios`. Null en el resto.
  * @property string       $tipo Fase 8 — `bodega` | `exhibicion`.
+ * @property bool         $is_active Fase 8b — false = desactivado: fuera de selectores y reglas de venta, con su historial intacto.
  * @property bool         $despacho_por_defecto SCRUM-1196 — la bodega que el picking propone (exactamente una, de venta). Editable por superadmin.
  */
 class Warehouse extends Model
@@ -41,7 +42,7 @@ class Warehouse extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'name', 'funcion', 'tipo', 'responsable', 'capacidad_pct', 'modo_detalle', 'excluye_disponible',
+        'name', 'funcion', 'tipo', 'is_active', 'responsable', 'capacidad_pct', 'modo_detalle', 'excluye_disponible',
         'permite_venta', 'despacho_por_defecto',
     ];
 
@@ -50,7 +51,7 @@ class Warehouse extends Model
     {
         return [
             'capacidad_pct' => 'float', 'excluye_disponible' => 'boolean',
-            'permite_venta' => 'boolean', 'despacho_por_defecto' => 'boolean',
+            'permite_venta' => 'boolean', 'despacho_por_defecto' => 'boolean', 'is_active' => 'boolean',
         ];
     }
 
@@ -63,7 +64,18 @@ class Warehouse extends Model
      */
     public function scopeParaVenta($query)
     {
-        return $query->where('permite_venta', true);
+        return $query->where('permite_venta', true)->where('is_active', true);
+    }
+
+    /**
+     * Fase 8b — almacenes activos: los únicos que ofrecen los selectores y las listas operativas.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder<Warehouse> $query
+     * @return \Illuminate\Database\Eloquent\Builder<Warehouse>
+     */
+    public function scopeActivos($query)
+    {
+        return $query->where('is_active', true);
     }
 
     /**
@@ -80,7 +92,7 @@ class Warehouse extends Model
         return self::query()->where('funcion', $funcion)->first();
     }
 
-    /** Regla de validación: el `warehouse_id` debe existir. */
+    /** Regla de validación: el `warehouse_id` debe existir y estar activo (se usa solo al crear operaciones nuevas). */
     public static function existsRule(): \Closure
     {
         // Closure y no `Rule::exists()`: con una tabla calificada por schema ("{tenant}_bodega.warehouses") Laravel la
@@ -89,7 +101,7 @@ class Warehouse extends Model
             if (! is_numeric($value)) {
                 return;
             }
-            if (! self::query()->whereKey((int) $value)->exists()) {
+            if (! self::query()->whereKey((int) $value)->where('is_active', true)->exists()) {
                 $fail(trans('validation.exists', ['attribute' => $attribute]));
             }
         };

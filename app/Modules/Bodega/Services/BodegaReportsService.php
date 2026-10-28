@@ -140,7 +140,7 @@ final class BodegaReportsService
     public function warehouseCapacity(): array
     {
         /** @var Collection<int, Warehouse> $warehouses */
-        $warehouses = Warehouse::query()->orderBy('id')->get(['id', 'name']);
+        $warehouses = Warehouse::activos()->orderBy('id')->get(['id', 'name']);
 
         /** @var Collection<int|string, Collection<int, ProductWarehouseStock>> $byWarehouse */
         $byWarehouse = ProductWarehouseStock::where('quantity', '>', 0)
