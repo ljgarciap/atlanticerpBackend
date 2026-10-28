@@ -40,7 +40,7 @@ Los tramos viven en la base (internos y de cartera), con `monto_minimo`, `monto_
 3. **Una factura incobrable conserva el estado `facturada`** y el detalle sigue ofreciendo marcarla. [E]
 4. **Los abonos heredados siguen en el código** aunque ya no se aceptan: retirar las rutas y la bandera de cobros v2. [E][C]
 5. **Las formas de pago son una lista fija con valores regionales (Yappy)**: debería ser un catálogo por empresa y país. [C]
-6. **Los tramos sembrados dejan un hueco de una unidad** (0–20.000 y luego desde 20.001) y no coinciden con los del manual (0–19.999,99): por verificar qué tramo recibe 20.000,50. [E][C]
+6. **Los tramos se muestran con límites que no son los que se aplican**: la tabla dice 0–20.000 y luego 20.001–35.000, pero el cálculo da el 2 % desde 20.000 (19.999,99 → 1,5 %; 20.000 → 2 %; 20.000,50 → 2 %), de modo que no hay hueco pero la lectura confunde; además difieren de los del manual (0–19.999,99). [E]
 7. **Un solo arqueo por día sin reapertura**: un error al anotar un movimiento no se puede corregir después del cierre sin intervención en la base. [E]
 8. **Comparten umbral y aprobador** la caja chica, los arqueos y las anulaciones: si el aprobador falta, todo se detiene. [E][C]
 9. **Sin ejercitar**: comisiones externas (perfil fiscal del arquitecto, cuenta de cobro, comprobante de retención, propuesta y decisión del porcentaje, pago), tesorería y movimientos bancarios (asignar cuenta), cuentas bancarias (baja y reactivación), exención de ITBMS de un cliente, devolución de dinero al cliente y reportes. [C]
