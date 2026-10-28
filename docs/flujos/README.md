@@ -18,7 +18,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | Compras (pagos, logística, reposición, reclamos, Zona Libre) | Compras | pendiente (11b) |
 | Bodega (inventario, ajustes, devoluciones, rutas, ubicaciones) | Bodega | pendiente (11c) |
 | [Admin & Contab: notas de crédito y anulaciones](admin-contab-notas-y-anulaciones.md) | Admin & Contab | verificado (notas de crédito, anulación completa, anulación de cobro); pendiente: compensaciones, abonos, incobrables, comisiones, caja chica, arqueo, tesorería (11d) |
-| Servicios (tickets, técnicos, inspecciones, insumos) | Servicios | pendiente (11e) |
+| [Servicios: tickets](servicios-tickets.md) | Servicios | verificado (instalación, garantía con compuertas de cierre, cotización de servicio, cancelación); pendiente: técnicos externos, herramientas, insumos, hoja de reclamo, reportes (11e) |
 | Transversales (acceso, usuarios y permisos, notificaciones, catálogos, perfil de empresa) | varios | pendiente (11f) |
 
 ## Prerrequisitos del entorno local (hallazgos de esta fase)
