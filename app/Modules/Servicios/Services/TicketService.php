@@ -520,6 +520,8 @@ final class TicketService
      */
     public function changeStage(Ticket $ticket, string $newEstado, User $user): Ticket
     {
+        $this->assertTransitionAllowed($ticket, $newEstado);
+
         if (in_array($newEstado, Ticket::ESTADOS_REQUIRING_CLOSE_GATE, true)) {
             $this->assertCloseAllowed($ticket);
         }
@@ -548,6 +550,64 @@ final class TicketService
             numero:    $ticket->numero,
             oldEstado: $oldEstado,
             newEstado: $newEstado,
+            changedBy: $user->id,
+            tenant:    $this->requiredTenantSlug(),
+        ));
+
+        return $ticket;
+    }
+
+    /**
+     * Fase 12a — solo se avanza por la matriz `Ticket::TRANSICIONES`; `scheduled` y `on_site` exigen técnico y agenda.
+     *
+     * @throws TicketCloseBlockedException
+     */
+    private function assertTransitionAllowed(Ticket $ticket, string $nuevo): void
+    {
+        $actual = $ticket->estado;
+        if ($actual === $nuevo) {
+            return;
+        }
+
+        $permitidos = Ticket::TRANSICIONES[$actual] ?? [];
+        if (! in_array($nuevo, $permitidos, true)) {
+            $detalle = $permitidos === []
+                ? 'es un estado final: se reabre con la reapertura (permiso y motivo)'
+                : 'solo puede pasar a: '.implode(', ', $permitidos);
+
+            throw new TicketCloseBlockedException("Un ticket en «{$actual}» no puede pasar a «{$nuevo}»: {$detalle}.");
+        }
+
+        if (in_array($nuevo, [Ticket::ESTADO_SCHEDULED, Ticket::ESTADO_ON_SITE], true)
+            && ($ticket->internal_technician_id === null || $ticket->scheduled_at === null)) {
+            throw new TicketCloseBlockedException("Para pasar a «{$nuevo}» el ticket necesita un técnico asignado y una fecha agendada.");
+        }
+    }
+
+    /**
+     * Fase 12a — reabrir un ticket cerrado o cancelado: permiso y motivo obligatorios; vuelve a `reported` y limpia el cierre.
+     *
+     * @throws TicketCloseBlockedException si el ticket no está en un estado final
+     */
+    public function reopen(Ticket $ticket, string $motivo, User $user): Ticket
+    {
+        if (! in_array($ticket->estado, [Ticket::ESTADO_CLOSED, Ticket::ESTADO_CANCELLED], true)) {
+            throw new TicketCloseBlockedException('Solo se puede reabrir un ticket cerrado o cancelado.');
+        }
+
+        $oldEstado = $ticket->estado;
+
+        $ticket->estado              = Ticket::ESTADO_REPORTED;
+        $ticket->closed_at           = null;
+        $ticket->reopened_at         = now();
+        $ticket->reopened_reason     = trim($motivo);
+        $ticket->save();
+
+        event(new TicketStageChanged(
+            ticketId:  $ticket->id,
+            numero:    $ticket->numero,
+            oldEstado: $oldEstado,
+            newEstado: Ticket::ESTADO_REPORTED,
             changedBy: $user->id,
             tenant:    $this->requiredTenantSlug(),
         ));

@@ -124,15 +124,28 @@ class TicketBatch3Test extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_reactivar_ticket_cancelado_cambiando_estado_manualmente(): void
+    /** Fase 12a — un ticket cancelado es final: se reabre solo con la reapertura (permiso y motivo), no moviéndolo de estado. */
+    public function test_un_ticket_cancelado_se_reabre_solo_con_reapertura_y_motivo(): void
     {
         $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_CANCELLED, 'cancellation_reason' => 'Motivo previo']);
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_REPORTED])
+            ->assertStatus(422);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson("/api/servicios/tickets/{$ticket->id}/reabrir", ['motivo' => 'corto'])
+            ->assertStatus(422);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson("/api/servicios/tickets/{$ticket->id}/reabrir", ['motivo' => 'El cliente retomó el proyecto'])
             ->assertStatus(200)
             ->assertJsonPath('estado', Ticket::ESTADO_REPORTED);
+
+        $this->makeCurrentTenant();
+        $this->assertSame('El cliente retomó el proyecto', $ticket->fresh()->reopened_reason);
+        $this->assertNotNull($ticket->fresh()->reopened_at);
     }
 
     public function test_tecnico_interno_no_puede_cancelar(): void

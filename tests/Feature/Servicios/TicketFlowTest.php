@@ -329,6 +329,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_resuelto_bloqueado_si_falta_informe(): void
     {
         $ticket = $this->makeTicket([
+            'estado' => Ticket::ESTADO_ON_SITE,
             'quote_status' => Ticket::QUOTE_STATUS_APPROVED,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
@@ -342,12 +343,13 @@ class TicketFlowTest extends FeatureTestCase
         $response->assertJsonFragment(['message' => 'No se puede cerrar: falta completar el informe de inspección.']);
 
         $this->makeCurrentTenant();
-        $this->assertSame(Ticket::ESTADO_REPORTED, $ticket->fresh()->estado);
+        $this->assertSame(Ticket::ESTADO_ON_SITE, $ticket->fresh()->estado);
     }
 
     public function test_cambio_a_cerrado_bloqueado_si_cotizacion_rechazada(): void
     {
         $ticket = $this->makeTicket([
+            'estado' => Ticket::ESTADO_RESOLVED,
             'quote_status' => Ticket::QUOTE_STATUS_REJECTED,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_COMPLETED,
         ]);
@@ -364,6 +366,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_resuelto_permitido_cuando_cotizacion_y_informe_cumplen(): void
     {
         $ticket = $this->makeTicket([
+            'estado' => Ticket::ESTADO_ON_SITE,
             'quote_status' => Ticket::QUOTE_STATUS_APPROVED,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_COMPLETED,
         ]);
@@ -379,6 +382,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_cerrado_permitido_cuando_no_aplica(): void
     {
         $ticket = $this->makeTicket([
+            'estado' => Ticket::ESTADO_RESOLVED,
             'quote_status' => Ticket::QUOTE_STATUS_NOT_APPLICABLE,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_NOT_APPLICABLE,
         ]);
@@ -410,6 +414,7 @@ class TicketFlowTest extends FeatureTestCase
     public function test_cambio_a_agendado_no_valida_el_gate(): void
     {
         $ticket = $this->makeTicket([
+            'internal_technician_id' => \App\Models\User::query()->value('id'), 'scheduled_at' => now(),
             'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
         ]);
@@ -453,9 +458,68 @@ class TicketFlowTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
+    // ── Fase 12a — matriz de transiciones ────────────────────────────────────────────────────
+
+    public function test_no_se_salta_de_reportado_a_cerrado(): void
+    {
+        $ticket = $this->makeTicket(['quote_status' => Ticket::QUOTE_STATUS_NOT_APPLICABLE, 'inspection_report_status' => Ticket::INSPECTION_STATUS_NOT_APPLICABLE]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+
+        foreach ([Ticket::ESTADO_CLOSED, Ticket::ESTADO_RESOLVED, Ticket::ESTADO_ON_SITE] as $destino) {
+            $this->withHeaders($this->authHeaders($token))
+                ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => $destino])
+                ->assertStatus(422);
+        }
+
+        $this->makeCurrentTenant();
+        $this->assertSame(Ticket::ESTADO_REPORTED, $ticket->fresh()->estado);
+    }
+
+    public function test_agendado_y_en_sitio_exigen_tecnico_y_agenda(): void
+    {
+        $sinAgenda = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson("/api/servicios/tickets/{$sinAgenda->id}/estado", ['estado' => Ticket::ESTADO_ON_SITE])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Para pasar a «on_site» el ticket necesita un técnico asignado y una fecha agendada.');
+    }
+
+    public function test_cerrado_es_final_y_no_se_vuelve_atras_por_el_endpoint_de_estado(): void
+    {
+        $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_CLOSED]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_REPORTED])
+            ->assertStatus(422);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson("/api/servicios/tickets/{$ticket->id}/reabrir", ['motivo' => 'Faltó una pieza por instalar'])
+            ->assertStatus(200)
+            ->assertJsonPath('estado', Ticket::ESTADO_REPORTED);
+    }
+
+    public function test_solo_se_reabre_un_ticket_en_estado_final_y_no_el_tecnico(): void
+    {
+        $abierto = $this->makeTicket();
+        $lider = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $this->withHeaders($this->authHeaders($lider))
+            ->patchJson("/api/servicios/tickets/{$abierto->id}/reabrir", ['motivo' => 'No corresponde reabrir'])
+            ->assertStatus(422);
+
+        $this->makeCurrentTenant();
+        $cerrado = $this->makeTicket(['estado' => Ticket::ESTADO_CLOSED]);
+        $tecnico = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
+        $this->withHeaders($this->authHeaders($tecnico))
+            ->patchJson("/api/servicios/tickets/{$cerrado->id}/reabrir", ['motivo' => 'Intento no autorizado'])
+            ->assertStatus(403);
+    }
+
     public function test_lider_servicios_si_puede_cambiar_estado(): void
     {
-        $ticket = $this->makeTicket();
+        $ticket = $this->makeTicket(['internal_technician_id' => \App\Models\User::query()->value('id'), 'scheduled_at' => now()]);
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))

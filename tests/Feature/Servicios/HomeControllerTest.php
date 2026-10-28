@@ -22,6 +22,8 @@ use Tests\Feature\FeatureTestCase;
  */
 class HomeControllerTest extends FeatureTestCase
 {
+    use \Tests\Support\RecorreEstadosDeTicket;
+
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
     private const CARLOS = 'tecnico@test.com';
@@ -393,11 +395,11 @@ class HomeControllerTest extends FeatureTestCase
         $service = app(TicketService::class);
 
         $thisMonth = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
-        $service->changeStage($thisMonth, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $thisMonth, $user);
 
         Carbon::setTestNow(Carbon::parse('2026-07-15 12:00:00', 'UTC'));
         $lastMonth = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
-        $service->changeStage($lastMonth, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $lastMonth, $user);
 
         Carbon::setTestNow(Carbon::parse('2026-08-15 12:00:00', 'UTC'));
         $response = $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
@@ -416,11 +418,11 @@ class HomeControllerTest extends FeatureTestCase
         $service = app(TicketService::class);
 
         $thisMonth = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
-        $service->changeStage($thisMonth, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $thisMonth, $user);
 
         Carbon::setTestNow(Carbon::parse('2026-07-15 12:00:00', 'UTC'));
         $lastMonth = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
-        $service->changeStage($lastMonth, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $lastMonth, $user);
 
         Carbon::setTestNow(Carbon::parse('2026-08-15 12:00:00', 'UTC'));
         $response = $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
@@ -458,7 +460,7 @@ class HomeControllerTest extends FeatureTestCase
             Carbon::setTestNow(Carbon::parse("{$date} 12:00:00", 'UTC'));
             for ($i = 0; $i < $count; $i++) {
                 $t = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
-                $service->changeStage($t, Ticket::ESTADO_CLOSED, $user);
+                $this->cerrarTicket($service, $t, $user);
             }
         }
 
@@ -497,16 +499,16 @@ class HomeControllerTest extends FeatureTestCase
         // 3 garantías resueltas en 1ra visita.
         for ($i = 0; $i < 3; $i++) {
             $t = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'estado' => Ticket::ESTADO_SCHEDULED]);
-            $service->changeStage($t, Ticket::ESTADO_ON_SITE, $user);
-            $service->changeStage($t, Ticket::ESTADO_CLOSED, $user);
+            $this->llevarTicketA($service, $t, $user, Ticket::ESTADO_ON_SITE);
+            $this->cerrarTicket($service, $t, $user);
         }
 
         // 1 garantía que necesitó 2 visitas (on_site dos veces).
         $revisit = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'estado' => Ticket::ESTADO_SCHEDULED]);
-        $service->changeStage($revisit, Ticket::ESTADO_ON_SITE, $user);
-        $service->changeStage($revisit, Ticket::ESTADO_SCHEDULED, $user);
-        $service->changeStage($revisit, Ticket::ESTADO_ON_SITE, $user);
-        $service->changeStage($revisit, Ticket::ESTADO_CLOSED, $user);
+        $this->llevarTicketA($service, $revisit, $user, Ticket::ESTADO_ON_SITE);
+        $this->llevarTicketA($service, $revisit, $user, Ticket::ESTADO_SCHEDULED);
+        $this->llevarTicketA($service, $revisit, $user, Ticket::ESTADO_ON_SITE);
+        $this->cerrarTicket($service, $revisit, $user);
 
         $response = $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
             ->getJson('/api/servicios/home/summary')
@@ -525,11 +527,11 @@ class HomeControllerTest extends FeatureTestCase
         $service = app(TicketService::class);
 
         $warranty = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(5)]);
-        $service->changeStage($warranty, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $warranty, $user);
 
         // Instalación cerrada el mismo mes NO debe contar para "tiempo prom. resolución (Garantías)".
         $installation = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(20)]);
-        $service->changeStage($installation, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $installation, $user);
 
         $response = $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
             ->getJson('/api/servicios/home/summary')
@@ -550,7 +552,7 @@ class HomeControllerTest extends FeatureTestCase
         $service = app(TicketService::class);
 
         $approvedThisMonth = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(5)]);
-        $service->changeStage($approvedThisMonth, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $approvedThisMonth, $user);
         $this->makeQuote($approvedThisMonth, ServiceQuote::ESTADO_APPROVED, 1500.00);
 
         // Cotización en borrador del mismo ticket/mes — no debe sumar.
@@ -559,7 +561,7 @@ class HomeControllerTest extends FeatureTestCase
         // Instalación aprobada pero cerrada el mes pasado — no debe sumar.
         Carbon::setTestNow(Carbon::parse('2026-07-15 12:00:00', 'UTC'));
         $approvedLastMonth = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(5)]);
-        $service->changeStage($approvedLastMonth, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $approvedLastMonth, $user);
         $this->makeQuote($approvedLastMonth, ServiceQuote::ESTADO_APPROVED, 800.00);
         Carbon::setTestNow(Carbon::parse('2026-08-20 12:00:00', 'UTC'));
 

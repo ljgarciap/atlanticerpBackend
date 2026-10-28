@@ -99,6 +99,21 @@ class Ticket extends Model
         self::ESTADO_RESOLVED, self::ESTADO_CLOSED, self::ESTADO_CANCELLED,
     ];
 
+    /**
+     * Fase 12a — destinos válidos por estado actual. `closed` y `cancelled` son FINALES: se salen solo con `reabrir` (permiso y motivo).
+     * Cancelar tiene su ruta (`/cancelar`, con motivo) y no figura aquí.
+     *
+     * @var array<string, list<string>>
+     */
+    public const TRANSICIONES = [
+        self::ESTADO_REPORTED  => [self::ESTADO_SCHEDULED],
+        self::ESTADO_SCHEDULED => [self::ESTADO_ON_SITE, self::ESTADO_REPORTED],
+        self::ESTADO_ON_SITE   => [self::ESTADO_RESOLVED, self::ESTADO_SCHEDULED],
+        self::ESTADO_RESOLVED  => [self::ESTADO_CLOSED, self::ESTADO_ON_SITE],
+        self::ESTADO_CLOSED    => [],
+        self::ESTADO_CANCELLED => [],
+    ];
+
     /** REQ-218 RN1/RN6 — solo estos 2 destinos disparan el gate de cotización/informe. */
     public const ESTADOS_REQUIRING_CLOSE_GATE = [self::ESTADO_RESOLVED, self::ESTADO_CLOSED];
 
@@ -175,7 +190,7 @@ class Ticket extends Model
     protected $fillable = [
         'numero', 'tipo', 'subtipo', 'tipo_instalacion', 'descripcion',
         'sales_project_id', 'cliente', 'contacto', 'telefono', 'email', 'direccion',
-        'requerimientos_especiales', 'observaciones', 'estado', 'cancellation_reason', 'quote_status', 'inspection_report_status',
+        'requerimientos_especiales', 'observaciones', 'estado', 'cancellation_reason', 'reopened_at', 'reopened_reason', 'quote_status', 'inspection_report_status',
         'internal_technician_id', 'scheduled_at', 'scheduled_ends_at', 'created_by',
     ];
 
