@@ -21,9 +21,17 @@ class Scrum1167Scrum1157DataFixesTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
+    /** Carga una migración histórica por su nombre o, si termina en `*`, por su prefijo (los nombres históricos no se tocan). */
     private function migration(string $file): object
     {
-        return require base_path("database/migrations/tenant/{$file}");
+        $path = base_path("database/migrations/tenant/{$file}");
+        if (str_contains($file, '*')) {
+            $found = glob($path) ?: [];
+            $this->assertCount(1, $found, "Migración histórica no encontrada: {$file}");
+            $path = $found[0];
+        }
+
+        return require $path;
     }
 
     private function aviso(int $userId, string $subject, ?string $link = null, array $extra = []): int
@@ -80,7 +88,7 @@ class Scrum1167Scrum1157DataFixesTest extends FeatureTestCase
             DB::table($t)->insert(['user_id' => $uid, 'module' => $modulo, 'can_view' => 2, 'can_view_team' => true]);
         }
 
-        $migracion = $this->migration('2026_10_18_120000_remove_ventas_diseno_visibility_from_lideroperaciones.php');
+        $migracion = $this->migration('2026_10_18_120000_remove_ventas_diseno_visibility_from_*.php');
         $migracion->up();
         $migracion->up(); // idempotente
 
