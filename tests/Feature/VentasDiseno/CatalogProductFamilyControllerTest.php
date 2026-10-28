@@ -64,6 +64,25 @@ class CatalogProductFamilyControllerTest extends FeatureTestCase
         $this->assertSame(2, $found['products_count']);
     }
 
+    public function test_el_listado_lo_leen_bodega_y_compras_pero_no_el_detalle(): void
+    {
+        // Pantalla «Bodegas» (filtro Familia): el líder de bodega no tiene `ventas_diseno.read` y antes recibía 403.
+        $family = CatalogProductFamily::create(['name' => 'Familia visible para Bodega', 'is_active' => true]);
+
+        foreach ([['liderbodega@test.com', 'lider_bodega'], ['lidercompras@test.com', 'lider_compras']] as [$email, $role]) {
+            $token = $this->loginAs($email, $email, $role);
+            $lista = $this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/catalog-product-families')->assertStatus(200);
+            $this->assertNotNull(collect($lista->json('data'))->firstWhere('name', 'Familia visible para Bodega'), $role);
+            $this->withHeaders($this->authHeaders($token))->getJson("/api/ventas-diseno/catalog-product-families/{$family->id}")->assertStatus(403);
+        }
+    }
+
+    public function test_el_listado_sigue_cerrado_a_un_rol_sin_lectura_de_ninguno_de_los_tres_modulos(): void
+    {
+        $token = $this->loginAs('tecnico@test.com', 'tecnico@test.com', 'tecnico');
+        $this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/catalog-product-families')->assertStatus(403);
+    }
+
     public function test_listado_excluye_familias_inactivas(): void
     {
         $this->grantVentasDisenoRead('vendedor@atlantic.test');

@@ -294,8 +294,10 @@ Route::prefix('catalog')->group(function (): void {
 });
 
 // REQ-037: tab "Familias" del buscador — mismo permiso de lectura que catalog-products.
+// El LISTADO (id, nombre, cantidad) alimenta además el filtro «Familia» de Bodegas y de Reposición de Compras: también lo leen quienes
+// tienen `bodega.read` o `compras.read` (las comas del middleware son un OR). El detalle conserva `ventas_diseno.read`.
 Route::prefix('catalog-product-families')->group(function (): void {
-    Route::get('/', [CatalogProductFamilyController::class, 'index'])->middleware('permission:ventas_diseno.read');
+    Route::get('/', [CatalogProductFamilyController::class, 'index'])->middleware('permission:ventas_diseno.read,bodega.read,compras.read');
     Route::get('/{id}', [CatalogProductFamilyController::class, 'show'])->middleware('permission:ventas_diseno.read');
 });
 
