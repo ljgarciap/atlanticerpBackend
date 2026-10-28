@@ -7,7 +7,7 @@
 - `FiscalCertificationService` tiene `certificarFactura()` / `certificarNotaCredito()`; ambos, con la FE apagada o el tipo deshabilitado, **sobrescriben `fe_estado = 'no_aplica'`**. Un reintento NO puede reutilizarlos tal cual: borraría el estado (y la evidencia) de un documento rechazado. Hay que entrar por el `certificar()` privado, que ya centraliza ensamblado + proveedor + registro de transmisión + `persistirResultado()`.
 - `persistirResultado()` es el **único** punto que escribe el resultado (estado, CUFE, QR, XML, `fe_detalle`) y agenda el polling; un reintento que pase por ahí hereda todo, incluido el registro en `fe_transmisiones`.
 - MSL confirmó que un documento rechazado **no consume el número**: se puede reenviar el mismo `numero` (`numeroFiscal` es determinista a partir del folio).
-- `primary_approver_only` + el flag `$isMark` de los controladores de detalle ya modelan "solo Aprobador/superadmin" (`AdminContFiscalSettings::actorEsMarkOSuperadmin`).
+- `primary_approver_only` + el flag `$isApprover` de los controladores de detalle ya modelan "solo Aprobador/superadmin" (`AdminContFiscalSettings::actorEsAprobadorOSuperadmin`).
 - No hay `Cache::lock` en el código de AdminCont; Redis está disponible (circuitos, colas).
 - Un `9022` ("referencia interna ya enviada") indica que MSL ya tiene ese número certificado (p. ej. timeout tras un envío exitoso): reenviar no ayuda, hace falta consultar el estado. Fuera de alcance (ver abajo).
 
@@ -24,7 +24,7 @@
    - `POST /api/admin-contab/notas-credito/{creditNote}/fe-recertificar`.
    - Respuesta 200: `{ fe_estado, fe_detalle, cufe, mensaje }` con el resultado real (puede seguir en `rechazado` con un motivo nuevo; eso NO es un error HTTP).
 4. **Auditoría:** `AuditService::log('admin_cont.fe_documento.recertificado', entityType: 'invoice'|'credit_note', entityId, oldValues: fe_estado anterior, newValues: fe_estado nuevo, metadata: {tipo, http_status})`, constante nueva en `AuditService`. Sin payload ni datos del receptor.
-5. **Flag para la UI:** `puede_recertificar` en `detail()` y `show()` (junto a `puede_ver_fe_transmisiones`): `isMark` y estado reintentable, no anulada / NC aplicada y FE activa. Deny-by-default como `fe_detalle`.
+5. **Flag para la UI:** `puede_recertificar` en `detail()` y `show()` (junto a `puede_ver_fe_transmisiones`): `isApprover` y estado reintentable, no anulada / NC aplicada y FE activa. Deny-by-default como `fe_detalle`.
 6. **Contrato con SCRUM-1009:** como el reintento pasa por `persistirResultado()`, cuando una NC de anulación de una corrección pase a `certificado` por reintento, el oyente que 1009 defina (liberar la factura de reemplazo) se dispara igual que en la certificación inicial. Esta spec no lo implementa.
 
 **Frontend**

@@ -18,14 +18,14 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
     public function test_index_devuelve_las_3_tasas_base_activas(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/itbms-rates')
@@ -48,7 +48,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_store_crea_una_tasa_personalizada_desactivada_por_defecto(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/itbms-rates', [
@@ -64,7 +64,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_store_ignora_activa_del_body(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/itbms-rates', [
@@ -80,7 +80,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_store_no_exige_nombre(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/itbms-rates', [
@@ -96,7 +96,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_store_exige_porcentaje_y_descripcion(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/itbms-rates', ['nombre' => 'Tasa incompleta'])
@@ -106,7 +106,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_update_activa_una_tasa_personalizada(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $headers = $this->authHeaders($token);
 
         $created = $this->withHeaders($headers)->postJson('/api/admin-contab/itbms-rates', [
@@ -123,7 +123,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_destroy_elimina_una_tasa_personalizada(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $headers = $this->authHeaders($token);
 
         $created = $this->withHeaders($headers)->postJson('/api/admin-contab/itbms-rates', [
@@ -139,7 +139,7 @@ class AdminContItbmsRateControllerTest extends FeatureTestCase
 
     public function test_destroy_rechaza_eliminar_una_tasa_base(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
         $headers = $this->authHeaders($token);
 
         $baseId = $this->withHeaders($headers)

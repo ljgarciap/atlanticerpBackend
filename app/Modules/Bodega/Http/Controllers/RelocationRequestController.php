@@ -128,7 +128,7 @@ final class RelocationRequestController extends Controller
      */
     public function approve(Request $request, int $id): JsonResponse
     {
-        $access = $this->resolveMarkAccess($request);
+        $access = $this->resolveApproverAccess($request);
         if ($access instanceof JsonResponse) {
             return $access;
         }
@@ -195,7 +195,7 @@ final class RelocationRequestController extends Controller
      */
     public function reject(Request $request, int $id): JsonResponse
     {
-        $access = $this->resolveMarkAccess($request);
+        $access = $this->resolveApproverAccess($request);
         if ($access instanceof JsonResponse) {
             return $access;
         }
@@ -240,7 +240,7 @@ final class RelocationRequestController extends Controller
 
     /**
      * Gate "exclusivo de Gerencia" — mismo mecanismo que
-     * `AdjustmentRequestController::resolveMarkAccess()` (`ComprasSettings::primary_approver_user_id`,
+     * `AdjustmentRequestController::resolveApproverAccess()` (`ComprasSettings::primary_approver_user_id`,
      * no un permiso de rol nuevo).
      *
      * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Gerencia acepta cualquier
@@ -249,7 +249,7 @@ final class RelocationRequestController extends Controller
      *
      * @return array{0: User}|JsonResponse
      */
-    private function resolveMarkAccess(Request $request): array|JsonResponse
+    private function resolveApproverAccess(Request $request): array|JsonResponse
     {
         $user = $this->resolveUser($request);
         if ($user === null) {

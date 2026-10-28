@@ -40,7 +40,7 @@ class AdminContItbmsExencionTest extends FeatureTestCase
         $this->stubReceptorGuard();
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
         $this->reTenant();
@@ -361,7 +361,7 @@ class AdminContItbmsExencionTest extends FeatureTestCase
     {
         $tasa  = AdminContItbmsRate::query()->where('es_base', true)->where('porcentaje', 0)->firstOrFail();
         $sub   = $this->subCliente(exento: true);
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $r = $this->api($token, 'PUT', "/api/admin-contab/itbms-rates/{$tasa->id}", ['activa' => false])->assertStatus(422);
         $this->assertStringContainsString('exento', (string) $r->json('message'));
@@ -378,7 +378,7 @@ class AdminContItbmsExencionTest extends FeatureTestCase
         $general = AdminContItbmsRate::query()->where('es_base', true)->where('porcentaje', '>', 0)->orderByDesc('porcentaje')->firstOrFail();
         $this->subCliente(exento: true);
 
-        $this->api($this->loginAsMark(), 'PUT', "/api/admin-contab/itbms-rates/{$general->id}", ['activa' => false])->assertStatus(200);
+        $this->api($this->loginAsApprover(), 'PUT', "/api/admin-contab/itbms-rates/{$general->id}", ['activa' => false])->assertStatus(200);
     }
 
     public function test_cambiar_el_ruc_o_el_tipo_de_un_cliente_exento_avisa_que_hay_que_revisar_la_exencion_y_queda_en_auditoria(): void

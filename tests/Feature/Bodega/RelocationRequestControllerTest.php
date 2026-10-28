@@ -248,8 +248,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -291,8 +291,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -324,8 +324,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -354,8 +354,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-aprobador y no-superadmin.
         $this->grantBodega('nivel8@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -389,8 +389,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $headers = $this->authHeaders($token);
@@ -452,8 +452,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
@@ -469,7 +469,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
      * contra un usuario de Bodega genérico (QA 2026-07-26, Lider Bodega vía UI real) — este test cierra
      * el mismo caso con el actor EXACTO que nombra el rebote (`lider_bodega`, no "management" ni
      * "bodega genérico"), incluso concediéndole `bodega.approve` de más (defensa en profundidad:
-     * el gate real es `resolveMarkAccess()` por `primary_approver_user_id`, no el permiso de ruta).
+     * el gate real es `resolveApproverAccess()` por `primary_approver_user_id`, no el permiso de ruta).
      */
     public function test_aprobar_siendo_lider_bodega_retorna_403(): void
     {
@@ -487,8 +487,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
         $this->grantBodega('liderbodega@test.com', ['bodega.read', 'bodega.write', 'bodega.approve']);
 
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
@@ -517,8 +517,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
         $this->grantBodega('liderbodega@test.com', ['bodega.read', 'bodega.write', 'bodega.approve']);
 
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');

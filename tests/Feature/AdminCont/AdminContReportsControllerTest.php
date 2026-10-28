@@ -47,7 +47,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsMark(): string
+    private function loginAsApprover(): string
     {
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
@@ -389,7 +389,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_aprobador_puede_crear_actualizar_y_borrar_un_tramo(): void
     {
-        $token = $this->loginAsMark();
+        $token = $this->loginAsApprover();
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/commissions/cartera/tiers', ['monto_minimo' => 30000, 'monto_maximo' => null, 'porcentaje' => 3.0, 'orden' => 4])

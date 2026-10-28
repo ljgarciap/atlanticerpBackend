@@ -141,7 +141,7 @@ abstract class FeatureTestCase extends TestCase
     /**
      * SCRUM-1150 — devuelve a Contabilidad al estado de SCRUM-1139 (sin el override de Ventas & Diseño ni los permisos de Gerencia), para los
      * tests que lo usan como fixture de "usuario de Admin&Cont con solo permisos angostos de Pipeline". El estado real de Contabilidad
-     * (igual a Gerencia) lo cubre ContabilidadComoMarkVentasDisenoTest.
+     * (igual a Gerencia) lo cubre ContabilidadComoAprobadorVentasDisenoTest.
      */
     protected function contabilidadComoEnScrum1139(): void
     {

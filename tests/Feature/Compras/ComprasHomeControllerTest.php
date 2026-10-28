@@ -286,11 +286,11 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-908 — tarjeta "Aprobaciones Pendientes". Senior Review: la autorización real de
-     * `purchase_order` es `AprobacionGate::esMark()` (`ComprasSettings.primary_approver_user_id`),
+     * `purchase_order` es `AprobacionGate::esAprobador()` (`ComprasSettings.primary_approver_user_id`),
      * no el permiso `compras.approve` (ese es solo el gate grueso de la ruta —
      * `PurchaseOrderController::approve()` igual exige ser Gerencia, ver docblock de `AprobacionGate`).
      * Este test fija a designer como `primary_approver_user_id` explícitamente para no depender del
-     * fallback "sin approver configurado, no bloquea a nadie" de `esMark()`. Solo cuentan las
+     * fallback "sin approver configurado, no bloquea a nadie" de `esAprobador()`. Solo cuentan las
      * órdenes con `requires_primary_approval = true` (RN3/REQ-118) — sin ese flag, `PurchaseOrderController::
      * approve()` las rechaza con 422 aunque el usuario sí sea Gerencia.
      */

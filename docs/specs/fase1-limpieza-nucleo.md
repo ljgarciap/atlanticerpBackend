@@ -49,7 +49,7 @@ Cuatro bloques independientes sobre la rama que parte del merge de la sincroniza
 
 ### B. Personas
 Regla de clasificación de tests (ejemplos reales; total medido: 155 métodos `test_*` con nombre de persona en 70+ archivos):
-- **Se borran** (el asunto es una persona o una concesión por persona): `ContabilidadComoMarkVentasDisenoTest`, `JwtClaimsMarkApproverFlagTest`,
+- **Se borran** (el asunto es una persona o una concesión por persona): `ContabilidadComoAprobadorVentasDisenoTest`, `JwtClaimsPrimaryApproverFlagTest`,
   `SpecialPermissionSeederTest` (casos por persona), `UserModuleVisibilityGrantSeederTest` (concesiones por persona), tests de
   `BusinessRoleUserSeederTest` sobre personas concretas.
 - **Se renombran al rol** (verifican comportamiento de un rol y la persona solo está en el nombre): p. ej. `test_contabilidad_puede_…`

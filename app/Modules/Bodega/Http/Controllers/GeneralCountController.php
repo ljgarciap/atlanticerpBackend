@@ -388,7 +388,7 @@ final class GeneralCountController extends Controller
      */
     public function approve(Request $request, int $id): JsonResponse
     {
-        $access = $this->resolveMarkAccess($request);
+        $access = $this->resolveApproverAccess($request);
         if ($access instanceof JsonResponse) {
             return $access;
         }
@@ -429,7 +429,7 @@ final class GeneralCountController extends Controller
     /** SCRUM-465 (REQ-395 RN2) — Gerencia rechaza, motivo obligatorio, no toca el Kardex. */
     public function reject(Request $request, int $id): JsonResponse
     {
-        $access = $this->resolveMarkAccess($request);
+        $access = $this->resolveApproverAccess($request);
         if ($access instanceof JsonResponse) {
             return $access;
         }
@@ -483,7 +483,7 @@ final class GeneralCountController extends Controller
      * gateado por `permission:bodega.write` — un permiso amplio que cualquier perfil de Bodega
      * tiene (Asistentes/Operativos) y que Gerencia también tiene vía su security level de Gerencia,
      * dejando el botón funcional para gente que nunca debió poder accionarlo. `resolveUser()` no
-     * alcanza por sí solo — mismo patrón que `resolveMarkAccess()` en este mismo controller y en
+     * alcanza por sí solo — mismo patrón que `resolveApproverAccess()` en este mismo controller y en
      * `RelocationRequestController`, pero gateando por `role_key` en vez de por
      * `primary_approver_user_id` (esto es un rol, no una persona puntual).
      */
@@ -612,7 +612,7 @@ final class GeneralCountController extends Controller
 
     /**
      * Gate "exclusivo de Gerencia" — mismo mecanismo que
-     * `AdjustmentRequestController::resolveMarkAccess()` (`ComprasSettings::primary_approver_user_id`).
+     * `AdjustmentRequestController::resolveApproverAccess()` (`ComprasSettings::primary_approver_user_id`).
      *
      * SCRUM-161/162 (2026-08-26): delega en `AprobacionGate`, que además de Gerencia acepta cualquier
      * usuario con una `ReglaAprobacion` activa para tipo=general_count (SCRUM-163) — ver docblock
@@ -620,7 +620,7 @@ final class GeneralCountController extends Controller
      *
      * @return array{0: User}|JsonResponse
      */
-    private function resolveMarkAccess(Request $request): array|JsonResponse
+    private function resolveApproverAccess(Request $request): array|JsonResponse
     {
         $user = $this->resolveUser($request);
         if ($user === null) {
@@ -634,7 +634,7 @@ final class GeneralCountController extends Controller
         return [$user];
     }
 
-    /** SCRUM-463/161 — misma condición que resolveMarkAccess(), como boolean informativo para el listado. */
+    /** SCRUM-463/161 — misma condición que resolveApproverAccess(), como boolean informativo para el listado. */
     private function canApprove(Request $request): bool
     {
         $user = $this->resolveUser($request);
@@ -647,7 +647,7 @@ final class GeneralCountController extends Controller
 
     /**
      * Gate "exclusivo de Líder de Bodega" (SCRUM-466, rebote 2026-08-14) — a diferencia de
-     * `resolveMarkAccess()`, esto es un ROL (`BodegaRoles::LIDER_BODEGA`), no una persona puntual
+     * `resolveApproverAccess()`, esto es un ROL (`BodegaRoles::LIDER_BODEGA`), no una persona puntual
      * configurable — nunca hardcodear un `user_id`, mismo criterio que `PickingService::
      * assignPicker()` (`$actor->role?->key`).
      *

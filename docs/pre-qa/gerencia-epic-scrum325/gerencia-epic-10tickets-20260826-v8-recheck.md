@@ -132,7 +132,7 @@ fuera del rediseño, tal como se decidió.
   la sesión de Gerencia5 (que no tiene autoridad sobre `purchase_order`): `403 "No tienes permiso para
   aprobar esta solicitud."` — confirmado que `PO-8` sigue `status=por_aprobar`, `approved_by=null`
   tras el intento. `AprobacionGate::canAct()` para `purchase_order` usa exactamente el mismo
-  criterio (`esMark()`) que `PurchaseOrderController::approve()` — ya no hay dos definiciones
+  criterio (`esAprobador()`) que `PurchaseOrderController::approve()` — ya no hay dos definiciones
   divergentes de "quién puede aprobar una orden de compra".
 
 **Efecto real en datos de dev.atlanticerp.ai dejado por esta sesión** (documentado, no revertido —

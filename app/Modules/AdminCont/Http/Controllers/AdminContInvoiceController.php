@@ -221,19 +221,19 @@ class AdminContInvoiceController
 
         // superadmin.all bypassa el gate de Gerencia (decisión de Luis, 2026-08-22) — mismo criterio
         // que EnsureIsPrimaryApprover, que ya lo aplica sobre la acción real de decidir.
-        $isMark = AdminContFiscalSettings::actorEsMarkOSuperadmin($payload);
+        $isApprover = AdminContFiscalSettings::actorEsAprobadorOSuperadmin($payload);
 
-        $detail['puede_decidir_incobrable'] = $detail['cobrabilidad'] === 'pendiente_aprobacion' && $isMark;
+        $detail['puede_decidir_incobrable'] = $detail['cobrabilidad'] === 'pendiente_aprobacion' && $isApprover;
         // El texto del rechazo del PAC es información de Configuración Fiscal: solo Gerencia/superadmin.
         // Se agrega acá (deny-by-default) y no en `InvoiceService::detail()`, que también sirven los
         // controllers de Bodega sin este gate.
-        $detail['puede_ver_fe_transmisiones'] = $isMark;
-        $facturaMark = $isMark && isset($detail['invoice_id']) ? AdminContInvoice::query()->whereKey($detail['invoice_id'])->first() : null;
-        $detail['fe_detalle'] = $facturaMark?->fe_detalle;
+        $detail['puede_ver_fe_transmisiones'] = $isApprover;
+        $facturaAprobador = $isApprover && isset($detail['invoice_id']) ? AdminContInvoice::query()->whereKey($detail['invoice_id'])->first() : null;
+        $detail['fe_detalle'] = $facturaAprobador?->fe_detalle;
         // SCRUM-1007 — 'reintentar' | 'actualizar_estado' | null; solo Gerencia/superadmin y solo si el documento lo admite.
-        $detail['accion_fe'] = $facturaMark !== null ? $this->certification->accionDisponible($facturaMark, 'factura') : null;
+        $detail['accion_fe'] = $facturaAprobador !== null ? $this->certification->accionDisponible($facturaAprobador, 'factura') : null;
         // SCRUM-1019 — "Reconciliar con MSL" disponible (rechazado/error_configuracion/pendiente); mismo gate Gerencia/superadmin.
-        $detail['puede_reconciliar_fe'] = $facturaMark !== null && $this->certification->reconciliacionDisponible($facturaMark, 'factura');
+        $detail['puede_reconciliar_fe'] = $facturaAprobador !== null && $this->certification->reconciliacionDisponible($facturaAprobador, 'factura');
 
         return response()->json($detail);
     }

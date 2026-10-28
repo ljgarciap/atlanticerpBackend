@@ -330,7 +330,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
 
     // ── P4: la aprobación revalida (caso NC-0027) ──────────────────────────────────────────────────────────────
 
-    private function markToken(): string
+    private function approverToken(): string
     {
         return $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
     }
@@ -365,7 +365,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         ]);
         $anulacion = $this->notaPendienteForzada($f, 137.77, AdminContCreditNote::TIPO_ANULACION_COMPLETA);
 
-        $mensaje = (string) $this->decidir($this->markToken(), $anulacion->id, true)->assertStatus(422)->json('message');
+        $mensaje = (string) $this->decidir($this->approverToken(), $anulacion->id, true)->assertStatus(422)->json('message');
 
         $this->assertStringContainsString('no se puede aprobar', $mensaje);
         $this->assertStringContainsString('USD 9.01', $mensaje);
@@ -385,7 +385,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         ]);
         $nota = $this->notaPendienteForzada($f, 100, AdminContCreditNote::TIPO_ANULACION_COMPLETA);
 
-        $this->decidir($this->markToken(), $nota->id, false)->assertStatus(200)->assertJson(['estado' => AdminContCreditNote::ESTADO_RECHAZADA]);
+        $this->decidir($this->approverToken(), $nota->id, false)->assertStatus(200)->assertJson(['estado' => AdminContCreditNote::ESTADO_RECHAZADA]);
     }
 
     public function test_p4_la_aprobacion_normal_sigue_funcionando_y_la_nota_no_cuenta_contra_si_misma(): void
@@ -395,7 +395,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         $this->descuento($token, $f, 300)->assertStatus(201);
         $id = (int) $this->anular($token, $f)->assertStatus(201)->assertJson(['monto' => 700])->json('id');
 
-        $this->decidir($this->markToken(), $id, true)->assertStatus(200)->assertJson(['estado' => AdminContCreditNote::ESTADO_APLICADA]);
+        $this->decidir($this->approverToken(), $id, true)->assertStatus(200)->assertJson(['estado' => AdminContCreditNote::ESTADO_APLICADA]);
     }
 
     // ── P6: Corrección de datos con notas previas ──────────────────────────────────────────────────────────────
@@ -445,7 +445,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         $descuentoId  = $this->notaPendienteForzada($f, 300, AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL)->id;
         $anulacionId  = (int) $this->anular($token, $f)->assertStatus(201)->assertJson(['monto' => 700])->json('id');
 
-        $approver = $this->markToken();
+        $approver = $this->approverToken();
         $this->decidir($approver, $descuentoId, false)->assertStatus(200);
 
         $mensaje = (string) $this->decidir($approver, $anulacionId, true)->assertStatus(422)->json('message');
@@ -463,7 +463,7 @@ class CreditNoteSaldoAcreditableTest extends FeatureTestCase
         // Nota heredada (pre-fix) que junto con la primera excede la factura: 600 + 600 > 1.000.
         $b = $this->notaPendienteForzada($f, 600, AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA)->id;
 
-        $approver = $this->markToken();
+        $approver = $this->approverToken();
         $this->decidir($approver, $a, true)->assertStatus(422); // con la otra pendiente de 600 el acumulado sería 1.200
         $this->decidir($approver, $b, false)->assertStatus(200); // rechazar una libera el valor...
         $this->decidir($approver, $a, true)->assertStatus(200)->assertJson(['estado' => AdminContCreditNote::ESTADO_APLICADA]); // ...y la otra se aprueba

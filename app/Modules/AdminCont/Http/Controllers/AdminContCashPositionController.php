@@ -173,11 +173,11 @@ class AdminContCashPositionController
         // superadmin.all bypassa el gate de Gerencia (decisión de Luis, 2026-08-22) — mismo criterio
         // que EnsureIsPrimaryApprover, que ya lo aplica sobre la acción real de aprobar.
         $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
-        $isMark = in_array('superadmin.all', $permissions, true)
+        $isApprover = in_array('superadmin.all', $permissions, true)
             || ($payload !== null && isset($payload['sub']) && $primaryApproverId !== null
                 && (int) $payload['sub'] === $primaryApproverId);
 
-        $data['puede_aprobar'] = $data['estado'] === AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION && $isMark;
+        $data['puede_aprobar'] = $data['estado'] === AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION && $isApprover;
 
         return response()->json($data);
     }

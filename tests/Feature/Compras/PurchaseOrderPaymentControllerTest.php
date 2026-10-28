@@ -140,8 +140,8 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $this->grantCompras('management@atlantic.test', ['compras.edit']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
@@ -160,8 +160,8 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->patchJson("/api/compras/orders/{$order->id}/approve-amount-change")
             ->assertStatus(403);
 
-        $markToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $this->withHeaders($this->authHeaders($approverToken))
             ->patchJson("/api/compras/orders/{$order->id}/approve-amount-change")
             ->assertStatus(200)
             ->assertJsonPath('total_amount', 1200);
@@ -231,8 +231,8 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $this->grantCompras('management@atlantic.test', ['compras.edit']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
@@ -246,8 +246,8 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->patchJson("/api/compras/orders/{$order->id}/reject-amount-change")
             ->assertStatus(403);
 
-        $markToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $this->withHeaders($this->authHeaders($approverToken))
             ->patchJson("/api/compras/orders/{$order->id}/reject-amount-change")
             ->assertStatus(200)
             ->assertJsonPath('total_amount', 1000);
@@ -276,8 +276,8 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $this->grantCompras('management@atlantic.test', ['compras.edit']);
-        $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
-        ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
+        $approverId = (int) User::where('email', 'management@atlantic.test')->value('id');
+        ComprasSettings::current()->update(['primary_approver_user_id' => $approverId]);
 
         $order = $this->makeOrder($this->makeProvider()->id);
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
@@ -292,8 +292,8 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             'payment_proof_storage_key' => 'compras/test/fake.pdf',
         ]);
 
-        $markToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
-        $this->withHeaders($this->authHeaders($markToken))
+        $approverToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $this->withHeaders($this->authHeaders($approverToken))
             ->patchJson("/api/compras/orders/{$order->id}/approve-amount-change")
             ->assertStatus(422);
 
