@@ -15,7 +15,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 |---|---|---|
 | [Venta a cobro](cadena-venta-a-cobro.md) | Ventas & Diseño → Compras → Bodega → Admin & Contab | verificado de punta a punta |
 | Ventas & Diseño (clientes, arquitectos, comisiones, calendario, catálogo) | Ventas & Diseño, CRM | pendiente (11a) |
-| Compras (pagos, logística, reposición, reclamos, Zona Libre) | Compras | pendiente (11b) |
+| [Compras: órdenes, pagos, cambio de monto, reclamos y sustituciones](compras-ordenes.md) | Compras | verificado; pendiente: logística, reposición, Zona Libre, agencias de liquidación, familias, proveedores (11b) |
 | Bodega (inventario, ajustes, devoluciones, rutas, ubicaciones) | Bodega | pendiente (11c) |
 | [Admin & Contab: notas de crédito y anulaciones](admin-contab-notas-y-anulaciones.md) | Admin & Contab | verificado (notas de crédito, anulación completa, anulación de cobro); pendiente: compensaciones, abonos, incobrables, comisiones, caja chica, arqueo, tesorería (11d) |
 | [Servicios: tickets](servicios-tickets.md) | Servicios | verificado (instalación, garantía con compuertas de cierre, cotización de servicio, cancelación); pendiente: técnicos externos, herramientas, insumos, hoja de reclamo, reportes (11e) |
