@@ -195,7 +195,7 @@ class BodegaReportsControllerTest extends FeatureTestCase
         $concentrated = $this->makeCatalogProduct();
         $this->setStock($concentrated, 90, 'Bodega Central');
         $other = $this->makeCatalogProduct();
-        $this->setStock($other, 10, 'Showroom Obarrio');
+        $this->setStock($other, 10, 'Sala de exhibición 1');
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson('/api/bodega/reports/warehouse-capacity')
@@ -213,7 +213,7 @@ class BodegaReportsControllerTest extends FeatureTestCase
         $a = $this->makeCatalogProduct();
         $this->setStock($a, 40, 'Bodega Central');
         $b = $this->makeCatalogProduct();
-        $this->setStock($b, 60, 'Showroom Obarrio');
+        $this->setStock($b, 60, 'Sala de exhibición 1');
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson('/api/bodega/reports/warehouse-capacity')
@@ -240,7 +240,7 @@ class BodegaReportsControllerTest extends FeatureTestCase
         $a = $this->makeCatalogProduct();
         $this->setStock($a, 60, 'Bodega Central');
         $b = $this->makeCatalogProduct();
-        $this->setStock($b, 40, 'Showroom Obarrio');
+        $this->setStock($b, 40, 'Sala de exhibición 1');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/reports/warehouse-capacity')

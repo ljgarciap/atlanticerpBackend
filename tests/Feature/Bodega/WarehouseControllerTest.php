@@ -146,18 +146,18 @@ class WarehouseControllerTest extends FeatureTestCase
 
     public function test_modo_cliente_expone_columna_cliente_en_vez_de_ubicacion(): void
     {
-        $showroomCliente = Warehouse::where('name', 'Showroom Cliente')->first();
+        $exhibicionCliente = Warehouse::where('name', 'Exhibición en cliente')->first();
         $cliente = MasterClient::create(['name' => 'Constructora Pacífico SA']);
         $product = $this->makeProduct();
         ProductWarehouseStock::create([
-            'catalog_product_id' => $product->id, 'warehouse_id' => $showroomCliente->id,
+            'catalog_product_id' => $product->id, 'warehouse_id' => $exhibicionCliente->id,
             'cliente_id' => $cliente->id, 'quantity' => 1,
         ]);
 
         $this->grantBodega('vendedor@atlantic.test');
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
-        $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$showroomCliente->id}");
+        $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$exhibicionCliente->id}");
 
         $response->assertStatus(200);
         $response->assertJsonPath('data.0.cliente', 'Constructora Pacífico SA');

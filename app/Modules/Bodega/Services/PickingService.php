@@ -282,9 +282,9 @@ final class PickingService
 
     /**
      * SCRUM-1196 — fija DE QUÉ BODEGA(S) se alistó una línea y cuánto, y devuelve el total alistado. Reglas del ticket:
-     *  - solo bodegas `permite_venta` (Reclamos, Merma, Reserva Servicios y los demás showrooms nunca se ofrecen);
+     *  - solo bodegas `permite_venta` (Reclamos, Merma, Reserva Servicios y los demás exhibiciones nunca se ofrecen);
      *  - nunca más de lo que tiene una bodega: en la de por defecto, lo que el sistema le reservó a ESTE pedido; en otra bodega de venta (1 pieza de
-     *    Showroom Obarrio que Bodega escoge), el saldo que no tienen reservado otros pedidos;
+     *    Sala de exhibición 1 que Bodega escoge), el saldo que no tienen reservado otros pedidos;
      *  - sin `$allocations`, todo `$qtyPicked` sale de la bodega por defecto (más lo que ya se había escogido a mano, que se conserva).
      * Lo que no se pueda alistar se deja en la línea como faltante (REQ-317); un exceso se rechaza con 422 antes de tocar nada.
      *
@@ -357,7 +357,7 @@ final class PickingService
             }
 
             // Mismo tope en TODAS las bodegas de venta: el saldo que no tienen reservado OTROS pedidos (el propio pedido no se descuenta a sí mismo, así que
-            // volver de «10 Central + 1 Obarrio» a «11 Central» no queda atrapado por la reserva ya recortada).
+            // volver de «10 Central + 1 Sala de exhibición 1» a «11 Central» no queda atrapado por la reserva ya recortada).
             $cap = $item->catalog_product_id !== null
                 ? $this->reservations->availableAtWarehouse((int) $item->catalog_product_id, $warehouseId, $item->id, lock: true)
                 : 0;

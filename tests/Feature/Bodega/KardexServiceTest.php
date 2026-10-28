@@ -52,26 +52,26 @@ class KardexServiceTest extends FeatureTestCase
 
     /**
      * SCRUM-429 (rebote de Gerencia Test 2026-08-13) — caso real reproducido: producto con 11
-     * unidades (10 en Showroom Obarrio + 1 en Bodega Central), ajuste de -1 en Showroom Obarrio.
+     * unidades (10 en Sala de exhibición 1 + 1 en Bodega Central), ajuste de -1 en Sala de exhibición 1.
      * Antes de este fix, `catalog_products.stock_quantity` (el agregado del que derivan
      * "Disponible"/"Stock Total" en todo el resto de Inventario) se quedaba en 11 aunque el
      * desglose por bodega sí bajara a 9+1 — acá se verifica que ambos quedan sincronizados.
      */
     public function test_registrar_sincroniza_el_agregado_stock_quantity_del_producto(): void
     {
-        $showroom = Warehouse::where('name', 'Bodega Central')->first();
+        $aparte = Warehouse::where('name', 'Bodega Central')->first();
         $central = Warehouse::where('name', 'Merma')->first();
         $product = $this->makeProduct(['stock_quantity' => 11]);
-        ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $showroom->id, 'quantity' => 10]);
+        ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $aparte->id, 'quantity' => 10]);
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 1]);
 
         (new KardexService)->registrar(
-            $product->id, $showroom->id, InventoryMovement::TIPO_CONTEO, -1, 'Conteo general aplicado',
+            $product->id, $aparte->id, InventoryMovement::TIPO_CONTEO, -1, 'Conteo general aplicado',
         );
 
         $this->assertSame(
             9,
-            ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $showroom->id)->value('quantity'),
+            ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $aparte->id)->value('quantity'),
         );
         $this->assertSame(10, $product->fresh()->stock_quantity);
     }

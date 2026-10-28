@@ -32,17 +32,17 @@ class AdminContLocationControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json())->pluck('nombre')->all();
-        foreach (['Bodega Central', 'Showroom Obarrio', 'Showroom SM', 'Showroom Cliente', 'Merma', 'Reclamos y Devoluciones'] as $expected) {
+        foreach (['Bodega Central', 'Sala de exhibición 1', 'Sala de exhibición 2', 'Exhibición en cliente', 'Merma', 'Reclamos y Devoluciones'] as $expected) {
             $this->assertContains($expected, $names, "Falta la ubicación oficial: {$expected}");
         }
 
         // SCRUM-990: Zona Libre es de solo consulta (catálogo de Lafayette) y ya no es una ubicación de Atlantic.
         $this->assertNotContains('Bodega Zona Libre', $names);
 
-        $showroom = collect($response->json())->firstWhere('nombre', 'Showroom Obarrio');
-        $this->assertSame('showroom', $showroom['tipo']);
-        $this->assertFalse($showroom['editable']);
-        $this->assertSame('bodega', $showroom['source']);
+        $aparte = collect($response->json())->firstWhere('nombre', 'Sala de exhibición 1');
+        $this->assertSame('exhibicion', $aparte['tipo']);
+        $this->assertFalse($aparte['editable']);
+        $this->assertSame('bodega', $aparte['source']);
 
         $central = collect($response->json())->firstWhere('nombre', 'Bodega Central');
         $this->assertSame('bodega', $central['tipo']);

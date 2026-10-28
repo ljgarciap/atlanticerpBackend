@@ -93,7 +93,7 @@ final class OrderPickingController extends Controller
         $order->loadMissing('items.catalogProduct', 'items.foundConfirmedBy', 'items.allocations');
         $items = $order->items->sortBy(fn (OrderItem $i) => $i->location_snapshot ?? '')->values();
 
-        // SCRUM-1196 — bodegas de venta que ofrece el selector de la hoja (Central y Showroom Obarrio; nunca Reclamos, Merma, etc.), con su saldo.
+        // SCRUM-1196 — bodegas de venta que ofrece el selector de la hoja (Central y Sala de exhibición 1; nunca Reclamos, Merma, etc.), con su saldo.
         /** @var \Illuminate\Support\Collection<int, Warehouse> $saleWarehouses */
         $saleWarehouses = Warehouse::paraVenta()->orderByDesc('despacho_por_defecto')->orderBy('id')->get();
         $productIds = $items->pluck('catalog_product_id')->filter()->unique()->values()->all();

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * SCRUM-1196 — reparto de UNA línea de pedido entre bodegas (10 de Bodega Central + 1 de Showroom Obarrio). `order_items.warehouse_id / qty_reserved /
+ * SCRUM-1196 — reparto de UNA línea de pedido entre bodegas (10 de Bodega Central + 1 de Sala de exhibición 1). `order_items.warehouse_id / qty_reserved /
  * qty_picked` siguen siendo el TOTAL y la bodega principal; esta tabla es el detalle por bodega que usan la reserva, el picking y el Kardex del despacho.
  *
  * @property int  $id

@@ -80,7 +80,7 @@ class ProductWarehouseStockBackfillSeeder extends Seeder
         $distribution = [
             DemoDataset::productoRef(1) => ['Bodega Central' => 24],
             DemoDataset::productoRef(2) => ['Bodega Central' => 15],
-            DemoDataset::productoRef(3) => ['Bodega Central' => 200, 'Showroom Obarrio' => 100],
+            DemoDataset::productoRef(3) => ['Bodega Central' => 200, 'Sala de exhibición 1' => 100],
             DemoDataset::productoRef(4) => ['Bodega Central' => 210],
             DemoDataset::productoRef(5) => ['Bodega Central' => 40],
             DemoDataset::productoRef(6) => ['Bodega Central' => 60],

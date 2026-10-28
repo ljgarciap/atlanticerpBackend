@@ -930,7 +930,7 @@ final class QuoteController extends Controller
                 $settings = PricingSettings::current();
 
                 // SCRUM-1196 — alerta de stock (REQ-039) contra el DISPONIBLE de venta (solo Bodega Central), no contra el stock total que suma Reclamos,
-                // Merma y showrooms; una sola pasada por todos los productos de la cotización.
+                // Merma y exhibiciones; una sola pasada por todos los productos de la cotización.
                 /** @var list<int> $quoteProductIds */
                 $quoteProductIds = $quote->parts->flatMap(fn (QuotePart $p) => $p->items->pluck('catalog_product_id'))->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
                 $availability    = $this->catalog->availableForSaleMap($quoteProductIds);

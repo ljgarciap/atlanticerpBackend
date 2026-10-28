@@ -9,7 +9,7 @@ use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * SCRUM-640 (REQ-563) — ubicaciones administrativas (tipo `oficina`/`otra`). Las 7 bodegas/showrooms
+ * SCRUM-640 (REQ-563) — ubicaciones administrativas (tipo `oficina`/`otra`). Las 7 bodegas/exhibiciones
  * oficiales viven en `App\Modules\Bodega\Models\Warehouse`, nunca acá — ver docblock de la migración.
  *
  * @property int         $id

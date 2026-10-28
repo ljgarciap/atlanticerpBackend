@@ -71,13 +71,13 @@ final class CatalogProductController extends Controller
         $productIds = array_map(fn (CatalogProduct $p): int => $p->id, $products);
         $committedMap  = $this->commitments->committedMap($productIds);
         $enExcluidaMap = $this->inventoryKpis->enBodegaExcluidaMap($productIds);
-        $showroomMap   = $this->inventoryKpis->enShowroomMap($productIds);
+        $apartadoMap   = $this->inventoryKpis->enOtrasBodegasDeVentaMap($productIds);
 
         return response()->json([
             // SCRUM-796 (secc. 6) — nunca heurístico, este flag queda siempre en false; se
             // mantiene el campo por compatibilidad de shape con el frontend existente.
             'fuzzy' => false,
-            'data'  => array_map(fn (CatalogProduct $p) => $this->format($p, $committedMap[$p->id] ?? 0, $enExcluidaMap[$p->id] ?? 0, $showroomMap[$p->id] ?? 0), $products),
+            'data'  => array_map(fn (CatalogProduct $p) => $this->format($p, $committedMap[$p->id] ?? 0, $enExcluidaMap[$p->id] ?? 0, $apartadoMap[$p->id] ?? 0), $products),
         ]);
     }
 
@@ -90,9 +90,9 @@ final class CatalogProductController extends Controller
 
         $committed  = $this->commitments->committedMap([$id])[$id] ?? 0;
         $enExcluida = $this->inventoryKpis->enBodegaExcluidaMap([$id])[$id] ?? 0;
-        $showroom   = $this->inventoryKpis->enShowroomMap([$id])[$id] ?? 0;
+        $aparte   = $this->inventoryKpis->enOtrasBodegasDeVentaMap([$id])[$id] ?? 0;
 
-        return response()->json($this->format($product, $committed, $enExcluida, $showroom));
+        return response()->json($this->format($product, $committed, $enExcluida, $aparte));
     }
 
     /** docs/specs/demo-mode.md — sin usuario autenticado (no debería pasar, ruta ya exige JWT), el filtro no se activa. */
@@ -110,7 +110,7 @@ final class CatalogProductController extends Controller
     }
 
     /** @return array<string, mixed> — REQ-036 AC2: foto, marca, descripción, disponible, precio. Nunca `cost`. */
-    private function format(CatalogProduct $product, int $committed = 0, int $enExcluida = 0, int $showroom = 0): array
+    private function format(CatalogProduct $product, int $committed = 0, int $enExcluida = 0, int $aparte = 0): array
     {
         return [
             'id'                => $product->id,
@@ -126,8 +126,8 @@ final class CatalogProductController extends Controller
             // CatalogService/Bodega), ya no el stock bruto. SCRUM-851 — tampoco cuenta lo
             // ubicado en una bodega excluida.
             'stock_quantity'    => max(0, (int) $this->inventoryKpis->disponibleParaVenta($product, $committed, $enExcluida)),
-            // SCRUM-1196 — Showroom Obarrio, aparte del disponible (no suma): para mostrar a clientes o vender una última pieza.
-            'stock_showroom'    => $showroom,
+            // SCRUM-1196 — Sala de exhibición 1, aparte del disponible (no suma): para mostrar a clientes o vender una última pieza.
+            'stock_aparte'    => $aparte,
         ];
     }
 }

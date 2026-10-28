@@ -696,7 +696,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 300]);
         $this->setStock($product, 200, 'Bodega Central');
-        $this->setStock($product, 100, 'Showroom Obarrio');
+        $this->setStock($product, 100, 'Sala de exhibición 1');
 
         $response = $this->withHeaders($this->readerHeaders())->getJson('/api/bodega/inventory');
 

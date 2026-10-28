@@ -923,7 +923,7 @@ class InventoryControllerTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 120, 'unit_cost' => 10, 'subtotal' => 1200,
         ]);
-        // SCRUM-1196 — antes tomaba «la primera bodega» sin orden definido; el Disponible solo cuenta Bodega Central (los showrooms lo excluyen).
+        // SCRUM-1196 — antes tomaba «la primera bodega» sin orden definido; el Disponible solo cuenta Bodega Central (los exhibiciones lo excluyen).
         $warehouseId = (int) DB::table('atlantic_bodega.warehouses')->where('name', 'Bodega Central')->value('id');
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);

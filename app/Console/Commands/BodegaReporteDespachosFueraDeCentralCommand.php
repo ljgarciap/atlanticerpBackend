@@ -88,7 +88,7 @@ final class BodegaReporteDespachosFueraDeCentralCommand extends Command
         $hC = ['Pedido', 'Etapa', 'Producto', 'Bodega asignada', 'Reservado', 'Alistado'];
 
         $this->info("A. Despachos desde {$desde} que NO salieron de «{$default->name}»: ".count($a));
-        $this->comment('Incluye las piezas de otra bodega de venta (p. ej. Showroom Obarrio) que Bodega escogió a propósito en el picking; revisar sobre todo las de bodegas que no son de venta.');
+        $this->comment('Incluye las piezas de otra bodega de venta (p. ej. Sala de exhibición 1) que Bodega escogió a propósito en el picking; revisar sobre todo las de bodegas que no son de venta.');
         $this->table($hA, $a);
         $this->info('B. Productos con alguna bodega en negativo: '.count($b));
         $this->table($hB, $b);
