@@ -76,6 +76,20 @@ class TicketBatch3Test extends FeatureTestCase
             ->assertStatus(422);
     }
 
+    public function test_cancelar_por_el_endpoint_de_estado_no_se_salta_el_motivo(): void
+    {
+        $ticket = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson("/api/servicios/tickets/{$ticket->id}/estado", ['estado' => Ticket::ESTADO_CANCELLED])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('estado');
+
+        $this->makeCurrentTenant();
+        $this->assertSame(Ticket::ESTADO_SCHEDULED, $ticket->fresh()->estado, 'el ticket no cambió');
+    }
+
     public function test_cancelar_con_motivo_solo_espacios_retorna_422(): void
     {
         $ticket = $this->makeTicket();
