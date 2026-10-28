@@ -15,8 +15,7 @@ use OpenApi\Attributes as OA;
     title: 'AtlanticERP API',
     description: 'API REST del CRM Atlantic — AtlanticERP Backend (Laravel 12 + JWT)',
     contact: new OA\Contact(
-        name: 'AtlanticERP',
-        email: 'dev@atlanticerp.ai'
+        name: 'AtlanticERP'
     ),
     license: new OA\License(name: 'MIT')
 )]

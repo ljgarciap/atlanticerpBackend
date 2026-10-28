@@ -161,7 +161,7 @@ final class QaSeedInvoicedComprasCommand extends Command
             });
         }
 
-        $this->info('Listo — verificar GET /pedidos en dev.atlanticerp.ai.');
+        $this->info('Listo — verificar GET /pedidos en el ambiente de desarrollo.');
 
         return self::SUCCESS;
     }

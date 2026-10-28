@@ -97,7 +97,7 @@ final class AdminContSeedRebotesQaCommand extends Command
         $this->seedArchitectReadyToPay($contabilidadId, $commissions);
         $this->seedDailyCashCountPayment($contabilidadId);
 
-        $this->info('Listo — verificar en dev.atlanticerp.ai (Comisiones Internas/Externas, Arqueo del día).');
+        $this->info('Listo — verificar en el ambiente de desarrollo (Comisiones Internas/Externas, Arqueo del día).');
 
         return self::SUCCESS;
     }

@@ -113,8 +113,7 @@ return [
      * ```
      */
     'servers' => [
-        'dev' => 'https://dev.atlanticerp.ai/api',
-        'test' => 'https://test.atlanticerp.ai/api',
+        'Actual' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/api',
     ],
 
     /**

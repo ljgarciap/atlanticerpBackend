@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dast.sh — SCRUM-964: DAST pasivo con OWASP ZAP (API autenticada, solo GET) contra dev.atlanticerp.ai.
+# dast.sh — SCRUM-964: DAST pasivo con OWASP ZAP (API autenticada, solo GET) contra el ambiente de desarrollo declarado en DAST_ALLOWED_TARGET.
 #
 # BAJO DEMANDA, NO BLOQUEANTE por diseño (spec docs/specs/scrum-964-dast-zap-baseline.md): no forma parte del gate ni del CI porque
 # golpea un entorno compartido. Imprime un resumen y sale 0 aunque haya alertas.
@@ -13,13 +13,15 @@
 #   infra/dast.sh --self-test                             prueba el resumen y el modo estricto con un informe sintético (sin red)
 #
 # Variables: DAST_EMAIL / DAST_PASSWORD (cuenta de PRUEBA, nunca real; solo por entorno de la shell, no se escriben a ningún archivo),
-#            DAST_TARGET (por defecto https://dev.atlanticerp.ai; cualquier otro host se RECHAZA),
+#            DAST_ALLOWED_TARGET (el ÚNICO host escaneable, p. ej. https://dev.<dominio>; lo declara quien opera el ambiente de desarrollo),
+#            DAST_TARGET (por defecto DAST_ALLOWED_TARGET; cualquier valor distinto se RECHAZA, así producción y test no se escanean por error),
 #            DAST_ALLOW_LOCAL=1 (solo para probar el propio script contra http://localhost:<puerto>; no es flujo normal).
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
 ZAP_IMAGE="ghcr.io/zaproxy/zaproxy:2.17.0"
-TARGET="${DAST_TARGET:-https://dev.atlanticerp.ai}"
+ALLOWED="${DAST_ALLOWED_TARGET:-}"; ALLOWED="${ALLOWED%/}"
+TARGET="${DAST_TARGET:-$ALLOWED}"
 MODE="${1:-report}"
 OUTDIR="infra/dast/out"
 ACCEPTED="infra/zap/accepted-alerts.txt"
@@ -86,20 +88,20 @@ PY
   check 1 "100 % 401 → cordura, --strict sale 1" summarize "$T/all4xx.json" 100
   MODE=report;   check 0 "alerta alta sintética en modo reporte → exit 0" summarize "$T/high.json" 100
   # rechazo de hosts
-  for h in https://atlanticerp.ai https://test.atlanticerp.ai https://www.atlanticerp.ai http://dev.atlanticerp.ai.evil.com; do
-    DAST_TARGET="$h" DAST_EMAIL=x DAST_PASSWORD=x "$0" >/dev/null 2>&1; [[ $? == 2 ]] && echo "ok   rechaza $h" || { echo "FALLA no rechaza $h"; fail=1; }
+  for h in https://prod.example.test https://test.example.test https://www.example.test http://dev.example.test.evil.com; do
+    DAST_ALLOWED_TARGET=https://dev.example.test DAST_TARGET="$h" DAST_EMAIL=x DAST_PASSWORD=x bash "$0" >/dev/null 2>&1; [[ $? == 2 ]] && echo "ok   rechaza $h" || { echo "FALLA no rechaza $h"; fail=1; }
   done
   exit "$fail"
 fi
 
 # ── lista cerrada de objetivos ────────────────────────────────────────────────────────────────────────────────────────────────
 HOST_FOR_ZAP="$TARGET"; ADD_HOST=()
-if [[ "$TARGET" =~ ^https://dev\.atlanticerp\.ai/?$ ]]; then
-  TARGET="https://dev.atlanticerp.ai"; HOST_FOR_ZAP="$TARGET"
+if [[ -n "$ALLOWED" && "$ALLOWED" =~ ^https://[A-Za-z0-9.-]+$ && "${TARGET%/}" == "$ALLOWED" ]]; then
+  TARGET="$ALLOWED"; HOST_FOR_ZAP="$TARGET"
 elif [[ "${DAST_ALLOW_LOCAL:-}" == "1" && "$TARGET" =~ ^http://localhost:[0-9]+$ ]]; then
   HOST_FOR_ZAP="${TARGET/localhost/host.docker.internal}"; ADD_HOST=(--add-host host.docker.internal:host-gateway)
 else
-  echo "dast: objetivo rechazado: '$TARGET'. Solo https://dev.atlanticerp.ai (producción y test NO se escanean con este script)."; exit 2
+  echo "dast: objetivo rechazado: '$TARGET'. Solo el host declarado en DAST_ALLOWED_TARGET (${ALLOWED:-sin definir}); producción y test NO se escanean con este script."; exit 2
 fi
 
 command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 || { echo "dast: Docker no disponible — omitido."; exit 0; }
