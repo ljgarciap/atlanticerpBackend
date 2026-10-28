@@ -127,12 +127,23 @@ final class ReplacementRequestController extends Controller
         }
 
         if (! $this->canDecide($user, $replacementRequest, $jwtPermissions)) {
+            // Fase 12a — quien reportó la solicitud no la decide: lo dice el mensaje, en vez de un 403 genérico.
+            if ($replacementRequest->requested_by === $user->id) {
+                return response()->json(['message' => 'Una solicitud no la decide quien la reportó: debe decidirla Gerencia o Compras.'], 403);
+            }
+
             return response()->json(['message' => trans('auth.unauthorized')], 403);
+        }
+
+        // Fase 12a — rechazar exige un motivo (como las notas de crédito, las anulaciones y la cancelación de tickets).
+        $motivo = null;
+        if ($newStatus === ReplacementRequest::STATUS_RECHAZADA) {
+            $motivo = trim((string) $request->validate(['motivo_rechazo' => ['required', 'string', 'min:5', 'max:1000']])['motivo_rechazo']);
         }
 
         $replacementRequest->update($newStatus === ReplacementRequest::STATUS_APROBADA
             ? ['status' => $newStatus, 'approved_by' => $user->id]
-            : ['status' => $newStatus, 'rejected_by' => $user->id]);
+            : ['status' => $newStatus, 'rejected_by' => $user->id, 'rejection_reason' => $motivo]);
 
         $replacementRequest->load(['originalProduct', 'proposedProduct', 'requester', 'salesProject']);
 
@@ -142,9 +153,9 @@ final class ReplacementRequestController extends Controller
     /**
      * RN dura del ticket (matriz de aprobación):
      *   pendiente_gerencia (margen < umbral) → SOLO Gerencia.
-     *   pendiente (margen ≥ umbral)          → Gerencia O el vendedor/diseñador responsable del
-     *                                            proyecto — nunca el creador de la solicitud si
-     *                                            no es también el responsable.
+     *   pendiente (margen ≥ umbral)          → Gerencia, el Líder de Compras (por rol)
+     *                                            o el vendedor/diseñador responsable del proyecto — y NUNCA quien reportó la
+     *                                            solicitud (Fase 12a), aunque sea el responsable.
      *
      * SCRUM-818 (rebote 2026-09-03) — `gerencia.view` se evalúa contra el JWT (`$jwtPermissions`,
      * poblado por `effectivePermissionsV2()`/`RoleModuleVisibility`), NUNCA contra
@@ -164,6 +175,17 @@ final class ReplacementRequestController extends Controller
 
         if ($r->status === ReplacementRequest::STATUS_PENDIENTE_GERENCIA) {
             return false;
+        }
+
+        // Fase 12a (decisión de Luis, 2026-10-29): separación de funciones — nadie decide la solicitud que reportó, aunque sea el
+        // responsable del proyecto. La decide Gerencia o quien gestiona sustituciones en Compras.
+        if ($r->requested_by === $user->id) {
+            return false;
+        }
+
+        // «Compras» es el Líder de Compras, por rol (no por permiso: Operaciones tiene `compras.sustitutos.manage` y es quien suele REPORTAR).
+        if ($user->role?->key === self::GENERATE_ORDER_ROLE_KEY) {
+            return true;
         }
 
         return $r->sales_project_id !== null && $this->isProjectResponsible($user, $r->sales_project_id);
