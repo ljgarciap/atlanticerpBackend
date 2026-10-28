@@ -31,10 +31,6 @@ use Illuminate\Support\Facades\DB;
  */
 final class InsumoService
 {
-    public const RESERVA_WAREHOUSE_NAME = 'Reserva Servicios';
-
-    public const BODEGA_CENTRAL_WAREHOUSE_NAME = 'Bodega Central';
-
     /**
      * REQ-273 — listado. `disponible` viene de `product_warehouse_stock` en la bodega "Reserva
      * Servicios" (REQ-291 RN2) — única fuente de verdad, nunca una columna propia que pueda
@@ -196,12 +192,12 @@ final class InsumoService
 
     public function reservaWarehouseId(): int
     {
-        return (int) Warehouse::where('name', self::RESERVA_WAREHOUSE_NAME)->value('id');
+        return (int) Warehouse::query()->where('funcion', Warehouse::FUNCION_RESERVA_SERVICIOS)->value('id');
     }
 
     public function bodegaCentralWarehouseId(): int
     {
-        return (int) Warehouse::where('name', self::BODEGA_CENTRAL_WAREHOUSE_NAME)->value('id');
+        return (int) Warehouse::query()->where('despacho_por_defecto', true)->value('id');
     }
 
     /** @return array<string, mixed> */

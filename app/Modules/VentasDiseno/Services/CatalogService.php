@@ -158,11 +158,11 @@ final class CatalogService
         $committedMap  = $this->commitments->committedMap($productIds);
         $enCaminoMap   = $this->inventoryKpis->enCaminoMap($productIds);
         $enExcluidaMap = $this->inventoryKpis->enBodegaExcluidaMap($productIds);
-        $showroomMap   = $this->inventoryKpis->enShowroomMap($productIds);
+        $apartadoMap   = $this->inventoryKpis->enOtrasBodegasDeVentaMap($productIds);
 
         return [
             'data' => array_map(
-                fn (CatalogProduct $p) => $this->format($p, $committedMap[$p->id] ?? 0, $enCaminoMap[$p->id] ?? 0, $enExcluidaMap[$p->id] ?? 0, $showroomMap[$p->id] ?? 0),
+                fn (CatalogProduct $p) => $this->format($p, $committedMap[$p->id] ?? 0, $enCaminoMap[$p->id] ?? 0, $enExcluidaMap[$p->id] ?? 0, $apartadoMap[$p->id] ?? 0),
                 $products,
             ),
             'meta'       => Pagination::meta($paginator),
@@ -174,7 +174,7 @@ final class CatalogService
     /**
      * SCRUM-1196 — «Disponible» de venta de varios productos de una vez (mismo cálculo que el catálogo y el buscador: stock − comprometido − lo que está en
      * bodegas excluidas, nunca negativo, de modo que solo cuenta Bodega Central). Lo usan las líneas de la cotización para su alerta de stock (REQ-039):
-     * comparar contra el stock TOTAL (que suma Reclamos, Merma, showrooms...) dejaba a los vendedores vender stock inexistente.
+     * comparar contra el stock TOTAL (que suma Reclamos, Merma, exhibiciones...) dejaba a los vendedores vender stock inexistente.
      *
      * @param list<int> $productIds
      * @return array<int, int> catalog_product_id => disponible
@@ -208,9 +208,9 @@ final class CatalogService
         $committed  = $this->commitments->committedMap([$id])[$id] ?? 0;
         $enCamino   = $this->inventoryKpis->enCaminoMap([$id])[$id] ?? 0;
         $enExcluida = $this->inventoryKpis->enBodegaExcluidaMap([$id])[$id] ?? 0;
-        $showroom   = $this->inventoryKpis->enShowroomMap([$id])[$id] ?? 0;
+        $aparte   = $this->inventoryKpis->enOtrasBodegasDeVentaMap([$id])[$id] ?? 0;
 
-        return $this->format($product, $committed, $enCamino, $enExcluida, $showroom);
+        return $this->format($product, $committed, $enCamino, $enExcluida, $aparte);
     }
 
     public function findModel(int $id): ?CatalogProduct
@@ -413,7 +413,7 @@ final class CatalogService
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /** @return array<string, mixed> */
-    private function format(CatalogProduct $product, int $committed, int $enCamino, int $enExcluida = 0, int $showroom = 0): array
+    private function format(CatalogProduct $product, int $committed, int $enCamino, int $enExcluida = 0, int $aparte = 0): array
     {
         // REQ-615 RN1/RN2 — "Disponible" ya neto del compromiso (mismo cálculo que Bodega), pero
         // acá SOLO se expone el número final: nunca `por_servir`/`por_ingresar`/`estado` internos.
@@ -439,8 +439,8 @@ final class CatalogService
             'family_name'       => $family?->name,
             // REQ-615 RN2 — stock simplificado: solo el número final + nota "en camino".
             'disponible'        => $disponible,
-            // SCRUM-1196 — unidades en Showroom Obarrio: aparte del disponible (no suman), para mostrar a clientes o vender una última pieza.
-            'stock_showroom'    => $showroom,
+            // SCRUM-1196 — unidades en Sala de exhibición 1: aparte del disponible (no suman), para mostrar a clientes o vender una última pieza.
+            'stock_aparte'    => $aparte,
             'en_camino'         => $enCamino,
             // REQ-615 RN4 / REQ-618 RN2/RN3.
             'has_technical_sheet'        => $product->hasTechnicalSheet(),

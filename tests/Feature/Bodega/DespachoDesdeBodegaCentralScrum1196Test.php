@@ -81,17 +81,17 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
 
     // ── Reglas de bodega (datos sembrados por la migración) ──────────────────────────────────────────────────────────
 
-    public function test_la_migracion_deja_central_como_despacho_por_defecto_y_solo_central_y_obarrio_como_bodegas_de_venta(): void
+    public function test_la_migracion_deja_central_como_despacho_por_defecto_y_solo_central_y_exhibicion1_como_bodegas_de_venta(): void
     {
-        $this->assertSame(['Bodega Central', 'Showroom Obarrio'], Warehouse::paraVenta()->orderBy('id')->pluck('name')->all());
+        $this->assertSame(['Bodega Central', 'Sala de exhibición 1'], Warehouse::paraVenta()->orderBy('id')->pluck('name')->all());
         $this->assertSame('Bodega Central', Warehouse::despachoPorDefecto()?->name);
 
-        foreach (['Reclamos y Devoluciones', 'Merma', 'Reserva Servicios', 'Showroom Cliente', 'Showroom SM'] as $name) {
+        foreach (['Reclamos y Devoluciones', 'Merma', 'Reserva Servicios', 'Exhibición en cliente', 'Sala de exhibición 2'] as $name) {
             $this->assertFalse($this->warehouse($name)->permite_venta, "{$name} NUNCA se usa para ventas");
         }
-        // «Disponible» cuenta solo Central: las demás (incluidos los 3 showrooms) lo excluyen.
+        // «Disponible» cuenta solo Central: las demás (incluidos los 3 exhibiciones) lo excluyen.
         $this->assertFalse($this->warehouse('Bodega Central')->excluye_disponible);
-        foreach (['Showroom Obarrio', 'Showroom Cliente', 'Showroom SM', 'Merma', 'Reclamos y Devoluciones', 'Reserva Servicios'] as $name) {
+        foreach (['Sala de exhibición 1', 'Exhibición en cliente', 'Sala de exhibición 2', 'Merma', 'Reclamos y Devoluciones', 'Reserva Servicios'] as $name) {
             $this->assertTrue($this->warehouse($name)->excluye_disponible, "{$name} excluye del disponible");
         }
     }
@@ -99,7 +99,7 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
     public function test_la_base_impide_dos_bodegas_de_despacho_por_defecto_y_un_defecto_que_no_es_de_venta(): void
     {
         $this->expectException(\Illuminate\Database\QueryException::class);
-        Warehouse::where('name', 'Showroom Obarrio')->update(['despacho_por_defecto' => true]); // ya hay una por defecto (Central)
+        Warehouse::where('name', 'Sala de exhibición 1')->update(['despacho_por_defecto' => true]); // ya hay una por defecto (Central)
     }
 
     public function test_la_base_impide_que_una_bodega_por_defecto_no_permita_venta(): void
@@ -122,10 +122,10 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
         $this->assertSame($this->warehouse('Bodega Central')->id, $item->warehouse_id);
         $this->assertSame(10, $item->qty_reserved, 'se reserva lo que hay en Central, no más');
 
-        // La hoja ofrece solo Central y Showroom Obarrio.
+        // La hoja ofrece solo Central y Sala de exhibición 1.
         $sheet = $this->withHeaders($headers)->getJson("/api/bodega/orders/{$order->id}/picking-sheet")->assertStatus(200);
-        $this->assertSame(['Bodega Central', 'Showroom Obarrio'], collect($sheet->json('sale_warehouses'))->pluck('name')->all());
-        $this->assertSame(['Bodega Central', 'Showroom Obarrio'], collect($sheet->json('items.0.warehouse_options'))->pluck('name')->all());
+        $this->assertSame(['Bodega Central', 'Sala de exhibición 1'], collect($sheet->json('sale_warehouses'))->pluck('name')->all());
+        $this->assertSame(['Bodega Central', 'Sala de exhibición 1'], collect($sheet->json('items.0.warehouse_options'))->pluck('name')->all());
         $this->assertSame(10, collect($sheet->json('items.0.warehouse_options'))->firstWhere('name', 'Bodega Central')['available']);
 
         // Pedir 25 alistados es imposible; 10 sí, y los 15 restantes caen en faltante (tarjeta de revisión de inventario).
@@ -173,26 +173,26 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
         }
     }
 
-    // ── Criterio 3: 10 en Central + 1 en Obarrio, pedido de 11 → Kardex −10 y −1 ──────────────────────────────────────
+    // ── Criterio 3: 10 en Central + 1 en Sala de exhibición 1, pedido de 11 → Kardex −10 y −1 ──────────────────────────────────────
 
-    public function test_bodega_puede_tomar_10_de_central_y_escoger_1_de_obarrio_y_el_kardex_registra_ambas_salidas(): void
+    public function test_bodega_puede_tomar_10_de_central_y_escoger_1_de_exhibicion1_y_el_kardex_registra_ambas_salidas(): void
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 11]);
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 1, 'Showroom Obarrio');
+        $this->setStock($product, 1, 'Sala de exhibición 1');
         $headers = $this->headers();
         [$order, $item] = $this->orderInPicking($product, 11, $headers);
 
         $central = $this->warehouse('Bodega Central');
-        $obarrio = $this->warehouse('Showroom Obarrio');
+        $exhibicion1 = $this->warehouse('Sala de exhibición 1');
 
-        // La reserva automática solo toma Central; Obarrio la escoge Bodega en el picking.
+        // La reserva automática solo toma Central; Sala de exhibición 1 la escoge Bodega en el picking.
         $this->assertSame(10, $item->fresh()->qty_reserved);
 
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order->id}/complete-picking", [
             'items' => [['order_item_id' => $item->id, 'qty_picked' => 11, 'allocations' => [
                 ['warehouse_id' => $central->id, 'qty_picked' => 10],
-                ['warehouse_id' => $obarrio->id, 'qty_picked' => 1],
+                ['warehouse_id' => $exhibicion1->id, 'qty_picked' => 1],
             ]]],
         ])->assertStatus(200)->assertJsonPath('order.stage', Order::STAGE_PACKING)->assertJsonPath('review', null);
 
@@ -205,12 +205,12 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
 
         $moves = InventoryMovement::where('referencia_entidad_id', $order->id)->orderBy('id')->get();
         $this->assertSame([-10, -1], $moves->pluck('cantidad')->map(fn ($v) => (int) $v)->all());
-        $this->assertSame([$central->id, $obarrio->id], $moves->pluck('warehouse_id')->all());
+        $this->assertSame([$central->id, $exhibicion1->id], $moves->pluck('warehouse_id')->all());
         $this->assertSame(0, $this->stockOf($product, 'Bodega Central'));
-        $this->assertSame(0, $this->stockOf($product, 'Showroom Obarrio'));
+        $this->assertSame(0, $this->stockOf($product, 'Sala de exhibición 1'));
     }
 
-    // ── Criterio 4: el selector solo ofrece Central y Obarrio; una bodega que no es de venta se rechaza ────────────────
+    // ── Criterio 4: el selector solo ofrece Central y Sala de exhibición 1; una bodega que no es de venta se rechaza ────────────────
 
     public function test_no_se_puede_escoger_en_el_picking_una_bodega_que_no_es_de_venta(): void
     {
@@ -221,7 +221,7 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
         [$order, $item] = $this->orderInPicking($product, 5, $headers);
 
         $noVenta = [];
-        foreach (['Reclamos y Devoluciones', 'Merma', 'Reserva Servicios', 'Showroom Cliente', 'Showroom SM'] as $name) {
+        foreach (['Reclamos y Devoluciones', 'Merma', 'Reserva Servicios', 'Exhibición en cliente', 'Sala de exhibición 2'] as $name) {
             $noVenta[$name] = $this->warehouse($name)->id; // antes de las llamadas HTTP, que dejan el tenant sin "current"
         }
         foreach ($noVenta as $name => $warehouseId) {
@@ -237,20 +237,20 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
 
     // ── Criterio 5: ninguna bodega queda en negativo ─────────────────────────────────────────────────────────────────
 
-    public function test_no_se_puede_alistar_mas_de_lo_que_tiene_obarrio(): void
+    public function test_no_se_puede_alistar_mas_de_lo_que_tiene_exhibicion1(): void
     {
         $product = $this->makeCatalogProduct();
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 1, 'Showroom Obarrio');
+        $this->setStock($product, 1, 'Sala de exhibición 1');
         $headers = $this->headers();
         [$order, $item] = $this->orderInPicking($product, 12, $headers);
 
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order->id}/complete-picking", [
             'items' => [['order_item_id' => $item->id, 'qty_picked' => 12, 'allocations' => [
                 ['warehouse_id' => $this->warehouse('Bodega Central')->id, 'qty_picked' => 10],
-                ['warehouse_id' => $this->warehouse('Showroom Obarrio')->id, 'qty_picked' => 2],
+                ['warehouse_id' => $this->warehouse('Sala de exhibición 1')->id, 'qty_picked' => 2],
             ]]],
-        ])->assertStatus(422)->assertJsonPath('message', fn (string $m): bool => str_contains($m, 'No hay saldo suficiente en «Showroom Obarrio»'));
+        ])->assertStatus(422)->assertJsonPath('message', fn (string $m): bool => str_contains($m, 'No hay saldo suficiente en «Sala de exhibición 1»'));
     }
 
     public function test_dos_pedidos_del_mismo_producto_no_pueden_dejar_central_en_negativo(): void
@@ -292,19 +292,19 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
         $this->assertNotSame(Order::STAGE_DESPACHADO, Order::find($order->id)->stage, 'el pedido sigue sin despacharse');
     }
 
-    // ── Criterio 6/7: «Disponible» cuenta solo Central; lo de Obarrio aparece aparte ─────────────────────────────────
+    // ── Criterio 6/7: «Disponible» cuenta solo Central; lo de Sala de exhibición 1 aparece aparte ─────────────────────────────────
 
-    public function test_el_disponible_cuenta_solo_central_y_obarrio_se_expone_aparte(): void
+    public function test_el_disponible_cuenta_solo_central_y_exhibicion1_se_expone_aparte(): void
     {
-        $product = $this->makeCatalogProduct(['stock_quantity' => 14]); // 10 Central + 3 Obarrio + 1 Reclamos
+        $product = $this->makeCatalogProduct(['stock_quantity' => 14]); // 10 Central + 3 Sala de exhibición 1 + 1 Reclamos
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 3, 'Showroom Obarrio');
+        $this->setStock($product, 3, 'Sala de exhibición 1');
         $this->setStock($product, 1, 'Reclamos y Devoluciones');
 
         $kpis = app(InventoryKpiService::class);
         $enExcluida = $kpis->enBodegaExcluidaMap([$product->id])[$product->id] ?? 0;
 
-        $this->assertSame(4, $enExcluida, 'Obarrio (3) + Reclamos (1) se excluyen del disponible');
+        $this->assertSame(4, $enExcluida, 'Sala de exhibición 1 (3) + Reclamos (1) se excluyen del disponible');
         $this->assertSame(10.0, (float) $kpis->disponibleParaVenta($product, 0, $enExcluida), 'Disponible = solo lo de Bodega Central');
     }
 

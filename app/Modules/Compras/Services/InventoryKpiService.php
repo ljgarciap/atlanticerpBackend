@@ -353,14 +353,14 @@ final class InventoryKpiService
     }
 
     /**
-     * SCRUM-1196 — unidades en bodegas que SÍ se pueden vender pero NO cuentan en el «Disponible» (hoy Showroom Obarrio: `permite_venta` y
-     * `excluye_disponible`). Es el dato aparte que ven los vendedores («en Showroom Obarrio: N») para mostrar a clientes o vender una última pieza,
+     * SCRUM-1196 — unidades en bodegas que SÍ se pueden vender pero NO cuentan en el «Disponible» (hoy Sala de exhibición 1: `permite_venta` y
+     * `excluye_disponible`). Es el dato aparte que ven los vendedores («en Sala de exhibición 1: N») para mostrar a clientes o vender una última pieza,
      * sin sumarlo al disponible. Una sola consulta agregada para todos los productos pedidos; nunca negativo.
      *
      * @param  list<int>  $productIds
      * @return array<int, int>
      */
-    public function enShowroomMap(array $productIds): array
+    public function enOtrasBodegasDeVentaMap(array $productIds): array
     {
         if ($productIds === []) {
             return [];

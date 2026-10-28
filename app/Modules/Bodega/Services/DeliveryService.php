@@ -408,7 +408,7 @@ final class DeliveryService
                 continue; // ítem personalizado (sin producto de Catálogo) o nada entregado — nada que mover.
             }
 
-            // SCRUM-1196 — una salida de Kardex por CADA bodega de la línea (10 de Bodega Central + 1 de Showroom Obarrio = −10 y −1). Un pedido
+            // SCRUM-1196 — una salida de Kardex por CADA bodega de la línea (10 de Bodega Central + 1 de Sala de exhibición 1 = −10 y −1). Un pedido
             // anterior al reparto (sin asignaciones) sale de `warehouse_id`, como siempre.
             $byWarehouse = $item->distributeAcrossAllocations($item->qty_delivered);
 

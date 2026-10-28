@@ -250,7 +250,7 @@ final class InventoryController extends Controller
         // SCRUM-234/238 — "Bodega(s)" solo se calcula para la página actual.
         $pageIds = array_values(array_map(fn (CatalogProduct $p): int => $p->id, $paginator->items()));
         $warehousesMap = $this->inventoryKpis->warehousesMap($pageIds);
-        $showroomMap = $this->inventoryKpis->enShowroomMap($pageIds); // SCRUM-1196 — una consulta agregada por página
+        $apartadoMap = $this->inventoryKpis->enOtrasBodegasDeVentaMap($pageIds); // SCRUM-1196 — una consulta agregada por página
 
         return response()->json([
             'fuzzy' => $fuzzy,
@@ -268,7 +268,7 @@ final class InventoryController extends Controller
                     (int) $p->getAttribute('en_camino'),
                     $warehousesMap[$p->id] ?? [],
                     enExcluida: (int) $p->getAttribute('en_excluida'),
-                    showroom: $showroomMap[$p->id] ?? 0,
+                    aparte: $apartadoMap[$p->id] ?? 0,
                 ),
                 $paginator->items(),
             ),
@@ -314,13 +314,13 @@ final class InventoryController extends Controller
         $enCamino = $this->inventoryKpis->enCaminoMap([$id])[$id] ?? 0;
         $warehouses = $this->inventoryKpis->warehousesMap([$id])[$id] ?? [];
         $enExcluida = $this->inventoryKpis->enBodegaExcluidaMap([$id])[$id] ?? 0;
-        $showroom = $this->inventoryKpis->enShowroomMap([$id])[$id] ?? 0;
+        $aparte = $this->inventoryKpis->enOtrasBodegasDeVentaMap([$id])[$id] ?? 0;
         // Rebote REQ-427 (Gerencia Test 2026-08-13) — el detalle de Compras debe reflejar si
         // Bodega ya confirmó la llegada física (cantidad + quién), solo en el detalle completo
         // (no en index(), para no pagar 1 query extra por fila de la tabla).
         $arrival = $this->arrivalConfirmation->pendingSummary($id);
 
-        return response()->json($this->format($product, $porServir, $restricted, $porIngresar, $enCamino, $warehouses, includeRestrictedDetail: true, arrival: $arrival, enExcluida: $enExcluida, showroom: $showroom));
+        return response()->json($this->format($product, $porServir, $restricted, $porIngresar, $enCamino, $warehouses, includeRestrictedDetail: true, arrival: $arrival, enExcluida: $enExcluida, aparte: $aparte));
     }
 
     public function store(StoreInventoryProductRequest $request): JsonResponse
@@ -851,7 +851,7 @@ final class InventoryController extends Controller
      * @param  array{pending_bodega_action: bool, awaiting_compras: bool, confirmed_quantity: int, confirmed_by_name: string|null}|null  $arrival
      * @return array<string, mixed>
      */
-    private function format(CatalogProduct $product, int $porServir, bool $restricted, int $porIngresar = 0, int $enCamino = 0, array $warehouses = [], bool $includeRestrictedDetail = false, ?array $arrival = null, int $enExcluida = 0, int $showroom = 0): array
+    private function format(CatalogProduct $product, int $porServir, bool $restricted, int $porIngresar = 0, int $enCamino = 0, array $warehouses = [], bool $includeRestrictedDetail = false, ?array $arrival = null, int $enExcluida = 0, int $aparte = 0): array
     {
         // REQ-172 Escenario 1/2 — "Disponible" nunca cuenta lo "Por ingresar" (llegó, falta
         // confirmar) hasta que se confirma; "En camino" (todavía no llegó de ninguna forma) es un
@@ -894,8 +894,8 @@ final class InventoryController extends Controller
             // SCRUM-1126 — todos los proveedores del producto (principal primero); `provider_name` sigue siendo el principal.
             'providers' => $product->relationLoaded('providers') ? $product->providersPayload() : [],
             'disponible' => $disponible,
-            // SCRUM-1196 — lo que hay en Showroom Obarrio (se puede vender, pero NO suma al disponible): dato aparte para el vendedor.
-            'stock_showroom' => $showroom,
+            // SCRUM-1196 — lo que hay en Sala de exhibición 1 (se puede vender, pero NO suma al disponible): dato aparte para el vendedor.
+            'stock_aparte' => $aparte,
             'estado' => $estado,
             'is_active' => $product->is_active,
             // SCRUM-425 (REQ-355, RN1) — ficha técnica de solo lectura, visible para Bodega igual

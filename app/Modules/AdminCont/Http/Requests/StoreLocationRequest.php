@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * REQ-563 — solo se pueden crear ubicaciones administrativas (`oficina`/`otra`) desde acá; las 7
- * bodegas/showrooms oficiales viven en el módulo Bodega, nunca se crean por este endpoint.
+ * bodegas/exhibiciones oficiales viven en el módulo Bodega, nunca se crean por este endpoint.
  */
 class StoreLocationRequest extends FormRequest
 {

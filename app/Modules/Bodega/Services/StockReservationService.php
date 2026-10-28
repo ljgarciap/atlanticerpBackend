@@ -50,9 +50,9 @@ use Illuminate\Support\Facades\DB;
  * extensión.
  *
  * SCRUM-1196 (reglas de Lider Bodega Cárdenas, Líder de Bodega, 22-10-2026) — el «bin por bin» ya NO usa todas las bodegas operativas ni la de más remanente
- * (`bestFitAllocation()`, eliminado: tomaba Reclamos, Merma o un Showroom y los dejaba en negativo). Solo cuentan las bodegas `permite_venta`; la reserva
+ * (`bestFitAllocation()`, eliminado: tomaba Reclamos, Merma o un Exhibición y los dejaba en negativo). Solo cuentan las bodegas `permite_venta`; la reserva
  * AUTOMÁTICA sale únicamente de la bodega `despacho_por_defecto` (Bodega Central), nunca más que su saldo (jamás negativo); lo que no alcance queda sin reservar
- * y al completar el picking cae en el flujo de faltante (REQ-316/317, «pendiente de compra»). Una bodega de venta distinta (1 pieza de Showroom Obarrio) solo
+ * y al completar el picking cae en el flujo de faltante (REQ-316/317, «pendiente de compra»). Una bodega de venta distinta (1 pieza de Sala de exhibición 1) solo
  * entra si Bodega la ESCOGE en el picking: esa asignación `manual` se conserva y se respeta como parte del saldo. El reparto por bodega vive en
  * `order_item_allocations`; `order_items.warehouse_id/qty_reserved` quedan como bodega principal y total.
  */

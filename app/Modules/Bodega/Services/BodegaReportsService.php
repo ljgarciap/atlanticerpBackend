@@ -212,7 +212,7 @@ final class BodegaReportsService
 
         // REQ-423, Escenario 1 — sugiere redistribuir hacia las bodegas con MENOS ocupación
         // (excluyendo la concentrada), top 2 por unidades ascendente — mismo criterio del mockup
-        // ("considera redistribuir... a Showroom Obarrio o SM, que tienen espacio disponible").
+        // ("considera redistribuir... a las salas de exhibición, que tienen espacio disponible").
         $targets = $rows
             ->reject(fn (array $row): bool => $row['warehouse_id'] === $top['warehouse_id'])
             ->sortBy('units_count')

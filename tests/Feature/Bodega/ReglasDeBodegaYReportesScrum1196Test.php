@@ -13,7 +13,7 @@ use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1196 — panel de superadmin «Reglas de bodega», «Ver bodegas» con saldos negativos, stock de showroom aparte del disponible y los dos comandos de
+ * SCRUM-1196 — panel de superadmin «Reglas de bodega», «Ver bodegas» con saldos negativos, stock de exhibición aparte del disponible y los dos comandos de
  * datos (reporte de solo lectura y reasignación de pedidos en vuelo).
  */
 class ReglasDeBodegaYReportesScrum1196Test extends FeatureTestCase
@@ -48,8 +48,8 @@ class ReglasDeBodegaYReportesScrum1196Test extends FeatureTestCase
 
         $this->assertTrue($rows['Bodega Central']['permite_venta']);
         $this->assertTrue($rows['Bodega Central']['despacho_por_defecto']);
-        $this->assertTrue($rows['Showroom Obarrio']['permite_venta']);
-        $this->assertFalse($rows['Showroom Obarrio']['despacho_por_defecto']);
+        $this->assertTrue($rows['Sala de exhibición 1']['permite_venta']);
+        $this->assertFalse($rows['Sala de exhibición 1']['despacho_por_defecto']);
         $this->assertFalse($rows['Reclamos y Devoluciones']['permite_venta']);
         $this->assertFalse($rows->has('Bodega Zona Libre'), 'las de solo consulta no se administran aquí');
     }
@@ -69,27 +69,27 @@ class ReglasDeBodegaYReportesScrum1196Test extends FeatureTestCase
     public function test_superadmin_puede_habilitar_una_bodega_para_ventas_y_quitar_el_disponible(): void
     {
         $headers = $this->superadmin();
-        $id = $this->id('Showroom SM');
+        $id = $this->id('Sala de exhibición 2');
 
         $this->withHeaders($headers)->putJson("/api/bodega/settings/warehouses/{$id}", ['permite_venta' => true])
             ->assertStatus(200)->assertJsonPath('permite_venta', true);
 
         $this->makeCurrentTenant();
-        $this->assertContains('Showroom SM', Warehouse::paraVenta()->pluck('name')->all(), 'ahora la hoja de picking la ofrecería');
+        $this->assertContains('Sala de exhibición 2', Warehouse::paraVenta()->pluck('name')->all(), 'ahora la hoja de picking la ofrecería');
     }
 
     public function test_cambiar_la_bodega_por_defecto_deja_exactamente_una(): void
     {
         $headers = $this->superadmin();
-        $obarrio = $this->id('Showroom Obarrio');
+        $exhibicion1 = $this->id('Sala de exhibición 1');
 
         // la bodega por defecto no puede estar excluida del Disponible: primero se le quita esa exclusión
-        $this->withHeaders($headers)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['excluye_disponible' => false])->assertStatus(200);
-        $this->withHeaders($headers)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['despacho_por_defecto' => true])
+        $this->withHeaders($headers)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['excluye_disponible' => false])->assertStatus(200);
+        $this->withHeaders($headers)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['despacho_por_defecto' => true])
             ->assertStatus(200)->assertJsonPath('despacho_por_defecto', true);
 
         $this->makeCurrentTenant();
-        $this->assertSame(['Showroom Obarrio'], Warehouse::where('despacho_por_defecto', true)->pluck('name')->all());
+        $this->assertSame(['Sala de exhibición 1'], Warehouse::where('despacho_por_defecto', true)->pluck('name')->all());
     }
 
     public function test_no_se_puede_dejar_el_sistema_sin_bodega_por_defecto_ni_una_por_defecto_que_no_venda(): void
@@ -108,37 +108,37 @@ class ReglasDeBodegaYReportesScrum1196Test extends FeatureTestCase
         $this->assertTrue(Warehouse::find($central)->permite_venta);
     }
 
-    // ── «Ver bodegas» y stock de showroom ───────────────────────────────────────────────────────────────────────────
+    // ── «Ver bodegas» y stock de exhibición ───────────────────────────────────────────────────────────────────────────
 
     public function test_ver_bodegas_muestra_tambien_las_negativas_y_su_suma_coincide_con_el_stock_total(): void
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 3]); // 10 Central − 6 Reclamos... = suma de bodegas
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 1, 'Showroom Obarrio');
+        $this->setStock($product, 1, 'Sala de exhibición 1');
         $this->setStock($product, -8, 'Reclamos y Devoluciones');
         $this->setStock($product, 0, 'Merma');
 
         $rows = collect($this->withHeaders($this->superadmin())->getJson("/api/compras/inventory/{$product->id}/warehouse-stock")->assertStatus(200)->json('data'));
 
-        $this->assertSame(['Bodega Central', 'Reclamos y Devoluciones', 'Showroom Obarrio'], $rows->pluck('warehouse_name')->sort()->values()->all(), 'sin las de saldo 0, con la negativa');
+        $this->assertSame(['Bodega Central', 'Reclamos y Devoluciones', 'Sala de exhibición 1'], $rows->pluck('warehouse_name')->sort()->values()->all(), 'sin las de saldo 0, con la negativa');
         $this->assertSame(-8, $rows->firstWhere('warehouse_name', 'Reclamos y Devoluciones')['quantity']);
         $this->assertSame($product->stock_quantity, $rows->sum('quantity'), 'la suma de las bodegas coincide con el Stock total');
     }
 
-    public function test_el_inventario_y_el_catalogo_exponen_el_stock_de_showroom_aparte_sin_sumarlo_al_disponible(): void
+    public function test_el_inventario_y_el_catalogo_exponen_el_stock_de_exhibición_aparte_sin_sumarlo_al_disponible(): void
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 13]);
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 3, 'Showroom Obarrio');
+        $this->setStock($product, 3, 'Sala de exhibición 1');
         $headers = $this->superadmin();
 
         $inv = $this->withHeaders($headers)->getJson("/api/compras/inventory/{$product->id}")->assertStatus(200);
-        $this->assertSame(3, $inv->json('stock_showroom'));
+        $this->assertSame(3, $inv->json('stock_aparte'));
         $this->assertEquals(10, $inv->json('disponible'), 'el disponible cuenta solo Central');
 
         $cat = $this->withHeaders($headers)->getJson("/api/ventas-diseno/catalog-products/{$product->id}");
         if ($cat->status() === 200) {
-            $this->assertSame(3, $cat->json('stock_showroom'));
+            $this->assertSame(3, $cat->json('stock_aparte'));
             $this->assertSame(10, $cat->json('stock_quantity'));
         }
     }

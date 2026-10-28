@@ -24,6 +24,8 @@ final class TerminosDelClienteAnterior
         'automotriz rey', 'ocean view', 'grupo melo', 'gelabert', 'farallon', 'illuminations',
         // Fase 4c — correos demo viejos (el renombre a vendedor@, tecnico@, nivelN@… no debe deshacerse).
         'vendedordisenador\d*@', 'tecnicoservicios\d*@', 'garantiasservicios@', 'ayudantegeneralbodega\d*@', '(?:designer|supervisor|electrician|readonly|multi)@',
+        // Fase 8 — nombres de almacén del cliente anterior (los almacenes son configurables).
+        'showrooms?', 'obarrio',
     ];
 
     /** Vocabulario del sector del cliente anterior (iluminación). */
@@ -35,7 +37,6 @@ final class TerminosDelClienteAnterior
     /**
      * Excepciones TEMPORALES (patrón => dueño). Son términos del modelo, no del dato:
      * - «catálogo de productos genérico»: las 8 claves de `CatalogProduct::CATEGORIES`, sus etiquetas y el campo `dialux` del CRM.
-     * - «almacenes configurables»: `showroom` y los nombres de almacén de la migración que los crea (`Obarrio`).
      *
      * @var array<string, string>
      */
@@ -54,8 +55,6 @@ final class TerminosDelClienteAnterior
         'L[aá]mparas de Piso y Mesa' => 'catálogo de productos genérico',
         '(?<=["\'])L[aá]mparas(?=["\'])' => 'catálogo de productos genérico',
         'dialux' => 'catálogo de productos genérico',
-        '\w*showrooms?\w*' => 'almacenes configurables',
-        'obarrio' => 'almacenes configurables',
     ];
 
     /**

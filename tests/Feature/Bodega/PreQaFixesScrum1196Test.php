@@ -65,19 +65,19 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
 
     // ── B1: «Quitar» persiste y se puede volver a todo-Central ────────────────────────────────────────────────────────
 
-    public function test_se_puede_volver_de_un_reparto_con_obarrio_a_todo_central_y_la_pieza_de_obarrio_no_se_descuenta(): void
+    public function test_se_puede_volver_de_un_reparto_con_exhibicion1_a_todo_central_y_la_pieza_de_exhibicion1_no_se_descuenta(): void
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 15]);
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 5, 'Showroom Obarrio');
+        $this->setStock($product, 5, 'Sala de exhibición 1');
         $h = $this->bodegaHeaders();
         [$order, $item] = $this->pickingOrder($product->id, 5, $h);
         $central = $this->wh('Bodega Central');
-        $obarrio = $this->wh('Showroom Obarrio');
+        $exhibicion1 = $this->wh('Sala de exhibición 1');
 
-        // 4 de Central + 1 de Obarrio...
+        // 4 de Central + 1 de Sala de exhibición 1...
         $this->withHeaders($h)->patchJson("/api/bodega/orders/{$order->id}/picking-sheet", ['items' => [['order_item_id' => $item->id, 'qty_picked' => 5, 'allocations' => [
-            ['warehouse_id' => $central, 'qty_picked' => 4], ['warehouse_id' => $obarrio, 'qty_picked' => 1],
+            ['warehouse_id' => $central, 'qty_picked' => 4], ['warehouse_id' => $exhibicion1, 'qty_picked' => 1],
         ]]]])->assertStatus(200);
         $this->makeCurrentTenant();
         $this->assertSame(1, OrderItemAllocation::where('order_item_id', $item->id)->where('manual', true)->count());
@@ -87,14 +87,14 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
             ['warehouse_id' => $central, 'qty_picked' => 5],
         ]]]])->assertStatus(200);
         $this->makeCurrentTenant();
-        $this->assertSame(0, OrderItemAllocation::where('order_item_id', $item->id)->where('manual', true)->count(), 'la pieza de Obarrio se quitó');
+        $this->assertSame(0, OrderItemAllocation::where('order_item_id', $item->id)->where('manual', true)->count(), 'la pieza de Sala de exhibición 1 se quitó');
         $this->assertSame(5, (int) OrderItemAllocation::where('order_item_id', $item->id)->where('warehouse_id', $central)->value('qty_picked'));
 
         $this->withHeaders($h)->postJson("/api/bodega/orders/{$order->id}/complete-picking", ['items' => [['order_item_id' => $item->id, 'qty_picked' => 5, 'allocations' => [
             ['warehouse_id' => $central, 'qty_picked' => 5],
         ]]]])->assertStatus(200);
         $this->makeCurrentTenant();
-        $this->assertSame(5, $this->stockIn($product, 'Showroom Obarrio'), 'Obarrio intacta hasta despachar');
+        $this->assertSame(5, $this->stockIn($product, 'Sala de exhibición 1'), 'Sala de exhibición 1 intacta hasta despachar');
     }
 
     private function stockIn($product, string $name): int
@@ -127,8 +127,8 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
         $this->setStock($product, 7, 'Bodega Central');
         $this->setStock($product, -3, 'Reclamos y Devoluciones');
         $this->setStock($product, 2, 'Merma');
-        $this->setStock($product, 1, 'Showroom Obarrio');
-        $this->setStock($product, 4, 'Showroom Cliente');
+        $this->setStock($product, 1, 'Sala de exhibición 1');
+        $this->setStock($product, 4, 'Exhibición en cliente');
         $h = $this->bodegaHeaders();
 
         $rows = collect($this->withHeaders($h)->getJson("/api/bodega/inventory/{$product->id}/warehouse-breakdown")->assertStatus(200)->json('data'));
@@ -190,10 +190,10 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
     {
         $h = $this->superadminHeaders();
         $central = $this->wh('Bodega Central');
-        $obarrio = $this->wh('Showroom Obarrio'); // de venta y excluida del disponible
+        $exhibicion1 = $this->wh('Sala de exhibición 1'); // de venta y excluida del disponible
 
         $this->withHeaders($h)->putJson("/api/bodega/settings/warehouses/{$central}", ['excluye_disponible' => true])->assertStatus(422);
-        $this->withHeaders($h)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['despacho_por_defecto' => true])->assertStatus(422);
+        $this->withHeaders($h)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['despacho_por_defecto' => true])->assertStatus(422);
 
         $this->makeCurrentTenant();
         $this->assertFalse(Warehouse::find($central)->excluye_disponible);
@@ -208,14 +208,14 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
         [$order, $item] = $this->pickingOrder($product->id, 5, $h);
         $this->assertSame($this->wh('Bodega Central'), $item->fresh()->warehouse_id);
 
-        // un superadmin deja de permitir ventas desde Central... no puede (es la por defecto): se traslada la por defecto a Obarrio primero
+        // un superadmin deja de permitir ventas desde Central... no puede (es la por defecto): se traslada la por defecto a Sala de exhibición 1 primero
         $sa = $this->superadminHeaders();
-        $obarrio = $this->wh('Showroom Obarrio');
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['excluye_disponible' => false])->assertStatus(200);
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['despacho_por_defecto' => true])->assertStatus(200);
+        $exhibicion1 = $this->wh('Sala de exhibición 1');
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['excluye_disponible' => false])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['despacho_por_defecto' => true])->assertStatus(200);
 
         $this->makeCurrentTenant();
-        // Obarrio no tiene stock: la reserva se recalculó ya (no hay nada reservable en la nueva por defecto)
+        // Sala de exhibición 1 no tiene stock: la reserva se recalculó ya (no hay nada reservable en la nueva por defecto)
         $this->assertSame(0, $item->fresh()->qty_reserved);
     }
 
@@ -223,23 +223,23 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 14]);
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 4, 'Showroom Obarrio');
+        $this->setStock($product, 4, 'Sala de exhibición 1');
         $h = $this->bodegaHeaders();
         [$order, $item] = $this->pickingOrder($product->id, 4, $h);
         $central = $this->wh('Bodega Central');
-        $obarrio = $this->wh('Showroom Obarrio');
+        $exhibicion1 = $this->wh('Sala de exhibición 1');
         $this->assertSame(4, OrderItemAllocation::where('order_item_id', $item->id)->sum('qty_reserved'));
 
-        // un superadmin traslada la bodega por defecto a Obarrio (con stock): la reserva se MUEVE, no se duplica
+        // un superadmin traslada la bodega por defecto a Sala de exhibición 1 (con stock): la reserva se MUEVE, no se duplica
         $sa = $this->superadminHeaders();
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['excluye_disponible' => false])->assertStatus(200);
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['despacho_por_defecto' => true])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['excluye_disponible' => false])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['despacho_por_defecto' => true])->assertStatus(200);
 
         $this->makeCurrentTenant();
         $rows = OrderItemAllocation::where('order_item_id', $item->id)->get();
         $this->assertSame(4, (int) $rows->sum('qty_reserved'), 'reservado = lo que necesita el pedido, no el doble');
         $this->assertSame(0, $rows->where('warehouse_id', $central)->count(), 'la fila automática de la bodega anterior se liberó');
-        $this->assertSame(4, (int) $rows->where('warehouse_id', $obarrio)->sum('qty_reserved'));
+        $this->assertSame(4, (int) $rows->where('warehouse_id', $exhibicion1)->sum('qty_reserved'));
         $this->assertSame(4, $item->fresh()->qty_reserved);
 
         // y de vuelta a Central tampoco queda nada huérfano
@@ -247,26 +247,26 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
         $this->makeCurrentTenant();
         $rows = OrderItemAllocation::where('order_item_id', $item->id)->get();
         $this->assertSame(4, (int) $rows->sum('qty_reserved'));
-        $this->assertSame(0, $rows->where('warehouse_id', $obarrio)->count());
+        $this->assertSame(0, $rows->where('warehouse_id', $exhibicion1)->count());
     }
 
     public function test_lo_ya_alistado_en_la_bodega_anterior_se_respeta_al_cambiar_la_por_defecto(): void
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 14]);
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 4, 'Showroom Obarrio');
+        $this->setStock($product, 4, 'Sala de exhibición 1');
         $h = $this->bodegaHeaders();
         [$order, $item] = $this->pickingOrder($product->id, 4, $h);
         $central = $this->wh('Bodega Central');
-        $obarrio = $this->wh('Showroom Obarrio');
+        $exhibicion1 = $this->wh('Sala de exhibición 1');
 
         $this->withHeaders($h)->patchJson("/api/bodega/orders/{$order->id}/picking-sheet", ['items' => [['order_item_id' => $item->id, 'qty_picked' => 3, 'allocations' => [
             ['warehouse_id' => $central, 'qty_picked' => 3],
         ]]]])->assertStatus(200);
 
         $sa = $this->superadminHeaders();
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['excluye_disponible' => false])->assertStatus(200);
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['despacho_por_defecto' => true])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['excluye_disponible' => false])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['despacho_por_defecto' => true])->assertStatus(200);
 
         $this->makeCurrentTenant();
         $rows = OrderItemAllocation::where('order_item_id', $item->id)->get()->keyBy('warehouse_id');
@@ -281,33 +281,33 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 15]);
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 5, 'Showroom Obarrio');
+        $this->setStock($product, 5, 'Sala de exhibición 1');
         $h = $this->bodegaHeaders();
         [$o1, $i1] = $this->pickingOrder($product->id, 4, $h);
         [$o2, $i2] = $this->pickingOrder($product->id, 3, $h);
         $central = $this->wh('Bodega Central');
-        $obarrio = $this->wh('Showroom Obarrio');
+        $exhibicion1 = $this->wh('Sala de exhibición 1');
 
-        // el picker toma 1 de Obarrio (fila MANUAL) en el primer pedido
+        // el picker toma 1 de Sala de exhibición 1 (fila MANUAL) en el primer pedido
         $this->withHeaders($h)->patchJson("/api/bodega/orders/{$o1->id}/picking-sheet", ['items' => [['order_item_id' => $i1->id, 'qty_picked' => 4, 'allocations' => [
-            ['warehouse_id' => $central, 'qty_picked' => 3], ['warehouse_id' => $obarrio, 'qty_picked' => 1],
+            ['warehouse_id' => $central, 'qty_picked' => 3], ['warehouse_id' => $exhibicion1, 'qty_picked' => 1],
         ]]]])->assertStatus(200);
 
-        // un superadmin pasa Obarrio a ser la bodega por defecto: antes era un 500 (violación de order_item_allocations_unique)
+        // un superadmin pasa Sala de exhibición 1 a ser la bodega por defecto: antes era un 500 (violación de order_item_allocations_unique)
         $sa = $this->superadminHeaders();
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['excluye_disponible' => false])->assertStatus(200);
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['despacho_por_defecto' => true])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['excluye_disponible' => false])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['despacho_por_defecto' => true])->assertStatus(200);
 
         $this->makeCurrentTenant();
         $rows = OrderItemAllocation::where('order_item_id', $i1->id)->get();
-        $this->assertSame(1, $rows->where('warehouse_id', $obarrio)->count(), 'una sola fila por (línea, bodega)');
-        $this->assertFalse((bool) $rows->firstWhere('warehouse_id', $obarrio)->manual, 'la fila manual pasó a ser la automática de la nueva por defecto');
-        $this->assertSame(1, (int) $rows->firstWhere('warehouse_id', $obarrio)->qty_picked, 'lo ya alistado allí se conserva');
+        $this->assertSame(1, $rows->where('warehouse_id', $exhibicion1)->count(), 'una sola fila por (línea, bodega)');
+        $this->assertFalse((bool) $rows->firstWhere('warehouse_id', $exhibicion1)->manual, 'la fila manual pasó a ser la automática de la nueva por defecto');
+        $this->assertSame(1, (int) $rows->firstWhere('warehouse_id', $exhibicion1)->qty_picked, 'lo ya alistado allí se conserva');
         $this->assertLessThanOrEqual(4, (int) $rows->sum('qty_reserved'), 'nunca más reservado que lo necesitado');
 
         // y los pedidos del producto siguen operables (antes todo PATCH/complete daba 500)
         $this->withHeaders($h)->patchJson("/api/bodega/orders/{$o2->id}/picking-sheet", ['items' => [['order_item_id' => $i2->id, 'qty_picked' => 1, 'allocations' => [
-            ['warehouse_id' => $obarrio, 'qty_picked' => 1],
+            ['warehouse_id' => $exhibicion1, 'qty_picked' => 1],
         ]]]])->assertSuccessful();
         // un segundo cambio de regla tampoco rompe
         $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$central}", ['despacho_por_defecto' => true])->assertStatus(200);
@@ -319,29 +319,29 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 13]);
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 3, 'Showroom Obarrio');
+        $this->setStock($product, 3, 'Sala de exhibición 1');
         $h = $this->bodegaHeaders();
         [$a, $ia] = $this->pickingOrder($product->id, 3, $h); // pedido A, primero
-        [$b, $ib] = $this->pickingOrder($product->id, 4, $h); // pedido B, con 2 alistadas a mano en Obarrio
+        [$b, $ib] = $this->pickingOrder($product->id, 4, $h); // pedido B, con 2 alistadas a mano en Sala de exhibición 1
         $central = $this->wh('Bodega Central');
-        $obarrio = $this->wh('Showroom Obarrio');
+        $exhibicion1 = $this->wh('Sala de exhibición 1');
 
         $this->withHeaders($h)->patchJson("/api/bodega/orders/{$b->id}/picking-sheet", ['items' => [['order_item_id' => $ib->id, 'qty_picked' => 4, 'allocations' => [
-            ['warehouse_id' => $central, 'qty_picked' => 2], ['warehouse_id' => $obarrio, 'qty_picked' => 2],
+            ['warehouse_id' => $central, 'qty_picked' => 2], ['warehouse_id' => $exhibicion1, 'qty_picked' => 2],
         ]]]])->assertStatus(200);
 
         $sa = $this->superadminHeaders();
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['excluye_disponible' => false])->assertStatus(200);
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['despacho_por_defecto' => true])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['excluye_disponible' => false])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['despacho_por_defecto' => true])->assertStatus(200);
 
         $this->makeCurrentTenant();
-        $reservedAtObarrio = (int) OrderItemAllocation::whereIn('order_item_id', [$ia->id, $ib->id])->where('warehouse_id', $obarrio)->sum('qty_reserved');
-        $this->assertLessThanOrEqual(3, $reservedAtObarrio, 'lo reservado en Obarrio nunca supera su stock (3)');
-        $this->assertGreaterThanOrEqual(2, (int) OrderItemAllocation::where('order_item_id', $ib->id)->where('warehouse_id', $obarrio)->sum('qty_reserved'), 'el pedido B conserva lo que ya alistó');
+        $reservedAtExhibicion1 = (int) OrderItemAllocation::whereIn('order_item_id', [$ia->id, $ib->id])->where('warehouse_id', $exhibicion1)->sum('qty_reserved');
+        $this->assertLessThanOrEqual(3, $reservedAtExhibicion1, 'lo reservado en Sala de exhibición 1 nunca supera su stock (3)');
+        $this->assertGreaterThanOrEqual(2, (int) OrderItemAllocation::where('order_item_id', $ib->id)->where('warehouse_id', $exhibicion1)->sum('qty_reserved'), 'el pedido B conserva lo que ya alistó');
 
         // y B puede completar sus piezas ya alistadas (antes: 422 «hasta 0 y se intentó 2»)
         $this->withHeaders($h)->postJson("/api/bodega/orders/{$b->id}/complete-picking", ['items' => [['order_item_id' => $ib->id, 'qty_picked' => 4, 'allocations' => [
-            ['warehouse_id' => $central, 'qty_picked' => 2], ['warehouse_id' => $obarrio, 'qty_picked' => 2],
+            ['warehouse_id' => $central, 'qty_picked' => 2], ['warehouse_id' => $exhibicion1, 'qty_picked' => 2],
         ]]]])->assertStatus(200);
     }
 
@@ -374,31 +374,31 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
     {
         $product = $this->makeCatalogProduct(['stock_quantity' => 14]);
         $this->setStock($product, 10, 'Bodega Central');
-        $this->setStock($product, 4, 'Showroom Obarrio');
+        $this->setStock($product, 4, 'Sala de exhibición 1');
         $h = $this->bodegaHeaders();
         [$x, $ix] = $this->pickingOrder($product->id, 3, $h);
         [$y, $iy] = $this->pickingOrder($product->id, 3, $h);
         $central = $this->wh('Bodega Central');
-        $obarrio = $this->wh('Showroom Obarrio');
+        $exhibicion1 = $this->wh('Sala de exhibición 1');
 
-        // X alista 2 de Obarrio a mano
+        // X alista 2 de Sala de exhibición 1 a mano
         $this->withHeaders($h)->patchJson("/api/bodega/orders/{$x->id}/picking-sheet", ['items' => [['order_item_id' => $ix->id, 'qty_picked' => 3, 'allocations' => [
-            ['warehouse_id' => $central, 'qty_picked' => 1], ['warehouse_id' => $obarrio, 'qty_picked' => 2],
+            ['warehouse_id' => $central, 'qty_picked' => 1], ['warehouse_id' => $exhibicion1, 'qty_picked' => 2],
         ]]]])->assertStatus(200);
 
         $sa = $this->superadminHeaders();
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['permite_venta' => false])->assertStatus(200);
-        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$obarrio}", ['permite_venta' => true])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['permite_venta' => false])->assertStatus(200);
+        $this->withHeaders($sa)->putJson("/api/bodega/settings/warehouses/{$exhibicion1}", ['permite_venta' => true])->assertStatus(200);
 
         $this->makeCurrentTenant();
-        $row = OrderItemAllocation::where('order_item_id', $ix->id)->where('warehouse_id', $obarrio)->first();
+        $row = OrderItemAllocation::where('order_item_id', $ix->id)->where('warehouse_id', $exhibicion1)->first();
         $this->assertNotNull($row);
         $this->assertSame(2, (int) $row->qty_picked);
         $this->assertSame(2, (int) $row->qty_reserved, 'recupera su reserva: lo alistado nunca queda sin reservar');
 
-        // Y no puede llevarse las que X ya alistó: Obarrio tiene 4, X 2, a Y le quedan 2
+        // Y no puede llevarse las que X ya alistó: Sala de exhibición 1 tiene 4, X 2, a Y le quedan 2
         $this->withHeaders($h)->patchJson("/api/bodega/orders/{$y->id}/picking-sheet", ['items' => [['order_item_id' => $iy->id, 'qty_picked' => 3, 'allocations' => [
-            ['warehouse_id' => $obarrio, 'qty_picked' => 3],
+            ['warehouse_id' => $exhibicion1, 'qty_picked' => 3],
         ]]]])->assertStatus(422);
     }
 }

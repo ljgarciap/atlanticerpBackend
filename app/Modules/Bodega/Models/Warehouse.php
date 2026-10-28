@@ -21,7 +21,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string      $modo_detalle ubicacion_exacta|pendiente|cliente — ver REQ-385
  * @property bool         $excluye_disponible SCRUM-851 — cuenta en Total, se excluye de
  *   Disponible (Reserva Servicios, Merma, Reclamos y Devoluciones).
- * @property bool         $permite_venta SCRUM-1196 — puede surtir pedidos de venta (Central y Showroom Obarrio). Editable por superadmin.
+ * @property bool         $permite_venta SCRUM-1196 — puede surtir pedidos de venta (Central y Sala de exhibición 1). Editable por superadmin.
+ * @property string|null  $funcion Fase 8 — función de sistema (única): `reserva_servicios`. Null en el resto.
+ * @property string       $tipo Fase 8 — `bodega` | `exhibicion`.
  * @property bool         $despacho_por_defecto SCRUM-1196 — la bodega que el picking propone (exactamente una, de venta). Editable por superadmin.
  */
 class Warehouse extends Model
@@ -32,9 +34,14 @@ class Warehouse extends Model
     public const MODO_PENDIENTE = 'pendiente';
     public const MODO_CLIENTE = 'cliente';
 
+    public const FUNCION_RESERVA_SERVICIOS = 'reserva_servicios';
+
+    public const TIPO_BODEGA = 'bodega';
+    public const TIPO_EXHIBICION = 'exhibicion';
+
     /** @var list<string> */
     protected $fillable = [
-        'name', 'responsable', 'capacidad_pct', 'modo_detalle', 'excluye_disponible',
+        'name', 'funcion', 'tipo', 'responsable', 'capacidad_pct', 'modo_detalle', 'excluye_disponible',
         'permite_venta', 'despacho_por_defecto',
     ];
 
@@ -49,7 +56,7 @@ class Warehouse extends Model
 
     /**
      * SCRUM-1196 — bodegas que pueden surtir pedidos de venta (`permite_venta`). La reserva, la hoja de picking y su validación
-     * usan SOLO este scope: Reclamos, Merma, Reserva Servicios y los demás showrooms nunca se ofrecen ni se descuentan por una venta.
+     * usan SOLO este scope: Reclamos, Merma, Reserva Servicios y las demás exhibiciones nunca se ofrecen ni se descuentan por una venta.
      *
      * @param \Illuminate\Database\Eloquent\Builder<Warehouse> $query
      * @return \Illuminate\Database\Eloquent\Builder<Warehouse>
@@ -65,6 +72,12 @@ class Warehouse extends Model
     public static function despachoPorDefecto(): ?self
     {
         return self::query()->where('despacho_por_defecto', true)->first();
+    }
+
+    /** Fase 8 — el almacén con la función de sistema indicada (hoy solo `reserva_servicios`), sin buscarlo por nombre. */
+    public static function conFuncion(string $funcion): ?self
+    {
+        return self::query()->where('funcion', $funcion)->first();
     }
 
     /** Regla de validación: el `warehouse_id` debe existir. */
