@@ -96,7 +96,7 @@ class DemoModeSettingTest extends FeatureTestCase
             ->patchJson('/api/settings/system', ['demo_mode_enabled' => true])
             ->assertStatus(200);
 
-        $designer = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $this->withHeaders($this->authHeaders($designer))
             ->getJson('/api/settings/demo-mode-status')
             ->assertStatus(200)
@@ -110,7 +110,7 @@ class DemoModeSettingTest extends FeatureTestCase
 
     public function test_usuario_sin_settings_global_no_puede_tocar_el_gate_global(): void
     {
-        $designer = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($designer))
             ->patchJson('/api/settings/system', ['demo_mode_enabled' => true])
@@ -131,7 +131,7 @@ class DemoModeSettingTest extends FeatureTestCase
 
     public function test_cualquier_usuario_autenticado_activa_su_propia_preferencia_sin_permiso_especial(): void
     {
-        $designer = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($designer))
             ->patchJson('/api/settings/preferences', ['demo_mode_enabled' => true])
@@ -148,7 +148,7 @@ class DemoModeSettingTest extends FeatureTestCase
     {
         // Gate global sigue apagado (default) -- el usuario igual puede prender su preferencia
         // personal; el efecto combinado de ambos gates lo valida el scope, no este endpoint.
-        $designer = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($designer))
             ->patchJson('/api/settings/preferences', ['demo_mode_enabled' => true])
@@ -160,7 +160,7 @@ class DemoModeSettingTest extends FeatureTestCase
 
     public function test_activar_la_preferencia_personal_no_genera_audit_log(): void
     {
-        $designer = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($designer))
             ->patchJson('/api/settings/preferences', ['demo_mode_enabled' => true])

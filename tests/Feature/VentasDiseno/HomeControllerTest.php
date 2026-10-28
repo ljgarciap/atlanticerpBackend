@@ -45,7 +45,7 @@ class HomeControllerTest extends FeatureTestCase
 
     // Nombre de proyecto único por llamada: el seeder demo (VentasDisenoDemoSeeder)
     // también corre en 'testing' y deja una tarjeta legítimamente estancada (20 días)
-    // a nombre del mismo designer@atlantic.test — las aserciones de estos tests
+    // a nombre del mismo vendedor@atlantic.test — las aserciones de estos tests
     // deben acotarse a SU PROPIA tarjeta por nombre de proyecto, nunca al total de la
     // respuesta ni al primer resultado de un tipo.
     private function makeCard(int $ownerId, string $stage = 'lead', ?Carbon $stageChangedAt = null, bool $withArchitect = false, string $projectName = 'Proyecto Test'): PipelineCard
@@ -80,8 +80,8 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_vendors_retorna_lista_vacia_para_disenador(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/vendors')
@@ -100,19 +100,19 @@ class HomeControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
-        $this->assertTrue($names->contains('Designer Demo'));
+        $this->assertTrue($names->contains('Vendedor Demo'));
     }
 
     // ── GET /home/summary — Final Stage (REQ-060) ───────────────────────────
 
     public function test_summary_final_stage_incluye_tarjetas_en_propuesta(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $this->makeCard($designerId, 'proposal');
         $this->makeCard($designerId, 'lead');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/summary')
             ->assertStatus(200);
@@ -124,12 +124,12 @@ class HomeControllerTest extends FeatureTestCase
     {
         // SCRUM-68 — Gerencia encontró que el modal de detalle solo traía Subcliente y
         // Observaciones, sin contexto de etapa/días/valor que pide el criterio.
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'proposal', \Carbon\Carbon::now()->subDays(3));
         $card->update(['amount' => 4275.5]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/summary')
             ->assertStatus(200);
@@ -143,11 +143,11 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_summary_pendientes_incluye_tarjeta_sin_contacto_mas_de_7_dias(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $this->makeCard($designerId, 'design', Carbon::now()->subDays(10), withArchitect: true, projectName: 'Proyecto 7 Dias');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/summary')
             ->assertStatus(200);
@@ -160,11 +160,11 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_summary_pendientes_marca_prioridad_alta_pasados_14_dias(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $this->makeCard($designerId, 'design', Carbon::now()->subDays(20), withArchitect: true, projectName: 'Proyecto 20 Dias');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/summary')
             ->assertStatus(200);
@@ -176,11 +176,11 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_summary_pendientes_incluye_tarjeta_sin_contacto_arquitecto(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $this->makeCard($designerId, 'design', Carbon::now(), withArchitect: false, projectName: 'Proyecto Sin Arquitecto');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/summary')
             ->assertStatus(200);
@@ -193,11 +193,11 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_summary_sin_pendientes_para_tarjeta_reciente_y_con_arquitecto(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $this->makeCard($designerId, 'design', Carbon::now(), withArchitect: true, projectName: 'Proyecto Reciente Completo');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/summary')
             ->assertStatus(200);
@@ -213,14 +213,14 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_summary_performance_calcula_avance_y_comision_del_mes_en_curso(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         SalesGoal::create(['user_id' => $designerId, 'goal_amount' => 10000]);
 
         $card = $this->makeCard($designerId, 'approved', Carbon::now(), projectName: 'Proyecto Aprobado Mes');
         $card->update(['amount' => 4000]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/summary')
             ->assertStatus(200);
@@ -235,8 +235,8 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_summary_performance_sin_meta_configurada_es_null(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/home/summary')
@@ -254,7 +254,7 @@ class HomeControllerTest extends FeatureTestCase
         // — corregido 2026-07-12, antes performance() ignoraba $filters a propósito.
         $this->grantVentasDisenoRead('management@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         SalesGoal::create(['user_id' => $managerId, 'goal_amount' => 5000]);
         SalesGoal::create(['user_id' => $designerId, 'goal_amount' => 8000]);
 
@@ -279,7 +279,7 @@ class HomeControllerTest extends FeatureTestCase
         // que atribuirle "Mi desempeño" — se mantiene la del usuario autenticado.
         $this->grantVentasDisenoRead('management@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         SalesGoal::create(['user_id' => $managerId, 'goal_amount' => 5000]);
 
         $card = $this->makeCard($designerId, 'approved', Carbon::now(), projectName: 'Proyecto De Otro Vendedor 2');
@@ -300,7 +300,7 @@ class HomeControllerTest extends FeatureTestCase
     public function test_summary_owner_id_filtra_a_vendedor_especifico_para_gerencia(): void
     {
         $this->grantVentasDisenoRead('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
         $this->makeCard($designerId, 'proposal');
         $this->makeCard($managerId, 'proposal');
@@ -315,13 +315,13 @@ class HomeControllerTest extends FeatureTestCase
 
     public function test_summary_owner_id_es_ignorado_para_disenador(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
         $this->makeCard($designerId, 'proposal');
         $this->makeCard($managerId, 'proposal');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/home/summary?scope=team&owner_id={$managerId}")
             ->assertStatus(200);

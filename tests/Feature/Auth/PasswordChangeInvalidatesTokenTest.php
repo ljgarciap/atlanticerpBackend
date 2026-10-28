@@ -15,7 +15,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class PasswordChangeInvalidatesTokenTest extends FeatureTestCase
 {
-    private const EMAIL = 'designer@atlantic.test';
+    private const EMAIL = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {

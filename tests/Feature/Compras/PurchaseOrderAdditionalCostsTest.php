@@ -31,10 +31,10 @@ class PurchaseOrderAdditionalCostsTest extends FeatureTestCase
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
-            ->where('email', 'designer@atlantic.test')
+            ->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode($perms)]);
 
-        return $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        return $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
     }
 
     /** @return array{provider: Provider, product: CatalogProduct} */

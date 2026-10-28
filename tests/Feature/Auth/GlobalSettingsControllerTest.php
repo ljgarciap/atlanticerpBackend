@@ -127,7 +127,7 @@ class GlobalSettingsControllerTest extends FeatureTestCase
         $this->getJson('/api/admin/global-settings')->assertStatus(401);
         $this->putJson('/api/admin/global-settings/documents.max_size_mb', ['value' => 5])->assertStatus(401);
 
-        $designer = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designer = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($designer))->getJson('/api/admin/global-settings')->assertStatus(403);
         $this->withHeaders($this->authHeaders($designer))
             ->putJson('/api/admin/global-settings/documents.max_size_mb', ['value' => 5])

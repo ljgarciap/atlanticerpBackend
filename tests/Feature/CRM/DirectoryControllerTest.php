@@ -93,7 +93,7 @@ class DirectoryControllerTest extends FeatureTestCase
     public function test_designer_solo_ve_contactos_de_sus_proyectos(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $designerId = $this->userIdFromToken($designerToken);
 
@@ -158,7 +158,7 @@ class DirectoryControllerTest extends FeatureTestCase
     {
         $token = $this->loginAs();
 
-        $this->createProject($token, ['arquitecto' => 'Tecnico Servicios Ruiz']);
+        $this->createProject($token, ['arquitecto' => 'Tecnico Ruiz']);
         $this->createProject($token, ['arquitecto' => 'Diana Lopez']);
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -168,7 +168,7 @@ class DirectoryControllerTest extends FeatureTestCase
 
         $names = collect($response->json('entries'))->pluck('nombre')->all();
 
-        $this->assertContains('Tecnico Servicios Ruiz', $names);
+        $this->assertContains('Tecnico Ruiz', $names);
         $this->assertNotContains('Diana Lopez', $names);
     }
 }

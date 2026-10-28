@@ -82,7 +82,7 @@ class AuditActionsScrum791Test extends FeatureTestCase
             'hora_inicio' => '09:00',
             'hora_fin' => '10:00',
             'findings' => [],
-            'firma_tecnico_nombre' => 'Tecnico Servicios Test',
+            'firma_tecnico_nombre' => 'Tecnico Test',
             'firma_cliente_nombre' => 'Cliente de prueba',
             'estado' => InspectionReport::ESTADO_COMPLETED,
         ]);

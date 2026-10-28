@@ -29,7 +29,7 @@ class SalesCommissionTierControllerTest extends FeatureTestCase
 
     private function loginAsDesigner(): string
     {
-        return $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        return $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
     }
 
     /**

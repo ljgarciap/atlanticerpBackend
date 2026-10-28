@@ -50,7 +50,7 @@ class AdminContContactControllerTest extends FeatureTestCase
 
     public function test_store_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/contacts', [

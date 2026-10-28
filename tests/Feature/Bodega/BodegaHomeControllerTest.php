@@ -79,7 +79,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_team_retorna_lista_vacia_para_picker_sin_alcance_de_equipo(): void
     {
-        $response = $this->withHeaders($this->authHeadersFor('ayudantegeneralbodega@test.com', 'auxiliar_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('auxiliarbodega@test.com', 'auxiliar_bodega'))
             ->getJson('/api/bodega/home/team')
             ->assertStatus(200);
 
@@ -89,7 +89,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
     /**
      * SCRUM-366 — fix QA 2026-07-24 (marly.rangel): el selector de personas solo debe listar
      * Asistentes de Bodega (`BodegaRoles::TEAM_SELECTABLE`), nunca al Jefe (Lider Bodega), al Ayudante
-     * General/Picker (Ayudante General Bodega) ni a Transporte (Transporte) — pese a que los 3 son miembros reales del
+     * General/Picker (Auxiliar Bodega) ni a Transporte (Transporte) — pese a que los 3 son miembros reales del
      * equipo de Bodega para otros propósitos (`bodegaRoleIds()`, guard de `owner_id`, calendario).
      */
     public function test_team_retorna_solo_los_asistentes_de_bodega_para_el_jefe(): void
@@ -103,7 +103,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $this->assertTrue($names->contains('Asistente Bodega Test'));
         $this->assertTrue($names->contains('Asistente Bodega Test 2'));
         $this->assertFalse($names->contains('Lider Bodega Test'));
-        $this->assertFalse($names->contains('Ayudante General Bodega Test'));
+        $this->assertFalse($names->contains('Auxiliar Bodega Test'));
         $this->assertFalse($names->contains('Transporte Test'));
     }
 
@@ -124,7 +124,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $names = collect($response->json('data'))->pluck('name');
         $this->assertTrue($names->contains('Transporte Test'));
         $this->assertFalse($names->contains('Asistente Bodega Test'));
-        $this->assertFalse($names->contains('Ayudante General Bodega Test'));
+        $this->assertFalse($names->contains('Auxiliar Bodega Test'));
     }
 
     public function test_team_members_role_picker_retorna_solo_ayudante_general(): void
@@ -134,7 +134,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name');
-        $this->assertTrue($names->contains('Ayudante General Bodega Test'));
+        $this->assertTrue($names->contains('Auxiliar Bodega Test'));
         $this->assertFalse($names->contains('Transporte Test'));
         $this->assertFalse($names->contains('Asistente Bodega Test'));
     }
@@ -146,7 +146,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
         $pickers = collect($this->withHeaders($headers)->getJson('/api/bodega/team-members?role=picker')->assertStatus(200)->json('data'))->pluck('name');
         $this->assertTrue($pickers->contains('Picker Bodega Test'));
-        $this->assertTrue($pickers->contains('Ayudante General Bodega Test'), 'Las opciones existentes se mantienen.');
+        $this->assertTrue($pickers->contains('Auxiliar Bodega Test'), 'Las opciones existentes se mantienen.');
         $this->assertFalse($pickers->contains('Repartidor Test'));
 
         $couriers = collect($this->withHeaders($headers)->getJson('/api/bodega/team-members?role=courier')->assertStatus(200)->json('data'))->pluck('name');
@@ -196,7 +196,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_summary_scope_team_es_ignorado_para_quien_no_puede_ver_equipo(): void
     {
-        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
+        $pickerId = $this->userIdByEmail('auxiliarbodega@test.com');
         $order = $this->makeOrder(['picker_id' => $pickerId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($order, null, Order::STAGE_ASIGNADO, Carbon::now());
 
@@ -205,7 +205,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $otherId = $this->userIdByEmail('asistentebodega2@test.com');
         $this->makeOrder(['assistant_id' => $otherId, 'stage' => Order::STAGE_ASIGNADO]);
 
-        $response = $this->withHeaders($this->authHeadersFor('ayudantegeneralbodega@test.com', 'auxiliar_bodega'))
+        $response = $this->withHeaders($this->authHeadersFor('auxiliarbodega@test.com', 'auxiliar_bodega'))
             ->getJson('/api/bodega/home/summary?scope=team')
             ->assertStatus(200);
 
@@ -717,7 +717,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
         ]);
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
-        $solicitante = User::where('email', 'designer@atlantic.test')->first();
+        $solicitante = User::where('email', 'vendedor@atlantic.test')->first();
         $aprobador = User::where('email', 'liderbodega@test.com')->firstOrFail();
 
         RelocationRequest::create([
@@ -773,7 +773,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
             'price_full' => 20, 'cost' => 10, 'stock_quantity' => 10, 'is_active' => true,
         ]);
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitante = User::where('email', 'designer@atlantic.test')->first();
+        $solicitante = User::where('email', 'vendedor@atlantic.test')->first();
         $adjustmentRequest = AdjustmentRequest::create(['catalog_product_id' => $product->id, 'solicitado_por' => $solicitante->id]);
         AdjustmentRequestLine::create([
             'adjustment_request_id' => $adjustmentRequest->id, 'warehouse_id' => $central->id,
@@ -794,7 +794,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
     {
         $this->makeBodegaMark();
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $solicitante = User::where('email', 'designer@atlantic.test')->first();
+        $solicitante = User::where('email', 'vendedor@atlantic.test')->first();
         GeneralCountRequest::create([
             'warehouse_id' => $central->id, 'realizado_por' => $solicitante->id,
             'estado' => GeneralCountRequest::ESTADO_PENDIENTE_APROBACION,

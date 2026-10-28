@@ -138,7 +138,7 @@ class ShareLinkControllerTest extends FeatureTestCase
         $projectId  = $this->createProject($adminToken);
         $docId      = $this->uploadDocument($adminToken, $projectId);
 
-        $readonlyToken = $this->loginAs('readonly@atlantic.test', 'Password123!', 'electrician');
+        $readonlyToken = $this->loginAs('nivel1@atlantic.test', 'Password123!', 'electrician');
 
         $this->withHeaders($this->authHeaders($readonlyToken))
             ->postJson("/api/crm/projects/{$projectId}/documents/{$docId}/share-links")
@@ -243,14 +243,14 @@ class ShareLinkControllerTest extends FeatureTestCase
     }
 
     // Revoke es destructivo/irreversible — gateado por crm.delete, no crm.write (a
-    // diferencia de crear/listar). designer@atlantic.test (nivel 3, "Standard User")
+    // diferencia de crear/listar). vendedor@atlantic.test (nivel 3, "Standard User")
     // tiene crm.write+crm.edit pero NO crm.delete.
     public function test_revocar_share_link_requiere_crm_delete_no_solo_crm_write(): void
     {
-        // electrician@ (nivel 2: crm.read+crm.write, sin crm.delete) en vez de designer@ -- ver
-        // SCRUM-83, designer@ ahora es un vendedor real en nivel 4 con crm.delete.
+        // nivel2@ (nivel 2: crm.read+crm.write, sin crm.delete) en vez de vendedor@ -- ver
+        // SCRUM-83, vendedor@ ahora es un vendedor real en nivel 4 con crm.delete.
         $mgmtToken     = $this->loginAs();
-        $assigneeId    = $this->userId('electrician@atlantic.test');
+        $assigneeId    = $this->userId('nivel2@atlantic.test');
         $projectId     = $this->createProject($mgmtToken, [$assigneeId]);
         $docId         = $this->uploadDocument($mgmtToken, $projectId);
 
@@ -258,7 +258,7 @@ class ShareLinkControllerTest extends FeatureTestCase
             ->postJson("/api/crm/projects/{$projectId}/documents/{$docId}/share-links");
         $linkId = (int) $create->json('id');
 
-        $assigneeToken = $this->loginAs('electrician@atlantic.test', 'Password123!');
+        $assigneeToken = $this->loginAs('nivel2@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($assigneeToken))
             ->deleteJson("/api/crm/share-links/{$linkId}")

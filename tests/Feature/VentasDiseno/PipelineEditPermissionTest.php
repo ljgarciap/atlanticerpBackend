@@ -31,7 +31,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
 
     private function sellerId(): int
     {
-        return (int) DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->value('id');
+        return (int) DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('id');
     }
 
     private function makeCard(string $stage): PipelineCard
@@ -197,7 +197,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     public function test_el_vendedor_dueno_conserva_su_flujo(): void
     {
         $card    = $this->makeCard('design');
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['name' => 'Propio'])->assertOk();

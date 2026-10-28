@@ -183,7 +183,7 @@ class AdminContItbmsExencionTest extends FeatureTestCase
     public function test_solo_quien_tiene_el_permiso_angosto_puede_marcar(): void
     {
         $sub      = $this->subCliente();
-        $vendedor = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $vendedor = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->reTenant();
 
         $this->marcar($vendedor, $sub, ['exento' => true, 'documento' => 'Resolución 201-1234'])->assertStatus(403);

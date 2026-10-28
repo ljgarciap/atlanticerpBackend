@@ -19,7 +19,7 @@ use Tests\Feature\FeatureTestCase;
  * ya tenía (Inventario restringido y Comparación de Referencias, vía Ventas & Diseño) y gana
  * ÚNICAMENTE Compras → Órdenes → Logística y Envío y Bodega → Bodegas, ambos en solo consulta.
  *
- * `designer@atlantic.test` hace de vendedor: tiene `ventas_diseno.read` pero no `compras.read`
+ * `vendedor@atlantic.test` hace de vendedor: tiene `ventas_diseno.read` pero no `compras.read`
  * ni `bodega.read`; los dos permisos angostos se le conceden como extra_permissions, igual que
  * SpecialPermissionSeeder hace con los 10 reales.
  */
@@ -35,14 +35,14 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
     private function conceder(array $perms): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')
+        DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode($perms)]);
     }
 
     /** @return array<string, string> */
     private function vendedor(): array
     {
-        return $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        return $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
     }
 
     private function orden(): PurchaseOrder

@@ -91,7 +91,7 @@ class PermissionCatalogTest extends FeatureTestCase
 
     public function test_permission_catalog_sin_rol_management_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/permission-catalog')

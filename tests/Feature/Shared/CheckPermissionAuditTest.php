@@ -28,8 +28,8 @@ class CheckPermissionAuditTest extends FeatureTestCase
 
     public function test_403_por_falta_de_permiso_registra_security_access_denied(): void
     {
-        $userId = $this->userId('designer@atlantic.test');
-        $token  = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $userId = $this->userId('vendedor@atlantic.test');
+        $token  = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // designer no tiene superadmin.all — ruta gateada permission:superadmin.all.
         $this->getJson('/api/admin/audit/logs', $this->authHeaders($token))

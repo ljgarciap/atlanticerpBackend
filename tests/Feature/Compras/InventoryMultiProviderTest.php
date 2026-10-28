@@ -16,7 +16,7 @@ use Tests\Feature\FeatureTestCase;
 /** SCRUM-1126 — varios proveedores por producto, edición de Proveedor/Stock mínimo y Nueva Orden por proveedor. */
 class InventoryMultiProviderTest extends FeatureTestCase
 {
-    private const EMAIL = 'designer@atlantic.test';
+    private const EMAIL = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {

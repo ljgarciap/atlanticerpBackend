@@ -24,11 +24,11 @@ class QuoteResponsibleViewTest extends FeatureTestCase
 {
     private const MARK = 'gerencia3@test.com';
 
-    private const RESPONSABLE = 'vendedordisenador9@test.com';
+    private const RESPONSABLE = 'vendedor9@test.com';
 
-    private const COMPARTIDO = 'vendedordisenador2@test.com';
+    private const COMPARTIDO = 'vendedor2@test.com';
 
-    private const AJENO = 'vendedordisenador5@test.com';
+    private const AJENO = 'vendedor5@test.com';
 
     protected function setUp(): void
     {
@@ -44,7 +44,7 @@ class QuoteResponsibleViewTest extends FeatureTestCase
     }
 
     /**
-     * Proyecto con tarjeta cuyo Responsable es Vendedor Disenador, una versión propia confirmada (v1), una versión de Gerencia
+     * Proyecto con tarjeta cuyo Responsable es Vendedor, una versión propia confirmada (v1), una versión de Gerencia
      * confirmada (v2, `owner_id` = Gerencia) y un borrador de Gerencia sin confirmar.
      *
      * @return array{card: PipelineCard, own: Quote, gerencia: Quote, draft: Quote}

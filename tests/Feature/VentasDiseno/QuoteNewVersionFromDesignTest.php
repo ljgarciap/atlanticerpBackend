@@ -26,7 +26,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class QuoteNewVersionFromDesignTest extends FeatureTestCase
 {
-    private const DESIGNER = 'designer@atlantic.test';
+    private const DESIGNER = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {
@@ -254,8 +254,8 @@ class QuoteNewVersionFromDesignTest extends FeatureTestCase
         ['quote' => $quote, 'card' => $card] = $this->projectWithConfirmedQuote($token);
         $this->moveTo($token, $card, 'lost', 'lead', 'design');
         // El rol del diseñador ya trae edición; el supervisor solo lectura (mismo patrón que QuoteControllerTest).
-        $this->grant('supervisor@atlantic.test', ['ventas_diseno.read']);
-        $soloLectura = $this->loginAs('supervisor@atlantic.test', 'Password123!');
+        $this->grant('nivel5@atlantic.test', ['ventas_diseno.read']);
+        $soloLectura = $this->loginAs('nivel5@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->h($soloLectura))->postJson("/api/ventas-diseno/quotes/{$quote->id}/duplicate")->assertStatus(403);
     }
@@ -266,8 +266,8 @@ class QuoteNewVersionFromDesignTest extends FeatureTestCase
         ['quote' => $quote, 'card' => $card] = $this->projectWithConfirmedQuote($token);
         $this->moveTo($token, $card, 'lost', 'lead', 'design');
         // Con permiso de edición pero sin ser el dueño ni tener vista de equipo: el 403 viene de canAccess(), no del middleware.
-        $this->grant('supervisor@atlantic.test', ['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit']);
-        $otro = $this->loginAs('supervisor@atlantic.test', 'Password123!');
+        $this->grant('nivel5@atlantic.test', ['ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit']);
+        $otro = $this->loginAs('nivel5@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->h($otro))->postJson("/api/ventas-diseno/quotes/{$quote->id}/duplicate")->assertStatus(403);
     }

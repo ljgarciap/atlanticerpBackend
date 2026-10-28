@@ -133,7 +133,7 @@ class ReportControllerTest extends FeatureTestCase
     public function test_monthly_designer_muestra_solo_sus_proyectos(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // Two projects: one visible to management, one assigned to designer
         $projectAll      = $this->createProject($mgmtToken);
@@ -149,7 +149,7 @@ class ReportControllerTest extends FeatureTestCase
         $designerResponse = $this->withHeaders($this->authHeaders($designerToken))
             ->getJson('/api/crm/reports/monthly');
         $designerResponse->assertStatus(200);
-        $this->assertSame('Designer Demo', $designerResponse->json('user_title'));
+        $this->assertSame('Vendedor Demo', $designerResponse->json('user_title'));
 
         $designerIds = array_column((array) $designerResponse->json('proyectos_nuevos'), 'id');
         $this->assertContains($projectDesigner, $designerIds);
@@ -159,7 +159,7 @@ class ReportControllerTest extends FeatureTestCase
     public function test_monthly_management_puede_filtrar_por_user_id(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $designerId    = $this->userIdFromToken($designerToken);
 
         // Capture baseline before creating the test project (demo seeder may have pre-seeded leads)
@@ -173,7 +173,7 @@ class ReportControllerTest extends FeatureTestCase
             ->getJson("/api/crm/reports/monthly?user_id={$designerId}");
 
         $response->assertStatus(200);
-        $this->assertSame('Designer Demo', $response->json('user_title'));
+        $this->assertSame('Vendedor Demo', $response->json('user_title'));
         $this->assertSame($baseline + 1, $response->json('kpis.leads_nuevos'));
     }
 
@@ -207,7 +207,7 @@ class ReportControllerTest extends FeatureTestCase
 
     public function test_team_retorna_403_para_designer(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/crm/reports/team')
@@ -229,7 +229,7 @@ class ReportControllerTest extends FeatureTestCase
     public function test_team_incluye_usuarios_con_proyectos(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $designerId    = $this->userIdFromToken($designerToken);
 
         $this->createProject($mgmtToken, ['assignee_ids' => [$designerId]]);
@@ -308,7 +308,7 @@ class ReportControllerTest extends FeatureTestCase
     public function test_export_management_incluye_desglose_equipo(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $designerId    = $this->userIdFromToken($designerToken);
 
         $this->createProject($mgmtToken, ['assignee_ids' => [$designerId]]);

@@ -39,7 +39,7 @@ class ModuleControllerTest extends FeatureTestCase
 
     public function test_index_cualquier_autenticado_ve_los_7_modulos_sembrados(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/modules');
 
@@ -73,7 +73,7 @@ class ModuleControllerTest extends FeatureTestCase
 
     public function test_store_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/modules', ['key' => 'logistica', 'name' => 'Logística'])

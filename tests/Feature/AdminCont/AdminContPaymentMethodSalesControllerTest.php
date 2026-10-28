@@ -25,7 +25,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
 
     private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
-    private const DESIGNER_EMAIL = 'designer@atlantic.test';
+    private const DESIGNER_EMAIL = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {

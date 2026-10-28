@@ -46,7 +46,7 @@ class InspectionReportPdfLayoutTest extends FeatureTestCase
             'modo'                  => InspectionReport::MODO_FORMULARIO,
             'conclusion'            => 'Conclusión de prueba',
             'requiere_seguimiento'  => false,
-            'firma_tecnico_nombre'  => 'Tecnico Servicios Test',
+            'firma_tecnico_nombre'  => 'Tecnico Test',
             'firma_cliente_nombre'  => 'Cliente de prueba',
             'estado'                => InspectionReport::ESTADO_COMPLETED,
         ]);

@@ -53,11 +53,11 @@ class PipelineFileUploadTest extends FeatureTestCase
 
     public function test_subir_archivo_de_diseno(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file = UploadedFile::fake()->create('plano.pdf', 200, 'application/pdf');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -77,11 +77,11 @@ class PipelineFileUploadTest extends FeatureTestCase
 
     public function test_subir_archivo_con_extension_no_permitida_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file = UploadedFile::fake()->create('modelo.dwg', 100);
 
         $this->withHeaders($this->authHeaders($token))
@@ -91,11 +91,11 @@ class PipelineFileUploadTest extends FeatureTestCase
 
     public function test_subir_archivo_a_tarjeta_perdida_retorna_403(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'lost');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
@@ -105,11 +105,11 @@ class PipelineFileUploadTest extends FeatureTestCase
 
     public function test_archivo_subido_aparece_en_el_detalle_de_la_tarjeta(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
@@ -129,11 +129,11 @@ class PipelineFileUploadTest extends FeatureTestCase
     /** SCRUM-767 — GET .../files/{fileId}/url devuelve una URL presignada real, no expone el storage_key crudo. */
     public function test_obtener_url_de_archivo_ya_cargado(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
@@ -166,10 +166,10 @@ class PipelineFileUploadTest extends FeatureTestCase
      */
     public function test_url_acepta_disposition_inline_y_attachment_cae_a_inline_por_defecto(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file = UploadedFile::fake()->create('plano.pdf', 100, 'application/pdf');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/files", ['type' => 'design', 'file' => $file])
@@ -206,8 +206,8 @@ class PipelineFileUploadTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $fileId = $card->files()->first()?->id;
 
-        $this->grantVentasDisenoEdit('designer@atlantic.test'); // designer: sin alcance de equipo, no dueño
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test'); // designer: sin alcance de equipo, no dueño
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($designerToken))
             ->getJson("/api/ventas-diseno/pipeline/{$card->id}/files/{$fileId}/url")
@@ -226,10 +226,10 @@ class PipelineFileUploadTest extends FeatureTestCase
      */
     public function test_obtener_url_de_archivo_con_nombre_conflictivo_para_iso_8859_1(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $problematicName = "Captura de pantalla 2026-08-11 a la(s) 2.35.19\u{202F}p.m..png";
         $file = UploadedFile::fake()->create($problematicName, 100, 'image/png');
@@ -252,10 +252,10 @@ class PipelineFileUploadTest extends FeatureTestCase
 
     public function test_obtener_url_de_archivo_inexistente_retorna_404(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'design');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/pipeline/{$card->id}/files/999999/url")

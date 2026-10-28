@@ -25,7 +25,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class PurchaseOrderTranslationTest extends FeatureTestCase
 {
-    private const EMAIL = 'designer@atlantic.test';
+    private const EMAIL = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {

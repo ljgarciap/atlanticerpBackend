@@ -80,10 +80,10 @@ class JwtMiddlewareTest extends FeatureTestCase
 
     public function test_token_de_usuario_eliminado_retorna_401(): void
     {
-        $token = $this->loginAs('electrician@atlantic.test', 'Password123!', 'electrician');
+        $token = $this->loginAs('nivel2@atlantic.test', 'Password123!', 'electrician');
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        User::where('email', 'electrician@atlantic.test')->delete();
+        User::where('email', 'nivel2@atlantic.test')->delete();
 
         $this->withHeaders(['Authorization' => 'Bearer '.$token])
             ->getJson('/api/auth/me')

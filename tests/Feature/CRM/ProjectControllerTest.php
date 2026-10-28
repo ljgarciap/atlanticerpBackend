@@ -199,7 +199,7 @@ class ProjectControllerTest extends FeatureTestCase
     public function test_actualizar_proyecto_ajeno_sin_ser_management_retorna_403(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $id = $this->createProject($mgmtToken, '_rbac');
 
@@ -251,7 +251,7 @@ class ProjectControllerTest extends FeatureTestCase
     public function test_eliminar_proyecto_con_rol_designer_retorna_403(): void
     {
         $mgmtToken     = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $id = $this->createProject($mgmtToken, '_del_rbac');
 
@@ -294,8 +294,8 @@ class ProjectControllerTest extends FeatureTestCase
 
     public function test_exportar_reporte_sin_permiso_reports_export_retorna_403(): void
     {
-        // readonly@ (nivel 1, sin reports.export) en vez de designer@ -- desde SCRUM-83,
-        // designer@ es un vendedor real en nivel 4, que sí incluye reports.export.
+        // nivel1@ (nivel 1, sin reports.export) en vez de vendedor@ -- desde SCRUM-83,
+        // vendedor@ es un vendedor real en nivel 4, que sí incluye reports.export.
         $token = $this->createLevel1Token();
 
         $this->withHeaders($this->authHeaders($token))
@@ -307,7 +307,7 @@ class ProjectControllerTest extends FeatureTestCase
 
     private function createLevel1Token(): string
     {
-        // readonly@atlantic.test existe en AuthUserSeeder (level 1, role electrician)
-        return $this->loginAs('readonly@atlantic.test', 'Password123!');
+        // nivel1@atlantic.test existe en AuthUserSeeder (level 1, role electrician)
+        return $this->loginAs('nivel1@atlantic.test', 'Password123!');
     }
 }

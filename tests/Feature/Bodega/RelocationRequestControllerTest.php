@@ -53,8 +53,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $merma = Warehouse::where('name', 'Merma')->first();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -76,8 +76,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -99,8 +99,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         $merma = Warehouse::where('name', 'Merma')->first();
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -119,8 +119,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -140,8 +140,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         // Solo 5 unidades REALES en la bodega de origen, pese a que el stock global es 100.
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -165,8 +165,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $merma = Warehouse::where('name', 'Merma')->first();
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 5]);
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -184,8 +184,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -201,8 +201,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -217,8 +217,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
@@ -243,7 +243,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
+            'solicitado_por' => User::where('email', 'vendedor@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
@@ -286,7 +286,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
+            'solicitado_por' => User::where('email', 'vendedor@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
@@ -319,7 +319,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
+            'solicitado_por' => User::where('email', 'vendedor@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
@@ -345,19 +345,19 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
+            'solicitado_por' => User::where('email', 'vendedor@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $this->grantBodega('multi@atlantic.test', ['bodega.approve']);
+        $this->grantBodega('nivel8@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);
 
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/approve")
             ->assertStatus(403);
@@ -384,7 +384,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
+            'solicitado_por' => User::where('email', 'vendedor@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
@@ -409,7 +409,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
-        $solicitanteId = User::where('email', 'designer@atlantic.test')->first()->id;
+        $solicitanteId = User::where('email', 'vendedor@atlantic.test')->first()->id;
 
         RelocationRequest::create([
             'catalog_product_id' => $product->id, 'origin_warehouse_id' => $central->id,
@@ -422,8 +422,8 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'solicitado_por' => $solicitanteId, 'estado' => RelocationRequest::ESTADO_RECHAZADA,
         ]);
 
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $all = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/relocations');
         $all->assertStatus(200);
@@ -447,7 +447,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
+            'solicitado_por' => User::where('email', 'vendedor@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_APROBADA,
         ]);
 
@@ -483,7 +483,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
+            'solicitado_por' => User::where('email', 'vendedor@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 
@@ -513,7 +513,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 4,
             'motivo' => 'Reorganización',
-            'solicitado_por' => User::where('email', 'designer@atlantic.test')->first()->id,
+            'solicitado_por' => User::where('email', 'vendedor@atlantic.test')->first()->id,
             'estado' => RelocationRequest::ESTADO_PENDIENTE,
         ]);
 

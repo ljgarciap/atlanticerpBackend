@@ -33,10 +33,10 @@ final class ReceptorTipoTest extends FeatureTestCase
     private function token(string ...$permissions): string
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')
+        DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(array_merge(['ventas_diseno.read', 'ventas_diseno.write'], $permissions))]);
 
-        return $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        return $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
     }
 
     private function reTenant(): void

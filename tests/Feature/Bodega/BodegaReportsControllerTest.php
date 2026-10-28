@@ -300,9 +300,9 @@ class BodegaReportsControllerTest extends FeatureTestCase
 
     public function test_reportes_requieren_bodega_read(): void
     {
-        // designer@ (Ventas & Diseño) no tiene ningún permiso bodega.* — mismo usuario "sin
+        // vendedor@ (Ventas & Diseño) no tiene ningún permiso bodega.* — mismo usuario "sin
         // permiso" que ya usan WarehouseControllerTest/BodegaInventoryControllerTest.
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/reports/productivity')

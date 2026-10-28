@@ -40,7 +40,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
             ->update(['extra_permissions' => json_encode($perms)]);
     }
 
-    private function makeQuote(string $projectName, ?string $stage, bool $withFolio = true, string $ownerEmail = 'designer@atlantic.test'): Quote
+    private function makeQuote(string $projectName, ?string $stage, bool $withFolio = true, string $ownerEmail = 'vendedor@atlantic.test'): Quote
     {
         $owner = User::where('email', $ownerEmail)->firstOrFail();
         $master = MasterClient::create(['name' => "Cliente {$projectName}"]);
@@ -93,12 +93,12 @@ class ApprovedProjectControllerTest extends FeatureTestCase
 
     public function test_solo_incluye_pedidos_aprobados(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeQuote('Proyecto Aprobado', 'approved');
         $this->makeQuote('Proyecto Enviado', 'quote');
         $this->makeQuote('Proyecto Sin Folio', 'approved', withFolio: false);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);
@@ -112,10 +112,10 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     public function test_usuario_de_compras_sin_ventas_diseno_read_puede_buscar(): void
     {
         // El propio caso que motivó este endpoint: rol lider_compras no tiene ventas_diseno.read.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeQuote('Proyecto Compras', 'approved');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);
@@ -124,10 +124,10 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     public function test_respuesta_no_incluye_monto(): void
     {
         // Mismo criterio que "el costo nunca viaja al buscador" (CatalogProductController).
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeQuote('Proyecto Aprobado', 'approved');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);
@@ -144,8 +144,8 @@ class ApprovedProjectControllerTest extends FeatureTestCase
      */
     public function test_proyecto_con_varias_cotizaciones_aprobadas_aparece_una_sola_vez(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
+        $owner = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
         $master = MasterClient::create(['name' => 'Cliente Duplicado']);
         $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Cliente Duplicado SA', 'tax_id' => uniqid()]);
         $salesProject = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Con Versiones']);
@@ -165,7 +165,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
             'folio' => 'COT-2222', 'confirmed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);
@@ -180,13 +180,13 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     /** Sin catalog_product_id (Nueva Orden), cero cambio de comportamiento — mismo resultado que antes. */
     public function test_sin_catalog_product_id_no_filtra_por_producto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $product = $this->makeCatalogProduct();
         $withProduct = $this->makeQuote('Proyecto Con Producto', 'approved');
         $this->addItemToQuote($withProduct, $product);
         $this->makeQuote('Proyecto Sin Producto', 'approved');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/approved-projects')
             ->assertStatus(200);
@@ -233,14 +233,14 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     /** Vendedor con catalog_product_id: solo ve SUS proyectos con el producto, aunque otro proyecto ajeno también lo tenga. */
     public function test_vendedor_con_catalog_product_id_solo_ve_sus_propios_proyectos(): void
     {
-        $this->grantCompras('designer@atlantic.test', []);
+        $this->grantCompras('vendedor@atlantic.test', []);
         $product = $this->makeCatalogProduct();
-        $ownProject = $this->makeQuote('Proyecto Propio', 'approved', ownerEmail: 'designer@atlantic.test');
+        $ownProject = $this->makeQuote('Proyecto Propio', 'approved', ownerEmail: 'vendedor@atlantic.test');
         $this->addItemToQuote($ownProject, $product);
-        $otherProject = $this->makeQuote('Proyecto Ajeno', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $otherProject = $this->makeQuote('Proyecto Ajeno', 'approved', ownerEmail: 'nivel5@atlantic.test');
         $this->addItemToQuote($otherProject, $product);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
             ->assertStatus(200);
@@ -255,7 +255,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     {
         $this->grantCompras('lidercompras@test.com', ['compras.read']);
         $product = $this->makeCatalogProduct();
-        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'nivel5@atlantic.test');
         $this->addItemToQuote($otherProject, $product);
 
         $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
@@ -272,7 +272,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
     {
         $this->grantCompras('lideroperaciones@test.com', ['compras.sustitutos.manage', 'compras.limited.view']);
         $product = $this->makeCatalogProduct();
-        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'nivel5@atlantic.test');
         $this->addItemToQuote($otherProject, $product);
 
         $token = $this->loginAs('lideroperaciones@test.com', 'lideroperaciones@test.com', 'lider_operaciones');
@@ -304,7 +304,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
         );
 
         $product = $this->makeCatalogProduct();
-        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'nivel5@atlantic.test');
         $this->addItemToQuote($otherProject, $product);
 
         $token = $this->loginAs('lidercompras@test.com', 'lidercompras@test.com', 'lider_compras');
@@ -326,7 +326,7 @@ class ApprovedProjectControllerTest extends FeatureTestCase
         );
 
         $product = $this->makeCatalogProduct();
-        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'supervisor@atlantic.test');
+        $otherProject = $this->makeQuote('Proyecto De Otro Vendedor', 'approved', ownerEmail: 'nivel5@atlantic.test');
         $this->addItemToQuote($otherProject, $product);
 
         $token = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
@@ -346,12 +346,12 @@ class ApprovedProjectControllerTest extends FeatureTestCase
      */
     public function test_con_catalog_product_id_incluye_proyectos_en_etapa_cotizacion(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $product = $this->makeCatalogProduct();
         $stillInCotizacion = $this->makeQuote('Proyecto En Cotizacion', 'quote'); // documentStatus() === 'sent'
         $this->addItemToQuote($stillInCotizacion, $product);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/approved-projects?catalog_product_id={$product->id}")
             ->assertStatus(200);

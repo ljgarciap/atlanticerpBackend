@@ -68,8 +68,8 @@ class CommissionsControllerTest extends FeatureTestCase
 
     public function test_mes_cerrado_fija_el_porcentaje_y_queda_pendiente(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         // Mes bien atrás (no solo el pasado) para minimizar la chance de que ya
         // exista una cohorte de datos demo cerrada ahí (CrmDemoSeeder tiende a
         // concentrar actividad reciente, no hace 5 meses) — igual el aserto de
@@ -79,7 +79,7 @@ class CommissionsControllerTest extends FeatureTestCase
         $targetMonth = now()->subMonths(5);
         $this->makeApprovedCard($designerId, 25000, $targetMonth);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/commissions?scope=own&period=year')
             ->assertStatus(200);
@@ -97,14 +97,14 @@ class CommissionsControllerTest extends FeatureTestCase
     // monto en partes iguales, ANTES de aplicar la tabla escalonada a cada una.
     public function test_tarjeta_con_compartido_con_divide_el_monto_entre_los_asignados(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId = $this->userIdByEmail('management@atlantic.test');
         $targetMonth = now()->subMonths(6);
         $card = $this->makeApprovedCard($designerId, 25000, $targetMonth);
         $card->update(['compartido_con' => [$managerId]]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/commissions?scope=own&period=year')
             ->assertStatus(200);
@@ -123,8 +123,8 @@ class CommissionsControllerTest extends FeatureTestCase
         // role_id nuevo, sin fila en user_roles) nunca tuvieron. Gerencia veía $0/"Sin comisiones"
         // en alcance Equipo pese a comisiones reales pendientes por vendedor.
         $this->grantVentasDisenoRead('management@atlantic.test');
-        $juanManuelId = $this->userIdByEmail('vendedordisenador8@test.com');
-        $this->assertGreaterThan(0, $juanManuelId, 'Vendedor Disenador Test 8 debe existir (BusinessRoleUserSeeder).');
+        $juanManuelId = $this->userIdByEmail('vendedor8@test.com');
+        $this->assertGreaterThan(0, $juanManuelId, 'Vendedor Test 8 debe existir (BusinessRoleUserSeeder).');
 
         $targetMonth = now()->subMonths(5);
         $this->makeApprovedCard($juanManuelId, 25000, $targetMonth);
@@ -142,11 +142,11 @@ class CommissionsControllerTest extends FeatureTestCase
 
     public function test_mes_en_curso_no_se_persiste(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $this->makeApprovedCard($designerId, 10000, now());
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/commissions?scope=own&period=month')
             ->assertStatus(200);
@@ -163,7 +163,7 @@ class CommissionsControllerTest extends FeatureTestCase
     public function test_marcar_como_pagada_mueve_de_pendiente_a_pagada(): void
     {
         $this->grantMarkPaid('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $before = $this->withHeaders($this->authHeaders($token))
@@ -195,13 +195,13 @@ class CommissionsControllerTest extends FeatureTestCase
 
     public function test_marcar_como_pagada_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $cohort = CommissionCohort::create([
             'owner_id' => $designerId, 'month' => now()->subMonth()->startOfMonth()->toDateString(),
             'total_amount' => 25000, 'commission_percent' => 2, 'commission_amount' => 500,
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/ventas-diseno/reports/commissions/{$cohort->id}/mark-paid")

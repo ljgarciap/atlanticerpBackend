@@ -36,7 +36,7 @@ class CatalogListSqlTest extends FeatureTestCase
     use BodegaOrderTestHelpers;
     use DemoModeTestHelpers;
 
-    private const EMAIL = 'designer@atlantic.test';
+    private const EMAIL = 'vendedor@atlantic.test';
 
     /** @var array<string, CatalogProduct> */
     private array $p = [];

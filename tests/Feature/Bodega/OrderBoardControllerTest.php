@@ -182,7 +182,7 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_sellers_devuelve_duenos_de_pedidos_para_un_usuario_solo_con_bodega_read(): void
     {
-        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        $ownerId = $this->userIdByEmail('vendedor@atlantic.test');
         $this->makeOrderWithPipelineCard($ownerId);
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
@@ -229,7 +229,7 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_ver_detalle_expone_cliente_master_y_subcliente_independientes(): void
     {
-        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedor2@test.com'));
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson("/api/bodega/orders/{$order->id}")
@@ -243,7 +243,7 @@ class OrderBoardControllerTest extends FeatureTestCase
     // SCRUM-1149 — las Observaciones del proyecto en el Pipeline llegan al detalle del pedido en Bodega.
     public function test_ver_detalle_expone_las_observaciones_del_proyecto_del_pipeline(): void
     {
-        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedor2@test.com'));
         $order->pipelineCard->update(['observations' => "COMENTARIOS 1 ENTREGA EN BODEGA\nLlamar antes de despachar"]);
 
         $this->withHeaders($this->authHeadersForBodegaReader())
@@ -254,8 +254,8 @@ class OrderBoardControllerTest extends FeatureTestCase
 
     public function test_ver_detalle_sin_observaciones_o_en_blanco_devuelve_null(): void
     {
-        $vacio = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
-        $blanco = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $vacio = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedor2@test.com'));
+        $blanco = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedor2@test.com'));
         $blanco->pipelineCard->update(['observations' => "  \n "]);
         $sinTarjeta = $this->makeOrder();
 
@@ -269,7 +269,7 @@ class OrderBoardControllerTest extends FeatureTestCase
     // SCRUM-1149 — entrega Parcial: todas las tarjetas de la familia comparten tarjeta de Pipeline, todas muestran la observación.
     public function test_ver_detalle_de_entregas_parciales_muestra_la_misma_observacion(): void
     {
-        $root = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $root = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedor2@test.com'));
         $root->pipelineCard->update(['observations' => 'Entregar en dos viajes']);
         $child = $this->makeOrder(['pipeline_card_id' => $root->pipeline_card_id, 'order_number' => $root->order_number, 'family_id' => $root->id]);
 
@@ -286,7 +286,7 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_ver_detalle_expone_telefono_y_correo_del_contacto_por_separado(): void
     {
-        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedordisenador2@test.com'));
+        $order = $this->makeOrderWithPipelineCard($this->userIdByEmail('vendedor2@test.com'));
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson("/api/bodega/orders/{$order->id}")
@@ -371,7 +371,7 @@ class OrderBoardControllerTest extends FeatureTestCase
     public function test_930_un_rol_sin_bodega_read_ni_rol_de_admin_contab_sigue_bloqueado(): void
     {
         $order = $this->makeOrder();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/orders/{$order->id}")

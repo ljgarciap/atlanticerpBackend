@@ -79,7 +79,7 @@ class AdminPasswordResetService
     ): Collection {
         $query = User::query()->where('is_active', true)->orderBy('id');
 
-        // SCRUM-1142 — las cuentas sin acceso (Tecnico Servicios, Repartidor, Personal de Bodega) nunca entran a un reset masivo: un reset
+        // SCRUM-1142 — las cuentas sin acceso (Tecnico, Repartidor, Personal de Bodega) nunca entran a un reset masivo: un reset
         // las dejaría con contraseña = correo, es decir, con acceso.
         $query->whereNotIn(DB::raw('lower(email)'), NoLoginAccounts::EMAILS);
 

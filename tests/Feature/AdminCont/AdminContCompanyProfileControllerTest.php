@@ -52,9 +52,9 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     public function test_show_rechaza_a_un_usuario_que_no_es_mark(): void
     {
         // `management@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/company-profile')
@@ -183,9 +183,9 @@ class AdminContCompanyProfileControllerTest extends FeatureTestCase
     public function test_upload_logo_rechaza_a_un_usuario_que_no_es_mark(): void
     {
         // `management@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
-        // bypassa el gate de Gerencia (2026-08-22), usar `multi@atlantic.test` (Nivel 8) para
+        // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
         // simular un management genuino, no-Mark y no-superadmin.
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token) + ['Accept' => 'application/json'])
             ->post('/api/admin-contab/company-profile/logo', [

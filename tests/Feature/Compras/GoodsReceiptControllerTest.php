@@ -78,12 +78,12 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_buscador_de_ordenes_excluye_recibidas_completas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_ORDENADO]);
         $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/goods-receipts/eligible-orders')
             ->assertStatus(200);
@@ -102,7 +102,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
      */
     public function test_buscador_de_ordenes_incluye_recibida_incompleta_para_repararla(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
@@ -111,7 +111,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
             'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/goods-receipts/eligible-orders')
             ->assertStatus(200);
@@ -129,7 +129,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
      */
     public function test_buscador_de_ordenes_no_rompe_con_producto_de_linea_borrado(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
@@ -139,7 +139,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
         ]);
         $product->delete(); // dispara nullOnDelete real en purchase_order_lines.catalog_product_id
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/goods-receipts/eligible-orders')
             ->assertStatus(200);
@@ -147,7 +147,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_orden_precarga_productos_esperados_con_cantidad_completa(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
@@ -156,7 +156,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
             'quantity' => 120, 'unit_cost' => 10, 'subtotal' => 1200,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/goods-receipts/orders/{$order->id}")
             ->assertStatus(200);
@@ -169,7 +169,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_proveedor_local_calcula_itbms_por_linea(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $product = $this->makeProduct(['cost' => 5]);
         $order = $this->makeOrder($provider);
@@ -178,7 +178,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
             'quantity' => 100, 'unit_cost' => 10, 'subtotal' => 1000,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts', [
                 'purchase_order_id' => $order->id,
@@ -198,7 +198,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_proveedor_no_local_prorratea_gastos_proporcionalmente(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_INTERNACIONAL]);
         // productoA vale el doble que productoB (mismo ejemplo del RN: reparto 2:1).
         $productA = $this->makeProduct(['reference' => 'A']);
@@ -207,7 +207,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $productA->id, 'quantity' => 20, 'unit_cost' => 10, 'subtotal' => 200]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $productB->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts', [
                 'purchase_order_id' => $order->id,
@@ -247,13 +247,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_entrega_incompleta_retorna_detalle_sin_persistir(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 120, 'unit_cost' => 10, 'subtotal' => 1200]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts', [
                 'purchase_order_id' => $order->id,
@@ -271,13 +271,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_entrega_incompleta_con_estado_elegido_persiste_y_marca_por_ingresar(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 120, 'unit_cost' => 10, 'subtotal' => 1200]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts', [
                 'purchase_order_id' => $order->id,
@@ -300,13 +300,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
      */
     public function test_entrega_incompleta_acepta_ordenado_como_etapa_del_remanente(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 120, 'unit_cost' => 10, 'subtotal' => 1200]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts', [
                 'purchase_order_id' => $order->id,
@@ -322,7 +322,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_entrega_completa_no_requiere_modal_y_confirma_directo_si_orden_ya_recibida(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         // RN de REQ-166 — factura que llega después de que la orden ya estaba Recibida: se
@@ -330,7 +330,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
         $order = $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 50, 'unit_cost' => 10, 'subtotal' => 500]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $warehouseId = $this->warehouseId();
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts', [
@@ -347,13 +347,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_no_permite_superar_la_cantidad_total_esperada(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 120, 'unit_cost' => 10, 'subtotal' => 1200]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = $this->warehouseId();
 
@@ -375,13 +375,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_segundo_ingreso_que_completa_el_total_no_muestra_modal_y_limpia_estado_pendiente(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 120, 'unit_cost' => 10, 'subtotal' => 1200]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = $this->warehouseId();
 
@@ -405,13 +405,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_confirmar_linea_pendiente_aplica_stock_en_la_bodega_ya_elegida(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = $this->warehouseId();
 
@@ -433,13 +433,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
     /** SCRUM-472 (REQ-402 RN1) — confirmar un ingreso genera la línea "Entrada" del Kardex. */
     public function test_confirmar_linea_pendiente_genera_movimiento_de_entrada_en_el_kardex(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = $this->warehouseId();
 
@@ -472,13 +472,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
      */
     public function test_confirmar_pendientes_de_un_producto_va_a_la_bodega_ya_elegida_sin_preguntar(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 30, 'unit_cost' => 10, 'subtotal' => 300]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $centralId = (int) DB::table('atlantic_bodega.warehouses')->where('name', 'Bodega Central')->value('id');
         $mermaId = (int) DB::table('atlantic_bodega.warehouses')->where('name', 'Merma')->value('id');
@@ -506,9 +506,9 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_confirmar_pendientes_sin_lineas_por_ingresar_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $product = $this->makeProduct();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/goods-receipts/products/{$product->id}/confirm-pending")
@@ -518,8 +518,8 @@ class GoodsReceiptControllerTest extends FeatureTestCase
     /** Senior Review 20260719 — producto inexistente debe dar 404, no el 422 genérico de "sin pendientes". */
     public function test_confirmar_pendientes_de_producto_inexistente_retorna_404(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts/products/999999/confirm-pending')
@@ -534,13 +534,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
         // el otro test). La línea se confirma a mano (REQ-173) antes de corregir, para poder
         // ejercitar el caso real del AC: "cambiar de 10 a 15 debe reflejar 15, no 25" — una
         // corrección sobre mercancía que YA se había confirmado como stock.
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_ORDENADO]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 15, 'unit_cost' => 10, 'subtotal' => 150]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = $this->warehouseId();
 
@@ -571,13 +571,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
         // La corrección a menos deja la línea incompleta → REQ-165 exige elegir estado del
         // remanente (200 sin persistir hasta que se elija). Este test cubre el ciclo completo:
         // primero el aviso sin persistir, después la corrección real con el estado elegido.
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_ORDENADO]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 8, 'unit_cost' => 10, 'subtotal' => 80]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = $this->warehouseId();
 
@@ -612,13 +612,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_no_se_puede_corregir_ingreso_de_orden_recibida_si_ya_no_es_la_misma_orden(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_ORDENADO]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 15, 'unit_cost' => 10, 'subtotal' => 150]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = $this->warehouseId();
 
@@ -640,7 +640,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_listar_ingresos_busca_por_producto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct(['reference' => 'REF-BUSCAR-ESTE']);
         $otherProduct = $this->makeProduct(['reference' => 'REF-OTRO']);
@@ -648,7 +648,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $otherProduct->id, 'quantity' => 5, 'unit_cost' => 10, 'subtotal' => 50]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = $this->warehouseId();
 
@@ -667,13 +667,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_listar_ingresos_expone_editable_segun_estado_de_la_orden(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider, ['status' => PurchaseOrder::STATUS_ORDENADO]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $receipt = $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
@@ -696,8 +696,8 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_listar_ingresos_sin_permiso_read_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', []);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', []);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/goods-receipts')
@@ -708,13 +708,13 @@ class GoodsReceiptControllerTest extends FeatureTestCase
 
     public function test_guardar_ingreso_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/goods-receipts', [
                 'purchase_order_id' => $order->id,

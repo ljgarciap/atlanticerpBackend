@@ -46,7 +46,7 @@ class AiProjectAuthorizationTest extends FeatureTestCase
 
     private function designer(): string
     {
-        return $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        return $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
     }
 
     /** @return array<string, array{string, array<string, mixed>}> */
@@ -96,7 +96,7 @@ class AiProjectAuthorizationTest extends FeatureTestCase
      */
     public function test_el_asignado_management_y_superadmin_siguen_pudiendo(string $url, array $extra): void
     {
-        $designerId = (int) DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->value('id');
+        $designerId = (int) DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('id');
         $pid = $this->proyecto($this->loginAs(), [$designerId]);
 
         $this->withHeaders($this->authHeaders($this->designer()))->postJson($url, ['project_id' => $pid, ...$extra])->assertStatus(202);
@@ -122,7 +122,7 @@ class AiProjectAuthorizationTest extends FeatureTestCase
 
     public function test_leer_un_analisis_exige_ser_el_solicitante_o_poder_ver_el_proyecto(): void
     {
-        $designerId = (int) DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->value('id');
+        $designerId = (int) DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('id');
         $mgmt = $this->loginAs();
         $pid = $this->proyecto($mgmt, [$designerId]);
         $id = $this->analisisDe($mgmt, $pid);

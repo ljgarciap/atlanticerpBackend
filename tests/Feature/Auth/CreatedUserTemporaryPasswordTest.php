@@ -68,7 +68,7 @@ class CreatedUserTemporaryPasswordTest extends FeatureTestCase
 
     public function test_crear_no_cambia_a_los_usuarios_ya_activos(): void
     {
-        $this->assertFalse((bool) DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->value('must_change_password'));
-        $this->assertNull(DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->value('password_reset_at'));
+        $this->assertFalse((bool) DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('must_change_password'));
+        $this->assertNull(DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('password_reset_at'));
     }
 }

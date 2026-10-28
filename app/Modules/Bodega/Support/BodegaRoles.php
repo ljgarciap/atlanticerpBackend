@@ -14,7 +14,7 @@ use App\Modules\Auth\Support\RoleKeys;
  * (Jefe, Asistentes, Picker, Repartidor), no solo uno.
  *
  * No hay un modelo de "picker"/"repartidor" nuevo — REQ-313/326 ya hablan de personas reales
- * sembradas por `BusinessRoleUserSeeder` con estos `role_key` (Ayudante General Bodega González =
+ * sembradas por `BusinessRoleUserSeeder` con estos `role_key` (Auxiliar Bodega González =
  * `auxiliar_bodega`, Transporte Test = `transporte`), confirmado contra Jira y el seeder
  * antes de escribir código nuevo (regla del proyecto).
  */
@@ -65,7 +65,7 @@ final class BodegaRoles
      * roles de `ALL`. El ticket describe el selector como "una [opción] por cada Asistente/
      * Operativo de Bodega (ej. Asistente Bodega Test 2, Asistente Bodega Test)" — ambos ejemplos son
      * `ASISTENTE_BODEGA`; QA confirmó en vivo que el Jefe (Lider Bodega, `LIDER_BODEGA`), el Ayudante
-     * General (Ayudante General Bodega, `PICKER`) y Transporte (Transporte, `COURIER`) NO deben aparecer como opciones
+     * General (Auxiliar Bodega, `PICKER`) y Transporte (Transporte, `COURIER`) NO deben aparecer como opciones
      * filtrables, pese a que los 3 sí participan del flujo operativo de Pedidos — "Asistente/
      * Operativo" en el ticket es un único rol de negocio, no una unión de roles distintos.
      *

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * Fase 4 — Servicios, Batch 10 (REQ-251→254 Informe móvil + REQ-258 Comisión Tecnico Servicios Test,
+ * Fase 4 — Servicios, Batch 10 (REQ-251→254 Informe móvil + REQ-258 Comisión Tecnico Test,
  * decisión de Luis 2026-08-11). Cubre lo más propenso a bugs reales de este batch: la fórmula
  * ponderada de comisión (RN1/RN5/RN6) y el gap de validación real encontrado en Senior Review —
  * `saveMobile()` decodifica el payload a mano (JSON string dentro de multipart) y por eso NO pasa
@@ -24,7 +24,7 @@ class ServiciosBatch10Test extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_CARLOS = 'tecnicoservicios@test.com';
+    private const TECNICO_CARLOS = 'tecnico@test.com';
 
     private const MANAGEMENT = 'gerencia@test.com';
 
@@ -42,7 +42,7 @@ class ServiciosBatch10Test extends FeatureTestCase
     {
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        return InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail();
+        return InternalTechnician::where('nombre', 'Tecnico Test')->firstOrFail();
     }
 
     /** @param array<string, mixed> $overrides */
@@ -281,7 +281,7 @@ class ServiciosBatch10Test extends FeatureTestCase
 
     public function test_tecnico_no_asignado_no_puede_completar_informe_movil(): void
     {
-        $ticket = $this->makeTicket(); // sin internal_technician_id asignado a Tecnico Servicios
+        $ticket = $this->makeTicket(); // sin internal_technician_id asignado a Tecnico
         $token = $this->loginAs(self::TECNICO_CARLOS, self::TECNICO_CARLOS, 'tecnico');
 
         $this->withHeaders($this->authHeaders($token))

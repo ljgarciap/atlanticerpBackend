@@ -34,7 +34,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
-    private const DESIGNER_EMAIL = 'designer@atlantic.test';
+    private const DESIGNER_EMAIL = 'vendedor@atlantic.test';
 
     private const URL = '/api/admin-contab/home/resumen-mes';
 

@@ -328,7 +328,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_store_rechaza_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/invoices', ['order_ids' => [1]])
@@ -464,7 +464,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
 
     public function test_export_rechaza_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->get('/api/admin-contab/invoices/export?format=excel')
@@ -1131,7 +1131,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     /** Rol sin acceso → 403 en los endpoints nuevos del batch. */
     public function test_detail_y_aging_rechazan_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/invoices/1/detail')
@@ -1261,7 +1261,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     public function test_1147_detalle_lista_todos_los_vendedores_responsables_del_pedido(): void
     {
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        $otroId = $this->userIdByEmail('designer@atlantic.test');
+        $otroId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAsFelix();
         ['order' => $order] = $this->facturar($token, $ownerId, ['compartido_con' => [$otroId, $ownerId]]);
 
@@ -1275,7 +1275,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
     public function test_1175_el_listado_trae_los_vendedores_y_se_filtra_por_vendedor_combinable_con_por_cobrar(): void
     {
         $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAsFelix();
         $a = $this->facturar($token, $felixId, ['compartido_con' => [$designerId]]); // Contabilidad + diseñador, por cobrar
         $b = $this->facturar($token, $designerId);                                   // solo el diseñador

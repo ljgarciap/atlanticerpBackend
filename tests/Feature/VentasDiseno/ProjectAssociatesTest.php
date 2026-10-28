@@ -21,8 +21,8 @@ use Tests\Feature\FeatureTestCase;
  */
 class ProjectAssociatesTest extends FeatureTestCase
 {
-    private const DESIGNER = 'designer@atlantic.test';
-    private const OTHER    = 'supervisor@atlantic.test';
+    private const DESIGNER = 'vendedor@atlantic.test';
+    private const OTHER    = 'nivel5@atlantic.test';
 
     protected function setUp(): void
     {

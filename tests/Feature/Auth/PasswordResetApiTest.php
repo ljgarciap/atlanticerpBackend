@@ -63,7 +63,7 @@ class PasswordResetApiTest extends FeatureTestCase
     {
         $user = $this->makeUser();
 
-        foreach ([['management@atlantic.test', 'management'], ['designer@atlantic.test', 'designer']] as [$email, $role]) {
+        foreach ([['management@atlantic.test', 'management'], ['vendedor@atlantic.test', 'designer']] as [$email, $role]) {
             $headers = $this->authHeaders($this->loginAs($email, 'Password123!', $role));
             $this->postJson("/api/users/{$user->id}/reset-password", [], $headers)->assertStatus(403);
         }
@@ -103,15 +103,15 @@ class PasswordResetApiTest extends FeatureTestCase
 
     public function test_el_reseteado_puede_ingresar_con_su_correo_y_el_login_avisa_que_debe_cambiarla(): void
     {
-        $this->postJson('/api/users/' . User::where('email', 'designer@atlantic.test')->value('id') . '/reset-password', [], $this->superadminHeaders())
+        $this->postJson('/api/users/' . User::where('email', 'vendedor@atlantic.test')->value('id') . '/reset-password', [], $this->superadminHeaders())
             ->assertStatus(200);
 
-        $this->postJson('/api/auth/login', ['email' => 'designer@atlantic.test', 'password' => 'designer@atlantic.test'])
+        $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'vendedor@atlantic.test'])
             ->assertStatus(200)
             ->assertJsonPath('user.must_change_password', true);
 
         // La contraseña vieja ya no sirve.
-        $this->postJson('/api/auth/login', ['email' => 'designer@atlantic.test', 'password' => 'Password123!'])->assertStatus(401);
+        $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'Password123!'])->assertStatus(401);
     }
 
     // ── Masivo ───────────────────────────────────────────────────────────────────────────────────────────

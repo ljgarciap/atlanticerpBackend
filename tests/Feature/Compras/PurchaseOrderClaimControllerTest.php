@@ -58,9 +58,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     public function test_crear_reclamo_no_puede_exceder_lo_pedido(): void
     {
         // REQ-197 Escenario 2 — orden pidió 250, se intenta declarar 300.
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
         $fixture = $this->makeOrderWithLine(250);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/claims', [
@@ -75,9 +75,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     public function test_crear_reclamo_no_puede_repetir_producto(): void
     {
         // REQ-197 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
         $fixture = $this->makeOrderWithLine(10);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/claims', [
@@ -92,9 +92,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
 
     public function test_crear_reclamo_valido(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.read']);
         $fixture = $this->makeOrderWithLine(10);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/claims', [
@@ -121,9 +121,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
      */
     public function test_expected_resolution_ya_no_acepta_texto_libre(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.read']);
         $fixture = $this->makeOrderWithLine(10);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/claims', [
@@ -140,8 +140,8 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     /** SCRUM-260 — las 5 opciones fijas son válidas, una por una. */
     public function test_expected_resolution_acepta_las_5_opciones_fijas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.read']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         foreach (PurchaseOrderClaim::RESOLUTION_TYPES as $resolution) {
             // Un ciclo completo de request HTTP (postJson) suelta el tenant "current" al
@@ -172,9 +172,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
      */
     public function test_crear_reclamo_sin_permiso_write_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $fixture = $this->makeOrderWithLine(10);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/claims', [
@@ -190,14 +190,14 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     {
         // REQ-194 Escenario 1 — el ejemplo literal del ticket usa 7 días; acá sembramos el
         // reclamo ya con 8 días de antigüedad en 'en_revision' para no depender de mockear now().
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
             'status_changed_at' => now()->subDays(8),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/claims')
             ->assertStatus(200);
@@ -219,14 +219,14 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     public function test_cambiar_estado_a_resuelto_quita_la_bandera(): void
     {
         // REQ-195 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
             'status_changed_at' => now()->subDays(8),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/claims/{$claim->id}/status", ['status' => PurchaseOrderClaim::STATUS_RESUELTO])
             ->assertStatus(200)
@@ -235,14 +235,14 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
 
     public function test_subir_foto_de_evidencia(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
             'status_changed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/claims/{$claim->id}/photos", [
                 'photo' => UploadedFile::fake()->create('evidencia.jpg', 50, 'image/jpeg'),
@@ -258,14 +258,14 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
      */
     public function test_actualizar_tipo_de_resolucion_desde_el_detalle(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
             'status_changed_at' => now(), 'expected_resolution' => PurchaseOrderClaim::RESOLUTION_REPOSICION,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/claims/{$claim->id}/resolution", [
                 'expected_resolution' => PurchaseOrderClaim::RESOLUTION_NEGADO,
@@ -282,14 +282,14 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
 
     public function test_actualizar_tipo_de_resolucion_rechaza_valor_fuera_del_catalogo(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
             'status_changed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/claims/{$claim->id}/resolution", ['expected_resolution' => 'lo que sea'])
             ->assertStatus(422);
@@ -297,14 +297,14 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
 
     public function test_actualizar_tipo_de_resolucion_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
             'status_changed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/claims/{$claim->id}/resolution", [
                 'expected_resolution' => PurchaseOrderClaim::RESOLUTION_NEGADO,
@@ -315,7 +315,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     /** SCRUM-259 (hallazgo de Gerencia Test) — "Descargar PDF del reclamo", descarga real (Content-Disposition: attachment), no vista inline. */
     public function test_pdf_del_reclamo_se_descarga_como_adjunto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
@@ -325,7 +325,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
             'claim_id' => $claim->id, 'purchase_order_line_id' => $fixture['line']->id, 'affected_quantity' => 2,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/compras/claims/{$claim->id}/pdf");
 
@@ -336,14 +336,14 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     public function test_detalle_incluye_acceso_a_la_orden(): void
     {
         // REQ-196 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
             'status_changed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/claims/{$claim->id}")
             ->assertStatus(200);
@@ -356,9 +356,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
         // Hallazgo de QA (SCRUM-259, 2026-07-18): "historial de estados" es parte explícita de
         // la ficha completa que pide el ticket — no existía ningún registro más allá del último
         // status_changed_at. La creación cuenta como el primer evento del historial.
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $fixture = $this->makeOrderWithLine(10);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/claims', [
@@ -389,14 +389,14 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     public function test_umbral_de_atencion_es_configurable(): void
     {
         ComprasSettings::current()->update(['claim_attention_days' => 2]);
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $fixture = $this->makeOrderWithLine(10);
         $claim = PurchaseOrderClaim::create([
             'purchase_order_id' => $fixture['order']->id, 'status' => PurchaseOrderClaim::STATUS_EN_REVISION,
             'status_changed_at' => now()->subDays(3),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/claims')
             ->assertStatus(200);
@@ -412,7 +412,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
      */
     public function test_kpis_del_encabezado(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
 
         // Todas las fixtures ANTES de loginAs() — loginAs() hace una request HTTP real
         // (POST /api/auth/login) que suelta el tenant "current" al terminar (mismo patrón que
@@ -431,7 +431,7 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
             'claim_id' => $claim3->id, 'purchase_order_line_id' => $fixture3['line']->id, 'affected_quantity' => 3,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // 1 en revisión.
         $this->withHeaders($this->authHeaders($token))->postJson('/api/compras/claims', [
@@ -463,13 +463,13 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     /** SCRUM-257 — filtro de proveedor. */
     public function test_filtro_por_proveedor(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.read']);
 
         // Todas las fixtures ANTES de loginAs() — ver nota en test_kpis_del_encabezado.
         $fixtureA = $this->makeOrderWithLine(10);
         $fixtureB = $this->makeOrderWithLine(10);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $claimA = $this->withHeaders($this->authHeaders($token))->postJson('/api/compras/claims', [
             'purchase_order_id' => $fixtureA['order']->id,
@@ -492,9 +492,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     /** SCRUM-257 — filtro de tipo de resolución + búsqueda de texto libre, combinados. */
     public function test_filtro_por_tipo_de_resolucion_y_busqueda_texto_combinados(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.read']);
         $fixture = $this->makeOrderWithLine(10);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $claimId = $this->withHeaders($this->authHeaders($token))->postJson('/api/compras/claims', [
             'purchase_order_id' => $fixture['order']->id,
@@ -519,9 +519,9 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
     /** SCRUM-258 — columna "Producto", derivada de las líneas del reclamo. */
     public function test_columna_producto_en_el_listado(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.read']);
         $fixture = $this->makeOrderWithLine(10);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $claimId = $this->withHeaders($this->authHeaders($token))->postJson('/api/compras/claims', [
             'purchase_order_id' => $fixture['order']->id,

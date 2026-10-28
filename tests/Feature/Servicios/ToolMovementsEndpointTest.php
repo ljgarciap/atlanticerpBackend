@@ -17,7 +17,7 @@ class ToolMovementsEndpointTest extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
+    private const TECNICO_SERVICIOS = 'tecnico@test.com';
 
     protected function setUp(): void
     {

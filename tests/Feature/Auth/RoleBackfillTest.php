@@ -80,9 +80,9 @@ class RoleBackfillTest extends FeatureTestCase
     public function test_dan_rosales_sin_cargo_definido_sigue_sin_cuenta(): void
     {
         // SCRUM-148 ("Usuarios - Correos") completó el correo de 25 de las 26 personas de
-        // negocio de SCRUM-144 (Gerencia incluido, ver BusinessRoleUserSeederTest) — pero Tecnico Servicios
-        // Ayudante General Bodega/Joel Somarria/Dan Rosales aparecían en ese ticket sin cargo. SCRUM-1142 les dio
-        // cargo a Tecnico Servicios (picker) y Repartidor (repartidor); Dan Rosales sigue sin cargo, así que sigue
+        // negocio de SCRUM-144 (Gerencia incluido, ver BusinessRoleUserSeederTest) — pero Tecnico
+        // Auxiliar Bodega/Joel Somarria/Dan Rosales aparecían en ese ticket sin cargo. SCRUM-1142 les dio
+        // cargo a Tecnico (picker) y Repartidor (repartidor); Dan Rosales sigue sin cargo, así que sigue
         // sin cuenta: nada que backfillear, y no se inventa un rol para él.
         $this->assertNull(User::where('first_name', 'Dan')->where('last_name', 'Rosales')->first());
     }

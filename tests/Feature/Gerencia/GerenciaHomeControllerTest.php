@@ -160,7 +160,7 @@ class GerenciaHomeControllerTest extends FeatureTestCase
             'reference' => 'REF-1154', 'name' => 'Reflector XL', 'description' => 'Reflector XL',
             'price_full' => 80, 'cost' => 40, 'stock_quantity' => 10, 'is_active' => true,
         ]);
-        $solicitante = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $solicitante = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
         $relocation = RelocationRequest::create([
             'catalog_product_id' => $product->id,
             'origin_warehouse_id' => Warehouse::where('name', 'Bodega Central')->firstOrFail()->id,

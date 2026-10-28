@@ -33,7 +33,7 @@ class CatalogPdfExportTest extends FeatureTestCase
 {
     use BodegaOrderTestHelpers;
 
-    private const OWNER = 'designer@atlantic.test';
+    private const OWNER = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {
@@ -396,8 +396,8 @@ class CatalogPdfExportTest extends FeatureTestCase
         $this->assertArrayNotHasKey('storage_key', $done->json(), 'la clave de S3 nunca se expone, solo la URL firmada');
 
         // Otra persona con el mismo permiso de lectura: 404, igual que una exportación inexistente.
-        $this->grantRead('readonly@atlantic.test');
-        $stranger = $this->authHeaders($this->loginAs('readonly@atlantic.test', 'Password123!', 'electrician'));
+        $this->grantRead('nivel1@atlantic.test');
+        $stranger = $this->authHeaders($this->loginAs('nivel1@atlantic.test', 'Password123!', 'electrician'));
         $this->withHeaders($stranger)->getJson("/api/ventas-diseno/catalog/pdf-exports/{$export->uuid}")->assertStatus(404);
 
         // Superadmin sí.

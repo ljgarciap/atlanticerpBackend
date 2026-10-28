@@ -22,6 +22,8 @@ final class TerminosDelClienteAnterior
         'atlantic home', 'signature lighting', 'nordic glow', 'proline comercial', 'banco general', 'banistmo', 'global bank', 'multibank', 'multiplaza',
         'super 99', 'paitilla', 'albrook', 'tocumen', 'bethania', 'costa del este', 'punta pac[ií]fica', 'condado del rey', 'farmacias transporte',
         'automotriz rey', 'ocean view', 'grupo melo', 'gelabert', 'farallon', 'illuminations',
+        // Fase 4c — correos demo viejos (el renombre a vendedor@, tecnico@, nivelN@… no debe deshacerse).
+        'vendedordisenador\d*@', 'tecnicoservicios\d*@', 'garantiasservicios@', 'ayudantegeneralbodega\d*@', '(?:designer|supervisor|electrician|readonly|multi)@',
     ];
 
     /** Vocabulario del sector del cliente anterior (iluminación). */
@@ -62,14 +64,7 @@ final class TerminosDelClienteAnterior
      *
      * @var array<string, string>
      */
-    public const ARCHIVOS_PENDIENTES_4C = [
-        'app/Modules/Auth/Jobs/SecurityAnalysisJob.php' => 'prompt de IA con el sector fijo',
-        'app/Modules/AI/Jobs/SummarizeProjectJob.php' => 'prompt de IA con el sector fijo',
-        'app/Modules/AI/Jobs/DraftMessageJob.php' => 'prompt de IA con el sector fijo',
-        'app/Modules/AI/Jobs/MonthlyAnalysisJob.php' => 'prompt de IA con el sector fijo',
-        'app/Modules/AI/Jobs/SuggestActionsJob.php' => 'prompt de IA con el sector fijo',
-        'resources/views/admin-contab/commission-account-statement-pdf.blade.php' => 'razón social del cliente anterior en la plantilla',
-    ];
+    public const ARCHIVOS_PENDIENTES_4C = [];
 
     public static function regexProhibidos(): string
     {

@@ -46,9 +46,9 @@ class SubstituteCandidatePreselectionTest extends FeatureTestCase
     private function headers(): array
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')->update(['extra_permissions' => json_encode(['compras.read'])]);
+        DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode(['compras.read'])]);
 
-        return $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        return $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
     }
 
     /** @param array<string, mixed> $overrides */

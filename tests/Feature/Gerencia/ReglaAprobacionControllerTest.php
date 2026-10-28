@@ -80,7 +80,7 @@ class ReglaAprobacionControllerTest extends FeatureTestCase
 
     public function test_actor_no_superadmin_no_puede_ver_ni_configurar_reglas(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/gerencia/reglas-aprobacion')

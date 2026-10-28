@@ -52,7 +52,7 @@ class VentasDisenoBackfillPipelineCardCreatedByCommandTest extends FeatureTestCa
 
     public function test_backfillea_desde_audit_logs_cuando_existe_el_registro_de_creacion(): void
     {
-        $ownerId   = $this->userIdByEmail('designer@atlantic.test');
+        $ownerId   = $this->userIdByEmail('vendedor@atlantic.test');
         $realCreatorId = $this->userIdByEmail('management@atlantic.test');
         $card = $this->makeCard($ownerId);
 
@@ -79,7 +79,7 @@ class VentasDisenoBackfillPipelineCardCreatedByCommandTest extends FeatureTestCa
         // uploads/created_at real de LogsAuditTrail queda con user_id NULL en este test (sin
         // contexto JWT) — exactamente el caso "sin dato disponible" que la RN del ticket cubre
         // con el fallback a owner_id actual.
-        $ownerId = $this->userIdByEmail('supervisor@atlantic.test');
+        $ownerId = $this->userIdByEmail('nivel5@atlantic.test');
         $card = $this->makeCard($ownerId);
 
         $this->artisan('ventas_diseno:backfill-pipeline-card-created-by', ['--tenant' => 'atlantic'])
@@ -91,7 +91,7 @@ class VentasDisenoBackfillPipelineCardCreatedByCommandTest extends FeatureTestCa
 
     public function test_dry_run_no_escribe_nada(): void
     {
-        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        $ownerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($ownerId);
 
         $this->artisan('ventas_diseno:backfill-pipeline-card-created-by', ['--tenant' => 'atlantic', '--dry-run' => true])
@@ -103,7 +103,7 @@ class VentasDisenoBackfillPipelineCardCreatedByCommandTest extends FeatureTestCa
 
     public function test_es_idempotente_no_toca_tarjetas_ya_backfilleadas(): void
     {
-        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        $ownerId = $this->userIdByEmail('vendedor@atlantic.test');
         $otherUserId = $this->userIdByEmail('management@atlantic.test');
         $card = $this->makeCard($ownerId);
         $card->update(['created_by' => $otherUserId]);

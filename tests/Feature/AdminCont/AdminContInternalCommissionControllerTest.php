@@ -32,7 +32,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     private const ASISTENTE_EMAIL = 'asistenteadministrativa@test.com';
 
-    private const DESIGNER_EMAIL = 'designer@atlantic.test';
+    private const DESIGNER_EMAIL = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {
@@ -56,7 +56,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     }
 
     /**
-     * `designer@atlantic.test` es la cuenta demo (AuthUserSeeder, solo local/dev/testing) —
+     * `vendedor@atlantic.test` es la cuenta demo (AuthUserSeeder, solo local/dev/testing) —
      * los 10 vendedores REALES reciben `admin_contab.commissions_internal.view` vía
      * `SpecialPermissionSeeder` (que no corre acá, ver docblock: "son personas y permisos reales,
      * no datos demo"), así que el fixture de test lo otorga directo, mismo patrón que el resto de
@@ -247,7 +247,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
      * vendedor sin ningún pedido nunca aparecía ahí, así que filtrar a ese vendedor devolvía
      * `vendedores: []` (el estado "Sin vendedores para este filtro." genérico de la tabla) en vez
      * de una fila con `groups: []` que el frontend puede expandir para mostrar "Sin pedidos
-     * registrados todavía." — reproducido contra dev.atlanticerp.ai con el usuario real "Designer Demo".
+     * registrados todavía." — reproducido contra dev.atlanticerp.ai con el usuario real "Vendedor Demo".
      */
     public function test_summary_vendedor_sin_ningun_pedido_en_su_historia_aparece_como_fila_vacia(): void
     {
@@ -421,7 +421,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $nombres = collect($response->json())->pluck('nombre');
-        $this->assertTrue($nombres->contains('Designer Demo'));
+        $this->assertTrue($nombres->contains('Vendedor Demo'));
     }
 
     public function test_vendor_options_prohibido_para_un_vendedor(): void
@@ -523,7 +523,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_summary_tarjetas_de_resumen_ignoran_el_filtro_de_vendedor(): void
     {
         $vendorA = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $vendorB = $this->userIdByEmail('vendedordisenador2@test.com');
+        $vendorB = $this->userIdByEmail('vendedor2@test.com');
 
         $this->makeCommissionableOrder($vendorA, 10000.0, 10000.0);
         $this->makeCommissionableOrder($vendorB, 8000.0, 4000.0);
@@ -551,7 +551,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     /**
      * SCRUM-904 — un Vendedor/Diseñador sin team-view debe ver el banner "se pagará
      * automáticamente al cierre de mes" calculado SOLO sobre sus propias comisiones "por pagar",
-     * nunca el total agregado de todos los vendedores (bug real: Vendedor Disenador Test 2 con $0.00 "por pagar"
+     * nunca el total agregado de todos los vendedores (bug real: Vendedor Test 2 con $0.00 "por pagar"
      * veía el mismo texto "4 comisión(es) por USD 876.04" que Asistente Administrativa).
      */
     public function test_banner_auto_pago_se_angosta_al_vendedor_sin_view_team_scrum904(): void
@@ -755,7 +755,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-906 (corrección) — caso real reportado: proyecto de $10,700 compartido entre 3
-     * responsables (Gerencia Test 3, Designer Demo, Vendedor Disenador Test 5 en el ticket original), comisión
+     * responsables (Gerencia Test 3, Vendedor Demo, Vendedor Test 5 en el ticket original), comisión
      * 1.5%. Antes del fix, cada uno recibía $160.50 (comisión sobre el monto COMPLETO,
      * replicada), sumando $481.50 — 3 veces la comisión real de ese proyecto. Con el fix, cada
      * responsable recibe ~$53.50 (10700/3 * 1.5%), sumando $160.50 en total — la misma comisión
@@ -792,7 +792,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
-        $neilId = $this->userIdByEmail('vendedordisenador2@test.com');
+        $neilId = $this->userIdByEmail('vendedor2@test.com');
 
         // 40000 / 4 = 10000 c/u (tramo 1.5%) → 150 de comisión c/u, 600 en total.
         $this->makeCommissionableOrder($designerId, 40000.0, 40000.0, null, [$felixId, $markId, $neilId]);

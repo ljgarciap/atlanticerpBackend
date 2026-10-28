@@ -45,7 +45,7 @@ class NotificationRuleControllerTest extends FeatureTestCase
 
     public function test_designer_no_puede_listar_reglas(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/notification-rules')
             ->assertStatus(403);

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-231→244 (REQ-168→181) — Inventario. `designer@atlantic.test` (role_key
+ * SCRUM-231→244 (REQ-168→181) — Inventario. `vendedor@atlantic.test` (role_key
  * vendedor) naturalmente tiene ventas_diseno.read pero NO compras.read — se usa sin
  * grantCompras() para probar el modo restringido, y con grantCompras() para el modo completo.
  */
@@ -133,8 +133,8 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_vendedor_con_logistica_view_sigue_en_modo_ventas_sin_costo_ni_margen(): void
     {
         $this->makeProduct();
-        $this->grantCompras('designer@atlantic.test', ['compras.logistica.view']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.logistica.view']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
@@ -149,8 +149,8 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_compras_limited_view_desenmascara_costos_por_eso_no_es_para_vendedores(): void
     {
         $this->makeProduct();
-        $this->grantCompras('designer@atlantic.test', ['compras.limited.view']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.limited.view']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
@@ -163,7 +163,7 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_modo_ventas_no_expone_costo_ni_margen(): void
     {
         $this->makeProduct();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
@@ -198,8 +198,8 @@ class InventoryControllerTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100,
         ]);
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = (int) DB::table('atlantic_bodega.warehouses')->value('id');
         $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
@@ -214,8 +214,8 @@ class InventoryControllerTest extends FeatureTestCase
         // ...y en modo restringido (Ventas & Diseño) el DETALLE de un producto también los expone
         // desde SCRUM-238 (ver docblock arriba) — a diferencia del listado, que sigue sin
         // mostrarlos.
-        $this->grantCompras('designer@atlantic.test', []);
-        $restrictedToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', []);
+        $restrictedToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $restricted = $this->withHeaders($this->authHeaders($restrictedToken))
             ->getJson("/api/compras/inventory/{$product->id}")
             ->assertStatus(200);
@@ -243,8 +243,8 @@ class InventoryControllerTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 5, 'unit_cost' => 10, 'subtotal' => 50,
         ]);
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
-        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
+        $comprasToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $comprasHeaders = $this->authHeaders($comprasToken);
         $warehouseId = (int) DB::table('atlantic_bodega.warehouses')->value('id');
         $this->withHeaders($comprasHeaders)->postJson('/api/compras/goods-receipts', [
@@ -290,7 +290,7 @@ class InventoryControllerTest extends FeatureTestCase
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['compras'], 'menuItems' => [], 'action' => 'hide'])
             ->assertStatus(200);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
             ->assertStatus(403);
@@ -299,7 +299,7 @@ class InventoryControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($superToken))
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['compras'], 'menuItems' => [], 'action' => 'restore'])
             ->assertStatus(200);
-        $restoredToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $restoredToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($restoredToken))
             ->getJson('/api/compras/inventory')
             ->assertStatus(200);
@@ -316,7 +316,7 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_modo_compras_pierde_acceso_cuando_compras_esta_oculto_por_uat(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['price_full' => 20, 'cost' => 10]);
 
         $superToken = $this->loginAs('superadmin@atlantic.test', 'Password123!');
@@ -324,7 +324,7 @@ class InventoryControllerTest extends FeatureTestCase
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['compras'], 'menuItems' => [], 'action' => 'hide'])
             ->assertStatus(200);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
             ->assertStatus(403);
@@ -333,7 +333,7 @@ class InventoryControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($superToken))
             ->postJson('/api/admin/module-visibility/bulk', ['modules' => ['compras'], 'menuItems' => [], 'action' => 'restore'])
             ->assertStatus(200);
-        $restoredToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $restoredToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($restoredToken))
             ->getJson('/api/compras/inventory')
             ->assertStatus(200);
@@ -362,9 +362,9 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // REQ-168 Escenario 1: un usuario con acceso completo puede pasar ?mode=ventas para
         // previsualizar lo que ve Ventas & Diseño (oculta costo/margen), sin perder su acceso real.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['price_full' => 20, 'cost' => 10]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory?mode=ventas')
@@ -376,9 +376,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_modo_compras_expone_costo_y_margen_en_vivo(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['price_full' => 20, 'cost' => 10]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
@@ -394,9 +394,9 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_estado_bajo_stock_cuando_disponible_es_positivo_pero_bajo_el_minimo(): void
     {
         // REQ-171 Escenario 1: Stock Total 3, mínimo 10 -> "Bajo stock", no "Sin stock".
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['stock_quantity' => 3, 'reorder_point' => 10]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
@@ -408,7 +408,7 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_disponible_descuenta_lo_reservado_por_proyecto(): void
     {
         // REQ-171 Escenario 2: 20 unidades totales, 8 con proyecto asignado -> Por servir 8, Disponible 12.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct(['stock_quantity' => 20]);
         $salesProject = SalesProject::create(['name' => 'Proyecto Test']);
@@ -421,7 +421,7 @@ class InventoryControllerTest extends FeatureTestCase
             'quantity' => 8, 'unit_cost' => 12, 'subtotal' => 96, 'sales_project_id' => $salesProject->id,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/inventory/{$product->id}")
             ->assertStatus(200);
@@ -434,9 +434,9 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // REQ-169 Escenario 1: producto rotación "baja" en 0 unidades NO cuenta en "en atención",
         // aunque sí en "sin stock".
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['stock_quantity' => 0, 'rotation' => CatalogProduct::ROTATION_BAJA]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
@@ -455,9 +455,9 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_kpi_en_atencion_cuenta_rotacion_null_sin_clasificar(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['stock_quantity' => 0, 'rotation' => null]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
@@ -473,9 +473,9 @@ class InventoryControllerTest extends FeatureTestCase
         // existe en Inventario todavía (alta automática vía ingreso, RN de REQ-166, no
         // implementada), no para uno existente con unidades "Por ingresar" mezcladas — ese caso
         // se ve en la columna de la fila, ver test_columna_por_ingresar_y_en_camino_* más abajo.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $todos = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')->assertStatus(200);
@@ -488,10 +488,10 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_chip_inactivos_muestra_solo_inactivos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['reference' => 'ACT-1', 'is_active' => true]);
         $this->makeProduct(['reference' => 'INACT-1', 'is_active' => false]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory?chip=inactivos')
@@ -505,9 +505,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_editar_costo_recalcula_margen(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $product = $this->makeProduct(['price_full' => 100, 'cost' => 50]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/inventory/{$product->id}", ['cost' => 25])
@@ -520,9 +520,9 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // SCRUM-237 — Costo Total = cost + import_cost + freight_cost + handling_cost + other_cost;
         // margin_percent debe calcularse sobre ese total, no solo sobre `cost`.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $product = $this->makeProduct(['price_full' => 100, 'cost' => 50]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/inventory/{$product->id}", [
@@ -538,10 +538,10 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // SCRUM-237 — selector único de familia en el modal (N:M por debajo, ver
         // CatalogProduct::families()); no existía ningún endpoint para esto antes de este ticket.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $product = $this->makeProduct();
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/inventory/{$product->id}", ['family_id' => $family->id])
@@ -557,9 +557,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_editar_family_id_inexistente_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $product = $this->makeProduct();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/inventory/{$product->id}", ['family_id' => 999999])
@@ -575,8 +575,8 @@ class InventoryControllerTest extends FeatureTestCase
         // compras.write (crear la familia) + compras.edit/read (asignarla a un producto después)
         // otorgados de una — el JWT ya emitido no se actualiza solo si se re-otorgan permisos a
         // mitad del test sin volver a loguear.
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/families', ['name' => 'Kit Sala Nueva'])
@@ -600,9 +600,9 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-237/240 — find-or-create case-insensitive, nunca crea un duplicado. */
     public function test_crear_familia_por_nombre_ya_existente_reusa_la_misma(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
         $existing = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/families', ['name' => 'kit baño'])
@@ -615,8 +615,8 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_crear_familia_sin_nombre_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/families', ['name' => ''])
@@ -625,7 +625,7 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_crear_familia_sin_permiso_de_compras_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/families', ['name' => 'Kit Cualquiera'])
@@ -636,10 +636,10 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // Hallazgo de QA (2026-07-18): el mensaje debe indicar a qué producto pertenece la
         // referencia (mismo texto que Nueva Orden), no el genérico "El reference ya esta en uso."
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $this->makeProduct(['reference' => 'DUP-1', 'name' => 'Producto original']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id, [
@@ -659,8 +659,8 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_crear_producto_sin_los_campos_ahora_obligatorios_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', [
@@ -678,9 +678,9 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-240 — categoría debe ser una de las 8 fijas, consistente con el resto de Inventario. */
     public function test_crear_producto_con_categoria_invalida_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id, [
@@ -693,10 +693,10 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-240 — familia opcional: si se manda, sincroniza la relación N:M (mismo criterio que update()). */
     public function test_crear_producto_con_family_id_sincroniza_la_familia(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
         $family = CatalogProductFamily::create(['name' => 'Kit Baño Familia Pre-QA']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id, [
@@ -711,9 +711,9 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-240 — "Costo adicional estimado" (ya resuelto a $ por el frontend) se persiste en other_cost. */
     public function test_crear_producto_persiste_other_cost(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id, [
@@ -732,9 +732,9 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_crear_producto_con_stock_inicial_en_varias_bodegas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $warehouses = DB::table('atlantic_bodega.warehouses')->pluck('id', 'name');
         $centralId = (int) $warehouses['Bodega Central'];
         $mermaId = (int) $warehouses['Merma'];
@@ -764,9 +764,9 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-240 — sin "Stock inicial" (sección completa omitida), el producto nace sin stock, sin error. */
     public function test_crear_producto_sin_stock_inicial_queda_en_cero(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id))
@@ -782,11 +782,11 @@ class InventoryControllerTest extends FeatureTestCase
         // validación de unicidad de factory_reference scopeaba a "provider_id IS NULL" cuando el
         // payload no reenviaba provider_id (caso común: editar solo factory_reference), dejando
         // colar un duplicado dentro del MISMO proveedor real.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
         $this->makeProduct(['provider_id' => $provider->id, 'factory_reference' => 'FX-1']);
         $target = $this->makeProduct(['provider_id' => $provider->id, 'factory_reference' => 'FX-2']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/inventory/{$target->id}", ['factory_reference' => 'FX-1'])
@@ -797,9 +797,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_reactivar_producto_conserva_stock_y_referencias(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $product = $this->makeProduct(['reference' => 'REACT-1', 'stock_quantity' => 15, 'is_active' => true]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/inventory/{$product->id}/toggle-active")
@@ -822,7 +822,7 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_no_permite_inactivar_producto_con_unidades_por_ingresar(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct(['stock_quantity' => 0]);
         $order = PurchaseOrder::create([
@@ -833,7 +833,7 @@ class InventoryControllerTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100,
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $warehouseId = (int) DB::table('atlantic_bodega.warehouses')->value('id');
 
@@ -857,9 +857,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_crear_producto_con_stock_inicial_queda_disponible_de_inmediato(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $centralId = (int) DB::table('atlantic_bodega.warehouses')->where('name', 'Bodega Central')->value('id');
 
@@ -884,7 +884,7 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_order_prefill_avisa_mercancia_en_camino(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct(['stock_quantity' => 5, 'reorder_point' => 20]);
         $order = PurchaseOrder::create([
@@ -895,7 +895,7 @@ class InventoryControllerTest extends FeatureTestCase
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
             'quantity' => 50, 'unit_cost' => 12, 'subtotal' => 600,
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/inventory/{$product->id}/order-prefill")
@@ -912,7 +912,7 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // REQ-172 AC — mismos números del ticket: la orden espera 120, se registra un ingreso de
         // 10 sin confirmar (Escenario 1), después se confirma (Escenario 2).
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct(['stock_quantity' => 0, 'reorder_point' => 5]);
         $order = PurchaseOrder::create([
@@ -925,7 +925,7 @@ class InventoryControllerTest extends FeatureTestCase
         ]);
         // SCRUM-1196 — antes tomaba «la primera bodega» sin orden definido; el Disponible solo cuenta Bodega Central (los showrooms lo excluyen).
         $warehouseId = (int) DB::table('atlantic_bodega.warehouses')->where('name', 'Bodega Central')->value('id');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $baseline = $this->withHeaders($headers)->getJson("/api/compras/inventory/{$product->id}")->assertStatus(200);
@@ -962,7 +962,7 @@ class InventoryControllerTest extends FeatureTestCase
         // aunque un producto EXISTENTE tuviera unidades "Por ingresar" reales. A diferencia de
         // test_chip_por_ingresar_oculto_por_defecto_de_todos (0 unidades pendientes, chip vacío
         // es lo correcto), acá el producto SÍ tiene unidades pendientes y debe listarse.
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct(['reference' => 'PEND-1', 'stock_quantity' => 0]);
         $order = PurchaseOrder::create([
@@ -974,7 +974,7 @@ class InventoryControllerTest extends FeatureTestCase
             'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100,
         ]);
         $warehouseId = (int) DB::table('atlantic_bodega.warehouses')->value('id');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $receipt = $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
@@ -1005,12 +1005,12 @@ class InventoryControllerTest extends FeatureTestCase
         // Repro real del hallazgo: un rol de Compras puro (compras.read, SIN ventas_diseno.read,
         // el caso real de lider_compras) debe poder listar familias — antes de este fix el
         // frontend llamaba al endpoint de VentasDiseno y devolvía 403 para este mismo perfil.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $product = $this->makeProduct(['reference' => 'FAM-A']);
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$product->id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/families')
             ->assertStatus(200);
@@ -1026,12 +1026,12 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_listado_de_familias_expone_total_value_por_familia_en_modo_compras(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $product = $this->makeProduct(['reference' => 'FAM-A', 'cost' => 10, 'stock_quantity' => 3]);
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$product->id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/families')
             ->assertStatus(200);
@@ -1048,7 +1048,7 @@ class InventoryControllerTest extends FeatureTestCase
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$product->id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/families')
             ->assertStatus(200)
@@ -1059,14 +1059,14 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_listado_de_familias_excluye_inactivas_y_cuenta_solo_productos_activos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $active = $this->makeProduct(['reference' => 'FAM-ACTIVE']);
         $inactive = $this->makeProduct(['reference' => 'FAM-INACTIVE', 'is_active' => false]);
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$active->id, $inactive->id]);
         CatalogProductFamily::create(['name' => 'Familia Inactiva', 'is_active' => false]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/families')
             ->assertStatus(200);
@@ -1080,13 +1080,13 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_detalle_de_familia_expone_costo_y_valor_total_en_modo_compras(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $productA = $this->makeProduct(['reference' => 'FAM-A', 'cost' => 10, 'stock_quantity' => 3]);
         $productB = $this->makeProduct(['reference' => 'FAM-B', 'cost' => 20, 'stock_quantity' => 2]);
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$productA->id, $productB->id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/families/{$family->id}")
             ->assertStatus(200);
@@ -1104,7 +1104,7 @@ class InventoryControllerTest extends FeatureTestCase
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$productA->id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/families/{$family->id}")
             ->assertStatus(200);
@@ -1121,7 +1121,7 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_detalle_de_familia_expone_las_mismas_columnas_que_la_tabla_de_productos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
         $warehouse = Warehouse::firstOrCreate(['name' => 'Bodega Central']);
         $product = $this->makeProduct([
@@ -1132,7 +1132,7 @@ class InventoryControllerTest extends FeatureTestCase
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$product->id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/families/{$family->id}")
             ->assertStatus(200);
@@ -1149,13 +1149,13 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_detalle_de_familia_excluye_productos_inactivos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $active = $this->makeProduct(['reference' => 'FAM-ACTIVE']);
         $inactive = $this->makeProduct(['reference' => 'FAM-INACTIVE', 'is_active' => false]);
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$active->id, $inactive->id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/families/{$family->id}")
             ->assertStatus(200);
@@ -1168,7 +1168,7 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_generar_compra_de_familia_crea_una_orden_por_proveedor(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $providerA = $this->makeProvider(['name' => 'Proveedor Demo A']);
         $providerB = $this->makeProvider(['name' => 'Proveedor Demo B SA']);
         $productA = $this->makeProduct(['reference' => 'FAM-A', 'provider_id' => $providerA->id, 'stock_quantity' => 2, 'reorder_point' => 10]);
@@ -1177,7 +1177,7 @@ class InventoryControllerTest extends FeatureTestCase
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
         $family->products()->attach([$productA->id, $productB->id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/families/{$family->id}/generate-purchase")
             ->assertStatus(201);
@@ -1198,9 +1198,9 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_crear_producto_no_expone_technical_spec_estructurado(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id, ['reference' => 'NOSPEC-1']))
@@ -1221,9 +1221,9 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_crear_producto_sin_ficha_tecnica_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $payload = $this->makeValidCreatePayload($provider->id);
         unset($payload['link']);
@@ -1237,9 +1237,9 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-426 — el link de ficha técnica queda disponible de inmediato en la MISMA respuesta de creación. */
     public function test_crear_producto_con_link_de_ficha_tecnica_queda_disponible_de_inmediato(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id, [
@@ -1254,9 +1254,9 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-426 — Caso A: un archivo real, no un link, también queda disponible en el mismo POST. */
     public function test_crear_producto_con_archivo_de_ficha_tecnica_queda_disponible_de_inmediato(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $payload = $this->makeValidCreatePayload($provider->id);
         unset($payload['link']);
@@ -1273,9 +1273,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_crear_producto_sin_imagen_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $payload = $this->makeValidCreatePayload($provider->id);
         unset($payload['photo']);
@@ -1288,9 +1288,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_crear_producto_con_imagen_genera_miniatura_y_queda_disponible_de_inmediato(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id))
@@ -1312,9 +1312,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_reemplazar_imagen_desde_editar_informacion_actualiza_las_keys_y_borra_las_viejas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id))
@@ -1344,9 +1344,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_reemplazar_imagen_sin_archivo_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $product = $this->makeProduct();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/inventory/{$product->id}/photo", [])
@@ -1362,9 +1362,9 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_editar_informacion_general_nunca_toca_la_imagen_del_producto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/inventory', $this->makeValidCreatePayload($provider->id))
@@ -1387,9 +1387,9 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // Producto creado antes de SCRUM-426, directo por el modelo (sin pasar por la validación
         // de StoreInventoryProductRequest) — no debe romper el detalle ni inventarse datos.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $product = $this->makeProduct(['reference' => 'LEGACY-1']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/inventory/{$product->id}")
@@ -1418,12 +1418,12 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_sin_warehouse_ids_devuelve_productos_de_todas_las_bodegas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $productA = $this->makeProduct(['reference' => 'WH-A']);
         $productB = $this->makeProduct(['reference' => 'WH-B']);
         $this->makeStock($productA, 'Bodega Central', 5);
         $this->makeStock($productB, 'Merma', 3);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory')
@@ -1440,12 +1440,12 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_warehouse_ids_vacio_devuelve_productos_de_todas_las_bodegas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $productA = $this->makeProduct(['reference' => 'WH-EMPTY-A']);
         $productB = $this->makeProduct(['reference' => 'WH-EMPTY-B']);
         $this->makeStock($productA, 'Bodega Central', 5);
         $this->makeStock($productB, 'Merma', 3);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory?warehouse_ids[]=')
@@ -1457,13 +1457,13 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_warehouse_ids_con_una_bodega_filtra_solo_esa_bodega(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $inCentral = $this->makeProduct(['reference' => 'WH-CENTRAL']);
         $inMerma = $this->makeProduct(['reference' => 'WH-MERMA']);
         $withoutStock = $this->makeProduct(['reference' => 'WH-NONE', 'stock_quantity' => 0]);
         $this->makeStock($inCentral, 'Bodega Central', 5);
         $this->makeStock($inMerma, 'Merma', 5);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $centralId = $this->warehouseId('Bodega Central');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -1483,7 +1483,7 @@ class InventoryControllerTest extends FeatureTestCase
      */
     public function test_warehouse_ids_con_dos_bodegas_es_union_no_interseccion(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $onlyCentral = $this->makeProduct(['reference' => 'UNION-CENTRAL']);
         $onlyMerma = $this->makeProduct(['reference' => 'UNION-MERMA']);
         $inBoth = $this->makeProduct(['reference' => 'UNION-BOTH']);
@@ -1492,7 +1492,7 @@ class InventoryControllerTest extends FeatureTestCase
         $this->makeStock($onlyMerma, 'Merma', 5);
         $this->makeStock($inBoth, 'Bodega Central', 2);
         $this->makeStock($inBoth, 'Merma', 3);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $centralId = $this->warehouseId('Bodega Central');
         $mermaId = $this->warehouseId('Merma');
 
@@ -1508,14 +1508,14 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // AC8 — la selección de bodegas se combina (AND) con el resto de filtros activos, acá
         // búsqueda de texto: solo el producto que matchea AMBOS criterios debe aparecer.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $matchInCentral = $this->makeProduct(['reference' => 'SEARCH-MATCH', 'name' => 'Cilindro especial XL']);
         $matchInMerma = $this->makeProduct(['reference' => 'OTHER-MATCH', 'name' => 'Cilindro especial XL']);
         $noMatchInCentral = $this->makeProduct(['reference' => 'NOMATCH', 'name' => 'Apliqu de pared distinto']);
         $this->makeStock($matchInCentral, 'Bodega Central', 5);
         $this->makeStock($matchInMerma, 'Merma', 5);
         $this->makeStock($noMatchInCentral, 'Bodega Central', 5);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $centralId = $this->warehouseId('Bodega Central');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -1530,7 +1530,7 @@ class InventoryControllerTest extends FeatureTestCase
     {
         // AC8 — combinado con el chip de filtro rápido (acá "sin_stock"): ambos filtros aplican
         // juntos (AND), la unión sigue siendo solo entre las bodegas seleccionadas.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $sinStockCentral = $this->makeProduct(['reference' => 'CHIP-SINSTOCK-CENTRAL', 'stock_quantity' => 0, 'reorder_point' => 0]);
         $sinStockMerma = $this->makeProduct(['reference' => 'CHIP-SINSTOCK-MERMA', 'stock_quantity' => 0, 'reorder_point' => 0]);
         $disponibleCentral = $this->makeProduct(['reference' => 'CHIP-DISPONIBLE-CENTRAL', 'stock_quantity' => 50, 'reorder_point' => 5]);
@@ -1540,7 +1540,7 @@ class InventoryControllerTest extends FeatureTestCase
         $this->makeStock($sinStockCentral, 'Bodega Central', 1);
         $this->makeStock($sinStockMerma, 'Merma', 1);
         $this->makeStock($disponibleCentral, 'Bodega Central', 1);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $centralId = $this->warehouseId('Bodega Central');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -1554,10 +1554,10 @@ class InventoryControllerTest extends FeatureTestCase
     /** AC — IDs de bodega no numéricos/negativos/cero se descartan en silencio, nunca 500. */
     public function test_warehouse_ids_invalidos_no_numericos_se_ignoran_como_sin_filtro(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $product = $this->makeProduct(['reference' => 'WH-JUNK']);
         $this->makeStock($product, 'Bodega Central', 5);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory?warehouse_ids[]=abc&warehouse_ids[]=-1&warehouse_ids[]=0')
@@ -1570,10 +1570,10 @@ class InventoryControllerTest extends FeatureTestCase
     /** AC — un ID de bodega con formato válido pero inexistente filtra sin matches, nunca rompe. */
     public function test_warehouse_ids_inexistente_devuelve_lista_vacia_sin_error(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $product = $this->makeProduct(['reference' => 'WH-GHOST']);
         $this->makeStock($product, 'Bodega Central', 5);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory?warehouse_ids[]=999999')
@@ -1586,9 +1586,9 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_editar_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $product = $this->makeProduct();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/inventory/{$product->id}", ['cost' => 1])
@@ -1598,10 +1598,10 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-992 — búsqueda en SQL sobre `search_text`: sin acentos ni mayúsculas. */
     public function test_busqueda_ignora_acentos_y_mayusculas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['reference' => 'ACC-1', 'name' => 'Vástago colgante Catalogación']);
         $this->makeProduct(['reference' => 'ACC-2', 'name' => 'Aplique de pared']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory?search=VASTAGO catalogación')
@@ -1615,9 +1615,9 @@ class InventoryControllerTest extends FeatureTestCase
     /** SCRUM-992 — el respaldo tolerante a typos solo entra con 0 resultados y prende `fuzzy`. */
     public function test_busqueda_con_typo_usa_el_respaldo_y_marca_fuzzy(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['reference' => 'TYP-1', 'name' => 'Catalogación exterior']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/inventory?search=catalogacon')
@@ -1653,13 +1653,13 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_family_id_filtra_solo_los_productos_de_esa_familia(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $inA = $this->makeProduct(['reference' => 'FAM-A']);
         $inB = $this->makeProduct(['reference' => 'FAM-B']);
         $this->makeProduct(['reference' => 'FAM-NONE']);
         $familyA = $this->makeFamily('Familia A', $inA);
         $this->makeFamily('Familia B', $inB);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->assertSame(['FAM-A'], $this->inventoryReferences($token, "?family_id={$familyA->id}"));
         $this->assertContains('FAM-NONE', $this->inventoryReferences($token, ''));
@@ -1667,12 +1667,12 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_un_producto_compartido_aparece_al_filtrar_por_cualquiera_de_sus_familias(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $shared = $this->makeProduct(['reference' => 'FAM-SHARED']);
         $only = $this->makeProduct(['reference' => 'FAM-ONLY-2']);
         $one = $this->makeFamily('Familia 1', $shared);
         $two = $this->makeFamily('Familia 2', $shared, $only);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->assertSame(['FAM-SHARED'], $this->inventoryReferences($token, "?family_id={$one->id}"));
         $this->assertEqualsCanonicalizing(['FAM-SHARED', 'FAM-ONLY-2'], $this->inventoryReferences($token, "?family_id={$two->id}"));
@@ -1680,20 +1680,20 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_family_id_inexistente_devuelve_lista_vacia(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProduct(['reference' => 'FAM-X']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->assertSame([], $this->inventoryReferences($token, '?family_id=999999'));
     }
 
     public function test_family_id_vacio_o_invalido_se_ignora_y_no_filtra(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $inFamily = $this->makeProduct(['reference' => 'FAM-IN']);
         $this->makeProduct(['reference' => 'FAM-OUT']);
         $this->makeFamily('Familia I', $inFamily);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         foreach (['?family_id=', '?family_id=abc', '?family_id=0'] as $query) {
             $this->assertEqualsCanonicalizing(['FAM-IN', 'FAM-OUT'], $this->inventoryReferences($token, $query), $query);
@@ -1702,13 +1702,13 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_family_id_se_combina_con_el_filtro_de_bodega(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $match = $this->makeProduct(['reference' => 'FAM-COMBO-1']);
         $otherWarehouse = $this->makeProduct(['reference' => 'FAM-COMBO-2']);
         $this->makeStock($match, 'Bodega Central', 5);
         $this->makeStock($otherWarehouse, 'Merma', 5);
         $family = $this->makeFamily('Familia combo', $match, $otherWarehouse);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $centralId = $this->warehouseId('Bodega Central');
 
         $this->assertSame(
@@ -1720,20 +1720,20 @@ class InventoryControllerTest extends FeatureTestCase
     public function test_family_id_respeta_el_acceso_sin_permiso_sigue_siendo_403(): void
     {
         $this->makeProduct(['reference' => 'FAM-403']);
-        $token = $this->loginAs('electrician@atlantic.test', 'Password123!', 'electrician');
+        $token = $this->loginAs('nivel2@atlantic.test', 'Password123!', 'electrician');
 
         $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/inventory?family_id=1')->assertStatus(403);
     }
 
     public function test_family_id_se_combina_con_la_busqueda_de_texto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $match = $this->makeProduct(['reference' => 'FAM-TXT-1', 'name' => 'Cilindro especial XL']);
         $sameFamilyOtherText = $this->makeProduct(['reference' => 'FAM-TXT-2', 'name' => 'Apliqu de pared distinto']);
         $matchOtherFamily = $this->makeProduct(['reference' => 'FAM-TXT-3', 'name' => 'Cilindro especial XL']);
         $family = $this->makeFamily('Familia texto', $match, $sameFamilyOtherText);
         $this->makeFamily('Otra familia texto', $matchOtherFamily);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // Solo el producto que está en la familia Y matchea el texto (AND, no unión).
         $this->assertSame(
@@ -1748,7 +1748,7 @@ class InventoryControllerTest extends FeatureTestCase
         $in = $this->makeProduct(['reference' => 'FAM-RESTR-IN']);
         $this->makeProduct(['reference' => 'FAM-RESTR-OUT']);
         $family = $this->makeFamily('Familia restringida', $in);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/inventory?family_id={$family->id}")

@@ -41,8 +41,8 @@ final class PreQa1186Round2Test extends FeatureTestCase
     {
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $this->reTenant();
-        $id = (int) User::where('email', 'designer@atlantic.test')->value('id');
-        $inactivo = User::where('email', 'like', '%@atlantic.test')->whereNotIn('email', ['superadmin@atlantic.test','designer@atlantic.test'])->first();
+        $id = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
+        $inactivo = User::where('email', 'like', '%@atlantic.test')->whereNotIn('email', ['superadmin@atlantic.test','vendedor@atlantic.test'])->first();
         $inactivo->forceFill(['is_active' => false])->save();
         $casos = [
             'string num' => [(string) $id], 'float' => [(float) $id + 0.0], 'float1.5' => [1.5], 'null elem' => [null], 'anidado' => [[$id]],
@@ -60,7 +60,7 @@ final class PreQa1186Round2Test extends FeatureTestCase
         $this->reTenant();
         fwrite(STDERR, 'GUARDADO FINAL '.json_encode(AdminContFiscalSettings::current()->fe_rechazo_notificar_user_ids)."\n");
         // el rol designer no
-        $t2 = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $t2 = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $r = $this->withHeaders($this->authHeaders($t2))->putJson('/api/admin-contab/fiscal-settings', ['fe_rechazo_notificar_user_ids' => [$id]]);
         fwrite(STDERR, 'DESIGNER '.$r->status()."\n");
         $this->assertSame(403, $r->status());
@@ -89,7 +89,7 @@ final class PreQa1186Round2Test extends FeatureTestCase
     public function test_texto_nc_y_correo_renderizado_y_alineador_que_lanza(): void
     {
         $this->app['env'] = 'production';
-        $dest = (int) User::where('email', 'designer@atlantic.test')->value('id');
+        $dest = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
         AdminContFiscalSettings::current()->forceFill(['pac_provider' => 'msl', 'pac_ambiente' => 'production', 'fe_rechazo_notificar_user_ids' => [$dest]])->save();
         ['root' => $root] = $this->makePedido([['desc' => 'Panel XL', 'qty' => 9, 'price' => 100.00]], [[9]]);
         Http::fake(['prod.msl.test/*' => Http::sequence()

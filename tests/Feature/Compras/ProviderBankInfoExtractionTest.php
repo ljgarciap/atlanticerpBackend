@@ -76,9 +76,9 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
 
     public function test_extraccion_completa_pre_llena_los_4_campos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'bank_name'           => 'Banco Demo A',
@@ -110,9 +110,9 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
 
     public function test_extraccion_parcial_solo_reporta_los_campos_encontrados(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'bank_name'           => 'Banco Demo A',
@@ -138,9 +138,9 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
     {
         // Mismo criterio que SCRUM-211 (test_subir_confirmacion_dispara_validacion_automaticamente)
         // — pedido explícito de Luis: automático, sin botón manual.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse(['fields_found' => ['bank_name'], 'bank_name' => 'X', 'confidence' => 'alta']);
 
@@ -155,9 +155,9 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
 
     public function test_poll_sin_ninguna_imagen_subida_retorna_null(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/providers/{$provider->id}/bank-image/extraction")
@@ -171,9 +171,9 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
         // Checklist del ADR: "no confiar ciegamente" — un fields_found con un valor que no está
         // en el schema (alucinación del modelo, o un intento de manipulación) invalida TODO el
         // resultado en vez de guardarse a medias.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse([
             'fields_found' => ['bank_name', 'campo_inventado'],
@@ -193,9 +193,9 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
 
     public function test_circuito_abierto_falla_sin_bloquear_el_resto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // Circuito 'anthropic' compartido por todos los jobs de IA — forzarlo abierto directo en
         // Redis (mismo layout que CircuitBreaker: cb:{name}:opened_at, sin TTL).
@@ -228,9 +228,9 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
         // bloquearía la imagen en sí, que el ADR pide explícitamente que nunca se bloquee. En vez
         // de eso, superado el límite el upload sigue devolviendo 200 pero con
         // extraction_job_id: null (no se disparó extracción esa vez).
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->fakeToolUseResponse(['fields_found' => [], 'confidence' => 'baja']);
 
@@ -255,8 +255,8 @@ class ProviderBankInfoExtractionTest extends FeatureTestCase
 
     public function test_poll_sin_permiso_read_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', []);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', []);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers/999/bank-image/extraction')

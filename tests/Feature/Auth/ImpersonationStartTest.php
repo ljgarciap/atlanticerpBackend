@@ -83,7 +83,7 @@ final class ImpersonationStartTest extends FeatureTestCase
 
     public function test_inicia_la_sesion_y_emite_un_token_con_la_identidad_del_objetivo_y_el_actor_real(): void
     {
-        $designer   = $this->userId('designer@atlantic.test');
+        $designer   = $this->userId('vendedor@atlantic.test');
         $superadmin = $this->userId('superadmin@atlantic.test');
 
         $response = $this->start($designer)->assertStatus(201);
@@ -91,7 +91,7 @@ final class ImpersonationStartTest extends FeatureTestCase
         $response->assertJsonPath('token_type', 'Bearer')
             ->assertJsonPath('expires_in_ms', 30 * 60_000)
             ->assertJsonPath('user.id', $designer)
-            ->assertJsonPath('user.email', 'designer@atlantic.test')
+            ->assertJsonPath('user.email', 'vendedor@atlantic.test')
             ->assertJsonPath('user.impersonation.actor_id', $superadmin);
         // RN4 / C8: sin refresh token, ni en el cuerpo ni dentro del usuario.
         $this->assertArrayNotHasKey('refresh_token', $response->json());
@@ -106,7 +106,7 @@ final class ImpersonationStartTest extends FeatureTestCase
         $this->assertSame(30 * 60, (int) $claims['exp'] - (int) $claims['iat']);
 
         // La vista sale idéntica a la del objetivo: mismos permisos, módulos, flags y rol que en su propio login.
-        $own = app(JwtService::class)->decode($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
+        $own = app(JwtService::class)->decode($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
         foreach (['role', 'role_id', 'permissions', 'modules', 'menuVisibility', 'flags', 'security_level', 'email'] as $claim) {
             $this->assertEquals($own[$claim], $claims[$claim], "claim {$claim} igual al del propio objetivo");
         }
@@ -115,18 +115,18 @@ final class ImpersonationStartTest extends FeatureTestCase
 
     public function test_la_respuesta_trae_el_bloque_de_impersonacion_del_contrato(): void
     {
-        $response = $this->start($this->userId('designer@atlantic.test'))->assertStatus(201);
+        $response = $this->start($this->userId('vendedor@atlantic.test'))->assertStatus(201);
 
         $block = $response->json('user.impersonation');
         $this->assertEqualsCanonicalizing(['id', 'actor_id', 'actor_name', 'target_name', 'expires_at'], array_keys($block));
         $this->assertSame('Super Admin', $block['actor_name']);
-        $this->assertSame('Designer Demo', $block['target_name']);
+        $this->assertSame('Vendedor Demo', $block['target_name']);
         $this->assertNotFalse(strtotime((string) $block['expires_at']));
     }
 
     public function test_la_sesion_queda_registrada_con_motivo_ip_y_vencimiento(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $response = $this->start($designer, ['reason' => '  SCRUM-1158 reproducir  ']);
 
         $this->reMakeCurrent();
@@ -141,7 +141,7 @@ final class ImpersonationStartTest extends FeatureTestCase
 
     public function test_el_inicio_queda_auditado_a_nombre_del_actor(): void
     {
-        $designer   = $this->userId('designer@atlantic.test');
+        $designer   = $this->userId('vendedor@atlantic.test');
         $superadmin = $this->userId('superadmin@atlantic.test');
         $response   = $this->start($designer)->assertStatus(201);
 
@@ -158,7 +158,7 @@ final class ImpersonationStartTest extends FeatureTestCase
     {
         GlobalSetting::updateOrCreate(['key' => 'impersonation_max_minutes'], ['value' => '10', 'updated_at' => now()]);
 
-        $response = $this->start($this->userId('designer@atlantic.test'))->assertStatus(201);
+        $response = $this->start($this->userId('vendedor@atlantic.test'))->assertStatus(201);
 
         $response->assertJsonPath('expires_in_ms', 10 * 60_000);
         $claims = app(JwtService::class)->decode((string) $response->json('token'));
@@ -169,7 +169,7 @@ final class ImpersonationStartTest extends FeatureTestCase
 
     public function test_sin_motivo_o_con_motivo_corto_responde_422_y_no_crea_sesion(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $headers  = $this->superadmin();
 
         $this->postJson("/api/users/{$designer}/impersonate", ['operator_password' => self::PASSWORD], $headers)
@@ -187,7 +187,7 @@ final class ImpersonationStartTest extends FeatureTestCase
     public function test_el_largo_minimo_del_motivo_sale_del_parametro(): void
     {
         GlobalSetting::updateOrCreate(['key' => 'impersonation_reason_min_length'], ['value' => '25', 'updated_at' => now()]);
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $headers  = $this->superadmin();
 
         $this->start($designer, ['reason' => 'SCRUM-1158 reproducir'], $headers)->assertStatus(422)->assertJsonValidationErrors(['reason']);
@@ -198,7 +198,7 @@ final class ImpersonationStartTest extends FeatureTestCase
 
     public function test_sin_contrasena_o_con_contrasena_incorrecta_no_se_crea_la_sesion(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $headers  = $this->superadmin();
 
         $this->postJson("/api/users/{$designer}/impersonate", ['reason' => self::REASON], $headers)
@@ -216,7 +216,7 @@ final class ImpersonationStartTest extends FeatureTestCase
 
     public function test_los_intentos_incorrectos_se_limitan_y_el_bloqueo_responde_429(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $headers  = $this->superadmin();
 
         for ($i = 0; $i < 5; $i++) {
@@ -230,7 +230,7 @@ final class ImpersonationStartTest extends FeatureTestCase
     /** C3: el cupo de contraseñas incorrectas de «Ver como usuario» NO es el del reset de contraseñas (y viceversa). */
     public function test_el_cupo_de_contrasenas_incorrectas_es_independiente_del_reset_de_contrasenas(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $headers  = $this->superadmin();
 
         // Agota el cupo de «Ver como usuario».
@@ -247,7 +247,7 @@ final class ImpersonationStartTest extends FeatureTestCase
 
     public function test_agotar_el_cupo_del_reset_de_contrasenas_no_bloquea_ver_como_usuario(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $headers  = $this->superadmin();
         $count    = $this->postJson('/api/users/reset-passwords', ['dry_run' => true], $headers)->json('data.count');
 
@@ -262,7 +262,7 @@ final class ImpersonationStartTest extends FeatureTestCase
     public function test_una_contrasena_correcta_devuelve_el_cupo(): void
     {
         config(['throttle.impersonation.per_minute' => 100]); // aísla el cupo de contraseñas del límite de peticiones por minuto
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $headers  = $this->superadmin();
 
         for ($round = 0; $round < 3; $round++) {
@@ -276,7 +276,7 @@ final class ImpersonationStartTest extends FeatureTestCase
     public function test_el_limite_de_inicios_por_minuto_es_por_usuario(): void
     {
         config(['throttle.impersonation.per_minute' => 2]);
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $headers  = $this->superadmin();
 
         $this->start($designer, [], $headers)->assertStatus(201);
@@ -290,7 +290,7 @@ final class ImpersonationStartTest extends FeatureTestCase
     public static function actoresSinSuperadmin(): array
     {
         return [
-            'vendedor/diseñador (nivel 4)' => [['__login' => 'designer@atlantic.test']],
+            'vendedor/diseñador (nivel 4)' => [['__login' => 'vendedor@atlantic.test']],
             'nivel 9'                      => [['__level' => 9]],
             'extra_permissions de gestión de usuarios' => [['__extra' => ['security.users', 'settings.global', 'security.levels']]],
         ];
@@ -310,16 +310,16 @@ final class ImpersonationStartTest extends FeatureTestCase
             $headers = $this->authHeaders($this->loginAs($user->email, self::PASSWORD, 'designer'));
         }
 
-        $this->start($this->userId('supervisor@atlantic.test'), [], $headers)->assertStatus(403);
+        $this->start($this->userId('nivel5@atlantic.test'), [], $headers)->assertStatus(403);
 
         $this->assertSame(0, $this->sessionCount());
         $this->reMakeCurrent();
-        $this->assertTrue(AuditLog::query()->where('action', AuditService::SECURITY_ACCESS_DENIED)->where('entity_id', 'api/users/' . $this->userId('supervisor@atlantic.test') . '/impersonate')->exists());
+        $this->assertTrue(AuditLog::query()->where('action', AuditService::SECURITY_ACCESS_DENIED)->where('entity_id', 'api/users/' . $this->userId('nivel5@atlantic.test') . '/impersonate')->exists());
     }
 
     public function test_sin_token_responde_401(): void
     {
-        $this->postJson('/api/users/' . $this->userId('designer@atlantic.test') . '/impersonate', ['reason' => self::REASON, 'operator_password' => self::PASSWORD])
+        $this->postJson('/api/users/' . $this->userId('vendedor@atlantic.test') . '/impersonate', ['reason' => self::REASON, 'operator_password' => self::PASSWORD])
             ->assertStatus(401);
     }
 
@@ -328,7 +328,7 @@ final class ImpersonationStartTest extends FeatureTestCase
         $operador = $this->makeUser(['password_hash' => 'ClaveOperador9!x']);
         $operador->forceFill(['role_id' => Role::where('is_superadmin', true)->value('id')])->save();
         $headers = $this->authHeaders($this->loginAs($operador->email, 'ClaveOperador9!x', 'superadmin'));
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
 
         $this->start($designer, ['operator_password' => 'ClaveOperador9!x'], $headers)->assertStatus(201);
 
@@ -405,17 +405,17 @@ final class ImpersonationStartTest extends FeatureTestCase
 
     public function test_un_token_de_impersonacion_no_puede_iniciar_otra_sesion(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $token    = (string) $this->start($designer)->assertStatus(201)->json('token');
 
-        $this->start($this->userId('supervisor@atlantic.test'), [], $this->authHeaders($token))->assertStatus(403);
+        $this->start($this->userId('nivel5@atlantic.test'), [], $this->authHeaders($token))->assertStatus(403);
         $this->assertSame(1, $this->sessionCount());
     }
 
     public function test_el_servicio_rechaza_el_encadenado_aunque_algo_dejara_pasar_la_peticion(): void
     {
         $request = \Illuminate\Http\Request::create('/api/users/1/impersonate', 'POST', ['reason' => self::REASON]);
-        $request->attributes->set('jwt', ['sub' => $this->userId('designer@atlantic.test'), 'act' => ['sub' => 1, 'imp_id' => (string) \Illuminate\Support\Str::uuid()], 'tenant' => 'atlantic']);
+        $request->attributes->set('jwt', ['sub' => $this->userId('vendedor@atlantic.test'), 'act' => ['sub' => 1, 'imp_id' => (string) \Illuminate\Support\Str::uuid()], 'tenant' => 'atlantic']);
 
         try {
             app(\App\Modules\Auth\Services\ImpersonationService::class)->authorizeStart($request, 1, self::REASON);

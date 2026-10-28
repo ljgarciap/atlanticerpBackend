@@ -41,7 +41,7 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/audit/logs')
@@ -67,7 +67,7 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_entity_types_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/audit/logs/entity-types')

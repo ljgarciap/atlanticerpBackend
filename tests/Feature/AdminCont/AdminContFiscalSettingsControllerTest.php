@@ -47,7 +47,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_show_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/fiscal-settings')
@@ -226,7 +226,7 @@ class AdminContFiscalSettingsControllerTest extends FeatureTestCase
 
     public function test_update_rechaza_a_un_usuario_que_no_es_mark(): void
     {
-        $token = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/fiscal-settings', ['razon_social' => 'Otra cosa'])

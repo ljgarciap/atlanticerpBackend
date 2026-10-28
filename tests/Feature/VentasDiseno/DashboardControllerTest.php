@@ -82,8 +82,8 @@ class DashboardControllerTest extends FeatureTestCase
 
     public function test_designer_no_puede_acceder_al_dashboard(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/dashboard/summary')
@@ -306,9 +306,9 @@ class DashboardControllerTest extends FeatureTestCase
     {
         Mail::fake();
         $this->grantVentasDisenoRead('management@atlantic.test');
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
 
         $this->makeCard($designerId, 'proposal', Carbon::now()->subDays(20), projectName: 'REQ604 Remind Designer');
         $this->makeCard($managerId, 'proposal', Carbon::now()->subDays(20), projectName: 'REQ604 Remind Manager');
@@ -402,7 +402,7 @@ class DashboardControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoRead('management@atlantic.test');
         $managerId = $this->userIdByEmail('management@atlantic.test');
-        $otherOwnerId = $this->userIdByEmail('designer@atlantic.test');
+        $otherOwnerId = $this->userIdByEmail('vendedor@atlantic.test');
 
         $this->makeCard($managerId, 'quote', amount: 1234, projectName: 'SCRUM854 Owner A');
         $this->makeCard($otherOwnerId, 'quote', amount: 5678, projectName: 'SCRUM854 Owner B');

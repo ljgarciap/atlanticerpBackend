@@ -33,12 +33,12 @@ class UatVisibilityControllerTest extends FeatureTestCase
 
     private function designerId(): int
     {
-        return (int) User::where('email', 'designer@atlantic.test')->value('id');
+        return (int) User::where('email', 'vendedor@atlantic.test')->value('id');
     }
 
     public function test_bulk_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $this->activateTenant();
 
         $this->withHeaders($this->authHeaders($token))

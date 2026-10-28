@@ -52,7 +52,7 @@ final class ImpersonationSchemaTest extends FeatureTestCase
     {
         $id = (string) Str::uuid();
         $actor  = (int) DB::table('atlantic_auth.users')->where('email', 'superadmin@atlantic.test')->value('id');
-        $target = (int) DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->value('id');
+        $target = (int) DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('id');
 
         DB::table('atlantic_auth.impersonation_sessions')->insert([
             'id' => $id, 'actor_id' => $actor, 'target_id' => $target, 'reason' => 'SCRUM-1158 prueba de esquema',
@@ -263,7 +263,7 @@ final class ImpersonationSchemaTest extends FeatureTestCase
             ->assertStatus(429)->assertJsonPath('code', 'too_many_attempts');
 
         // Es el mismo cupo que el inicio de «Ver como usuario» (mismo ámbito)…
-        $target = (int) DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->value('id');
+        $target = (int) DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('id');
         $this->withHeaders($headers)->postJson("/api/users/{$target}/impersonate", ['reason' => 'SCRUM-1158 prueba', 'operator_password' => 'Password123!'])->assertStatus(429);
         // …pero no toca el del reset de contraseñas ni el de otros ajustes que ya pedían contraseña.
         $this->withHeaders($headers)->putJson(self::SETTINGS_URL . '/password_reset_free_per_hour', ['value' => 7])->assertOk();
@@ -330,8 +330,8 @@ final class ImpersonationSchemaTest extends FeatureTestCase
 
     public function test_quien_no_es_superadmin_no_puede_ver_ni_cambiar_los_parametros(): void
     {
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->update(['extra_permissions' => json_encode(['settings.global'])]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode(['settings.global'])]);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->getJson(self::SETTINGS_URL)->assertStatus(403);
         $this->withHeaders($this->authHeaders($token))->putJson(self::SETTINGS_URL . '/impersonation_max_minutes', ['value' => 120, 'operator_password' => 'Password123!'])->assertStatus(403);

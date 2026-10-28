@@ -23,7 +23,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * SCRUM-735. Gerencia (gerencia@test.com, seedeada por CoreUserSeeder en TODOS
- * los entornos, incl. `testing`) y Vendedor Disenador (vendedordisenador2@test.com, seedeado por
+ * los entornos, incl. `testing`) y Vendedor (vendedor2@test.com, seedeado por
  * BusinessRoleUserSeeder, rol vendedor real) son usuarios reales — no hace falta
  * ningún fixture de usuario propio.
  */
@@ -39,7 +39,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->daniela = User::where('email', 'gerencia@test.com')->firstOrFail();
-        $this->neil = User::where('email', 'vendedordisenador2@test.com')->firstOrFail();
+        $this->neil = User::where('email', 'vendedor2@test.com')->firstOrFail();
     }
 
     /**
@@ -119,7 +119,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     public function test_dry_run_identifica_toda_la_data_de_gerencia_y_excluye_lo_de_otro_usuario(): void
     {
         $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia QA]');
-        $neil = $this->seedFullPipeline($this->neil, '[Vendedor Disenador Real]');
+        $neil = $this->seedFullPipeline($this->neil, '[Vendedor Real]');
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
@@ -173,7 +173,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     public function test_actualizar_un_registro_de_otro_usuario_no_lo_marca_como_candidato(): void
     {
         $this->actingForAudit($this->neil);
-        $master = MasterClient::create(['name' => 'Cliente real de Vendedor Disenador']);
+        $master = MasterClient::create(['name' => 'Cliente real de Vendedor']);
 
         // Gerencia solo EDITA (action=updated) — nunca lo creó. No debe quedar candidato.
         $this->actingForAudit($this->daniela);
@@ -203,7 +203,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $subDaniela = SubClient::create(['master_client_id' => $master->id, 'business_name' => '[Gerencia] Sub propio', 'tax_id' => '155-1111-1-2026']);
 
         $this->actingForAudit($this->neil);
-        $subNeil = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Vendedor Disenador', 'tax_id' => '155-2222-1-2026']);
+        $subNeil = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Vendedor', 'tax_id' => '155-2222-1-2026']);
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
@@ -211,7 +211,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->assertContains($subDaniela->id, $report['candidates']['sub_client']);
         $this->assertNotContains($subNeil->id, $report['candidates']['sub_client']);
         // ...pero el MasterClient compartido NO se borra: sub_clients.master_client_id es
-        // CASCADE, y borrarlo se llevaría puesto el subcliente real de Vendedor Disenador.
+        // CASCADE, y borrarlo se llevaría puesto el subcliente real de Vendedor.
         $this->assertNotContains($master->id, $report['candidates']['master_client']);
         $excludedIds = collect($report['excluded'])->where('entity_type', 'master_client')->pluck('id')->all();
         $this->assertContains($master->id, $excludedIds);
@@ -301,7 +301,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($this->daniela);
         $protectedMaster = MasterClient::create(['name' => '[QA-VD] Cliente protegido']);
 
-        $neil = $this->seedFullPipeline($this->neil, '[Vendedor Disenador Force]');
+        $neil = $this->seedFullPipeline($this->neil, '[Vendedor Force]');
 
         $service = app(TestDataCleanupService::class);
         $report = $service->buildReport('gerencia@test.com');

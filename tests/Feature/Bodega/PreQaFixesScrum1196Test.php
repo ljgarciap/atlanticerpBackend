@@ -56,7 +56,7 @@ class PreQaFixesScrum1196Test extends FeatureTestCase
     {
         $order = $this->makeOrder([], ['catalog_product_id' => $productId, 'qty_requested' => $qty]);
         $item  = $order->items->first();
-        $this->withHeaders($h)->postJson("/api/bodega/orders/{$order->id}/assign-picker", ['picker_id' => $this->userIdByEmail('ayudantegeneralbodega@test.com')])->assertStatus(200);
+        $this->withHeaders($h)->postJson("/api/bodega/orders/{$order->id}/assign-picker", ['picker_id' => $this->userIdByEmail('auxiliarbodega@test.com')])->assertStatus(200);
         $this->withHeaders($h)->postJson("/api/bodega/orders/{$order->id}/start-picking")->assertStatus(200);
         $this->makeCurrentTenant();
 

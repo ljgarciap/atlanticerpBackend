@@ -15,7 +15,7 @@ use Tests\Feature\FeatureTestCase;
  * SCRUM-148 ("Usuarios - Correos") — roster real de 25 personas de negocio de SCRUM-144 que no
  * tenían cuenta (Gerencia ya existía vía CoreUserSeeder). Verifica los casos puntuales acordados con
  * Luis: el override de nivel de Gerencia, el correo "Correo 1" de Contabilidad, el correo genérico de
- * Ayudante General Bodega, que Vendedor Disenador (10mo Vendedor/Diseñador) se creó igual, y que los 3 sin cargo NO se crearon.
+ * Auxiliar Bodega, que Vendedor (10mo Vendedor/Diseñador) se creó igual, y que los 3 sin cargo NO se crearon.
  *
  * No hay test de "no se manda WelcomeMail" — RefreshDatabase siembra una sola vez por proceso de
  * test, antes de que `Mail::fake()` (en `FeatureTestCase::setUp()`) empiece a interceptar, así que
@@ -56,9 +56,9 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
     public function test_apolonio_usa_correo_generico_nombre_apellido(): void
     {
         $ayudanteBodega = Role::where('key', 'auxiliar_bodega')->firstOrFail();
-        $apolonio = User::where('email', 'ayudantegeneralbodega@test.com')->first();
+        $apolonio = User::where('email', 'auxiliarbodega@test.com')->first();
 
-        $this->assertNotNull($apolonio, 'Ayudante General Bodega debe existir con el correo genérico del rol (ayudantegeneralbodega@test.com).');
+        $this->assertNotNull($apolonio, 'Auxiliar Bodega debe existir con el correo genérico del rol (auxiliarbodega@test.com).');
         $this->assertSame($ayudanteBodega->id, $apolonio->role_id);
     }
 
@@ -66,22 +66,22 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
     {
         // Cuenta acotada al roster real (no al total de role_id=vendedor de la BD):
         // en local/testing, AuthUserSeeder también le asigna este rol al fixture
-        // designer@atlantic.test (Task 4, ver ADR-006), así que un conteo global daría 11,
+        // vendedor@atlantic.test (Task 4, ver ADR-006), así que un conteo global daría 11,
         // no 10 — no es un bug, es esperado en este entorno.
         $roster = [
-            'vendedordisenador2@test.com', 'vendedordisenador3@test.com', 'vendedordisenador4@test.com',
-            'vendedordisenador5@test.com', 'vendedordisenador6@test.com', 'vendedordisenador7@test.com',
-            'vendedordisenador8@test.com', 'vendedordisenador9@test.com', 'vendedordisenador10@test.com',
-            'vendedordisenador@test.com',
+            'vendedor2@test.com', 'vendedor3@test.com', 'vendedor4@test.com',
+            'vendedor5@test.com', 'vendedor6@test.com', 'vendedor7@test.com',
+            'vendedor8@test.com', 'vendedor9@test.com', 'vendedor10@test.com',
+            'vendedor@test.com',
         ];
 
         $vendedor = Role::where('key', 'vendedor')->firstOrFail();
         $count = User::where('role_id', $vendedor->id)->whereIn('email', $roster)->count();
 
-        // 9 originales de SCRUM-144 + Vendedor Disenador (cargo confirmado en SCRUM-148, aunque no contado
+        // 9 originales de SCRUM-144 + Vendedor (cargo confirmado en SCRUM-148, aunque no contado
         // originalmente) = 10.
         $this->assertSame(10, $count);
-        $this->assertNotNull(User::where('email', 'vendedordisenador10@test.com')->first());
+        $this->assertNotNull(User::where('email', 'vendedor10@test.com')->first());
     }
 
     public function test_vendedor_disenador_usa_el_nivel_default_del_rol(): void
@@ -91,7 +91,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         // — can_edit=true solo en ventas_diseno) para poder darle visibilidad de solo lectura en
         // `servicios` sin heredar edición ahí. Ver
         // 2026_08_02_100003_grant_servicios_view_to_vendedor_disenador.php.
-        $neil = User::where('email', 'vendedordisenador2@test.com')->firstOrFail();
+        $neil = User::where('email', 'vendedor2@test.com')->firstOrFail();
         $this->assertSame(6, $neil->securityLevel?->level);
     }
 
@@ -117,7 +117,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $this->assertSame('Repartidor Test', trim("{$joel->first_name} {$joel->last_name}"));
     }
 
-    // SCRUM-1142 — Tecnico Servicios, Repartidor y "Personal de Bodega" existen solo para aparecer en los selectores: nadie entra con ellos.
+    // SCRUM-1142 — Tecnico, Repartidor y "Personal de Bodega" existen solo para aparecer en los selectores: nadie entra con ellos.
     public function test_las_cuentas_de_bodega_sin_acceso_no_aceptan_contrasena_igual_al_correo(): void
     {
         $courier = Role::where('key', 'transporte')->firstOrFail();
@@ -136,9 +136,9 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
 
     public function test_el_resto_del_roster_sigue_con_contrasena_igual_al_correo(): void
     {
-        $apolonio = User::where('email', 'ayudantegeneralbodega@test.com')->firstOrFail();
+        $apolonio = User::where('email', 'auxiliarbodega@test.com')->firstOrFail();
 
-        $this->assertTrue(Hash::check('ayudantegeneralbodega@test.com', $apolonio->password_hash));
+        $this->assertTrue(Hash::check('auxiliarbodega@test.com', $apolonio->password_hash));
     }
 
     public function test_25_personas_nuevas_mas_aprobador_ya_existente_suman_26_del_roster_de_scrum_144(): void
@@ -146,12 +146,12 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $emails = [
             'gerencia5@test.com', 'contabilidad@test.com', 'asistenteadministrativa@test.com',
             'lidercompras@test.com', 'liderbodega@test.com', 'asistentebodega@test.com',
-            'asistentebodega2@test.com', 'ayudantegeneralbodega@test.com', 'transporte@test.com',
-            'liderservicios@test.com', 'tecnicoservicios@test.com', 'tecnicoservicios2@test.com',
-            'tecnicoservicios3@test.com', 'garantiasservicios@test.com', 'vendedordisenador@test.com',
-            'vendedordisenador2@test.com', 'vendedordisenador3@test.com', 'vendedordisenador4@test.com',
-            'vendedordisenador5@test.com', 'vendedordisenador6@test.com', 'vendedordisenador7@test.com',
-            'vendedordisenador8@test.com', 'vendedordisenador9@test.com', 'vendedordisenador10@test.com',
+            'asistentebodega2@test.com', 'auxiliarbodega@test.com', 'transporte@test.com',
+            'liderservicios@test.com', 'tecnico@test.com', 'tecnico2@test.com',
+            'tecnico3@test.com', 'tecnicogarantias@test.com', 'vendedor@test.com',
+            'vendedor2@test.com', 'vendedor3@test.com', 'vendedor4@test.com',
+            'vendedor5@test.com', 'vendedor6@test.com', 'vendedor7@test.com',
+            'vendedor8@test.com', 'vendedor9@test.com', 'vendedor10@test.com',
             'lideroperaciones@test.com',
         ];
 

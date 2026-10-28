@@ -45,7 +45,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
     }
 
     /** @return array{0: array<string, string>, 1: string} headers del token de impersonación y el id de la sesión */
-    private function beginImpersonation(string $targetEmail = 'designer@atlantic.test'): array
+    private function beginImpersonation(string $targetEmail = 'vendedor@atlantic.test'): array
     {
         $admin = $this->authHeaders($this->loginAs('superadmin@atlantic.test', self::PASSWORD, 'superadmin'));
         $response = $this->postJson('/api/users/' . $this->userId($targetEmail) . '/impersonate', [
@@ -69,15 +69,15 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
         [$headers] = $this->beginImpersonation();
 
         $this->getJson('/api/auth/me', $headers)->assertOk()
-            ->assertJsonPath('email', 'designer@atlantic.test')
+            ->assertJsonPath('email', 'vendedor@atlantic.test')
             ->assertJsonPath('role', 'vendedor')
             ->assertJsonPath('impersonation.actor_name', 'Super Admin')
-            ->assertJsonPath('impersonation.target_name', 'Designer Demo');
+            ->assertJsonPath('impersonation.target_name', 'Vendedor Demo');
     }
 
     public function test_el_token_normal_no_trae_bloque_de_impersonacion_en_me(): void
     {
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
 
         $this->getJson('/api/auth/me', $headers)->assertOk()->assertJsonPath('impersonation', null);
     }
@@ -133,7 +133,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
     public function test_una_escritura_bloqueada_no_cambia_nada_en_la_base(): void
     {
         [$headers] = $this->beginImpersonation();
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $before = DB::table('atlantic_auth.users')->where('id', $designer)->first();
 
         $this->patchJson('/api/auth/profile', ['phone' => '+507 6111-1111', 'first_name' => 'Hackeado'], $headers)->assertStatus(403);
@@ -142,7 +142,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
         $after = DB::table('atlantic_auth.users')->where('id', $designer)->first();
         $this->assertEquals($before, $after);
         // La contraseña original del objetivo sigue funcionando.
-        $this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer');
+        $this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer');
     }
 
     public function test_un_post_con_method_override_a_get_tambien_se_bloquea(): void
@@ -174,7 +174,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
     {
         \Illuminate\Support\Facades\Route::middleware(['api', 'no_impersonation'])->get('/api/_test/get-que-escribe', fn () => response()->json(['ok' => true]));
 
-        $own = $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
+        $own = $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
         $this->getJson('/api/_test/get-que-escribe', $own)->assertOk()->assertJsonPath('ok', true);
 
         [$headers] = $this->beginImpersonation();
@@ -204,7 +204,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
 
     public function test_stop_con_un_token_normal_responde_409(): void
     {
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
 
         $this->postJson('/api/auth/impersonation/stop', [], $headers)->assertStatus(409)->assertJsonPath('code', 'not_impersonating');
     }
@@ -263,7 +263,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
     public function test_si_se_bloquea_por_seguridad_al_objetivo_la_sesion_muere_como_target_blocked(): void
     {
         [$headers, $sessionId] = $this->beginImpersonation();
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->update(['security_blocked_at' => now()]);
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->update(['security_blocked_at' => now()]);
 
         $this->getJson('/api/auth/me', $headers)->assertStatus(401)->assertJsonPath('code', 'impersonation_ended');
         $this->assertSame('target_blocked', $this->sessionRow($sessionId)->ended_reason);
@@ -275,22 +275,22 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
         [$headers, $sessionId] = $this->beginImpersonation();
         $this->getJson('/api/auth/me', $headers)->assertOk();
 
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->update(['is_active' => false]);
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->update(['is_active' => false]);
         $this->getJson('/api/auth/me', $headers)->assertStatus(401)->assertJsonPath('code', 'impersonation_ended');
 
         $session = $this->sessionRow($sessionId);
         $this->assertSame('target_blocked', $session->ended_reason);
         $this->assertSame('ended', $session->status(), 'ya no figura como «active» en el listado');
 
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->update(['is_active' => true]);
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->update(['is_active' => true]);
         $this->getJson('/api/auth/me', $headers)->assertStatus(401)->assertJsonPath('code', 'impersonation_ended');
         $this->getJson('/api/auth/mfa/status', $headers)->assertStatus(401)->assertJsonPath('code', 'impersonation_ended');
     }
 
     public function test_sin_act_un_usuario_desactivado_sigue_recibiendo_el_401_generico(): void
     {
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->update(['is_active' => false]);
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->update(['is_active' => false]);
 
         $res = $this->getJson('/api/auth/me', $headers)->assertStatus(401);
         $this->assertNull($res->json('code'), 'sin act no hay código de impersonación');
@@ -300,7 +300,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
     public function test_un_reset_de_contrasena_del_objetivo_invalida_la_sesion(): void
     {
         [$headers] = $this->beginImpersonation();
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->update(['password_reset_at' => now()->addSeconds(5)]);
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->update(['password_reset_at' => now()->addSeconds(5)]);
 
         $this->getJson('/api/auth/me', $headers)->assertStatus(401);
     }
@@ -308,7 +308,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
     public function test_un_cambio_de_contrasena_del_objetivo_invalida_la_sesion(): void
     {
         [$headers] = $this->beginImpersonation();
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->update(['password_changed_at' => now()->addSeconds(5)]);
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->update(['password_changed_at' => now()->addSeconds(5)]);
 
         $this->getJson('/api/auth/me', $headers)->assertStatus(401);
     }
@@ -345,9 +345,9 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
 
     public function test_una_sesion_real_combinada_con_otro_sub_se_rechaza(): void
     {
-        [, $sessionId] = $this->beginImpersonation('designer@atlantic.test');
+        [, $sessionId] = $this->beginImpersonation('vendedor@atlantic.test');
         $this->reMakeCurrent();
-        $supervisor = User::where('email', 'supervisor@atlantic.test')->firstOrFail();
+        $supervisor = User::where('email', 'nivel5@atlantic.test')->firstOrFail();
         $claims = [...app(JwtClaimsBuilder::class)->claims($supervisor, 'atlantic'), 'act' => $this->claimsOf($sessionId)['act']];
 
         $this->getJson('/api/auth/me', $this->authHeaders(app(JwtService::class)->encode($claims)))->assertStatus(401);
@@ -389,7 +389,7 @@ final class ImpersonationReadOnlyTest extends FeatureTestCase
 
     public function test_las_requests_normales_no_tocan_la_tabla_de_sesiones(): void
     {
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
         $this->reMakeCurrent();
 
         DB::enableQueryLog();

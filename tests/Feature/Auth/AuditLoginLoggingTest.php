@@ -29,10 +29,10 @@ class AuditLoginLoggingTest extends FeatureTestCase
 
     public function test_login_exitoso_registra_auth_login_con_el_user_id_correcto(): void
     {
-        $userId = $this->userId('designer@atlantic.test');
+        $userId = $this->userId('vendedor@atlantic.test');
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ])->assertStatus(200);
 
@@ -48,10 +48,10 @@ class AuditLoginLoggingTest extends FeatureTestCase
 
     public function test_login_fallido_con_password_incorrecto_registra_auth_failed(): void
     {
-        $userId = $this->userId('designer@atlantic.test');
+        $userId = $this->userId('vendedor@atlantic.test');
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'PasswordIncorrecto!',
         ])->assertStatus(401);
 

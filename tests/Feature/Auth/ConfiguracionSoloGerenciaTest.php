@@ -50,19 +50,19 @@ class ConfiguracionSoloGerenciaTest extends FeatureTestCase
         ];
     }
 
-    /** Loguea a designer@  con el role_key de negocio indicado. */
+    /** Loguea a vendedor@  con el role_key de negocio indicado. */
     private function tokenWithRole(string $roleKey, array $extraPermissions = []): string
     {
         $slug   = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $roleId = DB::table("{$slug}_auth.roles")->where('key', $roleKey)->value('id');
         $this->assertNotNull($roleId, "rol {$roleKey} no existe en el seed");
 
-        DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')->update([
+        DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')->update([
             'role_id'           => $roleId,
             'extra_permissions' => json_encode($extraPermissions),
         ]);
 
-        return $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        return $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
     }
 
     /** @param array<string, mixed> $body */

@@ -90,7 +90,7 @@ final class BodegaSeedUatProjectsCommand extends Command
 
         // Regla dura del proyecto (feedback_testing_uses_real_users_not_demo.md): nunca cuentas
         // demo, aunque compartan role_key por conveniencia de fixtures — ej.
-        // designer@atlantic.test (AuthUserSeeder) tiene role_key=vendedor en
+        // vendedor@atlantic.test (AuthUserSeeder) tiene role_key=vendedor en
         // local/dev/testing para no inflar el roster de FeatureTestCase, pero no es un vendedor
         // real. Exclusión explícita en vez de confiar en que qa (target real de este comando)
         // nunca corre AuthUserSeeder — así el comando es correcto en cualquier entorno.

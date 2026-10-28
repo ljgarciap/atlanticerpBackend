@@ -91,7 +91,7 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
     public function test_supera_el_umbral_de_sesiones_por_dia(): void
     {
         foreach (['08:00', '09:30', '11:00', '12:30', '14:00', '15:30'] as $time) {
-            $this->insertImpersonation('designer@atlantic.test', $time);
+            $this->insertImpersonation('vendedor@atlantic.test', $time);
         }
 
         $this->runJob();
@@ -108,7 +108,7 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
     public function test_en_el_umbral_exacto_no_salta(): void
     {
         foreach (['08:00', '09:30', '11:00', '12:30', '14:00'] as $time) {
-            $this->insertImpersonation('designer@atlantic.test', $time);
+            $this->insertImpersonation('vendedor@atlantic.test', $time);
         }
 
         $this->runJob();
@@ -120,7 +120,7 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
     {
         GlobalSetting::updateOrCreate(['key' => 'impersonation_alert_sessions_per_day'], ['value' => '2', 'updated_at' => now()]);
         foreach (['08:00', '10:00', '12:00'] as $time) {
-            $this->insertImpersonation('designer@atlantic.test', $time);
+            $this->insertImpersonation('vendedor@atlantic.test', $time);
         }
 
         $this->runJob();
@@ -135,7 +135,7 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
         for ($i = 0; $i < 8; $i++) {
             $id = (string) Str::uuid();
             DB::table('atlantic_auth.impersonation_sessions')->insert([
-                'id' => $id, 'actor_id' => $this->userId('superadmin@atlantic.test'), 'target_id' => $this->userId('designer@atlantic.test'),
+                'id' => $id, 'actor_id' => $this->userId('superadmin@atlantic.test'), 'target_id' => $this->userId('vendedor@atlantic.test'),
                 'reason' => 'SCRUM-1158 hoy', 'started_at' => Carbon::today()->setTime(1, $i), 'expires_at' => Carbon::today()->setTime(2, $i),
             ]);
         }
@@ -149,10 +149,10 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
 
     public function test_supera_el_umbral_de_personas_distintas_en_una_hora(): void
     {
-        $this->insertImpersonation('designer@atlantic.test', '10:00');
-        $this->insertImpersonation('supervisor@atlantic.test', '10:10');
-        $this->insertImpersonation('electrician@atlantic.test', '10:20');
-        $this->insertImpersonation('readonly@atlantic.test', '10:30');
+        $this->insertImpersonation('vendedor@atlantic.test', '10:00');
+        $this->insertImpersonation('nivel5@atlantic.test', '10:10');
+        $this->insertImpersonation('nivel2@atlantic.test', '10:20');
+        $this->insertImpersonation('nivel1@atlantic.test', '10:30');
 
         $this->runJob();
 
@@ -166,11 +166,11 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
 
     public function test_tres_personas_en_una_hora_o_cuatro_repartidas_en_varias_horas_no_saltan(): void
     {
-        $this->insertImpersonation('designer@atlantic.test', '10:00');
-        $this->insertImpersonation('supervisor@atlantic.test', '10:10');
-        $this->insertImpersonation('electrician@atlantic.test', '10:20');
+        $this->insertImpersonation('vendedor@atlantic.test', '10:00');
+        $this->insertImpersonation('nivel5@atlantic.test', '10:10');
+        $this->insertImpersonation('nivel2@atlantic.test', '10:20');
         // La cuarta, fuera de la hora de las anteriores.
-        $this->insertImpersonation('readonly@atlantic.test', '12:30');
+        $this->insertImpersonation('nivel1@atlantic.test', '12:30');
 
         $this->runJob();
 
@@ -180,7 +180,7 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
     public function test_la_misma_persona_varias_veces_no_cuenta_como_personas_distintas(): void
     {
         foreach (['10:00', '10:10', '10:20', '10:30', '10:40'] as $time) {
-            $this->insertImpersonation('designer@atlantic.test', $time);
+            $this->insertImpersonation('vendedor@atlantic.test', $time);
         }
 
         $this->runJob();
@@ -192,7 +192,7 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
 
     public function test_muchos_intentos_de_escritura_en_una_sesion_disparan_la_alerta(): void
     {
-        $id = $this->insertImpersonation('designer@atlantic.test');
+        $id = $this->insertImpersonation('vendedor@atlantic.test');
         $this->blockedWrites($id, 21);
 
         $this->runJob();
@@ -206,8 +206,8 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
 
     public function test_veinte_intentos_o_repartidos_en_varias_sesiones_no_saltan(): void
     {
-        $a = $this->insertImpersonation('designer@atlantic.test', '09:00');
-        $b = $this->insertImpersonation('supervisor@atlantic.test', '16:00');
+        $a = $this->insertImpersonation('vendedor@atlantic.test', '09:00');
+        $b = $this->insertImpersonation('nivel5@atlantic.test', '16:00');
         $this->blockedWrites($a, 20);
         $this->blockedWrites($b, 15);
 
@@ -221,7 +221,7 @@ final class ImpersonationAlertsJobTest extends FeatureTestCase
     public function test_no_duplica_si_el_job_corre_dos_veces(): void
     {
         foreach (['08:00', '09:30', '11:00', '12:30', '14:00', '15:30'] as $time) {
-            $this->insertImpersonation('designer@atlantic.test', $time);
+            $this->insertImpersonation('vendedor@atlantic.test', $time);
         }
 
         $this->runJob();

@@ -25,9 +25,9 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com'; // Lider Servicios Leis
 
-    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com'; // Tecnico Servicios Test
+    private const TECNICO_SERVICIOS = 'tecnico@test.com'; // Tecnico Test
 
-    private const OTRO_TECNICO = 'tecnicoservicios2@test.com'; // Tecnico Servicios Test 2
+    private const OTRO_TECNICO = 'tecnico2@test.com'; // Tecnico Test 2
 
     private const MANAGEMENT = 'gerencia3@test.com'; // Gerencia — Gerencia
 
@@ -694,11 +694,11 @@ class ServiceQuoteBatch12Test extends FeatureTestCase
 
     public function test_historial_global_incluye_todas_las_versiones_sin_filtrar_por_tecnico(): void
     {
-        $ticketCarlos = $this->makeTicket(); // asignado a Tecnico Servicios por defecto (ver makeTicket())
+        $ticketCarlos = $this->makeTicket(); // asignado a Tecnico por defecto (ver makeTicket())
         $tokenCarlos = $this->loginAs(self::TECNICO_SERVICIOS, self::TECNICO_SERVICIOS, 'tecnico');
         $this->generateAndSendQuote($ticketCarlos, $tokenCarlos);
 
-        // Tecnico Servicios (otro técnico interno, NO asignado a ningún ticket de arriba) consulta el
+        // Tecnico (otro técnico interno, NO asignado a ningún ticket de arriba) consulta el
         // historial global — RN de REQ-250: visibilidad transversal, nunca filtrada por técnico.
         $tokenPedro = $this->loginAs(self::OTRO_TECNICO, self::OTRO_TECNICO, 'tecnico');
 

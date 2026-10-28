@@ -42,8 +42,8 @@ class CalendarEventControllerTest extends FeatureTestCase
 
     public function test_crear_evento_propio(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/calendar-events', [
@@ -52,14 +52,14 @@ class CalendarEventControllerTest extends FeatureTestCase
             ->assertStatus(201);
 
         $response->assertJsonPath('title', 'Visita técnica');
-        $response->assertJsonPath('owner.name', 'Designer Demo');
+        $response->assertJsonPath('owner.name', 'Vendedor Demo');
     }
 
     public function test_crear_evento_a_nombre_de_otro_retorna_403_para_disenador(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $managerId = $this->userIdByEmail('management@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/calendar-events', [
@@ -71,7 +71,7 @@ class CalendarEventControllerTest extends FeatureTestCase
     public function test_gerencia_puede_crear_evento_a_nombre_de_otro_vendedor(): void
     {
         $this->grantVentasDisenoEdit('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -80,19 +80,19 @@ class CalendarEventControllerTest extends FeatureTestCase
             ])
             ->assertStatus(201);
 
-        $response->assertJsonPath('owner.name', 'Designer Demo');
+        $response->assertJsonPath('owner.name', 'Vendedor Demo');
     }
 
     public function test_listar_eventos_propios(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
 
         CalendarEvent::create(['owner_id' => $designerId, 'title' => 'Mío', 'start_at' => now()]);
         CalendarEvent::create(['owner_id' => $managerId, 'title' => 'Ajeno', 'start_at' => now()]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/calendar-events')
             ->assertStatus(200);
@@ -104,11 +104,11 @@ class CalendarEventControllerTest extends FeatureTestCase
 
     public function test_editar_evento_ajeno_retorna_403_para_disenador(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $managerId = $this->userIdByEmail('management@atlantic.test');
         $event = CalendarEvent::create(['owner_id' => $managerId, 'title' => 'Ajeno', 'start_at' => now()]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/calendar-events/{$event->id}", [
                 'title' => 'Editado', 'start_at' => '2026-07-20T10:00:00-05:00',
@@ -118,11 +118,11 @@ class CalendarEventControllerTest extends FeatureTestCase
 
     public function test_borrar_evento_propio(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $event = CalendarEvent::create(['owner_id' => $designerId, 'title' => 'Mío', 'start_at' => now()]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/ventas-diseno/calendar-events/{$event->id}")
             ->assertStatus(204);

@@ -22,7 +22,7 @@ class RefreshTokenReuseAuditTest extends FeatureTestCase
     /** @return array<string, mixed> */
     private function login(): array
     {
-        return $this->postJson('/api/auth/login', ['email' => 'designer@atlantic.test', 'password' => 'Password123!'])
+        return $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'Password123!'])
             ->assertStatus(200)->json();
     }
 

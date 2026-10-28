@@ -50,7 +50,7 @@ class MultiRoleLoginTest extends FeatureTestCase
     public function test_login_un_solo_rol_retorna_jwt_directo(): void
     {
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -110,7 +110,7 @@ class MultiRoleLoginTest extends FeatureTestCase
 
     public function test_switch_role_ya_no_existe(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/auth/switch-role', ['role' => 'management'])
             ->assertStatus(404);

@@ -11,7 +11,7 @@ use RuntimeException;
 
 /**
  * SCRUM-901 — "Limpieza de datos de prueba": conserva únicamente la data del usuario indicado
- * (--keep-user, default Vendedor Disenador — flujos completos de principio a fin en todos los módulos) y
+ * (--keep-user, default Vendedor — flujos completos de principio a fin en todos los módulos) y
  * purga la de cualquier otro usuario, transversal a CRM, Ventas & Diseño, Compras, Bodega,
  * Servicios y Administración & Contabilidad. Ver TransversalTestDataCleanupService para el
  * diseño completo del algoritmo.
@@ -30,7 +30,7 @@ final class TransversalCleanupTestDataCommand extends Command
     /** @var string */
     protected $signature = 'data:cleanup-test-data
         {--tenant=atlantic : Slug del tenant a limpiar}
-        {--keep-user=vendedordisenador5@test.com : Email del único usuario cuya data se conserva}
+        {--keep-user=vendedor5@test.com : Email del único usuario cuya data se conserva}
         {--force : Ejecuta el borrado/null-out real — sin esta opción el comando SIEMPRE corre en modo reporte}
         {--json : Emite el reporte en JSON en vez de tablas de consola}
         {--env-override : Permite correr en production — SOLO para testing local/CI, nunca en la operación real}';

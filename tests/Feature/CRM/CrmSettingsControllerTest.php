@@ -57,13 +57,13 @@ class CrmSettingsControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    // designer@atlantic.test — rol 'designer' puro (level 4), sin superadmin.all. La cuenta
+    // vendedor@atlantic.test — rol 'designer' puro (level 4), sin superadmin.all. La cuenta
     // demo 'management@atlantic.test' (loginAs() por default) tiene AMBOS roles
     // ['management','superadmin'] sembrados (AuthUserSeeder), así que no sirve para probar un
     // rechazo por falta de superadmin.all.
     private function loginAsDesigner(): string
     {
-        return $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        return $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
     }
 
     public function test_show_rechaza_a_un_rol_sin_superadmin_all(): void

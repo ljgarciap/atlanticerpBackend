@@ -279,9 +279,9 @@ class InventoryKpiServiceSqlParityTest extends FeatureTestCase
         // memoria con ~30K productos. Con 5,000 productos, una página de 20 no puede hidratar más de
         // 20 `CatalogProduct` (contados por el evento `retrieved`) ni gastar decenas de MB.
         $this->bulkProducts(5000);
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(['compras.read'])]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $hydrated = 0;
@@ -310,9 +310,9 @@ class InventoryKpiServiceSqlParityTest extends FeatureTestCase
         foreach ($refs as $r) {
             $this->product(['reference' => "ORD-{$r}", 'name' => "Nombre {$r}"]);
         }
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(['compras.read'])]);
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
 
         $asc = $this->withHeaders($headers)->getJson('/api/compras/inventory?per_page=100&sort_by=reference&sort_dir=asc&search=ORD-')->assertStatus(200);
         $desc = $this->withHeaders($headers)->getJson('/api/compras/inventory?per_page=100&sort_by=reference&sort_dir=desc&search=ORD-')->assertStatus(200);

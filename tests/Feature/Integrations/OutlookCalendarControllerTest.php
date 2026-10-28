@@ -61,14 +61,14 @@ class OutlookCalendarControllerTest extends FeatureTestCase
     {
         $this->fakeGraphEchoingRequestedEmail();
         $managerId = $this->userIdByEmail('management@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/calendar?owner_id={$managerId}")
             ->assertStatus(200);
 
         $titles = collect($response->json('data'))->pluck('title');
-        $this->assertTrue($titles->contains('Evento de designer@atlantic.test'));
+        $this->assertTrue($titles->contains('Evento de vendedor@atlantic.test'));
         $this->assertFalse($titles->contains('Evento de management@atlantic.test'));
     }
 
@@ -82,10 +82,10 @@ class OutlookCalendarControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $titles = collect($response->json('data'))->pluck('title');
-        // designer@atlantic.test es el único ROLE_DESIGNER seedeado — el "equipo" real de
+        // vendedor@atlantic.test es el único ROLE_DESIGNER seedeado — el "equipo" real de
         // Ventas & Diseño en este fixture. Si esto vuelve a devolver solo el propio de Gerencia,
         // es la regresión que encontró Senior Review el 2026-07-21.
-        $this->assertTrue($titles->contains('Evento de designer@atlantic.test'));
+        $this->assertTrue($titles->contains('Evento de vendedor@atlantic.test'));
     }
 
     /**
@@ -103,7 +103,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $designerEvent = collect($response->json('data'))
-            ->firstWhere('owner_email', 'designer@atlantic.test');
+            ->firstWhere('owner_email', 'vendedor@atlantic.test');
 
         $this->assertNotNull($designerEvent);
         $this->assertNotNull($designerEvent['owner_name']);
@@ -120,20 +120,20 @@ class OutlookCalendarControllerTest extends FeatureTestCase
 
         $titles = collect($response->json('data'))->pluck('title');
         $this->assertTrue($titles->contains('Evento de management@atlantic.test'));
-        $this->assertFalse($titles->contains('Evento de designer@atlantic.test'));
+        $this->assertFalse($titles->contains('Evento de vendedor@atlantic.test'));
     }
 
     /**
      * Hallazgo CRÍTICO de Pre-QA (2026-07-21, subagente real): con team-view en un módulo,
      * `owner_id` se honraba para CUALQUIER usuario del tenant, no solo los del equipo real de ese
      * módulo — confirmado en vivo trayendo el calendario real de un superadmin (no diseñador) vía
-     * la cuenta demo de Gerencia. `electrician@atlantic.test` no es ROLE_DESIGNER (no está en
+     * la cuenta demo de Gerencia. `nivel2@atlantic.test` no es ROLE_DESIGNER (no está en
      * el equipo de ventas_diseno) — mismo tipo de víctima que se probó en vivo.
      */
     public function test_owner_id_de_alguien_fuera_del_equipo_no_filtra_su_calendario(): void
     {
         $this->fakeGraphEchoingRequestedEmail();
-        $outsiderId = $this->userIdByEmail('electrician@atlantic.test');
+        $outsiderId = $this->userIdByEmail('nivel2@atlantic.test');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -141,14 +141,14 @@ class OutlookCalendarControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $titles = collect($response->json('data'))->pluck('title');
-        $this->assertFalse($titles->contains('Evento de electrician@atlantic.test'));
+        $this->assertFalse($titles->contains('Evento de nivel2@atlantic.test'));
         $this->assertTrue($titles->contains('Evento de management@atlantic.test'));
     }
 
     public function test_gerencia_puede_pedir_el_calendario_de_un_vendedor_puntual(): void
     {
         $this->fakeGraphEchoingRequestedEmail();
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -156,7 +156,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $titles = collect($response->json('data'))->pluck('title');
-        $this->assertTrue($titles->contains('Evento de designer@atlantic.test'));
+        $this->assertTrue($titles->contains('Evento de vendedor@atlantic.test'));
     }
 
     public function test_compras_usa_el_mismo_endpoint_gateado_por_su_propio_modulo(): void
@@ -164,16 +164,16 @@ class OutlookCalendarControllerTest extends FeatureTestCase
         $this->fakeGraphEchoingRequestedEmail();
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
-            ->where('email', 'designer@atlantic.test')
+            ->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(['compras.read'])]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/calendar')
             ->assertStatus(200);
 
         $titles = collect($response->json('data'))->pluck('title');
-        $this->assertTrue($titles->contains('Evento de designer@atlantic.test'));
+        $this->assertTrue($titles->contains('Evento de vendedor@atlantic.test'));
     }
 
     public function test_servicios_usa_el_mismo_endpoint_gateado_por_su_propio_modulo(): void
@@ -181,16 +181,16 @@ class OutlookCalendarControllerTest extends FeatureTestCase
         $this->fakeGraphEchoingRequestedEmail();
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
-            ->where('email', 'designer@atlantic.test')
+            ->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(['servicios.read'])]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/calendar')
             ->assertStatus(200);
 
         $titles = collect($response->json('data'))->pluck('title');
-        $this->assertTrue($titles->contains('Evento de designer@atlantic.test'));
+        $this->assertTrue($titles->contains('Evento de vendedor@atlantic.test'));
     }
 
     /**
@@ -201,7 +201,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
      * fix (`MODULES_WITH_TEAM_CALENDAR`), forjar `scope=team` directo contra el API (sin pasar
      * por `ServiciosMyCalendarPanel.tsx`, que nunca lo manda) devolvía el calendario real de
      * otros usuarios del "equipo" de `servicios` — confirmado en vivo contra el stack local con
-     * Lider Servicios viendo eventos de Garantias Servicios Test/Gerencia Test.
+     * Lider Servicios viendo eventos de Tecnico Garantias Test/Gerencia Test.
      */
     public function test_servicios_scope_team_forjado_nunca_devuelve_calendario_de_otro_usuario(): void
     {
@@ -214,15 +214,15 @@ class OutlookCalendarControllerTest extends FeatureTestCase
 
         $titles = collect($response->json('data'))->pluck('title');
         $this->assertTrue($titles->contains('Evento de liderservicios@test.com'));
-        $this->assertFalse($titles->contains('Evento de garantiasservicios@test.com'));
-        $this->assertFalse($titles->contains('Evento de tecnicoservicios@test.com'));
+        $this->assertFalse($titles->contains('Evento de tecnicogarantias@test.com'));
+        $this->assertFalse($titles->contains('Evento de tecnico@test.com'));
         $this->assertFalse($titles->contains('Evento de gerencia@test.com'));
     }
 
     public function test_servicios_owner_id_forjado_nunca_devuelve_calendario_de_otro_usuario(): void
     {
         $this->fakeGraphEchoingRequestedEmail();
-        $carlosId = $this->userIdByEmail('tecnicoservicios@test.com');
+        $carlosId = $this->userIdByEmail('tecnico@test.com');
         $token = $this->loginAs('liderservicios@test.com', 'liderservicios@test.com', 'lider_servicios');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -231,7 +231,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
 
         $titles = collect($response->json('data'))->pluck('title');
         $this->assertTrue($titles->contains('Evento de liderservicios@test.com'));
-        $this->assertFalse($titles->contains('Evento de tecnicoservicios@test.com'));
+        $this->assertFalse($titles->contains('Evento de tecnico@test.com'));
     }
 
     // SCRUM-164 (REQ-102) — "Mi calendario" de Gerencia, mismo endpoint cableado con
@@ -263,13 +263,13 @@ class OutlookCalendarControllerTest extends FeatureTestCase
         $titles = collect($response->json('data'))->pluck('title');
         $this->assertTrue($titles->contains('Evento de management@atlantic.test'));
         $this->assertFalse($titles->contains('Evento de liderservicios@test.com'));
-        $this->assertFalse($titles->contains('Evento de tecnicoservicios@test.com'));
+        $this->assertFalse($titles->contains('Evento de tecnico@test.com'));
     }
 
     public function test_gerencia_owner_id_forjado_nunca_devuelve_calendario_de_otro_usuario(): void
     {
         $this->fakeGraphEchoingRequestedEmail();
-        $carlosId = $this->userIdByEmail('tecnicoservicios@test.com');
+        $carlosId = $this->userIdByEmail('tecnico@test.com');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -278,7 +278,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
 
         $titles = collect($response->json('data'))->pluck('title');
         $this->assertTrue($titles->contains('Evento de management@atlantic.test'));
-        $this->assertFalse($titles->contains('Evento de tecnicoservicios@test.com'));
+        $this->assertFalse($titles->contains('Evento de tecnico@test.com'));
     }
 
     public function test_cuenta_sin_buzon_real_404_no_se_marca_como_fuente_no_disponible(): void
@@ -290,7 +290,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
             'login.microsoftonline.com/*' => Http::response(['access_token' => 'fake-token', 'expires_in' => 3600], 200),
             'graph.microsoft.com/*' => Http::response(['error' => ['code' => 'ErrorInvalidUser']], 404),
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/calendar')
@@ -339,7 +339,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
     {
         $eventAt = now()->setTime(14, 30, 0)->toIso8601String();
         $this->fakeGraphWithEventAt($eventAt);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $today = now()->toDateString();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -355,7 +355,7 @@ class OutlookCalendarControllerTest extends FeatureTestCase
             'login.microsoftonline.com/*' => Http::response(['access_token' => 'fake-token', 'expires_in' => 3600], 200),
             'graph.microsoft.com/*' => Http::response(['error' => 'boom'], 500),
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/calendar')
@@ -402,13 +402,13 @@ class OutlookCalendarControllerTest extends FeatureTestCase
         $titles = collect($response->json('data'))->pluck('title');
         $this->assertTrue($titles->contains('Evento de management@atlantic.test'));
         $this->assertFalse($titles->contains('Evento de liderservicios@test.com'));
-        $this->assertFalse($titles->contains('Evento de tecnicoservicios@test.com'));
+        $this->assertFalse($titles->contains('Evento de tecnico@test.com'));
     }
 
     public function test_admin_contab_owner_id_forjado_nunca_devuelve_calendario_de_otro_usuario(): void
     {
         $this->fakeGraphEchoingRequestedEmail();
-        $carlosId = $this->userIdByEmail('tecnicoservicios@test.com');
+        $carlosId = $this->userIdByEmail('tecnico@test.com');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -417,13 +417,13 @@ class OutlookCalendarControllerTest extends FeatureTestCase
 
         $titles = collect($response->json('data'))->pluck('title');
         $this->assertTrue($titles->contains('Evento de management@atlantic.test'));
-        $this->assertFalse($titles->contains('Evento de tecnicoservicios@test.com'));
+        $this->assertFalse($titles->contains('Evento de tecnico@test.com'));
     }
 
     public function test_admin_contab_sin_rol_del_gate_retorna_403(): void
     {
         $this->fakeGraphEchoingRequestedEmail();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/calendar')
@@ -439,12 +439,12 @@ class OutlookCalendarControllerTest extends FeatureTestCase
                 $email = urldecode($matches[1] ?? '');
 
                 return match ($email) {
-                    'designer@atlantic.test' => Http::response(['value' => [[
+                    'vendedor@atlantic.test' => Http::response(['value' => [[
                         'id' => 'evt-1', 'subject' => 'Evento real', 'isAllDay' => false,
                         'start' => ['dateTime' => now()->toIso8601String()],
                         'end' => ['dateTime' => now()->addHour()->toIso8601String()],
                     ]]], 200),
-                    'multi@atlantic.test' => Http::response(['error' => ['code' => 'ErrorInvalidUser']], 404),
+                    'nivel8@atlantic.test' => Http::response(['error' => ['code' => 'ErrorInvalidUser']], 404),
                     default => Http::response(['error' => 'boom'], 500),
                 };
             },

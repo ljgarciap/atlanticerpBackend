@@ -75,8 +75,8 @@ class InventarioConsistenteEntrePantallasTest extends FeatureTestCase
     public function test_vista_bodegas_no_cuenta_productos_inactivos(): void
     {
         ['central' => $central] = $this->sembrar();
-        $this->grantAmbos('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantAmbos('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$central->id}");
 
@@ -89,8 +89,8 @@ class InventarioConsistenteEntrePantallasTest extends FeatureTestCase
     public function test_bodega_central_da_el_mismo_numero_en_las_tres_pantallas(): void
     {
         ['central' => $central] = $this->sembrar();
-        $this->grantAmbos('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantAmbos('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $vista = $this->withHeaders($headers)->getJson("/api/bodega/warehouses/{$central->id}")->json('kpis.total_products');
@@ -107,8 +107,8 @@ class InventarioConsistenteEntrePantallasTest extends FeatureTestCase
     public function test_kpi_con_stock_cuenta_productos_activos_distintos_con_unidades(): void
     {
         $this->sembrar();
-        $this->grantAmbos('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantAmbos('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $compras = $this->withHeaders($headers)->getJson('/api/compras/inventory')->assertStatus(200);

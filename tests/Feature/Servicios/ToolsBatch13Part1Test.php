@@ -18,11 +18,11 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
+    private const TECNICO_SERVICIOS = 'tecnico@test.com';
 
     private const MANAGEMENT = 'gerencia@test.com';
 
-    private const VENDEDOR_DISENADOR = 'vendedordisenador@test.com';
+    private const VENDEDOR_DISENADOR = 'vendedor@test.com';
 
     protected function setUp(): void
     {
@@ -39,12 +39,12 @@ class ToolsBatch13Part1Test extends FeatureTestCase
 
     private function carlosTechnicianId(): int
     {
-        return InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail()->id;
+        return InternalTechnician::where('nombre', 'Tecnico Test')->firstOrFail()->id;
     }
 
     private function pedroTechnicianId(): int
     {
-        return InternalTechnician::where('nombre', 'Tecnico Servicios Test 2')->firstOrFail()->id;
+        return InternalTechnician::where('nombre', 'Tecnico Test 2')->firstOrFail()->id;
     }
 
     /** @param array<string, mixed> $overrides */
@@ -116,7 +116,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $porPersona = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/servicios/tools?search=Tecnico+Servicios')
+            ->getJson('/api/servicios/tools?search=Tecnico+Test')
             ->assertStatus(200);
         $this->assertContains('COD-HER-200', collect($porPersona->json('data'))->pluck('codigo_unico')->all());
 
@@ -171,7 +171,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
             ->patchJson("/api/servicios/tools/{$tool->id}/estado", ['estado' => Tool::ESTADO_DAMAGED])
             ->assertStatus(200);
 
-        $this->assertSame('Tecnico Servicios Test', $response->json('responsable_incidente'));
+        $this->assertSame('Tecnico Test', $response->json('responsable_incidente'));
         $this->assertSame('damaged', $response->json('estado'));
 
         $this->reactivateTenant();
@@ -224,7 +224,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
             'assigned_to_technician_id' => $carlosId,
             'assigned_since' => now()->toDateString(),
             'estado' => Tool::ESTADO_DAMAGED,
-            'responsable_incidente' => 'Tecnico Servicios Test',
+            'responsable_incidente' => 'Tecnico Test',
         ]);
 
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
@@ -289,7 +289,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
             ->assertStatus(200);
 
         $this->assertSame($pedroId, $response->json('assigned_to_technician_id'));
-        $this->assertSame('Tecnico Servicios Test 2', $response->json('assigned_to'));
+        $this->assertSame('Tecnico Test 2', $response->json('assigned_to'));
         $this->assertSame(now()->toDateString(), $response->json('assigned_since'));
     }
 

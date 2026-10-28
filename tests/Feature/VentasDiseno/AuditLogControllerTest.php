@@ -38,8 +38,8 @@ class AuditLogControllerTest extends FeatureTestCase
 
     public function test_sin_permiso_audit_retorna_403(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/audit-log')

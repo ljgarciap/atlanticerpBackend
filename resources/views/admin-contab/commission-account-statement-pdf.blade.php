@@ -33,7 +33,6 @@
     <div class="brand-name">ATLANTIC</div>
     <div class="brand-line"></div>
     <h1>Estado de cuenta de comisiones — {{ $data['mes'] }}{{ $data['mes_cerrado'] ? ' (liquidado)' : ' (en curso)' }}</h1>
-    <div class="sub">Atlantic Diseño e Iluminación, S.A. · Panamá City, Panamá</div>
 
     <div class="party">
         <div class="party-label">Vendedor</div>
@@ -103,6 +102,6 @@
         @endif
     </div>
 
-    <div class="footer">Atlantic Diseño e Iluminación, S.A. · Documento generado por AtlanticERP · atlantic.com.pa</div>
+    <div class="footer">Documento generado por AtlanticERP</div>
 </body>
 </html>

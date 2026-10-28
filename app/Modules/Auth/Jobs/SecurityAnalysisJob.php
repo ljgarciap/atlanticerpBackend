@@ -7,6 +7,7 @@ namespace App\Modules\Auth\Jobs;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentConfirmation;
 use App\Modules\AdminCont\Services\AdminContSettingsService;
+use App\Modules\AI\Support\BusinessProfile;
 use App\Modules\Auth\Events\SecurityAnomalyDetected;
 use App\Modules\Auth\Models\AuditLog;
 use App\Modules\Auth\Models\ImpersonationSession;
@@ -804,8 +805,8 @@ final class SecurityAnalysisJob implements ShouldQueue
 
     private function systemPrompt(): string
     {
-        return <<<'PROMPT'
-Sos un analista de seguridad para AtlanticERP, un CRM B2B de diseño de iluminación (Panamá). Vas a
+        return BusinessProfile::fill(<<<'PROMPT'
+Sos un analista de seguridad para AtlanticERP, un CRM B2B de la empresa: {negocio}. Vas a
 recibir un resumen JSON de actividad agregada por usuario de las últimas 24 horas — nunca
 contenido de texto libre, solo conteos y metadatos.
 
@@ -836,6 +837,6 @@ Respondé ÚNICAMENTE con este JSON, sin texto antes o después:
 {"anomalies": [{"affected_user_id": <int>, "severity": "low"|"medium"|"high", "reasoning": "<string, máx 280 caracteres>"}]}
 
 Si no hay hallazgos: {"anomalies": []}
-PROMPT;
+PROMPT);
     }
 }

@@ -64,11 +64,11 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_listado_incluye_solo_proveedores_activos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'Activo SA', 'is_active' => true]);
         $this->makeProvider(['name' => 'Inactivo SA', 'is_active' => false]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
@@ -83,9 +83,9 @@ class ProviderControllerTest extends FeatureTestCase
         // REQ-126 RN2. RN1 realineado 2026-08-06 (hallazgo Gerencia Test): obligatorios
         // name/category/country + al menos un contacto — ver test_crear_proveedor_sin_* abajo
         // para cada validación negativa por separado.
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
                 'name' => 'Nuevo Proveedor SA', 'category' => 'locales', 'country' => 'Panamá',
@@ -99,9 +99,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_sin_categoria_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', ['name' => 'X', 'country' => 'Panamá', 'phone' => '6000-0000'])
             ->assertStatus(422);
@@ -109,9 +109,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_sin_pais_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', ['name' => 'X', 'category' => 'locales', 'phone' => '6000-0000'])
             ->assertStatus(422);
@@ -119,9 +119,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_sin_ningun_contacto_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', ['name' => 'X', 'category' => 'locales', 'country' => 'Panamá'])
             ->assertStatus(422);
@@ -129,9 +129,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_con_solo_email_como_contacto_es_valido(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
                 'name' => 'X', 'category' => 'locales', 'country' => 'Panamá', 'email' => 'x@x.com',
@@ -141,9 +141,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_sin_permiso_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', ['name' => 'Nuevo Proveedor SA'])
             ->assertStatus(403);
@@ -152,9 +152,9 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_crear_proveedor_disponible_de_inmediato_en_listado(): void
     {
         // REQ-127/REQ-126 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
                 'name' => 'Nuevo Proveedor SA', 'category' => 'locales', 'country' => 'Panamá',
@@ -172,10 +172,10 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_editar_borrando_el_nombre_retorna_422(): void
     {
         // REQ-125 Escenario 2.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$provider->id}", ['name' => ''])
             ->assertStatus(422);
@@ -184,8 +184,8 @@ class ProviderControllerTest extends FeatureTestCase
     // SCRUM-1014 — RUC y DV se guardan al crear/editar y vuelven en el detalle.
     public function test_crear_proveedor_guarda_ruc_y_dv_y_los_devuelve_en_el_detalle(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $id = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
@@ -206,9 +206,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_editar_proveedor_actualiza_ruc_y_dv(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider(['name' => 'Proveedor Demo A', 'tax_id' => 'VIEJO-1', 'tax_id_dv' => '1']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$provider->id}", [
@@ -226,8 +226,8 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_dv_invalido_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
@@ -241,10 +241,10 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_editar_telefono_se_refleja_en_la_tabla_principal(): void
     {
         // REQ-125 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'Proveedor Demo A', 'phone' => '6000-0000'])
             ->assertStatus(200)
@@ -259,10 +259,10 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_proveedor_sin_ordenes_muestra_ultima_compra_null(): void
     {
         // REQ-123 RN2: "Sin compras registradas aún" — el backend nunca inventa una fecha.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'Sin Compras SA']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
@@ -274,11 +274,11 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_crear_orden_actualiza_ultima_compra_del_proveedor(): void
     {
         // REQ-123 Escenario 1: campo calculado desde las órdenes reales, no editable a mano.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider(['name' => 'Con Compras SA']);
         PurchaseOrder::create(['provider_id' => $provider->id, 'currency' => 'USD']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
@@ -290,13 +290,13 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_proveedor_sin_ordenes_recibidas_muestra_sin_calificar(): void
     {
         // REQ-124 RN2/Escenario 2: nunca 0/100.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider(['name' => 'Sin Calificar SA']);
         PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD', 'status' => PurchaseOrder::STATUS_POR_APROBAR,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
@@ -310,11 +310,11 @@ class ProviderControllerTest extends FeatureTestCase
         // REQ-121 Escenario 1. Total = 2 creados acá + 1 ("Zona Libre de Colón", sembrado por
         // `ZonaLibreProviderSeeder` en TODOS los entornos, incl. testing, ver Bloque B3) — sin
         // órdenes recibidas tampoco, así que sigue sin afectar el promedio/low_rating_count.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'A']);
         $this->makeProvider(['name' => 'B']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
@@ -330,13 +330,13 @@ class ProviderControllerTest extends FeatureTestCase
      */
     public function test_kpis_expone_lista_de_categorias_reales(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'A', 'category' => 'Catalogación']);
         $this->makeProvider(['name' => 'B', 'category' => 'Cableado']);
         $this->makeProvider(['name' => 'C', 'category' => 'Catalogación']);
         $this->makeProvider(['name' => 'D', 'category' => null]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
@@ -349,11 +349,11 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_filtro_por_categoria(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'A', 'category' => 'Catalogación']);
         $this->makeProvider(['name' => 'B', 'category' => 'Cableado']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers?category='.urlencode('Cableado'))
             ->assertStatus(200);
@@ -365,11 +365,11 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_busqueda_por_nombre(): void
     {
         // REQ-122.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'Proveedor Demo A']);
         $this->makeProvider(['name' => 'Proveedor Demo B SA']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers?search=Proveedor Demo A')
             ->assertStatus(200);
@@ -384,12 +384,12 @@ class ProviderControllerTest extends FeatureTestCase
         // Política global de paginación (memory/feedback_pagination_sorting_policy.md). SCRUM-754
         // (2026-08-18): default subió de 5 a 20. Total = 21 creados acá + 1 ("Zona Libre de
         // Colón", sembrado en todos los entornos, ver Bloque B3) = 22.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         foreach (range(1, 21) as $i) {
             $this->makeProvider(['name' => "Proveedor {$i}"]);
         }
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
@@ -403,12 +403,12 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_per_page_all_devuelve_todos(): void
     {
         // Total = 6 creados acá + 1 ("Zona Libre de Colón", sembrado en todos los entornos).
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         foreach (range(1, 6) as $i) {
             $this->makeProvider(['name' => "Proveedor {$i}"]);
         }
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers?per_page=all')
             ->assertStatus(200);
@@ -419,11 +419,11 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_sort_by_name_desc(): void
     {
         // "BK INTERPRISES S.A." (sembrado en todos los entornos, ver Bloque B3 / SCRUM-1135).
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'Alfa']);
         $this->makeProvider(['name' => 'Coral']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers?sort_by=name&sort_dir=desc')
             ->assertStatus(200);
@@ -439,8 +439,8 @@ class ProviderControllerTest extends FeatureTestCase
      */
     public function test_crear_proveedor_con_campos_del_mockup_deriva_origin_de_categoria(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
@@ -465,8 +465,8 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_categoria_locales_deriva_origin_local(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
@@ -480,8 +480,8 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_categoria_invalida_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', ['name' => 'X', 'category' => 'catalogación'])
@@ -491,9 +491,9 @@ class ProviderControllerTest extends FeatureTestCase
     /** SCRUM-190 (REQ-127 RN3, hallazgo de Gerencia Test): no debe haber 2 proveedores con el mismo nombre. */
     public function test_crear_proveedor_con_nombre_duplicado_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
         $this->makeProvider(['name' => 'Proveedor Demo A']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', ['name' => 'Proveedor Demo A'])
@@ -502,9 +502,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_con_nombre_duplicado_case_insensitive_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
         $this->makeProvider(['name' => 'Proveedor Demo A']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', ['name' => 'proveedor demo a'])
@@ -513,9 +513,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_editar_proveedor_sin_cambiar_nombre_no_se_bloquea_a_si_mismo(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'Proveedor Demo A', 'category' => 'europa'])
@@ -530,10 +530,10 @@ class ProviderControllerTest extends FeatureTestCase
      */
     public function test_editar_proveedor_vaciando_categoria_recalcula_origin_a_internacional(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['name' => 'Talleres del Istmo', 'category' => 'locales']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'Talleres del Istmo', 'category' => null])
             ->assertStatus(200)
@@ -543,10 +543,10 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_editar_proveedor_con_nombre_de_otro_proveedor_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $this->makeProvider(['name' => 'Proveedor Demo A']);
         $otro = $this->makeProvider(['name' => 'Proveedor Demo B SA']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$otro->id}", ['name' => 'Proveedor Demo A'])
@@ -557,12 +557,12 @@ class ProviderControllerTest extends FeatureTestCase
     {
         // Total = 21 creados acá + 1 ("Zona Libre de Colón", sembrado en todos los entornos) = 22,
         // per_page 20 (SCRUM-754) -> página 2 tiene los 2 restantes.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         foreach (range(1, 21) as $i) {
             $this->makeProvider(['name' => "Proveedor {$i}"]);
         }
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/providers?page=2')
             ->assertStatus(200);
@@ -575,10 +575,10 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_sube_imagen_bancaria_y_aparece_en_el_detalle(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/providers/{$provider->id}/bank-image", [
                 'file' => UploadedFile::fake()->image('datos-bancarios.jpg'),
@@ -592,10 +592,10 @@ class ProviderControllerTest extends FeatureTestCase
     /** RN9 — la imagen es independiente de los campos bank_* existentes, no los reemplaza. */
     public function test_subir_imagen_bancaria_no_modifica_los_campos_bank_existentes(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['bank_name' => 'Banco Demo A', 'bank_account_number' => '123456']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/providers/{$provider->id}/bank-image", [
                 'file' => UploadedFile::fake()->image('datos.png'),
@@ -609,9 +609,9 @@ class ProviderControllerTest extends FeatureTestCase
     /** RN8 — subir una imagen nueva reemplaza la anterior, no la acumula. */
     public function test_subir_una_segunda_imagen_reemplaza_la_primera(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/providers/{$provider->id}/bank-image", ['file' => UploadedFile::fake()->image('primera.jpg')])
@@ -635,9 +635,9 @@ class ProviderControllerTest extends FeatureTestCase
     /** RN7 — eliminar sin reemplazar deja bank_image en null. */
     public function test_elimina_la_imagen_bancaria(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/providers/{$provider->id}/bank-image", ['file' => UploadedFile::fake()->image('foto.jpg')])
@@ -657,10 +657,10 @@ class ProviderControllerTest extends FeatureTestCase
     /** RN3 — solo formatos de imagen, un PDF no puede colarse como "respaldo bancario". */
     public function test_subir_un_pdf_como_imagen_bancaria_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/providers/{$provider->id}/bank-image", [
                 'file' => UploadedFile::fake()->create('documento.pdf', 100, 'application/pdf'),
@@ -671,10 +671,10 @@ class ProviderControllerTest extends FeatureTestCase
     /** RN10 — mismo permiso que editar el proveedor (compras.edit), no compras.write ni compras.read solo. */
     public function test_subir_imagen_bancaria_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/providers/{$provider->id}/bank-image", [
                 'file' => UploadedFile::fake()->image('foto.jpg'),
@@ -685,10 +685,10 @@ class ProviderControllerTest extends FeatureTestCase
     /** Escenario 7 del ticket — sin imagen, el detalle sigue devolviendo bank_image: null. */
     public function test_detalle_sin_imagen_bancaria_devuelve_null(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/providers/{$provider->id}")
             ->assertStatus(200);
@@ -700,9 +700,9 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_crear_proveedor_con_categoria_latinoamerica_es_valido(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/providers', [
                 'name' => 'Proveedor LatAm', 'category' => 'latinoamerica', 'country' => 'Colombia',
@@ -717,10 +717,10 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_editar_categoria_a_latinoamerica_es_valido(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider(['category' => 'china']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/providers/{$provider->id}", ['name' => 'Proveedor Demo A', 'category' => 'latinoamerica'])
             ->assertStatus(200)

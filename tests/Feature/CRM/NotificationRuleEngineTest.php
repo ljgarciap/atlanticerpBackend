@@ -79,7 +79,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     {
         $mgmtToken = $this->loginAs();
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = $this->currentUserId($designerToken);
 
         $this->createRule(['recipient_value' => [$designerId]]);
@@ -96,7 +96,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     public function test_el_enlace_de_la_notificacion_es_una_ruta_interna_valida(): void
     {
         $mgmtToken = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = $this->currentUserId($designerToken);
 
         $this->createRule(['recipient_value' => [$designerId]]);
@@ -115,7 +115,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     public function test_changed_to_no_dispara_si_cambia_a_otro_valor(): void
     {
         $mgmtToken = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId = $this->currentUserId($designerToken);
 
         $this->createRule(['recipient_value' => [$designerId]]);
@@ -132,7 +132,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
         $mgmtToken = $this->loginAs();
         $mgmtId    = $this->currentUserId($mgmtToken);
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = $this->currentUserId($designerToken);
 
         // regla apunta al propio management (el actor del cambio)
@@ -149,7 +149,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     public function test_regla_inactiva_no_dispara(): void
     {
         $mgmtToken = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId = $this->currentUserId($designerToken);
 
         $this->createRule(['recipient_value' => [$designerId], 'is_active' => false]);
@@ -164,7 +164,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     public function test_regla_de_otro_modelo_no_dispara_por_cambio_de_project(): void
     {
         $mgmtToken = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId = $this->currentUserId($designerToken);
 
         $this->createRule([
@@ -182,7 +182,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     public function test_operador_gt_sobre_valor(): void
     {
         $mgmtToken = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId = $this->currentUserId($designerToken);
 
         $this->createRule([
@@ -205,7 +205,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     public function test_operador_gt_no_dispara_si_no_supera_el_valor(): void
     {
         $mgmtToken = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId = $this->currentUserId($designerToken);
 
         $this->createRule([
@@ -234,7 +234,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
         $projectId = $this->createProject($mgmtToken);
         $this->changeStage($mgmtToken, $projectId, 'cerrado');
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = $this->currentUserId($designerToken);
 
         $this->activateTenant();
@@ -244,7 +244,7 @@ class NotificationRuleEngineTest extends FeatureTestCase
     public function test_recipient_type_project_assignees_notifica_a_los_asignados(): void
     {
         $mgmtToken = $this->loginAs();
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = $this->currentUserId($designerToken);
 
         $this->createRule(['recipient_type' => 'project_assignees', 'recipient_value' => null]);

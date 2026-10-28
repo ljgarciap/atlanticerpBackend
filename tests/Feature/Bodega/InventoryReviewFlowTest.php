@@ -209,7 +209,7 @@ class InventoryReviewFlowTest extends FeatureTestCase
     // con el pedido ya buscado. Antes: solo el ID del pedido, sin enlace.
     public function test_aviso_de_sin_stock_al_vendedor_lleva_el_numero_de_cotizacion_y_el_enlace_a_status_de_pedidos(): void
     {
-        $sellerId = (int) User::where('email', 'designer@atlantic.test')->value('id');
+        $sellerId = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
         $review = $this->makeOrderWithPipelineCard(
             $sellerId,
             ['order_type' => Order::ORDER_TYPE_REVISION_INVENTARIO, 'stage' => Order::STAGE_PICKING_PENDIENTE],
@@ -357,8 +357,8 @@ class InventoryReviewFlowTest extends FeatureTestCase
     {
         $review = $this->makeReviewOrder();
         $item = $review->items->first();
-        $this->grantBodegaPermissions('ayudantegeneralbodega@test.com');
-        $token = $this->loginAs('ayudantegeneralbodega@test.com', 'ayudantegeneralbodega@test.com', 'auxiliar_bodega');
+        $this->grantBodegaPermissions('auxiliarbodega@test.com');
+        $token = $this->loginAs('auxiliarbodega@test.com', 'auxiliarbodega@test.com', 'auxiliar_bodega');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/orders/{$review->id}/resolve-inventory-review", [

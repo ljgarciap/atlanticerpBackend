@@ -100,15 +100,15 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // pantalla Bodegas, en consulta). NO `compras.limited.view` (el de Operaciones): desenmascara
         // costo y margen en Inventario, que un vendedor nunca ve — la migración
         // 2026_10_02_120100 lo quita de estos 10 y este seeder no lo vuelve a poner.
-        'vendedordisenador@test.com'      => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador2@test.com'  => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador3@test.com'        => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador4@test.com'     => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador5@test.com'       => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador6@test.com'       => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador7@test.com'     => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador8@test.com'  => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador9@test.com'    => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
-        'vendedordisenador10@test.com'       => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor@test.com'      => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor2@test.com'  => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor3@test.com'        => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor4@test.com'     => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor5@test.com'       => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor6@test.com'       => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor7@test.com'     => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor8@test.com'  => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor9@test.com'    => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
+        'vendedor10@test.com'       => ['admin_contab.commissions_internal.view', 'compras.logistica.view', 'bodega.warehouses.view'],
     ];
 }

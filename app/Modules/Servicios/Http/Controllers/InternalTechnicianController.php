@@ -147,9 +147,9 @@ final class InternalTechnicianController extends Controller
 
     /**
      * GET /api/servicios/internal-technicians/{id}/commission — REQ-258, tarjeta+detalle de
-     * comisión. RN8: exclusivo del propio técnico (Tecnico Servicios) y Gerencia — ni Lider Servicios
+     * comisión. RN8: exclusivo del propio técnico (Tecnico) y Gerencia — ni Lider Servicios
      * (`lider_servicios`, que sí puede CAPTURAR vía `commission-capture` sin ver el resultado) ni
-     * otros técnicos. La ruta deja pasar por rol (para que Tecnico Servicios, `tecnico`, llegue al
+     * otros técnicos. La ruta deja pasar por rol (para que Tecnico, `tecnico`, llegue al
      * controller); esta verificación de "es este técnico o es Gerencia" es la que de verdad
      * implementa RN8, no reemplazable por `role:` a nivel de ruta.
      */

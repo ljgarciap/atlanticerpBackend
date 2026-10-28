@@ -30,7 +30,7 @@ class StockReservationBackAllocationTest extends FeatureTestCase
 
     private function startPicking(Order $order): void
     {
-        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
+        $pickerId = $this->userIdByEmail('auxiliarbodega@test.com');
         $order->update(['picker_id' => $pickerId, 'stage' => Order::STAGE_PICKING_PENDIENTE]);
 
         $this->grantBodegaPermissions('liderbodega@test.com');

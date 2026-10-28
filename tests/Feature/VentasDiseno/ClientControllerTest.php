@@ -28,11 +28,11 @@ class ClientControllerTest extends FeatureTestCase
 
     public function test_buscar_clientes_master_por_nombre(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         MasterClient::create(['name' => 'Grupo Delta']);
         MasterClient::create(['name' => 'Otro Cliente']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/master-clients?search=Delta')
@@ -45,8 +45,8 @@ class ClientControllerTest extends FeatureTestCase
 
     public function test_crear_cliente_master(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/master-clients', ['name' => 'Cliente Nuevo'])
@@ -56,8 +56,8 @@ class ClientControllerTest extends FeatureTestCase
 
     public function test_crear_subcliente_requiere_master_client_existente(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/sub-clients', [
@@ -70,9 +70,9 @@ class ClientControllerTest extends FeatureTestCase
     {
         // SCRUM-1187 reemplaza REQ-068 «en sentido inverso» (SCRUM-79): un Subcliente nuevo creado desde el flujo de vinculación de
         // Pipeline ya no dispara una tarjeta Lead extra ni un proyecto, igual que en la pantalla de Clientes.
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $master = MasterClient::create(['name' => 'Grupo Delta']);
-        $token  = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token  = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/sub-clients', [
@@ -93,9 +93,9 @@ class ClientControllerTest extends FeatureTestCase
     {
         // SCRUM-1011: el modal de nuevo proyecto en Diseño manda from_design_context — el
         // Subcliente se crea igual (visible en Clientes) pero sin la tarjeta Lead automática.
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $master = MasterClient::create(['name' => 'Grupo Delta']);
-        $token  = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token  = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/sub-clients', [
@@ -111,13 +111,13 @@ class ClientControllerTest extends FeatureTestCase
 
     public function test_buscar_subclientes_acotado_al_master_client(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $master = MasterClient::create(['name' => 'Grupo Delta']);
         $other  = MasterClient::create(['name' => 'Otro Grupo']);
         $master->subClients()->create(['business_name' => 'Delta Residencial', 'tax_id' => '155-0000-1-2026']);
         $other->subClients()->create(['business_name' => 'Otro Residencial', 'tax_id' => '155-1111-1-2026']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/sub-clients?master_client_id={$master->id}")
@@ -132,13 +132,13 @@ class ClientControllerTest extends FeatureTestCase
     {
         // REQ-020 (Grupo 1d): el frontend usa contacts_count para advertir antes de
         // crear un proyecto en Diseño vinculado a un Subcliente sin contactos.
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $master   = MasterClient::create(['name' => 'Grupo Delta']);
         $withContact = $master->subClients()->create(['business_name' => 'Con Contacto', 'tax_id' => '155-2222-1-2026']);
         $withContact->contacts()->create(['name' => 'Juan Pérez', 'role' => 'client', 'phone' => '6000-0000']);
         $master->subClients()->create(['business_name' => 'Sin Contacto', 'tax_id' => '155-3333-1-2026']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/sub-clients?master_client_id={$master->id}")
@@ -152,9 +152,9 @@ class ClientControllerTest extends FeatureTestCase
     /** SCRUM-928/1140 — el diálogo de subcliente del flujo de Cotización: el DV es opcional (una cédula puede no tenerlo) pero si viene debe ser válido. */
     public function test_928_crear_subcliente_con_dv_opcional_y_lo_persiste(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $master = MasterClient::create(['name' => 'Grupo Dv']);
-        $token  = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token  = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $base   = ['master_client_id' => $master->id, 'business_name' => 'Dv Residencial', 'tax_id' => '155-5555-1-2026'];
 
         // SCRUM-1140: sin DV ya no es un error de validación; queda nulo y la guarda lo exige al facturar solo si la DGI lo trae.

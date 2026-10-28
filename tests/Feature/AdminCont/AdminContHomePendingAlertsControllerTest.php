@@ -30,7 +30,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 {
     private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
-    private const DESIGNER_EMAIL = 'designer@atlantic.test';
+    private const DESIGNER_EMAIL = 'vendedor@atlantic.test';
 
     private const URL = '/api/admin-contab/home/pendientes';
 

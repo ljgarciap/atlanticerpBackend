@@ -18,7 +18,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class AssociatesBaseTest extends FeatureTestCase
 {
-    private const DESIGNER = 'designer@atlantic.test';
+    private const DESIGNER = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {
@@ -138,7 +138,7 @@ class AssociatesBaseTest extends FeatureTestCase
     public function test_correo_telefono_o_documento_iguales_bloquean_y_ofrecen_el_existente(): void
     {
         $token = $this->token();
-        $first = $this->create($token, ['name' => 'Tecnico Servicios Vega', 'email' => 'Tecnico.Vega@Estudio.test', 'phone' => '+507 6000-1111', 'document' => '8-111-222'])
+        $first = $this->create($token, ['name' => 'Tecnico Vega', 'email' => 'Tecnico.Vega@Estudio.test', 'phone' => '+507 6000-1111', 'document' => '8-111-222'])
             ->assertStatus(201)->json('id');
 
         foreach ([
@@ -152,7 +152,7 @@ class AssociatesBaseTest extends FeatureTestCase
         }
 
         $this->tenant();
-        $this->assertSame(1, Architect::where('name', 'Tecnico Servicios Vega')->count());
+        $this->assertSame(1, Architect::where('name', 'Tecnico Vega')->count());
         $this->assertSame(0, Architect::where('name', 'Otro Nombre')->count());
     }
 

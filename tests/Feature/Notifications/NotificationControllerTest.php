@@ -40,7 +40,7 @@ class NotificationControllerTest extends FeatureTestCase
         $mgmtToken = $this->loginAs();
         $mgmtId    = $this->currentUserId($mgmtToken);
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = $this->currentUserId($designerToken);
 
         $this->activateTenant();
@@ -101,7 +101,7 @@ class NotificationControllerTest extends FeatureTestCase
         $mgmtToken = $this->loginAs();
         $mgmtId    = $this->currentUserId($mgmtToken);
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $this->activateTenant();
         app(NotificationService::class)->send([$mgmtId], ['subject' => 'X', 'body' => 'x'], ['in_app']);

@@ -46,7 +46,7 @@ class BodegaBackfillCustomerReturnCreditNotesCommandTest extends FeatureTestCase
             'finalized_at'  => now(),
             'contact_name'  => 'Persona que devuelve',
             'contact_phone' => '6000-0000',
-            'created_by'    => $this->userIdByEmail('designer@atlantic.test'),
+            'created_by'    => $this->userIdByEmail('vendedor@atlantic.test'),
             'credit_note_id' => null,
         ]);
     }

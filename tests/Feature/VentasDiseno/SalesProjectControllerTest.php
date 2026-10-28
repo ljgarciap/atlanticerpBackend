@@ -31,8 +31,8 @@ class SalesProjectControllerTest extends FeatureTestCase
 
     public function test_buscar_proyectos_requiere_sub_client_id(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/sales-projects')
@@ -41,14 +41,14 @@ class SalesProjectControllerTest extends FeatureTestCase
 
     public function test_buscar_proyectos_acotado_al_subcliente(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         $master = MasterClient::create(['name' => 'Cliente Test']);
         $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $other  = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Otro Sub', 'tax_id' => '155-1111-1-2026']);
         SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa']);
         SalesProject::create(['sub_client_id' => $other->id, 'name' => 'Otro Proyecto']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/sales-projects?sub_client_id={$sub->id}")
@@ -61,10 +61,10 @@ class SalesProjectControllerTest extends FeatureTestCase
 
     public function test_crear_proyecto_sin_nombre_retorna_422(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $master = MasterClient::create(['name' => 'Cliente Test']);
         $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/sales-projects', ['sub_client_id' => $sub->id])
@@ -73,10 +73,10 @@ class SalesProjectControllerTest extends FeatureTestCase
 
     public function test_crear_proyecto(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $master = MasterClient::create(['name' => 'Cliente Test']);
         $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/sales-projects', [
@@ -92,16 +92,16 @@ class SalesProjectControllerTest extends FeatureTestCase
 
     public function test_buscador_excluye_proyecto_con_borrador(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         $designerId = (int) DB::table((string) Tenant::where('slug', 'atlantic')->value('slug') . '_auth.users')
-            ->where('email', 'designer@atlantic.test')->value('id');
+            ->where('email', 'vendedor@atlantic.test')->value('id');
         $master  = MasterClient::create(['name' => 'Cliente Test']);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $quoted  = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Ya Cotizado']);
         $free    = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Sin Cotizar']);
         Quote::create(['owner_id' => $designerId, 'sales_project_id' => $quoted->id, 'description' => 'Borrador']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/sales-projects?sub_client_id={$sub->id}")
             ->assertStatus(200);
@@ -113,9 +113,9 @@ class SalesProjectControllerTest extends FeatureTestCase
 
     public function test_buscador_excluye_proyecto_con_cotizacion_generada(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         $designerId = (int) DB::table((string) Tenant::where('slug', 'atlantic')->value('slug') . '_auth.users')
-            ->where('email', 'designer@atlantic.test')->value('id');
+            ->where('email', 'vendedor@atlantic.test')->value('id');
         $master = MasterClient::create(['name' => 'Cliente Test']);
         $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $quoted = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Ya Cotizado']);
@@ -124,7 +124,7 @@ class SalesProjectControllerTest extends FeatureTestCase
             'folio' => 'COT-2026-0099', 'confirmed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/sales-projects?sub_client_id={$sub->id}")
             ->assertStatus(200);
@@ -134,15 +134,15 @@ class SalesProjectControllerTest extends FeatureTestCase
 
     public function test_crear_proyecto_con_nombre_duplicado_ya_cotizado_retorna_422(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $designerId = (int) DB::table((string) Tenant::where('slug', 'atlantic')->value('slug') . '_auth.users')
-            ->where('email', 'designer@atlantic.test')->value('id');
+            ->where('email', 'vendedor@atlantic.test')->value('id');
         $master  = MasterClient::create(['name' => 'Cliente Test']);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa']);
         Quote::create(['owner_id' => $designerId, 'sales_project_id' => $project->id, 'description' => 'Borrador']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/sales-projects', ['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa'])
             ->assertStatus(422);
@@ -152,12 +152,12 @@ class SalesProjectControllerTest extends FeatureTestCase
 
     public function test_crear_proyecto_mismo_nombre_pero_sin_cotizacion_no_se_bloquea(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         $master  = MasterClient::create(['name' => 'Cliente Test']);
         $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
         SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa']); // sin ninguna Quote
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/sales-projects', ['sub_client_id' => $sub->id, 'name' => 'Proyecto Alfa'])
             ->assertStatus(201);
