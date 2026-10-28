@@ -256,10 +256,10 @@ class AdminContHomeControllerTest extends FeatureTestCase
     /** Los 5 tipos de Admin&Cont son exclusivos de "Gerencia" (`AdminContFiscalSettings.primary_approver_user_id`). */
     private function makeMark(): int
     {
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $felixId]);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        AdminContFiscalSettings::current()->update(['primary_approver_user_id' => $contabilidadId]);
 
-        return $felixId;
+        return $contabilidadId;
     }
 
     public function test_approvals_pending_incluye_incobrable_para_mark(): void
@@ -276,14 +276,14 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_nota_de_credito_para_mark(): void
     {
-        $felixId = $this->makeMark();
+        $contabilidadId = $this->makeMark();
         $invoice = $this->makeInvoice(300, 0, now()->toDateTimeString());
         AdminContCreditNote::create([
             'numero' => 'NC-'.self::uniqueTestNumber(),
             'master_client_id' => MasterClient::create(['name' => 'Cliente NC '.self::uniqueTestNumber()])->id,
             'cliente' => 'Cliente NC', 'monto' => 100, 'subtotal' => 100, 'itbms' => 0, 'motivo' => 'Test SCRUM-908',
             'tipo' => AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, 'factura_origen_id' => $invoice->id,
-            'registrado_por' => $felixId, 'fecha' => now(), 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION,
+            'registrado_por' => $contabilidadId, 'fecha' => now(), 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION,
         ]);
 
         $token = $this->loginAsFelix();
@@ -295,16 +295,16 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_comision_arquitecto_para_mark(): void
     {
-        $felixId = $this->makeMark();
+        $contabilidadId = $this->makeMark();
         $architect = Architect::create(['name' => 'Arq. '.uniqid(), 'email' => uniqid().'@arq.test']);
         $master = MasterClient::create(['name' => 'Cliente Arq '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => SalesProject::create(['sub_client_id' => SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Arq '.self::uniqueTestNumber(), 'tax_id' => '155-0000-3-'.random_int(1000, 9999)])->id, 'name' => 'Proyecto Arq '.self::uniqueTestNumber()])->id,
-            'stage' => 'approved', 'master_client_id' => $master->id, 'owner_id' => $felixId, 'amount' => 1000, 'stage_changed_at' => now(),
+            'stage' => 'approved', 'master_client_id' => $master->id, 'owner_id' => $contabilidadId, 'amount' => 1000, 'stage_changed_at' => now(),
         ]);
         ArchitectCommission::create([
             'pipeline_card_id' => $card->id, 'architect_id' => $architect->id,
-            'porcentaje_pendiente' => 5.0, 'porcentaje_pendiente_propuesto_por' => $felixId,
+            'porcentaje_pendiente' => 5.0, 'porcentaje_pendiente_propuesto_por' => $contabilidadId,
             'porcentaje_pendiente_propuesto_at' => now(),
         ]);
 

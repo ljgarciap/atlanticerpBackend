@@ -54,7 +54,7 @@ final class ServiciosSettingsService
     private const DEFAULT_SIN_RESPONDER_UMBRAL_DIAS = 5;
 
     // Batch 10 (REQ-258 RN1/RN6) — pesos y montos máximos de los 5 criterios del "Plan de
-    // Bonificación por Desempeño" real (documento RRHH, Plan_Bonificacion_Carlos_Vergara.docx,
+    // Bonificación por Desempeño" real (documento RRHH, Plan_Bonificacion_Carlos_Tecnico.docx,
     // adjunto a SCRUM-321). Configurable a pedido explícito de Luis (2026-08-11) — ya existía el
     // mismo gap en los umbrales de conversión de Batch 7 (ver commissionUmbrales* abajo), corregido
     // en el mismo batch para no dejar dos capas de la misma regla ("Nunca" del CLAUDE.md raíz) con

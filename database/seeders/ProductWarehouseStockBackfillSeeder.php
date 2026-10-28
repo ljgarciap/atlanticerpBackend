@@ -12,7 +12,7 @@ use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Seeder;
 
 /**
- * SCRUM-422 (REQ-352) — hallazgo de QA 2026-07-24 (marly.rangel): la columna "Bodega(s)" de
+ * SCRUM-422 (REQ-352) — hallazgo de QA 2026-07-24 (qa.qa): la columna "Bodega(s)" de
  * Inventario y su modal de desglose mostraban 0/vacío para productos con stock real
  * (`catalog_products.stock_quantity` > 0). Investigación de causa raíz (Pre-QA/Backend Dev
  * 2026-07-27/28): NO es un bug de query — tanto

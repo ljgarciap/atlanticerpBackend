@@ -18,9 +18,9 @@ use Tests\Feature\FeatureTestCase;
  */
 class CrmPermissionMigrationTest extends FeatureTestCase
 {
-    private const DANIELA = 'gerencia@test.com'; // management
+    private const GERENCIA1 = 'gerencia@test.com'; // management
 
-    private const ALDO = 'liderservicios@test.com'; // lider_servicios — ajeno a ventas_diseno/crm
+    private const LIDERSERVICIOS = 'liderservicios@test.com'; // lider_servicios — ajeno a ventas_diseno/crm
 
     private const MILENA = 'vendedor@test.com'; // vendedor — can_view_team=false
 
@@ -39,8 +39,8 @@ class CrmPermissionMigrationTest extends FeatureTestCase
 
     public function test_management_ve_todos_los_proyectos_no_solo_los_propios(): void
     {
-        $tokenDaniela = $this->tokenFor(self::DANIELA, 'management');
-        $tokenAldo = $this->tokenFor(self::ALDO, 'lider_servicios');
+        $tokenDaniela = $this->tokenFor(self::GERENCIA1, 'management');
+        $tokenAldo = $this->tokenFor(self::LIDERSERVICIOS, 'lider_servicios');
 
         // Lider Servicios (lider_servicios) crea un proyecto sin asignarse a sí mismo — no tiene alcance de
         // equipo en ventas_diseno, pero SÍ tiene crm.write genérico (nivel 14, "Power User —
@@ -51,14 +51,14 @@ class CrmPermissionMigrationTest extends FeatureTestCase
 
         // Sin estar asignado, Lider Servicios no ve su propio proyecto en el listado — confirma que el
         // scoping es por asignación real, no por autoría (mismo comportamiento de siempre).
-        $aldoIndex = $this->withHeaders($this->authHeaders($tokenAldo))->getJson('/api/crm/projects');
-        $aldoIndex->assertStatus(200);
-        $this->assertNotContains('Proyecto de Lider Servicios', collect($aldoIndex->json('data'))->pluck('nombre'));
+        $liderserviciosIndex = $this->withHeaders($this->authHeaders($tokenAldo))->getJson('/api/crm/projects');
+        $liderserviciosIndex->assertStatus(200);
+        $this->assertNotContains('Proyecto de Lider Servicios', collect($liderserviciosIndex->json('data'))->pluck('nombre'));
 
         // Gerencia (management) sí lo ve, sin estar asignada — alcance de equipo.
-        $danielaIndex = $this->withHeaders($this->authHeaders($tokenDaniela))->getJson('/api/crm/projects');
-        $danielaIndex->assertStatus(200);
-        $nombresDaniela = collect($danielaIndex->json('data'))->pluck('nombre');
+        $gerencia1Index = $this->withHeaders($this->authHeaders($tokenDaniela))->getJson('/api/crm/projects');
+        $gerencia1Index->assertStatus(200);
+        $nombresDaniela = collect($gerencia1Index->json('data'))->pluck('nombre');
         $this->assertContains('Proyecto de Lider Servicios', $nombresDaniela);
     }
 
@@ -66,11 +66,11 @@ class CrmPermissionMigrationTest extends FeatureTestCase
 
     public function test_reports_team_management_si_lider_servicios_no(): void
     {
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::ALDO, 'lider_servicios')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::LIDERSERVICIOS, 'lider_servicios')))
             ->getJson('/api/crm/reports/team')
             ->assertStatus(403);
 
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::DANIELA, 'management')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::GERENCIA1, 'management')))
             ->getJson('/api/crm/reports/team')
             ->assertStatus(200);
     }
@@ -89,7 +89,7 @@ class CrmPermissionMigrationTest extends FeatureTestCase
 
     public function test_delete_project_management_puede_lider_servicios_no(): void
     {
-        $tokenAldo = $this->tokenFor(self::ALDO, 'lider_servicios');
+        $tokenAldo = $this->tokenFor(self::LIDERSERVICIOS, 'lider_servicios');
         $response = $this->withHeaders($this->authHeaders($tokenAldo))
             ->postJson('/api/crm/projects', ['nombre' => 'A Borrar', 'tipo' => 'diseno', 'assignee_ids' => []]);
         $response->assertStatus(201);
@@ -100,7 +100,7 @@ class CrmPermissionMigrationTest extends FeatureTestCase
             ->deleteJson("/api/crm/projects/{$projectId}")
             ->assertStatus(403);
 
-        $this->withHeaders($this->authHeaders($this->tokenFor(self::DANIELA, 'management')))
+        $this->withHeaders($this->authHeaders($this->tokenFor(self::GERENCIA1, 'management')))
             ->deleteJson("/api/crm/projects/{$projectId}")
             ->assertStatus(204);
     }

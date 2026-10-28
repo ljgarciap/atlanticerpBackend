@@ -58,7 +58,7 @@ final class AdminContHomeController
      * REQ-431 — comisiones internas pendientes de pago, TODOS los vendedores, sin scope de actor
      * (a diferencia de `AdminContInternalCommissionController::buildSummary()`, que auto-filtra a
      * `$actor` cuando no tiene `view_team`): esta tarjeta de Inicio es siempre el total de la
-     * empresa, la vea quien la vea — Contabilidad/Yaneth/Mark/Gerencia ya comparten el mismo roster
+     * empresa, la vea quien la vea — Contabilidad/Asistente/Mark/Gerencia ya comparten el mismo roster
      * amplio que gatea toda la pantalla "Inicio".
      */
     private function internalCommissionsPorPagar(): float

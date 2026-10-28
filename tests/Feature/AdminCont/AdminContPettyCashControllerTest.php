@@ -85,14 +85,14 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     public function test_registrar_multiples_lineas_de_2_solicitantes_aparecen_en_pendientes(): void
     {
         $token = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/petty-cash/expenses', [
                 'lineas' => [
-                    $this->lineaPayload($felixId, 'Cafetería Manolo', 18.50, 1.30),
-                    $this->lineaPayload($felixId, 'Farmacia Transporte', 32.00, 2.24),
+                    $this->lineaPayload($contabilidadId, 'Cafetería Manolo', 18.50, 1.30),
+                    $this->lineaPayload($contabilidadId, 'Farmacia Transporte', 32.00, 2.24),
                     $this->lineaPayload($markId, 'Estacionamiento Demo', 8.00, 0),
                 ],
             ]);
@@ -113,14 +113,14 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     public function test_falta_foto_en_una_linea_bloquea_el_guardado_completo(): void
     {
         $token = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $lineaSinFoto = $this->lineaPayload($felixId);
+        $lineaSinFoto = $this->lineaPayload($contabilidadId);
         unset($lineaSinFoto['foto']);
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/petty-cash/expenses', [
-                'lineas' => [$this->lineaPayload($felixId), $lineaSinFoto],
+                'lineas' => [$this->lineaPayload($contabilidadId), $lineaSinFoto],
             ]);
 
         $response->assertStatus(422);
@@ -131,9 +131,9 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     public function test_itbms_vacio_es_rechazado_nunca_asumido_como_cero(): void
     {
         $token = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $linea = $this->lineaPayload($felixId);
+        $linea = $this->lineaPayload($contabilidadId);
         $linea['itbms'] = '';
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -146,14 +146,14 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     public function test_generar_reporte_desmarcando_un_solicitante_completo_solo_incluye_al_otro(): void
     {
         $token = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/petty-cash/expenses', [
-            'lineas' => [$this->lineaPayload($felixId, 'A', 10, 0), $this->lineaPayload($markId, 'B', 20, 0)],
+            'lineas' => [$this->lineaPayload($contabilidadId, 'A', 10, 0), $this->lineaPayload($markId, 'B', 20, 0)],
         ])->assertStatus(201);
 
-        $soloFelix = DB::table($this->tableFqn('petty_cash_expenses'))->where('solicitante_id', $felixId)->pluck('id')->all();
+        $soloFelix = DB::table($this->tableFqn('petty_cash_expenses'))->where('solicitante_id', $contabilidadId)->pluck('id')->all();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/petty-cash/reports', [
@@ -182,14 +182,14 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     public function test_pending_pagina_a_nivel_de_grupo_sin_afectar_total_general(): void
     {
         $token = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
-        $yanethId = $this->userIdByEmail(self::ASISTENTE_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $asistenteId = $this->userIdByEmail(self::ASISTENTE_EMAIL);
         $markId = $this->userIdByEmail(self::APPROVER_EMAIL);
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/petty-cash/expenses', [
             'lineas' => [
-                $this->lineaPayload($felixId, 'A', 10, 0),
-                $this->lineaPayload($yanethId, 'B', 20, 0),
+                $this->lineaPayload($contabilidadId, 'A', 10, 0),
+                $this->lineaPayload($asistenteId, 'B', 20, 0),
                 $this->lineaPayload($markId, 'C', 30, 0),
             ],
         ])->assertStatus(201);
@@ -329,13 +329,13 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
         $this->withHeaders($this->authHeaders($tokenFelix))->postJson('/api/admin-contab/petty-cash/expenses', [
-            'lineas' => [$this->lineaPayload($felixId)],
+            'lineas' => [$this->lineaPayload($contabilidadId)],
         ])->assertStatus(201);
 
-        $this->crearReportePendiente($tokenFelix, $felixId);
+        $this->crearReportePendiente($tokenFelix, $contabilidadId);
 
         $summary = $this->withHeaders($this->authHeaders($tokenFelix))
             ->getJson('/api/admin-contab/petty-cash/summary')
@@ -350,16 +350,16 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
 
     public function test_asistente_puede_registrar_gastos_pero_management_no(): void
     {
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
         $this->withHeaders($this->authHeaders($tokenMark))
-            ->postJson('/api/admin-contab/petty-cash/expenses', ['lineas' => [$this->lineaPayload($felixId)]])
+            ->postJson('/api/admin-contab/petty-cash/expenses', ['lineas' => [$this->lineaPayload($contabilidadId)]])
             ->assertStatus(403);
 
         $tokenYaneth = $this->loginAsYaneth();
         $this->withHeaders($this->authHeaders($tokenYaneth))
-            ->postJson('/api/admin-contab/petty-cash/expenses', ['lineas' => [$this->lineaPayload($felixId)]])
+            ->postJson('/api/admin-contab/petty-cash/expenses', ['lineas' => [$this->lineaPayload($contabilidadId)]])
             ->assertStatus(201);
     }
 
@@ -390,10 +390,10 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $idA = $this->crearGastoPendiente($tokenFelix, $felixId, 'Copy Centro El Dorado');
-        $idB = $this->crearGastoPendiente($tokenFelix, $felixId, 'Ferretería Central');
+        $idA = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Copy Centro El Dorado');
+        $idB = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Ferretería Central');
         $reporte = $this->crearReporteConLineas($tokenFelix, [$idA, $idB]);
 
         $tokenMark = $this->loginAsMark();
@@ -419,10 +419,10 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Subway');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Subway');
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $id)->update(['intentos_rechazo' => 1]);
 
         $reporte = $this->crearReporteConLineas($tokenFelix, [$id]);
@@ -451,10 +451,10 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Subway');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Subway');
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $id)->update(['intentos_rechazo' => 1]);
         $reporte = $this->crearReporteConLineas($tokenFelix, [$id]);
 
@@ -463,7 +463,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        $contabilidad = DB::table("{$slug}_auth.users")->where('id', $felixId)->first();
+        $contabilidad = DB::table("{$slug}_auth.users")->where('id', $contabilidadId)->first();
         $nombreEsperado = trim("{$contabilidad->first_name} {$contabilidad->last_name}");
 
         $rejected = $this->withHeaders($this->authHeaders($tokenFelix))
@@ -471,7 +471,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
 
         $linea = collect($rejected['lineas'])->firstWhere('id', $id);
         $this->assertNotNull($linea);
-        $this->assertSame($felixId, $linea['solicitante_id']);
+        $this->assertSame($contabilidadId, $linea['solicitante_id']);
         $this->assertSame($nombreEsperado, $linea['solicitante_nombre']);
     }
 
@@ -491,11 +491,11 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
-        $idA = $this->crearGastoPendiente($tokenFelix, $felixId, 'Cafetería Manolo');
-        $idB = $this->crearGastoPendiente($tokenFelix, $felixId, 'Farmacia Transporte');
+        $idA = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Cafetería Manolo');
+        $idB = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Farmacia Transporte');
         $reporte = $this->crearReporteConLineas($tokenFelix, [$idA, $idB]);
 
         // rejectExpense() primero — reporte pasa a tener solo la línea B.
@@ -522,11 +522,11 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
-        $idFresca = $this->crearGastoPendiente($tokenFelix, $felixId, 'Farmacia Transporte');
-        $idYaRechazada = $this->crearGastoPendiente($tokenFelix, $felixId, 'Gasolinera Delta');
+        $idFresca = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Farmacia Transporte');
+        $idYaRechazada = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Gasolinera Delta');
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $idYaRechazada)->update(['intentos_rechazo' => 1]);
 
         $reporte = $this->crearReporteConLineas($tokenFelix, [$idFresca, $idYaRechazada]);
@@ -571,9 +571,9 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     public function test_rejected_no_incluye_lineas_que_siguen_asociadas_a_un_reporte(): void
     {
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Copias Demo');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Copias Demo');
         $reporte = $this->crearReporteConLineas($tokenFelix, [$id]);
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $id)->update(['intentos_rechazo' => 2]);
 
@@ -592,9 +592,9 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     public function test_reabrir_linea_rechazada_reinicia_contador_y_vuelve_a_pendientes(): void
     {
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Estacionamiento Demo');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Estacionamiento Demo');
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $id)->update(['intentos_rechazo' => 2]);
 
         $tokenYaneth = $this->loginAsYaneth();
@@ -617,9 +617,9 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     public function test_reabrir_es_de_contabilidad_asistente_no_de_mark(): void
     {
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Copy Centro El Dorado');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Copy Centro El Dorado');
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $id)->update(['intentos_rechazo' => 2]);
 
         $tokenMark = $this->loginAsMark();
@@ -632,9 +632,9 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Ferretería Central');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Ferretería Central');
         $this->crearReporteConLineas($tokenFelix, [$id]);
 
         $this->withHeaders($this->authHeaders($tokenFelix))
@@ -646,10 +646,10 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Subway');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Subway');
         $reporte = $this->crearReporteConLineas($tokenFelix, [$id]);
 
         $payload = ['fecha' => '2026-07-05', 'proveedor' => 'Subway Vía España', 'descripcion' => 'Corregido', 'monto_bruto' => 40, 'itbms' => 2.8];
@@ -674,10 +674,10 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
-        $idPendienteAprobacion = $this->crearGastoPendiente($tokenFelix, $felixId, 'Farmacia Transporte');
+        $idPendienteAprobacion = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Farmacia Transporte');
         $this->crearReporteConLineas($tokenFelix, [$idPendienteAprobacion]);
 
         // RN2 — permitido mientras el reporte sigue pendiente de aprobación.
@@ -687,7 +687,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
             ])
             ->assertStatus(200);
 
-        $idFinalizado = $this->crearGastoPendiente($tokenFelix, $felixId, 'Cafetería Manolo');
+        $idFinalizado = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Cafetería Manolo');
         $reporteFinalizado = $this->crearReporteConLineas($tokenFelix, [$idFinalizado]);
         $this->withHeaders($this->authHeaders($tokenMark))
             ->putJson("/api/admin-contab/petty-cash/reports/{$reporteFinalizado['numero']}/approve")
@@ -706,9 +706,9 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
         $tokenYaneth = $this->loginAsYaneth();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
 
-        $idPendiente = $this->crearGastoPendiente($tokenFelix, $felixId, 'Botiquín Transporte');
+        $idPendiente = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Botiquín Transporte');
         $detallePendiente = $this->withHeaders($this->authHeaders($tokenFelix))
             ->getJson("/api/admin-contab/petty-cash/expenses/{$idPendiente}")->assertStatus(200)->json();
         $this->assertSame('pendientes', $detallePendiente['ubicacion']);
@@ -716,7 +716,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
         $this->assertTrue($detallePendiente['editable']);
         $this->assertFalse($detallePendiente['puede_rechazar']);
 
-        $idEnReporte = $this->crearGastoPendiente($tokenFelix, $felixId, 'Estacionamiento Demo');
+        $idEnReporte = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Estacionamiento Demo');
         $this->crearReporteConLineas($tokenFelix, [$idEnReporte]);
         $tokenMark = $this->loginAsMark();
         $detalleEnReporte = $this->withHeaders($this->authHeaders($tokenMark))
@@ -725,7 +725,7 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
         $this->assertFalse($detalleEnReporte['editable']);
         $this->assertTrue($detalleEnReporte['puede_rechazar']);
 
-        $idRechazado = $this->crearGastoPendiente($tokenFelix, $felixId, 'Copy Centro El Dorado');
+        $idRechazado = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Copy Centro El Dorado');
         DB::table($this->tableFqn('petty_cash_expenses'))->where('id', $idRechazado)->update(['intentos_rechazo' => 2]);
         $detalleRechazado = $this->withHeaders($this->authHeaders($tokenYaneth))
             ->getJson("/api/admin-contab/petty-cash/expenses/{$idRechazado}")->assertStatus(200)->json();
@@ -754,10 +754,10 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
         DB::table($this->tableFqn('fiscal_settings'))->where('id', 1)->update(['petty_cash_max_intentos_rechazo' => 1]);
 
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Ferretería Central');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Ferretería Central');
         $this->crearReporteConLineas($tokenFelix, [$id]);
 
         $response = $this->withHeaders($this->authHeaders($tokenMark))
@@ -785,10 +785,10 @@ class AdminContPettyCashControllerTest extends FeatureTestCase
     {
         $this->ensureMarkIsApprover();
         $tokenFelix = $this->loginAsFelix();
-        $felixId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $tokenMark = $this->loginAsMark();
 
-        $id = $this->crearGastoPendiente($tokenFelix, $felixId, 'Subway');
+        $id = $this->crearGastoPendiente($tokenFelix, $contabilidadId, 'Subway');
         $reporte = $this->crearReporteConLineas($tokenFelix, [$id]);
 
         $this->withHeaders($this->authHeaders($tokenMark))

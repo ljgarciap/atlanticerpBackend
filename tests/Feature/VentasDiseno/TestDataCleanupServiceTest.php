@@ -38,7 +38,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         parent::setUp();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        $this->daniela = User::where('email', 'gerencia@test.com')->firstOrFail();
+        $this->gerencia1 = User::where('email', 'gerencia@test.com')->firstOrFail();
         $this->vendedor2 = User::where('email', 'vendedor2@test.com')->firstOrFail();
     }
 
@@ -118,7 +118,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_dry_run_identifica_toda_la_data_de_gerencia_y_excluye_lo_de_otro_usuario(): void
     {
-        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia QA]');
+        $gerencia = $this->seedFullPipeline($this->gerencia1, '[Gerencia QA]');
         $vendedor2 = $this->seedFullPipeline($this->vendedor2, '[Vendedor Real]');
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
@@ -142,7 +142,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_marcador_demo_711_protege_incluso_si_lo_creo_gerencia(): void
     {
-        $this->actingForAudit($this->daniela);
+        $this->actingForAudit($this->gerencia1);
         $master = MasterClient::create(['name' => '[DEMO-711] Cliente de Gerencia', 'default_price_type' => 'project']);
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
@@ -156,10 +156,10 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         // El marcador está en el Quote (padre), no en el QuoteItem (hijo) — el hijo debe
         // quedar protegido igual, vía labelsFor() caminando quote_part -> quote.
-        $this->actingForAudit($this->daniela);
+        $this->actingForAudit($this->gerencia1);
         $master = MasterClient::create(['name' => 'Cliente sin marcador']);
         $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub sin marcador', 'tax_id' => '155-0001-1-2026']);
-        $quote = Quote::create(['master_client_id' => $master->id, 'sub_client_id' => $sub->id, 'name' => '[QA-VD] Cotización protegida', 'description' => '[QA-VD] Cotización protegida', 'owner_id' => $this->daniela->id]);
+        $quote = Quote::create(['master_client_id' => $master->id, 'sub_client_id' => $sub->id, 'name' => '[QA-VD] Cotización protegida', 'description' => '[QA-VD] Cotización protegida', 'owner_id' => $this->gerencia1->id]);
         $part = QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida', 'position' => 1]);
         $item = QuoteItem::create(['quote_part_id' => $part->id, 'is_custom' => true, 'reference' => 'REF-X', 'name' => 'Item sin marcador propio', 'description' => 'Item sin marcador propio', 'quantity' => 1, 'unit_price' => 5.0]);
 
@@ -176,7 +176,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $master = MasterClient::create(['name' => 'Cliente real de Vendedor']);
 
         // Gerencia solo EDITA (action=updated) — nunca lo creó. No debe quedar candidato.
-        $this->actingForAudit($this->daniela);
+        $this->actingForAudit($this->gerencia1);
         $master->update(['default_price_type' => 'special']);
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
@@ -186,7 +186,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_sales_project_inferido_por_relacion_y_ventana_de_created_at(): void
     {
-        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia Inferido]');
+        $gerencia = $this->seedFullPipeline($this->gerencia1, '[Gerencia Inferido]');
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
@@ -198,7 +198,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_active_reference_protege_master_client_con_subcliente_vivo_de_otro_usuario(): void
     {
-        $this->actingForAudit($this->daniela);
+        $this->actingForAudit($this->gerencia1);
         $master = MasterClient::create(['name' => '[Gerencia] Cliente compartido']);
         $subDaniela = SubClient::create(['master_client_id' => $master->id, 'business_name' => '[Gerencia] Sub propio', 'tax_id' => '155-1111-1-2026']);
 
@@ -228,7 +228,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
      */
     public function test_active_reference_protege_catalog_product_referenciado_por_purchase_order_line_real(): void
     {
-        $this->actingForAudit($this->daniela);
+        $this->actingForAudit($this->gerencia1);
         $product = CatalogProduct::create([
             'reference' => '[Gerencia] REF-TEST',
             'name' => '[Gerencia] Producto de prueba', 'description' => '[Gerencia] Producto de prueba',
@@ -276,7 +276,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
      */
     public function test_catalog_product_sin_referencias_reales_se_borra_con_force(): void
     {
-        $this->actingForAudit($this->daniela);
+        $this->actingForAudit($this->gerencia1);
         $product = CatalogProduct::create([
             'reference' => '[Gerencia] REF-LIBRE',
             'name' => '[Gerencia] Producto sin referencias', 'description' => '[Gerencia] Producto sin referencias',
@@ -296,9 +296,9 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_force_borra_los_candidatos_y_preserva_lo_protegido(): void
     {
-        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia Force]');
+        $gerencia = $this->seedFullPipeline($this->gerencia1, '[Gerencia Force]');
 
-        $this->actingForAudit($this->daniela);
+        $this->actingForAudit($this->gerencia1);
         $protectedMaster = MasterClient::create(['name' => '[QA-VD] Cliente protegido']);
 
         $vendedor2 = $this->seedFullPipeline($this->vendedor2, '[Vendedor Force]');
@@ -339,7 +339,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
      */
     public function test_deleted_count_no_subreporta_filas_borradas_por_cascade(): void
     {
-        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia Cascade Count]');
+        $gerencia = $this->seedFullPipeline($this->gerencia1, '[Gerencia Cascade Count]');
 
         $service = app(TestDataCleanupService::class);
         $report = $service->buildReport('gerencia@test.com');
@@ -359,7 +359,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_artisan_command_dry_run_por_default_no_borra_nada(): void
     {
-        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia CLI]');
+        $gerencia = $this->seedFullPipeline($this->gerencia1, '[Gerencia CLI]');
 
         $this->artisan('ventas-diseno:cleanup-test-data', ['--env-override' => true])
             ->assertExitCode(0);
@@ -374,7 +374,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_artisan_command_con_force_borra_de_verdad(): void
     {
-        $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia CLI Force]');
+        $gerencia = $this->seedFullPipeline($this->gerencia1, '[Gerencia CLI Force]');
 
         $this->artisan('ventas-diseno:cleanup-test-data', ['--env-override' => true, '--force' => true])
             ->assertExitCode(0);

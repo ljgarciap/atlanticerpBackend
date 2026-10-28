@@ -629,7 +629,7 @@ final class CreditNoteService
      * real de factura de origen es REQ-483/Batch 11 — hasta entonces el formulario no puede excluir
      * "la tasa actual" porque no hay ninguna factura elegida, ver `RegistrarNotaCreditoModal`
      * `facturaActualRateId`). Deliberadamente un endpoint propio de Notas Crédito, distinto de
-     * `GET /admin-contab/itbms-rates` (ese es `primary_approver_only` — Contabilidad/Yaneth/Gerencia no tienen acceso
+     * `GET /admin-contab/itbms-rates` (ese es `primary_approver_only` — Contabilidad/Asistente/Gerencia no tienen acceso
      * ahí pero sí necesitan ver el catálogo para elegir "tratamiento correcto").
      *
      * @return list<array{id: int, nombre: string, descripcion: string, porcentaje: float, es_base: bool}>
@@ -879,7 +879,7 @@ final class CreditNoteService
 
     /**
      * REQ-491 — precarga del formulario de registro al hacer clic en una fila ámbar de la cola.
-     * Endpoint propio de Notas Crédito (no llama a `bodega.read`, que Contabilidad/Yaneth/Mark/Gerencia no
+     * Endpoint propio de Notas Crédito (no llama a `bodega.read`, que Contabilidad/Asistente/Mark/Gerencia no
      * tienen) — mismo criterio de "cross-schema directo" ya usado en `pendingBodegaReturns()`.
      *
      * @return array<string, mixed>|null null si la devolución no existe o ya no está en la cola
@@ -971,7 +971,7 @@ final class CreditNoteService
 
     /**
      * SCRUM-865 punto 2 — `CustomerReturnController::signedDocumentUrl()` (Bodega) está gateado
-     * por `permission:bodega.read`, que un usuario de Notas de Crédito (Contabilidad/Yaneth/Mark/
+     * por `permission:bodega.read`, que un usuario de Notas de Crédito (Contabilidad/Asistente/Mark/
      * Gerencia) no necesariamente tiene. Mismo mecanismo de presign, gateado acá por el permiso ya
      * exigido a toda la ruta de `notas-credito/*`.
      */

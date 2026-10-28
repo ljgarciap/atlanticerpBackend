@@ -103,7 +103,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     // ── Ficha técnica (SCRUM-425/426, REQ-355) ───────────────────────────────
 
     /**
-     * SCRUM-425 — hallazgo de QA 2026-07-27 (marly): el modal "Ver ficha técnica" ya está
+     * SCRUM-425 — hallazgo de QA 2026-07-27 (qa): el modal "Ver ficha técnica" ya está
      * cableado en el frontend de Bodega (`TechnicalSpecModal.tsx`, compartido con Compras) contra
      * `GET /bodega/inventory/{id}`, pero el endpoint nunca exponía `technical_spec` — a diferencia
      * de `Compras\Http\Controllers\InventoryController::format()`, que sí lo expone desde
@@ -153,7 +153,7 @@ class BodegaInventoryControllerTest extends FeatureTestCase
     // ── Facetas de filtro Proveedor/Marca (REQ-349, SCRUM-419) ───────────────
 
     /**
-     * Fix QA 2026-07-24 (marly.rangel): los dropdowns "Proveedor"/"Marca" aparecían vacíos porque
+     * Fix QA 2026-07-24 (qa.qa): los dropdowns "Proveedor"/"Marca" aparecían vacíos porque
      * no había ningún endpoint accesible con solo `bodega.read` para poblarlos. `bodega.read`
      * (sin `compras.read`) debe alcanzar para ver las opciones — derivadas del propio catálogo,
      * no de una lista completa de `Provider` en Compras.

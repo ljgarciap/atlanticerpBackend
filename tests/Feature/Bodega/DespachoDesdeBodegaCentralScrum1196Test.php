@@ -18,7 +18,7 @@ use Tests\Feature\Bodega\Concerns\BodegaOrderTestHelpers;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1196 — los despachos salen de Bodega Central por defecto (reglas de Lider Bodega Cárdenas, Líder de Bodega, 22-10-2026). Un caso por criterio de
+ * SCRUM-1196 — los despachos salen de Bodega Central por defecto (reglas de Lider Bodega Liderbodega, Líder de Bodega, 22-10-2026). Un caso por criterio de
  * aceptación del ticket, recorriendo el flujo real (asignar picker → iniciar picking → completar picking → entrega → repartidor → despachar).
  */
 class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase

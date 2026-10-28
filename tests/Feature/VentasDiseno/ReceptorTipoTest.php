@@ -205,7 +205,7 @@ final class ReceptorTipoTest extends FeatureTestCase
 
     public function test_sin_el_permiso_angosto_nadie_puede_crear_un_cliente_como_consumidor_final(): void
     {
-        $token = $this->token('ventas_diseno.edit'); // escribe y edita, pero no es Gerencia/Felix
+        $token = $this->token('ventas_diseno.edit'); // escribe y edita, pero no es Gerencia/Contabilidad
         $this->reTenant(); // el login olvida el tenant
         $master = MasterClient::create(['name' => 'Master Permiso '.uniqid()]);
 

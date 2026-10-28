@@ -60,7 +60,7 @@ final class BodegaRoles
     public const ALL = [self::LIDER_BODEGA, self::ASISTENTE_BODEGA, self::PICKER, self::COURIER];
 
     /**
-     * SCRUM-366 (REQ-296) — hallazgo de QA 2026-07-24 (marly.rangel): el selector de personas del
+     * SCRUM-366 (REQ-296) — hallazgo de QA 2026-07-24 (qa.qa): el selector de personas del
      * alcance "Equipo" en Home de Bodega debe listar ÚNICAMENTE Asistentes de Bodega, no los 4
      * roles de `ALL`. El ticket describe el selector como "una [opción] por cada Asistente/
      * Operativo de Bodega (ej. Asistente Bodega Test 2, Asistente Bodega Test)" — ambos ejemplos son

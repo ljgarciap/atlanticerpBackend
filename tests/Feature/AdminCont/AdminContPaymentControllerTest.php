@@ -881,7 +881,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $this->assertSame('Banco Demo A — corriente 04-72-99-123456-1', $account->receiptLabel());
     }
 
-    // Rebote de QA (SCRUM-858, marly.rangel 2026-09-08) — sin RUC cargado en Configuración Fiscal,
+    // Rebote de QA (SCRUM-858, qa.qa 2026-09-08) — sin RUC cargado en Configuración Fiscal,
     // el PDF no debe romperse (antes mostraba "RUC -" en el header; el guard nuevo simplemente
     // oculta la línea, ver payment-receipt-pdf.blade.php).
     public function test_pdf_del_recibo_no_se_rompe_sin_ruc_cargado(): void
@@ -1113,7 +1113,7 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     // Configuración Fiscal (exclusiva de Gerencia) nunca se llenó en NINGÚN entorno (dev/test/prod,
     // confirmado por tinker en vivo); `nombre_comercial`/`direccion_fiscal` quedan en '' por
     // default de la migración. Sin el fallback de PdfFooterText, el encabezado/pie del recibo
-    // salían en blanco (nunca "AtlanticERP", pero tampoco "Atlantic") — que es lo que marly vio y
+    // salían en blanco (nunca "AtlanticERP", pero tampoco "Atlantic") — que es lo que qa vio y
     // reportó como "el pie de página real no se ve". Fix es a nivel de dato (Gerencia debe cargar la
     // config real, ticket de seguimiento pendiente), pero el código nunca debe mostrar un
     // encabezado/pie vacío mientras tanto. Prueba pura sobre PdfFooterText — sin tocar DB/tenant,

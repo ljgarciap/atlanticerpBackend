@@ -22,7 +22,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class PipelinePassToOrderTest extends FeatureTestCase
 {
-    private const FELIX = 'contabilidad@test.com';
+    private const CONTABILIDAD = 'contabilidad@test.com';
 
     protected function setUp(): void
     {
@@ -101,11 +101,11 @@ class PipelinePassToOrderTest extends FeatureTestCase
     public function test_contabilidad_puede_pasar_a_pedido_un_proyecto_ajeno(): void
     {
         $card    = $this->makeCard($this->sellerId());
-        $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
+        $headers = $this->headersFor(self::CONTABILIDAD, self::CONTABILIDAD, 'lider_admin_contab');
 
         $this->withHeaders($headers)->postJson("/api/ventas-diseno/pipeline/{$card->id}/pass-to-order")
             ->assertOk()
-            ->assertJsonPath('order_approved_by.id', $this->userIdByEmail(self::FELIX));
+            ->assertJsonPath('order_approved_by.id', $this->userIdByEmail(self::CONTABILIDAD));
 
         $this->tenant();
         $this->assertSame(1, Order::where('pipeline_card_id', $card->id)->count());
@@ -170,8 +170,8 @@ class PipelinePassToOrderTest extends FeatureTestCase
         $firstAt = PipelineCard::find($card->id)->order_approved_at;
 
         // Otra persona (Contabilidad) repite la acción: no debe pisar quién aprobó ni crear otro pedido.
-        $felixHeaders = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
-        $this->withHeaders($felixHeaders)->postJson("/api/ventas-diseno/pipeline/{$card->id}/pass-to-order")
+        $contabilidadHeaders = $this->headersFor(self::CONTABILIDAD, self::CONTABILIDAD, 'lider_admin_contab');
+        $this->withHeaders($contabilidadHeaders)->postJson("/api/ventas-diseno/pipeline/{$card->id}/pass-to-order")
             ->assertStatus(409)
             ->assertJsonPath('data.order_approved_by.id', $this->userIdByEmail('management@atlantic.test'));
 
@@ -273,14 +273,14 @@ class PipelinePassToOrderTest extends FeatureTestCase
 
     public function test_contabilidad_ve_el_pipeline_de_todo_el_equipo_y_el_detalle_en_solo_lectura(): void
     {
-        $this->felixComoEnScrum1139();
+        $this->contabilidadComoEnScrum1139();
         // SCRUM-1139 — Contabilidad hoy SÍ edita el Pipeline (`pipeline.edit`); este test protege la lectura SOLA (`pipeline.read_all`),
         // así que se le quita el permiso de escritura para reproducir ese perfil.
-        $contabilidad = \App\Models\User::where('email', self::FELIX)->firstOrFail();
+        $contabilidad = \App\Models\User::where('email', self::CONTABILIDAD)->firstOrFail();
         $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
 
         $card    = $this->makeCard($this->sellerId());
-        $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
+        $headers = $this->headersFor(self::CONTABILIDAD, self::CONTABILIDAD, 'lider_admin_contab');
 
         $ids = collect($this->withHeaders($headers)->getJson('/api/ventas-diseno/pipeline?scope=team')->assertOk()->json('data'))->pluck('id');
         $this->assertTrue($ids->contains($card->id));
@@ -293,14 +293,14 @@ class PipelinePassToOrderTest extends FeatureTestCase
 
     public function test_contabilidad_no_puede_escribir_nada_en_el_pipeline(): void
     {
-        $this->felixComoEnScrum1139();
+        $this->contabilidadComoEnScrum1139();
         // SCRUM-1139 — Contabilidad hoy SÍ edita el Pipeline (`pipeline.edit`); este test protege la lectura SOLA (`pipeline.read_all`),
         // así que se le quita el permiso de escritura para reproducir ese perfil.
-        $contabilidad = \App\Models\User::where('email', self::FELIX)->firstOrFail();
+        $contabilidad = \App\Models\User::where('email', self::CONTABILIDAD)->firstOrFail();
         $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], ['ventas_diseno.pipeline.edit']))]);
 
         $card    = $this->makeCard($this->sellerId(), 'proposal');
-        $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
+        $headers = $this->headersFor(self::CONTABILIDAD, self::CONTABILIDAD, 'lider_admin_contab');
 
         $this->withHeaders($headers)->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])->assertStatus(403);
         $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['name' => 'Hackeado'])->assertStatus(403);
@@ -313,8 +313,8 @@ class PipelinePassToOrderTest extends FeatureTestCase
 
     public function test_el_permiso_de_lectura_total_de_pipeline_no_abre_el_resto_de_ventas_y_diseno(): void
     {
-        $this->felixComoEnScrum1139();
-        $headers = $this->headersFor(self::FELIX, self::FELIX, 'lider_admin_contab');
+        $this->contabilidadComoEnScrum1139();
+        $headers = $this->headersFor(self::CONTABILIDAD, self::CONTABILIDAD, 'lider_admin_contab');
 
         $this->withHeaders($headers)->getJson('/api/ventas-diseno/projects')->assertStatus(403);
     }

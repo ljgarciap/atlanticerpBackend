@@ -124,7 +124,7 @@ final class ClientsController extends Controller
          */
         $validated = $request->validated();
 
-        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Gerencia/Felix).
+        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Gerencia/Contabilidad).
         if (($validated['receptor_tipo'] ?? null) === ReceptorTipo::CONSUMIDOR_FINAL && ! $user->hasPermission(ReceptorTipo::PERMISO_CONSUMIDOR_FINAL)) {
             return response()->json(['message' => ReceptorTipo::MENSAJE_SIN_PERMISO], 403);
         }
@@ -162,7 +162,7 @@ final class ClientsController extends Controller
          */
         $validated = $request->validated();
 
-        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Gerencia/Felix).
+        // SCRUM-1003 — marcar un Consumidor Final exige el permiso angosto (Gerencia/Contabilidad).
         if (($validated['receptor_tipo'] ?? null) === ReceptorTipo::CONSUMIDOR_FINAL && ! $user->hasPermission(ReceptorTipo::PERMISO_CONSUMIDOR_FINAL)) {
             return response()->json(['message' => ReceptorTipo::MENSAJE_SIN_PERMISO], 403);
         }

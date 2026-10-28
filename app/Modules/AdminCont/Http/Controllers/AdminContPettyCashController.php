@@ -316,7 +316,7 @@ class AdminContPettyCashController
         return response()->json($result);
     }
 
-    /** PUT /api/admin-contab/petty-cash/expenses/{id}/reopen — REQ-544, Contabilidad/Yaneth (mismo
+    /** PUT /api/admin-contab/petty-cash/expenses/{id}/reopen — REQ-544, Contabilidad/Asistente (mismo
      *  roster que `storeExpenses`, deliberadamente SIN `primary_approver_only` — reabrir no es de Gerencia). */
     public function reopenExpense(int $id, ReopenPettyCashExpenseRequest $request): JsonResponse
     {
@@ -372,7 +372,7 @@ class AdminContPettyCashController
     }
 
     /** Redundante con el gate `primary_approver_only` de la ruta de aprobar (ver docblock ahí) — se reusa acá
-     *  solo para calcular `puede_aprobar` en el detalle, que SÍ es visible para Contabilidad/Yaneth/
+     *  solo para calcular `puede_aprobar` en el detalle, que SÍ es visible para Contabilidad/Asistente/
      *  Gerencia (no está detrás de `primary_approver_only`). Mismo criterio que
      *  `AdminContCashPositionController::historyDetail()`. */
     private function isPrimaryApprover(Request $request): bool

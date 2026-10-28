@@ -233,7 +233,7 @@ class GoodsReceiptControllerTest extends FeatureTestCase
         $this->assertEqualsWithDelta(10.0, (float) $freshB->freight_cost, 0.01);
         $this->assertEqualsWithDelta(20.0, $freshB->costTotal(), 0.01);
 
-        // REQ-164 Escenario 1 (fix Pre-QA 2026-07-20, rechazado por marly: "el reparto
+        // REQ-164 Escenario 1 (fix Pre-QA 2026-07-20, rechazado por qa: "el reparto
         // proporcional no es observable ni queda registrado por línea") — el TOTAL de flete
         // asignado a CADA línea, tal cual lo pide el criterio literal ("la primera línea recibe
         // $200 de flete y la segunda $100"), debe quedar en la respuesta y persistido por línea.

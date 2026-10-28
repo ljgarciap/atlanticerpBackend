@@ -12,7 +12,7 @@ use Tests\Feature\FeatureTestCase;
 /**
  * ADR-006 — mapeo rol→nivel (2026-07-09), `RoleBackfillSeeder` (`database/seeders/
  * RoleBackfillSeeder.php`). Corrección 2026-07-10: "Gerencia Total" reusa el Nivel 9 ("Admin")
- * existente en vez de un nivel nuevo — el mismo nivel en el que Gerencia/David/Daniela ya estaban
+ * existente en vez de un nivel nuevo — el mismo nivel en el que Gerencia/Gerencia2/Gerencia1 ya estaban
  * desde `CoreUserSeeder`. El backfill nunca toca `security_level_id`, ni antes ni después del
  * cutover de Fase C: no hace falta, 9 ya es el nivel correcto bajo el diseño corregido.
  */
@@ -24,7 +24,7 @@ class RoleBackfillTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    public function test_aprobador_david_gerencia_quedan_en_rol_gerencia_con_flags_transversales(): void
+    public function test_aprobador_gerencia2_gerencia_quedan_en_rol_gerencia_con_flags_transversales(): void
     {
         $gerencia = Role::where('key', 'management')->firstOrFail();
 
@@ -40,7 +40,7 @@ class RoleBackfillTest extends FeatureTestCase
     public function test_gerencia_real_permanece_en_nivel_9_gerencia_total(): void
     {
         // Corrección 2026-07-10: Nivel 9 ("Admin") YA ES "Gerencia Total" bajo el diseño
-        // corregido (reusa la escala 1-10 existente) -- Gerencia/David/Daniela no se mueven de ahí.
+        // corregido (reusa la escala 1-10 existente) -- Gerencia/Gerencia2/Gerencia1 no se mueven de ahí.
         foreach (['gerencia3@test.com', 'gerencia2@test.com', 'gerencia@test.com'] as $email) {
             $user = User::where('email', $email)->firstOrFail();
             $this->assertSame(9, $user->securityLevel?->level, "{$email} debería permanecer en nivel 9 (Gerencia Total).");
@@ -63,18 +63,18 @@ class RoleBackfillTest extends FeatureTestCase
             $this->assertSame(10, $user->securityLevel?->level, "{$email} debería seguir en nivel 10 (Superadmin).");
         }
 
-        $marly = User::where('email', 'gerencia4@test.com')->firstOrFail();
-        $this->assertSame(9, $marly->securityLevel?->level, 'Gerencia debería seguir en nivel 9 (su nivel original, sin relación al mapeo rol→nivel).');
+        $qa = User::where('email', 'gerencia4@test.com')->firstOrFail();
+        $this->assertSame(9, $qa->securityLevel?->level, 'Gerencia debería seguir en nivel 9 (su nivel original, sin relación al mapeo rol→nivel).');
     }
 
-    public function test_marly_queda_en_rol_superadmin_no_en_gerencia(): void
+    public function test_qa_queda_en_rol_superadmin_no_en_gerencia(): void
     {
         // Pregunta 7 del daily 2026-07-09: Gerencia es QA de plataforma, aunque su fila legada en
         // user_roles siga diciendo role='management' — role_id nuevo es superadmin, no gerencia.
         $superadmin = Role::where('key', 'superadmin')->firstOrFail();
-        $marly = User::where('email', 'gerencia4@test.com')->firstOrFail();
+        $qa = User::where('email', 'gerencia4@test.com')->firstOrFail();
 
-        $this->assertSame($superadmin->id, $marly->role_id);
+        $this->assertSame($superadmin->id, $qa->role_id);
     }
 
     public function test_dan_rosales_sin_cargo_definido_sigue_sin_cuenta(): void

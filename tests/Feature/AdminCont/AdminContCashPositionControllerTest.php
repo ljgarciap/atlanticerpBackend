@@ -727,8 +727,8 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_rechaza_a_management_para_aprobar_pero_permite_ver(): void
     {
-        $felixHeaders = $this->authHeaders($this->loginAsFelix());
-        $this->withHeaders($felixHeaders)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
+        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $this->withHeaders($contabilidadHeaders)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
 
         $markToken = $this->loginAsMark();
         $this->withHeaders($this->authHeaders($markToken))
@@ -738,14 +738,14 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_approve_es_exclusivo_de_mark(): void
     {
-        $felixHeaders = $this->authHeaders($this->loginAsFelix());
-        $close = $this->withHeaders($felixHeaders)
+        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
         $id = $close->json('id');
 
         // Contabilidad (lider_admin_contab) no es Gerencia — rechazado.
-        $this->withHeaders($felixHeaders)
+        $this->withHeaders($contabilidadHeaders)
             ->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])
             ->assertStatus(403);
 
@@ -760,8 +760,8 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_approve_rechaza_doble_aprobacion(): void
     {
-        $felixHeaders = $this->authHeaders($this->loginAsFelix());
-        $close = $this->withHeaders($felixHeaders)
+        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
         $id = $close->json('id');
@@ -775,8 +775,8 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_detail_puede_aprobar_true_para_aprobador_cuando_esta_pendiente(): void
     {
-        $felixHeaders = $this->authHeaders($this->loginAsFelix());
-        $close = $this->withHeaders($felixHeaders)
+        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
         $id = $close->json('id');
@@ -790,13 +790,13 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_detail_puede_aprobar_false_para_contabilidad(): void
     {
-        $felixHeaders = $this->authHeaders($this->loginAsFelix());
-        $close = $this->withHeaders($felixHeaders)
+        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
         $id = $close->json('id');
 
-        $response = $this->withHeaders($felixHeaders)
+        $response = $this->withHeaders($contabilidadHeaders)
             ->getJson("/api/admin-contab/cash-position/history/{$id}")
             ->assertStatus(200);
 
@@ -805,8 +805,8 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_detail_puede_aprobar_false_cuando_ya_esta_aprobado(): void
     {
-        $felixHeaders = $this->authHeaders($this->loginAsFelix());
-        $close = $this->withHeaders($felixHeaders)
+        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
         $id = $close->json('id');
@@ -885,13 +885,13 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_detail_export_devuelve_pdf(): void
     {
-        $felixHeaders = $this->authHeaders($this->loginAsFelix());
-        $close = $this->withHeaders($felixHeaders)
+        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
         $id = $close->json('id');
 
-        $this->withHeaders($felixHeaders)
+        $this->withHeaders($contabilidadHeaders)
             ->getJson("/api/admin-contab/cash-position/history/{$id}/export")
             ->assertStatus(200)
             ->assertHeader('Content-Type', 'application/pdf');

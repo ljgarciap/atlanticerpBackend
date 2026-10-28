@@ -34,18 +34,18 @@ class VentasDisenoSalesGoalsSeederTest extends FeatureTestCase
 
     public function test_vendedor5_recibe_sus_metas(): void
     {
-        $paola = User::where('email', 'vendedor5@test.com')->firstOrFail();
-        $goal = SalesGoal::where('user_id', $paola->id)->firstOrFail();
+        $vendedor5 = User::where('email', 'vendedor5@test.com')->firstOrFail();
+        $goal = SalesGoal::where('user_id', $vendedor5->id)->firstOrFail();
 
         $this->assertEquals(812.48, $goal->goal_amount);
         $this->assertEquals(700000.00, $goal->goal_plus_amount);
     }
 
-    public function test_annie_queda_sin_meta_configurada_pendiente_de_luis(): void
+    public function test_usuario_queda_sin_meta_configurada_pendiente_de_luis(): void
     {
-        $annie = User::where('email', 'vendedor6@test.com')->firstOrFail();
+        $usuario = User::where('email', 'vendedor6@test.com')->firstOrFail();
 
-        $this->assertNull(SalesGoal::where('user_id', $annie->id)->first());
+        $this->assertNull(SalesGoal::where('user_id', $usuario->id)->first());
     }
 
     public function test_no_pisa_una_meta_ya_ajustada_a_mano(): void

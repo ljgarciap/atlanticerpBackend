@@ -48,7 +48,7 @@ final class PaymentReceiptPdfService
             'fiscal'            => $fiscal,
             'moneda'            => $company->moneda,
             'logoDataUri'       => PdfLogo::dataUri(),
-            // Rebote de QA (SCRUM-858, marly.rangel 2026-09-08) — el footer viejo tenía un texto
+            // Rebote de QA (SCRUM-858, qa.qa 2026-09-08) — el footer viejo tenía un texto
             // propio hardcodeado ("Atlantic - Panama - Documento generado por AtlanticERP"), en vez
             // de leer los datos reales de la empresa como ya hacía quote-pdf.blade.php. Ver
             // PdfFooterText, compartido con AccountStatementPdfService (SCRUM-857).

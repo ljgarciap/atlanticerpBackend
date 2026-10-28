@@ -87,7 +87,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
     }
 
     /**
-     * SCRUM-366 — fix QA 2026-07-24 (marly.rangel): el selector de personas solo debe listar
+     * SCRUM-366 — fix QA 2026-07-24 (qa.qa): el selector de personas solo debe listar
      * Asistentes de Bodega (`BodegaRoles::TEAM_SELECTABLE`), nunca al Jefe (Lider Bodega), al Ayudante
      * General/Picker (Auxiliar Bodega) ni a Transporte (Transporte) — pese a que los 3 son miembros reales del
      * equipo de Bodega para otros propósitos (`bodegaRoleIds()`, guard de `owner_id`, calendario).
@@ -214,12 +214,12 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_summary_scope_team_sin_owner_id_agrega_todo_el_equipo(): void
     {
-        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
-        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
+        $asistentebodegaId = $this->userIdByEmail('asistentebodega@test.com');
+        $asistentebodega2Id = $this->userIdByEmail('asistentebodega2@test.com');
 
-        $o1 = $this->makeOrder(['assistant_id' => $osvaldoId, 'stage' => Order::STAGE_ASIGNADO]);
+        $o1 = $this->makeOrder(['assistant_id' => $asistentebodegaId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($o1, null, Order::STAGE_ASIGNADO, Carbon::now());
-        $o2 = $this->makeOrder(['assistant_id' => $marianoId, 'stage' => Order::STAGE_ASIGNADO]);
+        $o2 = $this->makeOrder(['assistant_id' => $asistentebodega2Id, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($o2, null, Order::STAGE_ASIGNADO, Carbon::now());
 
         $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
@@ -238,16 +238,16 @@ class BodegaHomeControllerTest extends FeatureTestCase
      */
     public function test_summary_scope_team_con_owner_id_puntual_saluda_en_singular(): void
     {
-        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
-        $marianoId = $this->userIdByEmail('asistentebodega2@test.com');
+        $asistentebodegaId = $this->userIdByEmail('asistentebodega@test.com');
+        $asistentebodega2Id = $this->userIdByEmail('asistentebodega2@test.com');
 
-        $o1 = $this->makeOrder(['assistant_id' => $osvaldoId, 'stage' => Order::STAGE_ASIGNADO]);
+        $o1 = $this->makeOrder(['assistant_id' => $asistentebodegaId, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($o1, null, Order::STAGE_ASIGNADO, Carbon::now());
-        $o2 = $this->makeOrder(['assistant_id' => $marianoId, 'stage' => Order::STAGE_ASIGNADO]);
+        $o2 = $this->makeOrder(['assistant_id' => $asistentebodega2Id, 'stage' => Order::STAGE_ASIGNADO]);
         $this->stageHistory($o2, null, Order::STAGE_ASIGNADO, Carbon::now());
 
         $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
-            ->getJson("/api/bodega/home/summary?scope=team&owner_id={$osvaldoId}")
+            ->getJson("/api/bodega/home/summary?scope=team&owner_id={$asistentebodegaId}")
             ->assertStatus(200);
 
         // El filtro por persona sigue funcionando (RN2, solo el pedido de Asistente Bodega cuenta).
@@ -259,7 +259,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
     // ── SCRUM-367 (REQ-297) — Mi día / Día del equipo ───────────────────────
 
     /**
-     * Fix de regresión (QA marly.rangel 2026-07-26, comentario SCRUM-367 — "Mismo tema que
+     * Fix de regresión (QA qa.qa 2026-07-26, comentario SCRUM-367 — "Mismo tema que
      * SCRUM-372") — `asignados_hoy` dependía de `order_stage_history.to_stage` ("entró a Asignado
      * HOY"), que se queda en 0 si el pedido nunca pasó por un servicio de transición de etapa
      * real (exactamente el caso de `makeOrder()`, que crea el `Order` directo, igual que el
@@ -432,11 +432,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     public function test_pendientes_de_ajuste_ve_todas_las_solicitudes_en_equipo_completo(): void
     {
-        $osvaldoId = $this->userIdByEmail('asistentebodega@test.com');
+        $asistentebodegaId = $this->userIdByEmail('asistentebodega@test.com');
         $product = $this->makeCatalogProduct();
         $warehouse = Warehouse::where('name', 'Bodega Central')->firstOrFail();
 
-        $request = AdjustmentRequest::create(['catalog_product_id' => $product->id, 'solicitado_por' => $osvaldoId]);
+        $request = AdjustmentRequest::create(['catalog_product_id' => $product->id, 'solicitado_por' => $asistentebodegaId]);
         AdjustmentRequestLine::create([
             'adjustment_request_id' => $request->id, 'warehouse_id' => $warehouse->id,
             'tipo' => AdjustmentRequestLine::TIPO_SUMAR, 'cantidad' => 2, 'motivo' => 'Conteo físico',
@@ -482,7 +482,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
     // ── SCRUM-372 (REQ-302) — Estado de pedidos ─────────────────────────────
 
     /**
-     * Fix de regresión (QA marly.rangel 2026-07-26, comentario SCRUM-372) — la implementación
+     * Fix de regresión (QA qa.qa 2026-07-26, comentario SCRUM-372) — la implementación
      * original solo contaba pedidos que ENTRARON hoy a la etapa, dejando el panel en 0 mientras el
      * Kanban mostraba backlog real. Corregido: las 6 primeras etapas cuentan el backlog ACTUAL
      * sentado en la columna (mismo criterio que `OrderBoardService::board()`), no solo lo de hoy —

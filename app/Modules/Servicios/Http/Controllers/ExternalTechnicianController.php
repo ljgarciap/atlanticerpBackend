@@ -86,7 +86,7 @@ final class ExternalTechnicianController extends Controller
             // excepción intencional) — antes SOLO dependía de `tarifa_visible`, así que un técnico
             // interno sin `puede_ver_costos` (ej. Tecnico) veía la tarifa/día real de un externo con
             // el toggle activado, aunque RN2 dice que el costo/día es exclusivo de
-            // Lider Servicios/Mark/David/Whil. Ahora exige ambos, igual que el resto de esta ficha.
+            // Lider Servicios/Mark/Gerencia2/Gerencia5. Ahora exige ambos, igual que el resto de esta ficha.
             'tarifa_dia'         => ($technician->tarifa_visible && $canSeeCosts) ? $technician->tarifa_dia : null,
             'tarifa_visible'     => $technician->tarifa_visible,
             'estado'             => $technician->estado,

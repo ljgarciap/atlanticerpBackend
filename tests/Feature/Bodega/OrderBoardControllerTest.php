@@ -136,11 +136,11 @@ class OrderBoardControllerTest extends FeatureTestCase
      */
     public function test_panel_de_carga_siempre_muestra_los_2_asistentes_incluso_con_cero_pedidos(): void
     {
-        $mariano = $this->userIdByEmail('asistentebodega2@test.com');
-        $osvaldo = $this->userIdByEmail('asistentebodega@test.com');
+        $asistentebodega2 = $this->userIdByEmail('asistentebodega2@test.com');
+        $asistentebodega = $this->userIdByEmail('asistentebodega@test.com');
         // Solo Asistente Bodega tiene pedidos asignados — Asistente Bodega se queda en 0.
-        $this->makeOrder(['assistant_id' => $mariano]);
-        $this->makeOrder(['assistant_id' => $mariano]);
+        $this->makeOrder(['assistant_id' => $asistentebodega2]);
+        $this->makeOrder(['assistant_id' => $asistentebodega2]);
 
         $response = $this->withHeaders($this->authHeadersForBodegaReader())
             ->getJson('/api/bodega/orders/assistant-load')
@@ -149,17 +149,17 @@ class OrderBoardControllerTest extends FeatureTestCase
         $rows = collect($response->json('data'));
         $this->assertCount(2, $rows, 'Deben aparecer las 2 tarjetas de asistentes, sin importar la carga.');
 
-        $marianoRow = $rows->firstWhere('assistant_id', $mariano);
-        $osvaldoRow = $rows->firstWhere('assistant_id', $osvaldo);
-        $this->assertNotNull($marianoRow);
-        $this->assertNotNull($osvaldoRow);
-        $this->assertSame(2, $marianoRow['orders_count']);
+        $asistentebodega2Row = $rows->firstWhere('assistant_id', $asistentebodega2);
+        $asistentebodegaRow = $rows->firstWhere('assistant_id', $asistentebodega);
+        $this->assertNotNull($asistentebodega2Row);
+        $this->assertNotNull($asistentebodegaRow);
+        $this->assertSame(2, $asistentebodega2Row['orders_count']);
         // json_encode() de un float "entero" (100.0) pierde el ".0" (sin JSON_PRESERVE_ZERO_FRACTION),
         // así que decodifica como int — assertEquals en vez de assertSame evita el falso negativo
         // por tipo (mismo criterio que el resto de este test file, ver `assertEqualsWithDelta` arriba).
-        $this->assertEquals(100.0, $marianoRow['percent_of_total']);
-        $this->assertSame(0, $osvaldoRow['orders_count'], 'Asistente Bodega sin pedidos NO debe desaparecer del panel.');
-        $this->assertEquals(0.0, $osvaldoRow['percent_of_total']);
+        $this->assertEquals(100.0, $asistentebodega2Row['percent_of_total']);
+        $this->assertSame(0, $asistentebodegaRow['orders_count'], 'Asistente Bodega sin pedidos NO debe desaparecer del panel.');
+        $this->assertEquals(0.0, $asistentebodegaRow['percent_of_total']);
     }
 
     /** REQ-306 — con 0 pedidos en todo el tablero, las 2 tarjetas igual aparecen, en 0%. */

@@ -151,7 +151,7 @@ class AdminContCashPositionController
      * RN2) es dependiente del actor, no del arqueo — mismo criterio que
      * `puede_decidir_incobrable`/`puede_aprobar_rechazar` en el resto del módulo
      * (AdminContInvoiceController::detail()/AdminContCreditNoteController), calculado acá porque
-     * esta ruta no está gateada por `primary_approver_only` (accesible a Contabilidad/Yaneth/Mark/Gerencia) — el
+     * esta ruta no está gateada por `primary_approver_only` (accesible a Contabilidad/Asistente/Mark/Gerencia) — el
      * frontend lo usa solo para mostrar/ocultar el botón "Aprobar", nunca decide por su cuenta
      * quién es Gerencia.
      */

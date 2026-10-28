@@ -272,7 +272,7 @@ class QuoteControllerTest extends FeatureTestCase
      */
     public function test_lider_admin_contab_no_puede_editar_cotizacion_ajena(): void
     {
-        $this->felixComoEnScrum1139();
+        $this->contabilidadComoEnScrum1139();
         $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quoteId = Quote::create(['owner_id' => $designerId])->id;
@@ -1406,7 +1406,7 @@ class QuoteControllerTest extends FeatureTestCase
         $this->assertSame($first, $second);
     }
 
-    // ── SCRUM-725/734: margen mínimo en generate()+confirm() + excepción Gerencia/David ─
+    // ── SCRUM-725/734: margen mínimo en generate()+confirm() + excepción Gerencia/Gerencia2 ─
 
     /**
      * SCRUM-734 (RN10) — "generar" ahora bloquea por margen igual que cualquier

@@ -139,7 +139,7 @@ class RoleControllerTest extends FeatureTestCase
         $this->activateTenant();
         $role  = Role::where('key', 'management')->firstOrFail();
 
-        // 'management' tiene usuarios reales asignados (Gerencia/David/Daniela) -- no es is_system
+        // 'management' tiene usuarios reales asignados (Gerencia/Gerencia2/Gerencia1) -- no es is_system
         // en este fixture porque es del catálogo de negocio, pero SÍ es is_system=true realmente.
         // Probamos con un rol no-sistema con usuario para aislar la guardia de "tiene usuarios".
         $role->update(['is_system' => false]);

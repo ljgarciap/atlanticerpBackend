@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Fila de la tabla `tiers` de `GET /admin-contab/reports/felix-commission` (Batch 22, SCRUM-643→647,
+ * Fila de la tabla `tiers` de `GET /admin-contab/reports/commission-tiers` (Batch 22, SCRUM-643→647,
  * REQ-567). Envolver el array asociativo en un Resource — no un array crudo — es lo que permite que
  * Scramble (generador de OpenAPI/tipos TS) resuelva el shape completo de la lista incluyendo tipos
  * precisos; ver `docs/architecture/typescript-types-from-backend.md`. Usar SIEMPRE

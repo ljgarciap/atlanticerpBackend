@@ -20,7 +20,7 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // Gerencia — REQ-034 (Precio Socio) + REQ-046 (Condiciones, junto con Contabilidad) + REQ-008
         // (editar proyectos Aprobado, SCRUM-77 — único usuario de negocio que el criterio nombra)
         // + SCRUM-725 (excepción de margen mínimo, junto con Gerencia) + SCRUM-925 (LUMO, junto con
-        // Gerencia/Felix)
+        // Gerencia/Contabilidad)
         'gerencia3@test.com' => [
             'ventas_diseno.select_partner_price',
             'ventas_diseno.edit.conditions',
@@ -33,7 +33,7 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
             // SCRUM-1166 — marcar a un cliente fiscal como exento de ITBMS (con documento), junto con Contabilidad y Asistente Administrativa.
             'admin_contab.edit.client_itbms_exemption',
         ],
-        // Contabilidad — REQ-046 (Condiciones) + SCRUM-925 (LUMO, junto con Gerencia/David) + SCRUM-1002 (editar
+        // Contabilidad — REQ-046 (Condiciones) + SCRUM-925 (LUMO, junto con Gerencia/Gerencia2) + SCRUM-1002 (editar
         // razón social/RUC/DV de un SubCliente, junto con Gerencia; Ventas & Diseño lo tiene por `ventas_diseno.edit`)
         // SCRUM-1128 — Contabilidad pasa proyectos aprobados a Pedido y ve el Pipeline en SOLO LECTURA
         // (`ventas_diseno.pipeline.read_all` no desbloquea ninguna ruta de escritura).
@@ -50,11 +50,11 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         // de facturar y `receptor_fiscal` (ver docs/runbooks/alta-de-facturador.md).
         // Gerencia — SCRUM-725 (excepción de margen mínimo, junto con Gerencia; el ticket los nombra a
         // los dos por email explícitamente, no es un grant de rol) + SCRUM-295 (desglose de costo
-        // del ítem Subcontratado, junto con Lider Servicios/Mark/Whil) + SCRUM-925 (LUMO, junto con Gerencia/Felix)
+        // del ítem Subcontratado, junto con Lider Servicios/Mark/Gerencia5) + SCRUM-925 (LUMO, junto con Gerencia/Contabilidad)
         'gerencia2@test.com' => ['ventas_diseno.override_min_margin', 'servicios.quotes.view_cost_breakdown'],
         // Lider Servicios (lider_servicios) — SCRUM-295: aunque lidera el módulo, ver el desglose de
         // costo/margen del ítem Subcontratado es un grant angosto por persona (el ticket lo nombra
-        // explícitamente junto con Gerencia/David/Whil), no algo que su rol/nivel otorgue por defecto.
+        // explícitamente junto con Gerencia/Gerencia2/Gerencia5), no algo que su rol/nivel otorgue por defecto.
         'liderservicios@test.com' => ['servicios.quotes.view_cost_breakdown'],
         // Gerencia (Gerencia Test 5, management con nivel restringido) — SCRUM-295, mismo grant.
         'gerencia5@test.com' => ['servicios.quotes.view_cost_breakdown'],

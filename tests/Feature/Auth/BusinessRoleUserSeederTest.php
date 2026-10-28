@@ -53,13 +53,13 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
         $this->assertTrue((bool) $contabilidad->manage_users);
     }
 
-    public function test_apolonio_usa_correo_generico_nombre_apellido(): void
+    public function test_auxiliarbodega_usa_correo_generico_nombre_apellido(): void
     {
         $ayudanteBodega = Role::where('key', 'auxiliar_bodega')->firstOrFail();
-        $apolonio = User::where('email', 'auxiliarbodega@test.com')->first();
+        $auxiliarbodega = User::where('email', 'auxiliarbodega@test.com')->first();
 
-        $this->assertNotNull($apolonio, 'Auxiliar Bodega debe existir con el correo genérico del rol (auxiliarbodega@test.com).');
-        $this->assertSame($ayudanteBodega->id, $apolonio->role_id);
+        $this->assertNotNull($auxiliarbodega, 'Auxiliar Bodega debe existir con el correo genérico del rol (auxiliarbodega@test.com).');
+        $this->assertSame($ayudanteBodega->id, $auxiliarbodega->role_id);
     }
 
     public function test_vendedor_disenador_incluye_al_decimo_vendedor(): void
@@ -101,7 +101,7 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
     }
 
     // SCRUM-1142 — Picker Bodega Test (picker) y Repartidor Test (repartidor) ya tienen cargo.
-    public function test_carlos_gonzalez_es_picker_y_joel_somarriba_es_repartidor(): void
+    public function test_picker_bodega_es_picker_y_repartidor_es_repartidor(): void
     {
         $picker = Role::where('key', 'auxiliar_bodega')->firstOrFail();
         $courier = Role::where('key', 'transporte')->firstOrFail();
@@ -136,9 +136,9 @@ class BusinessRoleUserSeederTest extends FeatureTestCase
 
     public function test_el_resto_del_roster_sigue_con_contrasena_igual_al_correo(): void
     {
-        $apolonio = User::where('email', 'auxiliarbodega@test.com')->firstOrFail();
+        $auxiliarbodega = User::where('email', 'auxiliarbodega@test.com')->firstOrFail();
 
-        $this->assertTrue(Hash::check('auxiliarbodega@test.com', $apolonio->password_hash));
+        $this->assertTrue(Hash::check('auxiliarbodega@test.com', $auxiliarbodega->password_hash));
     }
 
     public function test_25_personas_nuevas_mas_aprobador_ya_existente_suman_26_del_roster_de_scrum_144(): void

@@ -52,7 +52,7 @@ class AdminContReversosF4Test extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    /** @return array{0: array<string, string>, 1: array<string, string>} [felix, mark] */
+    /** @return array{0: array<string, string>, 1: array<string, string>} [contabilidad, mark] */
     private function sesiones(bool $v2 = true): array
     {
         $contabilidad = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');

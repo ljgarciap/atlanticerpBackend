@@ -968,7 +968,7 @@ class InventoryControllerTest extends FeatureTestCase
 
     public function test_chip_por_ingresar_lista_producto_existente_con_unidades_pendientes(): void
     {
-        // REQ-172/235 — fix Pre-QA 2026-07-20, rechazado por marly: el chip devolvía [] siempre,
+        // REQ-172/235 — fix Pre-QA 2026-07-20, rechazado por qa: el chip devolvía [] siempre,
         // aunque un producto EXISTENTE tuviera unidades "Por ingresar" reales. A diferencia de
         // test_chip_por_ingresar_oculto_por_defecto_de_todos (0 unidades pendientes, chip vacío
         // es lo correcto), acá el producto SÍ tiene unidades pendientes y debe listarse.
