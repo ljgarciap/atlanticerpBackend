@@ -72,6 +72,34 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
+    public function test_crear_reclamo_no_acepta_una_linea_de_otra_orden(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $propia = $this->makeOrderWithLine(10);
+        $ajena = $this->makeOrderWithLine(10);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/claims', [
+                'purchase_order_id' => $propia['order']->id,
+                'lines' => [
+                    ['purchase_order_line_id' => $ajena['line']->id, 'affected_quantity' => 1],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('lines.0.purchase_order_line_id');
+
+        // y la línea propia sigue funcionando
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/claims', [
+                'purchase_order_id' => $propia['order']->id,
+                'lines' => [
+                    ['purchase_order_line_id' => $propia['line']->id, 'affected_quantity' => 1],
+                ],
+            ])
+            ->assertStatus(201);
+    }
+
     public function test_crear_reclamo_no_puede_repetir_producto(): void
     {
         // REQ-197 Escenario 1.
