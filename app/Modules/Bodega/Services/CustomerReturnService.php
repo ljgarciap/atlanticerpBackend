@@ -269,6 +269,11 @@ final class CustomerReturnService
                 if ($input['qty_received'] < 0) {
                     throw new CustomerReturnException('La cantidad recibida no puede ser negativa.');
                 }
+                // REQ-409 RN1 — la cantidad real puede diferir de la solicitada, pero nunca superar lo ENTREGADO de ese ítem: sin este tope
+                // se podía sumar al inventario más de lo que salió de bodega.
+                if ($input['qty_received'] > $line->orderItem->qty_delivered) {
+                    throw new CustomerReturnException("La cantidad recibida no puede exceder lo entregado ({$line->orderItem->qty_delivered}).", ['lines' => ['La cantidad recibida no puede exceder lo entregado.']]);
+                }
 
                 $line->update(['qty_received' => $input['qty_received']]);
 
