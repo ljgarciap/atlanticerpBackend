@@ -1,6 +1,6 @@
 # Spec — Fase 10: infraestructura de producción en AWS
 
-**Estado**: BORRADOR (rol AWS Architect + Cybersecurity) — decisión de hosting de Luis: **AWS (EC2/ECS + RDS)** (2026-10-29). Dominio: **aún sin definir**. **No se crea ningún recurso** sin su aprobación explícita (todo comando `aws`/`terraform apply` pide aprobación individual).
+**Estado**: BORRADOR (rol AWS Architect + Cybersecurity) — decisiones de Luis en §6 (AWS, `us-east-1`, piloto sin Multi-AZ); dominio, presupuesto y cuenta de AWS siguen abiertos (§7). **No se crea ningún recurso** sin su aprobación explícita (todo comando `aws`/`terraform apply` pide aprobación individual).
 
 ## 1. Punto de partida (medido en el repo)
 - `infra/docker-compose.prod.yml` ya describe un **EC2 dedicado con Docker Compose**: `postgres:16-alpine` y `redis:7-alpine` como contenedores del mismo host, `laravel` + `horizon` + `nginx`, frontend servido desde `/var/www/static`, certificados en `/etc/letsencrypt`, agente de CloudWatch y logrotate (carpetas `infra/cloudwatch-agent`, `infra/logrotate`).
@@ -39,9 +39,13 @@ Multi-región, CDN para el frontend (CloudFront; se evalúa después), adaptador
 3. Costos mensuales estimados con la calculadora y aprobados por Luis antes del primer `apply`.
 4. Los jobs de deploy reactivados solo tras el punto 1, con aprobación del revisor de `prod`.
 
-## 6. Decisiones abiertas (Luis)
-1. **Dominio** (bloquea el certificado ACM y el balanceador): ¿cuál y quién administra el DNS?
-2. **Región** de AWS (latencia hacia los usuarios y requisitos de residencia de datos).
-3. **Objetivo de disponibilidad** (¿tolera una ventana de mantenimiento? → decide Multi-AZ y si pasar a ECS).
-4. **Presupuesto mensual** objetivo, para dimensionar EC2/RDS.
-5. **Quién crea la cuenta/organización de AWS** y con qué usuarios (nada se aplica desde esta sesión sin credenciales de mínimo privilegio que Luis entregue y apruebe).
+## 6. Decisiones de Luis (2026-10-29)
+1. **Hosting**: AWS (EC2 + RDS). ✅
+2. **Región**: `us-east-1` (N. Virginia). ✅
+3. **Disponibilidad**: **piloto, tolera mantenimiento** → 1 EC2 y 1 RDS **sin Multi-AZ**; la recuperación es por copia/snapshot (RPO/RTO a medir en la restauración de prueba del criterio 1). Multi-AZ y ECS Fargate quedan como evolución. ✅
+4. **Dominio**: **todavía no** → bloquea el certificado ACM y el balanceador (HTTPS). Mientras no exista, solo se puede preparar la red, la base y el almacenamiento; no se publica nada.
+
+## 7. Decisiones que siguen abiertas (Luis)
+1. **Dominio** y quién administra el DNS (desbloquea ACM + ALB).
+2. **Presupuesto mensual** objetivo, para dimensionar EC2/RDS.
+3. **Cuenta de AWS**: quién la crea y qué usuarios/roles de mínimo privilegio se entregan (nada se aplica desde esta sesión sin credenciales que Luis entregue y apruebe).
