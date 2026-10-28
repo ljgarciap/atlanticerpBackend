@@ -82,16 +82,16 @@ final class AdminContSeedRebotesQaCommand extends Command
         $tenant->makeCurrent();
 
         $felixId = (int) User::where('email', 'contabilidad@test.com')->value('id');
-        $neilId = (int) User::where('email', 'vendedor2@test.com')->value('id');
-        $fefiId = (int) User::where('email', 'vendedor3@test.com')->value('id');
+        $vendedor2Id = (int) User::where('email', 'vendedor2@test.com')->value('id');
+        $vendedor3Id = (int) User::where('email', 'vendedor3@test.com')->value('id');
 
-        if ($felixId === 0 || $neilId === 0 || $fefiId === 0) {
+        if ($felixId === 0 || $vendedor2Id === 0 || $vendedor3Id === 0) {
             $this->error('Faltan usuarios base del roster real (Contabilidad/Vendedor) — abortando.');
 
             return self::FAILURE;
         }
 
-        $this->seedSharedProject($neilId, $fefiId);
+        $this->seedSharedProject($vendedor2Id, $vendedor3Id);
         $this->seedArchitectPendingSinArchivo(self::MARKER_590, ArchitectFiscalProfile::REGIMEN_CON_ITBMS, $felixId);
         $this->seedArchitectPendingSinArchivo(self::MARKER_591, ArchitectFiscalProfile::REGIMEN_RETENCION_50, $felixId);
         $this->seedArchitectReadyToPay($felixId, $commissions);

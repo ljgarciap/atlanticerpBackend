@@ -31,7 +31,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 {
     private User $gerencia;
 
-    private User $neil;
+    private User $vendedor2;
 
     protected function setUp(): void
     {
@@ -39,7 +39,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->daniela = User::where('email', 'gerencia@test.com')->firstOrFail();
-        $this->neil = User::where('email', 'vendedor2@test.com')->firstOrFail();
+        $this->vendedor2 = User::where('email', 'vendedor2@test.com')->firstOrFail();
     }
 
     /**
@@ -119,7 +119,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     public function test_dry_run_identifica_toda_la_data_de_gerencia_y_excluye_lo_de_otro_usuario(): void
     {
         $gerencia = $this->seedFullPipeline($this->daniela, '[Gerencia QA]');
-        $neil = $this->seedFullPipeline($this->neil, '[Vendedor Real]');
+        $vendedor2 = $this->seedFullPipeline($this->vendedor2, '[Vendedor Real]');
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
@@ -131,13 +131,13 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->assertContains($gerencia['part']->id, $report['candidates']['quote_part']);
         $this->assertContains($gerencia['item']->id, $report['candidates']['quote_item']);
 
-        $this->assertNotContains($neil['master']->id, $report['candidates']['master_client']);
-        $this->assertNotContains($neil['sub']->id, $report['candidates']['sub_client']);
-        $this->assertNotContains($neil['project']->id, $report['candidates']['sales_project']);
-        $this->assertNotContains($neil['card']->id, $report['candidates']['pipeline_card']);
-        $this->assertNotContains($neil['quote']->id, $report['candidates']['quote']);
-        $this->assertNotContains($neil['part']->id, $report['candidates']['quote_part']);
-        $this->assertNotContains($neil['item']->id, $report['candidates']['quote_item']);
+        $this->assertNotContains($vendedor2['master']->id, $report['candidates']['master_client']);
+        $this->assertNotContains($vendedor2['sub']->id, $report['candidates']['sub_client']);
+        $this->assertNotContains($vendedor2['project']->id, $report['candidates']['sales_project']);
+        $this->assertNotContains($vendedor2['card']->id, $report['candidates']['pipeline_card']);
+        $this->assertNotContains($vendedor2['quote']->id, $report['candidates']['quote']);
+        $this->assertNotContains($vendedor2['part']->id, $report['candidates']['quote_part']);
+        $this->assertNotContains($vendedor2['item']->id, $report['candidates']['quote_item']);
     }
 
     public function test_marcador_demo_711_protege_incluso_si_lo_creo_gerencia(): void
@@ -172,7 +172,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
     public function test_actualizar_un_registro_de_otro_usuario_no_lo_marca_como_candidato(): void
     {
-        $this->actingForAudit($this->neil);
+        $this->actingForAudit($this->vendedor2);
         $master = MasterClient::create(['name' => 'Cliente real de Vendedor']);
 
         // Gerencia solo EDITA (action=updated) — nunca lo creó. No debe quedar candidato.
@@ -202,14 +202,14 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $master = MasterClient::create(['name' => '[Gerencia] Cliente compartido']);
         $subDaniela = SubClient::create(['master_client_id' => $master->id, 'business_name' => '[Gerencia] Sub propio', 'tax_id' => '155-1111-1-2026']);
 
-        $this->actingForAudit($this->neil);
-        $subNeil = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Vendedor', 'tax_id' => '155-2222-1-2026']);
+        $this->actingForAudit($this->vendedor2);
+        $subVendedor2 = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Vendedor', 'tax_id' => '155-2222-1-2026']);
 
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         // El subcliente de Gerencia sigue siendo candidato en sí mismo...
         $this->assertContains($subDaniela->id, $report['candidates']['sub_client']);
-        $this->assertNotContains($subNeil->id, $report['candidates']['sub_client']);
+        $this->assertNotContains($subVendedor2->id, $report['candidates']['sub_client']);
         // ...pero el MasterClient compartido NO se borra: sub_clients.master_client_id es
         // CASCADE, y borrarlo se llevaría puesto el subcliente real de Vendedor.
         $this->assertNotContains($master->id, $report['candidates']['master_client']);
@@ -241,13 +241,13 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $provider = Provider::create([
             'name' => 'Proveedor real', 'category' => Provider::CATEGORY_LOCALES,
             'origin' => Provider::ORIGIN_LOCAL, 'currency' => 'USD', 'is_active' => true,
-            'created_by' => $this->neil->id,
+            'created_by' => $this->vendedor2->id,
         ]);
         $order = PurchaseOrder::create([
             'provider_id' => $provider->id, 'status' => PurchaseOrder::STATUS_POR_APROBAR,
             'shipping_type' => PurchaseOrder::SHIPPING_TERRESTRE, 'who_pays_shipping' => PurchaseOrder::PAYS_PROVIDER,
             'modality' => PurchaseOrder::MODALITY_DIRECTO, 'requires_primary_approval' => false,
-            'currency' => 'USD', 'created_by' => $this->neil->id,
+            'currency' => 'USD', 'created_by' => $this->vendedor2->id,
         ]);
         $line = PurchaseOrderLine::create([
             'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id,
@@ -301,7 +301,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $this->actingForAudit($this->daniela);
         $protectedMaster = MasterClient::create(['name' => '[QA-VD] Cliente protegido']);
 
-        $neil = $this->seedFullPipeline($this->neil, '[Vendedor Force]');
+        $vendedor2 = $this->seedFullPipeline($this->vendedor2, '[Vendedor Force]');
 
         $service = app(TestDataCleanupService::class);
         $report = $service->buildReport('gerencia@test.com');
@@ -317,13 +317,13 @@ class TestDataCleanupServiceTest extends FeatureTestCase
 
         $this->assertNotNull(MasterClient::find($protectedMaster->id));
 
-        $this->assertNotNull(MasterClient::find($neil['master']->id));
-        $this->assertNotNull(SubClient::find($neil['sub']->id));
-        $this->assertNotNull(SalesProject::find($neil['project']->id));
-        $this->assertNotNull(PipelineCard::find($neil['card']->id));
-        $this->assertNotNull(Quote::find($neil['quote']->id));
-        $this->assertNotNull(QuotePart::find($neil['part']->id));
-        $this->assertNotNull(QuoteItem::find($neil['item']->id));
+        $this->assertNotNull(MasterClient::find($vendedor2['master']->id));
+        $this->assertNotNull(SubClient::find($vendedor2['sub']->id));
+        $this->assertNotNull(SalesProject::find($vendedor2['project']->id));
+        $this->assertNotNull(PipelineCard::find($vendedor2['card']->id));
+        $this->assertNotNull(Quote::find($vendedor2['quote']->id));
+        $this->assertNotNull(QuotePart::find($vendedor2['part']->id));
+        $this->assertNotNull(QuoteItem::find($vendedor2['item']->id));
     }
 
     /**

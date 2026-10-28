@@ -123,11 +123,11 @@ class CommissionsControllerTest extends FeatureTestCase
         // role_id nuevo, sin fila en user_roles) nunca tuvieron. Gerencia veía $0/"Sin comisiones"
         // en alcance Equipo pese a comisiones reales pendientes por vendedor.
         $this->grantVentasDisenoRead('management@atlantic.test');
-        $juanManuelId = $this->userIdByEmail('vendedor8@test.com');
-        $this->assertGreaterThan(0, $juanManuelId, 'Vendedor Test 8 debe existir (BusinessRoleUserSeeder).');
+        $vendedor8Id = $this->userIdByEmail('vendedor8@test.com');
+        $this->assertGreaterThan(0, $vendedor8Id, 'Vendedor Test 8 debe existir (BusinessRoleUserSeeder).');
 
         $targetMonth = now()->subMonths(5);
-        $this->makeApprovedCard($juanManuelId, 25000, $targetMonth);
+        $this->makeApprovedCard($vendedor8Id, 25000, $targetMonth);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -135,7 +135,7 @@ class CommissionsControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $row = collect($response->json('cohorts'))
-            ->first(fn (array $c): bool => $c['owner_id'] === $juanManuelId && $c['month'] === $targetMonth->format('Y-m'));
+            ->first(fn (array $c): bool => $c['owner_id'] === $vendedor8Id && $c['month'] === $targetMonth->format('Y-m'));
         $this->assertNotNull($row, 'Un vendedor real sembrado por BusinessRoleUserSeeder debe aparecer en alcance Equipo.');
         $this->assertEquals(500, $row['commission_amount']);
     }

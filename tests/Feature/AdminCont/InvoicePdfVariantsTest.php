@@ -92,7 +92,7 @@ final class InvoicePdfVariantsTest extends FeatureTestCase
             'invoice_id' => $invoice->id, 'numero_factura' => $invoice->numero, 'fecha_factura' => '2026-10-14',
             'es_anulada' => false, 'cliente' => self::NOMBRE_REAL, 'cliente_ruc' => $invoice->receptor_ruc,
             'cliente_receptor_tipo' => $invoice->receptor_tipo, 'receptor_nombre' => $invoice->receptor_nombre,
-            'vendedor' => 'MARIBEL', 'monto' => 107.0, 'subtotal' => 100.0, 'descuentos' => 0.0, 'itbms' => 7.0, 'total' => 107.0,
+            'vendedor' => 'VENDEDOR7', 'monto' => 107.0, 'subtotal' => 100.0, 'descuentos' => 0.0, 'itbms' => 7.0, 'total' => 107.0,
             'saldo_aplicado' => 0.0, 'total_a_pagar' => 107.0, 'cuenta_pago' => '0123456789', 'responsable' => 'Contabilidad',
             'fe_estado' => $invoice->fe_estado, 'cufe' => $invoice->cufe, 'qr_content' => $invoice->qr_content,
             'items' => [['referencia_publica' => 'ML-10221CBK', 'descripcion' => 'EMP/XL DIM 10W 3K', 'cantidad' => 2, 'precio_unitario' => 50.0, 'subtotal' => 100.0]],
@@ -170,7 +170,7 @@ final class InvoicePdfVariantsTest extends FeatureTestCase
         $this->assertStringContainsString('<td>ILU</td>', $html);
         $this->assertStringContainsString('<td>0039</td>', $html);
         $this->assertStringContainsString('14/10/2026 15:30', $html);
-        $this->assertStringContainsString('<td>MARIBEL</td>', $html);
+        $this->assertStringContainsString('<td>VENDEDOR7</td>', $html);
     }
 
     public function test_contribuyente_imprime_razon_social_ruc_y_dv_del_receptor_congelado(): void
