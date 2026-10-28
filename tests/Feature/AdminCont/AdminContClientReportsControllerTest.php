@@ -32,7 +32,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -92,7 +92,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
 
     public function test_sin_master_client_id_devuelve_estado_sin_cliente(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/mensual-cliente')
@@ -113,7 +113,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($masterClientId, $projectId, 5000.0, 0, '2026-01-10 10:00:00');
         $this->makePayment($invoice, 5000.0, AdminContPayment::METODO_TRANSFERENCIA, '2026-03-15 09:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/reports/mensual-cliente?master_client_id={$masterClientId}&desde=2026-01-01&hasta=2026-01-31")
             ->assertStatus(200);
@@ -135,7 +135,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $inv2 = $this->makeInvoice($masterClientId, $projectId, 3000.0, 0, '2026-06-02 10:00:00');
         $this->makePayment($inv2, 3000.0, AdminContPayment::METODO_CHEQUE, '2026-06-20 09:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $dia = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/reports/mensual-cliente?master_client_id={$masterClientId}&desde=2026-06-01&hasta=2026-06-30")
             ->assertStatus(200);
@@ -161,7 +161,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $inv2 = $this->makeInvoice($masterClientId2, $projectId2, 1500.0, 0, '2026-07-02 10:00:00');
         $this->makePayment($inv2, 1500.0, AdminContPayment::METODO_EFECTIVO, '2026-07-02 10:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/mensual-cliente?master_client_id=todos&desde=2026-07-01&hasta=2026-07-31')
             ->assertStatus(200);
@@ -176,7 +176,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($masterClientId, $projectId, 900.0, 0, '2026-08-05 10:00:00');
         $this->makePayment($invoice, 900.0, AdminContPayment::METODO_DEPOSITO, '2026-08-05 10:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/reports/mensual-cliente?master_client_id={$masterClientId}&desde=2026-08-01&hasta=2026-08-31")
             ->assertStatus(200);
@@ -190,7 +190,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         [$masterClientId, $projectId] = $this->makeClientWithProject('Proyecto Reportes Pendiente');
         $this->makeInvoice($masterClientId, $projectId, 6200.0, 0, '2026-09-01 10:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/reports/mensual-cliente?master_client_id={$masterClientId}&desde=2026-09-01&hasta=2026-09-30")
             ->assertStatus(200);
@@ -206,7 +206,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
 
     public function test_export_sin_cliente_devuelve_422(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/mensual-cliente/excel')
@@ -219,7 +219,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($masterClientId, $projectId, 1200.0, 0, '2026-10-01 10:00:00');
         $this->makePayment($invoice, 1200.0, AdminContPayment::METODO_YAPPY, '2026-10-01 10:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/admin-contab/reports/mensual-cliente/excel?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31");
 
@@ -235,7 +235,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($masterClientId, $projectId, 1200.0, 0, '2026-10-01 10:00:00');
         $this->makePayment($invoice, 1200.0, AdminContPayment::METODO_YAPPY, '2026-10-01 10:00:00');
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->get("/api/admin-contab/reports/mensual-cliente/excel?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31")
             ->assertStatus(200);
         $sheet = $this->loadWorkbook($response)->getActiveSheet();
@@ -265,7 +265,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($masterClientId, $projectId, 800.5, 0, '2026-10-05 10:00:00');
         $this->makePayment($invoice, 800.5, AdminContPayment::METODO_YAPPY, '2026-10-05 10:00:00');
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->get("/api/admin-contab/reports/mensual-cliente-acumulado/excel?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31")
             ->assertStatus(200);
         $sheet = $this->loadWorkbook($response)->getActiveSheet();
@@ -288,7 +288,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $this->makePayment($cobrada, 500.0, AdminContPayment::METODO_YAPPY, '2026-10-01 10:00:00');
         $this->makeInvoice($masterClientId, $projectId, 6200.0, 0, '2026-10-02 10:00:00'); // sin cobrar → Pendientes
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->get("/api/admin-contab/reports/mensual-cliente/excel?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31")
             ->assertStatus(200);
         $pendientes = $this->loadWorkbook($response)->getSheetByName('Pendientes');
@@ -304,7 +304,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
         $this->makePayment($invoice, 300.0, AdminContPayment::METODO_YAPPY, '2026-10-01 10:00:00');
 
         foreach (['mensual-cliente', 'mensual-cliente-acumulado'] as $reporte) {
-            $json = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+            $json = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
                 ->getJson("/api/admin-contab/reports/{$reporte}?master_client_id={$masterClientId}&desde=2026-10-01&hasta=2026-10-31")
                 ->assertStatus(200)
                 ->json();

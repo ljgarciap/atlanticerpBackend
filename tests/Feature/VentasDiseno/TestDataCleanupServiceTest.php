@@ -200,7 +200,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
     {
         $this->actingForAudit($this->gerencia1);
         $master = MasterClient::create(['name' => '[Gerencia] Cliente compartido']);
-        $subDaniela = SubClient::create(['master_client_id' => $master->id, 'business_name' => '[Gerencia] Sub propio', 'tax_id' => '155-1111-1-2026']);
+        $subGerencia = SubClient::create(['master_client_id' => $master->id, 'business_name' => '[Gerencia] Sub propio', 'tax_id' => '155-1111-1-2026']);
 
         $this->actingForAudit($this->vendedor2);
         $subVendedor2 = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub real de Vendedor', 'tax_id' => '155-2222-1-2026']);
@@ -208,7 +208,7 @@ class TestDataCleanupServiceTest extends FeatureTestCase
         $report = app(TestDataCleanupService::class)->buildReport('gerencia@test.com');
 
         // El subcliente de Gerencia sigue siendo candidato en sí mismo...
-        $this->assertContains($subDaniela->id, $report['candidates']['sub_client']);
+        $this->assertContains($subGerencia->id, $report['candidates']['sub_client']);
         $this->assertNotContains($subVendedor2->id, $report['candidates']['sub_client']);
         // ...pero el MasterClient compartido NO se borra: sub_clients.master_client_id es
         // CASCADE, y borrarlo se llevaría puesto el subcliente real de Vendedor.

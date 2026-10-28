@@ -31,7 +31,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -89,7 +89,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $master  = MasterClient::create(['name' => 'Cliente F0 '.uniqid()]);
         $factura = $this->facturaDe($master, 500);
         $cuenta  = $this->cuenta();
-        $h       = $this->authHeaders($this->loginAsFelix());
+        $h       = $this->authHeaders($this->loginAsContabilidad());
 
         // Dos cobros por transferencia sobre la misma factura: ambos pasan el registro (ninguno movió el saldo todavía).
         $a = $this->withHeaders($h)->postJson('/api/admin-contab/payments', $this->cobro($master->id, [$factura->id], 'transferencia', $cuenta->id, 500))->assertStatus(201);
@@ -125,7 +125,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $master  = MasterClient::create(['name' => 'Cliente F0 '.uniqid()]);
         $factura = $this->facturaDe($master, 500);
         $cuenta  = $this->cuenta();
-        $h       = $this->authHeaders($this->loginAsFelix());
+        $h       = $this->authHeaders($this->loginAsContabilidad());
 
         $cobro = $this->withHeaders($h)->postJson('/api/admin-contab/payments', $this->cobro($master->id, [$factura->id], 'cheque', $cuenta->id, 500))->assertStatus(201);
         $this->remakeTenant();
@@ -150,7 +150,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $master  = MasterClient::create(['name' => 'Cliente F0 '.uniqid()]);
         $factura = $this->facturaDe($master, 500);
         $cuenta  = $this->cuenta();
-        $h       = $this->authHeaders($this->loginAsFelix());
+        $h       = $this->authHeaders($this->loginAsContabilidad());
 
         $a = $this->withHeaders($h)->postJson('/api/admin-contab/payments', $this->cobro($master->id, [$factura->id], 'transferencia', $cuenta->id, 500))->assertStatus(201);
         $this->remakeTenant();
@@ -181,7 +181,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $master  = MasterClient::create(['name' => 'Cliente F0 '.uniqid()]);
         $factura = $this->facturaDe($master, 500);
         $cuenta  = $this->cuenta();
-        $h       = $this->authHeaders($this->loginAsFelix());
+        $h       = $this->authHeaders($this->loginAsContabilidad());
 
         $cobro = $this->withHeaders($h)->postJson('/api/admin-contab/payments', $this->cobro($master->id, [$factura->id], 'transferencia', $cuenta->id, 500))->assertStatus(201);
         $this->remakeTenant();
@@ -202,7 +202,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $facturaB = $this->facturaDe($master, 300);
         $abono    = $this->abonoCliente($master->id, 100);
         $cuenta   = $this->cuenta();
-        $h        = $this->authHeaders($this->loginAsFelix());
+        $h        = $this->authHeaders($this->loginAsContabilidad());
 
         // Ambos cobros por transferencia aplican los mismos $100 de saldo (el saldo recién se consume al confirmar).
         $a = $this->withHeaders($h)->postJson('/api/admin-contab/payments', $this->cobro($master->id, [$facturaA->id], 'transferencia', $cuenta->id, 200, 100))->assertStatus(201);
@@ -233,7 +233,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $factura = $this->facturaDe($master, 300);
         $this->abonoCliente($master->id, 50);
         $cuenta  = $this->cuenta();
-        $h       = $this->authHeaders($this->loginAsFelix());
+        $h       = $this->authHeaders($this->loginAsContabilidad());
 
         $this->withHeaders($h)->postJson('/api/admin-contab/payments', $this->cobro($master->id, [$factura->id], 'efectivo', $cuenta->id, 100, 200))->assertStatus(422);
     }
@@ -246,7 +246,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $otro   = MasterClient::create(['name' => 'Cliente Otro '.uniqid()]);
         $ajena  = $this->facturaDe($otro, 500);
         $cuenta = $this->cuenta();
-        $h      = $this->authHeaders($this->loginAsFelix());
+        $h      = $this->authHeaders($this->loginAsContabilidad());
 
         $this->withHeaders($h)->postJson('/api/admin-contab/abonos', [
             'master_client_id' => $dueno->id, 'invoice_id' => $ajena->id, 'monto_original' => 100,
@@ -261,7 +261,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $subAjeno = SubClient::create(['master_client_id' => $otro->id, 'business_name' => 'Sub '.uniqid(), 'tax_id' => 'TAX-'.uniqid()]);
         $proyectoAjeno = SalesProject::create(['sub_client_id' => $subAjeno->id, 'name' => 'Proyecto ajeno '.uniqid()]);
         $cuenta  = $this->cuenta();
-        $h       = $this->authHeaders($this->loginAsFelix());
+        $h       = $this->authHeaders($this->loginAsContabilidad());
 
         $base = ['master_client_id' => $dueno->id, 'monto_original' => 100, 'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $cuenta->id, 'referencia' => 'TRF-AJENO'];
 
@@ -276,7 +276,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $proyecto = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto propio '.uniqid()]);
         $factura = $this->facturaDe($master, 500);
         $cuenta  = $this->cuenta();
-        $h       = $this->authHeaders($this->loginAsFelix());
+        $h       = $this->authHeaders($this->loginAsContabilidad());
 
         $this->withHeaders($h)->postJson('/api/admin-contab/abonos', [
             'master_client_id' => $master->id, 'sub_client_id' => $sub->id, 'sales_project_id' => $proyecto->id, 'invoice_id' => $factura->id,
@@ -290,7 +290,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $otro   = MasterClient::create(['name' => 'Cliente Otro '.uniqid()]);
         $ajena  = $this->facturaDe($otro, 500);
         $cuenta = $this->cuenta();
-        $h      = $this->authHeaders($this->loginAsFelix());
+        $h      = $this->authHeaders($this->loginAsContabilidad());
 
         $creado = $this->withHeaders($h)->postJson('/api/admin-contab/abonos', [
             'master_client_id' => $master->id, 'monto_original' => 100, 'metodo_pago' => 'transferencia',
@@ -305,7 +305,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
     {
         $master = MasterClient::create(['name' => 'Cliente F0 '.uniqid()]);
         $cuenta = $this->cuenta();
-        $h      = $this->authHeaders($this->loginAsFelix());
+        $h      = $this->authHeaders($this->loginAsContabilidad());
 
         $creado = $this->withHeaders($h)->postJson('/api/admin-contab/abonos', [
             'master_client_id' => $master->id, 'monto_original' => 100, 'metodo_pago' => 'transferencia',

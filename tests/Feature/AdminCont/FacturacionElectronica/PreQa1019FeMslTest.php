@@ -437,7 +437,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         ];
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -467,7 +467,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/*' => $respuestas]);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
 
-        $response = $this->postCorreccionFecha($this->loginAsFelix(), $invoice)->assertStatus(201);
+        $response = $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice)->assertStatus(201);
         $this->reTenant();
 
         $note = AdminContCreditNote::findOrFail($response->json('id'));
@@ -501,9 +501,9 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         ['note' => $note] = $this->correccionConNcRechazada();
         $dm = $this->withHeaders($this->authHeaders($this->loginAsMark()))->getJson("/api/admin-contab/notas-credito/{$note->id}")->assertStatus(200);
         $this->assertTrue($dm->json('puede_reconciliar_fe'));
-        $df = $this->withHeaders($this->authHeaders($this->loginAsFelix()))->getJson("/api/admin-contab/notas-credito/{$note->id}");
+        $df = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->getJson("/api/admin-contab/notas-credito/{$note->id}");
         $this->assertNotTrue($df->json('puede_reconciliar_fe'));
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))->postJson("/api/admin-contab/notas-credito/{$note->id}/fe-reconciliar")->assertStatus(403);
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->postJson("/api/admin-contab/notas-credito/{$note->id}/fe-reconciliar")->assertStatus(403);
     }
 
     public function test_preqa_1009b_msl_la_tiene_pendiente_bloquea_en_registro_y_preview(): void
@@ -511,7 +511,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(['ok' => true, 'estado' => 'PENDIENTE'], 202)]);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['cufe' => null, 'fe_estado' => 'error_configuracion'])->save();
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $this->postCorreccionFecha($token, $invoice)->assertStatus(422);
         $p = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/notas-credito/correccion/preview', [
             'master_client_id' => $invoice->master_client_id, 'factura_origen_id' => $invoice->id,
@@ -528,10 +528,10 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response('boom', 500)]);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['cufe' => null, 'fe_estado' => 'rechazado'])->save();
-        $r = $this->postCorreccionFecha($this->loginAsFelix(), $invoice);
+        $r = $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice);
         $r->assertStatus(422);
         Http::fake(['sandbox.msl.test/v1/documentos/*' => fn () => throw new \Illuminate\Http\Client\ConnectionException('timeout')]);
-        $r2 = $this->postCorreccionFecha($this->loginAsFelix(), $invoice);
+        $r2 = $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice);
         $r2->assertStatus(422);
         $this->reTenant();
         $this->assertNull($invoice->fresh()->anulada_at);
@@ -542,7 +542,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/*' => Http::response(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE01...x'], 200)]);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['cufe' => null, 'fe_estado' => 'error_configuracion', 'serie' => null])->save();
-        $r = $this->postCorreccionFecha($this->loginAsFelix(), $invoice);
+        $r = $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice);
         $this->assertContains($r->status(), [201, 422]);
     }
 
@@ -551,7 +551,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         Http::fake();
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['anulada_at' => now()])->save();
-        $t = $this->loginAsFelix();
+        $t = $this->loginAsContabilidad();
         $payload = ['master_client_id' => $invoice->master_client_id, 'factura_origen_id' => $invoice->id,
             'motivo_correccion' => AdminContCreditNote::MOTIVO_CORRECCION_FECHA, 'nueva_fecha' => now()->toDateString(), 'motivo' => 'Fecha de facturación incorrecta'];
         $p = $this->withHeaders($this->authHeaders($t))->postJson('/api/admin-contab/notas-credito/correccion/preview', $payload)->assertStatus(404);
@@ -567,7 +567,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 500);
         $emision = Carbon::parse('2026-10-01 08:15:00', 'America/Panama');
         $invoice->forceFill(['cufe' => 'CUFE-ORIGINAL-XYZ', 'fe_estado' => 'certificado', 'fe_emision_at' => $emision])->save();
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))->post('/api/admin-contab/notas-credito', $this->registerPayload($invoice, 100))->assertStatus(201);
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->post('/api/admin-contab/notas-credito', $this->registerPayload($invoice, 100))->assertStatus(201);
         Http::assertSent(function ($q) use ($emision): bool {
             $d = $q->data();
             if (! isset($d['referencia'])) { return false; }

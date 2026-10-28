@@ -56,7 +56,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     }
 
     /** @param list<string> $quitar */
-    private function quitarPermisosDeFelix(array $quitar): void
+    private function quitarPermisosDeContabilidad(array $quitar): void
     {
         $contabilidad = User::where('email', self::CONTABILIDAD)->firstOrFail();
         $contabilidad->update(['extra_permissions' => array_values(array_diff($contabilidad->extra_permissions ?? [], $quitar))]);
@@ -110,7 +110,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
 
     public function test_sin_edit_approved_un_proyecto_aprobado_no_es_editable(): void
     {
-        $this->quitarPermisosDeFelix(['ventas_diseno.edit.approved']);
+        $this->quitarPermisosDeContabilidad(['ventas_diseno.edit.approved']);
         $card = $this->makeCard('approved');
 
         $this->withHeaders($this->contabilidadHeaders())->getJson("/api/ventas-diseno/pipeline/{$card->id}")
@@ -120,7 +120,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     public function test_sin_pipeline_edit_contabilidad_vuelve_a_solo_lectura(): void
     {
         $this->contabilidadComoEnScrum1139();
-        $this->quitarPermisosDeFelix(['ventas_diseno.pipeline.edit']);
+        $this->quitarPermisosDeContabilidad(['ventas_diseno.pipeline.edit']);
         $card    = $this->makeCard('design');
         $headers = $this->contabilidadHeaders();
 
@@ -174,7 +174,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     public function test_sin_pipeline_edit_contabilidad_no_vincula_clientes(): void
     {
         $this->contabilidadComoEnScrum1139();
-        $this->quitarPermisosDeFelix(['ventas_diseno.pipeline.edit']);
+        $this->quitarPermisosDeContabilidad(['ventas_diseno.pipeline.edit']);
         $headers = $this->contabilidadHeaders();
 
         $this->withHeaders($headers)->getJson('/api/ventas-diseno/master-clients')->assertStatus(403);

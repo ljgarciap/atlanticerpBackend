@@ -107,7 +107,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         ];
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -122,7 +122,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/*' => Http::response(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE04...nc'], 200)]);
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($ownerId, 500);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         // 100 < umbral (5000) y < saldo pendiente (500) -> resultado aplicado_saldo, estado aplicada.
         $response = $this->withHeaders($this->authHeaders($token))
@@ -141,7 +141,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake();
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($ownerId, 10000);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         // 6000 > umbral (5000) -> queda pendiente_aprobacion, nunca debe llamar a MSL.
         $response = $this->withHeaders($this->authHeaders($token))
@@ -160,7 +160,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/*' => Http::response(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE04...aprobada'], 200)]);
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($ownerId, 10000);
-        $contabilidad = $this->loginAsFelix();
+        $contabilidad = $this->loginAsContabilidad();
         $store = $this->withHeaders($this->authHeaders($contabilidad))
             ->post('/api/admin-contab/notas-credito', $this->registerPayload($invoice, 6000))
             ->assertStatus(201);
@@ -184,7 +184,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake();
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($ownerId, 10000);
-        $contabilidad = $this->loginAsFelix();
+        $contabilidad = $this->loginAsContabilidad();
         $store = $this->withHeaders($this->authHeaders($contabilidad))
             ->post('/api/admin-contab/notas-credito', $this->registerPayload($invoice, 6000))
             ->assertStatus(201);
@@ -209,7 +209,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake();
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($ownerId, 500);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->post('/api/admin-contab/notas-credito', $this->registerPayload($invoice, 100))
@@ -226,7 +226,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/*' => Http::response(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE01...reemplazo'], 200)]);
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($ownerId, 100);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         Storage::fake('s3-private');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -265,7 +265,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Carbon::setTestNow(Carbon::parse('2026-09-30 10:00:00', 'America/Panama'));
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($ownerId, 100);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         Storage::fake('s3-private');
 
         Carbon::setTestNow(Carbon::parse('2026-09-30 10:05:00', 'America/Panama'));
@@ -323,7 +323,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/*' => $respuestas]);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
 
-        $response = $this->postCorreccionFecha($this->loginAsFelix(), $invoice)->assertStatus(201);
+        $response = $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice)->assertStatus(201);
         $this->reTenant();
 
         $note = AdminContCreditNote::findOrFail($response->json('id'));
@@ -374,7 +374,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake();
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
 
-        $response = $this->postCorreccionFecha($this->loginAsFelix(), $invoice)->assertStatus(201);
+        $response = $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice)->assertStatus(201);
         $this->reTenant();
 
         $note = AdminContCreditNote::findOrFail($response->json('id'));
@@ -412,7 +412,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
     {
         Http::fake(['sandbox.msl.test/*' => Http::response(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE04...nc'], 200)]);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 500);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $this->withHeaders($this->authHeaders($token))
             ->post('/api/admin-contab/notas-credito', $this->registerPayload($invoice, 100))
             ->assertStatus(201);
@@ -446,7 +446,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['cufe' => null, 'fe_estado' => 'rechazado'])->save();
 
-        $response = $this->postCorreccionFecha($this->loginAsFelix(), $invoice)->assertStatus(201);
+        $response = $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice)->assertStatus(201);
         $this->reTenant();
 
         $note = AdminContCreditNote::findOrFail($response->json('id'));
@@ -461,7 +461,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['cufe' => null, 'fe_estado' => 'pendiente'])->save();
 
-        $this->postCorreccionFecha($this->loginAsFelix(), $invoice)->assertStatus(422);
+        $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice)->assertStatus(422);
         $this->reTenant();
 
         $this->assertNull($invoice->fresh()->anulada_at);
@@ -474,7 +474,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake();
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
 
-        $this->postCorreccionFecha($this->loginAsFelix(), $invoice)->assertStatus(422);
+        $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice)->assertStatus(422);
         $this->reTenant();
 
         $this->assertNull($invoice->fresh()->anulada_at);
@@ -507,7 +507,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         // La original se emitió ayer a las 08:15 (fe_emision_at), distinto de su created_at (hoy): la referencia debe usar la emisión.
         $invoice->forceFill(['fe_emision_at' => Carbon::parse('2026-10-01 08:15:00', 'America/Panama')])->save();
 
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->post('/api/admin-contab/notas-credito', $this->registerPayload($invoice, 100))
             ->assertStatus(201);
 
@@ -528,7 +528,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         $order->pipelineCard->subClient->forceFill(['receptor_tipo' => '02'])->save();
         $invoice->forceFill(['fe_emision_at' => now()->subHour()])->save();
 
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->post('/api/admin-contab/notas-credito', $this->registerPayload($invoice, 100))
             ->assertStatus(201);
 
@@ -547,7 +547,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake(['sandbox.msl.test/v1/documentos/*' => Http::response(['ok' => true, 'estado' => 'CERTIFICADO', 'cufe' => 'FE01...ya-en-msl'], 200)]);
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['cufe' => null, 'fe_estado' => 'rechazado'])->save();
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $r = $this->postCorreccionFecha($token, $invoice)->assertStatus(422);
         $this->assertStringContainsString('MSL ya tiene la factura', (string) $r->json('message'));
@@ -576,7 +576,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
             'response_body' => ['ok' => false, 'estado' => 'RECHAZADO', 'detalles' => ['9022 - La referencia INTERNA ya fue enviada a certificar']],
         ]);
 
-        $this->postCorreccionFecha($this->loginAsFelix(), $invoice)->assertStatus(422);
+        $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice)->assertStatus(422);
     }
 
     public function test_si_no_se_puede_verificar_con_msl_la_correccion_de_una_original_rechazada_se_bloquea(): void
@@ -585,7 +585,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['cufe' => null, 'fe_estado' => 'error_configuracion'])->save();
 
-        $r = $this->postCorreccionFecha($this->loginAsFelix(), $invoice)->assertStatus(422);
+        $r = $this->postCorreccionFecha($this->loginAsContabilidad(), $invoice)->assertStatus(422);
         $this->assertStringContainsString('No se pudo verificar con MSL', (string) $r->json('message'));
     }
 
@@ -595,7 +595,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         Http::fake();
         ['invoice' => $invoice] = $this->facturaCertificadaConCotizacion($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 100);
         $invoice->forceFill(['anulada_at' => now()])->save();
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $r = $this->postCorreccionFecha($token, $invoice)->assertStatus(404);
         $this->assertSame('La factura ya fue anulada o no existe: no se puede corregir.', $r->json('message'));
@@ -619,7 +619,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         ])->save();
 
         $origen = $invoice->fresh(); // antes del login: el login HTTP del test deja el tenant sin activar
-        $response = $this->postCorreccionFecha($this->loginAsFelix(), $origen)->assertStatus(201);
+        $response = $this->postCorreccionFecha($this->loginAsContabilidad(), $origen)->assertStatus(201);
         $this->reTenant();
 
         $nueva = AdminContInvoice::findOrFail(AdminContCreditNote::findOrFail($response->json('id'))->factura_nueva_id);
@@ -638,7 +638,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         ])->save();
 
         $origen = $invoice->fresh(); // antes del login: el login HTTP del test deja el tenant sin activar
-        $response = $this->postCorreccionFecha($this->loginAsFelix(), $origen)->assertStatus(201);
+        $response = $this->postCorreccionFecha($this->loginAsContabilidad(), $origen)->assertStatus(201);
         $this->reTenant();
 
         $nueva = AdminContInvoice::findOrFail(AdminContCreditNote::findOrFail($response->json('id'))->factura_nueva_id);
@@ -662,7 +662,7 @@ final class CertifyCreditNoteTest extends FeatureTestCase
         ])->save();
 
         $origen = $invoice->fresh(); // antes del login: el login HTTP del test deja el tenant sin activar
-        $response = $this->postCorreccionFecha($this->loginAsFelix(), $origen)->assertStatus(201);
+        $response = $this->postCorreccionFecha($this->loginAsContabilidad(), $origen)->assertStatus(201);
         $this->reTenant();
 
         $nueva = AdminContInvoice::findOrFail(AdminContCreditNote::findOrFail($response->json('id'))->factura_nueva_id);

@@ -21,12 +21,12 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsYaneth(): string
+    private function loginAsAsistente(): string
     {
         return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
@@ -37,7 +37,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
             'banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034',
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/bank-accounts')
@@ -56,7 +56,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_store_crea_una_cuenta_activa_con_defaults_de_tipo_y_moneda(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
@@ -72,7 +72,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_store_asistente_tambien_puede_crear_cuentas(): void
     {
-        $token = $this->loginAsYaneth();
+        $token = $this->loginAsAsistente();
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
@@ -94,7 +94,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_store_exige_ultimos_4_digitos_exactos(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', ['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '123'])
@@ -107,7 +107,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_store_ignora_un_campo_con_nombre_distinto_al_real(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
@@ -127,7 +127,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
     // Cuenta pueda mostrarle al cliente el dato real que necesita para pagar por transferencia.
     public function test_store_acepta_numero_cuenta_completo(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
@@ -144,7 +144,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
     public function test_update_completa_el_numero_de_cuenta_completo_de_una_cuenta_ya_creada(): void
     {
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4455']);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-accounts/{$account->id}", [
@@ -160,7 +160,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
         $account = AdminContBankAccount::create([
             'banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4455', 'moneda' => 'USD',
         ]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-accounts/{$account->id}", ['numero_cuenta_completo' => '00-00-00-000000-1'])
@@ -185,7 +185,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_update_cuenta_inexistente_retorna_404(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/bank-accounts/999999', ['numero_cuenta_completo' => '1234567890'])
@@ -195,7 +195,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
     public function test_deactivate_y_reactivate(): void
     {
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-accounts/{$account->id}/deactivate")
@@ -213,7 +213,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
         AdminContBankAccount::create(['banco' => 'Activa', 'ultimos_4_digitos' => '1111', 'activa' => true]);
         AdminContBankAccount::create(['banco' => 'Inactiva', 'ultimos_4_digitos' => '2222', 'activa' => false]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/bank-accounts?activa=true')
