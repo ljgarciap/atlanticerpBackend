@@ -29,7 +29,7 @@ use Illuminate\Http\Request;
  * docs/adr/ADR-SCRUM591-596-batch17-comisiones-externas.md.
  *
  * Sin lógica de autorización propio-vs-ajeno acá (a diferencia de
- * `AdminContInternalCommissionController`): la audiencia de esta pantalla es Contabilidad/Asistente/Mark/
+ * `AdminContInternalCommissionController`): la audiencia de esta pantalla es Contabilidad/Asistente/Aprobador/
  * Gerencia únicamente (REQ-508→512, ningún arquitecto ni vendedor la consulta), gateada por rol
  * directo en `routes/admin-contab.php` — no hace falta el patrón "vendedor solo ve lo suyo".
  */

@@ -56,7 +56,7 @@ final class OrdersService
     {
         // REQ-629 RN4: Pedidos no tiene selector explícito Mías/Equipo — el frontend nunca manda
         // `scope`. Hallazgo CRÍTICO de Pre-QA (2026-07-31): defaultear a 'own' cuando no viene el
-        // filtro dejaba a Líder/Gerencia/Mark viendo solo lo suyo, nunca el equipo, porque nadie
+        // filtro dejaba a Líder/Gerencia/Aprobador viendo solo lo suyo, nunca el equipo, porque nadie
         // les manda 'team' explícito. Sin selector, el default correcto es pedir SIEMPRE 'team' —
         // `buildOrders()` ya baja a 'own' internamente para quien no tenga `canViewTeamV2`
         // (RN1/RN3), así que esto no abre alcance a nadie que no debiera tenerlo.

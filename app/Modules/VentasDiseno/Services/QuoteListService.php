@@ -265,7 +265,7 @@ final class QuoteListService
      * `ReplacementRequestController::hasFullComprasReadAccess()`: se evalúa contra el JWT
      * (`effectivePermissionsV2()`/`RoleModuleVisibility`), NUNCA `$user->hasPermission()` (v1) —
      * ver docblock de `canDecide()` en ese controller para el detalle completo de por qué. Antes
-     * de este fix, Gerencia (Gerencia/Mark) y Compras (Lider Compras) tenían acceso real al módulo vía su
+     * de este fix, Gerencia (Gerencia/Aprobador) y Compras (Lider Compras) tenían acceso real al módulo vía su
      * rol pero nunca el permiso v1 correspondiente, así que caían siempre a la rama de "proyectos
      * propios" — y como ninguno de los dos es dueño de proyectos de venta, veían "No existe
      * ningún proyecto que contenga este producto" sin importar el producto real.

@@ -430,7 +430,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $this->grantBodega('management@atlantic.test', ['bodega.approve']);
         // `gerencia@atlantic.test` carga Nivel 10 (superadmin.all) — desde que superadmin
         // bypassa el gate de Gerencia (2026-08-22), usar `nivel8@atlantic.test` (Nivel 8) para
-        // simular un management genuino, no-Mark y no-superadmin.
+        // simular un management genuino, no-aprobador y no-superadmin.
         $this->grantBodega('nivel8@atlantic.test', ['bodega.approve']);
         $markId = (int) User::where('email', 'management@atlantic.test')->value('id');
         ComprasSettings::current()->update(['primary_approver_user_id' => $markId]);

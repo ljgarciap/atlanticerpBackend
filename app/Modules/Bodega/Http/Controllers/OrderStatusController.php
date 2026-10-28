@@ -149,7 +149,7 @@ final class OrderStatusController extends Controller
 
         $isSuperadmin = in_array('superadmin.all', $permissions, true);
 
-        // SCRUM-741 (decisión de Luis, tras hallazgo de Pre-QA: Gerencia/Mark tienen bodega.read REAL
+        // SCRUM-741 (decisión de Luis, tras hallazgo de Pre-QA: Gerencia/Aprobador tienen bodega.read REAL
         // vía su rol Gerencia) — mismo criterio que InventoryController::resolveAccess(): mientras
         // Bodega esté oculto por la etapa de UAT actual, NADIE no-superadmin accede de verdad, ni
         // siquiera con bodega.read real.

@@ -879,7 +879,7 @@ final class CreditNoteService
 
     /**
      * REQ-491 — precarga del formulario de registro al hacer clic en una fila ámbar de la cola.
-     * Endpoint propio de Notas Crédito (no llama a `bodega.read`, que Contabilidad/Asistente/Mark/Gerencia no
+     * Endpoint propio de Notas Crédito (no llama a `bodega.read`, que Contabilidad/Asistente/Aprobador/Gerencia no
      * tienen) — mismo criterio de "cross-schema directo" ya usado en `pendingBodegaReturns()`.
      *
      * @return array<string, mixed>|null null si la devolución no existe o ya no está en la cola
@@ -971,7 +971,7 @@ final class CreditNoteService
 
     /**
      * SCRUM-865 punto 2 — `CustomerReturnController::signedDocumentUrl()` (Bodega) está gateado
-     * por `permission:bodega.read`, que un usuario de Notas de Crédito (Contabilidad/Asistente/Mark/
+     * por `permission:bodega.read`, que un usuario de Notas de Crédito (Contabilidad/Asistente/Aprobador/
      * Gerencia) no necesariamente tiene. Mismo mecanismo de presign, gateado acá por el permiso ya
      * exigido a toda la ruta de `notas-credito/*`.
      */

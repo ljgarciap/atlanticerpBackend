@@ -1404,7 +1404,7 @@ final class InvoiceService
     }
 
     /**
-     * REQ-448 — Contabilidad/Mark/Gerencia proponen, solo Gerencia decide (gate en el middleware de la ruta).
+     * REQ-448 — Contabilidad/Aprobador/Gerencia proponen, solo Gerencia decide (gate en el middleware de la ruta).
      * RN1: solo sobre facturas emitidas vigentes (ni pendientes, ni ya anuladas). RN5: no se puede
      * proponer un segundo cambio mientras el primero sigue sin resolver.
      *

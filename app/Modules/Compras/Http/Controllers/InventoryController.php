@@ -994,7 +994,7 @@ final class InventoryController extends Controller
 
         $isSuperadmin = in_array('superadmin.all', $permissions, true);
 
-        // SCRUM-741 (decisión de Luis, tras hallazgo de Pre-QA: Gerencia/Mark tienen compras.read
+        // SCRUM-741 (decisión de Luis, tras hallazgo de Pre-QA: Gerencia/Aprobador tienen compras.read
         // REAL vía su rol Gerencia — "compras.read igual pierde acceso" no es un caso raro, es
         // exactamente el camino que el ticket reportó) — mientras Compras esté oculto por la
         // etapa de UAT actual, NADIE no-superadmin accede de verdad, ni siquiera con compras.read
