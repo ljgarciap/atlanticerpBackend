@@ -24,12 +24,12 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsYaneth(): string
+    private function loginAsAsistente(): string
     {
         return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
@@ -46,7 +46,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'devolucion', 'concepto' => 'NC-1', 'monto' => 50]);
         AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión Vendedor X', 'monto' => 270]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/bank-movements')
@@ -67,7 +67,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         AdminContBankMovement::create(['bank_account_id' => $account1->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'A', 'monto' => 100]);
         AdminContBankMovement::create(['bank_account_id' => $account2->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'B', 'monto' => 200]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/bank-movements?bank_account_id={$account1->id}")
@@ -85,7 +85,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         for ($i = 0; $i < 25; $i++) {
             AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => "Mov {$i}", 'monto' => 10]);
         }
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/bank-movements')
@@ -100,7 +100,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
 
-        $token = $this->loginAsYaneth();
+        $token = $this->loginAsAsistente();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-movements/{$movement->id}/assign-account", ['bank_account_id' => $account->id])
@@ -125,7 +125,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034', 'activa' => false]);
         $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-movements/{$movement->id}/assign-account", ['bank_account_id' => $account->id])
@@ -137,7 +137,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         $cobro = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 100]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-movements/{$cobro->id}/assign-account", ['bank_account_id' => $account->id])
@@ -150,7 +150,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         $account2 = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1234']);
         $movement = AdminContBankMovement::create(['bank_account_id' => $account1->id, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-movements/{$movement->id}/assign-account", ['bank_account_id' => $account2->id])

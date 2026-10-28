@@ -42,7 +42,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -203,7 +203,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_periodo_invalido_devuelve_422_en_ventas_y_flujo_caja(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/ventas?periodo=semana')
@@ -220,7 +220,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice(8400, 0, now()->subDays(140)->toDateTimeString());
         $this->makeConfirmedPayment($invoice, 8400, now()->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(200);
@@ -234,7 +234,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice(17000, 0, now()->subDays(140)->toDateTimeString());
         $this->makeConfirmedPayment($invoice, 17000, now()->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(200);
@@ -247,7 +247,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice(25000, 0, now()->subDays(140)->toDateTimeString());
         $this->makeConfirmedPayment($invoice, 25000, now()->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(200);
@@ -257,7 +257,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_contabilidad_commission_expone_los_3_tramos_con_el_actual_marcado(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/commission-tiers')
             ->assertStatus(200);
@@ -284,7 +284,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         // Factura +90 días vencida, sin pagar (outstanding) → cuenta como "pendiente", no "cobrado".
         $pendiente = $this->makeInvoice(700, 0, now()->subDays(140)->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/cartera')
             ->assertStatus(200);
@@ -304,7 +304,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $mesAnterior = now()->subMonthNoOverflow()->startOfMonth()->addDays(2);
         $this->makeInvoice(6200, 0, $mesAnterior->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/ventas?periodo=hoy')
             ->assertStatus(200);
@@ -317,7 +317,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
     {
         $this->makeInvoice(2000, 0, now()->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/ventas?periodo=3m')
             ->assertStatus(200);
@@ -336,7 +336,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $cuenta = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         AdminContBankMovement::create(['bank_account_id' => $cuenta->id, 'fecha' => now(), 'tipo' => AdminContBankMovement::TIPO_COBRO, 'concepto' => 'Cobro', 'monto' => 1000]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $flujo = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/flujo-caja?periodo=hoy')
             ->assertStatus(200);
@@ -358,7 +358,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         AdminContBankMovement::create(['bank_account_id' => $cuenta->id, 'fecha' => now(), 'tipo' => AdminContBankMovement::TIPO_COBRO, 'concepto' => 'Cobro', 'monto' => 2200]);
         AdminContBankMovement::create(['bank_account_id' => $cuenta->id, 'fecha' => now(), 'tipo' => AdminContBankMovement::TIPO_COMISION, 'concepto' => 'Comisión', 'monto' => 1500]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/flujo-caja?periodo=hoy')
             ->assertStatus(200);
@@ -370,7 +370,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_get_tiers_expone_los_3_tramos_seed(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/cartera/tiers')
             ->assertStatus(200);
@@ -380,7 +380,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_store_tier_rechaza_a_contabilidad_solo_aprobador_puede_escribir(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/commissions/cartera/tiers', ['monto_minimo' => 30000, 'monto_maximo' => null, 'porcentaje' => 3.0, 'orden' => 4])
@@ -420,7 +420,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_comisiones_periodo_invalido_devuelve_422(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/comisiones?periodo=semana')
@@ -436,7 +436,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         // Externa: proyecto de $8,000, régimen exento (comisión 10% default) pagada hoy → $800.
         $this->makeArchitectProjectPagado(8000.0, now()->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/comisiones?periodo=hoy')
             ->assertStatus(200);
@@ -451,7 +451,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         $invoice = $this->makeCommissionableOrder($this->userIdByEmail(self::CONTABILIDAD_EMAIL), 10000.0);
         $this->makeConfirmedPayment($invoice, 10000.0, now()->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/comisiones?periodo=3m')
             ->assertStatus(200);
@@ -467,7 +467,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     public function test_notas_credito_siempre_expone_los_4_motivos_en_orden(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/notas-credito')
             ->assertStatus(200);
@@ -492,7 +492,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         // Mes anterior — nunca debe sumar (RN2, siempre mes en curso).
         $this->makeCreditNote(AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, null, 55555, AdminContCreditNote::ESTADO_APLICADA, now()->subMonthNoOverflow()->toDateString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/notas-credito')
             ->assertStatus(200);

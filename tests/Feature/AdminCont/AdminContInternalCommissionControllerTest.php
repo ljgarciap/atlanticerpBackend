@@ -45,12 +45,12 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         return $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsYaneth(): string
+    private function loginAsAsistente(): string
     {
         return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
@@ -207,7 +207,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         // Abono parcial → pendiente_cobro (estimado sobre total_facturado).
         $this->makeCommissionableOrder($vendorId, 5000.0, 2000.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
@@ -254,7 +254,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         // sin ningún makeCommissionableOrder() para este vendedor — cero pedidos en TODA su historia.
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/commissions/internal?vendedor_id={$vendorId}")
@@ -277,7 +277,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_summary_sin_filtro_incluye_vendedores_sin_ningun_pedido(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
@@ -300,7 +300,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
      */
     public function test_summary_puede_editar_tramos_solo_para_mark(): void
     {
-        $contabilidadToken = $this->loginAsFelix();
+        $contabilidadToken = $this->loginAsContabilidad();
         $this->withHeaders($this->authHeaders($contabilidadToken))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200)
@@ -350,7 +350,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $contabilidadId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $this->makeCommissionableOrder($contabilidadId, 30000.0, 30000.0);
 
-        $token = $this->loginAsYaneth();
+        $token = $this->loginAsAsistente();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
@@ -389,7 +389,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get('/api/admin-contab/commissions/internal/export?format=pdf')
@@ -403,7 +403,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get('/api/admin-contab/commissions/internal/export?format=excel')
@@ -414,7 +414,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     public function test_vendor_options_lista_vendedor_disenador_para_contabilidad(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal/vendors')
@@ -446,7 +446,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     public function test_tier_crud_exclusivo_de_mark(): void
     {
-        $contabilidadToken = $this->loginAsFelix();
+        $contabilidadToken = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($contabilidadToken))
             ->postJson('/api/admin-contab/commissions/internal/tiers', [
@@ -528,7 +528,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $this->makeCommissionableOrder($vendorA, 10000.0, 10000.0);
         $this->makeCommissionableOrder($vendorB, 8000.0, 4000.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $unfiltered = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
@@ -610,7 +610,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $factura = $this->makeCommissionableOrder($vendorId, 6600.0, 6600.0);
         $nc = $this->makeCreditNote($factura, 200.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
@@ -631,7 +631,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $factura = $this->makeCommissionableOrder($vendorId, 6600.0, 6600.0);
         $this->makeCreditNote($factura, 200.0, AdminContCreditNote::ESTADO_PENDIENTE_APROBACION);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
@@ -652,7 +652,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         // Mes anterior, abono parcial — sigue pendiente, debe arrastrarse.
         $this->makeCommissionableOrder($vendorId, 6600.0, 3000.0, Carbon::now()->subMonth());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
@@ -670,7 +670,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         // no debe seguir arrastrándose al ver el mes actual.
         $this->makeCommissionableOrder($vendorId, 6600.0, 6600.0, Carbon::now()->subMonths(2));
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
@@ -691,7 +691,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $this->makeCommissionableOrder($vendorId, 10000.0, 10000.0); // mes actual, por_pagar
         $this->makeCommissionableOrder($vendorId, 5000.0, 1000.0, Carbon::now()->subMonth()); // arrastrado, pendiente
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
@@ -713,7 +713,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, null, [$contabilidadId]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/commissions/internal')
             ->assertStatus(200);
@@ -822,7 +822,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0); // por_pagar, mes actual
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/commissions/internal/{$vendorId}/account-statement")
             ->assertStatus(200);
@@ -842,7 +842,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         // cuenta de ese mes (RN1 REQ-507, vive en el estado de cuenta del mes en curso).
         $this->makeCommissionableOrder($vendorId, 5000.0, 0.0, $mesPasado);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/commissions/internal/{$vendorId}/account-statement?mes=".$mesPasado->format('Y-m'))
             ->assertStatus(200);
@@ -878,7 +878,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($vendorId, 10000.0, 10000.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/admin-contab/commissions/internal/{$vendorId}/account-statement/pdf")
             ->assertStatus(200);

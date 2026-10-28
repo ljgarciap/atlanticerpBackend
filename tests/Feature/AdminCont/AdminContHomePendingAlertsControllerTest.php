@@ -40,7 +40,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -148,7 +148,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
 
     public function test_sin_datos_devuelve_count_cero(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $response->assertJsonStructure(['count', 'items']);
@@ -163,7 +163,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         // dias_credito_factura default = 30 — creada hace 45 días => vencida hace 15, sin pago.
         $this->makeInvoice(1000, 0, now()->subDays(45)->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(1, $response->json('count'));
@@ -176,7 +176,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
     {
         $this->makeInvoice(1000, 0, now()->subDays(5)->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(0, $response->json('count'));
@@ -192,7 +192,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         $dias = AdminContFiscalSettings::current()->dias_credito_factura;
         $this->makeInvoice(1000, 0, now()->subDays($dias)->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(0, $response->json('count'));
@@ -204,7 +204,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
     {
         $this->makeInvoice(1000, 400, now()->subDays(45)->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(1, $response->json('count'));
@@ -217,7 +217,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
     {
         $this->makeInvoice(1000, 1000, now()->subDays(45)->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(0, $response->json('count'));
@@ -240,7 +240,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         $invoice = $this->makeCommissionableOrder((int) $vendedor->id, 5000.0, CarbonImmutable::parse('2026-06-01'));
         $invoice->forceFill(['saldo_aplicado' => 5000.0])->save();
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 
@@ -262,7 +262,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         $invoice = $this->makeCommissionableOrder((int) $vendedor->id, 5000.0, CarbonImmutable::parse('2026-06-01'));
         $invoice->forceFill(['saldo_aplicado' => 5000.0])->save();
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 
@@ -286,7 +286,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         $invoice = $this->makeCommissionableOrder((int) $vendedor->id, 5000.0, CarbonImmutable::parse('2026-06-01'));
         $invoice->forceFill(['saldo_aplicado' => 5000.0])->save();
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 
@@ -303,7 +303,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         $this->travelTo(CarbonImmutable::parse('2026-06-20 12:00:00'));
         $this->makeArchitectProjectWithPayment($architect, 3000.0, '2026-06-01 10:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 

@@ -24,7 +24,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -53,7 +53,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     {
         $master  = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/abonos', $this->basePayload($master->id, $account->id))
@@ -73,7 +73,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
         $master    = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
         $subClient = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub '.uniqid(), 'tax_id' => 'TAX-'.uniqid()]);
         $account   = $this->makeBankAccount();
-        $token     = $this->loginAsFelix();
+        $token     = $this->loginAsContabilidad();
 
         $payload = [...$this->basePayload($master->id, $account->id), 'sub_client_id' => $subClient->id];
 
@@ -93,7 +93,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
             'master_client_id' => $master->id, 'cliente' => $master->name, 'monto' => 1200, 'saldo_aplicado' => 0,
         ]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $payload = [...$this->basePayload($master->id, $account->id), 'invoice_id' => $invoice->id];
 
@@ -110,7 +110,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     {
         $master  = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/abonos', $this->basePayload($master->id, $account->id))
@@ -146,7 +146,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
             'master_client_id' => $master->id, 'cliente' => $master->name, 'monto' => 300, 'saldo_aplicado' => 0,
         ]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         // Abono de $500 (nivel Factura) sobre una factura de solo $300.
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/abonos', [
@@ -183,7 +183,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
             'master_client_id' => $master->id, 'cliente' => $master->name, 'monto' => 1000, 'saldo_aplicado' => 0,
         ]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/abonos', [
             'master_client_id' => $master->id, 'monto_original' => 400,
@@ -213,7 +213,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
         $otroSub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Otro Sub', 'tax_id' => 'TAX-'.uniqid()]);
         $project    = SalesProject::create(['sub_client_id' => $subClient->id, 'name' => 'Proyecto Cascada']);
         SalesProject::create(['sub_client_id' => $otroSub->id, 'name' => 'Proyecto de Otro Sub']);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $subs = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/abonos/cascada/sub-clientes?master_client_id={$master->id}")
@@ -233,7 +233,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     {
         $master  = MasterClient::create(['name' => 'Cliente Paginacion '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         for ($i = 0; $i < 25; $i++) {
             $this->withHeaders($this->authHeaders($token))
@@ -264,7 +264,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     {
         $master  = MasterClient::create(['name' => 'Cliente PerPage '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         for ($i = 0; $i < 3; $i++) {
             $this->withHeaders($this->authHeaders($token))
@@ -286,7 +286,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     {
         $master  = MasterClient::create(['name' => 'Cliente Metodo '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/abonos', $this->basePayload($master->id, $account->id))
@@ -307,7 +307,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     {
         $master  = MasterClient::create(['name' => 'Cliente Fecha '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $dentro = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/abonos', $this->basePayload($master->id, $account->id))
@@ -337,7 +337,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     {
         $master  = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $r1 = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/abonos', $this->basePayload($master->id, $account->id))
@@ -355,7 +355,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     public function test_registrar_abono_con_retencion_de_impuestos_no_exige_cuenta_bancaria(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
-        $token  = $this->loginAsFelix();
+        $token  = $this->loginAsContabilidad();
 
         $payload = [
             'master_client_id' => $master->id,
@@ -377,7 +377,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
         // método que no la usa, el backend nunca la persiste (mismo criterio que PaymentService).
         $master  = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $payload = [
             'master_client_id'   => $master->id,
@@ -397,7 +397,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     public function test_registrar_abono_con_transferencia_sigue_exigiendo_cuenta_bancaria(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
-        $token  = $this->loginAsFelix();
+        $token  = $this->loginAsContabilidad();
 
         $payload = [
             'master_client_id' => $master->id,
@@ -426,7 +426,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
             'master_client_id' => $master->id, 'cliente' => $master->name, 'monto' => 500, 'saldo_aplicado' => 0,
         ]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $payload = [...$this->basePayload($master->id, $account->id), 'invoice_id' => $invoice->id, 'monto_original' => 500];
 
@@ -448,7 +448,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
             'master_client_id' => $master->id, 'cliente' => $master->name, 'monto' => 777.5, 'saldo_aplicado' => 0,
             'sales_project_id' => $project->id,
         ]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/abonos/cascada/facturas-por-subcliente?sub_client_id='.$subClient->id)
@@ -463,7 +463,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
     {
         $master  = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
         $account = $this->makeBankAccount();
-        $token   = $this->loginAsFelix();
+        $token   = $this->loginAsContabilidad();
 
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/abonos', $this->basePayload($master->id, $account->id))
@@ -478,7 +478,7 @@ class AdminContAbonoControllerTest extends FeatureTestCase
 
     public function test_pdf_de_abono_inexistente_devuelve_404(): void
     {
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->get('/api/admin-contab/abonos/999999/pdf')
             ->assertStatus(404);
     }

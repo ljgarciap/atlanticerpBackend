@@ -113,8 +113,12 @@ final class TerminosDelClienteAnterior
             return null;
         }
         foreach ($m[0] as $palabra) {
-            if (mb_strlen($palabra) >= 4 && in_array(hash('sha256', strtolower(\Illuminate\Support\Str::ascii($palabra))), self::NOMBRES_SHA256, true)) {
-                return '[nombre de persona]';
+            // La palabra entera y, además, cada parte de un identificador en camelCase (loginAsNombre, tokenNombre).
+            preg_match_all('/\p{Lu}?\p{Ll}+|\p{Lu}+(?!\p{Ll})/u', $palabra, $partes);
+            foreach ([$palabra, ...$partes[0]] as $candidata) {
+                if (mb_strlen($candidata) >= 4 && in_array(hash('sha256', strtolower(\Illuminate\Support\Str::ascii($candidata))), self::NOMBRES_SHA256, true)) {
+                    return '[nombre de persona]';
+                }
             }
         }
 

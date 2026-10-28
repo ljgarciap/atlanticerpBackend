@@ -43,12 +43,12 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
-    private function loginAsYaneth(): string
+    private function loginAsAsistente(): string
     {
         return $this->loginAs(self::ASISTENTE_EMAIL, self::ASISTENTE_EMAIL, 'asistente_administrativa');
     }
@@ -78,7 +78,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
         AdminContFiscalSettings::current()->update(['petty_cash_balance' => 340]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position')
             ->assertStatus(200);
@@ -97,7 +97,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         // Comisión pagada SIN cuenta asignada — igual es salida real de dinero (E-3).
         AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now()->subDays(2), 'tipo' => 'comision', 'concepto' => 'Comisión interna pagada — Vendedor X (jun 2026)', 'monto' => 250, 'source_type' => 'internal_commission', 'source_id' => 1]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         // saldo_bancos: 1000 cobro - 250 comisión sin cuenta = 750.
         $this->withHeaders($this->authHeaders($token))
@@ -128,7 +128,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     {
         AdminContInvoice::create(['numero' => 'F-9199', 'order_id' => 919900, 'cliente' => 'Cliente Asistente Administrativa', 'monto' => 750]);
 
-        $token = $this->loginAsYaneth();
+        $token = $this->loginAsAsistente();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/projected?window=30')
             ->assertStatus(200);
@@ -139,7 +139,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_real_rechaza_a_asistente(): void
     {
-        $token = $this->loginAsYaneth();
+        $token = $this->loginAsAsistente();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/real?window=30')
@@ -158,7 +158,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         DB::table("{$slug}_admin_contab.invoices")->where('id', $atrasada->id)
             ->update(['created_at' => now()->subDays($diasCredito + 20)]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/projected?window=30')
             ->assertStatus(200);
@@ -176,7 +176,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         AdminContInvoice::create(['numero' => 'F-9103', 'order_id' => 910102, 'cliente' => 'Incobrable', 'monto' => 500, 'es_incobrable' => true]);
         AdminContInvoice::create(['numero' => 'F-9104', 'order_id' => 910103, 'cliente' => 'Saldada', 'monto' => 500, 'saldo_aplicado' => 500]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/projected?window=30')
             ->assertStatus(200);
@@ -199,7 +199,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'registrado_por' => $userId, 'fecha' => now()->subDays(5)->toDateString(),
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/projected?window=30')
             ->assertStatus(200);
@@ -220,7 +220,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now()->subDays(10), 'tipo' => 'cobro', 'concepto' => 'Cobro viejo', 'monto' => 500]);
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now()->subDays(2), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 100]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/real?window=30')
             ->assertStatus(200);
@@ -238,7 +238,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_real_rechaza_window_0(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/real?window=0')
@@ -249,7 +249,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_export_rechaza_real_mas_hoy(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/export?view=real&window=0&format=pdf')
@@ -263,7 +263,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
      */
     public function test_export_rechaza_a_asistente(): void
     {
-        $token = $this->loginAsYaneth();
+        $token = $this->loginAsAsistente();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/export?view=proyectado&window=30&format=pdf')
@@ -272,7 +272,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_export_pdf_proyectado_devuelve_pdf(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/export?view=proyectado&window=30&format=pdf')
@@ -282,7 +282,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_export_excel_real_devuelve_xlsx(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/export?view=real&window=30&format=excel')
@@ -301,7 +301,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9036']);
         AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 300]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->get('/api/admin-contab/cash-position/export?view=real&window=30&format=excel')
             ->assertStatus(200);
@@ -316,7 +316,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     public function test_939_excel_proyectado_escribe_monto_y_neto_como_celdas_numericas(): void
     {
         AdminContInvoice::create(['numero' => 'F-9201', 'order_id' => 920100, 'cliente' => 'Cliente Test', 'monto' => 1000]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $neto = (float) $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/projected?window=30')
@@ -360,7 +360,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'resultado' => AdminContCreditNote::RESULTADO_DEVUELTO, 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION,
             'registrado_por' => $userId, 'fecha' => now()->subDays(5)->toDateString(),
         ]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         // 350 - (1000-800) saldo pendiente = 150 en la salida real, -150.0 en el Excel.
         $salidaMonto = (float) $this->withHeaders($this->authHeaders($token))
@@ -416,7 +416,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'metodo_pago' => AdminContPayment::METODO_YAPPY, 'estado' => AdminContPayment::ESTADO_ESPERANDO_CONFIRMACION,
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(200);
@@ -447,7 +447,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'source_type' => AdminContBankMovement::SOURCE_CREDIT_NOTE, 'source_id' => $note->id,
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(200);
@@ -470,7 +470,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'source_type' => AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION, 'source_id' => 1,
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(200);
@@ -487,7 +487,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'metodo_pago' => AdminContPayment::METODO_EFECTIVO, 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)
@@ -518,7 +518,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'numero_documento_retencion' => 'Retención 2% ISR',
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(200);
@@ -530,7 +530,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_close_pasa_a_pendiente_de_aprobacion_y_asigna_numero(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $headers = $this->authHeaders($token);
 
         $response = $this->withHeaders($headers)
@@ -544,7 +544,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_close_rechaza_doble_cierre(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
@@ -565,7 +565,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             'metodo_pago' => AdminContPayment::METODO_EFECTIVO, 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $headers = $this->authHeaders($token);
         $closed = $this->withHeaders($headers)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
@@ -596,7 +596,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_editar_observacion_de_arqueo_ya_cerrado_es_rechazado(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
@@ -611,7 +611,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         // arqueo de ayer, sin cerrar (fila creada a mano simulando que quedó atrasado).
         AdminContDailyCashCount::create(['fecha' => now()->subDay()->toDateString()]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(200);
@@ -624,7 +624,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
     {
         AdminContDailyCashCount::create(['fecha' => now()->subDay()->toDateString()]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
@@ -650,7 +650,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         AdminContDailyCashCount::create(['fecha' => now()->subDays(3)->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_APROBADO]);
         AdminContDailyCashCount::create(['fecha' => now()->subDays(2)->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_APROBADO]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(200);
@@ -676,7 +676,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         AdminContDailyCashCount::create(['fecha' => now()->subDays(2)->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_APROBADO]);
         // hace 1 día: sin fila, cero movimiento — igual que el escenario reportado.
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(200);
@@ -702,7 +702,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_admin_contab.payments")->where('id', $payment->id)->update(['created_at' => now()->subDay()]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count')
             ->assertStatus(200);
@@ -713,7 +713,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_lista_solo_cerrados_con_contador_de_pendientes(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $headers = $this->authHeaders($token);
 
         $this->withHeaders($headers)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
@@ -727,7 +727,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_rechaza_a_management_para_aprobar_pero_permite_ver(): void
     {
-        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $contabilidadHeaders = $this->authHeaders($this->loginAsContabilidad());
         $this->withHeaders($contabilidadHeaders)->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertStatus(200);
 
         $markToken = $this->loginAsMark();
@@ -738,7 +738,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_approve_es_exclusivo_de_mark(): void
     {
-        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $contabilidadHeaders = $this->authHeaders($this->loginAsContabilidad());
         $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
@@ -760,7 +760,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_approve_rechaza_doble_aprobacion(): void
     {
-        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $contabilidadHeaders = $this->authHeaders($this->loginAsContabilidad());
         $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
@@ -775,7 +775,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_detail_puede_aprobar_true_para_aprobador_cuando_esta_pendiente(): void
     {
-        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $contabilidadHeaders = $this->authHeaders($this->loginAsContabilidad());
         $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
@@ -790,7 +790,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_detail_puede_aprobar_false_para_contabilidad(): void
     {
-        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $contabilidadHeaders = $this->authHeaders($this->loginAsContabilidad());
         $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
@@ -805,7 +805,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_detail_puede_aprobar_false_cuando_ya_esta_aprobado(): void
     {
-        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $contabilidadHeaders = $this->authHeaders($this->loginAsContabilidad());
         $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
@@ -823,7 +823,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_daily_count_export_devuelve_pdf(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/cash-position/daily-count/export')
@@ -885,7 +885,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_history_detail_export_devuelve_pdf(): void
     {
-        $contabilidadHeaders = $this->authHeaders($this->loginAsFelix());
+        $contabilidadHeaders = $this->authHeaders($this->loginAsContabilidad());
         $close = $this->withHeaders($contabilidadHeaders)
             ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
             ->assertStatus(200);
@@ -957,7 +957,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $this->makePedido(500.00, $hoy);
         $this->makePedido(888.00, $ayer);                  // ayer → otro día
 
-        $response = $this->getActiveDailyCount($this->loginAsFelix());
+        $response = $this->getActiveDailyCount($this->loginAsContabilidad());
 
         $this->assertEquals(350.50, $response->json('total_facturado_dia'));
         $this->assertEquals(1500.00, $response->json('total_pasado_a_pedido_dia'));
@@ -971,7 +971,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $this->makeInvoiceAt(400.00, $ayer);
         $this->makePedido(600.00, $ayer);
 
-        $response = $this->getActiveDailyCount($this->loginAsFelix());
+        $response = $this->getActiveDailyCount($this->loginAsContabilidad());
 
         // El arqueo activo es el de HOY (no hay filas ni cobros previos) → contador de hoy en cero.
         // `assertIsNumeric` primero: `assertEquals(0.0, null)` pasaría igual con el campo AUSENTE
@@ -984,7 +984,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_934_indicadores_reflejan_el_estado_al_momento_de_generar_y_cambian_si_se_regenera(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el login HTTP deja el tenant limpio
         $this->makeInvoiceAt(100.00, now()->toDateTimeString());
         $primero = $this->getActiveDailyCount($token);
@@ -998,7 +998,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
 
     public function test_934_close_congela_los_indicadores_contra_una_factura_posterior(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el login HTTP deja el tenant limpio
         $this->makeInvoiceAt(100.00, now()->toDateTimeString());
         $this->makePedido(300.00, now()->toDateTimeString());
@@ -1049,7 +1049,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ],
         ])->save();
 
-        $detail = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $detail = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson("/api/admin-contab/cash-position/history/{$record->id}")
             ->assertStatus(200);
 
@@ -1061,7 +1061,7 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $this->makeInvoiceAt(350.50, now()->toDateTimeString());
         $this->makePedido(1500.00, now()->toDateTimeString());
 
-        $data = $this->getActiveDailyCount($this->loginAsFelix())->json();
+        $data = $this->getActiveDailyCount($this->loginAsContabilidad())->json();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $html = view('admin-cont.daily-cash-count-summary-pdf', (new DailyCashCountSummaryPdfService)->viewData($data))->render();
 
@@ -1084,14 +1084,14 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
             ]);
         }
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/cash-position/history')
             ->assertStatus(200)->json();
 
         $this->assertCount(20, $response['data']);
         $this->assertSame(['total' => 25, 'per_page' => 20, 'current_page' => 1, 'last_page' => 2], $response['meta']);
 
-        $perPage10 = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $perPage10 = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/cash-position/history?per_page=10')
             ->assertStatus(200)->json();
         $this->assertCount(10, $perPage10['data']);

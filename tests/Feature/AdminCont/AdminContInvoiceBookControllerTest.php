@@ -34,7 +34,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -112,7 +112,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         // 2500 @ 0% (exento) -> base 2500, itbms 0.
         $this->makeInvoiceWithRuc(2500.0, $rate0, '2026-01-01 09:00:00', '155-336698-1-2024');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/libro-facturas')
             ->assertStatus(200);
@@ -134,7 +134,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         $factura = $this->makeInvoiceWithRuc(1000.0, $this->makeRate(7.0), '2026-03-01 09:00:00', '8-1-1');
         $this->makeCreditNote($factura, AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, null, 100.0, 93.46, 6.54, '2026-03-05');
 
-        $docs = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $docs = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/reports/libro-facturas')->assertStatus(200)->json('documentos');
 
         $this->assertCount(2, $docs);
@@ -147,7 +147,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
     {
         $invoice = $this->makeInvoiceWithRuc(1000.0, null, '2026-03-01 09:00:00', '8-999-8888');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/libro-facturas')
             ->assertStatus(200);
@@ -169,7 +169,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         // y pasaba igual porque coincidía con un `match` del controller que comparaba contra ESA
         // etiqueta en vez del vocabulario real — el filtro nunca funcionó para ningún valor que el
         // <select> del frontend pudiera enviar de verdad. Ver AdminContInvoiceBookController::build().
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/libro-facturas?tipo=nota_credito')
             ->assertStatus(200);
@@ -187,7 +187,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         $factura = $this->makeInvoiceWithRuc(150.0, $this->makeRate(7.0), '2026-04-01 09:00:00', '155-1-1');
         $this->makeCreditNote($factura, AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, null, 150.0, 140.19, 9.81, '2026-04-05');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/libro-facturas?tipo=factura')
             ->assertStatus(200);
@@ -202,7 +202,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         $factura = $this->makeInvoiceWithRuc(1000.0, $this->makeRate(0.0), '2026-05-01 09:00:00', '155-1-1');
         $this->makeCreditNote($factura, AdminContCreditNote::TIPO_DEVOLUCION_MERCANCIA, null, 200.0, 200.0, 0.0, '2026-05-02');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/libro-facturas')
             ->assertStatus(200);
@@ -215,7 +215,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoiceWithRuc(500.0, $this->makeRate(0.0), '2026-06-01 09:00:00', '155-1-1');
         $invoice->forceFill(['anulada_at' => now()])->save();
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/libro-facturas')
             ->assertStatus(200);
@@ -227,7 +227,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
 
     public function test_export_sin_documentos_devuelve_422(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/libro-facturas/excel?desde=2099-01-01&hasta=2099-01-31')
@@ -238,7 +238,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
     {
         $this->makeInvoiceWithRuc(500.0, $this->makeRate(7.0), '2026-07-01 09:00:00', '155-1-1');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->get('/api/admin-contab/reports/libro-facturas/excel?desde=2026-07-01&hasta=2026-07-31');
 
@@ -252,7 +252,7 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
     {
         $this->makeInvoiceWithRuc(500.0, $this->makeRate(7.0), '2026-07-01 09:00:00', '155-1-1');
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->get('/api/admin-contab/reports/libro-facturas/excel?desde=2026-07-01&hasta=2026-07-31')
             ->assertStatus(200);
         $sheet = $this->loadWorkbook($response)->getActiveSheet();

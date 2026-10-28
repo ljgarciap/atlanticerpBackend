@@ -33,7 +33,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -85,7 +85,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($master->id, 1000.0, 0, '2026-01-01 09:00:00');
         $this->makePayment($invoice, 1000.0, AdminContPayment::METODO_TRANSFERENCIA, '2026-01-01 09:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/ventas-medio-pago')
             ->assertStatus(200);
@@ -102,7 +102,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($master->id, 660.0, 0, '2026-02-01 09:00:00');
         $this->makePayment($invoice, 660.0, AdminContPayment::METODO_TARJETA, '2026-02-01 09:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/ventas-medio-pago?desde=2026-02-01&hasta=2026-02-28')
             ->assertStatus(200);
@@ -124,7 +124,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
         $inv2 = $this->makeInvoice($master->id, 300.0, 0, '2026-03-02 09:00:00');
         $this->makePayment($inv2, 300.0, AdminContPayment::METODO_YAPPY, '2026-03-02 09:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/ventas-medio-pago?desde=2026-03-01&hasta=2026-03-31')
             ->assertStatus(200);
@@ -143,7 +143,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
 
     public function test_export_sin_datos_devuelve_422(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/reports/ventas-medio-pago/excel?desde=2099-01-01&hasta=2099-01-31')
@@ -196,7 +196,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($master->id, 500.0, 0, '2026-04-01 09:00:00');
         $this->makePayment($invoice, 500.0, AdminContPayment::METODO_YAPPY, '2026-04-01 09:00:00');
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $bytes = $this->withHeaders($this->authHeaders($token))
             ->get('/api/admin-contab/reports/ventas-medio-pago/excel?desde=2026-04-01&hasta=2026-04-30')
             ->assertStatus(200)
@@ -234,7 +234,7 @@ class AdminContPaymentMethodSalesControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice($master->id, 500.0, 0, '2026-04-01 09:00:00');
         $this->makePayment($invoice, 500.0, AdminContPayment::METODO_YAPPY, '2026-04-01 09:00:00');
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->get('/api/admin-contab/reports/ventas-medio-pago/excel?desde=2026-04-01&hasta=2026-04-30')
             ->assertStatus(200);
         $sheet = $this->loadWorkbook($response)->getActiveSheet();

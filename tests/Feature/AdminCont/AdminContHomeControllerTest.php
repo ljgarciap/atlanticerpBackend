@@ -44,7 +44,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -131,7 +131,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
 
     public function test_expone_los_5_campos_del_contrato(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $response->assertJsonStructure([
@@ -150,7 +150,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $invoice = $this->makeInvoice(4200, 0, now()->subDays(5)->toDateTimeString());
         $this->makeConfirmedPayment($invoice, 4200, now()->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(4200.0, $response->json('total_cobrado_mes'));
@@ -166,7 +166,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         // Creada hace 10 días => vence en 20 días => todavía al día.
         $noVenceAun = $this->makeInvoice(600, 0, now()->subDays(10)->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(600.0, $response->json('cuentas_al_dia.monto_al_dia'));
@@ -187,7 +187,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         // Incobrable YA aprobada — excluida de `monto`, contabilizada aparte.
         $this->makeInvoice(900, 0, now()->toDateTimeString(), esIncobrable: true);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(800.0, $response->json('cartera_por_cobrar.monto'));
@@ -203,7 +203,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $this->makeInvoice(5000, 0, now()->toDateTimeString());
         $this->makeInvoice(5000, 0, now()->subDays(2)->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(1500.0, $response->json('ventas_de_ayer.monto'));
@@ -232,7 +232,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $invoice = $this->makeCommissionableOrder((int) $vendedor->id, 10000.0);
         $this->makeConfirmedPayment($invoice, 10000.0, now()->toDateTimeString());
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals(150.0, $response->json('comisiones_por_pagar.internas'));
@@ -243,7 +243,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         // Llamado directo ANTES de cualquier request HTTP, mismo motivo que el test de arriba.
         $esperado = app(ArchitectCommissionService::class)->summary()['pendiente_factura'];
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $this->assertEquals($esperado, $response->json('comisiones_por_pagar.externas'));
@@ -267,7 +267,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $this->makeMark();
         $this->makeInvoice(500, 0, now()->toDateTimeString(), false, true);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
 
         $items = collect($response->json('data'));
@@ -286,7 +286,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
             'registrado_por' => $contabilidadId, 'fecha' => now(), 'estado' => AdminContCreditNote::ESTADO_PENDIENTE_APROBACION,
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
 
         $items = collect($response->json('data'));
@@ -308,7 +308,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
             'porcentaje_pendiente_propuesto_at' => now(),
         ]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
 
         $items = collect($response->json('data'));
@@ -320,7 +320,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $this->makeMark();
         AdminContDailyCashCount::create(['fecha' => now()->toDateString(), 'estado' => AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
 
         $items = collect($response->json('data'));
@@ -332,7 +332,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $this->makeMark();
         AdminContPettyCashReport::create(['numero' => 'CC-'.self::uniqueTestNumber(), 'forma_pago' => AdminContPettyCashReport::FORMA_PAGO_EFECTIVO]);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::APPROVALS_URL)->assertStatus(200);
 
         $items = collect($response->json('data'));

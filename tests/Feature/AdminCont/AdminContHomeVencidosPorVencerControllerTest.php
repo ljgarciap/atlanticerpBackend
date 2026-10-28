@@ -30,7 +30,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -72,7 +72,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
 
     public function test_sin_datos_devuelve_ambas_listas_vacias(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
 
         $response->assertJsonStructure(['vencidos', 'por_vencer']);
@@ -86,7 +86,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
         $this->travelTo(CarbonImmutable::parse('2026-06-20 12:00:00'));
         $this->makeInvoiceVenciendoEn(-12, 6200.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 
@@ -102,7 +102,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
         $this->travelTo(CarbonImmutable::parse('2026-06-20 12:00:00'));
         $this->makeInvoiceVenciendoEn(3, 9800.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 
@@ -118,7 +118,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
         $this->travelTo(CarbonImmutable::parse('2026-06-20 12:00:00'));
         $this->makeInvoiceVenciendoEn(0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 
@@ -134,7 +134,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
         $this->makeInvoiceVenciendoEn(7, 100.0);
         $this->makeInvoiceVenciendoEn(8, 200.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 
@@ -155,7 +155,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
         $this->makeInvoiceVenciendoEn(1, 500.0);
         $this->makeInvoiceVenciendoEn(6, 600.0);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 
@@ -169,7 +169,7 @@ class AdminContHomeVencidosPorVencerControllerTest extends FeatureTestCase
         $this->travelTo(CarbonImmutable::parse('2026-06-20 12:00:00'));
         $this->makeInvoiceVenciendoEn(-12, 6200.0, incobrable: true);
 
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))->getJson(self::URL)->assertStatus(200);
         $this->travelBack();
 

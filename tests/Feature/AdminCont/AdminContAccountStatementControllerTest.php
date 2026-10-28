@@ -35,7 +35,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -96,7 +96,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_clients_reusa_el_buscador_de_master_client(): void
     {
         ['master' => $master] = $this->makeClientWithProject('Buscar');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/account-statement/clients?search='.urlencode($master->name))
@@ -109,7 +109,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $m1, 'project' => $p1] = $this->makeClientWithProject('A');
         ['master' => $m2, 'project' => $p2] = $this->makeClientWithProject('B');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement/projects?master_client_id={$m1->id}")
@@ -122,7 +122,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
 
     public function test_projects_sin_master_client_id_falla_422(): void
     {
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/account-statement/projects')
             ->assertStatus(422);
     }
@@ -131,14 +131,14 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
 
     public function test_show_sin_master_client_id_falla_422(): void
     {
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/account-statement')
             ->assertStatus(422);
     }
 
     public function test_show_con_cliente_inexistente_falla_422(): void
     {
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/account-statement?master_client_id=999999')
             ->assertStatus(422);
     }
@@ -148,7 +148,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_show_sin_proyecto_devuelve_solo_el_cliente_y_defaults_de_billing_profile(): void
     {
         ['master' => $master] = $this->makeClientWithProject('Solo');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -165,7 +165,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_show_con_proyecto_incluye_cliente_y_proyecto_en_el_encabezado(): void
     {
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Filtrado');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}&sales_project_id={$project->id}")
@@ -179,7 +179,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $m1] = $this->makeClientWithProject('C1');
         ['project' => $ajeno] = $this->makeClientWithProject('C2');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$m1->id}&sales_project_id={$ajeno->id}")
@@ -192,7 +192,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         AdminContClientBillingProfile::create([
             'master_client_id' => $master->id, 'regimen_fiscal' => 'sin_itbms', 'terminos_pago' => 'Contado',
         ]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -207,7 +207,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_export_excel_devuelve_un_archivo_valido(): void
     {
         ['master' => $master] = $this->makeClientWithProject('Excel');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/admin-contab/account-statement/export?master_client_id={$master->id}")
@@ -221,7 +221,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
 
     public function test_export_excel_sin_cliente_falla_422(): void
     {
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/account-statement/export')
             ->assertStatus(422);
     }
@@ -234,7 +234,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Saldo1');
         $this->makeInvoice($master->id, $project->id, 5200);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -253,7 +253,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         // "Constructora del Istmo" pagó $500 de más) — deja un saldo a favor real de $500.
         $invoice2 = $this->makeInvoice($master->id, $project->id, 4825);
         $this->makeConfirmedPayment($master->id, $invoice2, 5325);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -270,7 +270,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         ['master' => $master] = $this->makeClientWithProject('Pago');
         AdminContFiscalSettings::current()->update(['responsable_administracion_user_id' => $this->userIdByEmailHelper(self::CONTABILIDAD_EMAIL)]);
         AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '03-01-01-074521-4', 'moneda' => 'USD', 'activa' => true]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -296,7 +296,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
             'banco' => 'Banco Demo A', 'tipo_cuenta' => 'corriente', 'ultimos_4_digitos' => '4455',
             'numero_cuenta_completo' => '00-00-00-000000-1', 'moneda' => 'USD', 'activa' => true,
         ]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -314,7 +314,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master] = $this->makeClientWithProject('PagoSinNumero');
         AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4521', 'activa' => true]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -330,7 +330,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master] = $this->makeClientWithProject('PagoBlanco');
         AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '4521', 'numero_cuenta_completo' => '   ', 'activa' => true]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -345,7 +345,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Pdf1');
         $this->makeInvoice($master->id, $project->id, 100);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/admin-contab/account-statement/pdf?master_client_id={$master->id}")
@@ -368,7 +368,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
             'nombre_comercial' => 'O\'Brien "Atlantic" S.A.',
             'direccion_fiscal' => 'Calle "5", Panamá',
         ]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->get("/api/admin-contab/account-statement/pdf?master_client_id={$master->id}")
@@ -407,7 +407,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
 
     public function test_pdf_sin_cliente_falla_422(): void
     {
-        $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/account-statement/pdf')
             ->assertStatus(422);
     }
@@ -428,7 +428,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Nota1');
         $this->makeInvoice($master->id, $project->id, 9800, 0, now()->subDays(200)->toDateTimeString());
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -442,7 +442,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Nota2');
         $invoice = $this->makeInvoice($master->id, $project->id, 100);
         $this->makeConfirmedPayment($master->id, $invoice, 600);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -456,7 +456,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Nota3');
         $invoice = $this->makeInvoice($master->id, $project->id, 9200);
         $this->makeConfirmedPayment($master->id, $invoice, 9200);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -469,7 +469,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Nota4');
         $this->makeInvoice($master->id, $project->id, 100, 50, now()->subDays(10)->toDateTimeString());
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -483,7 +483,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Nota5');
         $invoice = $this->makeInvoice($master->id, $project->id, 100);
         $this->makeConfirmedPayment($master->id, $invoice, 100);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}&sales_project_id={$project->id}")
@@ -497,7 +497,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'sub' => $sub] = $this->makeClientWithProject('Multi');
         SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Segundo proyecto']);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -513,7 +513,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Mov1');
         $invoice = $this->makeInvoice($master->id, $project->id, 8400, 0, '2026-05-01 00:00:00');
         $this->makeConfirmedPayment($master->id, $invoice, 8400, '2026-05-15 00:00:00');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -539,7 +539,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
             'monto_recibido' => 100, 'metodo_pago' => 'transferencia', 'estado' => AdminContPayment::ESTADO_ESPERANDO_CONFIRMACION,
         ]);
         AdminContPaymentInvoice::create(['payment_id' => $payment->id, 'invoice_id' => $invoice->id, 'monto_aplicado' => 100]);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -557,7 +557,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         $i2 = $this->makeInvoice($master->id, $project->id, 6600, 0, '2026-05-28 00:00:00');
         $this->makeConfirmedPayment($master->id, $i1, 6200, '2026-06-05 00:00:00');
         $this->makeConfirmedPayment($master->id, $i2, 6600, '2026-06-18 00:00:00');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -575,7 +575,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Mov4');
         $this->makeInvoice($master->id, $project->id, 100, 0, '2026-04-01 00:00:00');
         $this->makeInvoice($master->id, $project->id, 200, 0, '2026-06-01 00:00:00');
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}&desde=2026-05-01&hasta=2026-06-30")
@@ -592,7 +592,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         $p2 = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Otro proyecto']);
         $this->makeInvoice($master->id, $p1->id, 100);
         $this->makeInvoice($master->id, $p2->id, 200);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}&sales_project_id={$p1->id}")
@@ -607,7 +607,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Excel2');
         $this->makeInvoice($master->id, $project->id, 100);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/admin-contab/account-statement/export?master_client_id={$master->id}")
@@ -625,7 +625,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Money');
         $this->makeInvoice($master->id, $project->id, 250.0);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/admin-contab/account-statement/export?master_client_id={$master->id}")
@@ -679,7 +679,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
 
     private function movimientosFor(int $masterClientId): array
     {
-        return $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        return $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$masterClientId}")
             ->assertStatus(200)
             ->json('movimientos');
@@ -781,7 +781,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     {
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Pag947Default');
         $this->makeInvoice($master->id, $project->id, 100);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -803,7 +803,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         for ($i = 1; $i <= 12; $i++) {
             $this->makeInvoice($master->id, $project->id, 100, 0, sprintf('2026-01-%02d 00:00:00', $i));
         }
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $page1 = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}&per_page=10&page=1")
@@ -839,7 +839,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         ['master' => $master, 'project' => $project] = $this->makeClientWithProject('Recibo');
         $invoice = $this->makeInvoice($master->id, $project->id, 300);
         $payment = $this->makeConfirmedPayment($master->id, $invoice, 300);
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")

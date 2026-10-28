@@ -23,7 +23,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
@@ -59,7 +59,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
         $pendiente = $this->makeAbono($master, AdminContAbono::ESTADO_POR_CONFIRMAR);
         $confirmado = $this->makeAbono($master, AdminContAbono::ESTADO_CONFIRMADO);
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/saldo-favor')
             ->assertStatus(200);
 
@@ -86,7 +86,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
             'fecha' => now(),
         ]);
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/saldo-favor')
             ->assertStatus(200);
 
@@ -114,7 +114,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
             'fecha' => now(), 'motivo_rechazo' => 'No corresponde',
         ]);
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/saldo-favor')
             ->assertStatus(200);
 
@@ -129,7 +129,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
         $master = MasterClient::create(['name' => 'Cliente Saldo '.uniqid()]);
         $this->makeAbono($master, AdminContAbono::ESTADO_CONFIRMADO, monto: 400, usado: 150);
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/saldo-favor')
             ->assertStatus(200);
 
@@ -150,7 +150,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
         $this->makeAbono($masterA, AdminContAbono::ESTADO_CONFIRMADO, monto: 300, usado: 300);     // agotado
         $this->makeAbono($masterB, AdminContAbono::ESTADO_CONFIRMADO, monto: 300, usado: 0);       // disponible, otro cliente
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/saldo-favor?master_client_id='.$masterA->id.'&estado=disponible')
             ->assertStatus(200);
 
@@ -167,7 +167,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
         $this->makeAbono($masterA, AdminContAbono::ESTADO_CONFIRMADO, monto: 300, usado: 0);
         $this->makeAbono($masterB, AdminContAbono::ESTADO_CONFIRMADO, monto: 200, usado: 0);
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/saldo-favor?master_client_id='.$masterA->id)
             ->assertStatus(200);
 
@@ -185,7 +185,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
         $this->makeAbono($masterA, AdminContAbono::ESTADO_CONFIRMADO, monto: 100, usado: 0);
         $this->makeAbono($masterB, AdminContAbono::ESTADO_CONFIRMADO, monto: 100, usado: 0);
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/saldo-favor?cliente=Sensei')
             ->assertStatus(200);
 
@@ -202,7 +202,7 @@ class AdminContSaldoFavorControllerTest extends FeatureTestCase
             $this->makeAbono($master, AdminContAbono::ESTADO_CONFIRMADO, monto: 10, usado: 0);
         }
 
-        $response = $this->withHeaders($this->authHeaders($this->loginAsFelix()))
+        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
             ->getJson('/api/admin-contab/saldo-favor')
             ->assertStatus(200);
 

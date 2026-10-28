@@ -29,14 +29,14 @@ class AdminContSettingsControllerTest extends FeatureTestCase
             ->update(['extra_permissions' => json_encode(['admin_contab.settings.configure'])]);
     }
 
-    private function loginAsFelix(): string
+    private function loginAsContabilidad(): string
     {
         return $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
     }
 
     public function test_show_devuelve_los_valores_por_defecto(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/settings')
@@ -51,7 +51,7 @@ class AdminContSettingsControllerTest extends FeatureTestCase
     public function test_update_cambia_los_umbrales_y_persiste(): void
     {
         $this->grantConfigurePermission();
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/settings', [
@@ -74,7 +74,7 @@ class AdminContSettingsControllerTest extends FeatureTestCase
 
     public function test_update_sin_permiso_configure_retorna_403(): void
     {
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/settings', ['fraude_monto_desviaciones' => 2])
@@ -84,7 +84,7 @@ class AdminContSettingsControllerTest extends FeatureTestCase
     public function test_update_con_valor_cero_retorna_422(): void
     {
         $this->grantConfigurePermission();
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/settings', ['fraude_monto_desviaciones' => 0])
@@ -94,7 +94,7 @@ class AdminContSettingsControllerTest extends FeatureTestCase
     public function test_update_por_encima_del_maximo_retorna_422(): void
     {
         $this->grantConfigurePermission();
-        $token = $this->loginAsFelix();
+        $token = $this->loginAsContabilidad();
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/admin-contab/settings', ['fraude_monto_desviaciones' => 11])

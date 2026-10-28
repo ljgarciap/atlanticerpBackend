@@ -207,7 +207,7 @@ class AdminContPettyCashController
         $detail['puede_rechazar'] = $detail['ubicacion'] === 'reporte'
             && $detail['reporte_estado'] === AdminContPettyCashReport::ESTADO_PENDIENTE_APROBACION
             && $this->isPrimaryApprover($request);
-        $detail['puede_reabrir'] = $detail['ubicacion'] === 'rechazados' && $this->isFelixOrYaneth($request);
+        $detail['puede_reabrir'] = $detail['ubicacion'] === 'rechazados' && $this->isContabilidadOrAsistente($request);
 
         return response()->json($detail);
     }
@@ -399,7 +399,7 @@ class AdminContPettyCashController
      *  asistente_administrativa,lider_operaciones` que protege `PUT /expenses/{id}/reopen` (ver routes/admin-contab.php).
      *  Se duplica acá solo para calcular `puede_reabrir` en el detalle, que SÍ es visible para
      *  Gerencia (no está detrás de ese `role:`) — mismo criterio que `isPrimaryApprover()`. */
-    private function isFelixOrYaneth(Request $request): bool
+    private function isContabilidadOrAsistente(Request $request): bool
     {
         /** @var array{role?: string}|null $payload */
         $payload = $request->attributes->get('jwt');
