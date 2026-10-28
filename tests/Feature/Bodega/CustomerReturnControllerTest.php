@@ -419,6 +419,34 @@ class CustomerReturnControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
+    /** REQ-409 RN1 — no se recibe más de lo entregado: el inventario no sube y la devolución sigue pendiente. */
+    public function test_confirm_reception_no_acepta_mas_de_lo_entregado(): void
+    {
+        $product = $this->makeCatalogProduct();
+        $customerReturn = $this->makeCustomerReturn(itemOverrides: ['catalog_product_id' => $product->id, 'qty_requested' => 3, 'qty_delivered' => 3]);
+        $line = $customerReturn->lines->first();
+        $warehouse = Warehouse::where('name', 'Bodega Central')->first();
+        $this->setStock($product, 10, 'Bodega Central');
+
+        $this->grantBodegaPermissions('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/returns/{$customerReturn->id}/signed-document", [
+                'file' => UploadedFile::fake()->create('firmado.pdf', 100, 'application/pdf'),
+            ])->assertStatus(200);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/returns/{$customerReturn->id}/confirm-reception", [
+                'destination_warehouse_id' => $warehouse->id,
+                'lines' => [['customer_return_line_id' => $line->id, 'qty_received' => 4]],
+            ])
+            ->assertStatus(422);
+
+        $this->makeCurrentTenant();
+        $this->assertSame(CustomerReturn::STATUS_PENDIENTE, CustomerReturn::find($customerReturn->id)->status);
+        $this->assertSame(10, ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $warehouse->id)->value('quantity'), 'el stock no cambió');
+    }
+
     /**
      * REQ-409/410 — cantidad REAL (puede diferir de lo solicitado) + suma al inventario vía
      * Kardex (TIPO_DEVOLUCION) + notifica (sella credit_note_notified_at) en el mismo momento.
