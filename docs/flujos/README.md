@@ -17,7 +17,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | Ventas & Diseño (clientes, arquitectos, comisiones, calendario, catálogo) | Ventas & Diseño, CRM | pendiente (11a) |
 | Compras (pagos, logística, reposición, reclamos, Zona Libre) | Compras | pendiente (11b) |
 | Bodega (inventario, ajustes, devoluciones, rutas, ubicaciones) | Bodega | pendiente (11c) |
-| Admin & Contab (notas de crédito, anulaciones, comisiones, caja chica, arqueo, tesorería) | Admin & Contab | pendiente (11d) |
+| [Admin & Contab: notas de crédito y anulaciones](admin-contab-notas-y-anulaciones.md) | Admin & Contab | verificado (notas de crédito, anulación completa, anulación de cobro); pendiente: compensaciones, abonos, incobrables, comisiones, caja chica, arqueo, tesorería (11d) |
 | Servicios (tickets, técnicos, inspecciones, insumos) | Servicios | pendiente (11e) |
 | Transversales (acceso, usuarios y permisos, notificaciones, catálogos, perfil de empresa) | varios | pendiente (11f) |
 
