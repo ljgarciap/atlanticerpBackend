@@ -65,8 +65,8 @@ class ComprasReportsControllerTest extends FeatureTestCase
 
     public function test_periodo_invalido_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/purchased-by-period?period=fortnight')
@@ -76,11 +76,11 @@ class ComprasReportsControllerTest extends FeatureTestCase
     public function test_comprado_por_periodo_marca_el_mes_en_curso(): void
     {
         // REQ-200 Escenario 1 — el mes en curso se distingue de los ya cerrados.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['total_amount' => 500]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/purchased-by-period?period=month')
             ->assertStatus(200);
@@ -100,13 +100,13 @@ class ComprasReportsControllerTest extends FeatureTestCase
     {
         // REQ-202 Escenario 1 (definición real del Excel, no del texto de Jira solo) — el aviso
         // dispara si "A demanda" + "Tarde" COMBINADOS superan el 50%, no una sola categoría.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrderWithStockState($provider->id, InventoryKpiService::STOCK_DISPONIBLE);
         $this->makeOrderWithStockState($provider->id, InventoryKpiService::STOCK_BAJO_STOCK);
         $this->makeOrderWithStockState($provider->id, InventoryKpiService::STOCK_SIN_STOCK);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/purchase-opportunity')
             ->assertStatus(200);
@@ -118,13 +118,13 @@ class ComprasReportsControllerTest extends FeatureTestCase
 
     public function test_oportunidad_de_compra_sin_aviso_si_reactivas_no_superan_50_por_ciento(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrderWithStockState($provider->id, InventoryKpiService::STOCK_DISPONIBLE);
         $this->makeOrderWithStockState($provider->id, InventoryKpiService::STOCK_DISPONIBLE);
         $this->makeOrderWithStockState($provider->id, InventoryKpiService::STOCK_SIN_STOCK);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/purchase-opportunity')
             ->assertStatus(200);
@@ -136,7 +136,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
     {
         // Orden con 2 líneas: una "disponible", otra "sin_stock" -> la orden completa cuenta
         // como "Tarde" (el peor estado, criterio conservador documentado en la clase).
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
         $p1 = CatalogProduct::create([
@@ -158,7 +158,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
             'stock_state_at_order' => InventoryKpiService::STOCK_SIN_STOCK,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/purchase-opportunity')
             ->assertStatus(200);
@@ -171,7 +171,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
     public function test_oportunidad_de_compra_excluye_ordenes_sin_el_dato_capturado(): void
     {
         // Órdenes de antes de este batch (líneas sin stock_state_at_order) no se cuentan.
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
         $product = CatalogProduct::create([
@@ -183,7 +183,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
             'quantity' => 1, 'unit_cost' => 10, 'subtotal' => 10, 'stock_state_at_order' => null,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/purchase-opportunity')
             ->assertStatus(200);
@@ -196,11 +196,11 @@ class ComprasReportsControllerTest extends FeatureTestCase
     {
         // REQ-201 Escenario 1 — nunca un número distinto al de Proveedores. Esta orden está
         // "Por aprobar" (nunca llegó a "recibido"), así que sigue "Sin calificar" (RN2).
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['total_amount' => 300]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/provider-rating')
             ->assertStatus(200);
@@ -215,7 +215,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
         // SCRUM-264 (hallazgo de QA 2026-07-18) — el ticket pide estas 2 columnas explícitamente.
         // 2 órdenes recibidas: una a tiempo, una tarde -> on_time_percent = 50. La tardía tiene
         // 1 reclamo -> no_claims_percent = 50. Renormalizado (40/65 + 25/65): (50*40+50*25)/65 = 50.
-        $this->grantCompras('designer@atlantic.test', ['compras.write', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write', 'compras.read']);
         $provider = $this->makeProvider();
         $onTimeOrder = $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_RECIBIDO,
@@ -230,7 +230,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
             'status_changed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/provider-rating')
             ->assertStatus(200);
@@ -249,7 +249,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
      */
     public function test_conteo_de_reclamos_es_consistente_entre_calificacion_y_reclamos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = CatalogProduct::create([
             'reference' => 'REF-'.uniqid(), 'name' => 'Artículo', 'description' => 'Artículo', 'price_full' => 20,
@@ -266,7 +266,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
             'status_changed_at' => now(), 'created_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $claimsResponse = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/claims?period=month')
             ->assertStatus(200);
@@ -281,7 +281,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
 
     public function test_reclamos_tasa_y_ranking_por_proveedor(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write']);
         $provider = $this->makeProvider();
         $product = CatalogProduct::create([
             'reference' => 'REF-'.uniqid(), 'name' => 'Artículo', 'description' => 'Artículo', 'price_full' => 20,
@@ -299,7 +299,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
             'status_changed_at' => now(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/claims')
             ->assertStatus(200);
@@ -315,7 +315,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
     public function test_inventario_atencion_usa_los_mismos_numeros_que_inventario(): void
     {
         // REQ-204 — mismos números que la pantalla de Inventario, no un cálculo paralelo.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'REF-'.uniqid(), 'name' => 'Bajo stock', 'description' => 'Bajo stock', 'price_full' => 20,
@@ -323,7 +323,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
             'stock_quantity' => 2, 'reorder_point' => 5,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $reportResponse = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/inventory-attention')
             ->assertStatus(200);
@@ -336,7 +336,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
 
     public function test_liquidacion_de_importaciones_solo_cuenta_zona_libre(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider(['origin' => 'internacional']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
@@ -348,7 +348,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
         ]);
         $this->makeOrder($provider->id, ['modality' => 'directo']); // no debe contar
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/liquidation-imports')
             ->assertStatus(200);
@@ -369,7 +369,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
      */
     public function test_liquidacion_de_importaciones_por_liquidar_y_universo_excluye_no_ordenadas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider(['origin' => 'internacional']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
@@ -388,7 +388,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
             'modality' => 'zona_libre', 'status' => PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
         ]); // idem
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/liquidation-imports')
             ->assertStatus(200);
@@ -402,8 +402,8 @@ class ComprasReportsControllerTest extends FeatureTestCase
 
     public function test_sin_permiso_compras_read_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['ventas_diseno.read']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['ventas_diseno.read']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/reports/purchased-by-period')

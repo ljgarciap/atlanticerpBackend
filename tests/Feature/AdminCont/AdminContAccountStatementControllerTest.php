@@ -84,7 +84,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_show_rechaza_a_un_rol_sin_visibilidad_del_modulo(): void
     {
         ['master' => $master] = $this->makeClientWithProject();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement?master_client_id={$master->id}")
@@ -415,7 +415,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     public function test_pdf_rechaza_a_un_rol_sin_visibilidad_del_modulo(): void
     {
         ['master' => $master] = $this->makeClientWithProject('Pdf2');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/account-statement/pdf?master_client_id={$master->id}")

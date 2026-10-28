@@ -84,7 +84,7 @@ final class ExternalTechnicianController extends Controller
             //
             // SCRUM-337 (rebote QA 2026-08-13, decisión de Luis en el daily 2026-08-18: bug, no
             // excepción intencional) — antes SOLO dependía de `tarifa_visible`, así que un técnico
-            // interno sin `puede_ver_costos` (ej. Tecnico Servicios) veía la tarifa/día real de un externo con
+            // interno sin `puede_ver_costos` (ej. Tecnico) veía la tarifa/día real de un externo con
             // el toggle activado, aunque RN2 dice que el costo/día es exclusivo de
             // Lider Servicios/Mark/David/Whil. Ahora exige ambos, igual que el resto de esta ficha.
             'tarifa_dia'         => ($technician->tarifa_visible && $canSeeCosts) ? $technician->tarifa_dia : null,

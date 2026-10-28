@@ -63,7 +63,7 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
     public function test_usuario_sin_permiso_no_puede_listar_anomalias(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/security/anomalies')
@@ -72,7 +72,7 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
     public function test_superadmin_puede_listar_anomalias(): void
     {
-        $affected = $this->findUser('designer@atlantic.test');
+        $affected = $this->findUser('vendedor@atlantic.test');
         $this->makeAnomaly($affected->id);
 
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
@@ -87,7 +87,7 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
     public function test_confirm_bloquea_al_usuario_afectado_y_marca_la_anomalia_como_confirmada(): void
     {
-        $affected = $this->findUser('designer@atlantic.test');
+        $affected = $this->findUser('vendedor@atlantic.test');
         $this->assertNull($affected->security_blocked_at);
 
         $anomaly = $this->makeAnomaly($affected->id);
@@ -104,14 +104,14 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
         // El usuario bloqueado no puede loguearse
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ])->assertStatus(401);
     }
 
     public function test_confirm_es_idempotente_si_el_usuario_ya_estaba_bloqueado(): void
     {
-        $affected = $this->findUser('designer@atlantic.test');
+        $affected = $this->findUser('vendedor@atlantic.test');
         $this->blockUser($affected);
         $this->refreshUser($affected);
         $originalBlockedAt = $affected->security_blocked_at;
@@ -130,7 +130,7 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
     public function test_dismiss_no_bloquea_al_usuario_afectado(): void
     {
-        $affected = $this->findUser('designer@atlantic.test');
+        $affected = $this->findUser('vendedor@atlantic.test');
         $anomaly  = $this->makeAnomaly($affected->id);
         $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
 
@@ -145,7 +145,7 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
     public function test_unblock_reactiva_a_un_usuario_bloqueado(): void
     {
-        $affected = $this->findUser('designer@atlantic.test');
+        $affected = $this->findUser('vendedor@atlantic.test');
         $this->blockUser($affected);
 
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
@@ -158,14 +158,14 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
         $this->assertNull($affected->security_blocked_at);
 
         $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ])->assertStatus(200);
     }
 
     public function test_unblock_retorna_422_si_el_usuario_no_esta_bloqueado(): void
     {
-        $affected = $this->findUser('designer@atlantic.test');
+        $affected = $this->findUser('vendedor@atlantic.test');
         $this->assertNull($affected->security_blocked_at);
 
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
@@ -190,7 +190,7 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
     public function test_reset_mfa_desactiva_el_mfa_de_un_usuario_bloqueado(): void
     {
-        $affected = $this->findUser('designer@atlantic.test');
+        $affected = $this->findUser('vendedor@atlantic.test');
         $this->enableMfa($affected);
 
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
@@ -205,7 +205,7 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
     public function test_reset_mfa_retorna_422_si_el_usuario_no_tiene_mfa_activo(): void
     {
-        $affected = $this->findUser('designer@atlantic.test');
+        $affected = $this->findUser('vendedor@atlantic.test');
         $this->assertFalse($affected->mfa_enabled);
 
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
@@ -226,12 +226,12 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
 
     public function test_usuario_sin_permiso_no_puede_resetear_mfa_de_otro(): void
     {
-        $affected = $this->findUser('electrician@atlantic.test');
+        $affected = $this->findUser('nivel2@atlantic.test');
         $this->enableMfa($affected);
 
         // designer no tiene superadmin.all (a diferencia de management@atlantic.test,
         // que en el seed sí lo lleva junto con el rol management — ver AuthUserSeeder).
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/admin/security/users/{$affected->id}/mfa/reset")

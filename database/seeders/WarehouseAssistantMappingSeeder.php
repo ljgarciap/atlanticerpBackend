@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * SCRUM-329 Oleada A / Batch A1 (REQ-307, ticket SCRUM-377) — mapeo real vendedor→Asistente de
  * Bodega, confirmado contra la RN1/RN2 del ticket de Jira (no inventado): Asistente Bodega Test 2 recibe
- * los pedidos de Vendedor Disenador, Vendedor Disenador, Vendedor Disenador, Vendedor Disenador y Vendedor Disenador; Asistente Bodega Test recibe los de Vendedor Disenador,
- * Vendedor Disenador, Vendedor Disenador, Vendedor Disenador y Vendedor Disenador. Los 12 emails vienen de `BusinessRoleUserSeeder::USERS`
+ * los pedidos de Vendedor, Vendedor, Vendedor, Vendedor y Vendedor; Asistente Bodega Test recibe los de Vendedor,
+ * Vendedor, Vendedor, Vendedor y Vendedor. Los 12 emails vienen de `BusinessRoleUserSeeder::USERS`
  * (roster real ya sembrado) — ninguno se inventa acá.
  *
  * Corre en TODOS los entornos (bloque "Tipo A" de `DatabaseSeeder`, después de
@@ -28,17 +28,17 @@ class WarehouseAssistantMappingSeeder extends Seeder
 {
     /** @var array<string, string> seller email => assistant email */
     private const MAPPING = [
-        'vendedordisenador8@test.com' => 'asistentebodega2@test.com', // Asistente Bodega Test 2
-        'vendedordisenador3@test.com' => 'asistentebodega2@test.com',
-        'vendedordisenador2@test.com' => 'asistentebodega2@test.com',
-        'vendedordisenador9@test.com' => 'asistentebodega2@test.com',
-        'vendedordisenador6@test.com' => 'asistentebodega2@test.com',
+        'vendedor8@test.com' => 'asistentebodega2@test.com', // Asistente Bodega Test 2
+        'vendedor3@test.com' => 'asistentebodega2@test.com',
+        'vendedor2@test.com' => 'asistentebodega2@test.com',
+        'vendedor9@test.com' => 'asistentebodega2@test.com',
+        'vendedor6@test.com' => 'asistentebodega2@test.com',
 
-        'vendedordisenador10@test.com' => 'asistentebodega@test.com', // Asistente Bodega Test
-        'vendedordisenador4@test.com' => 'asistentebodega@test.com',
-        'vendedordisenador5@test.com' => 'asistentebodega@test.com',
-        'vendedordisenador@test.com' => 'asistentebodega@test.com',
-        'vendedordisenador7@test.com' => 'asistentebodega@test.com',
+        'vendedor10@test.com' => 'asistentebodega@test.com', // Asistente Bodega Test
+        'vendedor4@test.com' => 'asistentebodega@test.com',
+        'vendedor5@test.com' => 'asistentebodega@test.com',
+        'vendedor@test.com' => 'asistentebodega@test.com',
+        'vendedor7@test.com' => 'asistentebodega@test.com',
     ];
 
     public function run(): void

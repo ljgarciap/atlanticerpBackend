@@ -81,12 +81,12 @@ final class ReportsController extends Controller
     /**
      * GET /api/servicios/reportes/comision-tecnico — REQ-285. RN1: el desglose viene
      * exclusivamente de `CommissionCaptureService::commissionForTechnician()` (REQ-258), nunca de
-     * un cálculo paralelo. RN2: gate de visibilidad — SOLO Tecnico Servicios (el propio técnico) y Gerencia
+     * un cálculo paralelo. RN2: gate de visibilidad — SOLO Tecnico (el propio técnico) y Gerencia
      * (`superadmin`/`management`), replicado a propósito idéntico al de
      * `InternalTechnicianController::commission()` en vez de reusarlo directamente, porque acá no
-     * hay `{id}` en la URL (el ticket es específico a Tecnico Servicios, no genérico a "un técnico").
+     * hay `{id}` en la URL (el ticket es específico a Tecnico, no genérico a "un técnico").
      *
-     * El técnico se resuelve por `has_bonus_plan = true` — hoy Tecnico Servicios Test es, por diseño
+     * El técnico se resuelve por `has_bonus_plan = true` — hoy Tecnico Test es, por diseño
      * (`InternalTechnicianSeeder`), el único `InternalTechnician` con plan de bonificación activo;
      * no se hardcodea su nombre/email para no acoplar el endpoint a un dato de seed.
      */

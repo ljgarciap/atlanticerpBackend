@@ -52,7 +52,7 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->firstOrFail();
         $this->setStock($product, 15, 'Bodega Central');
 
-        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
+        $pickerId = $this->userIdByEmail('auxiliarbodega@test.com');
         $courierId = $this->userIdByEmail('transporte@test.com');
         $order = $this->makeOrder([], ['catalog_product_id' => $product->id, 'qty_requested' => 5]);
         $item = $order->items->first();
@@ -184,7 +184,7 @@ class KardexDispatchIntegrationTest extends FeatureTestCase
         $this->setStock($product, 10, 'Bodega Central');
         $this->setStock($product, 5, 'Merma');
 
-        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
+        $pickerId = $this->userIdByEmail('auxiliarbodega@test.com');
         $courierId = $this->userIdByEmail('transporte@test.com');
         $headers = $this->authHeadersForLiderBodega();
         $this->makeCurrentTenant(); // authHeadersForLiderBodega() hace un login HTTP real, que deja el tenant sin "current" al volver.

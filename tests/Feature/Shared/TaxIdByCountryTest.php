@@ -85,8 +85,8 @@ final class TaxIdByCountryTest extends FeatureTestCase
     public function test_un_proveedor_local_usa_las_reglas_del_pais_y_uno_del_exterior_no(): void
     {
         $this->ponerPais('CO');
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->update(['extra_permissions' => json_encode(['compras.read', 'compras.write'])]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode(['compras.read', 'compras.write'])]);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $h = $this->authHeaders($token);
 
         $local = ['name' => 'Local SAS', 'category' => 'locales', 'country' => 'Colombia', 'phone' => '6000-0000'];
@@ -103,10 +103,10 @@ final class TaxIdByCountryTest extends FeatureTestCase
     {
         $this->ponerPais('CO');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $esperado = ['label' => 'NIT', 'uses_dv' => true, 'dv_max_length' => 1];
         $this->withHeaders($this->authHeaders($token))->getJson('/api/auth/me')->assertOk()->assertJsonPath('fiscal_id', $esperado);
-        $this->assertSame($esperado, $this->postJson('/api/auth/login', ['email' => 'designer@atlantic.test', 'password' => 'Password123!'])->assertOk()->json('user.fiscal_id'));
+        $this->assertSame($esperado, $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'Password123!'])->assertOk()->json('user.fiscal_id'));
     }
 
     /** Fase 6d — el nombre visible del impuesto sale del país: ITBMS (PA), IVA (CO), Sales tax (US). */
@@ -116,7 +116,7 @@ final class TaxIdByCountryTest extends FeatureTestCase
             $this->ponerPais($pais);
             $this->assertSame($etiqueta, \App\Shared\Multitenancy\TenantRegion::taxLabel());
 
-            $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+            $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
             $this->withHeaders($this->authHeaders($token))->getJson('/api/auth/me')->assertOk()->assertJsonPath('tax_label', $etiqueta);
         }
 

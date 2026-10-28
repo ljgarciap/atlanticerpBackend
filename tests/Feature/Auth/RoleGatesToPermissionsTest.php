@@ -24,12 +24,12 @@ class RoleGatesToPermissionsTest extends FeatureTestCase
         'lider_operaciones'        => 'lideroperaciones@test.com',
         'lider_bodega'             => 'liderbodega@test.com',
         'asistente_bodega'         => 'asistentebodega@test.com',
-        'auxiliar_bodega'  => 'ayudantegeneralbodega@test.com',
+        'auxiliar_bodega'  => 'auxiliarbodega@test.com',
         'transporte'               => 'transporte@test.com',
         'lider_servicios'          => 'liderservicios@test.com',
-        'tecnico'        => 'tecnicoservicios@test.com',
-        'tecnico_garantias'      => 'garantiasservicios@test.com',
-        'vendedor'       => 'vendedordisenador@test.com',
+        'tecnico'        => 'tecnico@test.com',
+        'tecnico_garantias'      => 'tecnicogarantias@test.com',
+        'vendedor'       => 'vendedor@test.com',
     ];
 
     /**
@@ -114,7 +114,7 @@ class RoleGatesToPermissionsTest extends FeatureTestCase
 
         // …y los permisos nuevos no están en el catálogo, así que `extra_permissions` los rechaza (422).
         $gerencia = $this->loginAs('gerencia@test.com', 'gerencia@test.com', 'management');
-        $id = (int) $this->withHeaders($this->authHeaders($gerencia))->getJson('/api/users?search=vendedordisenador@test.com')->json('data.0.id');
+        $id = (int) $this->withHeaders($this->authHeaders($gerencia))->getJson('/api/users?search=vendedor@test.com')->json('data.0.id');
         $this->assertGreaterThan(0, $id);
 
         foreach (['platform.management', 'ventas_diseno.orders.access'] as $permiso) {

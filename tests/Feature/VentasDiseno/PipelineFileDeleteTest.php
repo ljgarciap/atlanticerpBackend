@@ -28,7 +28,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class PipelineFileDeleteTest extends FeatureTestCase
 {
-    private const EMAIL = 'designer@atlantic.test';
+    private const EMAIL = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {
@@ -138,7 +138,7 @@ class PipelineFileDeleteTest extends FeatureTestCase
         $this->deleteJson("/api/ventas-diseno/pipeline/{$tarjeta->id}/files/{$id}")->assertStatus(401);
 
         // Un rol sin `ventas_diseno.edit` (electricista) no pasa el permiso de la ruta.
-        $token = $this->loginAs('electrician@atlantic.test', 'Password123!', 'electrician');
+        $token = $this->loginAs('nivel2@atlantic.test', 'Password123!', 'electrician');
         $this->borrar($token, $tarjeta->id, $id)->assertStatus(403);
         $this->assertTrue($this->existe($tarjeta, $id));
     }

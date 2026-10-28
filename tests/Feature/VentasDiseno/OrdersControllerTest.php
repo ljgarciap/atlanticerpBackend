@@ -125,7 +125,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_solo_lista_pedidos_de_cotizaciones_aprobadas(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $approved = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-APROBADO');
@@ -155,7 +155,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_gerencia_ve_los_pedidos_de_todo_el_equipo(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
@@ -179,7 +179,7 @@ class OrdersControllerTest extends FeatureTestCase
     // quedaba viendo solo lo suyo — este test replica el request real del frontend (sin `scope`).
     public function test_gerencia_ve_todo_el_equipo_sin_mandar_scope_explicito_como_hace_el_frontend_real(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
@@ -202,7 +202,7 @@ class OrdersControllerTest extends FeatureTestCase
     // PipelineCard.owner_id.
     public function test_gerencia_filtra_pedidos_por_vendedores_seleccionados(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
@@ -221,7 +221,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_pedidos_sin_permiso_retorna_403(): void
     {
-        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
+        $token = $this->loginAs('nivel5@atlantic.test', 'Password123!', 'supervisor');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/orders')
@@ -232,7 +232,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_margen_cotizado_disponible_de_inmediato_sin_factura(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         // precio 100, costo 60 -> margen 40%.
@@ -251,7 +251,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_margen_facturado_mixto_y_parcial_con_productos_pendientes(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $p1 = $this->makeCatalogProduct(60, 'CAT-001');
         $p2 = $this->makeCatalogProduct(60, 'CAT-002');
 
@@ -281,7 +281,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_margen_facturado_definitivo_cuando_todos_los_productos_ya_facturaron(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
@@ -300,7 +300,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_diferencia_de_margen_por_producto_en_puntos_porcentuales(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60); // costo cotizado 60 -> margen 40% a precio 100.
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
@@ -321,7 +321,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_estado_margen_bajo_cuando_la_caida_supera_el_umbral(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60); // margen cotizado 40%.
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
@@ -338,7 +338,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_estado_margen_mejoro_cuando_la_caida_no_supera_el_umbral(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60); // margen cotizado 40%.
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
@@ -358,7 +358,7 @@ class OrdersControllerTest extends FeatureTestCase
         // Baja el umbral a 1pt -> una caída de 2pts (que antes era "mejoró") ahora es "bajó".
         OrdersSettings::current()->update(['margin_drop_threshold_pts' => 1.0]);
 
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
@@ -377,7 +377,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_kpis_no_cambian_con_los_filtros_de_busqueda_activos(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-UNO');
@@ -394,7 +394,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_margen_facturado_promedio_solo_cuenta_pedidos_100_facturados(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $p1 = $this->makeCatalogProduct(60, 'CAT-A');
         $p2 = $this->makeCatalogProduct(60, 'CAT-B');
 
@@ -417,7 +417,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_filtro_de_estado_acota_la_tabla(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-PENDIENTE');
@@ -436,7 +436,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_busqueda_por_folio_cliente_o_proyecto(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-9001');
@@ -460,7 +460,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_producto_compartido_entre_2_pedidos_en_la_misma_po_queda_pendiente_para_ambos(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
@@ -510,7 +510,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_dos_recepciones_confirmadas_para_el_mismo_producto_usa_la_mas_antigua_de_forma_determinista(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
 
         $order = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]]);
@@ -547,12 +547,12 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_vendedor_con_ventas_diseno_read_recibe_403_en_listado_y_detalle(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $product = $this->makeCatalogProduct(60);
         $propio = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-PROPIO-1119');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))->getJson('/api/ventas-diseno/orders')->assertStatus(403);
         $this->withHeaders($this->authHeaders($token))->getJson("/api/ventas-diseno/orders/{$propio['quote']->id}")->assertStatus(403);
         $this->withHeaders($this->authHeaders($token))->getJson("/api/ventas-diseno/orders?owner_ids[]={$designerId}")->assertStatus(403);
@@ -560,7 +560,7 @@ class OrdersControllerTest extends FeatureTestCase
 
     public function test_compras_ve_todos_los_pedidos_sin_tener_ventas_diseno_read(): void
     {
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $managerId  = $this->userIdByEmail('management@atlantic.test');
         $product = $this->makeCatalogProduct(60);
         $deDisenador = $this->makeApprovedOrder($designerId, [['price' => 100, 'cost' => 60, 'qty' => 1, 'product' => $product]], 'COT-1119-A');

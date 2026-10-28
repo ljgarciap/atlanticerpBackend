@@ -25,7 +25,7 @@ class DepartmentControllerTest extends FeatureTestCase
 
     public function test_listar_con_rol_designer_sin_permiso_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/departments')
@@ -34,7 +34,7 @@ class DepartmentControllerTest extends FeatureTestCase
 
     public function test_crear_con_rol_designer_sin_permiso_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/departments', ['name' => 'Intento sin permiso'])
@@ -49,7 +49,7 @@ class DepartmentControllerTest extends FeatureTestCase
             ->assertStatus(201);
         $id = $created->json('id');
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($designerToken))
             ->putJson("/api/departments/{$id}", ['name' => 'Hackeado'])
             ->assertStatus(403);
@@ -63,7 +63,7 @@ class DepartmentControllerTest extends FeatureTestCase
             ->assertStatus(201);
         $id = $created->json('id');
 
-        $electricianToken = $this->loginAs('electrician@atlantic.test', 'Password123!', 'electrician');
+        $electricianToken = $this->loginAs('nivel2@atlantic.test', 'Password123!', 'electrician');
         $this->withHeaders($this->authHeaders($electricianToken))
             ->patchJson("/api/departments/{$id}/status", ['is_active' => false])
             ->assertStatus(403);

@@ -94,7 +94,7 @@ class OrderExportControllerTest extends FeatureTestCase
     public function test_export_sin_permiso_bodega_read_retorna_403(): void
     {
         $order = $this->makeOrder();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->get("/api/bodega/orders/{$order->id}/picking-sheet/export")

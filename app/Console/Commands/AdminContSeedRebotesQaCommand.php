@@ -82,8 +82,8 @@ final class AdminContSeedRebotesQaCommand extends Command
         $tenant->makeCurrent();
 
         $felixId = (int) User::where('email', 'contabilidad@test.com')->value('id');
-        $neilId = (int) User::where('email', 'vendedordisenador2@test.com')->value('id');
-        $fefiId = (int) User::where('email', 'vendedordisenador3@test.com')->value('id');
+        $neilId = (int) User::where('email', 'vendedor2@test.com')->value('id');
+        $fefiId = (int) User::where('email', 'vendedor3@test.com')->value('id');
 
         if ($felixId === 0 || $neilId === 0 || $fefiId === 0) {
             $this->error('Faltan usuarios base del roster real (Contabilidad/Vendedor) — abortando.');

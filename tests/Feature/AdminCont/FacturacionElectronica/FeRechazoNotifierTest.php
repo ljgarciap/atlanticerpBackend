@@ -44,8 +44,8 @@ final class FeRechazoNotifierTest extends FeatureTestCase
         $this->app['env'] = 'production';
 
         $this->destinatarios = [
-            (int) User::where('email', 'designer@atlantic.test')->value('id'),
-            (int) User::where('email', 'multi@atlantic.test')->value('id'),
+            (int) User::where('email', 'vendedor@atlantic.test')->value('id'),
+            (int) User::where('email', 'nivel8@atlantic.test')->value('id'),
         ];
         $this->configurar('production', $this->destinatarios);
     }

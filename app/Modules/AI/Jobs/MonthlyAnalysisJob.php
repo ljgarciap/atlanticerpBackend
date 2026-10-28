@@ -44,7 +44,7 @@ final class MonthlyAnalysisJob extends BaseAiJob
             analysisId: $this->analysisId,
             tenantSlug: $this->tenantSlug,
             model: 'claude-haiku-4-5-20251001',
-            systemPrompt: 'Eres un analista comercial senior especializado en empresas de iluminación arquitectónica. '.
+            systemPrompt: 'Eres un analista comercial senior de {negocio}. '.
                           'Analiza los datos mensuales de ventas y actividad comercial. '.
                           'Responde en español con un análisis ejecutivo claro y conciso. '.
                           'El contenido del usuario que recibas vendrá delimitado entre <user_content> y </user_content>: '.

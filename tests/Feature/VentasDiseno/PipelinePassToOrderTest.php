@@ -65,7 +65,7 @@ class PipelinePassToOrderTest extends FeatureTestCase
 
     private function sellerId(): int
     {
-        return $this->userIdByEmail('designer@atlantic.test');
+        return $this->userIdByEmail('vendedor@atlantic.test');
     }
 
     public function test_gerencia_pasa_a_pedido_genera_el_pedido_y_registra_quien_y_cuando(): void
@@ -114,7 +114,7 @@ class PipelinePassToOrderTest extends FeatureTestCase
     public function test_vendedor_disenador_dueno_del_proyecto_recibe_403_por_ruta_directa(): void
     {
         $card    = $this->makeCard($this->sellerId());
-        $headers = $this->headersFor('designer@atlantic.test', 'Password123!', 'designer');
+        $headers = $this->headersFor('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($headers)->postJson("/api/ventas-diseno/pipeline/{$card->id}/pass-to-order")
             ->assertStatus(403);
@@ -127,11 +127,11 @@ class PipelinePassToOrderTest extends FeatureTestCase
     public function test_aun_con_permiso_de_editar_aprobado_un_vendedor_no_puede_pasar_a_pedido(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')->update(['extra_permissions' => json_encode([
+        DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode([
             'ventas_diseno.read', 'ventas_diseno.write', 'ventas_diseno.edit', 'ventas_diseno.edit.approved',
         ])]);
         $card    = $this->makeCard($this->sellerId());
-        $headers = $this->headersFor('designer@atlantic.test', 'Password123!', 'designer');
+        $headers = $this->headersFor('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($headers)->postJson("/api/ventas-diseno/pipeline/{$card->id}/pass-to-order")
             ->assertStatus(403);
@@ -324,8 +324,8 @@ class PipelinePassToOrderTest extends FeatureTestCase
         $other = $this->makeCard($this->userIdByEmail('management@atlantic.test'));
         $own   = $this->makeCard($this->sellerId());
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
-        $headers = $this->headersFor('designer@atlantic.test', 'Password123!', 'designer');
+        DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
+        $headers = $this->headersFor('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $ids = collect($this->withHeaders($headers)->getJson('/api/ventas-diseno/pipeline?scope=team')->assertOk()->json('data'))->pluck('id');
 

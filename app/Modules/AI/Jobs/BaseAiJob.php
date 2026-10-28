@@ -7,6 +7,7 @@ namespace App\Modules\AI\Jobs;
 use App\Modules\AI\Events\AnalysisCompleted;
 use App\Modules\AI\Models\AiAnalysis;
 use App\Modules\AI\Models\AiModelPricing;
+use App\Modules\AI\Support\BusinessProfile;
 use App\Modules\AI\Support\PromptSanitizer;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Services\AuditService;
@@ -84,6 +85,7 @@ abstract class BaseAiJob implements ShouldQueue
             );
         }
 
+        $systemPrompt = BusinessProfile::fill($systemPrompt);
         $userMessage = $taskInstruction . "\n\n" . PromptSanitizer::wrap($untrustedContext);
 
         try {

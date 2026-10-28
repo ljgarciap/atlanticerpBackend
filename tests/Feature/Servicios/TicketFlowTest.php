@@ -13,7 +13,7 @@ use Tests\Feature\FeatureTestCase;
 
 /**
  * Fase 4 — Servicios, Batch 1 (REQ-216→221, REQ-249). Usuarios reales de Servicios (Lider Servicios Leis/
- * lider_servicios, Tecnico Servicios Test/tecnico, Garantias Servicios Test/tecnico_garantias) y de
+ * lider_servicios, Tecnico Test/tecnico, Tecnico Garantias Test/tecnico_garantias) y de
  * Ventas & Diseño (vendedor) ya existen vía `BusinessRoleUserSeeder` en TODOS los
  * entornos incl. testing — password = el email (cast `hashed`, ver `User::casts()`). Los permisos
  * de módulo (`RoleModuleVisibility`/`SecurityLevelModulePermission`) ya vienen sembrados por las
@@ -23,13 +23,13 @@ class TicketFlowTest extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
+    private const TECNICO_SERVICIOS = 'tecnico@test.com';
 
-    private const GARANTIAS_SERVICIOS = 'garantiasservicios@test.com';
+    private const GARANTIAS_SERVICIOS = 'tecnicogarantias@test.com';
 
     private const MANAGEMENT = 'gerencia@test.com';
 
-    private const VENDEDOR_DISENADOR = 'vendedordisenador@test.com';
+    private const VENDEDOR_DISENADOR = 'vendedor@test.com';
 
     protected function setUp(): void
     {

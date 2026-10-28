@@ -40,7 +40,7 @@ final class TransversalCleanupTestDataCommandTest extends FeatureTestCase
             'created_at' => now(),
         ]);
 
-        $report = $this->runReport('designer@atlantic.test');
+        $report = $this->runReport('vendedor@atlantic.test');
 
         $refreshTokenCandidate = collect($report['delete_candidates'])
             ->first(fn (array $c): bool => $c['table'] === 'atlantic_auth.refresh_tokens');
@@ -64,7 +64,7 @@ final class TransversalCleanupTestDataCommandTest extends FeatureTestCase
             'created_by' => $purgeUserId,
         ]);
 
-        $report = $this->runReport('designer@atlantic.test');
+        $report = $this->runReport('vendedor@atlantic.test');
 
         $projectCandidate = collect($report['null_candidates'])
             ->first(fn (array $c): bool => $c['table'] === 'atlantic_crm.projects');
@@ -76,16 +76,16 @@ final class TransversalCleanupTestDataCommandTest extends FeatureTestCase
 
     public function test_data_del_usuario_a_conservar_nunca_aparece_como_candidata(): void
     {
-        $keepUserId = $this->userIdByEmail('designer@atlantic.test');
+        $keepUserId = $this->userIdByEmail('vendedor@atlantic.test');
 
         $project = Project::create([
-            'nombre'     => 'Proyecto de Vendedor Disenador/keep-user #'.self::uniqueTestNumber(),
+            'nombre'     => 'Proyecto de Vendedor/keep-user #'.self::uniqueTestNumber(),
             'etapa'      => 'lead',
             'tipo'       => 'diseno',
             'created_by' => $keepUserId,
         ]);
 
-        $report = $this->runReport('designer@atlantic.test');
+        $report = $this->runReport('vendedor@atlantic.test');
 
         // El proyecto es del keep-user — la fila entera de atlantic_crm.projects ni
         // siquiera debería calificar como candidata (ni a NULL ni a DELETE). Comparar SOLO
@@ -128,7 +128,7 @@ final class TransversalCleanupTestDataCommandTest extends FeatureTestCase
         $quote = Quote::create(['owner_id' => $purgeUserId]);
         QuotePart::create(['quote_id' => $quote->id, 'name' => 'Partida de prueba']);
 
-        $report = $this->runReport('designer@atlantic.test');
+        $report = $this->runReport('vendedor@atlantic.test');
 
         $quotesCandidate = collect($report['delete_candidates'])
             ->first(fn (array $c): bool => $c['table'] === 'atlantic_ventas_diseno.quotes');
@@ -157,7 +157,7 @@ final class TransversalCleanupTestDataCommandTest extends FeatureTestCase
 
         AuditLog::create(['user_id' => $purgeUserId, 'action' => 'test.action.created']);
 
-        $report = $this->runReport('designer@atlantic.test');
+        $report = $this->runReport('vendedor@atlantic.test');
 
         $auditLogsCandidate = collect($report['null_candidates'])
             ->first(fn (array $c): bool => $c['table'] === 'atlantic_auth.audit_logs');
@@ -185,7 +185,7 @@ final class TransversalCleanupTestDataCommandTest extends FeatureTestCase
 
         Artisan::call('data:cleanup-test-data', [
             '--tenant'       => 'atlantic',
-            '--keep-user'    => 'designer@atlantic.test',
+            '--keep-user'    => 'vendedor@atlantic.test',
             '--force'        => true,
             '--env-override' => true,
             '--json'         => true,

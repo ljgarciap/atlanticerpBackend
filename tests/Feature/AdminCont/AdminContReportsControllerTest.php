@@ -34,7 +34,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     private const APPROVER_EMAIL = 'gerencia3@test.com';
 
-    private const DESIGNER_EMAIL = 'designer@atlantic.test';
+    private const DESIGNER_EMAIL = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {

@@ -57,9 +57,9 @@ final class CustomerReturnPdfPostTest extends FeatureTestCase
     /** @return array<string, string> */
     private function bodegaHeaders(): array
     {
-        $this->grantBodegaPermissions('designer@atlantic.test');
+        $this->grantBodegaPermissions('vendedor@atlantic.test');
 
-        return $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
+        return $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
     }
 
     /** @return list<string> */
@@ -107,7 +107,7 @@ final class CustomerReturnPdfPostTest extends FeatureTestCase
         $document = OrderDocument::query()->latest('id')->firstOrFail();
         $this->assertSame(OrderDocument::TIPO_GUIA_ENTREGA, $document->tipo);
         $this->assertSame($return->order_id, $document->order_id);
-        $this->assertSame($this->userIdByEmail('designer@atlantic.test'), $document->uploaded_by);
+        $this->assertSame($this->userIdByEmail('vendedor@atlantic.test'), $document->uploaded_by);
     }
 
     /** Semántica de repetición (sin cambios respecto al GET): cada llamada genera un objeto S3 nuevo y, en la guía, un documento nuevo; no hay deduplicación. */
@@ -148,7 +148,7 @@ final class CustomerReturnPdfPostTest extends FeatureTestCase
     public function test_sin_permiso_de_bodega_responde_403_y_no_genera_nada(string $ruta): void
     {
         $return = $this->makeCustomerReturn();
-        $token  = $this->loginAs('electrician@atlantic.test', self::PASSWORD, 'electrician');
+        $token  = $this->loginAs('nivel2@atlantic.test', self::PASSWORD, 'electrician');
 
         $this->postJson("/api/bodega/returns/{$return->id}/{$ruta}", [], $this->authHeaders($token))->assertStatus(403);
 
@@ -182,8 +182,8 @@ final class CustomerReturnPdfPostTest extends FeatureTestCase
     public function test_con_claim_act_el_post_da_403_impersonation_read_only_sin_crear_nada(string $ruta): void
     {
         $return = $this->makeCustomerReturn();
-        $this->grantBodegaPermissions('designer@atlantic.test');
-        $designer = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantBodegaPermissions('vendedor@atlantic.test');
+        $designer = $this->userIdByEmail('vendedor@atlantic.test');
 
         $admin = $this->authHeaders($this->loginAs('superadmin@atlantic.test', self::PASSWORD, 'superadmin'));
         $token = (string) $this->postJson("/api/users/{$designer}/impersonate", [
@@ -206,8 +206,8 @@ final class CustomerReturnPdfPostTest extends FeatureTestCase
     #[DataProvider('rutas')]
     public function test_con_claim_act_el_get_viejo_tambien_esta_cerrado(string $ruta): void
     {
-        $this->grantBodegaPermissions('designer@atlantic.test');
-        $designer = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantBodegaPermissions('vendedor@atlantic.test');
+        $designer = $this->userIdByEmail('vendedor@atlantic.test');
         $admin = $this->authHeaders($this->loginAs('superadmin@atlantic.test', self::PASSWORD, 'superadmin'));
         $token = (string) $this->postJson("/api/users/{$designer}/impersonate", [
             'reason' => 'SCRUM-1180 ver devoluciones', 'operator_password' => self::PASSWORD,

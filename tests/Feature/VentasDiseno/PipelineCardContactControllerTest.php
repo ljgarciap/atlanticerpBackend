@@ -49,11 +49,11 @@ class PipelineCardContactControllerTest extends FeatureTestCase
 
     public function test_crear_contacto_requiere_telefono_o_correo(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/contacts", ['name' => 'Sin contacto', 'role' => 'client'])
@@ -62,11 +62,11 @@ class PipelineCardContactControllerTest extends FeatureTestCase
 
     public function test_crear_contacto_de_rol_arquitecto(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/contacts", [
@@ -85,12 +85,12 @@ class PipelineCardContactControllerTest extends FeatureTestCase
 
     public function test_editar_y_borrar_contacto(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId);
         $contact = $card->contacts()->create(['name' => 'Original', 'role' => 'other', 'phone' => '6000-0000']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}/contacts/{$contact->id}", [
@@ -111,11 +111,11 @@ class PipelineCardContactControllerTest extends FeatureTestCase
 
     public function test_no_se_puede_agregar_contacto_a_tarjeta_perdida(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'lost');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/pipeline/{$card->id}/contacts", ['name' => 'X', 'role' => 'other', 'phone' => '6000-0000'])

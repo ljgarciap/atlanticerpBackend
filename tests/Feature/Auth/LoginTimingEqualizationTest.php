@@ -27,7 +27,7 @@ class LoginTimingEqualizationTest extends FeatureTestCase
     {
         return [
             'correo inexistente'          => ['nadie@atlantic.test', 'inexistente'],
-            'cuenta activa, clave mala'   => ['designer@atlantic.test', 'activa'],
+            'cuenta activa, clave mala'   => ['vendedor@atlantic.test', 'activa'],
             'cuenta inactiva'             => ['inactiva-1034@atlantic.test', 'inactiva'],
         ];
     }
@@ -76,7 +76,7 @@ class LoginTimingEqualizationTest extends FeatureTestCase
 
     public function test_el_login_correcto_sigue_funcionando(): void
     {
-        $this->postJson('/api/auth/login', ['email' => 'designer@atlantic.test', 'password' => 'Password123!'])
+        $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'Password123!'])
             ->assertStatus(200)->assertJsonStructure(['token', 'refresh_token']);
     }
 }

@@ -116,7 +116,7 @@ class Fase3RolesGenericosTest extends FeatureTestCase
     /** Decisión de Luis: reingreso obligado, sin alias. El claim `role` viejo no da ni quita nada: los permisos viajan aparte y ningún gate compara el claim con las 4 claves renombradas. */
     public function test_un_token_con_la_clave_vieja_en_el_claim_role_sigue_resolviendo_por_permisos(): void
     {
-        $token = $this->loginAs('vendedordisenador@test.com', 'vendedordisenador@test.com');
+        $token = $this->loginAs('vendedor@test.com', 'vendedor@test.com');
         $claims = app(JwtService::class)->decode($token);
         $this->assertSame('vendedor', $claims['role']);
 
@@ -128,7 +128,7 @@ class Fase3RolesGenericosTest extends FeatureTestCase
 
     public function test_login_y_me_devuelven_el_nombre_visible_del_rol(): void
     {
-        $login = $this->postJson('/api/auth/login', ['email' => 'vendedordisenador@test.com', 'password' => 'vendedordisenador@test.com']);
+        $login = $this->postJson('/api/auth/login', ['email' => 'vendedor@test.com', 'password' => 'vendedor@test.com']);
         $login->assertStatus(200)->assertJsonPath('user.role', 'vendedor')->assertJsonPath('user.role_name', 'Vendedor');
 
         $this->withHeaders($this->authHeaders((string) $login->json('token')))->getJson('/api/auth/me')
@@ -136,7 +136,7 @@ class Fase3RolesGenericosTest extends FeatureTestCase
 
         // Renombrar el rol por CRUD (sin deploy) se refleja en el siguiente login.
         \Illuminate\Support\Facades\DB::table('atlantic_auth.roles')->where('key', 'vendedor')->update(['name' => 'Ejecutivo comercial']);
-        $this->postJson('/api/auth/login', ['email' => 'vendedordisenador@test.com', 'password' => 'vendedordisenador@test.com'])
+        $this->postJson('/api/auth/login', ['email' => 'vendedor@test.com', 'password' => 'vendedor@test.com'])
             ->assertJsonPath('user.role_name', 'Ejecutivo comercial');
     }
 }

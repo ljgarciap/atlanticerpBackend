@@ -21,7 +21,7 @@ class WarehouseAssistantMappingControllerTest extends FeatureTestCase
 
     public function test_jefe_de_bodega_puede_crear_el_mapeo(): void
     {
-        $sellerId = $this->userIdByEmail('vendedordisenador6@test.com');
+        $sellerId = $this->userIdByEmail('vendedor6@test.com');
         $assistantId = $this->userIdByEmail('asistentebodega2@test.com'); // Asistente Bodega
         $this->grantBodegaPermissions('liderbodega@test.com'); // Lider Bodega
         $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
@@ -37,7 +37,7 @@ class WarehouseAssistantMappingControllerTest extends FeatureTestCase
     /** Un Asistente de Bodega (no el Jefe) NO puede editar el mapeo. */
     public function test_asistente_de_bodega_no_puede_crear_el_mapeo(): void
     {
-        $sellerId = $this->userIdByEmail('vendedordisenador6@test.com');
+        $sellerId = $this->userIdByEmail('vendedor6@test.com');
         $assistantId = $this->userIdByEmail('asistentebodega2@test.com');
         $this->grantBodegaPermissions('asistentebodega@test.com'); // Asistente Bodega, asistente_bodega
         $token = $this->loginAs('asistentebodega@test.com', 'asistentebodega@test.com', 'asistente_bodega');
@@ -50,7 +50,7 @@ class WarehouseAssistantMappingControllerTest extends FeatureTestCase
     /** Reasignar un vendedor desactiva el mapeo anterior — nunca 2 filas activas para el mismo vendedor. */
     public function test_reasignar_vendedor_desactiva_el_mapeo_anterior(): void
     {
-        $sellerId = $this->userIdByEmail('vendedordisenador6@test.com');
+        $sellerId = $this->userIdByEmail('vendedor6@test.com');
         $assistant1 = $this->userIdByEmail('asistentebodega2@test.com');
         $assistant2 = $this->userIdByEmail('asistentebodega@test.com');
         $this->grantBodegaPermissions('liderbodega@test.com');
@@ -67,9 +67,9 @@ class WarehouseAssistantMappingControllerTest extends FeatureTestCase
 
     public function test_index_lista_solo_mapeos_activos(): void
     {
-        $sellerId = $this->userIdByEmail('vendedordisenador6@test.com');
+        $sellerId = $this->userIdByEmail('vendedor6@test.com');
         $assistantId = $this->userIdByEmail('asistentebodega2@test.com');
-        // WarehouseAssistantMappingSeeder (Batch A1) ya siembra un mapeo activo real para Vendedor Disenador
+        // WarehouseAssistantMappingSeeder (Batch A1) ya siembra un mapeo activo real para Vendedor
         // (REQ-307 RN1) — se limpia acá para que este test controle su propio estado, sin
         // acoplarse al roster real de vendedores/asistentes del seeder.
         WarehouseAssistantMapping::where('seller_user_id', $sellerId)->delete();

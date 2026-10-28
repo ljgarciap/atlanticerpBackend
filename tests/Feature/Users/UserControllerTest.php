@@ -332,7 +332,7 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_listar_usuarios_con_rol_designer_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/users')
@@ -341,7 +341,7 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_ver_usuario_por_id_con_rol_designer_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/users/1')
@@ -350,7 +350,7 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_crear_usuario_con_rol_designer_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/users', [
@@ -364,7 +364,7 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_actualizar_usuario_con_rol_designer_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/users/1', ['first_name' => 'Hack'])
@@ -373,7 +373,7 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_cambiar_estado_con_rol_electrician_retorna_403(): void
     {
-        $token = $this->loginAs('electrician@atlantic.test', 'Password123!', 'electrician');
+        $token = $this->loginAs('nivel2@atlantic.test', 'Password123!', 'electrician');
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson('/api/users/1/status', ['is_active' => false])
@@ -397,7 +397,7 @@ class UserControllerTest extends FeatureTestCase
         $targetId = $create->json('id');
 
         // 'multi' tiene rol management pero nivel 8 (no superadmin.all)
-        $actorToken = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $actorToken = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         // No toca security_level_id — solo el nombre. Antes del fix esto pasaba (200).
         $this->withHeaders($this->authHeaders($actorToken))
@@ -419,7 +419,7 @@ class UserControllerTest extends FeatureTestCase
         $create->assertStatus(201);
         $targetId = $create->json('id');
 
-        $actorToken = $this->loginAs('multi@atlantic.test', 'Password123!', 'management');
+        $actorToken = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
 
         // toggleStatus no tenía NINGUNA guardia jerárquica antes del fix.
         $this->withHeaders($this->authHeaders($actorToken))
@@ -432,7 +432,7 @@ class UserControllerTest extends FeatureTestCase
     public function test_actor_con_permiso_security_users_pero_rol_no_gerencial_no_puede_listar_usuarios(): void
     {
         // Senior Review 2026-08-02 (Fase 4 — Servicios, hallazgo CRÍTICO): este test verificaba
-        // originalmente que supervisor@ (Nivel 5 "Team Lead") podía listar usuarios porque el
+        // originalmente que nivel5@ (Nivel 5 "Team Lead") podía listar usuarios porque el
         // Nivel 5 traía `security.users` baked in en su catálogo legado — es decir, exactamente el
         // bug real que se cerró en 2026_08_02_100005 (cualquier usuario, sin importar su rol real,
         // ganaba administración de usuarios solo por caer en un nivel numérico con ese permiso).
@@ -443,9 +443,9 @@ class UserControllerTest extends FeatureTestCase
         // — se lo seteamos acá explícitamente en vez de depender del catálogo legado del nivel,
         // preservando la intención real del test (el gate es por PERMISO, no por rol/nivel).
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        User::where('email', 'supervisor@atlantic.test')->update(['manage_users' => true]);
+        User::where('email', 'nivel5@atlantic.test')->update(['manage_users' => true]);
 
-        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!', 'supervisor');
+        $token = $this->loginAs('nivel5@atlantic.test', 'Password123!', 'supervisor');
 
         // SCRUM-1012: el permiso (flag manage_users) ya no alcanza solo — Usuarios exige ADEMAS
         // el rol base management/superadmin.
@@ -757,9 +757,9 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_actualizar_flags_sin_permiso_security_users_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $target = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $target = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
 
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/admin/users/{$target->id}/flags", ['manage_users' => true])

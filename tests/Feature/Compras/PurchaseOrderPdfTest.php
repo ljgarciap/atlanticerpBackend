@@ -62,10 +62,10 @@ class PurchaseOrderPdfTest extends FeatureTestCase
 
     public function test_pdf_con_costo_es_un_documento_pdf_valido(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $order = $this->makeOrderWithLine();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->get("/api/compras/orders/{$order->id}/pdf")
             ->assertStatus(200);
@@ -78,7 +78,7 @@ class PurchaseOrderPdfTest extends FeatureTestCase
     {
         // REQ-136 Escenario 1 — se prueba sobre el HTML fuente (antes de convertir a PDF), más
         // confiable que inspeccionar el binario del PDF generado.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $order = $this->makeOrderWithLine();
         $order->load(['provider', 'lines.catalogProduct']);
 
@@ -98,7 +98,7 @@ class PurchaseOrderPdfTest extends FeatureTestCase
 
     public function test_vista_con_costo_incluye_total(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $order = $this->makeOrderWithLine();
         $order->load(['provider', 'lines.catalogProduct']);
 
@@ -131,7 +131,7 @@ class PurchaseOrderPdfTest extends FeatureTestCase
     /** SCRUM-1123 — sin referencia de fábrica la celda queda vacía y el PDF se genera sin error. */
     public function test_producto_sin_referencia_de_fabrica_deja_celda_vacia_y_genera_pdf(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $order = $this->makeOrderWithLine();
         $order->load(['provider', 'lines.catalogProduct']);
 
@@ -141,7 +141,7 @@ class PurchaseOrderPdfTest extends FeatureTestCase
         ])->render();
         $this->assertMatchesRegularExpression('/<td><\/td>\s*<td>REF-1<\/td>/', $html);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->get("/api/compras/orders/{$order->id}/pdf")
             ->assertStatus(200)
@@ -150,10 +150,10 @@ class PurchaseOrderPdfTest extends FeatureTestCase
 
     public function test_enviar_correo_sin_email_de_proveedor_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
         $order = $this->makeOrderWithLine();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/send-email")
             ->assertStatus(422);
@@ -164,10 +164,10 @@ class PurchaseOrderPdfTest extends FeatureTestCase
     public function test_enviar_correo_con_email_de_proveedor_encola_y_envia(): void
     {
         // QUEUE_CONNECTION=sync en testing (.env.testing) — el job corre en el mismo request.
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
         $order = $this->makeOrderWithLine(['email' => 'proveedor@proveedor-demo-a.test']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/send-email", ['include_cost' => true])
             ->assertStatus(202);
@@ -180,10 +180,10 @@ class PurchaseOrderPdfTest extends FeatureTestCase
 
     public function test_enviar_correo_sin_permiso_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $order = $this->makeOrderWithLine(['email' => 'proveedor@proveedor-demo-a.test']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/send-email")
             ->assertStatus(403);

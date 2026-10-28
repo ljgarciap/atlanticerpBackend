@@ -441,7 +441,7 @@ class AdminContReversosF4Test extends FeatureTestCase
 
     public function test_reversar_el_cobro_de_un_pedido_ya_liquidado_deja_la_comision_pagada_y_registra_un_descuento_para_la_siguiente_liquidacion(): void
     {
-        $vendedor = (int) User::where('email', 'designer@atlantic.test')->value('id');
+        $vendedor = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
         $facturaA = $this->pedidoComisionable($vendedor, 15000, 2);   // cerrado hace 2 meses
         [$contabilidad, $approver] = $this->sesiones();
         $masterA = MasterClient::findOrFail($facturaA->master_client_id);
@@ -476,7 +476,7 @@ class AdminContReversosF4Test extends FeatureTestCase
 
     public function test_un_descuento_mayor_a_la_liquidacion_deja_el_resto_para_la_siguiente(): void
     {
-        $vendedor = (int) User::where('email', 'designer@atlantic.test')->value('id');
+        $vendedor = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
         $facturaB = $this->pedidoComisionable($vendedor, 15000, 1);   // comisión del mes pasado: $225
         [$contabilidad] = $this->sesiones();
         $masterB = MasterClient::findOrFail($facturaB->master_client_id);

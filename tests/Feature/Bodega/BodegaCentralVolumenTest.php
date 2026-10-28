@@ -27,8 +27,8 @@ final class BodegaCentralVolumenTest extends FeatureTestCase
         DB::statement("INSERT INTO atlantic_bodega.product_warehouse_stock (catalog_product_id, warehouse_id, quantity, created_at, updated_at)
             SELECT id, {$central}, stock_quantity, now(), now() FROM atlantic_ventas_diseno.catalog_products WHERE reference LIKE 'VOL-%'");
 
-        $this->grantBodegaPermissions('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $url = "/api/bodega/warehouses/{$central}";
         $this->withHeaders($this->authHeaders($token))->getJson($url)->assertOk(); // calienta
 

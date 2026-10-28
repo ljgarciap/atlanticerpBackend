@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
  */
 final class InternalTechnicianService
 {
-    // REQ-259 RN3 — paleta fija; ámbar reservado en la práctica para Garantias Servicios Test (seed real),
+    // REQ-259 RN3 — paleta fija; ámbar reservado en la práctica para Tecnico Garantias Test (seed real),
     // pero no hay una regla que lo prohíba explícitamente para otro — solo unicidad real.
     private const COLOR_PALETTE = [
         '#F59E0B', '#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F97316', '#6366F1', '#14B8A6',
@@ -60,7 +60,7 @@ final class InternalTechnicianService
             return [
                 'id' => $t->id,
                 // Batch 10 (REQ-258 RN8) — el frontend necesita saber "es este técnico el usuario
-                // en sesión" para mostrar el mini-indicador de comisión solo a Tecnico Servicios mismo o
+                // en sesión" para mostrar el mini-indicador de comisión solo a Tecnico mismo o
                 // Gerencia (el backend igual re-valida esto mismo en GET .../commission, esto solo
                 // decide si mostrar el botón).
                 'user_id' => $t->user_id,

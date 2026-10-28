@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Batch 2 (REQ-225 RN5, REQ-226 RN2) — regla de "especialidad" de técnico interno por tipo de
- * ticket: Garantías solo la atiende `tecnico_garantias` (hoy, Garantias Servicios Test); cualquier otro
+ * ticket: Garantías solo la atiende `tecnico_garantias` (hoy, Tecnico Garantias Test); cualquier otro
  * tipo (Instalación/Reclamo/Retrofit) solo lo atienden los `tecnico` — nunca se mezclan.
  * El módulo formal de Técnicos Internos con un campo propio de "especialidad" es Batch 6 (todavía
  * no construido); esta regla ya es 100% resolvible hoy con el rol real de cada usuario (mismo

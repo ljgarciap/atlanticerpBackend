@@ -48,7 +48,7 @@ class StartPickingConcurrencyTest extends FeatureTestCase
 
     public function test_dos_inicios_de_picking_concurrentes_solo_uno_avanza_a_en_picking(): void
     {
-        $pickerId = (int) DB::table('atlantic_auth.users')->where('email', 'ayudantegeneralbodega@test.com')->value('id');
+        $pickerId = (int) DB::table('atlantic_auth.users')->where('email', 'auxiliarbodega@test.com')->value('id');
 
         $order = Order::create([
             'order_number' => 'PED-CONC-'.random_int(10000, 999999),

@@ -72,9 +72,9 @@ final class ClientTaxDataTest extends FeatureTestCase
 
     private function designerToken(string ...$permissions): string
     {
-        $this->grant('designer@atlantic.test', 'ventas_diseno.write', ...$permissions);
+        $this->grant('vendedor@atlantic.test', 'ventas_diseno.write', ...$permissions);
 
-        return $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        return $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
     }
 
     private function reTenant(): void
@@ -207,8 +207,8 @@ final class ClientTaxDataTest extends FeatureTestCase
 
     public function test_validar_exige_permiso_de_escritura_y_formato(): void
     {
-        $this->grant('supervisor@atlantic.test'); // solo lectura
-        $sinPermiso = $this->loginAs('supervisor@atlantic.test', 'Password123!');
+        $this->grant('nivel5@atlantic.test'); // solo lectura
+        $sinPermiso = $this->loginAs('nivel5@atlantic.test', 'Password123!');
         $this->withHeaders($this->authHeaders($sinPermiso))->postJson(self::URL_VALIDAR, ['tax_id' => '155704849-2-2021'])->assertStatus(403);
 
         $token = $this->designerToken();
@@ -219,7 +219,7 @@ final class ClientTaxDataTest extends FeatureTestCase
     public function test_la_validacion_tiene_un_limite_de_20_por_minuto_por_usuario(): void
     {
         $this->fakeMsl(['ok' => true, 'valido' => true, 'nombre' => 'X', 'dv' => '32']);
-        $this->limpiarLimite('designer@atlantic.test');
+        $this->limpiarLimite('vendedor@atlantic.test');
         $token = $this->designerToken();
 
         for ($i = 0; $i < 20; $i++) {
@@ -227,7 +227,7 @@ final class ClientTaxDataTest extends FeatureTestCase
         }
 
         $this->withHeaders($this->authHeaders($token))->postJson(self::URL_VALIDAR, ['tax_id' => '155704849-2-2021'])->assertStatus(429);
-        $this->limpiarLimite('designer@atlantic.test');
+        $this->limpiarLimite('vendedor@atlantic.test');
     }
 
     // ─── Edición de datos fiscales ────────────────────────────────────────────────────────────────
@@ -306,8 +306,8 @@ final class ClientTaxDataTest extends FeatureTestCase
     public function test_sin_ningun_permiso_de_edicion_es_403(): void
     {
         $ctx = $this->subClienteConPedido();
-        $this->grant('supervisor@atlantic.test', 'ventas_diseno.write'); // escribe (alta) pero no edita
-        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
+        $this->grant('nivel5@atlantic.test', 'ventas_diseno.write'); // escribe (alta) pero no edita
+        $token = $this->loginAs('nivel5@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))->patchJson($this->url($ctx['sub']), $this->payloadNuevo())->assertStatus(403);
         $this->reTenant();
@@ -415,11 +415,11 @@ final class ClientTaxDataTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($this->designerToken('ventas_diseno.edit')))->getJson(self::URL_DIRECTORIO)->assertStatus(200);
         // Solo el permiso angosto, sin ventas_diseno.read de más: es el caso de Contabilidad desde Admin&Cont.
-        $this->grant('designer@atlantic.test', 'ventas_diseno.edit.client_tax_data');
-        $this->withHeaders($this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer')))->getJson(self::URL_DIRECTORIO)->assertStatus(200);
+        $this->grant('vendedor@atlantic.test', 'ventas_diseno.edit.client_tax_data');
+        $this->withHeaders($this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer')))->getJson(self::URL_DIRECTORIO)->assertStatus(200);
 
-        $this->grant('supervisor@atlantic.test', 'ventas_diseno.write'); // escribe pero no edita
-        $this->withHeaders($this->authHeaders($this->loginAs('supervisor@atlantic.test', 'Password123!')))->getJson(self::URL_DIRECTORIO)->assertStatus(403);
+        $this->grant('nivel5@atlantic.test', 'ventas_diseno.write'); // escribe pero no edita
+        $this->withHeaders($this->authHeaders($this->loginAs('nivel5@atlantic.test', 'Password123!')))->getJson(self::URL_DIRECTORIO)->assertStatus(403);
     }
 
     public function test_el_directorio_busca_por_razon_social_ruc_y_cliente_master_y_marca_los_bloqueados(): void
@@ -461,8 +461,8 @@ final class ClientTaxDataTest extends FeatureTestCase
     public function test_validar_acepta_tambien_el_permiso_angosto_sin_ventas_diseno_write(): void
     {
         $this->fakeMsl(['ok' => true, 'valido' => true, 'nombre' => 'X', 'dv' => '32']);
-        $this->grant('supervisor@atlantic.test', 'ventas_diseno.edit.client_tax_data'); // como Contabilidad: sin .write
-        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
+        $this->grant('nivel5@atlantic.test', 'ventas_diseno.edit.client_tax_data'); // como Contabilidad: sin .write
+        $token = $this->loginAs('nivel5@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))->postJson(self::URL_VALIDAR, ['tax_id' => '155704849-2-2021'])->assertStatus(200);
     }

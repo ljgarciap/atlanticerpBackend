@@ -147,8 +147,8 @@ class ComprasZonaLibreRequestControllerTest extends FeatureTestCase
     public function test_bodega_no_puede_aprobar_ni_rechazar(): void
     {
         $zonaLibreRequest = $this->makeRequestWithLine();
-        $this->grantBodega('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodega('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/zona-libre/requests/{$zonaLibreRequest->id}/approve")

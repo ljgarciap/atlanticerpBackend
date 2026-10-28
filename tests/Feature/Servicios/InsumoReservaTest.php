@@ -30,7 +30,7 @@ class InsumoReservaTest extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
+    private const TECNICO_SERVICIOS = 'tecnico@test.com';
 
     protected function setUp(): void
     {
@@ -125,8 +125,8 @@ class InsumoReservaTest extends FeatureTestCase
         // en el mismo dispatch (PurchaseOrderController.php + OriginBadge.tsx). Se verifica acá vía
         // el endpoint HTTP real que usa Compras, no solo el modelo, para que una futura regresión de
         // "olvidar exponer el campo" se detecte en este nivel.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
+        $comprasToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($comprasToken))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200)
@@ -240,8 +240,8 @@ class InsumoReservaTest extends FeatureTestCase
         $orderId = $purchaseRequest->purchase_order_id;
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $comprasToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($comprasToken);
 
         // PENDIENTE_LIQUIDAR -> ORDENADO (la orden nace en pendiente_liquidar porque
@@ -327,8 +327,8 @@ class InsumoReservaTest extends FeatureTestCase
         $orderId = $purchaseRequest->purchase_order_id;
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $comprasToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($comprasToken);
 
         $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200);
@@ -406,8 +406,8 @@ class InsumoReservaTest extends FeatureTestCase
         $reservaId = $this->reservaWarehouseId();
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $comprasToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($comprasToken);
 
         $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200);
@@ -481,8 +481,8 @@ class InsumoReservaTest extends FeatureTestCase
         $reservaId = $this->reservaWarehouseId();
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $comprasToken = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $comprasToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($comprasToken);
 
         $this->withHeaders($headers)->patchJson("/api/compras/orders/{$orderId}/advance")->assertStatus(200);
@@ -528,8 +528,8 @@ class InsumoReservaTest extends FeatureTestCase
         $product = $this->makeProduct(['provider_id' => $provider->id]);
         $bodegaCentralId = $this->bodegaCentralWarehouseId();
 
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read', 'compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         // loginAs() ya disparó una request HTTP real, que resetea el search_path/tenant "actual"

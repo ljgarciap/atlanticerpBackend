@@ -69,7 +69,7 @@ class SecurityLevelControllerTest extends FeatureTestCase
 
     public function test_crear_nivel_sin_permiso_security_levels_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/security-levels', ['name' => 'X'])
@@ -117,7 +117,7 @@ class SecurityLevelControllerTest extends FeatureTestCase
 
     public function test_update_permissions_sin_permiso_security_levels_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->activateTenant();
         $levelId = DB::table('security_levels')->where('level', 4)->value('id');
 

@@ -47,7 +47,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
     private function beginImpersonation(): array
     {
         $admin = $this->authHeaders($this->loginAs('superadmin@atlantic.test', self::PASSWORD, 'superadmin'));
-        $response = $this->postJson('/api/users/' . $this->userId('designer@atlantic.test') . '/impersonate', [
+        $response = $this->postJson('/api/users/' . $this->userId('vendedor@atlantic.test') . '/impersonate', [
             'reason' => self::REASON, 'operator_password' => self::PASSWORD,
         ], $admin)->assertStatus(201);
 
@@ -67,7 +67,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
     public function test_un_evento_auditado_durante_la_sesion_queda_a_nombre_del_actor_con_el_objetivo_en_la_metadata(): void
     {
         [$headers, $sessionId] = $this->beginImpersonation();
-        $designer   = $this->userId('designer@atlantic.test');
+        $designer   = $this->userId('vendedor@atlantic.test');
         $superadmin = $this->userId('superadmin@atlantic.test');
 
         // Un GET sin permiso genera `security.access_denied` vía CheckPermission → AuditService, con el sub del token (el diseñador).
@@ -83,7 +83,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
     public function test_ningun_registro_de_la_sesion_queda_a_nombre_del_objetivo(): void
     {
         [$headers] = $this->beginImpersonation();
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
 
         $this->getJson('/api/auth/me', $headers)->assertOk();
         $this->getJson('/api/admin/security/impersonations', $headers)->assertStatus(403);
@@ -112,12 +112,12 @@ final class ImpersonationAuditTest extends FeatureTestCase
 
     public function test_un_evento_fuera_de_impersonacion_no_lleva_metadata_de_impersonacion(): void
     {
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
         $this->getJson('/api/admin/security/impersonations', $headers)->assertStatus(403);
 
         $this->reMakeCurrent();
         $log = AuditLog::query()->where('action', AuditService::SECURITY_ACCESS_DENIED)->latest('id')->firstOrFail();
-        $this->assertSame($this->userId('designer@atlantic.test'), $log->user_id);
+        $this->assertSame($this->userId('vendedor@atlantic.test'), $log->user_id);
         $this->assertArrayNotHasKey('impersonated_user_id', $log->metadata);
         $this->assertArrayNotHasKey('impersonation_id', $log->metadata);
     }
@@ -158,7 +158,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
     public function test_un_actingUserId_explicito_no_desvia_la_atribucion_durante_la_impersonacion(): void
     {
         $superadmin = $this->userId('superadmin@atlantic.test');
-        $designer   = $this->userId('designer@atlantic.test');
+        $designer   = $this->userId('vendedor@atlantic.test');
         $this->actAsImpersonation($superadmin, $designer, (string) Str::uuid());
 
         app(AuditService::class)->log(action: 'test.explicit_acting_user', actingUserId: $designer);
@@ -170,7 +170,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
     /** Senior Review R2 — con contexto de impersonación el autor es SIEMPRE el `actor_id`, aunque sea null: nunca cae al `actingUserId` (el suplantado). */
     public function test_con_contexto_de_impersonacion_sin_actor_no_se_cae_al_acting_user_id(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $request  = Request::create('/api/test', 'GET');
         // `act` mal formado: hay contexto de impersonación pero no se puede resolver el actor.
         $request->attributes->set('jwt', ['sub' => $designer, 'act' => [], 'tenant' => 'atlantic']);
@@ -186,7 +186,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
 
     public function test_sin_contexto_de_impersonacion_el_acting_user_id_explicito_sigue_ganando(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $request  = Request::create('/api/test', 'GET');
         $request->attributes->set('jwt', ['sub' => $this->userId('superadmin@atlantic.test'), 'tenant' => 'atlantic']);
         $this->app->instance('request', $request);
@@ -202,7 +202,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
     public function test_el_rastro_automatico_de_eloquent_tambien_va_al_actor(): void
     {
         $superadmin = $this->userId('superadmin@atlantic.test');
-        $designer   = $this->userId('designer@atlantic.test');
+        $designer   = $this->userId('vendedor@atlantic.test');
         $impId      = (string) Str::uuid();
         $this->actAsImpersonation($superadmin, $designer, $impId);
 
@@ -219,7 +219,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
     public function test_el_trigger_de_base_de_datos_atribuye_al_actor_real(): void
     {
         $superadmin = $this->userId('superadmin@atlantic.test');
-        $designer   = $this->userId('designer@atlantic.test');
+        $designer   = $this->userId('vendedor@atlantic.test');
         $request    = Request::create('/api/test', 'GET');
         $request->attributes->set('jwt', ['sub' => $designer, 'act' => ['sub' => $superadmin, 'imp_id' => (string) Str::uuid()]]);
 
@@ -240,7 +240,7 @@ final class ImpersonationAuditTest extends FeatureTestCase
 
     public function test_sin_impersonacion_el_trigger_sigue_atribuyendo_al_sub(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $request  = Request::create('/api/test', 'GET');
         $request->attributes->set('jwt', ['sub' => $designer]);
 

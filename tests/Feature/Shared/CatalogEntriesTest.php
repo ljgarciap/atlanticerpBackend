@@ -49,7 +49,7 @@ final class CatalogEntriesTest extends FeatureTestCase
 
     public function test_la_lista_de_dominios_informa_que_no_puede_cambiar_una_entrada_de_sistema(): void
     {
-        $h = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        $h = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
         $dominios = collect($this->withHeaders($h)->getJson('/api/catalogs/domains')->assertOk()->json())->keyBy('domain');
 
         $this->assertSame(['sort_order', 'categoria'], $dominios['pipeline_stage']['locked_when_system']);
@@ -61,7 +61,7 @@ final class CatalogEntriesTest extends FeatureTestCase
     {
         $this->getJson('/api/catalogs/provider_category')->assertStatus(401);
 
-        $h = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        $h = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
         $this->withHeaders($h)->getJson('/api/catalogs/provider_category')->assertOk()->assertJsonCount(6)->assertJsonPath('0.key', 'locales');
         $this->withHeaders($h)->getJson('/api/catalogs/no_existe')->assertNotFound();
         $this->withHeaders($h)->getJson('/api/catalogs/domains')->assertOk()->assertJsonFragment(['domain' => 'architect_type']);

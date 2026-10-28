@@ -540,7 +540,7 @@ final class PurchaseOrderController extends Controller
     /**
      * SCRUM-210 (REQ-147, alcance reducido) — asigna/cambia la agencia de liquidación de una
      * orden Zona Libre y dispara el evento de dominio para que Bodega lo consuma (RN6 del
-     * ticket, "avisar a Garantias Servicios", queda para cuando ese módulo exista — ver docblock del evento).
+     * ticket, "avisar a Tecnico Garantias", queda para cuando ese módulo exista — ver docblock del evento).
      * No cambia `status` — la secuencia de estados no se toca en este alcance reducido.
      */
     public function liquidate(Request $request, int $id): JsonResponse

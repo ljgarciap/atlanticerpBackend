@@ -52,7 +52,7 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
     {
         $request = Request::create('/api/test', 'GET');
         $request->attributes->set('jwt', [
-            'sub' => $this->userId('designer@atlantic.test'),
+            'sub' => $this->userId('vendedor@atlantic.test'),
             'act' => ['sub' => $this->userId('superadmin@atlantic.test'), 'imp_id' => (string) Str::uuid()],
             'tenant' => 'atlantic',
         ]);
@@ -62,7 +62,7 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
     private function actAsNormalUser(): void
     {
         $request = Request::create('/api/test', 'GET');
-        $request->attributes->set('jwt', ['sub' => $this->userId('designer@atlantic.test'), 'tenant' => 'atlantic']);
+        $request->attributes->set('jwt', ['sub' => $this->userId('vendedor@atlantic.test'), 'tenant' => 'atlantic']);
         $this->app->instance('request', $request);
     }
 
@@ -76,7 +76,7 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
 
     public function test_con_act_el_mes_cerrado_se_calcula_y_no_se_congela_el_snapshot(): void
     {
-        $vendor = $this->userId('designer@atlantic.test');
+        $vendor = $this->userId('vendedor@atlantic.test');
         $month  = CarbonImmutable::now()->subMonths(2)->startOfMonth();
         $this->actAsImpersonation();
 
@@ -91,7 +91,7 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
 
     public function test_sin_act_el_snapshot_se_sigue_creando_y_los_datos_son_los_mismos(): void
     {
-        $vendor = $this->userId('designer@atlantic.test');
+        $vendor = $this->userId('vendedor@atlantic.test');
         $month  = CarbonImmutable::now()->subMonths(2)->startOfMonth();
 
         $this->actAsImpersonation();
@@ -107,7 +107,7 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
 
     public function test_con_act_un_snapshot_ya_congelado_se_lee_sin_cambios(): void
     {
-        $vendor = $this->userId('designer@atlantic.test');
+        $vendor = $this->userId('vendedor@atlantic.test');
         $month  = CarbonImmutable::now()->subMonths(2)->startOfMonth();
         $this->actAsNormalUser();
         app(CommissionOrderService::class)->percentForVendorMonth($vendor, $month, $this->ordersOf($month, 12000.0));
@@ -125,7 +125,7 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
 
     public function test_el_mes_en_curso_no_cambia_con_act(): void
     {
-        $vendor = $this->userId('designer@atlantic.test');
+        $vendor = $this->userId('vendedor@atlantic.test');
         $month  = CarbonImmutable::now()->startOfMonth();
         $this->actAsImpersonation();
 
@@ -187,9 +187,9 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
 
     public function test_el_reporte_de_comisiones_no_congela_la_cohorte_durante_la_sesion_y_si_fuera_de_ella(): void
     {
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $month    = now()->subMonths(5);
         $this->makeApprovedCard($designer, 25000, $month);
         $this->reMakeCurrent();
@@ -211,7 +211,7 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
         $this->assertEquals(500, $viewedRow['commission_amount']);
 
         // La persona, en su propia sesión, sí la congela y ve los mismos números.
-        $own = $this->getJson($url, $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer')))->assertOk();
+        $own = $this->getJson($url, $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer')))->assertOk();
         $ownRow = collect($own->json('cohorts'))->firstWhere('month', $month->format('Y-m'));
         $this->reMakeCurrent();
         $this->assertSame($before + 1, CommissionCohort::query()->count());
@@ -223,16 +223,16 @@ final class ImpersonationSnapshotsTest extends FeatureTestCase
 
     public function test_la_pantalla_de_inicio_del_observado_responde_200_con_los_mismos_datos(): void
     {
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
 
         $admin = $this->authHeaders($this->loginAs('superadmin@atlantic.test', self::PASSWORD, 'superadmin'));
         $token = (string) $this->postJson("/api/users/{$designer}/impersonate", ['reason' => 'SCRUM-1158 ver inicio', 'operator_password' => self::PASSWORD], $admin)
             ->assertStatus(201)->json('token');
 
         $viewed = $this->getJson('/api/ventas-diseno/home/summary', $this->authHeaders($token))->assertOk();
-        $own    = $this->getJson('/api/ventas-diseno/home/summary', $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer')))->assertOk();
+        $own    = $this->getJson('/api/ventas-diseno/home/summary', $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer')))->assertOk();
 
         $this->assertEquals($own->json(), $viewed->json());
     }

@@ -24,9 +24,9 @@ class HomeControllerTest extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const CARLOS = 'tecnicoservicios@test.com';
+    private const CARLOS = 'tecnico@test.com';
 
-    private const MIGUEL = 'garantiasservicios@test.com';
+    private const MIGUEL = 'tecnicogarantias@test.com';
 
     private const MANAGEMENT = 'gerencia@test.com';
 
@@ -159,7 +159,7 @@ class HomeControllerTest extends FeatureTestCase
         $this->assertSame([$early->id, $late->id], $ids);
     }
 
-    /** RN3 — el color debe ser EXACTAMENTE el mismo que internal_technicians.color (Garantias Servicios Test = ámbar). */
+    /** RN3 — el color debe ser EXACTAMENTE el mismo que internal_technicians.color (Tecnico Garantias Test = ámbar). */
     public function test_rutas_dia_color_de_tecnico_coincide_con_tecnicos_internos(): void
     {
         $miguel = InternalTechnician::where('email', self::MIGUEL)->firstOrFail();
@@ -603,7 +603,7 @@ class HomeControllerTest extends FeatureTestCase
         $ticket = $this->makeTicket();
         $this->makeQuote($ticket, ServiceQuote::ESTADO_SENT, 500.00);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/servicios/home/approvals-pending')
             ->assertStatus(200);

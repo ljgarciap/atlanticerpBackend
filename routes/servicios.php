@@ -62,7 +62,7 @@ Route::patch('/settings', [ServiciosSettingsController::class, 'update'])
 // Fase 4 — Servicios, pantalla "Reportes" (SCRUM-350→356, REQ-280→286). 7 endpoints GET de solo
 // lectura, sin tablas nuevas. Lectura: mismo permiso que el resto del módulo
 // (permission:servicios.read), salvo /comision-tecnico — RN2 (REQ-285) restringe la
-// visibilidad al propio Tecnico Servicios y a Gerencia, mismo permiso angosto que ya usa
+// visibilidad al propio Tecnico y a Gerencia, mismo permiso angosto que ya usa
 // /internal-technicians/{id}/commission (servicios.technicians.commission.view_own, Fase 2 de la
 // auditoría de permisos — el chequeo fino "es este técnico o es Gerencia" vive en el controller,
 // la ruta solo deja pasar a quien PODRÍA calificar).

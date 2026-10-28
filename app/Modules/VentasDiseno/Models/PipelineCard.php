@@ -121,7 +121,7 @@ class PipelineCard extends Model
 
     /**
      * SCRUM-1195 — mismo criterio que `projectIdsOwnedBy()` para varias personas a la vez (filtro Vendedor/Diseñador del listado de
-     * cotizaciones de Gerencia: «los proyectos de Vendedor Disenador» incluye los que le asignaron, no solo lo que ella generó).
+     * cotizaciones de Gerencia: «los proyectos de Vendedor» incluye los que le asignaron, no solo lo que ella generó).
      *
      * @param list<int> $userIds
      * @return list<int>

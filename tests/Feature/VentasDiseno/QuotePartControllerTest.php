@@ -38,10 +38,10 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_crear_partida_sin_nombre_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts", [])
@@ -50,10 +50,10 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_crear_y_renombrar_partida(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $create = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts", ['name' => 'Partida 1'])
@@ -74,10 +74,10 @@ class QuotePartControllerTest extends FeatureTestCase
      */
     public function test_partidas_conservan_el_orden_de_creacion(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         foreach (['Partida Z', 'Partida A', 'Partida B'] as $name) {
@@ -94,10 +94,10 @@ class QuotePartControllerTest extends FeatureTestCase
     /** SCRUM-953 — una partida duplicada nunca se agrupa junto a la original, queda al final. */
     public function test_partida_duplicada_queda_al_final_no_junto_a_la_original(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $partAId = $this->withHeaders($headers)
@@ -117,12 +117,12 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_borrar_partida_en_cotizacion_ajena_retorna_403(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $managerId = $this->userIdByEmail('management@atlantic.test');
         $quote = Quote::create(['owner_id' => $managerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}")
@@ -133,10 +133,10 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_crear_partida_en_cotizacion_confirmada_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId, 'folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts", ['name' => 'Partida Nueva'])
@@ -145,12 +145,12 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_renombrar_partida_en_cotizacion_confirmada_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $quote->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}", ['name' => 'Intento de Renombrar'])
@@ -165,15 +165,15 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_duplicar_partida_copia_items_e_independiza_la_original(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $part->items()->create([
             'is_custom' => true, 'reference' => 'REF-1', 'description' => 'Producto A',
             'quantity' => 2, 'unit_price' => 100,
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}/duplicate")
@@ -194,8 +194,8 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_duplicar_partida_copia_la_foto_del_item_a_una_key_propia(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $item = $part->items()->create([
@@ -205,7 +205,7 @@ class QuotePartControllerTest extends FeatureTestCase
         app(QuoteItemPhotoService::class)->uploadPhoto($item, UploadedFile::fake()->image('foto.jpg', 400, 400));
         $originalKey = $item->fresh()->photo_key;
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}/duplicate")
             ->assertStatus(201);
@@ -248,8 +248,8 @@ class QuotePartControllerTest extends FeatureTestCase
      */
     public function test_duplicar_partida_si_falla_la_copia_de_foto_no_tumba_la_duplicacion(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $item = $part->items()->create([
@@ -261,7 +261,7 @@ class QuotePartControllerTest extends FeatureTestCase
         // mismo escenario real que dispararía "Source photo not found" en copyPhotoTo().
         Storage::disk('s3-public')->delete($item->fresh()->photo_key);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}/duplicate")
             ->assertStatus(201);
@@ -275,12 +275,12 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_duplicar_partida_en_cotizacion_ajena_retorna_403(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $managerId = $this->userIdByEmail('management@atlantic.test');
         $quote = Quote::create(['owner_id' => $managerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}/duplicate")
@@ -289,12 +289,12 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_duplicar_partida_en_cotizacion_confirmada_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $quote->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}/duplicate")
@@ -303,12 +303,12 @@ class QuotePartControllerTest extends FeatureTestCase
 
     public function test_borrar_partida_en_cotizacion_confirmada_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $designerId]);
         $part = $quote->parts()->create(['name' => 'Partida 1']);
         $quote->update(['folio' => 'COT-2026-0099', 'confirmed_at' => now()]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/ventas-diseno/quotes/{$quote->id}/parts/{$part->id}")
@@ -321,11 +321,11 @@ class QuotePartControllerTest extends FeatureTestCase
     // ── SCRUM-1161 — reordenar partidas y productos por drag and drop ───────────
 
     /** @return array{0: Quote, 1: array<string, string>} */
-    private function quoteWithToken(string $owner = 'designer@atlantic.test'): array
+    private function quoteWithToken(string $owner = 'vendedor@atlantic.test'): array
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $quote = Quote::create(['owner_id' => $this->userIdByEmail($owner)]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         // El login suelta el tenant actual; estos tests siguen creando partidas/ítems después.
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
@@ -364,7 +364,7 @@ class QuotePartControllerTest extends FeatureTestCase
         [$quote, $headers] = $this->quoteWithToken();
         $a = $quote->parts()->create(['name' => 'A', 'position' => 0]);
         $b = $quote->parts()->create(['name' => 'B', 'position' => 1]);
-        $otra = Quote::create(['owner_id' => $this->userIdByEmail('designer@atlantic.test')])->parts()->create(['name' => 'X', 'position' => 0]);
+        $otra = Quote::create(['owner_id' => $this->userIdByEmail('vendedor@atlantic.test')])->parts()->create(['name' => 'X', 'position' => 0]);
 
         $url = "/api/ventas-diseno/quotes/{$quote->id}/parts/reorder";
         foreach ([[$a->id], [$a->id, $b->id, $otra->id], [$a->id, $otra->id], [$a->id, $a->id], [], ['x' => $a->id, 'y' => $b->id]] as $ids) {

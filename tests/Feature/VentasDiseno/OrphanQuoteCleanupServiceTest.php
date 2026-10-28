@@ -24,7 +24,7 @@ class OrphanQuoteCleanupServiceTest extends FeatureTestCase
     {
         parent::setUp();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $this->ownerId = (int) User::where('email', 'designer@atlantic.test')->value('id');
+        $this->ownerId = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
     }
 
     private function backdate(Quote $quote, int $hoursAgo): void

@@ -11,7 +11,7 @@ class AiModelPricingControllerTest extends FeatureTestCase
 {
     public function test_index_requiere_permiso_superadmin(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/ai/pricing')

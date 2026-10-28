@@ -42,7 +42,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_respuesta_incluye_costo_y_referencia_de_fabrica(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'NORDIC-40', 'factory_reference' => 'LMP-001',
@@ -50,7 +50,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/products')
             ->assertStatus(200);
@@ -62,7 +62,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     public function test_filtra_solo_productos_del_proveedor_elegido(): void
     {
         // REQ-130 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $proveedorA = $this->makeProvider(['name' => 'Proveedor Demo A']);
         $proveedorB = $this->makeProvider(['name' => 'Proveedor Demo B SA']);
         CatalogProduct::create([
@@ -74,7 +74,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $proveedorB->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?provider_id={$proveedorA->id}")
             ->assertStatus(200);
@@ -91,7 +91,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
      */
     public function test_con_original_catalog_product_id_expone_similarity_percent_de_un_candidato_muy_parecido(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
             'reference' => 'ORIG-01', 'name' => 'Cilindro XL E27 blanco cálido', 'description' => 'Cilindro XL 9W',
@@ -104,7 +104,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?search=Cilindro&original_catalog_product_id={$original->id}")
             ->assertStatus(200);
@@ -118,7 +118,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_sin_candidatos_en_la_misma_categoria_amplia_a_todas_con_penalizacion(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
             'reference' => 'ORIG-02', 'name' => 'Cilindro XL E27 blanco cálido', 'description' => 'Cilindro XL 9W',
@@ -131,7 +131,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $withoutOriginal = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/products?search=Cilindro')
             ->assertStatus(200);
@@ -154,14 +154,14 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     /** Antes 403 total (no tenía ninguno de los 3 permisos que ya aceptaba este endpoint). */
     public function test_vendedor_puede_buscar_via_ventas_diseno_edit(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['ventas_diseno.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['ventas_diseno.edit']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'VD-01', 'name' => 'Cilindro para vendedor', 'description' => 'Cilindro para vendedor',
             'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/products')
             ->assertStatus(200);
@@ -174,14 +174,14 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
      */
     public function test_vendedor_via_ventas_diseno_edit_no_ve_costo(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['ventas_diseno.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['ventas_diseno.edit']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'VD-02', 'name' => 'Cilindro sin costo para vendedor', 'description' => 'Cilindro sin costo para vendedor',
             'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/products')
             ->assertStatus(200);
@@ -195,14 +195,14 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     /** Con compras.read real (Compras/Gerencia), el costo sigue viajando igual que siempre. */
     public function test_usuario_de_compras_sigue_viendo_costo(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'ventas_diseno.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'ventas_diseno.edit']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'VD-03', 'name' => 'Cilindro con costo', 'description' => 'Cilindro con costo',
             'price_full' => 50, 'cost' => 30, 'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/products')
             ->assertStatus(200);
@@ -213,7 +213,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_candidato_bajo_el_umbral_minimo_se_descarta_silenciosamente(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $original = CatalogProduct::create([
             'reference' => 'ORIG-03', 'name' => 'Cilindro XL E27 blanco cálido', 'description' => 'Cilindro XL 9W',
@@ -227,7 +227,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?search=Poste&original_catalog_product_id={$original->id}")
             ->assertStatus(200);
@@ -238,13 +238,13 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     /** SCRUM-992 — búsqueda en SQL, respaldo tolerante a typos y tope de resultados. */
     public function test_busqueda_sin_acentos_y_typo_con_respaldo(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         CatalogProduct::create([
             'reference' => 'NEW-1', 'name' => 'Vástago colgante Nordic', 'description' => 'x', 'price_full' => 10,
             'provider_id' => $provider->id, 'is_active' => true,
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $ok = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products?search=VASTAGO nordic')->assertStatus(200);
         $this->assertSame(['NEW-1'], collect($ok->json('data'))->pluck('reference')->all());
@@ -257,7 +257,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_resultados_acotados_y_exacta_primero(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         foreach (range(1, 105) as $i) {
             CatalogProduct::create([
@@ -265,7 +265,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
                 'provider_id' => $provider->id, 'is_active' => true,
             ]);
         }
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $all = $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/products')->assertStatus(200);
         $this->assertCount(100, $all->json('data'));
@@ -277,7 +277,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
     // SCRUM-1163 — paginación real en servidor: el total es el del catálogo del proveedor, no el tope de 100.
     public function test_paginacion_real_devuelve_total_y_recorre_todo_el_catalogo_del_proveedor(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         foreach (range(1, 130) as $i) {
             CatalogProduct::create([
@@ -285,7 +285,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
                 'provider_id' => $provider->id, 'is_active' => true,
             ]);
         }
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $get = fn (string $qs) => $this->withHeaders($this->authHeaders($token))->getJson("/api/compras/products?provider_id={$provider->id}&{$qs}")->assertStatus(200);
 
         $p1 = $get('page=1&per_page=50');
@@ -302,7 +302,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_paginacion_real_respeta_busqueda_y_excluye_los_ya_agregados(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $ids = [];
         foreach (range(1, 12) as $i) {
@@ -311,7 +311,7 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
                 'provider_id' => $provider->id, 'is_active' => true,
             ])->id;
         }
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $r = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?provider_id={$provider->id}&page=1&per_page=10&exclude_ids[]={$ids[0]}&exclude_ids[]={$ids[1]}")
@@ -328,9 +328,9 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_paginacion_real_con_proveedor_sin_productos_o_busqueda_sin_resultados_devuelve_total_cero(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $vacio = $this->makeProvider();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $r = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/products?provider_id={$vacio->id}&page=1&per_page=20")->assertStatus(200);
@@ -340,10 +340,10 @@ class CatalogProductSearchControllerTest extends FeatureTestCase
 
     public function test_per_page_se_acota_y_una_pagina_fuera_de_rango_no_rompe(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         CatalogProduct::create(['reference' => 'ONE-1', 'name' => 'One', 'description' => 'x', 'price_full' => 10, 'provider_id' => $provider->id, 'is_active' => true]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $get = fn (string $qs) => $this->withHeaders($this->authHeaders($token))->getJson("/api/compras/products?provider_id={$provider->id}&{$qs}");
 
         $this->assertSame(100, $get('page=1&per_page=100000')->assertStatus(200)->json('meta.per_page'));

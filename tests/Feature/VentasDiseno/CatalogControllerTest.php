@@ -58,10 +58,10 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_listado_nunca_expone_costo_ni_margen(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog')
             ->assertStatus(200);
@@ -74,10 +74,10 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_detalle_nunca_expone_costo_ni_margen(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/catalog/{$product->id}")
             ->assertStatus(200);
@@ -91,10 +91,10 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_stock_simplificado_resta_lo_comprometido(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct(['stock_quantity' => 14]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog')
             ->assertStatus(200);
@@ -106,10 +106,10 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_stock_cero_no_es_negativo(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['stock_quantity' => 0]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog')
             ->assertStatus(200);
@@ -121,14 +121,14 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_categoria_y_familia_son_filtros_independientes(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $family = CatalogProductFamily::create(['name' => 'Kit Baño', 'is_active' => true]);
 
         $withFamily = $this->makeProduct(['reference' => 'A-1', 'category' => 'candelabros_colgantes']);
         $withFamily->families()->attach($family->id);
         $this->makeProduct(['reference' => 'A-2', 'category' => 'iluminacion_bano']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // Filtrar solo por categoría no exige familia.
         $byCategory = $this->withHeaders($this->authHeaders($token))
@@ -145,11 +145,11 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_dropdown_de_categorias_solo_incluye_las_que_tienen_producto_activo(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'A-1', 'category' => 'candelabros_colgantes']);
         $this->makeProduct(['reference' => 'A-2', 'category' => 'bombillos', 'is_active' => false]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog')
             ->assertStatus(200);
@@ -163,13 +163,13 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_busqueda_matchea_nombre_de_familia_aunque_no_este_seleccionada(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $family = CatalogProductFamily::create(['name' => 'Kit Exterior Premium', 'is_active' => true]);
         $product = $this->makeProduct(['reference' => 'EXT-01', 'name' => 'Reflector XL', 'description' => 'Reflector XL']);
         $product->families()->attach($family->id);
         $this->makeProduct(['reference' => 'OTHER-01', 'name' => 'Spot interior', 'description' => 'Spot interior']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog?search=' . urlencode('kit exterior'))
             ->assertStatus(200);
@@ -183,11 +183,11 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_filtro_stock_con_y_sin(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'CON-STOCK', 'stock_quantity' => 5]);
         $this->makeProduct(['reference' => 'SIN-STOCK', 'stock_quantity' => 0]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $con = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog?stock=con')->assertStatus(200);
@@ -202,10 +202,10 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_badge_sin_ficha_por_default(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog')
             ->assertStatus(200);
@@ -215,10 +215,10 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_subir_ficha_tecnica_pdf_exitoso(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file   = UploadedFile::fake()->create('ficha.pdf', 500, 'application/pdf');
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -236,10 +236,10 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_subir_ficha_tecnica_formato_invalido_retorna_422(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file   = UploadedFile::fake()->create('ficha.dwg', 100);
 
         $this->withHeaders($this->authHeaders($token))
@@ -254,10 +254,10 @@ class CatalogControllerTest extends FeatureTestCase
      */
     public function test_subir_ficha_tecnica_sin_limite_de_tamano_artificial(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file   = UploadedFile::fake()->create('ficha-grande.pdf', 10 * 1024, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
@@ -267,9 +267,9 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_reemplazar_ficha_tecnica_borra_la_anterior_de_s3(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $first = UploadedFile::fake()->create('v1.pdf', 100, 'application/pdf');
         $this->withHeaders($this->authHeaders($token))
@@ -295,10 +295,10 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_ver_documento_sin_ficha_retorna_404(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/catalog/{$product->id}/technical-sheet")
             ->assertStatus(404);
@@ -306,9 +306,9 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_ver_documento_con_ficha_retorna_url_presignada(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $file = UploadedFile::fake()->create('ficha.pdf', 100, 'application/pdf');
         $this->withHeaders($this->authHeaders($token))
@@ -327,13 +327,13 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_send_pdf_modo_completo_incluye_todos_los_productos(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'A-1']);
         $this->makeProduct(['reference' => 'A-2']);
         // Inactivo — nunca debe aparecer, ni siquiera en modo "completo".
         $this->makeProduct(['reference' => 'A-3', 'is_active' => false]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/catalog/send-pdf', ['mode' => 'completo'])
             ->assertStatus(200);
@@ -349,11 +349,11 @@ class CatalogControllerTest extends FeatureTestCase
     {
         // RN4 — "completo" siempre trae TODO el universo activo, ignorando cualquier
         // selección recibida (no debe fallar ni acotarse si el frontend manda product_ids igual).
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct(['reference' => 'A-1']);
         $this->makeProduct(['reference' => 'A-2']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/catalog/send-pdf', [
                 'mode'        => 'completo',
@@ -365,11 +365,11 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_send_pdf_modo_seleccionados_devuelve_pdf(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct(['reference' => 'A-1']);
         $this->makeProduct(['reference' => 'A-2']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/catalog/send-pdf', [
                 'mode'        => 'seleccionados',
@@ -381,9 +381,9 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_send_pdf_seleccionados_sin_product_ids_retorna_422(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/catalog/send-pdf', ['mode' => 'seleccionados'])
             ->assertStatus(422);
@@ -391,9 +391,9 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_send_pdf_seleccionados_con_product_ids_vacio_retorna_422(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/catalog/send-pdf', ['mode' => 'seleccionados', 'product_ids' => []])
             ->assertStatus(422);
@@ -401,9 +401,9 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_send_pdf_modo_invalido_retorna_422(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/catalog/send-pdf', ['mode' => 'otro'])
             ->assertStatus(422);
@@ -411,9 +411,9 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_send_pdf_product_id_inexistente_retorna_422(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/catalog/send-pdf', [
                 'mode'        => 'seleccionados',
@@ -464,10 +464,10 @@ class CatalogControllerTest extends FeatureTestCase
         // REQ-618 PERMISOS: "sin restricción de rol específica — visible para cualquier usuario
         // con acceso a Catálogo". Este usuario tiene SOLO `.read`, sin `.edit`/`.write`, y el
         // upload debe funcionar igual — es una decisión ya tomada en la spec, no un descuido.
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $file   = UploadedFile::fake()->create('ficha.pdf', 100, 'application/pdf');
 
         $this->withHeaders($this->authHeaders($token))
@@ -480,11 +480,11 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_ambos_gates_apagados_muestra_catalogo_completo(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['name' => 'Completo', 'photo_url' => 'https://cdn/foto.jpg']);
         $this->makeProduct(['reference' => 'IL-INCOMPLETO', 'name' => '', 'photo_url' => null, 'price_full' => 0]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog')
             ->assertStatus(200);
@@ -494,7 +494,7 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_gate_global_on_personal_off_muestra_catalogo_completo(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['name' => 'Completo', 'photo_url' => 'https://cdn/foto.jpg']);
         $this->makeProduct(['reference' => 'IL-INCOMPLETO', 'name' => '', 'photo_url' => null, 'price_full' => 0]);
 
@@ -503,7 +503,7 @@ class CatalogControllerTest extends FeatureTestCase
             ->patchJson('/api/settings/system', ['demo_mode_enabled' => true])
             ->assertStatus(200);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog')
             ->assertStatus(200);
@@ -513,7 +513,7 @@ class CatalogControllerTest extends FeatureTestCase
 
     public function test_ambos_gates_activos_filtra_por_nombre_imagen_y_precio(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $completo = $this->makeProduct(['name' => 'Completo', 'photo_url' => 'https://cdn/foto.jpg']);
         $this->makeProduct(['reference' => 'IL-SIN-NOMBRE',  'name' => '', 'photo_url' => 'https://cdn/x.jpg']);
         $this->makeProduct(['reference' => 'IL-SIN-IMAGEN',  'name' => 'Sin imagen', 'photo_url' => null]);
@@ -525,7 +525,7 @@ class CatalogControllerTest extends FeatureTestCase
             ->patchJson('/api/settings/system', ['demo_mode_enabled' => true])
             ->assertStatus(200);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson('/api/settings/preferences', ['demo_mode_enabled' => true])
             ->assertStatus(200);

@@ -207,11 +207,11 @@ class PromptInjectionIntegrationTest extends FeatureTestCase
         $token = $this->loginAs();
 
         DB::table('atlantic_auth.users')
-            ->where('email', 'designer@atlantic.test')
+            ->where('email', 'vendedor@atlantic.test')
             ->update(['first_name' => self::INJECTION]);
 
         $designerId = DB::table('atlantic_auth.users')
-            ->where('email', 'designer@atlantic.test')
+            ->where('email', 'vendedor@atlantic.test')
             ->value('id');
 
         $this->createProject($token, 'Proyecto normal, sin notas sospechosas.', [(int) $designerId]);

@@ -123,10 +123,10 @@ final class TenantRegionTest extends FeatureTestCase
         $this->tenant()->update(['country' => 'CO', 'currency' => 'COP', 'timezone' => 'America/Bogota', 'locale' => 'es-CO']);
         $esperada = ['country' => 'CO', 'currency' => 'COP', 'timezone' => 'America/Bogota', 'locale' => 'es-CO'];
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))->getJson('/api/auth/me')->assertOk()->assertJsonPath('region', $esperada);
 
-        $login = $this->postJson('/api/auth/login', ['email' => 'designer@atlantic.test', 'password' => 'Password123!'])->assertOk();
+        $login = $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'Password123!'])->assertOk();
         $this->assertSame($esperada, $login->json('user.region'));
     }
 }

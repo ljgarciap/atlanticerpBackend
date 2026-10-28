@@ -12,22 +12,22 @@ use Illuminate\Database\Seeder;
 /**
  * Fase 4 — Servicios, Batch 6 (REQ-255→260) — backfill de `internal_technicians` para los 4
  * técnicos internos reales que ya existen como `User` desde `BusinessRoleUserSeeder`/
- * `CoreUserSeeder` (Tecnico Servicios Test, Tecnico Servicios Test 2, Agustín Rodríguez, Garantias Servicios Test). Corre en
+ * `CoreUserSeeder` (Tecnico Test, Tecnico Test 2, Agustín Rodríguez, Tecnico Garantias Test). Corre en
  * TODOS los entornos — son personas reales, no datos demo. Create-only-if-not-exists por
  * `user_id`, nunca pisa un color/especialidad ya asignados a mano.
  *
- * Garantias Servicios Test recibe explícitamente el color ámbar (REQ-259 RN3 lo usa como el ejemplo de
+ * Tecnico Garantias Test recibe explícitamente el color ámbar (REQ-259 RN3 lo usa como el ejemplo de
  * "color ya tomado" — el resto de la paleta evita ese tono para no repetirlo).
  */
 class InternalTechnicianSeeder extends Seeder
 {
     /** @var list<array{email: string, especialidad: string, color: string, has_bonus_plan: bool}> */
     private const TECHNICIANS = [
-        // Batch 7 (REQ-258 RN7) — Tecnico Servicios Test es hoy el único con plan de bonificación activo.
-        ['email' => 'tecnicoservicios@test.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#3B82F6', 'has_bonus_plan' => true],
-        ['email' => 'tecnicoservicios2@test.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#8B5CF6', 'has_bonus_plan' => false],
-        ['email' => 'tecnicoservicios3@test.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#EC4899', 'has_bonus_plan' => false],
-        ['email' => 'garantiasservicios@test.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_WARRANTY, 'color' => '#F59E0B', 'has_bonus_plan' => false],
+        // Batch 7 (REQ-258 RN7) — Tecnico Test es hoy el único con plan de bonificación activo.
+        ['email' => 'tecnico@test.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#3B82F6', 'has_bonus_plan' => true],
+        ['email' => 'tecnico2@test.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#8B5CF6', 'has_bonus_plan' => false],
+        ['email' => 'tecnico3@test.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_GENERAL, 'color' => '#EC4899', 'has_bonus_plan' => false],
+        ['email' => 'tecnicogarantias@test.com', 'especialidad' => InternalTechnician::ESPECIALIDAD_WARRANTY, 'color' => '#F59E0B', 'has_bonus_plan' => false],
     ];
 
     public function run(): void

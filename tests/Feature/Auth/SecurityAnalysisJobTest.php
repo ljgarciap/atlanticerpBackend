@@ -120,7 +120,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
     {
         // Confirma la semántica del fix: el job mira el día calendario ANTERIOR, no lo que
         // pasó "hoy" hasta el momento en que corre.
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED, createdAt: Carbon::today()->setTime(1, 0));
 
         Http::fake();
@@ -133,7 +133,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_detecta_anomalia_la_persiste_y_notifica_a_superadmins(): void
     {
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED);
 
         $this->fakeClaudeResponse([
@@ -162,7 +162,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
     /** SCRUM-1033 (A-03): el reuso de un refresh token revocado llega al resumen que analiza Claude. */
     public function test_el_reuso_de_refresh_token_se_cuenta_en_el_resumen_por_usuario(): void
     {
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_REFRESH_TOKEN_REUSE);
         $this->insertAuditLog($user->id, AuditService::AUTH_REFRESH_TOKEN_REUSE);
 
@@ -181,7 +181,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
      */
     public function test_llamada_a_claude_deja_registro_de_uso_de_ia(): void
     {
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED);
 
         $this->fakeClaudeResponse(['anomalies' => []]);
@@ -200,7 +200,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_hallazgo_con_user_id_fuera_del_resumen_enviado_se_descarta(): void
     {
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED);
 
         // Claude "inventa" un user_id que el job nunca le mandó — debe descartarse.
@@ -219,7 +219,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_respuesta_con_schema_invalido_no_crea_filas(): void
     {
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
         $this->insertAuditLog($user->id, AuditService::AUTH_FAILED);
 
         $this->fakeClaudeResponse(['unexpected_key' => 'sin anomalies']);
@@ -231,7 +231,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_upload_a_zona_publica_se_marca_como_hallazgo_deterministico(): void
     {
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
         $this->insertAuditLog(
             $user->id,
             AuditService::CRM_DOCUMENT_UPLOADED,
@@ -255,7 +255,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
         // re-disparo manual de security:analyze más tarde el mismo día — no dos llamadas en
         // el mismo instante exacto. Avanza el reloj unos minutos entre corridas para probar
         // que el dedupe sigue funcionando (antes del fix, esto SÍ duplicaba).
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
         $this->insertAuditLog(
             $user->id,
             AuditService::CRM_DOCUMENT_UPLOADED,
@@ -296,7 +296,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_ajuste_de_inventario_grande_se_marca_como_hallazgo_deterministico(): void
     {
-        $user    = $this->findUser('designer@atlantic.test');
+        $user    = $this->findUser('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
         $this->withTenant(function () use ($user, $product) {
@@ -320,7 +320,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_ajuste_de_inventario_por_debajo_del_umbral_no_dispara_hallazgo(): void
     {
-        $user    = $this->findUser('designer@atlantic.test');
+        $user    = $this->findUser('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
         $this->withTenant(function () use ($user, $product) {
@@ -341,7 +341,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_ajuste_en_madrugada_se_marca_como_hallazgo_fuera_de_horario(): void
     {
-        $user    = $this->findUser('designer@atlantic.test');
+        $user    = $this->findUser('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
         // App::timezone es America/Panama (config/app.php, SCRUM-883) — Carbon::yesterday()
@@ -370,7 +370,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_correlacion_ajuste_y_reubicacion_mismo_producto_ventana_corta(): void
     {
-        $user    = $this->findUser('designer@atlantic.test');
+        $user    = $this->findUser('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
         $this->withTenant(function () use ($user, $product) {
@@ -403,7 +403,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_ip_nueva_dispara_hallazgo_si_el_usuario_ya_tiene_historial(): void
     {
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
 
         // Historial previo con otra IP, dentro de la ventana de lookback (default 90 días).
         $this->insertAuditLog($user->id, 'auth.login', createdAt: Carbon::yesterday()->subDays(5)->setTime(9, 0), ipAddress: '10.0.0.1');
@@ -420,7 +420,7 @@ class SecurityAnalysisJobTest extends FeatureTestCase
 
     public function test_ip_nueva_no_dispara_en_la_primera_accion_del_usuario(): void
     {
-        $user = $this->findUser('designer@atlantic.test');
+        $user = $this->findUser('vendedor@atlantic.test');
 
         // Sin ningún historial previo — arranque en frío, la regla no debe evaluarse.
         $this->insertAuditLog($user->id, 'bodega.adjustment_request.created', createdAt: Carbon::yesterday()->setTime(14, 0), ipAddress: '10.0.0.99');

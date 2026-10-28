@@ -37,9 +37,9 @@ class ReplenishmentControllerTest extends FeatureTestCase
     /** @return array<string, string> */
     private function headers(): array
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
 
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el login resetea el tenant: sin esto no se pueden crear proveedores/productos después
 
         return $headers;
@@ -107,8 +107,8 @@ class ReplenishmentControllerTest extends FeatureTestCase
     public function test_con_solo_compras_read_retorna_403_porque_no_podria_generar_la_orden(): void
     {
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')->update(['extra_permissions' => json_encode(['compras.read'])]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode(['compras.read'])]);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/replenishment')
             ->assertStatus(403)->assertJsonMissingPath('groups');
@@ -116,7 +116,7 @@ class ReplenishmentControllerTest extends FeatureTestCase
 
     public function test_sin_permisos_de_compras_retorna_403_y_no_filtra_datos(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))->getJson('/api/compras/replenishment')
             ->assertStatus(403)->assertJsonMissingPath('groups');
     }
@@ -159,7 +159,7 @@ class ReplenishmentControllerTest extends FeatureTestCase
     public function test_el_folio_de_la_cotizacion_del_proyecto_viaja_con_el_pedido_y_el_nombre_del_proyecto(): void
     {
         $product = $this->makeProduct();
-        $ownerId = (int) User::where('email', 'designer@atlantic.test')->value('id');
+        $ownerId = (int) User::where('email', 'vendedor@atlantic.test')->value('id');
         $order   = $this->makeOrderWithPipelineCard($ownerId, ['order_type' => Order::ORDER_TYPE_FALTANTE], ['catalog_product_id' => $product->id, 'qty_requested' => 3, 'found_at_location' => false, 'shortage_reason' => OrderItem::SHORTAGE_SIN_STOCK]);
         $card    = $order->pipelineCard;
         foreach (['COT-2026-0001', 'COT-2026-0002'] as $folio) { // la última con folio del proyecto es la vigente (misma regla que Order::linkedQuote())
@@ -401,8 +401,8 @@ class ReplenishmentControllerTest extends FeatureTestCase
         $provider = $this->makeProvider('X');
         $product = $this->pendingProduct(['provider_id' => null]);
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        DB::table("{$slug}_auth.users")->where('email', 'designer@atlantic.test')->update(['extra_permissions' => json_encode(['compras.read'])]);
-        $readOnly = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode(['compras.read'])]);
+        $readOnly = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
 
         $this->assign($readOnly, $product->id, $provider->id, null)->assertStatus(403);
         $this->assertNull($product->fresh()->provider_id);

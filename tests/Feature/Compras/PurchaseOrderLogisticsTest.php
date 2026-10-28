@@ -80,12 +80,12 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
     public function test_active_shipments_excluye_ordenes_por_aprobar(): void
     {
         // REQ-151 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?active_shipments=1')
             ->assertStatus(200);
@@ -96,11 +96,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_active_shipments_incluye_recibido(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_RECIBIDO]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?active_shipments=1')
             ->assertStatus(200);
@@ -112,14 +112,14 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_chip_critical_funciona_igual_para_retrasados(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_EN_TRANSITO,
             'estimated_arrival_date' => now()->subDay()->toDateString(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?active_shipments=1&chip=critical')
             ->assertStatus(200);
@@ -136,14 +136,14 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
      */
     public function test_chip_critical_incluye_ordenado_con_llegada_vencida(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_ORDENADO,
             'estimated_arrival_date' => now()->subMonth()->toDateString(),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?active_shipments=1&chip=critical')
             ->assertStatus(200);
@@ -156,7 +156,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_search_matchea_por_nombre_de_proyecto_asignado(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $masterClient = \App\Modules\VentasDiseno\Models\MasterClient::create(['name' => 'MC Test']);
@@ -173,7 +173,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
         ]);
         $this->makeOrder($provider->id); // orden sin proyecto — no debe matchear
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders?search=Torre+Norte')
             ->assertStatus(200);
@@ -192,7 +192,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
      */
     public function test_shipment_projects_encuentra_proyecto_sin_cotizacion_aprobada(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $masterClient = \App\Modules\VentasDiseno\Models\MasterClient::create(['name' => 'MC Sin Cotizacion']);
         $subClient = \App\Modules\VentasDiseno\Models\SubClient::create([
@@ -209,7 +209,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
             'sales_project_id' => $salesProject->id,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // Prueba negativa primero: approved-projects (el endpoint viejo) NO lo encuentra — así se
         // reprodujo el hallazgo de Pre-QA en vivo.
@@ -233,7 +233,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
      */
     public function test_shipment_projects_excluye_proyecto_de_orden_no_activa_con_active_shipments(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $masterClient = \App\Modules\VentasDiseno\Models\MasterClient::create(['name' => 'MC Por Aprobar']);
         $subClient = \App\Modules\VentasDiseno\Models\SubClient::create([
@@ -248,7 +248,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
             'sales_project_id' => $salesProject->id,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders/shipment-projects?search=Todavia+No+Aprobada&active_shipments=1')
             ->assertStatus(200);
@@ -264,7 +264,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
      */
     public function test_shipment_projects_incluye_proyecto_de_orden_por_aprobar_sin_active_shipments(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $masterClient = \App\Modules\VentasDiseno\Models\MasterClient::create(['name' => 'MC Por Aprobar Ver Ordenes']);
         $subClient = \App\Modules\VentasDiseno\Models\SubClient::create([
@@ -279,7 +279,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
             'sales_project_id' => $salesProject->id,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders/shipment-projects?search=Ver+Ordenes+Por+Aprobar')
             ->assertStatus(200);
@@ -290,8 +290,8 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_shipment_projects_sin_permiso_read_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', []);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', []);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/orders/shipment-projects?search=x')
             ->assertStatus(403);
@@ -301,11 +301,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_bodega_read_puede_ver_detalle_de_orden_sin_compras_read(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['bodega.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['bodega.read']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200);
@@ -313,11 +313,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_sin_compras_read_ni_bodega_read_detalle_de_orden_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', []);
+        $this->grantCompras('vendedor@atlantic.test', []);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(403);
@@ -327,13 +327,13 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_reception_status_pendiente_sin_ingresos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider->id);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 100, 'unit_cost' => 10, 'subtotal' => 1000]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200);
@@ -345,13 +345,13 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_reception_status_completo_cuando_cubre_lo_esperado(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
             'purchase_order_id' => $order->id,
@@ -365,7 +365,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_reception_status_parcial_mezcla_lineas(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $productA = $this->makeProduct(['reference' => 'REC-A']);
         $productB = $this->makeProduct(['reference' => 'REC-B']);
@@ -373,7 +373,7 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $productA->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $productB->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         // Solo A completo (10 de 10); B queda sin ningún ingreso registrado (pendiente).
         $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
@@ -390,13 +390,13 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
     /** REQ-145 RN — un movimiento "Por ingresar" (sin confirmar) cuenta igual para Recepción, a diferencia de Disponible en Inventario. */
     public function test_reception_cuenta_lineas_por_ingresar_sin_confirmar(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider();
         $product = $this->makeProduct();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]);
         PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
         // Sin confirmar (confirm-pending nunca se llama) — queda "Por ingresar" en Inventario.
         $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
@@ -413,11 +413,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_enlace_ingreso_mercancia_visible_en_aduana_proveedor_no_local(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_INTERNACIONAL]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_ADUANA]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200)
@@ -426,11 +426,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_enlace_ingreso_mercancia_oculto_antes_de_aduana(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_INTERNACIONAL]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200)
@@ -440,11 +440,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
     /** Proveedor local salta "En aduana" (statusSequence()) — el enlace debe aparecer igual desde "En tránsito local". */
     public function test_enlace_ingreso_mercancia_visible_en_transito_local_proveedor_local(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200)
@@ -454,14 +454,14 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
     /** REQ-157 RN — un remanente pendiente en una etapa anterior oculta el enlace de nuevo, aunque el `status` de la orden ya haya avanzado. */
     public function test_enlace_ingreso_mercancia_oculto_por_remanente_en_etapa_anterior(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider(['origin' => Provider::ORIGIN_INTERNACIONAL]);
         $order = $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_EN_TRANSITO_LOCAL,
             'pending_remainder_status' => PurchaseOrder::REMAINDER_EN_TRANSITO,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200)
@@ -473,11 +473,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
     public function test_actualizar_datos_de_envio_en_orden_en_transito(): void
     {
         // REQ-156 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/shipping-info", [
                 'container_number' => 'MSCU1234567',
@@ -499,11 +499,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
      */
     public function test_shipping_info_ignora_actual_arrival_date_si_se_manda(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/shipping-info", [
                 'container_number'    => 'MSCU1234567',
@@ -520,11 +520,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
     public function test_subir_documento_del_envio(): void
     {
         // REQ-155 Escenario 1.
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_ADUANA]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => PurchaseOrderDocument::CATEGORY_DECLARACION_NACIONALIZACION,
@@ -538,11 +538,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_documento_subido_queda_consultable(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_ADUANA]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => PurchaseOrderDocument::CATEGORY_FACTURA_COMERCIAL,
@@ -560,11 +560,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_subir_documento_con_categoria_invalida_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => 'no_existe',
@@ -577,11 +577,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_actualizar_datos_de_envio_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->patchJson("/api/compras/orders/{$order->id}/shipping-info", [
                 'container_number' => 'MSCU1234567',
@@ -593,11 +593,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_subir_documento_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_ADUANA]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => PurchaseOrderDocument::CATEGORY_FACTURA_COMERCIAL,
@@ -608,11 +608,11 @@ class PurchaseOrderLogisticsTest extends FeatureTestCase
 
     public function test_listar_documentos_sin_permiso_read_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', []);
+        $this->grantCompras('vendedor@atlantic.test', []);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_ADUANA]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}/documents")
             ->assertStatus(403);

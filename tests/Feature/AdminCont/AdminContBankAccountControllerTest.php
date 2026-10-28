@@ -47,7 +47,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_index_rechaza_a_un_rol_sin_visibilidad_del_modulo(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/bank-accounts')
@@ -83,7 +83,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
 
     public function test_store_rechaza_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/bank-accounts', [
@@ -176,7 +176,7 @@ class AdminContBankAccountControllerTest extends FeatureTestCase
     public function test_update_rechaza_a_un_rol_no_autorizado(): void
     {
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-accounts/{$account->id}", ['numero_cuenta_completo' => '1234567890'])

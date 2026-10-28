@@ -26,7 +26,7 @@ class ReportsControllerTest extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO = 'tecnicoservicios@test.com';
+    private const TECNICO = 'tecnico@test.com';
 
     private const MANAGEMENT = 'gerencia@test.com';
 
@@ -432,7 +432,7 @@ class ReportsControllerTest extends FeatureTestCase
         $this->assertSame(0, $data[6]['total']); // meses sin datos igual aparecen, en 0.
     }
 
-    // ── REQ-285 — Comisión Tecnico Servicios Test ─────────────────────────────────────────────────────
+    // ── REQ-285 — Comisión Tecnico Test ─────────────────────────────────────────────────────
 
     public function test_comision_tecnico_gerencia_puede_verla_y_coincide_con_el_endpoint_de_tecnicos(): void
     {

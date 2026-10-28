@@ -50,7 +50,7 @@ final class ImpersonationAdminTest extends FeatureTestCase
     {
         $id = (string) Str::uuid();
         DB::table('atlantic_auth.impersonation_sessions')->insert($overrides + [
-            'id' => $id, 'actor_id' => $this->userId('superadmin@atlantic.test'), 'target_id' => $this->userId('designer@atlantic.test'),
+            'id' => $id, 'actor_id' => $this->userId('superadmin@atlantic.test'), 'target_id' => $this->userId('vendedor@atlantic.test'),
             'reason' => 'SCRUM-1158 prueba', 'started_at' => now(), 'expires_at' => now()->addMinutes(30),
         ]);
 
@@ -60,7 +60,7 @@ final class ImpersonationAdminTest extends FeatureTestCase
     /** @return array{0: array<string, string>, 1: string} */
     private function beginImpersonation(): array
     {
-        $response = $this->postJson('/api/users/' . $this->userId('designer@atlantic.test') . '/impersonate', [
+        $response = $this->postJson('/api/users/' . $this->userId('vendedor@atlantic.test') . '/impersonate', [
             'reason' => 'SCRUM-1158 reproducir pantalla', 'operator_password' => self::PASSWORD,
         ], $this->superadmin())->assertStatus(201);
 
@@ -82,7 +82,7 @@ final class ImpersonationAdminTest extends FeatureTestCase
             array_keys($row),
         );
         $this->assertSame(['id' => $this->userId('superadmin@atlantic.test'), 'name' => 'Super Admin'], $row['actor']);
-        $this->assertSame('Designer Demo', $row['target']['name']);
+        $this->assertSame('Vendedor Demo', $row['target']['name']);
         $this->assertSame('active', $row['status']);
         $this->assertNull($row['ended_at']);
         $this->assertEqualsCanonicalizing(['current_page', 'per_page', 'total', 'last_page'], array_keys($response->json('meta')));
@@ -104,12 +104,12 @@ final class ImpersonationAdminTest extends FeatureTestCase
     public function test_filtra_por_actor_y_objetivo_y_ordena_de_la_mas_reciente_a_la_mas_antigua(): void
     {
         $old = $this->insertSession(['started_at' => now()->subDay(), 'expires_at' => now()->subDay()->addMinutes(30)]);
-        $new = $this->insertSession(['target_id' => $this->userId('supervisor@atlantic.test')]);
+        $new = $this->insertSession(['target_id' => $this->userId('nivel5@atlantic.test')]);
         $headers = $this->superadmin();
 
         $this->assertSame([$new, $old], collect($this->getJson(self::URL, $headers)->json('data'))->pluck('id')->all());
-        $this->assertSame([$new], collect($this->getJson(self::URL . '?target_id=' . $this->userId('supervisor@atlantic.test'), $headers)->json('data'))->pluck('id')->all());
-        $this->assertSame([], $this->getJson(self::URL . '?actor_id=' . $this->userId('designer@atlantic.test'), $headers)->json('data'));
+        $this->assertSame([$new], collect($this->getJson(self::URL . '?target_id=' . $this->userId('nivel5@atlantic.test'), $headers)->json('data'))->pluck('id')->all());
+        $this->assertSame([], $this->getJson(self::URL . '?actor_id=' . $this->userId('vendedor@atlantic.test'), $headers)->json('data'));
     }
 
     public function test_pagina_con_per_page_y_page(): void
@@ -142,7 +142,7 @@ final class ImpersonationAdminTest extends FeatureTestCase
     public function test_solo_superadmin_ve_y_termina_sesiones(): void
     {
         $id = $this->insertSession();
-        $designer = $this->authHeaders($this->loginAs('designer@atlantic.test', self::PASSWORD, 'designer'));
+        $designer = $this->authHeaders($this->loginAs('vendedor@atlantic.test', self::PASSWORD, 'designer'));
 
         $this->getJson(self::URL)->assertStatus(401);
         $this->getJson(self::URL, $designer)->assertStatus(403);
@@ -177,7 +177,7 @@ final class ImpersonationAdminTest extends FeatureTestCase
         $log = AuditLog::query()->where('action', AuditService::AUTH_IMPERSONATION_REVOKED)->firstOrFail();
         $this->assertSame($id, $log->entity_id);
         $this->assertSame($this->userId('superadmin@atlantic.test'), $log->user_id);
-        $this->assertSame($this->userId('designer@atlantic.test'), $log->metadata['target_user_id']);
+        $this->assertSame($this->userId('vendedor@atlantic.test'), $log->metadata['target_user_id']);
         $this->assertArrayNotHasKey('impersonation_id', $log->metadata, 'el revocador no está en una sesión de impersonación');
     }
 

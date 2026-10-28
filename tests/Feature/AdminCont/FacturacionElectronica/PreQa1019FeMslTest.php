@@ -229,7 +229,7 @@ final class PreQa1019FeMslTest extends FeatureTestCase
         $url = $this->urlFactura($f, 'fe-reconciliar');
         $this->flushHeaders();
         $this->postJson($url)->assertStatus(401);
-        $this->api($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'), 'POST', $url)->assertStatus(403);
+        $this->api($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'), 'POST', $url)->assertStatus(403);
         $this->api($this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega'), 'POST', $url)->assertStatus(403);
         $this->api($this->token(), 'POST', $url)->assertStatus(403);
         Http::assertSentCount(1);

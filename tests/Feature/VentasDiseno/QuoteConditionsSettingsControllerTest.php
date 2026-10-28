@@ -40,8 +40,8 @@ class QuoteConditionsSettingsControllerTest extends FeatureTestCase
 
     public function test_get_settings_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/quote-conditions-settings')
@@ -61,8 +61,8 @@ class QuoteConditionsSettingsControllerTest extends FeatureTestCase
 
     public function test_actualizar_settings_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/ventas-diseno/quote-conditions-settings', ['text' => 'Nuevo texto'])

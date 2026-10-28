@@ -18,7 +18,7 @@ class AuthUserSeeder extends Seeder
      * role_key: ADR-006 — rol nuevo (SCRUM-144) equivalente al rol legado, para que Task 4
      * (canViewTeamV2() en vez de hasRole(MANAGEMENT)) no rompa los tests existentes de
      * VentasDiseno que dependen de estos fixtures para "ve equipo"/"ve solo lo propio". null
-     * donde no hay correspondencia real (supervisor/electrician son roles legados de
+     * donde no hay correspondencia real (las cuentas nivel* son fixtures de nivel; antes supervisor/electrician, roles legados de
      * Installations/CRM, fuera del catálogo de 13 roles de negocio).
      *
      * @var list<array{first_name: string, last_name: string, email: string, level: int, role_key: string|null}>
@@ -34,11 +34,11 @@ class AuthUserSeeder extends Seeder
         // reportó. Los tests de VentasDiseno no lo detectaron porque cada uno otorga
         // extra_permissions manualmente vía grantVentasDisenoEdit(), sin pasar por el bridge
         // rol+nivel real.
-        ['first_name' => 'Designer',   'last_name' => 'Demo', 'email' => 'designer@atlantic.test',    'level' => 4, 'role_key' => 'vendedor'],
-        ['first_name' => 'Supervisor', 'last_name' => 'Demo', 'email' => 'supervisor@atlantic.test',  'level' => 5, 'role_key' => null],
-        ['first_name' => 'Electrician','last_name' => 'Demo', 'email' => 'electrician@atlantic.test','roles' => ['electrician'],                'level' => 2, 'role_key' => null],
-        ['first_name' => 'Multi',      'last_name' => 'Role', 'email' => 'multi@atlantic.test',       'level' => 8, 'role_key' => 'management'],
-        ['first_name' => 'Readonly',   'last_name' => 'Demo', 'email' => 'readonly@atlantic.test',    'level' => 1, 'role_key' => null],
+        ['first_name' => 'Vendedor',   'last_name' => 'Demo', 'email' => 'vendedor@atlantic.test',    'level' => 4, 'role_key' => 'vendedor'],
+        ['first_name' => 'Nivel 5',    'last_name' => 'Demo', 'email' => 'nivel5@atlantic.test',  'level' => 5, 'role_key' => null],
+        ['first_name' => 'Nivel 2',    'last_name' => 'Demo', 'email' => 'nivel2@atlantic.test',    'level' => 2, 'role_key' => null],
+        ['first_name' => 'Nivel 8',    'last_name' => 'Demo', 'email' => 'nivel8@atlantic.test',       'level' => 8, 'role_key' => 'management'],
+        ['first_name' => 'Nivel 1',     'last_name' => 'Demo', 'email' => 'nivel1@atlantic.test',    'level' => 1, 'role_key' => null],
     ];
 
     /** @var array{first_name: string, last_name: string, email: string, level: int, role_key: string|null} */

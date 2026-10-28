@@ -281,7 +281,7 @@ class PasswordResetExpirationTest extends FeatureTestCase
 
     public function test_solo_superadmin_edita_los_ajustes(): void
     {
-        $headers = $this->authHeaders($this->loginAs('designer@atlantic.test', 'Password123!', 'designer'));
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
 
         $this->putJson('/api/admin/global-settings/password_reset_enabled', ['value' => 0], $headers)->assertStatus(403);
     }

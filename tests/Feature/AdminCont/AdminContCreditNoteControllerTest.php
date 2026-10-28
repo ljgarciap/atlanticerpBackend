@@ -429,7 +429,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
     public function test_summary_y_itbms_treatment_rechazan_a_un_rol_no_autorizado(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/notas-credito/summary')
@@ -853,7 +853,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     {
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/admin-contab/notas-credito/clientes/{$invoice->master_client_id}/facturas")

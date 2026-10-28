@@ -32,9 +32,9 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_show_devuelve_el_valor_por_defecto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/settings')
             ->assertStatus(200);
@@ -59,8 +59,8 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_asigna_y_limpia_el_proveedor_de_zona_libre(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.settings.configure']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.settings.configure']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el login suelta el tenant actual
         $provider = Provider::create([
             'name' => 'Proveedor Zona Libre de prueba', 'category' => Provider::CATEGORY_ZONA_LIBRE,
@@ -82,8 +82,8 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_rechaza_un_proveedor_de_zona_libre_inexistente(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.settings.configure']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.settings.configure']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['zona_libre_provider_id' => 99999999])
@@ -93,10 +93,10 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_los_pesos_de_la_formula_de_similitud(): void
     {
-        $this->grantCompras('designer@atlantic.test', [
+        $this->grantCompras('vendedor@atlantic.test', [
             'compras.read', 'compras.settings.configure',
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', [
@@ -116,10 +116,10 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_los_dias_de_atencion_de_reclamos(): void
     {
-        $this->grantCompras('designer@atlantic.test', [
+        $this->grantCompras('vendedor@atlantic.test', [
             'compras.read', 'compras.settings.configure',
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['claim_attention_days' => 14])
@@ -134,10 +134,10 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_el_umbral_de_margen_de_sustitutos(): void
     {
-        $this->grantCompras('designer@atlantic.test', [
+        $this->grantCompras('vendedor@atlantic.test', [
             'compras.read', 'compras.settings.configure',
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['replacement_margin_threshold' => 20])
@@ -152,9 +152,9 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_sin_permiso_configure_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['low_rating_threshold' => 70])
             ->assertStatus(403);
@@ -172,10 +172,10 @@ class ComprasSettingsControllerTest extends FeatureTestCase
 
     public function test_update_cambia_el_umbral_usado_por_el_filtro_de_proveedores(): void
     {
-        $this->grantCompras('designer@atlantic.test', [
+        $this->grantCompras('vendedor@atlantic.test', [
             'compras.read', 'compras.settings.configure',
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['low_rating_threshold' => 85])

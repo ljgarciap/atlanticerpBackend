@@ -36,7 +36,7 @@ class PipelineCanEditTest extends FeatureTestCase
 
     private function sellerId(): int
     {
-        return (int) DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')->value('id');
+        return (int) DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('id');
     }
 
     private function makeCard(string $stage): PipelineCard
@@ -92,7 +92,7 @@ class PipelineCanEditTest extends FeatureTestCase
     public function test_vendedor_dueno_conserva_can_edit_true(string $stage): void
     {
         $card    = $this->makeCard($stage);
-        $headers = $this->headersFor('designer@atlantic.test', 'Password123!', 'designer');
+        $headers = $this->headersFor('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}")
             ->assertOk()->assertJsonPath('can_edit', true);

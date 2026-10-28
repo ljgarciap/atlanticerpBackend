@@ -25,7 +25,7 @@ class SessionInactivityTest extends FeatureTestCase
     }
 
     /** @return array{token: string, refresh_token: string} */
-    private function login(string $email = 'designer@atlantic.test'): array
+    private function login(string $email = 'vendedor@atlantic.test'): array
     {
         $response = $this->postJson('/api/auth/login', [
             'email'    => $email,

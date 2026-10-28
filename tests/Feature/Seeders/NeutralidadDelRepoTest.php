@@ -73,6 +73,7 @@ final class NeutralidadDelRepoTest extends TestCase
 
     public function test_cada_archivo_pendiente_de_la_4c_sigue_necesitando_su_excepcion(): void
     {
+        $this->addToAssertionCount(1); // la lista puede estar vacía (4c completa)
         foreach (T::ARCHIVOS_PENDIENTES_4C as $rel => $motivo) {
             $this->assertFileExists(base_path($rel), "«{$rel}» ya no existe: quítalo de ARCHIVOS_PENDIENTES_4C");
             $this->assertNotNull(

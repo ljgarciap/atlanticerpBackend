@@ -22,7 +22,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class QuoteDeliveryToPipelineTest extends FeatureTestCase
 {
-    private const DESIGNER = 'designer@atlantic.test';
+    private const DESIGNER = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {

@@ -17,7 +17,7 @@ class LoginTest extends FeatureTestCase
     {
         // designer has a single role → login returns JWT directly
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -39,7 +39,7 @@ class LoginTest extends FeatureTestCase
                 ['value' => 'en', 'updated_by' => null, 'updated_at' => now()],
             );
 
-            $user = User::where('email', 'designer@atlantic.test')->firstOrFail();
+            $user = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
             $user->preferences = [];
             $user->save();
         } finally {
@@ -47,7 +47,7 @@ class LoginTest extends FeatureTestCase
         }
 
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -67,7 +67,7 @@ class LoginTest extends FeatureTestCase
                 ['value' => 120, 'updated_by' => null, 'updated_at' => now()],
             );
 
-            $user = User::where('email', 'designer@atlantic.test')->firstOrFail();
+            $user = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
             $user->preferences = [];
             $user->save();
         } finally {
@@ -75,7 +75,7 @@ class LoginTest extends FeatureTestCase
         }
 
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ]);
 
@@ -98,7 +98,7 @@ class LoginTest extends FeatureTestCase
                 ['value' => 120, 'updated_by' => null, 'updated_at' => now()],
             );
 
-            $user = User::where('email', 'designer@atlantic.test')->firstOrFail();
+            $user = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
             $user->preferences = ['session_timeout_min' => 15];
             $user->save();
         } finally {
@@ -106,7 +106,7 @@ class LoginTest extends FeatureTestCase
         }
 
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ]);
 

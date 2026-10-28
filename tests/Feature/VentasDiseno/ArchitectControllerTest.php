@@ -70,12 +70,12 @@ class ArchitectControllerTest extends FeatureTestCase
         // SCRUM-907 — la pantalla "Arquitectos" del menú CRM necesita un listado global, sin
         // acotar a un Subcliente (a diferencia del picker de Cotización, que sí lo exige vía
         // sub_client_id). Mismo endpoint sirve ambos casos.
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         [$sub, $other] = $this->makeTwoSubClients();
         Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
         Architect::create(['sub_client_id' => $other->id, 'name' => 'Arq. De Otro Sub', 'email' => 'otro@example.com']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/architects')
@@ -88,12 +88,12 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_listar_arquitectos_sin_sub_client_id_filtra_por_nombre(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         [$sub] = $this->makeTwoSubClients();
         Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
         Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Otro', 'email' => 'otro@example.com']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/architects?search=Fernando')
@@ -106,12 +106,12 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_buscar_arquitectos_acotado_al_subcliente(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         [$sub, $other] = $this->makeTwoSubClients();
         Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
         Architect::create(['sub_client_id' => $other->id, 'name' => 'Arq. De Otro Sub', 'email' => 'otro@example.com']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/architects?sub_client_id={$sub->id}")
@@ -124,12 +124,12 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_buscar_arquitectos_por_nombre_dentro_del_subcliente(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         [$sub] = $this->makeTwoSubClients();
         Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
         Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Otro', 'email' => 'otro@example.com']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/architects?sub_client_id={$sub->id}&search=Fernando")
@@ -142,12 +142,12 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_arquitecto_huerfano_sin_subcliente_no_aparece_en_ninguna_busqueda(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         [$sub] = $this->makeTwoSubClients();
         // Simula un registro creado antes de SCRUM-122 (directorio global, sin sub_client_id).
         Architect::create(['name' => 'Arq. Legacy Global', 'phone' => '6000-9999']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/architects?sub_client_id={$sub->id}")
@@ -160,8 +160,8 @@ class ArchitectControllerTest extends FeatureTestCase
     public function test_crear_arquitecto_sin_sub_client_id_ahora_es_valido_la_base_es_global(): void
     {
         // SCRUM-1121: la base de asociados ya no está atada a un subcliente.
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/architects', ['name' => 'Arq. Sin Sub', 'phone' => '6000-0000'])
@@ -171,9 +171,9 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_crear_arquitecto_sin_telefono_ni_correo_retorna_422(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         [$sub] = $this->makeTwoSubClients();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/architects', ['sub_client_id' => $sub->id, 'name' => 'Arq. Sin Contacto'])
@@ -182,9 +182,9 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_crear_arquitecto(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         [$sub] = $this->makeTwoSubClients();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/architects', [
@@ -197,9 +197,9 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_crear_arquitecto_solo_con_correo_sin_telefono(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.write');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.write');
         [$sub] = $this->makeTwoSubClients();
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/ventas-diseno/architects', [
@@ -215,10 +215,10 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_editar_arquitecto_actualiza_el_registro_real(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.edit');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.edit');
         [$sub] = $this->makeTwoSubClients();
         $architect = Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/architects/{$architect->id}", [
@@ -235,12 +235,12 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_editar_arquitecto_sin_permiso_edit_retorna_403(): void
     {
-        // supervisor@ (rol sin bridge de edit por default) en vez de designer@ —
+        // nivel5@ (rol sin bridge de edit por default) en vez de vendedor@ —
         // mismo motivo que QuoteControllerTest::test_actualizar_sin_permiso_edit_retorna_403.
-        $this->grantVentasDiseno('supervisor@atlantic.test');
+        $this->grantVentasDiseno('nivel5@atlantic.test');
         [$sub] = $this->makeTwoSubClients();
         $architect = Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
-        $token = $this->loginAs('supervisor@atlantic.test', 'Password123!');
+        $token = $this->loginAs('nivel5@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/architects/{$architect->id}", ['name' => 'Arq. Fernando Solís', 'phone' => '6000-9999'])
@@ -249,8 +249,8 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_editar_arquitecto_inexistente_retorna_404(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.edit');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.edit');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/ventas-diseno/architects/999999', ['name' => 'X', 'phone' => '6000-0000'])
@@ -259,10 +259,10 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_editar_arquitecto_sin_telefono_ni_correo_retorna_422(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test', 'ventas_diseno.edit');
+        $this->grantVentasDiseno('vendedor@atlantic.test', 'ventas_diseno.edit');
         [$sub] = $this->makeTwoSubClients();
         $architect = Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/architects/{$architect->id}", ['name' => 'Arq. Fernando Solís'])
@@ -278,8 +278,8 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_ver_detalle_de_arquitecto_inexistente_retorna_404(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/architects/999999')
@@ -288,8 +288,8 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_ver_detalle_de_arquitecto_incluye_los_proyectos_asociados(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
-        $ownerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
+        $ownerId = $this->userIdByEmail('vendedor@atlantic.test');
         [$sub, $otherSub] = $this->makeTwoSubClients();
         $architect = Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Fernando Solís', 'phone' => '6000-0000']);
 
@@ -301,7 +301,7 @@ class ArchitectControllerTest extends FeatureTestCase
         $otherCard = $this->makeCardForSubClient($otherSub, $ownerId);
         Quote::create(['owner_id' => $ownerId, 'architect_id' => $otherArchitect->id, 'sales_project_id' => $otherCard->sales_project_id]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/architects/{$architect->id}")
@@ -316,10 +316,10 @@ class ArchitectControllerTest extends FeatureTestCase
 
     public function test_ver_detalle_de_arquitecto_sin_proyectos_devuelve_lista_vacia(): void
     {
-        $this->grantVentasDiseno('designer@atlantic.test');
+        $this->grantVentasDiseno('vendedor@atlantic.test');
         [$sub] = $this->makeTwoSubClients();
         $architect = Architect::create(['sub_client_id' => $sub->id, 'name' => 'Arq. Sin Proyectos', 'phone' => '6000-0000']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/architects/{$architect->id}")

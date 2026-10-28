@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * REQ-292 RN1 — los 3 valores capturados + la bandera de licencia médica (RN4), un mes/año puntual.
  * Batch 10 (REQ-258 RN2) — `calidad_pct` es opcional: solo aplica a técnicos con
- * `has_bonus_plan=true` (hoy solo Tecnico Servicios Test), captura manual del % directamente (no hay
+ * `has_bonus_plan=true` (hoy solo Tecnico Test), captura manual del % directamente (no hay
  * conversión de rango, a diferencia de los otros 3 valores crudos).
  */
 class StoreCommissionCaptureRequest extends FormRequest

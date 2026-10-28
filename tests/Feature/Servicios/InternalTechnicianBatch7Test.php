@@ -19,7 +19,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
+    private const TECNICO_SERVICIOS = 'tecnico@test.com';
 
     private const MANAGEMENT = 'gerencia@test.com';
 
@@ -59,7 +59,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
         // documentado en TicketBatch4Test/ExternalTechnicianBatch5Test).
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
-        return InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail()->id;
+        return InternalTechnician::where('nombre', 'Tecnico Test')->firstOrFail()->id;
     }
 
     // ── REQ-261 — Estadísticas generales del equipo ──────────────────────────────────────────
@@ -86,7 +86,7 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL, 'descripcion' => 'x', 'cliente' => 'x',
             'estado' => Ticket::ESTADO_SCHEDULED, 'quote_status' => Ticket::QUOTE_STATUS_PENDING,
             'inspection_report_status' => Ticket::INSPECTION_STATUS_PENDING,
-            'internal_technician_id' => InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail()->user_id,
+            'internal_technician_id' => InternalTechnician::where('nombre', 'Tecnico Test')->firstOrFail()->user_id,
             'scheduled_at' => $this->panama('14:00'), 'scheduled_ends_at' => $this->panama('15:00'),
         ]);
 
@@ -197,12 +197,12 @@ class InternalTechnicianBatch7Test extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    /** REQ-258 RN7 — hoy solo Tecnico Servicios Test tiene plan de bonificación activo. */
+    /** REQ-258 RN7 — hoy solo Tecnico Test tiene plan de bonificación activo. */
     public function test_tecnico_sin_plan_de_bonificacion_retorna_422(): void
     {
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $miguelId = InternalTechnician::where('nombre', 'Garantias Servicios Test')->firstOrFail()->id;
+        $miguelId = InternalTechnician::where('nombre', 'Tecnico Garantias Test')->firstOrFail()->id;
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/internal-technicians/{$miguelId}/commission-capture")

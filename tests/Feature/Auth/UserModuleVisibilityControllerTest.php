@@ -31,14 +31,14 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
     private function designerId(): int
     {
-        return (int) User::where('email', 'designer@atlantic.test')->value('id');
+        return (int) User::where('email', 'vendedor@atlantic.test')->value('id');
     }
 
     // ── GET/PUT /api/admin/users/{id}/module-visibility ─────────────────────────
 
     public function test_module_visibility_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $this->activateTenant();
 
         $this->withHeaders($this->authHeaders($token))
@@ -58,7 +58,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
 
         $modules = collect($response->json('modules'))->keyBy('module');
         $this->assertCount(7, $modules);
-        // vendedor (rol de designer@) tiene ventas_diseno full, sin equipo.
+        // vendedor (rol de vendedor@) tiene ventas_diseno full, sin equipo.
         $this->assertSame(RoleModuleVisibility::VIEW_FULL, $modules['ventas_diseno']['can_view']);
         $this->assertFalse($modules['ventas_diseno']['can_view_team']);
         // Ningún otro módulo — cae en None por default de rol, no por override.

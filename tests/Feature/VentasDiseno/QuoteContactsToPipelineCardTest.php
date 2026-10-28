@@ -20,7 +20,7 @@ use Tests\Feature\FeatureTestCase;
  */
 class QuoteContactsToPipelineCardTest extends FeatureTestCase
 {
-    private const DESIGNER = 'designer@atlantic.test';
+    private const DESIGNER = 'vendedor@atlantic.test';
 
     protected function setUp(): void
     {

@@ -42,7 +42,7 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
+        $designerId = User::where('email', 'vendedor@atlantic.test')->first()->id;
 
         $r1 = GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $designerId, 'estado' => GeneralCountRequest::ESTADO_EVALUADO]);
         $l1 = GeneralCountRequestLine::create(['general_count_request_id' => $r1->id, 'catalog_product_id' => $product->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 8, 'diferencia' => -2]);
@@ -69,7 +69,7 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $productSinDiferencia = $this->makeProduct();
         $productYaReemplazado = $this->makeProduct();
-        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
+        $designerId = User::where('email', 'vendedor@atlantic.test')->first()->id;
 
         $r1 = GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $designerId, 'estado' => GeneralCountRequest::ESTADO_EVALUADO]);
         $sinDiferencia = GeneralCountRequestLine::create(['general_count_request_id' => $r1->id, 'catalog_product_id' => $productSinDiferencia->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 10, 'diferencia' => 0]);
@@ -93,7 +93,7 @@ class BodegaBackfillGeneralCountReplacedLinesCommandTest extends FeatureTestCase
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $product = $this->makeProduct();
-        $designerId = User::where('email', 'designer@atlantic.test')->first()->id;
+        $designerId = User::where('email', 'vendedor@atlantic.test')->first()->id;
 
         $r1 = GeneralCountRequest::create(['warehouse_id' => $central->id, 'realizado_por' => $designerId, 'estado' => GeneralCountRequest::ESTADO_EVALUADO]);
         $l1 = GeneralCountRequestLine::create(['general_count_request_id' => $r1->id, 'catalog_product_id' => $product->id, 'cantidad_sistema' => 10, 'cantidad_contada' => 8, 'diferencia' => -2]);

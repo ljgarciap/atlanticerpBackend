@@ -49,11 +49,11 @@ class CatalogProductControllerTest extends FeatureTestCase
 
     public function test_listado_incluye_solo_productos_activos(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'ACT-001', 'is_active' => true]);
         $this->makeProduct(['reference' => 'INACT-001', 'is_active' => false]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products')
             ->assertStatus(200);
@@ -68,10 +68,10 @@ class CatalogProductControllerTest extends FeatureTestCase
         // REQ-036 AC2: la ficha técnica muestra foto/marca/descripción/
         // disponible/precio — el costo es información de margen interna,
         // nunca debe viajar por HTTP hacia el buscador.
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products')
             ->assertStatus(200);
@@ -88,7 +88,7 @@ class CatalogProductControllerTest extends FeatureTestCase
      */
     public function test_stock_quantity_resta_lo_comprometido_en_bodega(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct(['reference' => 'NET-001', 'stock_quantity' => 20]);
 
         $order = Order::create([
@@ -104,7 +104,7 @@ class CatalogProductControllerTest extends FeatureTestCase
             'description_snapshot' => $product->name,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products?search=NET-001')
             ->assertStatus(200);
@@ -115,11 +115,11 @@ class CatalogProductControllerTest extends FeatureTestCase
 
     public function test_busqueda_exacta_por_referencia(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'SPOT-010', 'name' => 'Spot XL empotrable', 'description' => 'Spot XL empotrable']);
         $this->makeProduct(['reference' => 'CAND-099', 'name' => 'Modelo de cristal', 'description' => 'Modelo de cristal']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products?search=SPOT-010')
             ->assertStatus(200);
@@ -137,10 +137,10 @@ class CatalogProductControllerTest extends FeatureTestCase
      */
     public function test_busqueda_sin_coincidencia_exacta_ni_parcial_no_trae_resultados_por_similitud(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'ITEM-001', 'name' => 'Producto colgante industrial', 'description' => 'Producto colgante industrial']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         // Error de tipeo: "colgante" -> "colgnate" — no es substring de ningún campo.
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products?search=colgnate')
@@ -153,11 +153,11 @@ class CatalogProductControllerTest extends FeatureTestCase
     /** SCRUM-796 (secc. 6) — coincidencia parcial real (substring) sigue funcionando. */
     public function test_busqueda_parcial_por_substring_de_nombre(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'ITEM-001', 'name' => 'Producto colgante industrial', 'description' => 'Producto colgante industrial']);
         $this->makeProduct(['reference' => 'CAND-099', 'name' => 'Modelo de cristal', 'description' => 'Modelo de cristal']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products?search=colgante')
             ->assertStatus(200);
@@ -174,11 +174,11 @@ class CatalogProductControllerTest extends FeatureTestCase
      */
     public function test_busqueda_prioriza_coincidencia_exacta_sobre_parcial(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'ABC-123X', 'name' => 'Variante parcial', 'description' => 'Variante parcial']);
         $this->makeProduct(['reference' => 'ABC-123', 'name' => 'Coincidencia exacta', 'description' => 'Coincidencia exacta']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products?search=ABC-123')
             ->assertStatus(200);
@@ -191,12 +191,12 @@ class CatalogProductControllerTest extends FeatureTestCase
     /** SCRUM-796 (sección 5/6) — el tope de resultados (6) sigue aplicando a la coincidencia parcial. */
     public function test_busqueda_parcial_trae_hasta_6_resultados(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         for ($i = 1; $i <= 8; $i++) {
             $this->makeProduct(['reference' => "ITEM-00{$i}", 'name' => 'Producto colgante XL', 'description' => 'Producto colgante XL']);
         }
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products?search=ITEM')
             ->assertStatus(200);
@@ -207,10 +207,10 @@ class CatalogProductControllerTest extends FeatureTestCase
 
     public function test_show_retorna_ficha_tecnica_sin_costo(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/catalog-products/{$product->id}")
             ->assertStatus(200);
@@ -221,10 +221,10 @@ class CatalogProductControllerTest extends FeatureTestCase
 
     public function test_show_producto_inactivo_retorna_404(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct(['is_active' => false]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/catalog-products/{$product->id}")
             ->assertStatus(404);
@@ -234,12 +234,12 @@ class CatalogProductControllerTest extends FeatureTestCase
 
     public function test_gate_global_apagado_muestra_catalogo_completo_aunque_preferencia_personal_este_activa(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $this->setUserDemoModePreference('designer@atlantic.test', true);
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $this->setUserDemoModePreference('vendedor@atlantic.test', true);
         // Gate global queda en default (apagado) -- no se llama enableDemoModeGlobally().
         $this->makeProduct(['reference' => 'SIN-FOTO', 'photo_url' => null]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products')
             ->assertStatus(200);
@@ -249,12 +249,12 @@ class CatalogProductControllerTest extends FeatureTestCase
 
     public function test_gate_global_activo_pero_preferencia_personal_apagada_muestra_catalogo_completo(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->enableDemoModeGlobally();
-        $this->setUserDemoModePreference('designer@atlantic.test', false);
+        $this->setUserDemoModePreference('vendedor@atlantic.test', false);
         $this->makeProduct(['reference' => 'SIN-FOTO', 'photo_url' => null]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products')
             ->assertStatus(200);
@@ -264,13 +264,13 @@ class CatalogProductControllerTest extends FeatureTestCase
 
     public function test_ambos_gates_activos_excluye_producto_sin_imagen(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->enableDemoModeGlobally();
-        $this->setUserDemoModePreference('designer@atlantic.test', true);
+        $this->setUserDemoModePreference('vendedor@atlantic.test', true);
         $this->makeProduct(['reference' => 'SIN-FOTO', 'photo_url' => null, 'photo_key' => null]);
         $this->makeProduct(['reference' => 'CON-FOTO', 'photo_url' => 'https://cdn.test/foto.jpg']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products')
             ->assertStatus(200);
@@ -282,13 +282,13 @@ class CatalogProductControllerTest extends FeatureTestCase
 
     public function test_ambos_gates_activos_excluye_producto_con_precio_cero(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->enableDemoModeGlobally();
-        $this->setUserDemoModePreference('designer@atlantic.test', true);
+        $this->setUserDemoModePreference('vendedor@atlantic.test', true);
         $this->makeProduct(['reference' => 'SIN-PRECIO', 'photo_url' => 'https://cdn.test/foto.jpg', 'price_full' => 0]);
         $this->makeProduct(['reference' => 'CON-PRECIO', 'photo_url' => 'https://cdn.test/foto.jpg', 'price_full' => 150]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products')
             ->assertStatus(200);
@@ -303,12 +303,12 @@ class CatalogProductControllerTest extends FeatureTestCase
         // Precedencia de CatalogService::photoUrl(): photo_key gana si existe. Un producto con
         // photo_key pero SIN photo_url (foto subida por el mecanismo nuevo, SCRUM-830) debe
         // seguir contando como "tiene imagen" en Modo Demo.
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->enableDemoModeGlobally();
-        $this->setUserDemoModePreference('designer@atlantic.test', true);
+        $this->setUserDemoModePreference('vendedor@atlantic.test', true);
         $this->makeProduct(['reference' => 'FOTO-NUEVA', 'photo_url' => null, 'photo_key' => 'ventas_diseno/foo.jpg']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products')
             ->assertStatus(200);
@@ -320,12 +320,12 @@ class CatalogProductControllerTest extends FeatureTestCase
     public function test_1138_buscador_resuelve_la_foto_subida_y_conserva_la_legacy(): void
     {
         config(['filesystems.disks.s3-public.cdn_url' => 'https://cdn.test']);
-        $this->grantVentasDisenoRead('designer@atlantic.test');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'FOTO-SUB', 'photo_url' => null, 'photo_key' => 'catalog/5/photo/a.jpg', 'photo_thumbnail_key' => 'catalog/5/photo/a-thumb.jpg']);
         $this->makeProduct(['reference' => 'FOTO-LEG', 'photo_url' => 'https://legacy.test/l.jpg']);
         $this->makeProduct(['reference' => 'FOTO-SIN', 'photo_url' => null]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $rows = collect($this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/catalog-products?per_page=all')
             ->assertStatus(200)->json('data'))->keyBy('reference');

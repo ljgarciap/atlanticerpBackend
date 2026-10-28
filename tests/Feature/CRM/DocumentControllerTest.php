@@ -630,7 +630,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_diseñador_no_asignado_no_puede_listar_documentos(): void
     {
         $mgmt      = $this->loginAs();
-        $designer  = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer  = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $projectId = $this->createProject($mgmt);
 
         $this->withHeaders($this->authHeaders($designer))
@@ -641,7 +641,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_diseñador_no_asignado_no_puede_subir_documentos(): void
     {
         $mgmt      = $this->loginAs();
-        $designer  = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer  = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $projectId = $this->createProject($mgmt);
         $file      = UploadedFile::fake()->create('plano.pdf', 10, 'application/pdf');
 
@@ -656,7 +656,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_diseñador_no_asignado_no_puede_descargar_documentos(): void
     {
         $mgmt       = $this->loginAs();
-        $designer   = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer   = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $projectId  = $this->createProject($mgmt);
         $documentId = $this->uploadDocument($mgmt, $projectId);
 
@@ -668,7 +668,7 @@ class DocumentControllerTest extends FeatureTestCase
     public function test_diseñador_no_asignado_no_puede_eliminar_documentos(): void
     {
         $mgmt       = $this->loginAs();
-        $designer   = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designer   = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $projectId  = $this->createProject($mgmt);
         $documentId = $this->uploadDocument($mgmt, $projectId);
 
@@ -682,7 +682,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = (int) $this->withHeaders($this->authHeaders($designerToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -730,7 +730,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = (int) $this->withHeaders($this->authHeaders($designerToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -753,7 +753,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $designerToken = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $designerId    = (int) $this->withHeaders($this->authHeaders($designerToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -773,7 +773,7 @@ class DocumentControllerTest extends FeatureTestCase
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $readonlyToken = $this->loginAs('readonly@atlantic.test', 'Password123!');
+        $readonlyToken = $this->loginAs('nivel1@atlantic.test', 'Password123!');
         $readonlyId    = (int) $this->withHeaders($this->authHeaders($readonlyToken))
             ->getJson('/api/auth/me')
             ->json('id');
@@ -792,14 +792,14 @@ class DocumentControllerTest extends FeatureTestCase
 
     public function test_asignado_sin_crm_delete_no_puede_eliminar_documento(): void
     {
-        // electrician@ (nivel 2, Basic User: crm.read+crm.write, sin crm.delete) en vez de
-        // designer@ -- desde SCRUM-83, designer@ es un vendedor real en nivel 4
+        // nivel2@ (nivel 2, Basic User: crm.read+crm.write, sin crm.delete) en vez de
+        // vendedor@ -- desde SCRUM-83, vendedor@ es un vendedor real en nivel 4
         // ("Power User"), que sí incluye crm.delete en el escape hatch legado, así que ya no
         // sirve como fixture "asignado pero sin crm.delete".
         $mgmt      = $this->loginAs();
         $projectId = $this->createProject($mgmt);
 
-        $assigneeToken = $this->loginAs('electrician@atlantic.test', 'Password123!');
+        $assigneeToken = $this->loginAs('nivel2@atlantic.test', 'Password123!');
         $assigneeId    = (int) $this->withHeaders($this->authHeaders($assigneeToken))
             ->getJson('/api/auth/me')
             ->json('id');

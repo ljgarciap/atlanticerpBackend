@@ -52,9 +52,9 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
     public function test_index_sin_bodega_read_retorna_403(): void
     {
-        // designer@ (Ventas & Diseño) no tiene ningún permiso bodega.* — mismo usuario "sin
+        // vendedor@ (Ventas & Diseño) no tiene ningún permiso bodega.* — mismo usuario "sin
         // permiso" que ya usan WarehouseControllerTest/KardexControllerTest.
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/bodega/inventory')
@@ -67,8 +67,8 @@ class BodegaInventoryControllerTest extends FeatureTestCase
 
         // Usuario con bodega.read pero SIN bodega.write — el gate de escritura debe rechazarlo
         // aunque sí pueda leer el resto de la pantalla.
-        $this->grantBodegaPermissions('designer@atlantic.test', ['bodega.read']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantBodegaPermissions('vendedor@atlantic.test', ['bodega.read']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/inventory/{$product->id}/confirm-arrival", ['cantidad_entregada' => 5])

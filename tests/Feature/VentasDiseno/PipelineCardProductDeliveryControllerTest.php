@@ -83,12 +83,12 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_sin_acceso_a_la_tarjeta_retorna_403(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $otherId    = $this->userIdByEmail('management@atlantic.test');
         ['card' => $card] = $this->makePartialCardWithQuoteItem($otherId);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments")
@@ -97,12 +97,12 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_update_con_delivery_type_no_partial_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
         $card->update(['delivery_type' => 'single']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments", [
@@ -113,11 +113,11 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_get_devuelve_data_con_quote_item_id_como_identificador(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments")
@@ -132,11 +132,11 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_put_persiste_asignacion_con_fecha_valida(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments", [
@@ -151,11 +151,11 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_put_con_fecha_no_definida_para_la_tarjeta_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments", [
@@ -171,8 +171,8 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_put_con_delivery_date_null_borra_la_asignacion_existente(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
         $dateId = $card->deliveryDates()->where('date', '2026-11-01')->value('id');
         PipelineCardProductDelivery::create([
@@ -180,7 +180,7 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
             'pipeline_card_delivery_date_id' => $dateId,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments", [
@@ -207,10 +207,10 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_edicion_con_fechas_nuevas_sin_guardar_y_asignaciones_persiste_todo_en_un_solo_put(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // 2027-01-10 todavía no existe en BD: es una fecha del borrador de la edición.
         $this->withHeaders($this->authHeaders($token))
@@ -227,14 +227,14 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_guardar_la_tarjeta_con_las_mismas_fechas_no_borra_las_asignaciones_existentes(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
         PipelineCardProductDelivery::create([
             'pipeline_card_id' => $card->id, 'quote_item_id' => $quoteItemId,
             'pipeline_card_delivery_date_id' => $card->deliveryDates()->where('date', '2026-11-01')->value('id'),
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
@@ -248,14 +248,14 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_quitar_una_fecha_descarta_solo_las_asignaciones_de_esa_fecha(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
         PipelineCardProductDelivery::create([
             'pipeline_card_id' => $card->id, 'quote_item_id' => $quoteItemId,
             'pipeline_card_delivery_date_id' => $card->deliveryDates()->where('date', '2026-12-15')->value('id'),
         ]);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         // Se conserva 2026-11-01, se quita 2026-12-15 (la del producto) y se agrega 2027-02-01.
         $this->withHeaders($this->authHeaders($token))
@@ -270,10 +270,10 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_asignacion_a_fecha_fuera_del_borrador_retorna_422_y_no_persiste_nada(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", $this->editPayload(
@@ -291,10 +291,10 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_product_deliveries_con_entrega_unica_retorna_422(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card, 'quoteItemId' => $quoteItemId] = $this->makePartialCardWithQuoteItem($designerId);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/ventas-diseno/pipeline/{$card->id}", [
@@ -306,10 +306,10 @@ class PipelineCardProductDeliveryControllerTest extends FeatureTestCase
 
     public function test_get_con_dates_del_borrador_sugiere_la_fecha_mas_lejana_del_borrador(): void
     {
-        $this->grantVentasDisenoEdit('designer@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         ['card' => $card] = $this->makePartialCardWithQuoteItem($designerId); // stock 0 < pedido 5
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/pipeline/{$card->id}/product-delivery-assignments?dates[]=2026-11-01&dates[]=2027-03-20")

@@ -40,7 +40,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_index_cualquier_autenticado_ve_los_14_roles(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/roles');
 
@@ -54,7 +54,7 @@ class RoleControllerTest extends FeatureTestCase
     {
         // management@atlantic.test tiene nivel 10 (Super Admin, bypass vía superadmin.all
         // en su JSONB plano) -- usamos designer (nivel 3, sin bypass) para probar el 403 real.
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin/roles', ['key' => 'nuevo_rol', 'name' => 'Nuevo Rol'])
@@ -167,7 +167,7 @@ class RoleControllerTest extends FeatureTestCase
 
     public function test_visibility_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
         $this->activateTenant();
         $role  = Role::where('key', 'vendedor')->firstOrFail();
 

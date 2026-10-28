@@ -33,11 +33,11 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_busqueda_por_nombre(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
         LiquidationAgency::create(['name' => 'Otra Agencia']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/liquidation-agencies?search=Istmo')
             ->assertStatus(200);
@@ -48,8 +48,8 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_crear_agencia_solo_con_nombre(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/liquidation-agencies', ['name' => 'Agencia Nueva'])
@@ -61,8 +61,8 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_crear_agencia_sin_nombre_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/liquidation-agencies', [])
@@ -71,8 +71,8 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_crear_agencia_con_telefono_invalido_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.write']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/liquidation-agencies', ['name' => 'X', 'phone' => 'abcdef'])
@@ -81,8 +81,8 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_crear_agencia_sin_permiso_write_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/compras/liquidation-agencies', ['name' => 'X'])
@@ -94,7 +94,7 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
         // "Liquidada" = llegó a "recibido" (criterio real del escenario de aceptación del
         // ticket) — una orden solo EN "en_aduana" (sin llegar a recibido todavía) sigue
         // por_liquidar, ver test_orden_de_proveedor_local_cuenta_liquidada_al_llegar_a_recibido.
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.write', 'compras.edit', 'compras.approve']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.write', 'compras.edit', 'compras.approve']);
         $provider = \App\Modules\Compras\Models\Provider::create(['name' => 'Proveedor Demo A', 'origin' => 'internacional']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
@@ -107,7 +107,7 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
             'currency' => 'USD', 'total_amount' => 200,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/liquidation-agencies/summary')
             ->assertStatus(200);
@@ -123,7 +123,7 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
         // completo (PurchaseOrder::statusSequence()) — la definición vieja de "liquidada"
         // (hasReachedStage(EN_ADUANA)) dejaba estas órdenes "por_liquidar" para siempre, sin
         // importar que llegaran a Recibido. El criterio real del ticket es llegar a "Recibido".
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $localProvider = \App\Modules\Compras\Models\Provider::create(['name' => 'Local SA', 'origin' => 'local']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
@@ -132,7 +132,7 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
             'currency' => 'USD', 'total_amount' => 150,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/liquidation-agencies/summary')
             ->assertStatus(200);
@@ -144,11 +144,11 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_detalle_incluye_contactos_y_pedidos(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
         $agency->contacts()->create(['name' => 'Juan Pérez', 'phone' => '+507 6000-0000']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/liquidation-agencies/{$agency->id}")
             ->assertStatus(200);
@@ -159,10 +159,10 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_agregar_contacto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/liquidation-agencies/{$agency->id}/contacts", ['name' => 'Ana López'])
             ->assertStatus(201)
@@ -173,11 +173,11 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_no_se_puede_quitar_el_unico_contacto(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
         $contact = $agency->contacts()->create(['name' => 'Único Contacto']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/compras/liquidation-agencies/{$agency->id}/contacts/{$contact->id}")
             ->assertStatus(422);
@@ -187,12 +187,12 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_quitar_contacto_cuando_hay_mas_de_uno(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
         $contact = $agency->contacts()->create(['name' => 'Contacto A']);
         $agency->contacts()->create(['name' => 'Contacto B']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/compras/liquidation-agencies/{$agency->id}/contacts/{$contact->id}")
             ->assertStatus(204);
@@ -204,10 +204,10 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_actualizar_situacion_de_pago(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/liquidation-agencies/{$agency->id}", [
                 'pending_payment_amount' => 460,
@@ -226,10 +226,10 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_actualizar_situacion_de_pago_con_monto_negativo_retorna_422(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read', 'compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/liquidation-agencies/{$agency->id}", [
                 'pending_payment_amount' => -10,
@@ -240,10 +240,10 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_actualizar_situacion_de_pago_sin_permiso_edit_retorna_403(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/liquidation-agencies/{$agency->id}", [
                 'pending_payment_amount' => 100, 'paid_amount' => 0,
@@ -253,12 +253,12 @@ class LiquidationAgencyControllerTest extends FeatureTestCase
 
     public function test_resumen_incluye_kpis_de_situacion_de_pago(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $agency = LiquidationAgency::create([
             'name' => 'Agencia Aduanal Istmo', 'pending_payment_amount' => 460, 'paid_amount' => 0,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/liquidation-agencies/summary')
             ->assertStatus(200);

@@ -51,7 +51,7 @@ class AuditActivitySummaryTest extends FeatureTestCase
 
     public function test_sin_permiso_superadmin_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))->getJson(self::URL.'?from=2026-09-01&to=2026-09-07')->assertStatus(403);
     }
@@ -72,7 +72,7 @@ class AuditActivitySummaryTest extends FeatureTestCase
 
     public function test_agrega_por_usuario_tipo_modulo_y_dia(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $admin    = $this->userId('superadmin@atlantic.test');
 
         foreach (['2026-09-10 09:00:00', '2026-09-10 10:00:00', '2026-09-12 11:00:00'] as $at) {
@@ -125,7 +125,7 @@ class AuditActivitySummaryTest extends FeatureTestCase
     /** Las fechas se interpretan en hora de Panamá, no en UTC. */
     public function test_el_limite_del_dia_respeta_la_zona_horaria_de_panama(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $this->log($designer, 'crm.project.created', '2026-09-10 23:30:00'); // = 2026-09-11 04:30 UTC, sigue siendo día 10 en Panamá
         $this->log($designer, 'crm.project.created', '2026-09-11 00:30:00'); // día 11 en Panamá
 
@@ -150,7 +150,7 @@ class AuditActivitySummaryTest extends FeatureTestCase
     /** El total del dashboard debe coincidir con el visor de Logs para el mismo rango. */
     public function test_el_total_coincide_con_el_visor_de_logs(): void
     {
-        $designer = $this->userId('designer@atlantic.test');
+        $designer = $this->userId('vendedor@atlantic.test');
         $this->log($designer, 'crm.project.created', '2026-09-10 09:00:00');
         $this->log($designer, 'crm.project.updated', '2026-09-10 23:59:00');
         $this->log(null, 'ai.usage.requested', '2026-09-11 00:01:00');

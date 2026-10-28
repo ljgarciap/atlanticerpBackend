@@ -19,7 +19,7 @@ class InternalTechnicianEditDeleteTest extends FeatureTestCase
 {
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
-    private const TECNICO_SERVICIOS = 'tecnicoservicios@test.com';
+    private const TECNICO_SERVICIOS = 'tecnico@test.com';
 
     protected function setUp(): void
     {
@@ -118,7 +118,7 @@ class InternalTechnicianEditDeleteTest extends FeatureTestCase
     public function test_tecnico_eliminado_con_usuario_deja_de_ser_asignable_pero_su_historial_sigue(): void
     {
         /** @var InternalTechnician $carlos */
-        $carlos = InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail();
+        $carlos = InternalTechnician::where('nombre', 'Tecnico Test')->firstOrFail();
         $userId = (int) $carlos->user_id;
         $ticket = Ticket::create([
             'numero' => 'INS-2026-'.static::uniqueTestNumber(), 'tipo' => Ticket::TIPO_INSTALLATION,
@@ -140,7 +140,7 @@ class InternalTechnicianEditDeleteTest extends FeatureTestCase
     public function test_no_se_puede_eliminar_con_servicios_pendientes(): void
     {
         /** @var InternalTechnician $carlos */
-        $carlos = InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail();
+        $carlos = InternalTechnician::where('nombre', 'Tecnico Test')->firstOrFail();
         Ticket::create([
             'numero' => 'INS-2026-'.static::uniqueTestNumber(), 'tipo' => Ticket::TIPO_INSTALLATION,
             'tipo_instalacion' => Ticket::TIPO_INSTALACION_INTERNAL, 'descripcion' => 'Pendiente',
@@ -168,7 +168,7 @@ class InternalTechnicianEditDeleteTest extends FeatureTestCase
     public function test_el_seeder_no_resucita_ni_duplica_a_un_tecnico_eliminado(): void
     {
         /** @var InternalTechnician $carlos */
-        $carlos = InternalTechnician::where('nombre', 'Tecnico Servicios Test')->firstOrFail();
+        $carlos = InternalTechnician::where('nombre', 'Tecnico Test')->firstOrFail();
         $this->withHeaders($this->lider())->deleteJson("/api/servicios/internal-technicians/{$carlos->id}")->assertStatus(204);
 
         $this->seed(\Database\Seeders\InternalTechnicianSeeder::class);

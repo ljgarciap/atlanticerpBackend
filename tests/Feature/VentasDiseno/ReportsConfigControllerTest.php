@@ -48,8 +48,8 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_goals_sin_permiso_reports_configure_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/goals')
@@ -59,7 +59,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
     public function test_listar_goals_incluye_todos_los_disenadores(): void
     {
         $this->grantReportsConfigure('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         SalesGoal::create(['user_id' => $designerId, 'goal_amount' => 15000, 'goal_plus_amount' => 25000]);
 
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
@@ -88,13 +88,13 @@ class ReportsConfigControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('user_name');
-        $this->assertTrue($names->contains('Vendedor Disenador Test 8'), 'Un vendedor real sembrado por BusinessRoleUserSeeder debe listarse.');
+        $this->assertTrue($names->contains('Vendedor Test 8'), 'Un vendedor real sembrado por BusinessRoleUserSeeder debe listarse.');
     }
 
     public function test_upsert_goal_crea_y_actualiza(): void
     {
         $this->grantReportsConfigure('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
@@ -116,7 +116,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
         // Pre-QA 2026-07-16: sales_goals.goal_amount es decimal(12,2) -- sin el max:,
         // el valor llegaba intacto a Postgres y causaba 500 en vez de 422 (mismo patron SCRUM-81).
         $this->grantReportsConfigure('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
@@ -128,7 +128,7 @@ class ReportsConfigControllerTest extends FeatureTestCase
     public function test_goal_amount_negativo_retorna_422(): void
     {
         $this->grantReportsConfigure('management@atlantic.test');
-        $designerId = $this->userIdByEmail('designer@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
 
         $this->withHeaders($this->authHeaders($token))
@@ -141,8 +141,8 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_get_settings_es_legible_solo_con_ventas_diseno_read(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/settings')
@@ -156,8 +156,8 @@ class ReportsConfigControllerTest extends FeatureTestCase
 
     public function test_actualizar_settings_sin_permiso_retorna_403(): void
     {
-        $this->grantVentasDisenoRead('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantVentasDisenoRead('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/ventas-diseno/reports/settings', ['low_sales_threshold' => 30000])

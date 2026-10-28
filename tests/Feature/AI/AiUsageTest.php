@@ -95,7 +95,7 @@ class AiUsageTest extends FeatureTestCase
 
     public function test_index_requiere_permiso_superadmin(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin/ai/usage')
@@ -105,7 +105,7 @@ class AiUsageTest extends FeatureTestCase
     public function test_index_retorna_datos_paginados_con_totales_y_documento(): void
     {
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $requester = \App\Models\User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $requester = \App\Models\User::where('email', 'vendedor@atlantic.test')->firstOrFail();
 
         AiAnalysis::create([
             'entity_type' => 'project', 'entity_id' => null,

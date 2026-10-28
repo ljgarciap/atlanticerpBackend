@@ -22,7 +22,7 @@ class CrmPermissionMigrationTest extends FeatureTestCase
 
     private const ALDO = 'liderservicios@test.com'; // lider_servicios — ajeno a ventas_diseno/crm
 
-    private const MILENA = 'vendedordisenador@test.com'; // vendedor — can_view_team=false
+    private const MILENA = 'vendedor@test.com'; // vendedor — can_view_team=false
 
     protected function setUp(): void
     {

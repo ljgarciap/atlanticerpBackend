@@ -78,11 +78,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
 
     public function test_subir_confirmacion_proveedor_bloqueada_mientras_por_aprobar(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => 'confirmacion_proveedor',
@@ -95,11 +95,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
 
     public function test_subir_confirmacion_proveedor_permitida_fuera_de_por_aprobar(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => 'confirmacion_proveedor',
@@ -111,11 +111,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
     /** El gate es específico de confirmacion_proveedor — el resto del checklist (REQ-155) no tiene esa regla. */
     public function test_subir_otra_categoria_de_documento_no_se_bloquea_por_aprobar(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.edit']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/compras/orders/{$order->id}/documents", [
                 'category' => 'factura_comercial',
@@ -134,11 +134,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
      */
     public function test_index_documentos_permitido_con_solo_bodega_read(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['bodega.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['bodega.read']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}/documents")
             ->assertStatus(200);
@@ -146,11 +146,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
 
     public function test_index_documentos_permitido_con_solo_compras_limited_view(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.limited.view']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.limited.view']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}/documents")
             ->assertStatus(200);
@@ -159,11 +159,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
     /** Regresión: un rol sin ninguno de los 3 permisos sigue bloqueado (el gate no se abrió de más). */
     public function test_index_documentos_sigue_bloqueado_sin_ninguno_de_los_3_permisos(): void
     {
-        $this->grantCompras('designer@atlantic.test', []);
+        $this->grantCompras('vendedor@atlantic.test', []);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}/documents")
             ->assertStatus(403);
@@ -172,11 +172,11 @@ class PurchaseOrderDocumentControllerTest extends FeatureTestCase
     /** Regresión: compras.read (el caso ya cubierto antes de este fix) sigue funcionando igual. */
     public function test_index_documentos_sigue_permitido_con_compras_read(): void
     {
-        $this->grantCompras('designer@atlantic.test', ['compras.read']);
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/compras/orders/{$order->id}/documents")
             ->assertStatus(200);

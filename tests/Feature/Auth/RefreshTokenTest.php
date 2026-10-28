@@ -13,7 +13,7 @@ class RefreshTokenTest extends FeatureTestCase
     {
         // designer has a single role → login returns token + refresh_token directly
         $response = $this->postJson('/api/auth/login', [
-            'email'    => 'designer@atlantic.test',
+            'email'    => 'vendedor@atlantic.test',
             'password' => 'Password123!',
         ]);
 

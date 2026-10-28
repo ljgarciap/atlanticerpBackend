@@ -731,7 +731,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
 
     public function test_el_resumen_y_las_compensaciones_estan_cerradas_a_roles_sin_acceso_al_modulo(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/compensaciones/clientes')->assertStatus(403);
     }
 }

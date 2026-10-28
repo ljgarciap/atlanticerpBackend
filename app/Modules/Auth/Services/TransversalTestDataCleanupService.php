@@ -10,7 +10,7 @@ use RuntimeException;
 
 /**
  * SCRUM-901 — "Limpieza de datos de prueba" transversal: conservar ÚNICAMENTE la data de UN
- * usuario (`$keepUserEmail`, default Vendedor Disenador — flujos completos de principio a fin en todos los
+ * usuario (`$keepUserEmail`, default Vendedor — flujos completos de principio a fin en todos los
  * módulos) y purgar la de cualquier otro usuario, en cualquier módulo (CRM, Ventas & Diseño,
  * Compras, Bodega, Servicios, Administración & Contabilidad).
  *
@@ -45,7 +45,7 @@ use RuntimeException;
  *    la fila — típicamente quién la tocó/asignó, no quién es su dueño real).
  * 3. GUARD DE REFERENCIA ACTIVA (nuevo respecto a DemoCleanupController, motivado por el hallazgo
  *    de investigación: un `Provider`/`Warehouse`/`CatalogProduct` de prueba puede estar
- *    referenciado por un pedido REAL de Vendedor Disenador) — antes de confirmar un DELETE candidato, se
+ *    referenciado por un pedido REAL de Vendedor) — antes de confirmar un DELETE candidato, se
  *    resuelve vía `information_schema` TODA FK que apunte a esa tabla (sin importar el módulo) y
  *    se verifica que ninguna fila SOBREVIVIENTE (no candidata a borrar) todavía la referencie. Si
  *    la referencia existe, el candidato se excluye (`active_reference`) en vez de borrarse — más

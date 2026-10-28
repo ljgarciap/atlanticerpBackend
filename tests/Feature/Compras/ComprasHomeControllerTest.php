@@ -77,19 +77,19 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_summary_sin_permiso_read_retorna_403(): void
     {
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(403);
     }
 
     public function test_resumen_mes_comprado_incluye_todas_las_ordenes_del_mes_sin_importar_estado(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 500]);
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_RECIBIDO, 'total_amount' => 300]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
 
@@ -98,8 +98,8 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_resumen_mes_entregado_a_tiempo_null_sin_ordenes_recibidas_este_mes(): void
     {
-        $this->grantCompras('designer@atlantic.test');
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $this->grantCompras('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
@@ -109,7 +109,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_resumen_mes_entregado_a_tiempo_calcula_porcentaje_real(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         // A tiempo: llego el mismo dia estimado.
         $this->makeOrder($provider->id, [
@@ -122,7 +122,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
             'estimated_arrival_date' => now()->subDays(5), 'actual_arrival_date' => now()->subDays(1),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
 
@@ -131,14 +131,14 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_pendientes_orden_3_dias_exactos_genera_alerta(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_POR_APROBAR,
             'status_changed_at' => now()->subDays(3),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
 
@@ -149,14 +149,14 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_pendientes_orden_antes_de_3_dias_no_genera_alerta(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_POR_APROBAR,
             'status_changed_at' => now()->subDays(2),
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
 
@@ -165,7 +165,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_ordenes_criticas_coincide_con_chip_criticas_de_ver_ordenes(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, [
             'status' => PurchaseOrder::STATUS_POR_APROBAR, 'status_changed_at' => now()->subDays(4),
@@ -175,7 +175,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
         ]);
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO]); // no critica
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $home = $this->withHeaders($headers)->getJson('/api/compras/home/summary')->assertStatus(200);
@@ -191,13 +191,13 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_estado_compras_agrupa_las_7_etapas_con_conteo_y_valor(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO, 'total_amount' => 100]);
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_ORDENADO, 'total_amount' => 200]);
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_RECIBIDO, 'total_amount' => 50]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
 
@@ -211,10 +211,10 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_por_reordenar_producto_sin_orden_activa_aparece(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $this->makeProduct(['reference' => 'REORDER-1', 'stock_quantity' => 2, 'reorder_point' => 5]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
 
@@ -224,7 +224,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_por_reordenar_producto_con_orden_activa_no_aparece(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         $product = $this->makeProduct(['reference' => 'REORDER-2', 'stock_quantity' => 2, 'reorder_point' => 5]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
@@ -233,7 +233,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
             'quantity' => 10, 'unit_cost' => 5, 'subtotal' => 50,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
 
@@ -243,7 +243,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_por_reordenar_se_libera_cuando_la_orden_llega_a_recibido(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         $product = $this->makeProduct(['reference' => 'REORDER-3', 'stock_quantity' => 2, 'reorder_point' => 5]);
         $order = $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_EN_TRANSITO]);
@@ -252,7 +252,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
             'quantity' => 10, 'unit_cost' => 5, 'subtotal' => 50,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $headers = $this->authHeaders($token);
 
         $before = $this->withHeaders($headers)->getJson('/api/compras/home/summary')->assertStatus(200);
@@ -267,14 +267,14 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_por_reordenar_expone_cantidad_sugerida_y_proveedor(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider(['name' => 'ProveedorSugerido']);
         $this->makeProduct([
             'reference' => 'REORDER-4', 'stock_quantity' => 2, 'reorder_point' => 5,
             'provider_id' => $provider->id, 'cost' => 15,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/summary')->assertStatus(200);
 
@@ -296,14 +296,14 @@ class ComprasHomeControllerTest extends FeatureTestCase
      */
     public function test_approvals_pending_incluye_orden_por_aprobar_para_mark(): void
     {
-        $designer = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $designer = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
         ComprasSettings::current()->update(['primary_approver_user_id' => $designer->id]);
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 250, 'requires_primary_approval' => true]);
         // Control negativo: una orden que NO requiere aprobación de Gerencia no debe aparecer.
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 90, 'requires_primary_approval' => false]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
 
@@ -315,11 +315,11 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_vacio_sin_ningun_permiso_de_aprobacion(): void
     {
-        $this->grantCompras('designer@atlantic.test');
+        $this->grantCompras('vendedor@atlantic.test');
         $provider = $this->makeProvider();
         $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_POR_APROBAR, 'total_amount' => 250]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
 
@@ -337,7 +337,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
     public function test_approvals_pending_incluye_sustitucion_para_vendedor_responsable_sin_permiso_de_compras(): void
     {
         $product = $this->makeProduct();
-        $owner = User::where('email', 'designer@atlantic.test')->firstOrFail();
+        $owner = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
         $salesProject = SalesProject::create(['name' => 'Proyecto Responsable']);
         Quote::create([
             'sales_project_id' => $salesProject->id, 'owner_id' => $owner->id,
@@ -349,7 +349,7 @@ class ComprasHomeControllerTest extends FeatureTestCase
             'status' => ReplacementRequest::STATUS_PENDIENTE, 'margin_percent' => 20,
         ]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
 
@@ -360,12 +360,12 @@ class ComprasHomeControllerTest extends FeatureTestCase
 
     public function test_approvals_pending_incluye_zona_libre_para_quien_tiene_el_permiso(): void
     {
-        $this->grantCompras('designer@atlantic.test');
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')
+        $this->grantCompras('vendedor@atlantic.test');
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(['compras.read', 'compras.zona-libre.approve'])]);
         BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
 
@@ -382,14 +382,14 @@ class ComprasHomeControllerTest extends FeatureTestCase
      */
     public function test_approvals_pending_incluye_cambio_de_monto_para_quien_tiene_compras_edit(): void
     {
-        $this->grantCompras('designer@atlantic.test');
-        DB::table('atlantic_auth.users')->where('email', 'designer@atlantic.test')
+        $this->grantCompras('vendedor@atlantic.test');
+        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')
             ->update(['extra_permissions' => json_encode(['compras.read', 'compras.edit'])]);
         $provider = $this->makeProvider();
         $order = $this->makeOrder($provider->id, ['total_amount' => 500]);
-        $order->update(['pending_amount_change' => 1200, 'amount_change_requested_by' => $this->userIdByEmail('designer@atlantic.test')]);
+        $order->update(['pending_amount_change' => 1200, 'amount_change_requested_by' => $this->userIdByEmail('vendedor@atlantic.test')]);
 
-        $token = $this->loginAs('designer@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
 

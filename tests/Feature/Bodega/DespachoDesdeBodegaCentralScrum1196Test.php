@@ -58,7 +58,7 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
     {
         $order = $this->makeOrder([], ['catalog_product_id' => $product->id, 'qty_requested' => $qty]);
         $item  = $order->items->first();
-        $pickerId = $this->userIdByEmail('ayudantegeneralbodega@test.com');
+        $pickerId = $this->userIdByEmail('auxiliarbodega@test.com');
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order->id}/assign-picker", ['picker_id' => $pickerId])->assertStatus(200);
         $this->withHeaders($headers)->postJson("/api/bodega/orders/{$order->id}/start-picking")->assertStatus(200);
         $this->makeCurrentTenant();
@@ -317,7 +317,7 @@ class DespachoDesdeBodegaCentralScrum1196Test extends FeatureTestCase
         $central = $this->warehouse('Bodega Central');
         $headers = $this->headers();
 
-        $order = $this->makeOrder(['stage' => Order::STAGE_PACKING, 'picker_id' => $this->userIdByEmail('ayudantegeneralbodega@test.com')], [
+        $order = $this->makeOrder(['stage' => Order::STAGE_PACKING, 'picker_id' => $this->userIdByEmail('auxiliarbodega@test.com')], [
             'catalog_product_id' => $product->id, 'qty_requested' => 5, 'qty_picked' => 5, 'qty_reserved' => 5, 'warehouse_id' => $central->id,
         ]);
         $item = $order->items->first();
