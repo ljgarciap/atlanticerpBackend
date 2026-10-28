@@ -236,7 +236,7 @@ final class UserService
             $this->assertSuperadminOnly('permisos adicionales', $data['extra_permissions'] ?? [], $user->extra_permissions ?? [], $actorHasSuperadmin);
         }
         if (array_key_exists('additional_role_ids', $data)) {
-            $this->assertSuperadminOnly('roles adicionales', $data['additional_role_ids'] ?? [], $user->additionalRoles()->pluck('role_id')->all(), $actorHasSuperadmin);
+            $this->assertSuperadminOnly('roles adicionales', $data['additional_role_ids'] ?? [], array_values($user->additionalRoles()->pluck('role_id')->all()), $actorHasSuperadmin);
         }
 
         return DB::transaction(function () use ($user, $data, $actorHasSuperadmin): User {
