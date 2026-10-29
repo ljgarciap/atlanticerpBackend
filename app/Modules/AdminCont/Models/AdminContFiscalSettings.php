@@ -6,6 +6,7 @@ namespace App\Modules\AdminCont\Models;
 
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
+use App\Shared\Support\PrimaryApprovers;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
@@ -107,7 +108,7 @@ class AdminContFiscalSettings extends Model
 
         $primaryApproverId = self::current()->primary_approver_user_id;
 
-        return $jwt !== null && isset($jwt['sub']) && $primaryApproverId !== null && (int) $jwt['sub'] === $primaryApproverId;
+        return $jwt !== null && isset($jwt['sub']) && PrimaryApprovers::isApprover((int) $jwt['sub'], $primaryApproverId);
     }
 
     /**

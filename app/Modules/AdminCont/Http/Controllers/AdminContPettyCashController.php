@@ -23,6 +23,7 @@ use App\Modules\AdminCont\Services\AdminContPettyCashService;
 use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Http\Pagination;
 use App\Shared\Support\CircuitOpenException;
+use App\Shared\Support\PrimaryApprovers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -391,8 +392,8 @@ class AdminContPettyCashController
 
         $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        return $payload !== null && isset($payload['sub']) && $primaryApproverId !== null
-            && (int) $payload['sub'] === $primaryApproverId;
+        return $payload !== null && isset($payload['sub'])
+            && PrimaryApprovers::isApprover((int) $payload['sub'], $primaryApproverId);
     }
 
     /** Batch 21 — mismo roster de rol que el grupo `role:superadmin,lider_admin_contab,

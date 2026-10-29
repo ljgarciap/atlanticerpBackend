@@ -18,6 +18,7 @@ use App\Modules\AdminCont\Services\ArchitectCommissionService;
 use App\Modules\VentasDiseno\Models\Architect;
 use App\Shared\Http\Pagination;
 use App\Shared\Services\AuditService;
+use App\Shared\Support\PrimaryApprovers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -330,7 +331,7 @@ class AdminContArchitectCommissionController
 
         $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        return $primaryApproverId !== null && (int) $payload['sub'] === $primaryApproverId;
+        return PrimaryApprovers::isApprover((int) $payload['sub'], $primaryApproverId);
     }
 
     private function resolveUser(Request $request): ?User

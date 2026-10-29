@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Middleware;
 
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
+use App\Shared\Support\PrimaryApprovers;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,7 +46,7 @@ class EnsureIsPrimaryApprover
 
         $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        if ($primaryApproverId === null || (int) $payload['sub'] !== $primaryApproverId) {
+        if (! PrimaryApprovers::isApprover((int) $payload['sub'], $primaryApproverId)) {
             return response()->json(['message' => 'Esta pantalla es exclusiva del aprobador configurado.'], 403);
         }
 
