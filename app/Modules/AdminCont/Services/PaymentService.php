@@ -154,6 +154,16 @@ final class PaymentService
     }
 
     /**
+     * Fase 13 (2.2) — desglose por nivel del saldo a favor (ver `AbonoService::desgloseSaldoCliente()`).
+     *
+     * @return array{aplicable: float, a_cuenta: float, reservado: float, total: float}
+     */
+    public function creditBreakdownForClient(int $masterClientId): array
+    {
+        return $this->abonos->desgloseSaldoCliente($masterClientId);
+    }
+
+    /**
      * SCRUM-902 §4.2/4.3 — abono obligatorio (nivel Factura, o Proyecto ya re-asociado) que cubre
      * esta factura, capado a lo pendiente. Si hubiera más de un abono apuntando a la misma factura
      * (caso raro, el ticket no lo prohíbe), se consume el más antiguo primero; el resto queda

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Services;
 
 use App\Modules\AdminCont\Models\AdminContAbono;
+use App\Modules\AdminCont\Models\AdminContCompensationLine;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
@@ -95,9 +96,25 @@ final class SaldoFavorService
         usort($filtered, fn (array $a, array $b) => $b['fecha'] <=> $a['fecha']);
 
         return [
-            'indicadores' => ['saldo_disponible_total' => $saldoDisponibleTotal, 'clientes_con_saldo' => $clientesConSaldo],
+            'indicadores' => [
+                'saldo_disponible_total' => $saldoDisponibleTotal,
+                'clientes_con_saldo'     => $clientesConSaldo,
+                // Fase 13 (2.2) — el total desglosado, para que ninguna cifra mezcle niveles sin decirlo.
+                'saldo_aplicable_cliente' => $this->sumaDisponible($rows, fn (array $r): bool => $r['nivel'] === 'cliente' && $r['origen_tipo'] !== self::ORIGEN_COBRO),
+                'saldo_a_cuenta'          => $this->sumaDisponible($rows, fn (array $r): bool => $r['origen_tipo'] === self::ORIGEN_COBRO),
+                'saldo_reservado'         => $this->sumaDisponible($rows, fn (array $r): bool => $r['nivel'] !== 'cliente'),
+            ],
             'rows'        => $filtered,
         ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @param callable(array<string, mixed>): bool $filtro
+     */
+    private function sumaDisponible(array $rows, callable $filtro): float
+    {
+        return round(array_sum(array_map(fn (array $r): float => (float) $r['monto_disponible'], array_filter($rows, $filtro))), 2);
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -125,6 +142,10 @@ final class SaldoFavorService
         foreach ($abonos as $a) {
             $rows[] = [
                 'origen_tipo'      => self::ORIGEN_ABONO,
+                // Fase 13 (2.2) — la compensación pide `source_type` y `source_id` por línea; antes el listado no los exponía.
+                'source_type'      => AdminContCompensationLine::SOURCE_ABONO,
+                'source_id'        => $a->id,
+                'nivel'            => $a->nivelAsociacion(),
                 'origen'           => 'Abono de más',
                 'master_client_id' => $a->master_client_id,
                 'cliente'          => $clientNames->get($a->master_client_id) ?? '',
@@ -147,6 +168,9 @@ final class SaldoFavorService
             $original   = round((float) $c->monto_recibido, 2);
             $rows[] = [
                 'origen_tipo'      => self::ORIGEN_COBRO,
+                'source_type'      => AdminContCompensationLine::SOURCE_COBRO,
+                'source_id'        => $c->id,
+                'nivel'            => 'cliente',
                 'origen'           => 'Cobro a cuenta',
                 'master_client_id' => $c->master_client_id,
                 'cliente'          => $clientNames->get($c->master_client_id) ?? '',
@@ -181,6 +205,9 @@ final class SaldoFavorService
 
             $notaRows[] = [
                 'origen_tipo'      => $tipo,
+                'source_type'      => AdminContCompensationLine::SOURCE_NOTA_CREDITO,
+                'source_id'        => $n->id,
+                'nivel'            => 'cliente',
                 'origen'           => $label,
                 'master_client_id' => $n->master_client_id,
                 'cliente'          => $clientNames->get($n->master_client_id) ?? $n->cliente,

@@ -143,6 +143,48 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
         $this->assertSame(700.0, (float) $filas[0]['monto_disponible']);
     }
 
+    /** Fase 13 (2.2) — el saldo a favor de un cliente da la misma cifra en `open-invoices` (desglosada) y en el listado, y el listado expone de dónde sale. */
+    public function test_el_saldo_a_favor_cuadra_entre_open_invoices_y_el_listado_y_expone_los_origenes(): void
+    {
+        $master = MasterClient::create(['name' => 'Cliente V2 '.uniqid()]);
+        $cuenta = $this->cuenta();
+        $h = $this->headers();
+        $proyecto = \App\Modules\VentasDiseno\Models\SalesProject::create(['name' => 'Proyecto saldo '.uniqid()]);
+        $abono = fn (float $monto, ?int $proyectoId): AdminContAbono => AdminContAbono::create([
+            'master_client_id' => $master->id, 'sales_project_id' => $proyectoId, 'monto_original' => $monto, 'monto_usado' => 0,
+            'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $cuenta->id, 'referencia' => 'TRF-'.uniqid(),
+            'estado' => AdminContAbono::ESTADO_CONFIRMADO, 'registrado_por' => \App\Models\User::query()->value('id'),
+            'fecha_registro' => now(), 'fecha_confirmacion' => now(),
+        ]);
+
+        // 700 a cuenta (cobro v2) + 100 abono nivel Cliente + 50 abono reservado a un proyecto.
+        $cobro = $this->withHeaders($h)->postJson('/api/admin-contab/payments/cobro', $this->cobro($master->id, 700, 'efectivo', $cuenta->id))->assertStatus(201);
+        $this->remakeTenant();
+        $delCliente = $abono(100, null);
+        $delProyecto = $abono(50, $proyecto->id);
+
+        $oi = $this->withHeaders($h)->getJson('/api/admin-contab/payments/open-invoices?master_client_id='.$master->id)->assertStatus(200);
+        $this->assertSame(100.0, (float) $oi->json('credit_balance'), 'lo que un cobro puede aplicar de inmediato no cambia');
+        $this->assertSame(700.0, (float) $oi->json('credit_balance_cuenta'));
+        $this->assertSame(50.0, (float) $oi->json('credit_balance_reservado'));
+        $this->assertSame(850.0, (float) $oi->json('credit_balance_total'));
+
+        $this->remakeTenant();
+        $lista = $this->withHeaders($h)->getJson('/api/admin-contab/saldo-favor?cliente='.urlencode($master->name))->assertStatus(200);
+        $ind = $lista->json('indicadores');
+        $this->assertEqualsWithDelta($ind['saldo_disponible_total'], $ind['saldo_aplicable_cliente'] + $ind['saldo_a_cuenta'] + $ind['saldo_reservado'], 0.01, 'los indicadores desglosan el total sin mezclar niveles');
+        $this->remakeTenant();
+        $filas = collect($lista->json('rows'));
+        $this->assertCount(3, $filas);
+        $this->assertSame(850.0, round((float) $filas->sum('monto_disponible'), 2), 'el listado suma lo mismo que el total de open-invoices');
+
+        // cada fila dice qué es y de dónde sale (lo que la compensación exige por línea)
+        $porTipo = $filas->keyBy(fn (array $f) => $f['source_type'].':'.$f['source_id']);
+        $this->assertSame('cliente', $porTipo['cobro:'.$cobro->json('id')]['nivel']);
+        $this->assertSame('cliente', $porTipo['abono:'.$delCliente->id]['nivel']);
+        $this->assertSame('proyecto', $porTipo['abono:'.$delProyecto->id]['nivel']);
+    }
+
     public function test_aplicacion_directa_parcial_aplica_lo_indicado_y_el_resto_es_saldo_a_favor(): void
     {
         $master  = MasterClient::create(['name' => 'Cliente V2 '.uniqid()]);

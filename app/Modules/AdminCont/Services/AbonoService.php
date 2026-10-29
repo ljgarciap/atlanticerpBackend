@@ -494,6 +494,37 @@ final class AbonoService
     }
 
     /**
+     * Fase 13 (2.2) — DESGLOSE del saldo a favor de un cliente por nivel, la misma cuenta que la pantalla «Saldo a favor» y la compensación:
+     *  - `aplicable`: abonos nivel Cliente + notas de crédito `saldo_favor` (`saldoClienteDisponible()`, lo que consume un cobro);
+     *  - `a_cuenta`: cobros a cuenta del concepto nuevo, sin aplicar (libro de movimientos);
+     *  - `reservado`: abonos ligados a un proyecto o a una factura (solo sirven para ese destino);
+     *  - `total`: la suma de los tres, es decir, la cifra de la pantalla «Saldo a favor» para ese cliente.
+     * Antes cada pantalla sumaba orígenes distintos y daba cifras que no cuadraban entre sí.
+     *
+     * @return array{aplicable: float, a_cuenta: float, reservado: float, total: float}
+     */
+    public function desgloseSaldoCliente(int $masterClientId): array
+    {
+        $aplicable = $this->saldoClienteDisponible($masterClientId);
+
+        $reservado = (float) AdminContAbono::query()
+            ->where('master_client_id', $masterClientId)
+            ->where('estado', AdminContAbono::ESTADO_CONFIRMADO)
+            ->where(fn ($q) => $q->whereNotNull('sales_project_id')->orWhereNotNull('invoice_id'))
+            ->get()
+            ->sum(fn (AdminContAbono $a) => $a->montoDisponible());
+
+        $aCuenta = (float) ($this->clientBalance->remanentePorCliente([$masterClientId])[$masterClientId] ?? 0.0);
+
+        return [
+            'aplicable' => round($aplicable, 2),
+            'a_cuenta'  => round($aCuenta, 2),
+            'reservado' => round($reservado, 2),
+            'total'     => round($aplicable + $aCuenta + $reservado, 2),
+        ];
+    }
+
+    /**
      * SCRUM-1147 — saldo a favor que se podría aplicar a cada factura, para mostrarlo (informativo)
      * junto al total en Facturación. UN solo valor por factura: el del nivel MÁS ESPECÍFICO que
      * tenga saldo disponible — factura (abonos re-asociados a esa factura), si no proyecto (abonos
