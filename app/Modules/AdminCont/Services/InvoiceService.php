@@ -1284,8 +1284,12 @@ final class InvoiceService
             // SCRUM-864 — "Marcar como incobrable" no tiene sentido de negocio sobre una factura ya
             // cobrada (el pago ya se realizó). Mismo criterio de "no pagada" que `puede_registrar_cobro`
             // debajo (saldo_aplicado < monto), reusado acá para no duplicar la regla de "pagada".
+            // Fase 13 (2.8): tampoco se ofrece sobre una factura que YA es incobrable o que ya tiene una propuesta pendiente (el servicio la rechazaba
+            // con 422 después de mostrar la acción).
             'puede_marcar_incobrable' => $invoice !== null
                 && $invoice->anulada_at === null
+                && ! $invoice->es_incobrable
+                && ! $invoice->incobrable_pendiente
                 && $invoice->saldo_aplicado < $invoice->monto,
             // RN4 REQ-448 — el motivo original queda guardado como registro aunque se rechace,
             // pero solo se expone acá cuando hay algo vigente que mostrar (pendiente o aprobada).
