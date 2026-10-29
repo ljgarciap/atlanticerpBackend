@@ -179,6 +179,7 @@ class AdminContCashPositionController
                 && PrimaryApprovers::isApprover((int) $payload['sub'], $primaryApproverId));
 
         $data['puede_aprobar'] = $data['estado'] === AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION && $isApprover;
+        $data['puede_reabrir'] = $data['estado'] !== AdminContDailyCashCount::ESTADO_ABIERTO && $isApprover;
 
         return response()->json($data);
     }
@@ -207,6 +208,25 @@ class AdminContCashPositionController
 
         try {
             $result = $this->dailyCashCount->approve($id, $actor->id);
+        } catch (DailyCashCountStateException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+
+        return response()->json($result);
+    }
+
+    /** POST /api/admin-contab/cash-position/history/{id}/reopen — Fase 13 (2.10), exclusivo del aprobador (o su suplente). */
+    public function reopenDailyCashCount(int $id, Request $request): JsonResponse
+    {
+        $actor = $this->resolveUser($request);
+        if ($actor === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $data = $request->validate(['motivo' => ['required', 'string', 'min:10', 'max:1000']]);
+
+        try {
+            $result = $this->dailyCashCount->reopen($id, $actor->id, trim($data['motivo']));
         } catch (DailyCashCountStateException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
