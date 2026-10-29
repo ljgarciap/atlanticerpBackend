@@ -447,6 +447,41 @@ class CustomerReturnControllerTest extends FeatureTestCase
         $this->assertSame(10, ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $warehouse->id)->value('quantity'), 'el stock no cambió');
     }
 
+    /** Fase 13 — lo recibido puede ser menor que lo solicitado, nunca mayor, aunque lo entregado alcance. */
+    public function test_confirm_reception_no_acepta_mas_de_lo_solicitado_aunque_lo_entregado_alcance(): void
+    {
+        $product = $this->makeCatalogProduct();
+        $customerReturn = $this->makeCustomerReturn(itemOverrides: ['catalog_product_id' => $product->id, 'qty_requested' => 3, 'qty_delivered' => 5]);
+        $line = $customerReturn->lines->first();
+        $warehouse = Warehouse::where('name', 'Bodega Central')->first();
+        $this->setStock($product, 10, 'Bodega Central');
+
+        $this->grantBodegaPermissions('vendedor@atlantic.test');
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/returns/{$customerReturn->id}/signed-document", [
+                'file' => UploadedFile::fake()->create('firmado.pdf', 100, 'application/pdf'),
+            ])->assertStatus(200);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/returns/{$customerReturn->id}/confirm-reception", [
+                'destination_warehouse_id' => $warehouse->id,
+                'lines' => [['customer_return_line_id' => $line->id, 'qty_received' => 4]],
+            ])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'La cantidad recibida no puede exceder lo solicitado (3). Si el cliente trae más, registra otra devolución por la diferencia.']);
+
+        $this->makeCurrentTenant();
+        $this->assertSame(CustomerReturn::STATUS_PENDIENTE, CustomerReturn::find($customerReturn->id)->status, 'no se confirma nada');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/returns/{$customerReturn->id}/confirm-reception", [
+                'destination_warehouse_id' => $warehouse->id,
+                'lines' => [['customer_return_line_id' => $line->id, 'qty_received' => 3]],
+            ])
+            ->assertStatus(200);
+    }
+
     /**
      * REQ-409/410 — cantidad REAL (puede diferir de lo solicitado) + suma al inventario vía
      * Kardex (TIPO_DEVOLUCION) + notifica (sella credit_note_notified_at) en el mismo momento.
