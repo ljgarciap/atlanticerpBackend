@@ -71,9 +71,16 @@ class AdminContPaymentController
         $request->validate(['master_client_id' => ['required', 'integer']]);
         $masterClientId = (int) $request->integer('master_client_id');
 
+        $credito = $this->payments->creditBreakdownForClient($masterClientId);
+
         return response()->json([
             'invoices'          => $this->payments->openInvoicesForClient($masterClientId),
+            // `credit_balance` = lo que un cobro puede aplicar de inmediato (sin cambios). Los otros tres cierran la cuenta con la pantalla
+            // «Saldo a favor» y la compensación (Fase 13, 2.2): a cuenta (cobros sin aplicar), reservado (abonos de un proyecto o factura) y el total.
             'credit_balance'    => $this->payments->creditBalanceForClient($masterClientId),
+            'credit_balance_cuenta'    => $credito['a_cuenta'],
+            'credit_balance_reservado' => $credito['reservado'],
+            'credit_balance_total'     => $credito['total'],
             'master_client_name' => $this->payments->masterClientName($masterClientId),
         ]);
     }
