@@ -82,7 +82,7 @@
                 <tr>
                     <td>{{ $line->catalogProduct?->factory_reference }}</td>
                     <td>{{ $line->catalogProduct?->reference }}</td>
-                    <td>{{ $descriptions[$line->id] ?? $line->catalogProduct?->name }}</td>
+                    <td>{{ $descriptions[$line->id] ?? ($line->is_adjustment ? $line->adjustment_note : $line->catalogProduct?->name) }}</td>
                     <td>{{ $line->quantity }}</td>
                     @if($includeCost)
                         <td>${{ number_format($line->unit_cost, 2) }}</td>

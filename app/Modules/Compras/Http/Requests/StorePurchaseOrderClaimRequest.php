@@ -70,6 +70,13 @@ class StorePurchaseOrderClaimRequest extends FormRequest
                     continue;
                 }
 
+                // Fase 13: la línea de ajuste del cambio de monto no es mercancía: no se reclama.
+                if ($orderLine !== null && $orderLine->is_adjustment) {
+                    $validator->errors()->add("lines.{$i}.purchase_order_line_id", 'Esa línea es un ajuste de monto, no un producto.');
+
+                    continue;
+                }
+
                 $affected = (int) ($line['affected_quantity'] ?? 0);
                 if ($orderLine !== null && $affected > $orderLine->quantity) {
                     $validator->errors()->add(

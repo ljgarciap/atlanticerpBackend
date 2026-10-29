@@ -583,7 +583,8 @@ class PurchaseOrder extends Model
     {
         $received = $receivedByProduct ?? $this->receivedQuantitiesByProduct();
         /** @var Collection<int, int> $expected */
-        $expected = $this->lines->groupBy('catalog_product_id')
+        // Fase 13: la línea de ajuste del cambio de monto no es mercancía, no cuenta como «por recibir».
+        $expected = $this->lines->reject(fn ($line) => $line->is_adjustment)->groupBy('catalog_product_id')
             ->map(fn ($lines) => (int) $lines->sum('quantity'));
 
         $lines = $expected->map(function (int $exp, $productId) use ($received): array {

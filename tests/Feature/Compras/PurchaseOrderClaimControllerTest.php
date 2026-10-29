@@ -100,6 +100,26 @@ class PurchaseOrderClaimControllerTest extends FeatureTestCase
             ->assertStatus(201);
     }
 
+    /** Fase 13 (2.1) — la línea de ajuste de un cambio de monto no es mercancía: no se reclama. */
+    public function test_crear_reclamo_no_acepta_la_linea_de_ajuste_de_monto(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.write']);
+        $orden = $this->makeOrderWithLine(10);
+        $ajuste = PurchaseOrderLine::create([
+            'purchase_order_id' => $orden['order']->id, 'catalog_product_id' => null, 'quantity' => 1, 'unit_cost' => 50, 'subtotal' => 50,
+            'is_adjustment' => true, 'adjustment_note' => 'Ajuste de monto aprobado',
+        ]);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/compras/claims', [
+                'purchase_order_id' => $orden['order']->id,
+                'lines' => [['purchase_order_line_id' => $ajuste->id, 'affected_quantity' => 1]],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('lines.0.purchase_order_line_id');
+    }
+
     public function test_crear_reclamo_no_puede_repetir_producto(): void
     {
         // REQ-197 Escenario 1.

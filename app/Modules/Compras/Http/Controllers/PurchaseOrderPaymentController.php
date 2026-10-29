@@ -16,6 +16,7 @@ use App\Modules\Compras\Services\PurchaseOrderPaymentService;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\PrimaryApprovers;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
@@ -201,11 +202,24 @@ final class PurchaseOrderPaymentController extends Controller
         $previousAmount = $order->total_amount;
         $newAmount = $order->pending_amount_change;
 
-        $order->update([
-            'total_amount' => $newAmount,
-            'pending_amount_change' => null,
-            'amount_change_requested_by' => null,
-        ]);
+        // Fase 13 (2.1): el total debe seguir siendo la suma de las líneas, así que la diferencia queda como una línea de ajuste (calculada contra
+        // lo que HOY suman las líneas, no contra el total anterior: si una orden vieja ya no cuadraba, el ajuste la deja cuadrada).
+        DB::transaction(function () use ($order, $newAmount): void {
+            $sumaLineas = round((float) $order->lines()->sum('subtotal'), 2);
+            $diferencia = round((float) $newAmount - $sumaLineas, 2);
+            if (abs($diferencia) > 0.004) {
+                $order->lines()->create([
+                    'catalog_product_id' => null, 'quantity' => 1, 'unit_cost' => $diferencia, 'subtotal' => $diferencia,
+                    'is_adjustment' => true, 'adjustment_note' => 'Ajuste de monto aprobado',
+                ]);
+            }
+
+            $order->update([
+                'total_amount' => $newAmount,
+                'pending_amount_change' => null,
+                'amount_change_requested_by' => null,
+            ]);
+        });
 
         event(new PaymentAmountChangeApproved(
             orderId: $order->id,

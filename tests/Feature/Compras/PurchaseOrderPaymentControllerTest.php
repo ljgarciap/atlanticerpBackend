@@ -167,6 +167,55 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->assertJsonPath('total_amount', 1200);
     }
 
+    /** Fase 13 (2.1) — el total sigue siendo la suma de las líneas: el cambio de monto aprobado deja una línea de ajuste por la diferencia. */
+    public function test_aprobar_cambio_de_monto_deja_una_linea_de_ajuste_y_el_total_sigue_sumando_las_lineas(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
+        $this->grantCompras('management@atlantic.test', ['compras.edit']);
+        ComprasSettings::current()->update(['primary_approver_user_id' => (int) User::where('email', 'management@atlantic.test')->value('id')]);
+
+        $provider = $this->makeProvider();
+        $product = \App\Modules\VentasDiseno\Models\CatalogProduct::create([
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo de prueba', 'description' => 'Artículo de prueba',
+            'price_full' => 20, 'cost' => 12, 'provider_id' => $provider->id, 'is_active' => true,
+        ]);
+        $order = $this->makeOrder($provider->id, ['total_amount' => 1000]);
+        $linea = \App\Modules\Compras\Models\PurchaseOrderLine::create([
+            'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 2, 'unit_cost' => 500, 'subtotal' => 1000,
+        ]);
+
+        $vendedor = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
+        $aprobador = $this->authHeaders($this->loginAs('management@atlantic.test', 'Password123!', 'management'));
+        $cambiar = function (float $nuevo) use ($order, $vendedor, $aprobador): void {
+            $this->withHeaders($vendedor)->patchJson("/api/compras/orders/{$order->id}/request-amount-change", ['new_amount' => $nuevo])->assertStatus(200);
+            $this->withHeaders($aprobador)->patchJson("/api/compras/orders/{$order->id}/approve-amount-change")->assertStatus(200);
+            Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        };
+
+        $cambiar(1200.0);
+        $cambiar(900.0);
+
+        $fresh = PurchaseOrder::with('lines')->find($order->id);
+        $this->assertEquals(900.0, $fresh->total_amount);
+        $this->assertEqualsWithDelta($fresh->total_amount, $fresh->lines->sum('subtotal'), 0.001, 'el total es la suma de las líneas');
+        $ajustes = $fresh->lines->where('is_adjustment', true)->values();
+        $this->assertCount(2, $ajustes);
+        $this->assertEquals([200.0, -300.0], $ajustes->map(fn ($l) => (float) $l->subtotal)->all());
+        $this->assertNull($ajustes[0]->catalog_product_id);
+        $this->assertSame('Ajuste de monto aprobado', $ajustes[0]->adjustment_note);
+
+        // La mercancía no cambia: el ajuste no cuenta como «por recibir» ni se puede reclamar.
+        $resumen = $fresh->receptionSummary(collect());
+        $this->assertCount(1, $resumen['lines'], 'solo el producto, no el ajuste');
+        $this->assertSame($product->id, $resumen['lines'][0]['catalog_product_id']);
+        $this->assertSame(2, $resumen['lines'][0]['expected']);
+
+        $detalle = $this->withHeaders($vendedor)->getJson("/api/compras/orders/{$order->id}")->assertStatus(200)->json('lines');
+        $this->assertCount(3, $detalle);
+        $this->assertSame('Ajuste de monto aprobado', collect($detalle)->firstWhere('is_adjustment', true)['description']);
+        $this->assertSame($linea->id, collect($detalle)->firstWhere('is_adjustment', false)['id']);
+    }
+
     public function test_no_se_puede_cambiar_el_monto_si_ya_hay_pagos_registrados(): void
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
