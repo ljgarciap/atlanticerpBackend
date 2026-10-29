@@ -628,7 +628,7 @@ final class GeneralCountController extends Controller
         }
 
         if (! app(AprobacionGate::class)->canAct($user, 'general_count')) {
-            return response()->json(['message' => 'No tienes permiso para aprobar o rechazar esta solicitud.'], 403);
+            return response()->json(['message' => app(AprobacionGate::class)->motivoDenegacion('general_count')], 403);
         }
 
         return [$user];
