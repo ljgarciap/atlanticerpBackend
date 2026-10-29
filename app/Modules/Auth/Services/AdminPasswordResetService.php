@@ -14,6 +14,7 @@ use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Services\AuditService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -21,7 +22,7 @@ use InvalidArgumentException;
  * `users:reset-password` y la API de superadmin (`POST /api/users/{id}/reset-password` y
  * `POST /api/users/reset-passwords`) para que ambos hagan EXACTAMENTE lo mismo.
  *
- * Qué hace por usuario: contraseña = su propio correo, `must_change_password = true` (el middleware
+ * Qué hace por usuario: contraseña aleatoria que nadie conoce (Fase 12c; antes = su correo) y un enlace de activación por correo, `must_change_password = true` (el middleware
  * AuthenticateJwt solo deja ver el perfil y cambiar la contraseña hasta que la cambie), revoca todos
  * sus refresh tokens, invalida los access tokens ya emitidos (`password_reset_at`) y deja un evento de auditoría. NUNCA registra ni imprime contraseñas ni hashes.
  * No toca `is_active` ni `security_blocked_at` (un bloqueo de seguridad no se levanta con un reset).
@@ -30,8 +31,7 @@ class AdminPasswordResetService
 {
     public function __construct(
         private readonly AuditService $audit,
-        private readonly PasswordNotifier $notifier,
-        private readonly PasswordResetPolicy $policy,
+        private readonly PasswordResetService $resetLinks,
     ) {}
 
     /**
@@ -153,7 +153,8 @@ class AdminPasswordResetService
         DB::transaction(function () use ($user, $operador, $origen, $modo, $reauth): void {
             // El cast `hashed` del modelo hashea el correo; el hash nunca sale de aquí ni va a la auditoría
             // (User::auditableAttributes() ya excluye password_hash).
-            $user->password_hash = $user->email;
+            // Fase 12c: ya no queda la clave = correo; se guarda una aleatoria y la persona elige la suya con el enlace de activación.
+            $user->password_hash = Str::random(64);
             $user->must_change_password = true;
             // H1: AuthenticateJwt rechaza los access tokens emitidos ANTES de este instante (sesiones previas al reset).
             $user->password_reset_at = now();
@@ -169,10 +170,8 @@ class AdminPasswordResetService
             );
         });
 
-        // Aviso al afectado, FUERA de la transacción: un fallo de envío nunca deshace el reset (ver PasswordNotifier).
-        if ($user->password_reset_at !== null) {
-            $this->notifier->notifyAdminReset($user, $this->policy->expiresAt($user->password_reset_at));
-        }
+        // Enlace de activación al afectado, FUERA de la transacción: un fallo de envío nunca deshace el reset (ver PasswordResetService).
+        $this->resetLinks->sendActivationLink($user);
     }
 
     /**

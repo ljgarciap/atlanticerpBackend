@@ -59,18 +59,18 @@ class PasswordResetTokenInvalidationTest extends FeatureTestCase
         ], $headers)->assertStatus(401);
 
         $this->reMakeCurrent();
-        $this->assertTrue(\Illuminate\Support\Facades\Hash::check(self::EMAIL, $this->usuario()->password_hash), 'la contraseña sigue siendo el correo');
+        $this->assertFalse(\Illuminate\Support\Facades\Hash::check('TomaDeCuenta99!', $this->usuario()->password_hash), 'el intento de tomar la cuenta no fijó ninguna contraseña');
+        $this->assertFalse(\Illuminate\Support\Facades\Hash::check(self::EMAIL, $this->usuario()->password_hash), 'Fase 12c: tampoco queda el correo como clave');
     }
 
-    public function test_un_login_nuevo_despues_del_reset_funciona_y_pide_cambiar_la_contrasena(): void
+    public function test_despues_del_reset_ni_el_correo_ni_la_vieja_sirven_para_entrar(): void
     {
         $this->resetAdministrativo();
-        sleep(1); // `iat` (segundos) debe quedar por encima de `password_reset_at` (microsegundos)
+        sleep(1);
 
-        $headers = $this->authHeaders($this->loginAs(self::EMAIL, self::EMAIL, 'designer'));
-
-        $this->getJson('/api/auth/me', $headers)->assertStatus(200)->assertJsonPath('must_change_password', true);
-        $this->getJson('/api/auth/mfa/status', $headers)->assertStatus(403)->assertJsonPath('code', 'password_change_required');
+        // Fase 12c: el reset ya no deja la clave = correo; la persona elige la suya con el enlace de activación.
+        $this->postJson('/api/auth/login', ['email' => self::EMAIL, 'password' => self::EMAIL])->assertStatus(401);
+        $this->postJson('/api/auth/login', ['email' => self::EMAIL, 'password' => 'Password123!'])->assertStatus(401);
     }
 
     public function test_el_cambio_de_contrasena_propio_no_toca_password_reset_at_pero_invalida_el_token_previo(): void

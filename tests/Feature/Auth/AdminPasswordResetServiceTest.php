@@ -124,15 +124,17 @@ class AdminPasswordResetServiceTest extends FeatureTestCase
         $this->assertTrue((bool) $nivel10->fresh()?->must_change_password);
     }
 
-    public function test_reset_deja_la_contrasena_igual_al_correo_y_exige_cambiarla(): void
+    public function test_reset_deja_una_clave_que_nadie_conoce_exige_cambiarla_y_envia_el_enlace(): void
     {
+        \Illuminate\Support\Facades\Mail::fake();
         $user = $this->makeUser();
 
         $this->service->resetUser($user, 'luis@example.test', 'comando');
 
         $fresh = $user->fresh();
         $this->assertNotNull($fresh);
-        $this->assertTrue(Hash::check($fresh->email, $fresh->password_hash));
+        $this->assertFalse(Hash::check($fresh->email, $fresh->password_hash), 'Fase 12c: la clave ya no es el correo');
+        \Illuminate\Support\Facades\Mail::assertQueued(\App\Modules\Auth\Mail\AccountActivationMail::class, fn ($m): bool => $m->hasTo($fresh->email));
         $this->assertFalse(Hash::check('ClaveOriginal99!', $fresh->password_hash));
         $this->assertTrue($fresh->must_change_password);
     }

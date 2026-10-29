@@ -19,12 +19,6 @@ use Illuminate\Support\Facades\Mail;
  */
 final class PasswordNotifier
 {
-    /** Reset administrativo: avisa que debe cambiar la contraseña antes de `$expiresAt`. */
-    public function notifyAdminReset(User $user, CarbonInterface $expiresAt): void
-    {
-        $this->send($user, PasswordNoticeMail::TYPE_ADMIN_RESET, $expiresAt);
-    }
-
     /** La contraseña fue cambiada (cambio propio u olvidé mi contraseña). */
     public function notifyChanged(User $user): void
     {

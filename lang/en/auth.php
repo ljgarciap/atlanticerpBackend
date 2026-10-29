@@ -60,6 +60,14 @@ return [
             'expires' => 'You must do it before: :date. After that the temporary password stops working and you will need to ask for another reset.',
             'notme'   => 'If you were not expecting this change, tell the administrator right away.',
         ],
+        'activation' => [
+            'subject' => 'Activate your account — AtlanticERP',
+            'tag'     => 'Activate account',
+            'body'    => 'Your account was created (or reset). Choose your password with the button to sign in for the first time:',
+            'button'  => 'Choose my password',
+            'fallback' => 'If the button does not work, copy and paste this link into your browser:',
+            'warning' => 'This link works once and expires in :hours hours. If it expires, ask an administrator to send you another or use “Forgot my password”.',
+        ],
         'reset' => [
             'subject' => 'Reset your password — AtlanticERP CRM',
             'tag'     => 'Reset password',

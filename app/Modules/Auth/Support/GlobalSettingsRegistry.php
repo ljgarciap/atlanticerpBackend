@@ -33,7 +33,7 @@ final class GlobalSettingsRegistry
         // Reset administrativo de contraseñas (H2/S2 del cierre de la revisión de seguridad). Horas que dura la contraseña
         // temporal (= correo) tras un reset: pasado ese plazo la cuenta con el cambio obligatorio pendiente queda caducada.
         'password_reset_expiration_hours' => [
-            'type' => 'integer', 'min' => 1, 'max' => 720, 'default' => 48, 'group' => 'security',
+            'type' => 'integer', 'min' => 1, 'max' => 720, 'default' => 168, 'group' => 'security',
         ],
         // Interruptor del reset administrativo (comando y API). `default` es DINÁMICO: apagado (0) en producción y encendido (1) en
         // el resto de entornos (ver `defaultFor()`); un valor guardado lo reemplaza.

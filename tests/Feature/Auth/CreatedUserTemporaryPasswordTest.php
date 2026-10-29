@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Auth;
 
+use App\Modules\Auth\Mail\AccountActivationMail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1034 (H7): al crear un usuario, la contraseña temporal (= correo, ver WelcomeMail) obliga a cambiarla en el primer ingreso y NO
- * caduca (decisión de Luis, 2026-10-05: no se sabe si la persona entrará en 48 h). Sin el cambio obligatorio, quien conoce el correo entra
- * como la persona indefinidamente. Fase 2.2: esta política vivía en `approve()` (flujo de registro pendiente, retirado); ahora la aplica `create()`.
+ * SCRUM-1034 (H7): al crear un usuario, la cuenta queda SIN clave utilizable y la persona elige la suya con un enlace de un solo uso
+ * (Fase 12c, decisión de Luis 2026-10-30: reemplaza la clave inicial = correo, que no caducaba y dejaba entrar a quien conociera el correo). Fase 2.2: esta política vivía en `approve()` (flujo de registro pendiente, retirado); ahora la aplica `create()`.
  */
 class CreatedUserTemporaryPasswordTest extends FeatureTestCase
 {
@@ -46,24 +46,75 @@ class CreatedUserTemporaryPasswordTest extends FeatureTestCase
         $this->assertNull($row->password_reset_at, 'sin password_reset_at no hay caducidad');
     }
 
-    public function test_el_primer_ingreso_con_la_temporal_solo_permite_cambiar_la_contrasena(): void
+    public function test_la_cuenta_creada_no_entra_con_su_correo_y_recibe_el_enlace_de_activacion(): void
     {
         $this->crearUsuario();
-        $headers = $this->authHeaders($this->loginAs(self::EMAIL, self::EMAIL, 'designer'));
 
-        $this->getJson('/api/auth/me', $headers)->assertStatus(200)->assertJsonPath('must_change_password', true);
-        $this->getJson('/api/auth/mfa/status', $headers)->assertStatus(403)->assertJsonPath('code', 'password_change_required');
+        $this->postJson('/api/auth/login', ['email' => self::EMAIL, 'password' => self::EMAIL])->assertStatus(401);
+        Mail::assertQueued(AccountActivationMail::class, fn (AccountActivationMail $m): bool => $m->hasTo(self::EMAIL) && $m->validHours === 168);
     }
 
-    public function test_la_contrasena_inicial_no_caduca_aunque_pasen_meses(): void
+    public function test_el_enlace_deja_elegir_la_clave_una_sola_vez_y_despues_entra_sin_cambio_pendiente(): void
     {
         $this->crearUsuario();
+        $enlace = $this->enlaceDeActivacion();
 
-        Carbon::setTestNow(Carbon::now()->addDays(200));
+        $this->postJson('/api/auth/reset-password', ['token' => $enlace, 'password' => 'ClaveElegida99!x', 'password_confirmation' => 'ClaveElegida99!x'])->assertStatus(200);
+        $this->postJson('/api/auth/reset-password', ['token' => $enlace, 'password' => 'OtraClave99!xx', 'password_confirmation' => 'OtraClave99!xx'])->assertStatus(422);
 
-        $headers = $this->authHeaders($this->loginAs(self::EMAIL, self::EMAIL, 'designer'));
-        $this->getJson('/api/auth/me', $headers)->assertStatus(200)->assertJsonPath('must_change_password', true);
-        $this->getJson('/api/auth/mfa/status', $headers)->assertStatus(403)->assertJsonPath('code', 'password_change_required');
+        $this->postJson('/api/auth/login', ['email' => self::EMAIL, 'password' => 'ClaveElegida99!x'])
+            ->assertStatus(200)->assertJsonPath('user.must_change_password', false);
+    }
+
+    public function test_el_enlace_vence_con_la_vigencia_configurada_y_uno_nuevo_anula_al_anterior(): void
+    {
+        $this->crearUsuario();
+        $viejo = $this->enlaceDeActivacion();
+        $nuevo = $this->enlaceDeActivacion();
+
+        $this->postJson('/api/auth/reset-password', ['token' => $viejo, 'password' => 'ClaveElegida99!x', 'password_confirmation' => 'ClaveElegida99!x'])->assertStatus(422);
+
+        Carbon::setTestNow(Carbon::now()->addHours(169));
+        $this->postJson('/api/auth/reset-password', ['token' => $nuevo, 'password' => 'ClaveElegida99!x', 'password_confirmation' => 'ClaveElegida99!x'])->assertStatus(422);
+    }
+
+    public function test_superadmin_puede_reenviar_el_enlace_solo_a_una_cuenta_que_no_ha_elegido_su_clave(): void
+    {
+        $this->crearUsuario();
+        $id = (int) DB::table('atlantic_auth.users')->where('email', self::EMAIL)->value('id');
+        $admin = $this->authHeaders($this->loginAs());
+        Mail::fake();
+
+        $this->postJson("/api/users/{$id}/activation-link", [], $admin)->assertStatus(200);
+        Mail::assertQueued(AccountActivationMail::class, fn (AccountActivationMail $m): bool => $m->hasTo(self::EMAIL));
+
+        $activa = (int) DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')->value('id');
+        $this->postJson("/api/users/{$activa}/activation-link", [], $admin)->assertStatus(422);
+
+        $lista = $this->getJson('/api/users?search=vendedor@atlantic.test', $admin)->assertStatus(200)->json('data');
+        $this->assertFalse($lista[0]['pending_activation'], 'una cuenta que ya eligió su clave no está pendiente');
+        $pendiente = $this->getJson('/api/users?search='.self::EMAIL, $admin)->assertStatus(200)->json('data');
+        $this->assertTrue($pendiente[0]['pending_activation'], 'la recién creada sí');
+    }
+
+    public function test_el_comando_de_soporte_imprime_un_enlace_que_funciona_sin_enviar_correo(): void
+    {
+        $this->crearUsuario();
+        Mail::fake();
+
+        $this->artisan('users:activation-link', ['slug' => 'atlantic', 'email' => self::EMAIL])->assertExitCode(0);
+        $this->artisan('users:activation-link', ['slug' => 'atlantic', 'email' => 'no-existe@atlantic.test'])->assertExitCode(1);
+        Mail::assertNothingQueued();
+    }
+
+    /** El token en claro solo existe en el enlace: se emite uno nuevo con el servicio, igual que el comando de soporte. */
+    private function enlaceDeActivacion(): string
+    {
+        \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $user = \App\Models\User::where('email', self::EMAIL)->firstOrFail();
+        $url = (string) app(\App\Modules\Auth\Services\PasswordResetService::class)->activationLink($user);
+
+        return substr($url, (int) strpos($url, '#token=') + 7);
     }
 
     public function test_crear_no_cambia_a_los_usuarios_ya_activos(): void

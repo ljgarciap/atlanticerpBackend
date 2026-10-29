@@ -60,6 +60,14 @@ return [
             'expires' => 'Debes hacerlo antes de: :date. Pasado ese plazo la contraseña temporal deja de funcionar y tendrás que pedir otro restablecimiento.',
             'notme'   => 'Si no esperabas este cambio, avisa de inmediato al administrador.',
         ],
+        'activation' => [
+            'subject' => 'Activa tu cuenta — AtlanticERP',
+            'tag'     => 'Activar cuenta',
+            'body'    => 'Se creó (o se reinició) tu cuenta. Elige tu contraseña con el botón para entrar por primera vez:',
+            'button'  => 'Elegir mi contraseña',
+            'fallback' => 'Si el botón no funciona, copia y pega este enlace en tu navegador:',
+            'warning' => 'Este enlace sirve una sola vez y vence en :hours horas. Si caduca, pide a un administrador que te envíe otro o usa «Olvidé mi contraseña».',
+        ],
         'reset' => [
             'subject' => 'Restablece tu contraseña — AtlanticERP CRM',
             'tag'     => 'Restablecer contraseña',

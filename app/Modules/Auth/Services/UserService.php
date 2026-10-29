@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Services;
 
 use App\Models\User;
-use App\Modules\Auth\Mail\WelcomeMail;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Auth\Models\RoleModuleVisibility;
 use App\Modules\Auth\Models\SecurityLevel;
@@ -17,7 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 final class UserService
 {
@@ -147,10 +146,10 @@ final class UserService
                 'first_name'        => $data['first_name'],
                 'last_name'         => $data['last_name'],
                 'email'             => $data['email'],
-                'password_hash'     => $data['email'],
-                // SCRUM-1034 (H7): la contraseña inicial (= correo, ver WelcomeMail) obliga a cambiarla en el primer ingreso. SIN plazo de caducidad a
-                // propósito (decisión de Luis, 2026-10-05: no se sabe si la persona entrará en 48 h): `password_reset_at` queda nulo. Esta política vivía en
-                // `approve()`; al retirar el flujo de registro pendiente (Fase 2.2) pasa a `create()`, la única vía que queda de alta de usuarios.
+                // Fase 12c (decisión de Luis, 2026-10-30): sin clave inicial utilizable — antes era el propio correo. Se guarda una aleatoria que nadie
+                // conoce; la persona elige la suya con el enlace de activación que recibe por correo (vence según `password_reset_expiration_hours`,
+                // 7 días por defecto, y se puede reenviar). `must_change_password` sigue en true hasta que la elija.
+                'password_hash'     => Str::random(64),
                 'must_change_password' => true,
                 'phone'             => $data['phone'] ?? null,
                 // SCRUM-822 (REQ-548) — 3 campos del ticket original nunca implementados.
@@ -184,11 +183,7 @@ final class UserService
         // (no puede loguear todavía, ver AuthController::login()). Antes de este ticket, is_active
         // era siempre true al crear, así que esta condición nunca se evaluaba en false.
         if ($user->is_active) {
-            Mail::to($user->email)->send(new WelcomeMail(
-                firstName:         $user->first_name,
-                temporaryPassword: $user->email,
-                loginUrl:          (string) config('app.frontend_url', config('app.url')),
-            ));
+            app(PasswordResetService::class)->sendActivationLink($user);
         }
 
         return $user;
