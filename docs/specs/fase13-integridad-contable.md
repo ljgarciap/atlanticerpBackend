@@ -1,6 +1,6 @@
 # Fase 13 — integridad contable y saldos
 
-Estado: **BORRADOR — decisiones de negocio tomadas (§5); pendiente el «adelante» para implementar.** Origen: grupo 2 de `docs/flujos/candidatos-priorizados.md` (hallazgos de la Fase 11, cada uno verificado ejecutando el flujo real).
+Estado: **APROBADA por Luis (2026-10-30, decisiones en §5); en implementación, un PR por ítem.** Origen: grupo 2 de `docs/flujos/candidatos-priorizados.md` (hallazgos de la Fase 11, cada uno verificado ejecutando el flujo real).
 
 ## 1. Problema
 Hay cifras de dinero que no reconcilian entre pantallas o con su detalle: el total de una orden de compra deja de sumar sus líneas tras un cambio de monto, el saldo a favor de un mismo cliente se muestra con tres cifras distintas, y varias operaciones que reabren deuda o mueven dinero no tienen el mismo control. Ninguna rompe una operación hoy, pero cada una hace que dos personas lean números distintos del mismo hecho.
@@ -26,7 +26,7 @@ Hay cifras de dinero que no reconcilian entre pantallas o con su detalle: el tot
 - **2.5 Folios**: al asignar, tomar el máximo entre el contador y el mayor folio existente (el contador deja de poder chocar).
 - **2.6 Facturar «completo»**: la vista previa advierte las cantidades no entregadas que se están cobrando.
 - **2.8 Incobrable**: estado propio `incobrable` en la factura y se oculta la acción; se puede marcar una sola vez.
-- **2.10 Arqueo cerrado** (propuesta, **sin decisión todavía**): reapertura con aprobación del aprobador o suplente y motivo, auditada. Ver §6.
+- **2.10 Arqueo cerrado** (decisión de Luis: *reapertura con aprobación*): el aprobador o un suplente puede reabrir un arqueo cerrado con motivo obligatorio; queda auditado y el cierre se vuelve a hacer.
 - **2.11 Anulación completa**: quitar el campo `monto`, que ya se ignora.
 
 ## 4. Riesgos y no-alcance
@@ -39,8 +39,9 @@ Hay cifras de dinero que no reconcilian entre pantallas o con su detalle: el tot
 2. **2.3 Reverso de compensación → con aprobación.** ✅
 3. **2.7 Pago mayor a lo recibido → avisar, no bloquear.** ✅
 4. **2.9 Devolución → tope = lo solicitado.** ✅
-5. Los demás ítems son técnicos y siguen la propuesta de §3 (2.2, 2.4, 2.5, 2.6, 2.8, 2.11).
+5. **2.10 Arqueo cerrado → reapertura con aprobación y motivo.** ✅
+6. **Entrega → un PR por ítem** (cada uno corre la suite completa antes de abrirse). ✅
+7. Los demás ítems son técnicos y siguen la propuesta de §3 (2.2, 2.4, 2.5, 2.6, 2.8, 2.11).
 
 ## 6. Abierto
-- **2.10 Arqueo cerrado**: ¿se permite reabrir (con aprobación y motivo) o un cierre es definitivo y se corrige con un asiento al día siguiente?
-- Entrega: ¿un PR por ítem (recomendado, 11 PR pequeños) o por sub-fase?
+Nada de negocio pendiente. Orden de entrega: 13a (2.1, 2.9, 2.7), 13b (2.2, 2.3, 2.4), 13c (2.5, 2.6, 2.8, 2.10, 2.11).
