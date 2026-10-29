@@ -88,11 +88,11 @@ class RegisterCreditNoteRequest extends FormRequest
             // (mismo gotcha que `AssignBankMovementAccountRequest`: calificar acá rompe `Rule::exists`
             // fuera de un contexto de tenant activo, sin necesidad real).
             'factura_origen_id' => ['required', 'integer', Rule::exists('invoices', 'id')],
-            // REQ-485 RN2 (implícito) — no aplica a Anulación completa, ahí lo calcula el service.
-            'monto' => [
-                Rule::requiredIf($tipo !== AdminContCreditNote::TIPO_ANULACION_COMPLETA),
-                'nullable', 'numeric', 'min:0.01',
-            ],
+            // REQ-485 RN2 (implícito) — no aplica a Anulación completa, ahí lo calcula el service. Fase 13 (2.11): en esa anulación el campo se IGNORA
+            // y ni siquiera se valida (antes un `monto` de 0 o con texto devolvía 422 por un dato que nunca se usa).
+            'monto' => $tipo === AdminContCreditNote::TIPO_ANULACION_COMPLETA
+                ? ['sometimes']
+                : ['required', 'nullable', 'numeric', 'min:0.01'],
             'motivo' => ['required', 'string'],
             'resultado' => [
                 Rule::requiredIf($hayExcedente),
