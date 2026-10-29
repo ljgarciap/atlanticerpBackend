@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null    $requested_by
  * @property int|null    $approved_by
  * @property int|null    $rejected_by
+ * @property string|null $rejection_reason
  * @property int|null    $generated_order_id
  * @property \Carbon\Carbon $created_at
  */
@@ -38,7 +39,7 @@ class ReplacementRequest extends Model
     /** @var list<string> */
     protected $fillable = [
         'original_catalog_product_id', 'sales_project_id', 'proposed_catalog_product_id',
-        'margin_percent', 'status', 'requested_by', 'approved_by', 'rejected_by', 'generated_order_id',
+        'margin_percent', 'status', 'requested_by', 'approved_by', 'rejected_by', 'rejection_reason', 'generated_order_id',
     ];
 
     /** @return array<string, string> */

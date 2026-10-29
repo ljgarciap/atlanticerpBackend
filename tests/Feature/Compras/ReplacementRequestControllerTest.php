@@ -480,12 +480,67 @@ class ReplacementRequestControllerTest extends FeatureTestCase
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/compras/replacement-requests/{$request->id}/reject")
+            ->postJson("/api/compras/replacement-requests/{$request->id}/reject", ['motivo_rechazo' => 'El cliente prefiere el original'])
             ->assertStatus(200);
 
         $response->assertJsonPath('status', ReplacementRequest::STATUS_RECHAZADA);
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame('vendedor@atlantic.test', $request->fresh()->rejecter?->email);
+    }
+
+    /** Fase 12a — rechazar exige motivo y queda guardado. */
+    public function test_rechazar_exige_motivo_y_lo_guarda(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', []);
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject();
+        $request = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE, 'margin_percent' => 20,
+        ]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/reject")
+            ->assertStatus(422)->assertJsonValidationErrors('motivo_rechazo');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame(ReplacementRequest::STATUS_PENDIENTE, $request->fresh()->status, 'sin motivo no se rechaza');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$request->id}/reject", ['motivo_rechazo' => 'Prefiere el original'])
+            ->assertStatus(200);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame('Prefiere el original', $request->fresh()->rejection_reason);
+    }
+
+    /** Fase 12a — quien reportó la solicitud no la decide, aunque sea el responsable del proyecto. */
+    public function test_el_solicitante_no_decide_su_propia_solicitud_aunque_sea_el_responsable(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', []);
+        $product = $this->makeProduct();
+        $salesProject = $this->makeApprovedSalesProject();
+        $vendedor = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
+        $propia = ReplacementRequest::create([
+            'original_catalog_product_id' => $product->id, 'sales_project_id' => $salesProject->id,
+            'status' => ReplacementRequest::STATUS_PENDIENTE, 'margin_percent' => 20, 'requested_by' => $vendedor->id,
+        ]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/replacement-requests/{$propia->id}/approve")
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'Una solicitud no la decide quien la reportó: debe decidirla Gerencia o Compras.');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame(ReplacementRequest::STATUS_PENDIENTE, $propia->fresh()->status);
+
+        // Gerencia sí puede, aunque el solicitante sea otro
+        $this->grantCompras('gerencia3@test.com', ['gerencia.view']);
+        $gerencia = $this->loginAs('gerencia3@test.com', 'gerencia3@test.com', 'management');
+        $this->withHeaders($this->authHeaders($gerencia))
+            ->postJson("/api/compras/replacement-requests/{$propia->id}/approve")
+            ->assertStatus(200)->assertJsonPath('status', ReplacementRequest::STATUS_APROBADA);
     }
 
     /** Una solicitud ya decidida (aprobada/rechazada) no se puede volver a decidir. */
