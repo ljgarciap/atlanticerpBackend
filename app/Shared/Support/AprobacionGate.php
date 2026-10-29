@@ -54,6 +54,21 @@ final class AprobacionGate
     }
 
     /**
+     * Fase 12b — por qué `canAct()` dijo que no, en palabras de quien lo lee: «no eres el aprobador» (identidad) o «falta un permiso». Solo se
+     * llama tras un `canAct() === false`; el texto no cambia ninguna decisión.
+     */
+    public function motivoDenegacion(string $tipo): string
+    {
+        if ($tipo === 'zona_libre') {
+            return 'Falta el permiso «compras.zona-libre.approve» para decidir esta solicitud.';
+        }
+
+        $alternativa = in_array($tipo, self::TIPOS_CON_OVERRIDE_REGLA, true) ? ' (o quien esté en una regla de aprobación activa para este tipo)' : '';
+
+        return 'Solo el aprobador configurado o un suplente puede decidir esto'.$alternativa.'. No es un permiso que falte: pídele a un superadmin que te designe en Configuración global → Aprobadores.';
+    }
+
+    /**
      * @param  list<string>  $tipos
      * @return list<string> subconjunto de $tipos sobre los que $user puede actuar
      */

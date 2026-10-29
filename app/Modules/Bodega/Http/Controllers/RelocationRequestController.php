@@ -257,7 +257,7 @@ final class RelocationRequestController extends Controller
         }
 
         if (! app(AprobacionGate::class)->canAct($user, 'relocation')) {
-            return response()->json(['message' => 'No tienes permiso para aprobar o rechazar esta solicitud.'], 403);
+            return response()->json(['message' => app(AprobacionGate::class)->motivoDenegacion('relocation')], 403);
         }
 
         return [$user];

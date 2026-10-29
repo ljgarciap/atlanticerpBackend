@@ -58,7 +58,7 @@ final class GerenciaAprobacionController extends Controller
         }
 
         if (! $this->gate->canAct($user, $type)) {
-            return response()->json(['message' => 'No tienes permiso para aprobar esta solicitud.'], 403);
+            return response()->json(['message' => $this->gate->motivoDenegacion($type)], 403);
         }
 
         return match ($type) {
@@ -79,7 +79,7 @@ final class GerenciaAprobacionController extends Controller
         }
 
         if (! $this->gate->canAct($user, $type)) {
-            return response()->json(['message' => 'No tienes permiso para rechazar esta solicitud.'], 403);
+            return response()->json(['message' => $this->gate->motivoDenegacion($type)], 403);
         }
 
         if ($type === 'purchase_order') {

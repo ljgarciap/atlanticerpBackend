@@ -466,7 +466,7 @@ final class AdjustmentRequestController extends Controller
         }
 
         if (! app(AprobacionGate::class)->canAct($user, 'adjustment')) {
-            return response()->json(['message' => 'No tienes permiso para aprobar o rechazar esta solicitud.'], 403);
+            return response()->json(['message' => app(AprobacionGate::class)->motivoDenegacion('adjustment')], 403);
         }
 
         return [$user];
