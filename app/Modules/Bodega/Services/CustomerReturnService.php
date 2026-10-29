@@ -269,8 +269,16 @@ final class CustomerReturnService
                 if ($input['qty_received'] < 0) {
                     throw new CustomerReturnException('La cantidad recibida no puede ser negativa.');
                 }
-                // REQ-409 RN1 — la cantidad real puede diferir de la solicitada, pero nunca superar lo ENTREGADO de ese ítem: sin este tope
-                // se podía sumar al inventario más de lo que salió de bodega.
+                // Fase 13 (decisión de Luis, 2026-10-30): lo recibido puede ser MENOR que lo solicitado (REQ-409 RN1) pero nunca MAYOR: la nota de
+                // crédito y el inventario se calculan sobre esa cantidad, y la solicitud es lo que se aprobó. Si el cliente trae más, se registra
+                // otra devolución por la diferencia.
+                if ($input['qty_received'] > $line->qty_requested) {
+                    throw new CustomerReturnException(
+                        "La cantidad recibida no puede exceder lo solicitado ({$line->qty_requested}). Si el cliente trae más, registra otra devolución por la diferencia.",
+                        ['lines' => ['La cantidad recibida no puede exceder lo solicitado.']],
+                    );
+                }
+                // Segunda guarda: nunca superar lo ENTREGADO de ese ítem (sin este tope se podía sumar al inventario más de lo que salió de bodega).
                 if ($input['qty_received'] > $line->orderItem->qty_delivered) {
                     throw new CustomerReturnException("La cantidad recibida no puede exceder lo entregado ({$line->orderItem->qty_delivered}).", ['lines' => ['La cantidad recibida no puede exceder lo entregado.']]);
                 }
