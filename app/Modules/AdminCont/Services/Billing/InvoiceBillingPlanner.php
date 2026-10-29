@@ -252,7 +252,49 @@ final class InvoiceBillingPlanner
             throw new InvoicePreviewException(['Todas las cantidades de la cotización ya están facturadas.']);
         }
 
-        return $this->build($ctx, AdminContInvoice::TIPO_COMPLETO, $ctx->root->id, $qtyByItem, [], $registrarAvisos);
+        return $this->build($ctx, AdminContInvoice::TIPO_COMPLETO, $ctx->root->id, $qtyByItem, [], $registrarAvisos, $this->avisosNoEntregado($ctx, $qtyByItem, $billed));
+    }
+
+    /**
+     * Fase 13 (2.6) — facturar «completo» cobra lo cotizado que falte, aunque no se haya entregado todo. Es una elección permitida por diseño (ADR de
+     * facturación parcial o completa), pero la vista previa lo dice: por cada ítem, cuántas unidades se cobran sin haberse entregado.
+     *
+     * @param array<int, float> $qtyByItem quote_item_id => cantidad que cobraría esta factura
+     * @param array<int, float> $billed    quote_item_id => cantidad ya facturada antes
+     * @return list<string>
+     */
+    private function avisosNoEntregado(BillingContext $ctx, array $qtyByItem, array $billed): array
+    {
+        if (! $ctx->linkable) {
+            return [];   // sin vínculo con la cotización no se sabe qué entrega corresponde a qué ítem
+        }
+
+        /** @var array<int, float> $entregado */
+        $entregado = [];
+        foreach ($ctx->members as $member) {
+            foreach ($member->items as $item) {
+                if ($item->quote_item_id !== null) {
+                    $entregado[$item->quote_item_id] = ($entregado[$item->quote_item_id] ?? 0.0) + (float) $item->qty_delivered;
+                }
+            }
+        }
+
+        $avisos = [];
+        foreach ($qtyByItem as $quoteItemId => $aCobrar) {
+            // Lo entregado todavía sin facturar es lo que respalda este cobro; el resto se cobra sin haberse entregado.
+            $respaldado = max(0.0, ($entregado[$quoteItemId] ?? 0.0) - ($billed[$quoteItemId] ?? 0.0));
+            $sinEntregar = round($aCobrar - $respaldado, 4);
+            if ($sinEntregar > self::QTY_EPSILON) {
+                $item = $ctx->quoteItems->get($quoteItemId);
+                $avisos[] = sprintf(
+                    'Se cobrarían %s unidad(es) de «%s» que todavía no se entregaron. Si se despachan después, se facturarían dos veces: factura por entrega si solo quieres cobrar lo entregado.',
+                    rtrim(rtrim(number_format($sinEntregar, 2, '.', ''), '0'), '.'),
+                    $item !== null ? $item->description : "#{$quoteItemId}",
+                );
+            }
+        }
+
+        return $avisos;
     }
 
     /**
@@ -280,10 +322,11 @@ final class InvoiceBillingPlanner
      *
      * @param array<int, float> $qtyByItem      quote_item_id => cantidad a facturar
      * @param array<int, int>   $orderItemByItem quote_item_id => order_item_id (solo trazabilidad)
+     * @param list<string>      $avisosExtra    avisos de quien llama (p. ej. lo cobrado sin entregar), antes de los del cierre
      *
      * @throws InvoicePreviewException
      */
-    private function build(BillingContext $ctx, string $tipo, int $orderId, array $qtyByItem, array $orderItemByItem, bool $registrarAvisos): InvoicePlan
+    private function build(BillingContext $ctx, string $tipo, int $orderId, array $qtyByItem, array $orderItemByItem, bool $registrarAvisos, array $avisosExtra = []): InvoicePlan
     {
         $lines    = $this->buildLines($ctx, $qtyByItem, $orderItemByItem);
         $cierra   = $this->cierraTodo($ctx, $qtyByItem);
@@ -322,7 +365,7 @@ final class InvoiceBillingPlanner
             lines: $lines,
             cierraPedido: $cierra,
             restanteDespues: max(0.0, round($restante - $monto, 2)),
-            advertencias: $advertencias,
+            advertencias: [...$avisosExtra, ...$advertencias],
         );
     }
 

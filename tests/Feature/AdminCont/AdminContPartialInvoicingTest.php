@@ -484,6 +484,40 @@ class AdminContPartialInvoicingTest extends FeatureTestCase
         $this->assertSame(round((float) $card->amount, 2), $this->sumaActivas($root));
     }
 
+    /** Fase 13 (2.6) — facturar «completo» cobra lo no entregado: la vista previa lo advierte, ítem por ítem. */
+    public function test_pedido_completo_con_cantidades_sin_entregar_advierte_cuantas_se_cobran_sin_haberse_entregado(): void
+    {
+        // Cotizado 10; entregó 6 y las otras 4 siguen en una tarjeta de faltante sin entregar.
+        $data = $this->makePedido([['desc' => 'Panel', 'qty' => 10, 'price' => 100.00]], [[6], [4]], stages: [1 => Order::STAGE_ASIGNADO]);
+        ['root' => $root, 'entregas' => $entregas] = $data;
+        $entregas[1]->items()->update(['qty_delivered' => 0]);
+        $token = $this->token();
+
+        $completo = $this->api($token, 'POST', '/api/admin-contab/invoices/preview', ['order_ids' => [$root->id], 'modo' => 'completo'])
+            ->assertStatus(200)->json('results.0');
+
+        $this->assertTrue($completo['ok']);
+        $this->assertCount(1, $completo['advertencias']);
+        $this->assertStringContainsString('4 unidad(es) de «Panel» que todavía no se entregaron', $completo['advertencias'][0]);
+
+        // Por entrega no cobra lo no entregado: sin ese aviso.
+        $porEntrega = $this->api($token, 'POST', '/api/admin-contab/invoices/preview', ['order_ids' => [$root->id], 'modo' => 'entrega'])
+            ->assertStatus(200)->json('results.0');
+        $this->assertSame([], $porEntrega['advertencias']);
+    }
+
+    public function test_pedido_completo_con_todo_entregado_no_advierte_nada(): void
+    {
+        $data = $this->makePedido([['desc' => 'Panel', 'qty' => 10, 'price' => 100.00]], [[10]]);
+        $token = $this->token();
+
+        $completo = $this->api($token, 'POST', '/api/admin-contab/invoices/preview', ['order_ids' => [$data['root']->id], 'modo' => 'completo'])
+            ->assertStatus(200)->json('results.0');
+
+        $this->assertTrue($completo['ok']);
+        $this->assertSame([], $completo['advertencias']);
+    }
+
     public function test_929_si_el_remanente_nunca_se_despacha_no_se_cobra(): void
     {
         ['root' => $root, 'card' => $card] = $this->makePedido(
