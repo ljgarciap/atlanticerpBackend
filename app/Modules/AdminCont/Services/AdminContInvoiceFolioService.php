@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
+use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContInvoiceFolioCounter;
 use Illuminate\Support\Facades\DB;
 
@@ -23,8 +24,14 @@ final class AdminContInvoiceFolioService
 
         /** @var AdminContInvoiceFolioCounter $counter */
         $counter = AdminContInvoiceFolioCounter::where('id', 1)->lockForUpdate()->firstOrFail();
-        $counter->increment('last_number');
 
-        return sprintf('F-%04d', $counter->last_number);
+        // Fase 13 (2.5): el contador se reconcilia con las facturas que YA existen. Una factura insertada fuera del servicio (importación, restauración
+        // de un respaldo) dejaba el contador atrás y el siguiente alta chocaba con la unicidad del número (500). Se toma el mayor de los dos.
+        $facturas = (new AdminContInvoice())->getTable();
+        $maximoExistente = (int) DB::scalar("SELECT COALESCE(MAX(CAST(SUBSTRING(numero FROM 3) AS BIGINT)), 0) FROM {$facturas} WHERE numero ~ '^F-[0-9]+$'");
+        $siguiente = max((int) $counter->last_number, $maximoExistente) + 1;
+        $counter->update(['last_number' => $siguiente]);
+
+        return sprintf('F-%04d', $siguiente);
     }
 }
