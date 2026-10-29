@@ -36,6 +36,11 @@ class AdminContPaymentReversalRequest extends Model
 
     public const TIPO_ANULACION  = 'anulacion';
     public const TIPO_DEVOLUCION = 'devolucion';
+    /** Fase 13 (2.3) — reversar una compensación de saldo a favor: antes era directo; ahora lo decide el aprobador como la anulación de un cobro. */
+    public const TIPO_REVERSO_COMPENSACION = 'reverso_compensacion';
+
+    /** `source_type` de la solicitud de reverso de una compensación (`source_id` = id de la compensación). */
+    public const SOURCE_COMPENSACION = 'compensacion';
 
     public const ESTADO_SOLICITADA = 'solicitada';
     public const ESTADO_EJECUTADA  = 'ejecutada';
