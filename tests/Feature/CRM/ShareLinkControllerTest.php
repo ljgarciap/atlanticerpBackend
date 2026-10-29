@@ -288,6 +288,13 @@ class ShareLinkControllerTest extends FeatureTestCase
                 'extra_permissions' => ['crm.delete'],
             ])->assertStatus(201);
 
+        // Fase 12c: una cuenta creada por la API no tiene clave utilizable hasta usar su enlace de activación; aquí se fija a mano para poder entrar.
+        \App\Shared\Multitenancy\Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $outsider = \App\Models\User::where('email', $outsiderEmail)->firstOrFail();
+        $outsider->password_hash = $outsiderEmail;
+        $outsider->must_change_password = false;
+        $outsider->save();
+
         $outsiderToken = $this->loginAs($outsiderEmail, $outsiderEmail, 'designer');
 
         $this->withHeaders($this->authHeaders($outsiderToken))
