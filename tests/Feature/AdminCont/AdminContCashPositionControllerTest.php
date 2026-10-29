@@ -15,6 +15,7 @@ use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentConfirmation;
 use App\Modules\AdminCont\Services\DailyCashCountService;
 use App\Modules\AdminCont\Services\DailyCashCountSummaryPdfService;
+use App\Modules\Auth\Models\AuditLog;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\PipelineCard;
@@ -769,6 +770,91 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $approverHeaders = $this->authHeaders($this->loginAsApprover());
         $this->withHeaders($approverHeaders)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(200);
         $this->withHeaders($approverHeaders)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(409);
+    }
+
+    // ---------------------------------------------------------------- Fase 13 (2.10): reapertura de un arqueo cerrado ----
+
+    private function cerrarArqueo(): int
+    {
+        return (int) $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
+            ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
+            ->assertStatus(200)
+            ->json('id');
+    }
+
+    public function test_reopen_es_exclusivo_del_aprobador(): void
+    {
+        $id = $this->cerrarArqueo();
+
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
+            ->postJson("/api/admin-contab/cash-position/history/{$id}/reopen", ['motivo' => 'Faltó registrar un cobro del día'])
+            ->assertStatus(403);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el HTTP deja el tenant limpio
+        $this->assertSame('pendiente_aprobacion', AdminContDailyCashCount::findOrFail($id)->estado);
+    }
+
+    public function test_reopen_exige_motivo(): void
+    {
+        $id = $this->cerrarArqueo();
+        $headers = $this->authHeaders($this->loginAsApprover());
+
+        $this->withHeaders($headers)->postJson("/api/admin-contab/cash-position/history/{$id}/reopen", [])->assertStatus(422);
+        $this->withHeaders($headers)->postJson("/api/admin-contab/cash-position/history/{$id}/reopen", ['motivo' => 'corto'])->assertStatus(422);
+    }
+
+    public function test_reopen_de_un_arqueo_aprobado_lo_deja_abierto_con_motivo_y_auditoria_y_conserva_el_numero(): void
+    {
+        $id = $this->cerrarArqueo();
+        $headers = $this->authHeaders($this->loginAsApprover());
+        $this->withHeaders($headers)->postJson("/api/admin-contab/cash-position/history/{$id}/approve", [])->assertStatus(200);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el HTTP deja el tenant limpio
+        $numero = AdminContDailyCashCount::findOrFail($id)->numero;
+
+        $response = $this->withHeaders($headers)
+            ->postJson("/api/admin-contab/cash-position/history/{$id}/reopen", ['motivo' => 'Faltó registrar un cobro del día'])
+            ->assertStatus(200);
+
+        $this->assertSame('abierto', $response->json('estado'));
+        $this->assertSame('Faltó registrar un cobro del día', $response->json('reabierto_motivo'));
+        $this->assertNull($response->json('aprobado_at'));
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el HTTP deja el tenant limpio
+        $row = AdminContDailyCashCount::findOrFail($id);
+        $this->assertNull($row->snapshot);
+        $this->assertNull($row->cerrado_por);
+        $this->assertNotNull($row->reabierto_por);
+        $this->assertSame($numero, $row->numero);
+        $this->assertTrue(
+            AuditLog::where('action', 'admin_contab.daily_cash_count.reopened')->where('entity_id', (string) $id)->exists(),
+        );
+
+        // El cierre se vuelve a hacer y el número se conserva.
+        $cierre = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
+            ->postJson('/api/admin-contab/cash-position/daily-count/close', [])
+            ->assertStatus(200);
+        $this->assertSame($id, $cierre->json('id'));
+        $this->assertSame($numero, $cierre->json('numero'));
+        $this->assertSame('pendiente_aprobacion', $cierre->json('estado'));
+    }
+
+    public function test_reopen_rechaza_un_arqueo_ya_abierto(): void
+    {
+        $id = $this->cerrarArqueo();
+        $headers = $this->authHeaders($this->loginAsApprover());
+        $payload = ['motivo' => 'Faltó registrar un cobro del día'];
+
+        $this->withHeaders($headers)->postJson("/api/admin-contab/cash-position/history/{$id}/reopen", $payload)->assertStatus(200);
+        $this->withHeaders($headers)->postJson("/api/admin-contab/cash-position/history/{$id}/reopen", $payload)->assertStatus(409);
+    }
+
+    public function test_history_detail_expone_puede_reabrir_solo_al_aprobador_y_si_esta_cerrado(): void
+    {
+        $id = $this->cerrarArqueo();
+
+        $this->withHeaders($this->authHeaders($this->loginAsApprover()))
+            ->getJson("/api/admin-contab/cash-position/history/{$id}")->assertJsonPath('puede_reabrir', true);
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))
+            ->getJson("/api/admin-contab/cash-position/history/{$id}")->assertJsonPath('puede_reabrir', false);
     }
 
     // ---------------------------------------------------------------- puede_aprobar (gap encontrado por Frontend Dev) ----

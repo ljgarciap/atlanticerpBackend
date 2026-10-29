@@ -414,6 +414,7 @@ Route::middleware('permission:admin_contab.records.manage')
 // criterio que `notas-credito/{id}/decision`/`invoices/{order}/uncollectible-decision`.
 Route::middleware('primary_approver_only')->prefix('cash-position/history')->group(function (): void {
     Route::post('/{id}/approve', [AdminContCashPositionController::class, 'approveDailyCashCount'])->whereNumber('id');
+    Route::post('/{id}/reopen', [AdminContCashPositionController::class, 'reopenDailyCashCount'])->whereNumber('id');
 });
 
 // Batch 20 (SCRUM-612→617, REQ-535→540) — Caja Chica. Lectura + aprobar visibles para Contabilidad,

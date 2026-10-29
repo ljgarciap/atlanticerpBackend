@@ -17,6 +17,7 @@ use App\Modules\AdminCont\Models\AdminContPaymentReversalRequest;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Shared\Http\Pagination;
+use App\Shared\Services\AuditService;
 use Carbon\CarbonImmutable;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -291,7 +292,8 @@ final class DailyCashCountService
 
             // REQ-525→529 punto 8 del ADR — entero simple, asignado solo al cerrar, sin tabla de
             // folio dedicada (volumen de 1 cierre/día, acción humana explícita).
-            $numero = (int) (AdminContDailyCashCount::whereNotNull('numero')->max('numero') ?? 0) + 1;
+            // Fase 13 (2.10): un arqueo reabierto conserva su número al volver a cerrarse.
+            $numero = $record->numero ?? (int) (AdminContDailyCashCount::whereNotNull('numero')->max('numero') ?? 0) + 1;
 
             // Pre-QA SCRUM-878/879 (2026-09-10) — el total se congela ACÁ, en el instante del
             // cierre (forDate() en vivo, sin $asOf — es exactamente lo que Contabilidad ve al confirmar),
@@ -392,6 +394,54 @@ final class DailyCashCountService
         });
     }
 
+    /**
+     * Fase 13 (2.10) — reabre un arqueo cerrado (pendiente de aprobación o aprobado). Exclusivo del aprobador
+     * o su suplente (middleware `primary_approver_only`). Conserva el número y las observaciones, descarta el
+     * snapshot (vuelve a calcularse en vivo hasta el nuevo cierre) y deja motivo y autor en el registro y en
+     * `audit_logs`.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws DailyCashCountStateException si el arqueo ya está abierto.
+     */
+    public function reopen(int $id, int $actorId, string $motivo): array
+    {
+        return DB::transaction(function () use ($id, $actorId, $motivo): array {
+            /** @var AdminContDailyCashCount $record */
+            $record = AdminContDailyCashCount::query()->lockForUpdate()->findOrFail($id);
+
+            if ($record->estado === AdminContDailyCashCount::ESTADO_ABIERTO) {
+                throw new DailyCashCountStateException('Este arqueo ya está abierto.');
+            }
+
+            $estadoPrevio = $record->estado;
+
+            $record->update([
+                'estado' => AdminContDailyCashCount::ESTADO_ABIERTO,
+                'cerrado_por' => null,
+                'cerrado_at' => null,
+                'aprobado_por' => null,
+                'aprobado_at' => null,
+                'snapshot' => null,
+                'reabierto_por' => $actorId,
+                'reabierto_at' => now(),
+                'reabierto_motivo' => $motivo,
+            ]);
+
+            app(AuditService::class)->log(
+                'admin_contab.daily_cash_count.reopened',
+                'daily_cash_count',
+                $record->id,
+                ['estado' => $estadoPrevio],
+                ['estado' => AdminContDailyCashCount::ESTADO_ABIERTO],
+                ['motivo' => $motivo, 'fecha' => $record->fecha->toDateString(), 'numero' => $record->numero],
+                $actorId,
+            );
+
+            return $this->present($record->fresh(), $record->fecha->toDateString());
+        });
+    }
+
     public function updateEntryObservation(string $movementType, int $movementId, ?string $observacion): void
     {
         $count = $this->activeRecordForWrite();
@@ -442,6 +492,9 @@ final class DailyCashCountService
             'cerrado_at' => $record?->cerrado_at?->toIso8601String(),
             'aprobado_por' => $record?->aprobado_por !== null ? $this->userName($record->aprobado_por) : null,
             'aprobado_at' => $record?->aprobado_at?->toIso8601String(),
+            'reabierto_por' => $record?->reabierto_por !== null ? $this->userName($record->reabierto_por) : null,
+            'reabierto_at' => $record?->reabierto_at?->toIso8601String(),
+            'reabierto_motivo' => $record?->reabierto_motivo,
         ];
     }
 

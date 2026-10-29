@@ -27,6 +27,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon|null $cerrado_at
  * @property int|null    $aprobado_por
  * @property \Carbon\Carbon|null $aprobado_at
+ * @property int|null    $reabierto_por
+ * @property \Carbon\Carbon|null $reabierto_at
+ * @property string|null $reabierto_motivo
  * @property array<string, mixed>|null $snapshot
  * @property \Carbon\Carbon $created_at
  */
@@ -42,6 +45,7 @@ class AdminContDailyCashCount extends Model
     protected $fillable = [
         'fecha', 'numero', 'estado', 'observacion_general',
         'cerrado_por', 'cerrado_at', 'aprobado_por', 'aprobado_at', 'snapshot',
+        'reabierto_por', 'reabierto_at', 'reabierto_motivo',
     ];
 
     /** @return array<string, string> */
@@ -51,6 +55,7 @@ class AdminContDailyCashCount extends Model
             'fecha'       => 'date',
             'cerrado_at'  => 'datetime',
             'aprobado_at' => 'datetime',
+            'reabierto_at' => 'datetime',
             // Pre-QA SCRUM-878/879 (2026-09-10) — total congelado al cerrar, ver migración
             // 2026_09_11_100000. `array` (no `json`) porque se lee/escribe como PHP array siempre,
             // igual que el resto del módulo (`AdminContBankMovement`, etc. no usan json crudo).
