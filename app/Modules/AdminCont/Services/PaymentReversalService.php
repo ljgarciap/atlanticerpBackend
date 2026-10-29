@@ -111,7 +111,7 @@ final class PaymentReversalService
     /**
      * Decide una solicitud (Gerencia): rechazarla la deja asentada; aprobarla la ejecuta.
      *
-     * @return array{request: AdminContPaymentReversalRequest, ajustes_comision: list<array{vendedor_id: int, pedido_id: int, monto: float}>}
+     * @return array{request: AdminContPaymentReversalRequest, ajustes_comision: list<array{vendedor_id: int, pedido_id: int, monto: float}>, sugerencia_compensacion: array<string, mixed>|null}
      * @throws PaymentStateException
      */
     public function decidir(int $requestId, bool $aprobar, ?string $motivoRechazo, User $mark): array
@@ -134,7 +134,7 @@ final class PaymentReversalService
                     'estado' => AdminContPaymentReversalRequest::ESTADO_RECHAZADA, 'decided_by' => $mark->id, 'decided_at' => now(), 'motivo_rechazo' => trim((string) $motivoRechazo),
                 ]);
 
-                return ['request' => $request, 'ajustes_comision' => []];
+                return ['request' => $request, 'ajustes_comision' => [], 'sugerencia_compensacion' => null];
             }
 
             if ($request->tipo === AdminContPaymentReversalRequest::TIPO_REVERSO_COMPENSACION) {
@@ -149,8 +149,49 @@ final class PaymentReversalService
 
             $request->update(['estado' => AdminContPaymentReversalRequest::ESTADO_EJECUTADA, 'decided_by' => $mark->id, 'decided_at' => now(), 'executed_at' => now()]);
 
-            return ['request' => $request, 'ajustes_comision' => $ajustes];
+            // Fase 13 (2.4): al anular un cobro las facturas se reabren por su saldo completo aunque el cliente tenga saldo a favor para cubrirlas
+            // (p. ej. de notas de crédito); se SUGIERE la compensación, no se aplica sola.
+            $sugerencia = $request->tipo === AdminContPaymentReversalRequest::TIPO_ANULACION ? $this->sugerirCompensacion($request) : null;
+
+            return ['request' => $request, 'ajustes_comision' => $ajustes, 'sugerencia_compensacion' => $sugerencia];
         });
+    }
+
+    /**
+     * Fase 13 (2.4) — tras anular un cobro: las facturas que ese cobro pagaba y siguen con saldo pendiente, el saldo a favor que el cliente tiene y
+     * cuánto de eso se podría compensar. `null` si no hay nada que sugerir. Solo informa; la compensación la hace una persona desde Compensaciones.
+     *
+     * @return array{master_client_id: int, saldo_a_favor: float, pendiente_total: float, compensable: float, facturas: list<array{invoice_id: int, numero: string|null, pendiente: float}>}|null
+     */
+    private function sugerirCompensacion(AdminContPaymentReversalRequest $request): ?array
+    {
+        // Las facturas que pagaba el cobro: líneas del flujo anterior y aplicaciones del libro del concepto nuevo (las líneas pueden desaparecer al desaplicar).
+        $invoiceIds = AdminContPaymentInvoice::query()->where('payment_id', $request->payment_id)->pluck('invoice_id')
+            ->merge(AdminContPaymentMovement::query()->where('payment_id', $request->payment_id)->where('tipo', AdminContPaymentMovement::TIPO_APLICACION)
+                ->whereNotNull('invoice_id')->pluck('invoice_id'))
+            ->map(fn ($id): int => (int) $id)->unique()->values()->all();
+        if ($invoiceIds === []) {
+            return null;
+        }
+
+        $facturas = [];
+        foreach (AdminContInvoice::query()->whereIn('id', $invoiceIds)->orderBy('id')->get() as $invoice) {
+            $pendiente = round((float) $invoice->monto - (float) $invoice->saldo_aplicado, 2);
+            if ($pendiente > 0.004) {
+                $facturas[] = ['invoice_id' => (int) $invoice->id, 'numero' => $invoice->numero, 'pendiente' => $pendiente];
+            }
+        }
+
+        $saldo = $this->abonos->desgloseSaldoCliente($request->master_client_id)['total'];
+        $pendienteTotal = round(array_sum(array_column($facturas, 'pendiente')), 2);
+        if ($facturas === [] || $saldo <= 0.004) {
+            return null;
+        }
+
+        return [
+            'master_client_id' => (int) $request->master_client_id, 'saldo_a_favor' => $saldo, 'pendiente_total' => $pendienteTotal,
+            'compensable' => round(min($saldo, $pendienteTotal), 2), 'facturas' => $facturas,
+        ];
     }
 
     private function validarAnulable(AdminContPayment $payment): void

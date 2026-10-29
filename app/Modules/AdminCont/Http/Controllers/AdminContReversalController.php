@@ -148,7 +148,7 @@ class AdminContReversalController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($this->present($result['request']) + ['ajustes_comision' => $result['ajustes_comision']]);
+        return response()->json($this->present($result['request']) + ['ajustes_comision' => $result['ajustes_comision'], 'sugerencia_compensacion' => $result['sugerencia_compensacion']]);
     }
 
     /**
