@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $additional_cost_type
  * @property int|null    $sales_project_id
  * @property string|null $stock_state_at_order
+ * @property bool        $is_adjustment    Fase 13 — línea de ajuste del cambio de monto aprobado (sin producto)
+ * @property string|null $adjustment_note
  */
 class PurchaseOrderLine extends Model
 {
@@ -34,7 +36,7 @@ class PurchaseOrderLine extends Model
     protected $fillable = [
         'purchase_order_id', 'catalog_product_id', 'quantity', 'unit_cost', 'subtotal',
         'additional_cost_percent', 'additional_cost_amount', 'additional_cost_type',
-        'sales_project_id', 'stock_state_at_order',
+        'sales_project_id', 'stock_state_at_order', 'is_adjustment', 'adjustment_note',
     ];
 
     /** @return array<string, string> */
@@ -42,6 +44,7 @@ class PurchaseOrderLine extends Model
     {
         return [
             'quantity'                 => 'integer',
+            'is_adjustment'            => 'boolean',
             'unit_cost'                => 'float',
             'subtotal'                 => 'float',
             'additional_cost_percent'  => 'float',

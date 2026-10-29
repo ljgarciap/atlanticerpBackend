@@ -262,7 +262,7 @@ final class GoodsReceiptController extends Controller
         // RN de REQ-166 (validación confirmada con el cliente) — ninguna línea, sumada a lo ya
         // recibido antes para esa misma orden y producto, puede superar lo TOTAL esperado.
         $alreadyReceived = $this->receivedByProduct($order, $excludeReceiptId);
-        $expectedByProduct = $order->lines->groupBy('catalog_product_id')
+        $expectedByProduct = $order->lines->reject(fn ($l) => $l->is_adjustment)->groupBy('catalog_product_id')
             ->map(fn ($l) => (int) $l->sum('quantity'));
 
         $partial = [];

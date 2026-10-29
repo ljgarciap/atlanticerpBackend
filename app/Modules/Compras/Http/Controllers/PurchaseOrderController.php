@@ -486,7 +486,8 @@ final class PurchaseOrderController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            $order->lines()->delete();
+            // Fase 13: las líneas de ajuste de un cambio de monto aprobado se conservan al editar (y suman al total).
+            $order->lines()->where('is_adjustment', false)->delete();
             $this->replaceLines($order, $validated);
         });
 
@@ -998,7 +999,7 @@ final class PurchaseOrderController extends Controller
      */
     private function replaceLines(PurchaseOrder $order, array $validated): void
     {
-        $totalAmount = 0.0;
+        $totalAmount = round((float) $order->lines()->where('is_adjustment', true)->sum('subtotal'), 2);
 
         // SCRUM-265: precalculado una sola vez para todos los productos existentes del payload,
         // no por línea dentro del loop — evita una query por línea en órdenes multi-producto.
@@ -1257,7 +1258,9 @@ final class PurchaseOrderController extends Controller
                     'catalog_product_id' => $line->catalog_product_id,
                     'reference' => $line->catalogProduct?->reference,
                     'factory_reference' => $line->catalogProduct?->factory_reference,
-                    'description' => $line->catalogProduct?->name,
+                    'description' => $line->is_adjustment ? $line->adjustment_note : $line->catalogProduct?->name,
+                    // Fase 13 — línea de ajuste del cambio de monto aprobado (sin producto, no se recibe ni se reclama).
+                    'is_adjustment' => $line->is_adjustment,
                     'quantity' => $line->quantity,
                     'unit_cost' => $line->unit_cost,
                     'subtotal' => $line->subtotal,
