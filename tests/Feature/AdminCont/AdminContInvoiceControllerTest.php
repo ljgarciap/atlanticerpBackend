@@ -776,6 +776,26 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
+    /** Fase 13 (2.8) — la acción de marcar incobrable no se ofrece cuando ya hay una propuesta pendiente ni cuando ya es incobrable (antes la pantalla la ofrecía y respondía 422). */
+    public function test_puede_marcar_incobrable_pasa_a_falso_con_la_propuesta_pendiente_y_una_vez_aprobada(): void
+    {
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        ['order' => $order] = $this->makeFacturableOrder($ownerId);
+        $contabilidad = $this->authHeaders($this->loginAsContabilidad());
+        $this->withHeaders($contabilidad)->postJson('/api/admin-contab/invoices', ['order_ids' => [$order->id]])->assertStatus(201);
+        $detalle = fn () => $this->withHeaders($contabilidad)->getJson("/api/admin-contab/invoices/{$order->id}/detail")->assertStatus(200);
+
+        $detalle()->assertJsonPath('puede_marcar_incobrable', true)->assertJsonPath('cobrabilidad', 'normal');
+
+        $this->withHeaders($contabilidad)->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'sin respuesta'])->assertStatus(200);
+        $detalle()->assertJsonPath('puede_marcar_incobrable', false)->assertJsonPath('cobrabilidad', 'pendiente_aprobacion');
+
+        $approver = $this->authHeaders($this->loginAsApprover());
+        $this->withHeaders($approver)->putJson("/api/admin-contab/invoices/{$order->id}/uncollectible-decision", ['approve' => true])->assertStatus(200);
+        $detalle()->assertJsonPath('puede_marcar_incobrable', false)->assertJsonPath('cobrabilidad', 'incobrable');
+        $this->withHeaders($contabilidad)->postJson("/api/admin-contab/invoices/{$order->id}/mark-uncollectible", ['motivo' => 'otra vez'])->assertStatus(422);
+    }
+
     /** REQ-448 Escenario 2 — Gerencia aprueba: pasa a cartera incobrable y sale de la antigüedad. */
     public function test_uncollectible_decision_aprobar_pasa_a_incobrable_y_sale_del_aging(): void
     {
