@@ -14,6 +14,7 @@ use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
 use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use App\Modules\AdminCont\Models\AdminContPaymentReversalRequest;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
+use App\Modules\AdminCont\Models\AdminContCompensation;
 use App\Modules\AdminCont\Models\AdminContCompensationLine;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Shared\Support\CircuitBreaker;
@@ -72,6 +73,42 @@ final class PaymentReversalService
     }
 
     /**
+     * Fase 13 (2.3, decisión de Luis) — reversar una compensación reabre la deuda de las facturas igual que anular un cobro, así que pasa por el
+     * mismo control: se solicita con motivo y lo decide el aprobador (o un suplente). Mientras esté pendiente, la compensación sigue vigente.
+     *
+     * @throws PaymentStateException si la compensación no existe, ya fue reversada o ya tiene una solicitud pendiente.
+     */
+    public function solicitarReversoCompensacion(int $compensationId, string $motivo, User $actor): AdminContPaymentReversalRequest
+    {
+        $motivo = trim($motivo);
+        if ($motivo === '') {
+            throw new PaymentStateException('Indica el motivo del reverso.');
+        }
+
+        /** @var AdminContCompensation|null $compensation */
+        $compensation = AdminContCompensation::query()->find($compensationId);
+        if ($compensation === null) {
+            throw new PaymentStateException('Compensación no encontrada.');
+        }
+        if ($compensation->estado === AdminContCompensation::ESTADO_REVERSADO) {
+            throw new PaymentStateException('Esta compensación ya fue reversada.');
+        }
+
+        $abierta = AdminContPaymentReversalRequest::query()
+            ->where('tipo', AdminContPaymentReversalRequest::TIPO_REVERSO_COMPENSACION)->where('source_id', $compensationId)
+            ->where('estado', AdminContPaymentReversalRequest::ESTADO_SOLICITADA)->exists();
+        if ($abierta) {
+            throw new PaymentStateException('Esta compensación ya tiene una solicitud de reverso pendiente de aprobación.');
+        }
+
+        return AdminContPaymentReversalRequest::create([
+            'tipo' => AdminContPaymentReversalRequest::TIPO_REVERSO_COMPENSACION, 'master_client_id' => $compensation->master_client_id,
+            'source_type' => AdminContPaymentReversalRequest::SOURCE_COMPENSACION, 'source_id' => $compensation->id,
+            'monto' => $compensation->monto_total, 'motivo' => $motivo, 'estado' => AdminContPaymentReversalRequest::ESTADO_SOLICITADA, 'requested_by' => $actor->id,
+        ]);
+    }
+
+    /**
      * Decide una solicitud (Gerencia): rechazarla la deja asentada; aprobarla la ejecuta.
      *
      * @return array{request: AdminContPaymentReversalRequest, ajustes_comision: list<array{vendedor_id: int, pedido_id: int, monto: float}>}
@@ -100,9 +137,15 @@ final class PaymentReversalService
                 return ['request' => $request, 'ajustes_comision' => []];
             }
 
-            $ajustes = $request->tipo === AdminContPaymentReversalRequest::TIPO_ANULACION
-                ? $this->ejecutarAnulacion($request, $mark)
-                : $this->ejecutarDevolucion($request, $mark);
+            if ($request->tipo === AdminContPaymentReversalRequest::TIPO_REVERSO_COMPENSACION) {
+                // El que ejecuta el reverso es quien lo aprobó: queda como `reversed_by` de la compensación y en el libro con el motivo solicitado.
+                $this->applications->reversarCompensacion((int) $request->source_id, (string) $request->motivo, $mark);
+                $ajustes = [];
+            } else {
+                $ajustes = $request->tipo === AdminContPaymentReversalRequest::TIPO_ANULACION
+                    ? $this->ejecutarAnulacion($request, $mark)
+                    : $this->ejecutarDevolucion($request, $mark);
+            }
 
             $request->update(['estado' => AdminContPaymentReversalRequest::ESTADO_EJECUTADA, 'decided_by' => $mark->id, 'decided_at' => now(), 'executed_at' => now()]);
 

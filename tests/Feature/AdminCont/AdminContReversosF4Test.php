@@ -171,7 +171,7 @@ class AdminContReversosF4Test extends FeatureTestCase
         $this->withHeaders($contabilidad)->postJson("/api/admin-contab/movimientos/{$historico->id}/desaplicar", ['motivo' => 'x'])->assertStatus(422);
     }
 
-    public function test_reversar_un_cruce_completo_con_las_tres_fuentes_las_restituye_y_lo_marca_reversado(): void
+    public function test_reversar_un_cruce_se_solicita_lo_decide_el_aprobador_y_restituye_las_tres_fuentes(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Cruce '.uniqid()]);
         $f1 = $this->factura($master, 300);
@@ -191,7 +191,7 @@ class AdminContReversosF4Test extends FeatureTestCase
             'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha' => now(),
         ]);
         app(PaymentLedgerBackfill::class)->run();
-        [$contabilidad] = $this->sesiones();
+        [$contabilidad, $approver] = $this->sesiones();
         $cobro = $this->cobro($contabilidad, $master, 150);
 
         $cruce = $this->withHeaders($contabilidad)->postJson('/api/admin-contab/compensaciones', ['master_client_id' => $master->id, 'lines' => [
@@ -204,7 +204,31 @@ class AdminContReversosF4Test extends FeatureTestCase
         $this->assertEqualsWithDelta(80.0, (float) $f2->refresh()->saldo_aplicado, 0.001);
         $this->sinDiferencias();
 
-        $this->withHeaders($contabilidad)->postJson('/api/admin-contab/compensaciones/'.$cruce->json('id').'/reverse', ['motivo' => 'Cruce hecho con el cliente equivocado'])->assertStatus(200)->assertJson(['estado' => 'reversado']);
+        // Fase 13 (2.3): reversar un cruce reabre deuda, así que se SOLICITA (con motivo) y lo decide el aprobador; mientras tanto nada cambia.
+        $ruta = '/api/admin-contab/compensaciones/'.$cruce->json('id').'/reverse';
+        $this->withHeaders($contabilidad)->postJson($ruta, [])->assertStatus(422);
+        $sol = $this->withHeaders($contabilidad)->postJson($ruta, ['motivo' => 'Cruce hecho con el cliente equivocado'])->assertStatus(201);
+        $this->assertSame('reverso_compensacion', $sol->json('tipo'));
+        $this->assertSame('solicitada', $sol->json('estado'));
+        $this->assertSame('compensacion', $sol->json('source_type'));
+        $this->remakeTenant();
+        $this->assertSame('confirmado', AdminContCompensation::findOrFail($cruce->json('id'))->estado, 'Solicitar no cambia nada todavía.');
+        $this->assertEqualsWithDelta(250.0, (float) $f1->refresh()->saldo_aplicado, 0.001);
+        $this->withHeaders($contabilidad)->postJson($ruta, ['motivo' => 'otra solicitud'])->assertStatus(422);
+
+        // Solo el aprobador decide; rechazar exige motivo y deja el cruce intacto.
+        $decision = '/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision';
+        $this->withHeaders($contabilidad)->putJson($decision, ['aprobar' => true])->assertStatus(403);
+        $this->withHeaders($approver)->putJson($decision, ['aprobar' => false])->assertStatus(422);
+        $this->withHeaders($approver)->putJson($decision, ['aprobar' => false, 'motivo_rechazo' => 'Está bien aplicado'])->assertStatus(200)->assertJsonPath('estado', 'rechazada');
+        $this->remakeTenant();
+        $this->assertSame('confirmado', AdminContCompensation::findOrFail($cruce->json('id'))->estado);
+        $this->assertEqualsWithDelta(250.0, (float) $f1->refresh()->saldo_aplicado, 0.001);
+
+        // Nueva solicitud, ahora aprobada: se reversa el cruce completo.
+        $sol2 = $this->withHeaders($contabilidad)->postJson($ruta, ['motivo' => 'Cruce hecho con el cliente equivocado'])->assertStatus(201);
+        $this->withHeaders($approver)->putJson('/api/admin-contab/reversal-requests/'.$sol2->json('id').'/decision', ['aprobar' => true])
+            ->assertStatus(200)->assertJsonPath('estado', 'ejecutada');
 
         $this->remakeTenant();
         $this->assertEqualsWithDelta(0.0, (float) $f1->refresh()->saldo_aplicado, 0.001);
@@ -217,7 +241,7 @@ class AdminContReversosF4Test extends FeatureTestCase
         $this->assertNotNull($comp->reversed_at);
         $this->sinDiferencias();
 
-        $this->withHeaders($contabilidad)->postJson('/api/admin-contab/compensaciones/'.$cruce->json('id').'/reverse', ['motivo' => 'otra vez'])->assertStatus(422);
+        $this->withHeaders($contabilidad)->postJson($ruta, ['motivo' => 'otra vez'])->assertStatus(422);
     }
 
     // ── anular un cobro (solicita Contabilidad, decide Gerencia) ───────────────────────────────────────────

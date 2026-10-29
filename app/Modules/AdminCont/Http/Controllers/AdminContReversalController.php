@@ -10,7 +10,6 @@ use App\Modules\AdminCont\Exceptions\PaymentStateException;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentReversalRequest;
 use App\Modules\AdminCont\Services\ApplicationReversalService;
-use App\Modules\AdminCont\Services\CompensationService;
 use App\Modules\AdminCont\Services\PaymentReversalService;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Shared\Http\Pagination;
@@ -20,7 +19,8 @@ use Illuminate\Routing\Controller;
 
 /**
  * SCRUM-1168 F4 — reversos del dinero de los cobros:
- *  - desaplicar (una aplicación o un cruce completo): sin aprobación, queda en el libro con motivo y autor;
+ *  - desaplicar una aplicación: sin aprobación, queda en el libro con motivo y autor;
+ *  - reversar un cruce (compensación) completo: lo solicita Contabilidad y lo decide el aprobador (Fase 13, 2.3);
  *  - anular un cobro: lo solicitan Contabilidad o Asistente Administrativa y lo decide Gerencia (la ruta de decisión es `primary_approver_only`).
  */
 class AdminContReversalController extends Controller
@@ -28,7 +28,6 @@ class AdminContReversalController extends Controller
     public function __construct(
         private readonly ApplicationReversalService $applications,
         private readonly PaymentReversalService $reversals,
-        private readonly CompensationService $compensations,
     ) {}
 
     /** POST /api/admin-contab/movimientos/{id}/desaplicar {motivo} */
@@ -49,7 +48,7 @@ class AdminContReversalController extends Controller
         return response()->json(['id' => $reverso->id, 'tipo' => $reverso->tipo, 'monto' => $reverso->monto, 'reverses_movement_id' => $reverso->reverses_movement_id], 201);
     }
 
-    /** POST /api/admin-contab/compensaciones/{id}/reverse {motivo} */
+    /** POST /api/admin-contab/compensaciones/{id}/reverse {motivo} — Fase 13 (2.3): solicita el reverso; lo decide el aprobador o un suplente. */
     public function reversarCompensacion(int $id, Request $request): JsonResponse
     {
         $actor = $this->resolveUser($request);
@@ -59,12 +58,12 @@ class AdminContReversalController extends Controller
         $data = $request->validate(['motivo' => ['required', 'string', 'max:1000']]);
 
         try {
-            $compensation = $this->applications->reversarCompensacion($id, $data['motivo'], $actor);
+            $solicitud = $this->reversals->solicitarReversoCompensacion($id, $data['motivo'], $actor);
         } catch (PaymentStateException|InvoiceStateException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($this->compensations->presentar($compensation));
+        return response()->json($this->present($solicitud), 201);
     }
 
     /** POST /api/admin-contab/payments/{id}/anular {motivo} — solicita la anulación (la decide Gerencia). */
@@ -117,14 +116,14 @@ class AdminContReversalController extends Controller
         return response()->json($this->present($solicitud), 201);
     }
 
-    /** GET /api/admin-contab/reversal-requests?estado=solicitada|ejecutada|rechazada&tipo=anulacion|devolucion */
+    /** GET /api/admin-contab/reversal-requests?estado=solicitada|ejecutada|rechazada&tipo=anulacion|devolucion|reverso_compensacion */
     public function index(Request $request): JsonResponse
     {
         $query = AdminContPaymentReversalRequest::query()->orderByDesc('id');
         if (in_array($request->query('estado'), ['solicitada', 'ejecutada', 'rechazada'], true)) {
             $query->where('estado', $request->query('estado'));
         }
-        if (in_array($request->query('tipo'), ['anulacion', 'devolucion'], true)) {
+        if (in_array($request->query('tipo'), ['anulacion', 'devolucion', 'reverso_compensacion'], true)) {
             $query->where('tipo', $request->query('tipo'));
         }
         $rows       = $query->get();
