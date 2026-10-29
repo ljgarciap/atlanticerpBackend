@@ -93,6 +93,47 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
         $final->assertJsonPath('paid_amount', 1000);
     }
 
+    /** Fase 13 (2.7) — pagar por encima de lo recibido no se bloquea, pero avisa y queda en la auditoría. */
+    public function test_pagar_por_encima_de_lo_recibido_avisa_sin_bloquear_y_queda_auditado(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
+        $provider = $this->makeProvider();
+        $product = \App\Modules\VentasDiseno\Models\CatalogProduct::create([
+            'reference' => 'REF-'.uniqid(), 'name' => 'Artículo de prueba', 'description' => 'Artículo de prueba',
+            'price_full' => 20, 'cost' => 12, 'provider_id' => $provider->id, 'is_active' => true,
+        ]);
+        $order = $this->makeOrder($provider->id, ['total_amount' => 1000]);
+        \App\Modules\Compras\Models\PurchaseOrderLine::create([
+            'purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 100, 'subtotal' => 1000,
+        ]);
+        // Llegaron 4 de 10: lo recibido vale 400.
+        $receipt = \App\Modules\Compras\Models\PurchaseOrderReceipt::create(['purchase_order_id' => $order->id]);
+        \App\Modules\Compras\Models\PurchaseOrderReceiptLine::create([
+            'purchase_order_receipt_id' => $receipt->id, 'catalog_product_id' => $product->id, 'quantity' => 4, 'unit_cost' => 100,
+            'warehouse_id' => (int) \App\Modules\Bodega\Models\Warehouse::query()->value('id'),
+        ]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $pagar = fn (int $monto, string $nombre) => $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/orders/{$order->id}/payments", [
+                'amount' => $monto, 'proof' => UploadedFile::fake()->create($nombre, 50, 'application/pdf'),
+            ]);
+
+        $pagar(300, 'c1.pdf')->assertStatus(201)->assertJsonPath('warnings', []);
+
+        // 300 + 300 = 600 > 400 recibidos: se registra igual (201) y avisa del adelanto de 200.
+        $r = $pagar(300, 'c2.pdf')->assertStatus(201);
+        $r->assertJsonPath('warnings.0.code', 'pago_supera_recibido');
+        $r->assertJsonPath('warnings.0.diferencia', 200);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame(2, PurchaseOrderPayment::where('purchase_order_id', $order->id)->count(), 'no se bloquea');
+        $this->assertTrue(
+            \App\Modules\Auth\Models\AuditLog::where('action', 'compras.payment.exceeds_received')->where('entity_id', $order->id)->exists(),
+            'queda en la auditoría',
+        );
+    }
+
     public function test_registrar_pago_que_excede_el_saldo_retorna_422(): void
     {
         // REQ-189 Escenario 3 — saldo 1000, intento de pagar 1500.

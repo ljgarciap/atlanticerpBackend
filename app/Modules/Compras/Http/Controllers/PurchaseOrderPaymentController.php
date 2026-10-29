@@ -14,6 +14,7 @@ use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderPayment;
 use App\Modules\Compras\Services\PurchaseOrderPaymentService;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Services\AuditService;
 use App\Shared\Support\PrimaryApprovers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,26 @@ final class PurchaseOrderPaymentController extends Controller
         $payment = $this->payments->register($validated['proof'], $order->id, $amount, $user->id);
         $order->refresh()->load('payments');
 
+        // Fase 13 (2.7, decisión de Luis): pagar más de lo recibido no se bloquea (hay anticipos legítimos), pero se avisa y queda registrado.
+        $warnings = [];
+        $limite = $order->paidWithoutAdvanceLimit();
+        $pagado = round($order->paidAmount(), 2);
+        if ($pagado - $limite > 0.004) {
+            $warnings[] = [
+                'code' => 'pago_supera_recibido',
+                'message' => sprintf('El pago acumulado (%.2f) supera lo recibido más los costos adicionales (%.2f): se está pagando por adelantado %.2f.', $pagado, $limite, $pagado - $limite),
+                'pagado_acumulado' => $pagado,
+                'recibido_y_costos' => $limite,
+                'diferencia' => round($pagado - $limite, 2),
+            ];
+            app(AuditService::class)->log(
+                action: 'compras.payment.exceeds_received',
+                entityType: 'purchase_order',
+                entityId: $order->id,
+                metadata: ['payment_id' => $payment->id, 'amount' => $amount, ...$warnings[0]],
+            );
+        }
+
         event(new PaymentRegistered(
             orderId: $order->id,
             paymentId: $payment->id,
@@ -97,7 +118,7 @@ final class PurchaseOrderPaymentController extends Controller
             tenant: (string) Tenant::current()?->slug,
         ));
 
-        return response()->json($this->format($payment), 201);
+        return response()->json([...$this->format($payment), 'warnings' => $warnings], 201);
     }
 
     /** REQ-189 — "Enviar a pago", informativo, no bloquea nada. */

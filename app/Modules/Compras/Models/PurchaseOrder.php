@@ -317,6 +317,23 @@ class PurchaseOrder extends Model
         return round($this->total_amount + $this->atlanticShippingCost() + $this->additionalCostsTotal(), 2);
     }
 
+    /**
+     * Fase 13 (2.7) — lo que se puede haber pagado SIN que sea un anticipo: lo recibido valorado al costo de la orden (cada línea de recepción:
+     * cantidad × costo), más lo que se paga aunque no llegue mercancía (envío de Atlantic, costos adicionales y las líneas de ajuste de un cambio
+     * de monto aprobado). Informativo: un pago por encima de esto genera una advertencia, no un bloqueo.
+     */
+    public function paidWithoutAdvanceLimit(): float
+    {
+        $recibido = (float) PurchaseOrderReceiptLine::query()
+            ->whereHas('receipt', fn ($q) => $q->where('purchase_order_id', $this->id))
+            ->get()
+            ->sum(fn (PurchaseOrderReceiptLine $l): float => $l->quantity * (float) $l->unit_cost);
+
+        $ajustes = (float) $this->lines()->where('is_adjustment', true)->sum('subtotal');
+
+        return round($recibido + $ajustes + $this->atlanticShippingCost() + $this->additionalCostsTotal(), 2);
+    }
+
     /** REQ-189 Escenario 2 — pendiente/parcial/completo según lo pagado contra `payableTotal()`. */
     public function paymentStatus(): string
     {
