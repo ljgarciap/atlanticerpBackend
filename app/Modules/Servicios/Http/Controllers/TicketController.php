@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Servicios\Exceptions\TicketAttachmentLimitExceededException;
 use App\Modules\Servicios\Exceptions\TicketCloseBlockedException;
 use App\Modules\Servicios\Http\Requests\CancelTicketRequest;
+use App\Modules\Servicios\Http\Requests\ReopenTicketRequest;
 use App\Modules\Servicios\Http\Requests\ScheduleTicketRequest;
 use App\Modules\Servicios\Http\Requests\StoreTicketRequest;
 use App\Modules\Servicios\Http\Requests\UpdateTicketRequest;
@@ -389,6 +390,28 @@ final class TicketController extends Controller
             $ticket = $this->tickets->cancel($ticket, $validated['motivo'], $user);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json($this->tickets->detail($ticket));
+    }
+
+    /** PATCH /api/servicios/tickets/{id}/reabrir — Fase 12a: reabre un ticket cerrado o cancelado (permiso y motivo). */
+    public function reopen(ReopenTicketRequest $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $ticket = Ticket::find($id);
+        if ($ticket === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        try {
+            $ticket = $this->tickets->reopen($ticket, (string) $request->validated('motivo'), $user);
+        } catch (TicketCloseBlockedException $e) {
+            return response()->json(['message' => $e->getMessage(), 'errors' => $e->errors()], $e->status());
         }
 
         return response()->json($this->tickets->detail($ticket));

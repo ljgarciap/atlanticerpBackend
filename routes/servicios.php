@@ -153,6 +153,10 @@ Route::prefix('tickets')->group(function (): void {
     Route::patch('/{id}/cancelar', [TicketController::class, 'cancel'])
         ->middleware('permission:servicios.tickets.manage');
 
+    // Fase 12a — `closed` y `cancelled` son estados finales: se reabren solo aquí, con permiso y motivo.
+    Route::patch('/{id}/reabrir', [TicketController::class, 'reopen'])
+        ->middleware('permission:servicios.tickets.manage');
+
     // Fase 4 — Servicios, Batch 8 (REQ-238→243). Lectura: mismo permiso que el resto del módulo —
     // visible para todos los roles que ven Tickets (Gerencia incluida, "Solo ver" según la Matriz
     // de Permisos por Rol). Escritura: permission:servicios.field_work.edit cubre "quién puede

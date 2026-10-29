@@ -24,6 +24,8 @@ use Tests\Feature\FeatureTestCase;
  */
 class ReportsControllerTest extends FeatureTestCase
 {
+    use \Tests\Support\RecorreEstadosDeTicket;
+
     private const LIDER_SERVICIOS = 'liderservicios@test.com';
 
     private const TECNICO = 'tecnico@test.com';
@@ -126,8 +128,8 @@ class ReportsControllerTest extends FeatureTestCase
         $this->makeTicket();
         $this->makeTicket();
 
-        $service->changeStage($a, Ticket::ESTADO_CLOSED, $user);
-        $service->changeStage($b, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $a, $user);
+        $this->cerrarTicket($service, $b, $user);
 
         $response = $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
             ->getJson('/api/servicios/reportes/panorama-mes')
@@ -161,15 +163,15 @@ class ReportsControllerTest extends FeatureTestCase
 
         for ($i = 0; $i < 3; $i++) {
             $t = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'estado' => Ticket::ESTADO_SCHEDULED]);
-            $service->changeStage($t, Ticket::ESTADO_ON_SITE, $user);
-            $service->changeStage($t, Ticket::ESTADO_CLOSED, $user);
+            $this->llevarTicketA($service, $t, $user, Ticket::ESTADO_ON_SITE);
+            $this->cerrarTicket($service, $t, $user);
         }
 
         $revisit = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'estado' => Ticket::ESTADO_SCHEDULED]);
-        $service->changeStage($revisit, Ticket::ESTADO_ON_SITE, $user);
-        $service->changeStage($revisit, Ticket::ESTADO_SCHEDULED, $user);
-        $service->changeStage($revisit, Ticket::ESTADO_ON_SITE, $user);
-        $service->changeStage($revisit, Ticket::ESTADO_CLOSED, $user);
+        $this->llevarTicketA($service, $revisit, $user, Ticket::ESTADO_ON_SITE);
+        $this->llevarTicketA($service, $revisit, $user, Ticket::ESTADO_SCHEDULED);
+        $this->llevarTicketA($service, $revisit, $user, Ticket::ESTADO_ON_SITE);
+        $this->cerrarTicket($service, $revisit, $user);
 
         $headers = $this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios');
 
@@ -191,10 +193,10 @@ class ReportsControllerTest extends FeatureTestCase
         $service = app(TicketService::class);
 
         $warranty = $this->makeTicket(['tipo' => Ticket::TIPO_WARRANTY, 'estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(3)]);
-        $service->changeStage($warranty, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $warranty, $user);
 
         $installation = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED, 'created_at' => now()->subDays(7)]);
-        $service->changeStage($installation, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $installation, $user);
 
         $headers = $this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios');
 
@@ -243,12 +245,12 @@ class ReportsControllerTest extends FeatureTestCase
         Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00', 'UTC'));
         $june = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
         $this->makeTicket();
-        $service->changeStage($june, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $june, $user);
 
         // Mes en curso (agosto, frozen por setUp): 1 reportado, 1 cerrado -> 100% si se incluyera.
         Carbon::setTestNow(Carbon::parse(self::FROZEN_NOW, 'UTC'));
         $august = $this->makeTicket(['estado' => Ticket::ESTADO_SCHEDULED]);
-        $service->changeStage($august, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $august, $user);
 
         $response = $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
             ->getJson('/api/servicios/reportes/panorama-mes?year=2026&month=6')
@@ -294,7 +296,7 @@ class ReportsControllerTest extends FeatureTestCase
         $service = app(TicketService::class);
 
         $closed = $this->makeTicket(['subtipo' => Ticket::SUBTIPO_INSPECTION, 'estado' => Ticket::ESTADO_SCHEDULED]);
-        $service->changeStage($closed, Ticket::ESTADO_CLOSED, $user);
+        $this->cerrarTicket($service, $closed, $user);
         $this->makeQuote($closed, ServiceQuote::ESTADO_APPROVED, 1500.00);
         // Borrador del mismo ticket — no debe sumar.
         $this->makeQuote($closed, ServiceQuote::ESTADO_DRAFT, 999.00);
