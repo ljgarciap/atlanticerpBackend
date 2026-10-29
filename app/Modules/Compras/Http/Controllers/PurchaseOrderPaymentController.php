@@ -14,6 +14,7 @@ use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderPayment;
 use App\Modules\Compras\Services\PurchaseOrderPaymentService;
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\PrimaryApprovers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -193,7 +194,7 @@ final class PurchaseOrderPaymentController extends Controller
 
         // superadmin.all bypassa este gate (decisión de Luis, 2026-08-22).
         $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
-        if ($primaryApproverId !== null && $user->id !== $primaryApproverId && ! $user->hasPermission('superadmin.all')) {
+        if ($primaryApproverId !== null && ! PrimaryApprovers::isApprover($user->id, $primaryApproverId) && ! $user->hasPermission('superadmin.all')) {
             return response()->json(['message' => 'Solo el aprobador configurado puede aprobar un cambio de monto.'], 403);
         }
 
@@ -241,7 +242,7 @@ final class PurchaseOrderPaymentController extends Controller
 
         // superadmin.all bypassa este gate (decisión de Luis, 2026-08-22).
         $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
-        if ($primaryApproverId !== null && $user->id !== $primaryApproverId && ! $user->hasPermission('superadmin.all')) {
+        if ($primaryApproverId !== null && ! PrimaryApprovers::isApprover($user->id, $primaryApproverId) && ! $user->hasPermission('superadmin.all')) {
             return response()->json(['message' => 'Solo el aprobador configurado puede rechazar un cambio de monto.'], 403);
         }
 

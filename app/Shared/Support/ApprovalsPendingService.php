@@ -256,7 +256,7 @@ final class ApprovalsPendingService
 
         $approverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        return $approverId !== null && $user->id === $approverId;
+        return PrimaryApprovers::isApprover($user->id, $approverId);
     }
 
     // ── Bodega / Compras (tipos ya cubiertos por AprobacionGate) ────────────────────

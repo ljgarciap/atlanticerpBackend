@@ -6,6 +6,7 @@ namespace App\Shared\Auth;
 
 use App\Models\User;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
+use App\Shared\Support\PrimaryApprovers;
 
 /**
  * ADR-006, Fase C, Decisión 11 — forma nueva del payload (JWT y el objeto `user` de las
@@ -73,7 +74,7 @@ final class JwtClaimsBuilder
     {
         $approverId = rescue(fn () => AdminContFiscalSettings::query()->value('primary_approver_user_id'), null);
 
-        return $approverId !== null && (int) $approverId === (int) $user->id;
+        return PrimaryApprovers::isApprover((int) $user->id, $approverId === null ? null : (int) $approverId);
     }
 
     /** SCRUM-1168 — bandera del concepto nuevo de cobros (`cobros_v2_activo`). Dato visual: si no se puede resolver devuelve false y no rompe el login. */

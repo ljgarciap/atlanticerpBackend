@@ -16,6 +16,7 @@ use App\Modules\AdminCont\Services\DailyCashCountService;
 use App\Modules\AdminCont\Services\DailyCashCountSummaryPdfService;
 use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Http\Pagination;
+use App\Shared\Support\PrimaryApprovers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -175,7 +176,7 @@ class AdminContCashPositionController
         $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
         $isApprover = in_array('superadmin.all', $permissions, true)
             || ($payload !== null && isset($payload['sub']) && $primaryApproverId !== null
-                && (int) $payload['sub'] === $primaryApproverId);
+                && PrimaryApprovers::isApprover((int) $payload['sub'], $primaryApproverId));
 
         $data['puede_aprobar'] = $data['estado'] === AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION && $isApprover;
 

@@ -13,6 +13,7 @@ use App\Modules\AdminCont\Services\CommissionExportService;
 use App\Modules\AdminCont\Services\CommissionOrderService;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Auth\Support\RoleKeys;
+use App\Shared\Support\PrimaryApprovers;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -344,6 +345,6 @@ class AdminContInternalCommissionController
 
         $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
 
-        return $primaryApproverId !== null && $actor->id === $primaryApproverId;
+        return PrimaryApprovers::isApprover($actor->id, $primaryApproverId);
     }
 }

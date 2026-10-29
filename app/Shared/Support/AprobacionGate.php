@@ -69,7 +69,7 @@ final class AprobacionGate
         // Mismo criterio permisivo que los gates nativos que reemplaza (RelocationRequestController::
         // resolveApproverAccess() etc.): sin primary_approver_user_id configurado todavía, el gate no
         // bloquea a nadie — estado inicial antes del ajuste (SCRUM-206), no un bug.
-        return $primaryApproverId === null || $user->id === $primaryApproverId;
+        return $primaryApproverId === null || PrimaryApprovers::isApprover($user->id, $primaryApproverId);
     }
 
     private function tieneReglaPara(User $user, string $tipo): bool

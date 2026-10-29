@@ -7,6 +7,7 @@ use App\Modules\Auth\Http\Controllers\AuditLogController;
 use App\Modules\Auth\Http\Controllers\GlobalSettingsController;
 use App\Modules\Auth\Http\Controllers\ImpersonationAdminController;
 use App\Modules\Auth\Http\Controllers\ModuleController;
+use App\Modules\Auth\Http\Controllers\PrimaryApproverSubstituteController;
 use App\Shared\Catalogs\CatalogController;
 use App\Modules\Auth\Http\Controllers\RoleController;
 use App\Modules\Auth\Http\Controllers\SecurityAnomalyController;
@@ -74,6 +75,10 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     Route::post('/modules',        [ModuleController::class, 'store']);
     Route::put('/modules/{id}',    [ModuleController::class, 'update']);
     Route::delete('/modules/{id}', [ModuleController::class, 'destroy']);
+
+    // Fase 12b — aprobadores suplentes (el titular se fija en Ajustes de Compras / Configuración Fiscal).
+    Route::get('/primary-approver-substitutes', [PrimaryApproverSubstituteController::class, 'index']);
+    Route::put('/primary-approver-substitutes', [PrimaryApproverSubstituteController::class, 'update']);
 
     // Fase 7a — administración de los catálogos de vocabulario por empresa (docs/specs/fase7-catalogos.md); mismo permiso que módulos y roles.
     Route::get('/catalogs/{domain}',                [CatalogController::class, 'all']);

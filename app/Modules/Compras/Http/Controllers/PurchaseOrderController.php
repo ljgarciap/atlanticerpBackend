@@ -26,6 +26,7 @@ use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Shared\Http\Pagination;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Services\AuditService;
+use App\Shared\Support\PrimaryApprovers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -524,7 +525,7 @@ final class PurchaseOrderController extends Controller
         // superadmin.all bypassa este gate (decisión de Luis, 2026-08-22) — mismo criterio que
         // el resto de la app, ver EnsureIsPrimaryApprover en Admin&Cont.
         $primaryApproverId = ComprasSettings::current()->primary_approver_user_id;
-        if ($primaryApproverId !== null && $user->id !== $primaryApproverId && ! $user->hasPermission('superadmin.all')) {
+        if ($primaryApproverId !== null && ! PrimaryApprovers::isApprover($user->id, $primaryApproverId) && ! $user->hasPermission('superadmin.all')) {
             return response()->json(['message' => 'Solo el aprobador configurado puede aprobar esta orden.'], 403);
         }
 
