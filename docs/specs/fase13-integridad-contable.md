@@ -45,3 +45,15 @@ Hay cifras de dinero que no reconcilian entre pantallas o con su detalle: el tot
 
 ## 6. Abierto
 Nada de negocio pendiente. Orden de entrega: 13a (2.1, 2.9, 2.7), 13b (2.2, 2.3, 2.4), 13c (2.5, 2.6, 2.8, 2.10, 2.11).
+
+## 7. Resultado (2026-10-31) — Fase 13 completa
+Todos los ítems están mezclados en `master` (backend #58–#69, frontend #48–#54), un PR por ítem y suite completa antes de abrir cada uno.
+
+**2.10 Reapertura de un arqueo cerrado** (backend #69, frontend #54):
+- `POST /cash-position/history/{id}/reopen` (`primary_approver_only`: aprobador o suplente), motivo de 10 a 1000 caracteres; un arqueo ya abierto responde 409.
+- Reabre un arqueo pendiente o aprobado: vuelve a `abierto`, conserva número y observaciones, borra cierre y aprobación y descarta el snapshot (los totales se recalculan en vivo hasta el nuevo cierre). Al volver a cerrarse conserva su número.
+- Migración `2026_11_01_100000` (aditiva, reversible): `reabierto_por/at/motivo` con la ÚLTIMA reapertura; el historial completo vive en `audit_logs` (`admin_contab.daily_cash_count.reopened`).
+- El detalle del historial expone `puede_reabrir`; el frontend ofrece «Reabrir arqueo» con el motivo.
+- Verificado: 5 tests nuevos, backend 5219 tests / 0 fallos, PHPStan 0, frontend 246 archivos / 3011 tests, `tsc` limpio.
+
+**Abierto (no bloqueante)**: un arqueo reabierto no muestra en la interfaz quién lo reabrió ni el motivo (el dato ya viaja en la respuesta: `reabierto_por/at/motivo`); la reapertura de un día anterior vuelve a ser el arqueo activo (`es_atrasado`) y bloquea el cierre de los días siguientes hasta rehacerse.
