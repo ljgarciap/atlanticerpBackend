@@ -616,6 +616,48 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
         $this->assertEquals(0.0, DB::table($this->tableFqn('invoices'))->where('id', $invoice->id)->value('saldo_aplicado'));
     }
 
+    /** Fase 13 (2.11) — la anulación completa no pide `monto` y no valida el que llegue (siempre se acredita lo que falta de la factura). */
+    public function test_anulacion_completa_no_exige_monto_ni_valida_el_que_llegue(): void
+    {
+        Storage::fake('s3-private');
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        $token = $this->loginAsContabilidad();
+
+        foreach ([null, 0, 'texto'] as $monto) {
+            Tenant::where('slug', 'atlantic')->first()?->makeCurrent();   // tras una petición HTTP el tenant queda olvidado
+            ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
+            $payload = [
+                'master_client_id' => $invoice->master_client_id, 'cliente' => $invoice->cliente,
+                'tipo' => AdminContCreditNote::TIPO_ANULACION_COMPLETA, 'subtipo_anulacion' => AdminContCreditNote::SUBTIPO_CANCELADO,
+                'factura_origen_id' => $invoice->id, 'motivo' => 'Pedido cancelado por el cliente',
+                'comprobante' => UploadedFile::fake()->create('anulacion.pdf', 100, 'application/pdf'),
+            ];
+            if ($monto !== null) {
+                $payload['monto'] = $monto;
+            }
+
+            $this->withHeaders($this->authHeaders($token))->post('/api/admin-contab/notas-credito', $payload)
+                ->assertStatus(201)->assertJson(['monto' => 500]);
+        }
+    }
+
+    /** Fase 13 (2.11) — el resto de los tipos siguen exigiendo un `monto` válido. */
+    public function test_descuento_comercial_sigue_exigiendo_un_monto_valido(): void
+    {
+        Storage::fake('s3-private');
+        $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
+        ['invoice' => $invoice] = $this->makeInvoicedOrder($ownerId, monto: 500);
+        $token = $this->loginAsContabilidad();
+        $base = [
+            'master_client_id' => $invoice->master_client_id, 'cliente' => $invoice->cliente, 'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL,
+            'factura_origen_id' => $invoice->id, 'motivo' => 'Descuento pactado', 'comprobante' => UploadedFile::fake()->create('d.pdf', 100, 'application/pdf'),
+        ];
+
+        $json = [...$this->authHeaders($token), 'Accept' => 'application/json'];
+        $this->withHeaders($json)->post('/api/admin-contab/notas-credito', $base)->assertStatus(422)->assertJsonValidationErrors('monto');
+        $this->withHeaders($json)->post('/api/admin-contab/notas-credito', [...$base, 'monto' => 0])->assertStatus(422)->assertJsonValidationErrors('monto');
+    }
+
     public function test_anulacion_completa_de_factura_nunca_cobrada_no_mueve_dinero(): void
     {
         Storage::fake('s3-private');
