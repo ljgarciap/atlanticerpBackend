@@ -246,6 +246,47 @@ class AdminContReversosF4Test extends FeatureTestCase
 
     // ── anular un cobro (solicita Contabilidad, decide Gerencia) ───────────────────────────────────────────
 
+    /** Fase 13 (2.4) — tras anular un cobro, si el cliente tiene saldo a favor para cubrir las facturas reabiertas se SUGIERE la compensación (no se aplica sola). */
+    public function test_al_anular_un_cobro_se_sugiere_compensar_con_el_saldo_a_favor_que_el_cliente_tiene(): void
+    {
+        $conSaldo = MasterClient::create(['name' => 'Cliente Sugerencia '.uniqid()]);
+        $sinSaldo = MasterClient::create(['name' => 'Cliente Sin Saldo '.uniqid()]);
+        $f1 = $this->factura($conSaldo, 300);
+        $f2 = $this->factura($sinSaldo, 300);
+        [$contabilidad, $approver] = $this->sesiones();
+        $cobro1 = $this->cobro($contabilidad, $conSaldo, 300, [['invoice_id' => $f1->id, 'monto' => 300]]);
+        $cobro2 = $this->cobro($contabilidad, $sinSaldo, 300, [['invoice_id' => $f2->id, 'monto' => 300]]);
+
+        // El primer cliente tiene además 120 de saldo a favor (un abono nivel Cliente).
+        $this->remakeTenant();
+        AdminContAbono::create([
+            'master_client_id' => $conSaldo->id, 'monto_original' => 120, 'monto_usado' => 0, 'metodo_pago' => 'transferencia',
+            'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF-'.uniqid(), 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
+            'registrado_por' => User::query()->value('id'), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
+        ]);
+
+        $anular = function (int $cobro) use ($contabilidad, $approver) {
+            $sol = $this->withHeaders($contabilidad)->postJson("/api/admin-contab/payments/{$cobro}/anular", ['motivo' => 'Cobro duplicado'])->assertStatus(201);
+
+            return $this->withHeaders($approver)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(200);
+        };
+
+        $r = $anular($cobro1);
+        $sug = $r->json('sugerencia_compensacion');
+        $this->assertNotNull($sug, 'hay saldo a favor y facturas reabiertas: se sugiere');
+        $this->assertSame($conSaldo->id, $sug['master_client_id']);
+        $this->assertEqualsWithDelta(120.0, $sug['saldo_a_favor'], 0.001);
+        $this->assertEqualsWithDelta(300.0, $sug['pendiente_total'], 0.001);
+        $this->assertEqualsWithDelta(120.0, $sug['compensable'], 0.001, 'se puede compensar lo menor entre el saldo y lo pendiente');
+        $this->assertSame([$f1->id], array_column($sug['facturas'], 'invoice_id'));
+        $this->remakeTenant();
+        $this->assertEqualsWithDelta(0.0, (float) $f1->refresh()->saldo_aplicado, 0.001, 'solo se sugiere: nada se compensa solo');
+        $this->assertEqualsWithDelta(0.0, (float) AdminContAbono::where('master_client_id', $conSaldo->id)->value('monto_usado'), 0.001);
+
+        // Sin saldo a favor no hay nada que sugerir.
+        $this->assertNull($anular($cobro2)->json('sugerencia_compensacion'));
+    }
+
     public function test_anular_un_cobro_del_concepto_nuevo_lo_solicita_contabilidad_y_al_aprobar_aprobador_se_reversa_todo(): void
     {
         $master  = MasterClient::create(['name' => 'Cliente Anular '.uniqid()]);
