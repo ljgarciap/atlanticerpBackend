@@ -117,7 +117,7 @@ final class ImpersonationPendingPasswordTest extends FeatureTestCase
     {
         $target  = $this->makeTarget();
         $headers = $this->tokenPropio($target);
-        $this->conCambioPendiente($target, hoursAgo: 100);
+        $this->conCambioPendiente($target, hoursAgo: 200);
 
         $this->getJson('/api/auth/mfa/status', $headers)->assertStatus(401)->assertJsonPath('code', 'password_reset_expired');
         $this->getJson('/api/auth/me', $headers)->assertStatus(401)->assertJsonPath('code', 'password_reset_expired');

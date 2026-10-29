@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Cache;
  * Política del reset administrativo de contraseñas, leída de los ajustes globales (`global_settings`, editables por superadmin en
  * `/api/admin/global-settings`):
  *
- * - `password_reset_expiration_hours` (1..720, default 48): horas que dura la contraseña temporal (= correo). Una cuenta con
+ * - `password_reset_expiration_hours` (1..720, default 168): horas que dura el enlace de activación de una cuenta nueva o reiniciada (Fase 12c; antes, la contraseña temporal = correo). Una cuenta con
  *   `must_change_password` activo cuyo `password_reset_at` es más antiguo que ese plazo está CADUCADA: no puede iniciar sesión ni
  *   usar un token vivo hasta otro reset o un "olvidé mi contraseña" (H2).
  * - `password_reset_enabled`: interruptor del reset administrativo (comando y API). Si no hay valor guardado, está APAGADO en
@@ -32,7 +32,7 @@ final class PasswordResetPolicy
         $stored = $this->stored(GlobalSettingsRegistry::PASSWORD_RESET_EXPIRATION_HOURS);
 
         if ($meta === null) {
-            return 48;
+            return 168;
         }
 
         return $stored !== null && $stored >= $meta['min'] && $stored <= $meta['max'] ? $stored : $meta['default'];

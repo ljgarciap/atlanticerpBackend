@@ -6,6 +6,7 @@ namespace App\Modules\Auth\Services;
 
 use App\Models\User;
 use App\Modules\Auth\Support\NoLoginAccounts;
+use App\Modules\Auth\Mail\AccountActivationMail;
 use App\Modules\Auth\Mail\PasswordResetMail;
 use App\Modules\Auth\Models\PasswordResetToken;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 final class PasswordResetService
 {
-    public function __construct(private readonly PasswordNotifier $notifier) {}
+    public function __construct(private readonly PasswordNotifier $notifier, private readonly PasswordResetPolicy $policy) {}
 
     private const TTL_HOURS        = 1;
     private const TOKEN_BYTES      = 32;
@@ -34,18 +35,7 @@ final class PasswordResetService
             return;
         }
 
-        PasswordResetToken::query()
-            ->where('email', $email)
-            ->whereNull('used_at')
-            ->update(['used_at' => now()]);
-
-        $rawToken = bin2hex(random_bytes(self::TOKEN_BYTES));
-
-        PasswordResetToken::create([
-            'email'      => $email,
-            'token_hash' => $this->hash($rawToken),
-            'expires_at' => now()->addHours(self::TTL_HOURS),
-        ]);
+        $rawToken = $this->issueToken($email, self::TTL_HOURS);
 
         // SCRUM-1178 — el token viaja en el FRAGMENTO (#): el navegador nunca lo envía al servidor, así no queda en el access.log de nginx.
         $resetUrl = $this->frontendUrl("/reset-password#token={$rawToken}");
@@ -56,6 +46,37 @@ final class PasswordResetService
             Mail::to($email)->send(new PasswordResetMail($user->first_name, $resetUrl, $this->notifier->locale($user)));
         } catch (\Throwable $e) {
             Log::error('Restablecimiento de contraseña: no se pudo encolar el correo', ['user_id' => $user->id, 'exception' => $e::class]);
+        }
+    }
+
+    /**
+     * Fase 12c — enlace de activación: una cuenta nueva o reiniciada NO tiene contraseña utilizable; la persona elige la suya con este
+     * enlace (la misma página y el mismo endpoint de «restablecer», `reset()`). Vigencia = `password_reset_expiration_hours`. Devuelve el enlace
+     * (para el comando de soporte) o `null` si la cuenta no puede activarse (inactiva o sin acceso). Un nuevo enlace anula los anteriores.
+     */
+    public function activationLink(User $user): ?string
+    {
+        if ($user->is_active !== true || NoLoginAccounts::isNoLogin($user->email)) {
+            return null;
+        }
+
+        $rawToken = $this->issueToken($user->email, $this->policy->expirationHours());
+
+        return $this->frontendUrl("/reset-password#token={$rawToken}");
+    }
+
+    /** Genera el enlace de activación y lo envía por correo (cola). Un fallo de envío se registra (sin el token) y no deshace el alta o el reinicio. */
+    public function sendActivationLink(User $user): void
+    {
+        $url = $this->activationLink($user);
+        if ($url === null) {
+            return;
+        }
+
+        try {
+            Mail::to($user->email)->send(new AccountActivationMail($user->first_name, $url, $this->policy->expirationHours(), $this->notifier->locale($user)));
+        } catch (\Throwable $e) {
+            Log::error('Activación de cuenta: no se pudo encolar el correo', ['user_id' => $user->id, 'exception' => $e::class]);
         }
     }
 
@@ -108,6 +129,25 @@ final class PasswordResetService
 
         // S2: aviso al dueño de la cuenta de que su contraseña cambió (un fallo de envío no rompe el cambio).
         $this->notifier->notifyChanged($user);
+    }
+
+    /** Invalida los tokens vivos del correo y crea uno nuevo; devuelve el valor en claro (solo viaja en el enlace). */
+    private function issueToken(string $email, int $ttlHours): string
+    {
+        PasswordResetToken::query()
+            ->where('email', $email)
+            ->whereNull('used_at')
+            ->update(['used_at' => now()]);
+
+        $rawToken = bin2hex(random_bytes(self::TOKEN_BYTES));
+
+        PasswordResetToken::create([
+            'email'      => $email,
+            'token_hash' => $this->hash($rawToken),
+            'expires_at' => now()->addHours($ttlHours),
+        ]);
+
+        return $rawToken;
     }
 
     private function hash(string $value): string

@@ -11,6 +11,7 @@ use App\Modules\Auth\Models\Department;
 use App\Modules\Auth\Models\RoleModuleVisibility;
 use App\Modules\Auth\Models\SecurityLevel;
 use App\Modules\Auth\Services\UatVisibilityService;
+use App\Modules\Auth\Services\PasswordResetService;
 use App\Modules\Auth\Services\UserService;
 use App\Modules\Auth\Support\ModuleCatalog;
 use Illuminate\Http\JsonResponse;
@@ -101,6 +102,20 @@ class UserController extends Controller
         }
 
         return response()->json($this->format($user));
+    }
+
+    /** Fase 12c — POST /api/users/{id}/activation-link: reenvía el enlace a una cuenta que todavía no eligió su contraseña. */
+    public function resendActivation(int $id): JsonResponse
+    {
+        $user = $this->service->findOrFail($id);
+
+        if ($user->is_active !== true || $user->must_change_password !== true) {
+            return response()->json(['message' => 'Solo se reenvía el enlace a una cuenta activa que aún no eligió su contraseña.'], 422);
+        }
+
+        app(PasswordResetService::class)->sendActivationLink($user);
+
+        return response()->json(['message' => 'Enlace de activación enviado.']);
     }
 
     /** ADR-006, Decisión 10 — PATCH /api/admin/users/{id}/flags */
@@ -230,6 +245,8 @@ class UserController extends Controller
             'manager'          => $manager ? ['id' => $manager->id, 'name' => $manager->first_name . ' ' . $manager->last_name] : null,
             'is_active'        => $user->is_active,
             'mfa_enabled'      => $user->mfa_enabled,
+            // Fase 12c — cuenta activa que aún no eligió su contraseña: la lista ofrece «Reenviar enlace».
+            'pending_activation' => $user->is_active === true && $user->must_change_password === true,
             'notes'            => $user->notes,
             'extra_permissions' => $user->extra_permissions,
             'department'       => $dept  ? ['id' => $dept->id,  'name' => $dept->name]  : null,

@@ -63,10 +63,17 @@ class PasswordResetExpirationTest extends FeatureTestCase
         Cache::forget(GlobalSettingsRegistry::cacheKey($key));
     }
 
+    /**
+     * Reinicia y deja la cuenta como la dejaba un reset ANTERIOR a la Fase 12c (clave = correo): hoy el reset ya no deja ninguna clave utilizable,
+     * pero las cuentas reiniciadas antes siguen existiendo y la caducidad (H2) tiene que seguir protegiéndolas.
+     */
     private function resetear(User $user): Carbon
     {
         app(AdminPasswordResetService::class)->resetUser($user, 'prueba', 'comando');
         $this->reMakeCurrent();
+        $fresh = $user->fresh();
+        $fresh->password_hash = $fresh->email;
+        $fresh->save();
 
         return Carbon::parse($user->fresh()?->password_reset_at);
     }
@@ -79,11 +86,11 @@ class PasswordResetExpirationTest extends FeatureTestCase
 
     // ── Política: valores por defecto ─────────────────────────────────────────────────────────────────────
 
-    public function test_la_caducidad_por_defecto_es_48_horas_y_el_interruptor_esta_encendido_fuera_de_produccion(): void
+    public function test_la_vigencia_por_defecto_es_7_dias_y_el_interruptor_esta_encendido_fuera_de_produccion(): void
     {
         $policy = app(PasswordResetPolicy::class);
 
-        $this->assertSame(48, $policy->expirationHours());
+        $this->assertSame(168, $policy->expirationHours());
         $this->assertTrue($policy->enabled());
     }
 
@@ -113,12 +120,12 @@ class PasswordResetExpirationTest extends FeatureTestCase
         $user    = $this->makeUser();
         $resetAt = $this->resetear($user);
 
-        Carbon::setTestNow($resetAt->copy()->addHours(47)->addMinutes(59));
+        Carbon::setTestNow($resetAt->copy()->addHours(167)->addMinutes(59));
         $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => $user->email])
             ->assertStatus(200)
             ->assertJsonPath('user.must_change_password', true);
 
-        Carbon::setTestNow($resetAt->copy()->addHours(48)->addMinute());
+        Carbon::setTestNow($resetAt->copy()->addHours(168)->addMinute());
         $response = $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => $user->email])
             ->assertStatus(401)
             ->assertJsonPath('code', 'password_reset_expired');
@@ -152,7 +159,7 @@ class PasswordResetExpirationTest extends FeatureTestCase
     {
         $user    = $this->makeUser();
         $resetAt = $this->resetear($user);
-        Carbon::setTestNow($resetAt->copy()->addHours(49));
+        Carbon::setTestNow($resetAt->copy()->addHours(169));
 
         $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => 'otra-clave-cualquiera'])
             ->assertStatus(401)
@@ -199,7 +206,7 @@ class PasswordResetExpirationTest extends FeatureTestCase
         $user    = $this->makeUser();
         $resetAt = $this->resetear($user);
 
-        Carbon::setTestNow($resetAt->copy()->addHours(49));
+        Carbon::setTestNow($resetAt->copy()->addHours(169));
         $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => $user->email])->assertStatus(401);
 
         $this->reMakeCurrent();
@@ -211,7 +218,7 @@ class PasswordResetExpirationTest extends FeatureTestCase
     {
         $user    = $this->makeUser();
         $resetAt = $this->resetear($user);
-        Carbon::setTestNow($resetAt->copy()->addHours(49));
+        Carbon::setTestNow($resetAt->copy()->addHours(169));
 
         app(PasswordResetService::class)->sendResetLink($user->email);
         $url = null;
@@ -237,7 +244,7 @@ class PasswordResetExpirationTest extends FeatureTestCase
     {
         $rows = collect($this->getJson('/api/admin/global-settings', $this->superadminHeaders())->assertStatus(200)->json('data'))->keyBy('key');
 
-        $this->assertSame(48, $rows['password_reset_expiration_hours']['value']);
+        $this->assertSame(168, $rows['password_reset_expiration_hours']['value']);
         $this->assertSame(1, $rows['password_reset_expiration_hours']['min']);
         $this->assertSame(720, $rows['password_reset_expiration_hours']['max']);
         $this->assertSame('boolean', $rows['password_reset_enabled']['type']);

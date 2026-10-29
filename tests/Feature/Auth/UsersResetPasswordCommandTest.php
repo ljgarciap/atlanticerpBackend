@@ -114,7 +114,7 @@ class UsersResetPasswordCommandTest extends FeatureTestCase
 
         $this->reMakeCurrent();
         $fresh = $user->fresh();
-        $this->assertTrue(Hash::check($user->email, $fresh->password_hash));
+        $this->assertFalse(Hash::check($user->email, $fresh->password_hash), 'Fase 12c: la clave ya no es el correo');
         $this->assertTrue($fresh->must_change_password);
         $this->assertTrue($this->sinCambios($otro), 'solo se resetea al usuario indicado');
     }

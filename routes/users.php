@@ -25,4 +25,5 @@ Route::middleware(['permission:platform.management', 'permission:security.users'
     Route::post('/',              [UserController::class, 'store']);
     Route::put('/{id}',           [UserController::class, 'update'])->whereNumber('id');
     Route::patch('/{id}/status',  [UserController::class, 'toggleStatus'])->whereNumber('id');
+    Route::post('/{id}/activation-link', [UserController::class, 'resendActivation'])->whereNumber('id');
 });

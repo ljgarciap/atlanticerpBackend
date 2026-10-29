@@ -3,7 +3,7 @@
 namespace Tests\Feature\Users;
 
 use App\Models\User;
-use App\Modules\Auth\Mail\WelcomeMail;
+use App\Modules\Auth\Mail\AccountActivationMail;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -914,7 +914,7 @@ class UserControllerTest extends FeatureTestCase
 
     public function test_crear_usuario_inactivo_no_envia_correo_de_bienvenida(): void
     {
-        // RN3 — estado elegible al crear; is_active=false no debe disparar WelcomeMail.
+        // RN3 — estado elegible al crear; is_active=false no debe disparar el enlace de activación.
         $token = $this->loginAs();
 
         $response = $this->withHeaders($this->authHeaders($token))
@@ -928,10 +928,10 @@ class UserControllerTest extends FeatureTestCase
             ]);
 
         $response->assertStatus(201)->assertJsonPath('is_active', false);
-        Mail::assertNotSent(WelcomeMail::class);
+        Mail::assertNotQueued(AccountActivationMail::class);
     }
 
-    public function test_crear_usuario_activo_por_defecto_envia_correo_de_bienvenida(): void
+    public function test_crear_usuario_activo_por_defecto_envia_el_enlace_de_activacion(): void
     {
         $token = $this->loginAs();
 
@@ -945,6 +945,6 @@ class UserControllerTest extends FeatureTestCase
             ])
             ->assertStatus(201);
 
-        Mail::assertSent(WelcomeMail::class);
+        Mail::assertQueued(AccountActivationMail::class);
     }
 }

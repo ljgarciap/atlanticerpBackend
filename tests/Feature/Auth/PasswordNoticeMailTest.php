@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Modules\Auth\Mail\AccountActivationMail;
 use App\Modules\Auth\Mail\PasswordNoticeMail;
 use App\Modules\Auth\Mail\PasswordResetMail;
 use App\Modules\Auth\Models\SecurityLevel;
@@ -45,20 +46,20 @@ class PasswordNoticeMailTest extends FeatureTestCase
         return $this->authHeaders($this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin'));
     }
 
-    public function test_el_reset_administrativo_por_api_avisa_al_afectado_con_el_vencimiento_y_sin_contrasenas(): void
+    public function test_el_reset_administrativo_por_api_envia_el_enlace_de_activacion_con_la_vigencia_y_sin_contrasenas(): void
     {
         Mail::fake();
         $user = $this->makeUser();
 
         $this->postJson("/api/users/{$user->id}/reset-password", [], $this->superadminHeaders())->assertStatus(200);
 
-        Mail::assertQueued(PasswordNoticeMail::class, function (PasswordNoticeMail $m) use ($user): bool {
+        Mail::assertQueued(AccountActivationMail::class, function (AccountActivationMail $m) use ($user): bool {
             $html = $m->render();
 
             return $m->hasTo($user->email)
-                && $m->type === PasswordNoticeMail::TYPE_ADMIN_RESET
                 && str_contains($html, 'Marta')
-                && str_contains($html, 'antes de')
+                && str_contains($html, '168 horas')
+                && str_contains($html, '/reset-password#token=')
                 && ! str_contains($html, 'ClaveOriginal99!')
                 && ! str_contains($html, $user->email . '</');
         });
@@ -73,8 +74,8 @@ class PasswordNoticeMailTest extends FeatureTestCase
         $this->postJson("/api/users/{$user->id}/reset-password", [], $this->superadminHeaders())->assertStatus(200);
 
         // R3-7: el reset no depende del SMTP síncrono; el aviso queda encolado (el worker lo envía luego).
-        Mail::assertQueued(PasswordNoticeMail::class);
-        Mail::assertNotSent(PasswordNoticeMail::class);
+        Mail::assertQueued(AccountActivationMail::class);
+        Mail::assertNotSent(AccountActivationMail::class);
         $this->assertInstanceOf(\Illuminate\Contracts\Queue\ShouldQueue::class, new PasswordNoticeMail(PasswordNoticeMail::TYPE_CHANGED, 'X', 'es', '01/01/2026 10:00'));
     }
 
@@ -92,14 +93,14 @@ class PasswordNoticeMailTest extends FeatureTestCase
         }
 
         $subjects = [];
-        Mail::assertQueued(PasswordNoticeMail::class, function (PasswordNoticeMail $m) use (&$subjects): bool {
+        Mail::assertQueued(AccountActivationMail::class, function (AccountActivationMail $m) use (&$subjects): bool {
             $subjects[$m->to[0]['address']] = $m->envelope()->subject;
 
             return true;
         });
-        $this->assertSame('Your password was reset — AtlanticERP CRM', $subjects[$en->email]);
-        $this->assertSame('Tu contraseña fue restablecida — AtlanticERP CRM', $subjects[$es->email]);
-        $this->assertSame('Tu contraseña fue restablecida — AtlanticERP CRM', $subjects[$sin->email], 'sin preferencia usa el idioma por defecto');
+        $this->assertSame('Activate your account — AtlanticERP', $subjects[$en->email]);
+        $this->assertSame('Activa tu cuenta — AtlanticERP', $subjects[$es->email]);
+        $this->assertSame('Activa tu cuenta — AtlanticERP', $subjects[$sin->email], 'sin preferencia usa el idioma por defecto');
     }
 
     public function test_el_cambio_propio_de_contrasena_avisa_al_dueno(): void
@@ -150,7 +151,7 @@ class PasswordNoticeMailTest extends FeatureTestCase
         Mail::assertQueued(PasswordNoticeMail::class, static fn (PasswordNoticeMail $m): bool => $m->hasTo($user->email) && $m->type === PasswordNoticeMail::TYPE_CHANGED);
     }
 
-    public function test_el_masivo_avisa_a_cada_afectado(): void
+    public function test_el_masivo_envia_el_enlace_a_cada_afectado(): void
     {
         Mail::fake();
         $a = $this->makeUser();
@@ -161,7 +162,7 @@ class PasswordNoticeMailTest extends FeatureTestCase
         $this->postJson('/api/users/reset-passwords', ['operator_password' => 'Password123!', 'confirm' => "RESETEAR {$count}"], $headers)->assertStatus(200);
 
         foreach ([$a, $b] as $u) {
-            Mail::assertQueued(PasswordNoticeMail::class, static fn (PasswordNoticeMail $m): bool => $m->hasTo($u->email) && $m->type === PasswordNoticeMail::TYPE_ADMIN_RESET);
+            Mail::assertQueued(AccountActivationMail::class, static fn (AccountActivationMail $m): bool => $m->hasTo($u->email));
         }
         Mail::assertQueuedCount($count);
     }

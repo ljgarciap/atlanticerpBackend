@@ -80,7 +80,7 @@ class PasswordResetApiTest extends FeatureTestCase
 
         $this->reMakeCurrent();
         $fresh = $user->fresh();
-        $this->assertTrue(Hash::check($user->email, $fresh->password_hash));
+        $this->assertFalse(Hash::check($user->email, $fresh->password_hash), 'Fase 12c: la clave ya no es el correo');
         $this->assertTrue($fresh->must_change_password);
     }
 
@@ -101,17 +101,24 @@ class PasswordResetApiTest extends FeatureTestCase
         $this->assertFalse($user->fresh()->must_change_password);
     }
 
-    public function test_el_reseteado_puede_ingresar_con_su_correo_y_el_login_avisa_que_debe_cambiarla(): void
+    public function test_el_reseteado_no_entra_con_su_correo_ni_con_la_vieja_y_elige_su_clave_con_el_enlace(): void
     {
-        $this->postJson('/api/users/' . User::where('email', 'vendedor@atlantic.test')->value('id') . '/reset-password', [], $this->superadminHeaders())
-            ->assertStatus(200);
+        $user = User::where('email', 'vendedor@atlantic.test')->firstOrFail();
+        $this->postJson("/api/users/{$user->id}/reset-password", [], $this->superadminHeaders())->assertStatus(200);
 
-        $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'vendedor@atlantic.test'])
-            ->assertStatus(200)
-            ->assertJsonPath('user.must_change_password', true);
-
-        // La contraseña vieja ya no sirve.
+        // Fase 12c: ni el correo ni la contraseña vieja sirven.
+        $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'vendedor@atlantic.test'])->assertStatus(401);
         $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'Password123!'])->assertStatus(401);
+
+        // Con el enlace elige la suya y entra, ya sin cambio obligatorio pendiente.
+        $this->reMakeCurrent();
+        $url = app(\App\Modules\Auth\Services\PasswordResetService::class)->activationLink($user->fresh());
+        $token = substr((string) $url, (int) strpos((string) $url, '#token=') + 7);
+        $this->postJson('/api/auth/reset-password', ['token' => $token, 'password' => 'ClaveNueva99!x', 'password_confirmation' => 'ClaveNueva99!x'])->assertStatus(200);
+
+        $this->postJson('/api/auth/login', ['email' => 'vendedor@atlantic.test', 'password' => 'ClaveNueva99!x'])
+            ->assertStatus(200)
+            ->assertJsonPath('user.must_change_password', false);
     }
 
     // ── Masivo ───────────────────────────────────────────────────────────────────────────────────────────
