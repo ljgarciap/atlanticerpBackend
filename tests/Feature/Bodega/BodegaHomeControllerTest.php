@@ -564,7 +564,6 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $this->assertSame('FAB-777', $row['factory_reference']);
         $this->assertSame(8, $row['quantity']);
         $this->assertSame('ProveedorImportacion', $row['provider_name']);
-        $this->assertArrayNotHasKey('is_zona_libre', $row);
     }
 
     public function test_por_recibir_excluye_ordenes_recibidas(): void

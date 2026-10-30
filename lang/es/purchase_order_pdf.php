@@ -23,7 +23,6 @@ return [
     'total'        => 'Total',
     'no_cost_note' => 'Documento sin información de costos.',
     'unspecified'  => 'Sin especificar',
-    'modality_zona_libre' => 'Zona Libre',
     'modality_direct'     => 'Directo',
     'page'         => 'Pagina {PAGE_NUM} de {PAGE_COUNT}',
 

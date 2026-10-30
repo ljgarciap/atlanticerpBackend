@@ -58,22 +58,10 @@ final class FixtureSpecialPermissionSeeder extends SpecialPermissionSeeder
         'liderservicios@test.com' => ['servicios.quotes.view_cost_breakdown'],
         // Gerencia (Gerencia Test 5, management con nivel restringido) — SCRUM-295, mismo grant.
         'gerencia5@test.com' => ['servicios.quotes.view_cost_breakdown'],
-        // Lider Compras Test (lider_compras) — compras.settings.configure (umbral configurable de
-        // "calificación baja" de proveedores, ver compras_settings), aprobado por Luis 2026-07-16
-        // junto con el fix de su security_level default (Nivel 1 -> Nivel 4, ver migración
-        // 2026_07_20_100000 en `dev`); compras.zona-libre.approve (SCRUM-440, Bloque B3 Zona Libre
-        // de Colón, 2026-07-24) — es quien aprueba/rechaza las solicitudes que genera Bodega.
-        // bodega.read (SCRUM-440, hallazgo de QA 2026-07-25/26): el backend ya la dejaba
-        // aprobar/rechazar (200 real, confirmado por Pre-QA), pero su rol `lider_compras` no
-        // tiene ninguna fila en `RoleModuleVisibility` para `bodega` — sin este grant, `Require
-        // Permission permission="bodega.read"` (routes/App.tsx, TODAS las rutas de Bodega
-        // comparten ese único gate, no hay uno más angosto solo para Zona Libre) la redirigía al
-        // dashboard antes de poder llegar a /bodega/ordenes-zona-libre. Efecto secundario
-        // aceptado (no un bug): al tener bodega.read, el Sidebar también le muestra el resto del
-        // módulo Bodega (Home, Pedidos, Inventario, etc.) — no existe hoy un permiso más angosto
-        // que exponga solo Zona Libre, y Luis confirmó que darle lectura completa de Bodega es
-        // aceptable para este caso.
-        'lidercompras@test.com' => ['compras.settings.configure', 'compras.zona-libre.approve', 'bodega.read'],
+        // Lider Compras Test (lider_compras) — compras.settings.configure (umbral configurable de "calificación baja" de proveedores,
+        // ver compras_settings) y bodega.read (su rol no tiene fila en `RoleModuleVisibility` para `bodega`; sin este grant las rutas de
+        // Bodega, que comparten ese único gate, la redirigen al dashboard).
+        'lidercompras@test.com' => ['compras.settings.configure', 'bodega.read'],
         // Lider Operaciones Test (lider_operaciones) — SCRUM-771: acceso COMPLETO a Comparación de
         // Referencias (Sustitutos) dentro de Compras, sin heredar compras.write/.edit (que
         // desbloquearía escritura en el resto del módulo). La visibilidad de solo-lectura del

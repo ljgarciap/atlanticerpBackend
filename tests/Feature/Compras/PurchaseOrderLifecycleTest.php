@@ -92,7 +92,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     /**
      * SCRUM-204 (REQ-141, 2026-08-06 — hallazgo Gerencia Test): "Pendiente/Por liquidar" pasa a
      * ser parte de la secuencia automática, entre "Por aprobar" y "Ordenado", para TODA orden
-     * (antes solo se alcanzaba vía el botón "Liquidar" de Zona Libre, diferido a backlog).
+     * (antes solo se alcanzaba vía el botón "Liquidar", diferido a backlog).
      */
     public function test_secuencia_completa_pasa_por_pendiente_liquidar_antes_de_ordenado(): void
     {

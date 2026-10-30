@@ -576,7 +576,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
     /**
      * SCRUM-428 RN1 — cantidad actual por cada bodega OPERATIVA para el selector del modal (7 físicas originales +
-     * "Reserva Servicios" desde Grupo D parte 2, REQ-291/SCRUM-361 = 8). SCRUM-990: "Bodega Zona Libre" es de solo
+     * "Reserva Servicios" desde Grupo D parte 2, REQ-291/SCRUM-361 = 8). SCRUM-990: una bodega de solo
      * consulta (catálogo de Lafayette, no inventario de Atlantic) y ya no aparece: quedan 7.
      */
     public function test_product_warehouse_stock_expone_cantidad_por_bodega(): void
@@ -593,7 +593,6 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
 
         $response->assertStatus(200);
         $response->assertJsonCount(7, 'warehouses');
-        $this->assertNull(collect($response->json('warehouses'))->firstWhere('name', 'Bodega Zona Libre'), 'Zona Libre (solo consulta) no aparece en el desglose de stock');
         $centralRow = collect($response->json('warehouses'))->firstWhere('warehouse_id', $central->id);
         $this->assertSame(12, $centralRow['quantity']);
         $otherRow = collect($response->json('warehouses'))->firstWhere('name', 'Merma');

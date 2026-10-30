@@ -41,8 +41,8 @@ final class NeutralidadDelRepoTest extends TestCase
                 if (! in_array($f->getExtension(), self::EXTENSIONES, true)) {
                     continue;
                 }
-                // Permanentes: migraciones históricas. Y este contrato y su lista, que contienen los términos a propósito.
-                if (str_starts_with($rel, 'database/migrations/') || str_contains($rel, 'TerminosDelClienteAnterior') || str_ends_with($rel, 'NeutralidadDelRepoTest.php')) {
+                // Permanentes: migraciones históricas (y el test de la que retiró Zona Libre, que debe nombrarla). Y este contrato y su lista, que contienen los términos a propósito.
+                if (str_starts_with($rel, 'database/migrations/') || str_contains($rel, 'TerminosDelClienteAnterior') || str_ends_with($rel, 'NeutralidadDelRepoTest.php') || str_ends_with($rel, 'RetiroZonaLibreMigracionTest.php')) {
                     continue;
                 }
                 $out[] = $rel;

@@ -334,7 +334,7 @@ class ComprasReportsControllerTest extends FeatureTestCase
         $this->assertEquals($inventoryResponse->json('kpis'), $reportResponse->json());
     }
 
-    public function test_liquidacion_de_importaciones_solo_cuenta_zona_libre(): void
+    public function test_liquidacion_de_importaciones_solo_cuenta_proveedores_internacionales(): void
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
         $provider = $this->makeProvider(['origin' => 'internacional']);
@@ -342,11 +342,9 @@ class ComprasReportsControllerTest extends FeatureTestCase
 
         // "Liquidada" = llegó a "recibido" (PurchaseOrder::isLiquidated(), hallazgo de QA
         // 2026-07-18 — la definición vieja usaba en_aduana, que un proveedor local salta).
-        $zonaLibre = $this->makeOrder($provider->id, [
-            'modality' => 'zona_libre', 'status' => PurchaseOrder::STATUS_RECIBIDO,
-            'liquidation_agency_id' => $agency->id,
-        ]);
-        $this->makeOrder($provider->id, ['modality' => 'directo']); // no debe contar
+        $this->makeOrder($provider->id, ['status' => PurchaseOrder::STATUS_RECIBIDO, 'liquidation_agency_id' => $agency->id]);
+        $local = $this->makeProvider(['category' => 'locales', 'origin' => 'local', 'name' => 'Proveedor Local']);
+        $this->makeOrder($local->id, ['status' => PurchaseOrder::STATUS_RECIBIDO]); // proveedor local: no debe contar
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -374,18 +372,18 @@ class ComprasReportsControllerTest extends FeatureTestCase
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
         $this->makeOrder($provider->id, [
-            'modality' => 'zona_libre', 'status' => PurchaseOrder::STATUS_RECIBIDO,
+            'status' => PurchaseOrder::STATUS_RECIBIDO,
             'liquidation_agency_id' => $agency->id,
         ]); // Liquidada
         $this->makeOrder($provider->id, [
-            'modality' => 'zona_libre', 'status' => PurchaseOrder::STATUS_EN_TRANSITO,
+            'status' => PurchaseOrder::STATUS_EN_TRANSITO,
             'liquidation_agency_id' => $agency->id,
         ]); // Ordenada, todavía no liquidada -> Por liquidar
         $this->makeOrder($provider->id, [
-            'modality' => 'zona_libre', 'status' => PurchaseOrder::STATUS_POR_APROBAR,
+            'status' => PurchaseOrder::STATUS_POR_APROBAR,
         ]); // NI SIQUIERA Ordenada -> fuera del universo del panel por completo
         $this->makeOrder($provider->id, [
-            'modality' => 'zona_libre', 'status' => PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
+            'status' => PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
         ]); // idem
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');

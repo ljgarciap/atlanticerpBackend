@@ -51,7 +51,6 @@ class ReglasDeBodegaYReportesScrum1196Test extends FeatureTestCase
         $this->assertTrue($rows['Sala de exhibición 1']['permite_venta']);
         $this->assertFalse($rows['Sala de exhibición 1']['despacho_por_defecto']);
         $this->assertFalse($rows['Reclamos y Devoluciones']['permite_venta']);
-        $this->assertFalse($rows->has('Bodega Zona Libre'), 'las de solo consulta no se administran aquí');
     }
 
     public function test_sin_el_permiso_de_configurar_no_se_pueden_editar_las_reglas(): void

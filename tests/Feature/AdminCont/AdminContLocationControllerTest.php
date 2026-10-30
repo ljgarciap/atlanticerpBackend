@@ -36,8 +36,6 @@ class AdminContLocationControllerTest extends FeatureTestCase
             $this->assertContains($expected, $names, "Falta la ubicación oficial: {$expected}");
         }
 
-        // SCRUM-990: Zona Libre es de solo consulta (catálogo de Lafayette) y ya no es una ubicación de Atlantic.
-        $this->assertNotContains('Bodega Zona Libre', $names);
 
         $aparte = collect($response->json())->firstWhere('nombre', 'Sala de exhibición 1');
         $this->assertSame('exhibicion', $aparte['tipo']);

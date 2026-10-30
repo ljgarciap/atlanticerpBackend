@@ -42,7 +42,7 @@ final class CatalogEntriesTest extends FeatureTestCase
         $this->assertSame('internacional', CatalogService::prop('provider_category', 'china', 'origen'));
         $this->assertTrue(CatalogService::prop('provider_category', 'locales', 'valida_identificacion'));
         $this->assertSame('local', Provider::deriveOrigin('locales'));
-        $this->assertSame('internacional', Provider::deriveOrigin('zona_libre'));
+        $this->assertSame('internacional', Provider::deriveOrigin('china'));
         // Clave desconocida: valor por omisión del dominio.
         $this->assertSame('internacional', Provider::deriveOrigin('inexistente'));
     }
