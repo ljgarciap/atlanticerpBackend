@@ -1,6 +1,6 @@
 # Fase 14 — Reglas y catálogos configurables por empresa (2026-10-31)
 
-**Estado**: spec aprobada por Luis (2026-10-31, orden 14a, 14d, 14c, 14b). **14a mezclada** (§8); **14d mezclada** (§9); **14c mezclada** (§10); **14b implementada** (§11), pendiente de mezclar. Origen: Grupo 3 de `docs/flujos/candidatos-priorizados.md`.
+**Estado**: spec aprobada por Luis (2026-10-31, orden 14a, 14d, 14c, 14b). **14a mezclada** (§8); **14d mezclada** (§9); **14c mezclada** (§10); **14b mezclada** (§11). **Fase 14 completa.** Origen: Grupo 3 de `docs/flujos/candidatos-priorizados.md`.
 
 ## 1. Objetivo
 Que los criterios de negocio que hoy viven en el código (cuándo una orden de compra necesita aprobación, qué formas de pago existen, qué motivos y roles se ofrecen) sean DATOS por empresa, editables por el superadmin sin desplegar. El ítem 3.1 es el único que incumple una regla dura del workspace (no hardcodear umbrales ni criterios de negocio).
