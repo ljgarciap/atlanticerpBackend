@@ -57,21 +57,22 @@ class Provider extends Model
 
     public const CATEGORY_LOCALES = 'locales';
 
-    public const CATEGORY_ZONA_LIBRE = 'zona_libre';
-
     public const CATEGORY_CHINA = 'china';
 
     public const CATEGORY_EUROPA = 'europa';
 
     public const CATEGORY_ONLINE = 'online';
 
+    /** Fase 14f — destino de la categoría retirada: cualquier proveedor del exterior sin categoría propia. */
+    public const CATEGORY_INTERNACIONAL = 'internacional';
+
     /** SCRUM-820 — 6ta categoría, agregada 2026-08-31 a pedido de Gerencia Test. */
     public const CATEGORY_LATINOAMERICA = 'latinoamerica';
 
     /** @var list<string> */
     public const CATEGORIES = [
-        self::CATEGORY_LOCALES, self::CATEGORY_ZONA_LIBRE, self::CATEGORY_CHINA,
-        self::CATEGORY_EUROPA, self::CATEGORY_ONLINE, self::CATEGORY_LATINOAMERICA,
+        self::CATEGORY_LOCALES, self::CATEGORY_CHINA, self::CATEGORY_EUROPA, self::CATEGORY_ONLINE,
+        self::CATEGORY_LATINOAMERICA, self::CATEGORY_INTERNACIONAL,
     ];
 
     /** @var list<string> */

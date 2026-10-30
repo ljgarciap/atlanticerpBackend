@@ -26,6 +26,8 @@ final class TerminosDelClienteAnterior
         'vendedordisenador\d*@', 'tecnicoservicios\d*@', 'garantiasservicios@', 'ayudantegeneralbodega\d*@', '(?:designer|supervisor|electrician|readonly|multi)@',
         // Fase 8 — nombres de almacén del cliente anterior (los almacenes son configurables).
         'showrooms?', 'obarrio',
+        // Fase 14f — la zona franca de Colón (Panamá) salió del núcleo: ni como flujo, ni como modalidad, categoría, permiso o texto.
+        'zona.?libre',
     ];
 
     /** Vocabulario del sector del cliente anterior (iluminación). */

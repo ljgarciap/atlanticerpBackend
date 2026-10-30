@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\VentasDiseno;
 
+use App\Modules\Compras\Models\ReplacementRequest;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Shared\Multitenancy\Tenant;
@@ -78,20 +79,8 @@ class CatalogUatTestDataCleanupControllerTest extends FeatureTestCase
         $blocked   = $this->makeUatProduct('BLOCKED');
         $deletable = $this->makeUatProduct('OK');
 
-        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-
-        $requestId = DB::table("{$slug}_compras.bodega_zona_libre_requests")->insertGetId([
-            'order_number' => 900001, 'status' => 'pendiente', 'created_at' => now(), 'updated_at' => now(),
-        ]);
-
-        DB::table("{$slug}_compras.bodega_zona_libre_request_lines")->insert([
-            'bodega_zona_libre_request_id' => $requestId,
-            'catalog_product_id'           => $blocked->id,
-            'quantity'                     => 1,
-            'unit_cost_snapshot'           => 10.00,
-            'created_at'                   => now(),
-            'updated_at'                   => now(),
-        ]);
+        // replacement_requests.original_catalog_product_id es restrictOnDelete: un producto referenciado ahí no se borra.
+        ReplacementRequest::create(['original_catalog_product_id' => $blocked->id, 'status' => ReplacementRequest::STATUS_PENDIENTE]);
 
         $token    = $this->loginAs('superadmin@atlantic.test', 'Password123!', 'superadmin');
         $response = $this->withHeader('Authorization', "Bearer {$token}")

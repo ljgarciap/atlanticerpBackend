@@ -48,7 +48,7 @@
         <tr>
             <td>{{ $order->provider->name }}</td>
             <td>{{ $statusLabel }}</td>
-            <td>{{ $order->modality === 'zona_libre' ? $t('modality_zona_libre') : $t('modality_direct') }}</td>
+            <td>{{ $t('modality_direct') }}</td>
         </tr>
         <tr>
             <td class="label">{{ $t('shipping_type') }}</td>

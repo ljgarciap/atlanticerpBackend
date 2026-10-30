@@ -19,8 +19,8 @@ final class TestDatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Fase 4a: estos dos seeders de «datos del cliente» ya no cuelgan de `DatabaseSeeder`; la suite los sigue necesitando (identidad fiscal de ejemplo
-        // para los PDF y el proveedor fijo de Zona Libre), así que los carga acá, en el mismo estado que antes.
+        // Fase 4a: la identidad fiscal de ejemplo ya no cuelga de `DatabaseSeeder`; la suite la sigue necesitando (para los PDF),
+        // así que la carga acá, en el mismo estado que antes.
         $this->call([DatabaseSeeder::class, AdminContFiscalIdentitySeeder::class, FixtureSpecialPermissionSeeder::class]);
     }
 }

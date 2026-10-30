@@ -1,6 +1,6 @@
 # Fase 14f — Retiro de Zona Libre
 
-**Estado**: spec con las decisiones de §5 tomadas por Luis (2026-10-30); pendiente de su «adelante con 14f» y de la confirmación explícita del `DROP`. Decisión de fondo ya tomada por Luis (2026-10-30): **retirar Zona Libre** (es un concepto de Panamá, ajeno a un ERP genérico). Contiene una migración **irreversible**: no se implementa sin su «adelante» y la confirmación explícita del `DROP`.
+**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); «adelante con 14f» y confirmación explícita del borrado dadas el mismo día. **14f-1 (código) y 14f-2 (migración) implementadas** (§8-§9), pendientes de mezclar. Decisión de fondo ya tomada por Luis (2026-10-30): **retirar Zona Libre** (es un concepto de Panamá, ajeno a un ERP genérico). Contiene una migración **irreversible**: no se implementa sin su «adelante» y la confirmación explícita del `DROP`.
 
 ## 1. Objetivo
 Quitar del núcleo todo lo que nombra o depende de «Zona Libre» (la zona franca de Colón, Panamá), como se hizo con Legacy/Lafayette en la Fase 5, sin romper el flujo de compras ni el de liquidación aduanal que hoy cuelga de él.
@@ -47,3 +47,10 @@ Reglas de aprobación de órdenes (Fase 14e: Zona Libre queda fuera de ella por 
 - **Frontend**: fuera las dos páginas, el modal de bodegas, las rutas, el menú, el hook/API y los textos (es/en); el detalle de orden muestra la agencia para proveedores internacionales; «Nueva orden» ya no pide modalidad; el panel de Ajustes de Compras ya no pide el proveedor fijo.
 - **Se conserva a propósito hasta 14f-2** (la migración): las tablas, la columna `zona_libre_provider_id`, el permiso `compras.zona-libre.approve`, la categoría `zona_libre` (constante y entrada del catálogo) y el contrato de neutralidad. Mientras tanto no hay forma de crear datos nuevos de Zona Libre desde la aplicación.
 - **Verificación**: backend 5214 tests y PHPStan 0; frontend 247 archivos / 2969 tests y `tsc` limpio.
+
+## 9. Resultado de 14f-2 (migración y contrato)
+- **Migración `2026_11_06_100000_retire_zona_libre` — IRREVERSIBLE** (`down()` lanza error): borra las 3 tablas de solicitudes, `settings.zona_libre_provider_id`, el permiso `compras.zona-libre.approve` (catálogo, `security_levels.permissions` y `users.extra_permissions`) y las reglas de aprobación de Gerencia del tipo `zona_libre`; convierte las órdenes `zona_libre` a `directo`; la categoría de proveedor `zona_libre` pasa a una entrada nueva `internacional` (mismo origen internacional; se crea si no existe) y la entrada vieja se borra.
+- **Guardas**: aborta en cualquier entorno si queda una solicitud `pendiente`; fuera de local/dev/testing aborta si las tablas de solicitudes tienen filas. **Respaldo obligatorio antes de migrar un entorno con datos.**
+- **No toca `bodega.read`** del Líder de Compras: se le concedió por esta pantalla, pero hoy le da el resto de Bodega; quitarla sería un cambio de acceso aparte (decisión pendiente de Luis).
+- **Contrato de neutralidad**: `zona.?libre` pasa a la lista prohibida en ambos repos (migraciones históricas y el test de esta migración quedan exentos). `Provider::CATEGORIES` cambia `zona_libre` por `internacional`; catálogo de permisos 55 → 54 (`compras` 5 → 4).
+- **Verificación**: `RetiroZonaLibreMigracionTest` (aborta con una pendiente sin borrar nada; retira tablas, permiso, categoría y reglas y convierte las órdenes; es irreversible), backend 5217 tests y PHPStan 0.

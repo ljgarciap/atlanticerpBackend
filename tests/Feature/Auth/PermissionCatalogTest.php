@@ -16,7 +16,6 @@ class PermissionCatalogTest extends FeatureTestCase
     {
         // sprint2: compras.settings.configure (SCRUM-183→196) agrega el módulo `compras` nuevo.
         // SCRUM-500: bodega.settings.configure agrega el módulo `bodega` nuevo.
-        // SCRUM-440 (Bloque B3 Zona Libre de Colón): compras.zona-libre.approve, 2do permiso de `compras`.
         // SCRUM-725: ventas_diseno.override_min_margin, 12mo permiso de `ventas_diseno`.
         // Batch 11 (SCRUM-292→297): servicios.quotes.view_cost_breakdown agrega el módulo `servicios` nuevo.
         // SCRUM-771: compras.sustitutos.manage, 3er permiso de `compras`.
@@ -68,13 +67,13 @@ class PermissionCatalogTest extends FeatureTestCase
         $this->assertCount(1, $catalog['settings'], 'settings debe tener 1 permiso');
         $this->assertCount(1, $catalog['superadmin'], 'superadmin debe tener 1 permiso');
         $this->assertCount(17, $catalog['ventas_diseno'], 'ventas_diseno debe tener 17 permisos'); // SCRUM-1150: + gerencia_scope
-        $this->assertCount(5, $catalog['compras'], 'compras debe tener 5 permisos');
+        $this->assertCount(4, $catalog['compras'], 'compras debe tener 4 permisos'); // Fase 14f: se retiró un permiso de compras
         $this->assertCount(3, $catalog['bodega'], 'bodega debe tener 3 permisos');
         $this->assertCount(10, $catalog['servicios'], 'servicios debe tener 10 permisos'); // 1 de binax + 8 finos de la Fase 2 de Atlantic + kardex.view de la Fase 1b
         $this->assertCount(8, $catalog['admin_contab'], 'admin_contab debe tener 8 permisos'); // 5 de binax + 3 finos de la Fase 2 de Atlantic; // SCRUM-1166: + edit.client_itbms_exemption
 
         $totalPermisos = array_sum(array_map('count', $catalog));
-        $this->assertSame(55, $totalPermisos, 'El total de permisos en el catálogo debe ser 55'); // SCRUM-1166: + admin_contab.edit.client_itbms_exemption; Fase 1b: + servicios.tools.kardex.view
+        $this->assertSame(54, $totalPermisos, 'El total de permisos en el catálogo debe ser 54'); // Fase 14f: se retiró un permiso de compras; SCRUM-1166: + admin_contab.edit.client_itbms_exemption; Fase 1b: + servicios.tools.kardex.view
 
         $crmKeys = array_column((array) $catalog['crm'], 'key');
         $this->assertContains('crm.read', $crmKeys);

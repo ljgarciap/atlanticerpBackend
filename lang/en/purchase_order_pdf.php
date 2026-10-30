@@ -20,7 +20,6 @@ return [
     'total'        => 'Total',
     'no_cost_note' => 'Document without cost information.',
     'unspecified'  => 'Not specified',
-    'modality_zona_libre' => 'Free Zone',
     'modality_direct'     => 'Direct',
     'page'         => 'Page {PAGE_NUM} of {PAGE_COUNT}',
 

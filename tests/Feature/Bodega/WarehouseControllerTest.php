@@ -49,7 +49,7 @@ class WarehouseControllerTest extends FeatureTestCase
     }
 
     /**
-     * 7 bodegas físicas: las 6 originales de SCRUM-451 (sin la de consulta externa «Zona Libre», retirada en la Fase 5b-2) más
+     * 7 bodegas físicas: las 6 originales de SCRUM-451 (sin la de consulta externa, retirada en la Fase 5b-2) más
      * "Reserva Servicios" (Grupo D parte 2, REQ-291, SCRUM-361).
      */
     public function test_index_lista_las_7_bodegas_fisicas(): void
@@ -62,7 +62,6 @@ class WarehouseControllerTest extends FeatureTestCase
         $response->assertStatus(200);
         $response->assertJsonCount(7, 'data');
         $response->assertJsonPath('data.0.name', 'Bodega Central');
-        $this->assertNotContains('Bodega Zona Libre', collect($response->json('data'))->pluck('name')->all());
         $this->assertContains('Reserva Servicios', collect($response->json('data'))->pluck('name')->all());
     }
 
@@ -166,12 +165,12 @@ class WarehouseControllerTest extends FeatureTestCase
 
     public function test_capacidad_pct_nula_se_expone_como_null_no_como_cero(): void
     {
-        $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
+        $pendiente = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
 
         $this->grantBodega('vendedor@atlantic.test');
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
-        $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$zonaLibre->id}");
+        $response = $this->withHeaders($this->authHeaders($token))->getJson("/api/bodega/warehouses/{$pendiente->id}");
 
         $response->assertStatus(200);
         $response->assertJsonPath('kpis.capacidad_pct', null);
@@ -266,14 +265,14 @@ class WarehouseControllerTest extends FeatureTestCase
     /** REQ-384 — el chip solo aplica a bodegas con ubicación física individual. */
     public function test_chip_espacio_libre_vacio_en_modo_pendiente(): void
     {
-        $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
-        WarehouseLocation::create(['warehouse_id' => $zonaLibre->id, 'codigo' => 'X-1', 'is_active' => true]);
+        $pendiente = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
+        WarehouseLocation::create(['warehouse_id' => $pendiente->id, 'codigo' => 'X-1', 'is_active' => true]);
 
         $this->grantBodega('vendedor@atlantic.test');
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson("/api/bodega/warehouses/{$zonaLibre->id}?chip=espacio_libre");
+            ->getJson("/api/bodega/warehouses/{$pendiente->id}?chip=espacio_libre");
 
         $response->assertStatus(200);
         $response->assertJsonCount(0, 'data');

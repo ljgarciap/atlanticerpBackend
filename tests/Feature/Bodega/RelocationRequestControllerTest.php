@@ -90,13 +90,13 @@ class RelocationRequestControllerTest extends FeatureTestCase
 
     /**
      * Visual Review 2026-07-24 (CRÍTICO) — el mockup nunca ofrece "Reubicar" en bodegas modo
-     * "pendiente" (sin ubicación física confirmada, ej. Zona Libre); el frontend oculta el botón
+     * "pendiente" (sin ubicación física confirmada); el frontend oculta el botón
      * ahí, pero el backend también debe rechazarlo por si alguien llama el endpoint directo.
      */
     public function test_store_desde_bodega_modo_pendiente_retorna_422(): void
     {
         $product = $this->makeProduct();
-        $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
+        $pendiente = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         $merma = Warehouse::where('name', 'Merma')->first();
 
         $this->grantBodega('vendedor@atlantic.test');
@@ -104,19 +104,19 @@ class RelocationRequestControllerTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
-            'origin_warehouse_id' => $zonaLibre->id,
+            'origin_warehouse_id' => $pendiente->id,
             'destination_warehouse_id' => $merma->id,
             'cantidad' => 3,
             'motivo' => 'Reorganización',
         ])->assertStatus(422);
     }
 
-    /** Mejora SCRUM-752 RN1 (Gerencia Test 2026-08-13) — Zona Libre tampoco puede ser DESTINO. */
+    /** Mejora SCRUM-752 RN1 (Gerencia Test 2026-08-13) — una bodega pendiente tampoco puede ser DESTINO. */
     public function test_store_hacia_bodega_modo_pendiente_retorna_422(): void
     {
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
-        $zonaLibre = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
+        $pendiente = Warehouse::create(['name' => 'Bodega pendiente de prueba', 'modo_detalle' => Warehouse::MODO_PENDIENTE]);
         ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
         $this->grantBodega('vendedor@atlantic.test');
@@ -125,7 +125,7 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))->postJson('/api/bodega/relocations', [
             'catalog_product_id' => $product->id,
             'origin_warehouse_id' => $central->id,
-            'destination_warehouse_id' => $zonaLibre->id,
+            'destination_warehouse_id' => $pendiente->id,
             'cantidad' => 3,
             'motivo' => 'Reorganización',
         ])->assertStatus(422);
