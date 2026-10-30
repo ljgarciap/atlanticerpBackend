@@ -1,6 +1,6 @@
 # Fase 14h — Mostrar quién reabrió un arqueo y el motivo
 
-**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); pendiente de su «adelante con 14h». Origen: «Abierto» de la Fase 13 (2.10): «la interfaz no muestra quién reabrió ni el motivo». No se implementa sin su «adelante».
+**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); «adelante con 14h» dado; **implementada** (§8), pendiente de mezclar. Origen: «Abierto» de la Fase 13 (2.10): «la interfaz no muestra quién reabrió ni el motivo». No se implementa sin su «adelante».
 
 ## 1. Objetivo
 Reabrir un arqueo cerrado es una acción sensible (solo el aprobador o su suplente, con motivo de al menos 10 caracteres). Hoy queda guardada y auditada, pero quien mira el arqueo no ve que fue reabierto ni por qué. Que la pantalla lo diga.
@@ -36,3 +36,8 @@ Mínimos: es solo presentación sobre datos que ya existen. La lectura de la aud
 
 ## 7. No-alcance
 Cambiar quién puede reabrir, el límite de un cierre por día, o reabrir días anteriores sin bloquear los siguientes. No hay tabla nueva: el historial sale de la auditoría.
+
+## 8. Resultado
+- **Backend**: `DailyCashCountService::present()` suma `reaperturas: [{por, at, motivo}]` (la más reciente primero), leídas de `audit_logs` solo si el arqueo se reabrió alguna vez; `history()` suma `reabierto` (booleano). Sin migración ni permiso nuevo.
+- **Frontend** (`ArqueoCajaPage`): el detalle de un día lista todas las reaperturas con quién, cuándo y el motivo; el arqueo activo reabierto muestra un aviso ámbar con la más reciente; el listado marca «Reabierto» los días que se reabrieron (con ayuda en el tooltip). es/en.
+- **Verificación**: test de API (`reaperturas` con dos reaperturas en orden, motivo y marca en el historial; un día nunca reabierto sin marca) y 3 de pantalla; backend 5233 tests y PHPStan 0; frontend 247 archivos / 2976 tests y `tsc` limpio.

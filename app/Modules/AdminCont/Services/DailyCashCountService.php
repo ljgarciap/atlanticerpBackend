@@ -14,6 +14,7 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentReversalRequest;
+use App\Modules\Auth\Models\AuditLog;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Shared\Http\Pagination;
@@ -352,6 +353,8 @@ final class DailyCashCountService
                 'realizado_por' => $r->cerrado_por !== null ? ($userNames->get($r->cerrado_por) ?? null) : null,
                 // QA SCRUM-603 (2026-08-29 RN4) — el historial mostraba quién cerró pero no la hora.
                 'cerrado_at' => $r->cerrado_at?->toIso8601String(),
+                // Fase 14h — marca para el listado: el día se reabrió al menos una vez (el detalle trae el historial completo).
+                'reabierto' => $r->reabierto_at !== null,
             ];
         })->values();
 
@@ -495,7 +498,37 @@ final class DailyCashCountService
             'reabierto_por' => $record?->reabierto_por !== null ? $this->userName($record->reabierto_por) : null,
             'reabierto_at' => $record?->reabierto_at?->toIso8601String(),
             'reabierto_motivo' => $record?->reabierto_motivo,
+            'reaperturas' => $record !== null ? $this->reaperturas($record) : [],
         ];
+    }
+
+    /**
+     * Fase 14h — TODAS las reaperturas del arqueo, la más reciente primero, leídas de la auditoría (inmutable y con respaldo, ADR-SCRUM815): una
+     * sola entidad y acción, y solo si el arqueo se reabrió alguna vez (`reabierto_at`), así que un arqueo normal no paga la consulta.
+     *
+     * @return list<array{por: string|null, at: string|null, motivo: string|null}>
+     */
+    private function reaperturas(AdminContDailyCashCount $record): array
+    {
+        if ($record->reabierto_at === null) {
+            return [];
+        }
+
+        $logs = AuditLog::query()
+            ->where('action', 'admin_contab.daily_cash_count.reopened')
+            ->where('entity_type', 'daily_cash_count')
+            ->where('entity_id', (string) $record->id)
+            ->orderByDesc('id')
+            ->get(['user_id', 'metadata', 'created_at']);
+
+        $names = User::query()->whereIn('id', $logs->pluck('user_id')->filter()->unique())->get(['id', 'first_name', 'last_name'])
+            ->mapWithKeys(fn (User $u): array => [$u->id => trim("{$u->first_name} {$u->last_name}")]);
+
+        return array_values($logs->map(fn (AuditLog $l): array => [
+            'por' => $l->user_id !== null ? ($names->get($l->user_id) ?? null) : null,
+            'at' => $l->created_at->toIso8601String(),
+            'motivo' => isset($l->metadata['motivo']) ? (string) $l->metadata['motivo'] : null,
+        ])->all());
     }
 
     /**

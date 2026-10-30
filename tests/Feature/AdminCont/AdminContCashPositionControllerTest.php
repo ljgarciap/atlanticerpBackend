@@ -837,6 +837,35 @@ class AdminContCashPositionControllerTest extends FeatureTestCase
         $this->assertSame('pendiente_aprobacion', $cierre->json('estado'));
     }
 
+    /** Fase 14h — el detalle trae TODAS las reaperturas (la más reciente primero, con quién y el motivo) y el historial marca el día como reabierto. */
+    public function test_el_detalle_lista_todas_las_reaperturas_y_el_historial_marca_el_dia_reabierto(): void
+    {
+        $id = $this->cerrarArqueo();
+        $headers = $this->authHeaders($this->loginAsApprover());
+
+        // Nunca reabierto: sin reaperturas y sin marca.
+        $this->assertSame([], $this->withHeaders($headers)->getJson("/api/admin-contab/cash-position/history/{$id}")->assertOk()->json('reaperturas'));
+        $fila = collect($this->withHeaders($headers)->getJson('/api/admin-contab/cash-position/history')->assertOk()->json('data'))->firstWhere('id', $id);
+        $this->assertFalse($fila['reabierto']);
+
+        // Primera reapertura, nuevo cierre, segunda reapertura.
+        $this->withHeaders($headers)->postJson("/api/admin-contab/cash-position/history/{$id}/reopen", ['motivo' => 'Faltó registrar un cobro del día'])->assertOk();
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertOk();
+        $this->withHeaders($headers)->postJson("/api/admin-contab/cash-position/history/{$id}/reopen", ['motivo' => 'Un depósito entró con la fecha equivocada'])->assertOk();
+        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->postJson('/api/admin-contab/cash-position/daily-count/close', [])->assertOk();
+
+        $detalle = $this->withHeaders($headers)->getJson("/api/admin-contab/cash-position/history/{$id}")->assertOk();
+        $reaperturas = $detalle->json('reaperturas');
+        $this->assertCount(2, $reaperturas);
+        $this->assertSame('Un depósito entró con la fecha equivocada', $reaperturas[0]['motivo'], 'la más reciente primero');
+        $this->assertSame('Faltó registrar un cobro del día', $reaperturas[1]['motivo']);
+        $this->assertNotNull($reaperturas[0]['por']);
+        $this->assertNotNull($reaperturas[0]['at']);
+
+        $fila = collect($this->withHeaders($headers)->getJson('/api/admin-contab/cash-position/history')->assertOk()->json('data'))->firstWhere('id', $id);
+        $this->assertTrue($fila['reabierto']);
+    }
+
     public function test_reopen_rechaza_un_arqueo_ya_abierto(): void
     {
         $id = $this->cerrarArqueo();
