@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
 use Carbon\Carbon;
+use App\Modules\Compras\Services\PurchaseApprovalRules;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -384,11 +385,13 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * RN3 (REQ-118, aplica a Nueva Orden): aéreo + paga Atlantic requiere aprobación de Gerencia.
+     * RN3 (REQ-118, aplica a Nueva Orden). Fase 14a: ya no está fija en el código — la deciden las reglas de aprobación de la empresa
+     * (`purchase_approval_rules`, primera regla activa que coincide); la regla sembrada es la histórica (aéreo + paga la empresa).
+     * `$payableTotal` es el total a pagar al proveedor (`payableTotal()`).
      */
-    public static function computeRequiresPrimaryApproval(?string $shippingType, ?string $whoPaysShipping): bool
+    public static function computeRequiresPrimaryApproval(?string $shippingType, ?string $whoPaysShipping, float $payableTotal = 0.0): bool
     {
-        return $shippingType === self::SHIPPING_AEREO && $whoPaysShipping === self::PAYS_ATLANTIC;
+        return app(PurchaseApprovalRules::class)->requiresApproval($shippingType, $whoPaysShipping, $payableTotal);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 use App\Modules\AI\Http\Controllers\AiModelPricingController;
 use App\Modules\AI\Http\Controllers\AiUsageController;
+use App\Modules\Compras\Http\Controllers\PurchaseApprovalRuleController;
 use App\Modules\Auth\Http\Controllers\AuditActivityController;
 use App\Modules\Auth\Http\Controllers\AuditLogController;
 use App\Modules\Auth\Http\Controllers\GlobalSettingsController;
@@ -79,6 +80,13 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     // Fase 12b — aprobadores suplentes (el titular se fija en Ajustes de Compras / Configuración Fiscal).
     Route::get('/primary-approver-substitutes', [PrimaryApproverSubstituteController::class, 'index']);
     Route::put('/primary-approver-substitutes', [PrimaryApproverSubstituteController::class, 'update']);
+
+    // Fase 14a — reglas de aprobación de órdenes de compra (docs/specs/fase14-parametrizacion.md); mismo permiso que módulos y roles.
+    Route::get('/purchase-approval-rules',                 [PurchaseApprovalRuleController::class, 'index']);
+    Route::post('/purchase-approval-rules',                [PurchaseApprovalRuleController::class, 'store']);
+    Route::post('/purchase-approval-rules/preview',        [PurchaseApprovalRuleController::class, 'preview']);
+    Route::put('/purchase-approval-rules/{id}',            [PurchaseApprovalRuleController::class, 'update'])->whereNumber('id');
+    Route::delete('/purchase-approval-rules/{id}',         [PurchaseApprovalRuleController::class, 'destroy'])->whereNumber('id');
 
     // Fase 7a — administración de los catálogos de vocabulario por empresa (docs/specs/fase7-catalogos.md); mismo permiso que módulos y roles.
     Route::get('/catalogs/{domain}',                [CatalogController::class, 'all']);
