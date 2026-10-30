@@ -1,6 +1,6 @@
 # Fase 14 — Reglas y catálogos configurables por empresa (2026-10-31)
 
-**Estado**: decisiones 1–4 tomadas por Luis (2026-10-31); pendiente su aprobación final de la spec y el orden de entrega. Origen: Grupo 3 de `docs/flujos/candidatos-priorizados.md`.
+**Estado**: spec aprobada por Luis (2026-10-31, orden 14a, 14d, 14c, 14b). **14a implementada** (§8), pendiente de mezclar. Origen: Grupo 3 de `docs/flujos/candidatos-priorizados.md`.
 
 ## 1. Objetivo
 Que los criterios de negocio que hoy viven en el código (cuándo una orden de compra necesita aprobación, qué formas de pago existen, qué motivos y roles se ofrecen) sean DATOS por empresa, editables por el superadmin sin desplegar. El ítem 3.1 es el único que incumple una regla dura del workspace (no hardcodear umbrales ni criterios de negocio).
@@ -40,3 +40,12 @@ Panamá sin cambio visible con los datos por defecto; migraciones aditivas y rev
 
 ## 7. No-alcance
 Quién aprueba (Fase 12b), umbral de notas de crédito como regla por monto/tipo, formas de pago por cliente, y cualquier cambio de contabilidad.
+
+## 8. Resultado de 14a (reglas de aprobación de compras)
+- **Tabla** `{tenant}_compras.purchase_approval_rules` (migración `2026_11_02_100000`, reversible) con UNA regla sembrada equivalente a la del código: envío aéreo pagado por la empresa → requiere aprobación. Test de equivalencia sobre las 12 combinaciones de tipo de envío y pagador.
+- **Evaluación**: `PurchaseApprovalRules` (memo `scoped` por petición, patrón `CatalogCache`): primera regla activa por `sort_order` y `id` cuyas condiciones coinciden; límites de monto inclusivos; sin coincidencia no requiere. `PurchaseOrder::computeRequiresPrimaryApproval(envío, pagador, total)` delega en ella.
+- **Total a pagar** (decisión 1): la regla se evalúa DESPUÉS de guardar las líneas (`applyApprovalRule`), con `payableTotal()` (productos + envío aéreo de la empresa + costos adicionales). Al crear fija también el estado inicial («Por aprobar» o «Pendiente/Por liquidar»); al editar reevalúa el indicador y no toca el estado, como antes. Una orden ya creada no se recalcula en bloque.
+- **API** (solo superadmin, `/api/admin/purchase-approval-rules`: listar, crear, editar, borrar y `preview`); validación (máximo ≥ mínimo, el pagador solo aplica al envío aéreo); toda escritura queda en auditoría (`LogsAuditTrail`).
+- **Frontend**: panel «Reglas de aprobación de órdenes» en Ajustes de Compras (solo superadmin) con lista, alta/edición, borrado con confirmación y vista previa.
+- **Verificación**: backend 5227 tests / 0 fallos y PHPStan 0; frontend 247 archivos / 3015 tests y `tsc` limpio; Playwright (crear una regla por monto, la vista previa nombra la regla que decide, borrar).
+- **Abierto**: el flujo de Insumos de Servicios crea órdenes sin pasar por esta evaluación (nacen sin aprobación, como antes).
