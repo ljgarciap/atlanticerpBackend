@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Modules\AdminCont\Http\Controllers\AdminContAbonoController;
 use App\Modules\AdminCont\Http\Controllers\AdminContAccountStatementController;
 use App\Modules\AdminCont\Http\Controllers\AdminContArchitectCommissionController;
 use App\Modules\AdminCont\Http\Controllers\AdminContBankAccountController;
@@ -162,12 +161,11 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('payments')-
     Route::get('/{id}/confirm-preview', [AdminContPaymentController::class, 'confirmPreview'])->whereNumber('id');
     Route::get('/{id}', [AdminContPaymentController::class, 'show'])->whereNumber('id');
     Route::get('/', [AdminContPaymentController::class, 'index']);
-    Route::post('/', [AdminContPaymentController::class, 'store']);
     Route::post('/cobro', [AdminContPaymentController::class, 'storeV2']);
 });
 
 // SCRUM-1168 F3 — Compensaciones: cruzar el dinero disponible de un cliente contra sus facturas pendientes. Mismo gate de rol que Cobros
-// ("Disponible para Contabilidad, Asistente Administrativa, Gerencia y Gerencia"). Solo responde con el concepto nuevo de cobros activo.
+// ("Disponible para Contabilidad, Asistente Administrativa, Gerencia y Gerencia"). 
 Route::middleware('permission:admin_contab.records.manage')->prefix('compensaciones')->group(function (): void {
     Route::get('/clientes', [AdminContCompensacionController::class, 'clientes']);
     Route::get('/clientes/{masterClientId}', [AdminContCompensacionController::class, 'cliente'])->whereNumber('masterClientId');
@@ -242,23 +240,6 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('notas-credi
 // mismo criterio que `invoices/{order}/uncollectible-decision`.
 Route::middleware('primary_approver_only')->prefix('notas-credito')->group(function (): void {
     Route::put('/{creditNote}/decision', [AdminContCreditNoteController::class, 'decision'])->whereNumber('creditNote');
-});
-
-// SCRUM-902 (Registrar Abono, 4O) — mismo gate de rol estándar que Cobros/Notas Crédito
-// ("Disponible para Contabilidad, Asistente Administrativa, Gerencia y Gerencia"), menú "Movimientos" justo después de Notas
-// Crédito. Rutas de cascada del formulario (`cascada/*`) van antes de `/{id}` por el mismo motivo
-// que `/correccion`/`/devoluciones` en notas-credito arriba.
-Route::middleware('permission:admin_contab.records.manage')->prefix('abonos')->group(function (): void {
-    Route::get('/cascada/sub-clientes', [AdminContAbonoController::class, 'subClientes']);
-    Route::get('/cascada/proyectos', [AdminContAbonoController::class, 'proyectos']);
-    Route::get('/cascada/facturas', [AdminContAbonoController::class, 'facturas']);
-    Route::get('/cascada/facturas-por-subcliente', [AdminContAbonoController::class, 'facturasPorSubcliente']);
-    Route::post('/{id}/confirm', [AdminContAbonoController::class, 'confirm'])->whereNumber('id');
-    Route::get('/{id}/pdf', [AdminContAbonoController::class, 'pdf'])->whereNumber('id');
-    Route::put('/{id}', [AdminContAbonoController::class, 'update'])->whereNumber('id');
-    Route::get('/{id}', [AdminContAbonoController::class, 'show'])->whereNumber('id');
-    Route::get('/', [AdminContAbonoController::class, 'index']);
-    Route::post('/', [AdminContAbonoController::class, 'store']);
 });
 
 // SCRUM-903 (Saldo a Favor de Clientes, 4N) — pantalla de solo consulta, menú "Movimientos"

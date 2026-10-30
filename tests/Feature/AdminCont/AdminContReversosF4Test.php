@@ -16,7 +16,6 @@ use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
 use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use App\Modules\AdminCont\Models\AdminContPaymentReversalRequest;
-use App\Modules\AdminCont\Services\CobrosConfigService;
 use App\Modules\AdminCont\Services\CommissionOrderService;
 use App\Modules\AdminCont\Services\DailyCashCountService;
 use App\Modules\AdminCont\Services\PaymentLedger;
@@ -53,12 +52,11 @@ class AdminContReversosF4Test extends FeatureTestCase
     }
 
     /** @return array{0: array<string, string>, 1: array<string, string>} [contabilidad, mark] */
-    private function sesiones(bool $v2 = true): array
+    private function sesiones(): array
     {
         $contabilidad = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
         $approver  = $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
         $this->remakeTenant();
-        app(CobrosConfigService::class)->setV2Activo($v2);
 
         return [$this->authHeaders($contabilidad), $this->authHeaders($approver)];
     }
@@ -441,44 +439,6 @@ class AdminContReversosF4Test extends FeatureTestCase
         $this->assertSame(0, AdminContBankMovement::where('source_id', $cobro)->count());
         // Ya no se puede confirmar.
         $this->withHeaders($contabilidad)->putJson("/api/admin-contab/payments/{$cobro}/confirm")->assertStatus(422);
-    }
-
-    public function test_anular_un_cobro_del_flujo_anterior_reversa_las_lineas_restituye_abono_y_saldo_y_el_libro_cuadra(): void
-    {
-        $master  = MasterClient::create(['name' => 'Cliente Legado '.uniqid()]);
-        $factura = $this->factura($master, 600);
-        $cuenta  = $this->cuenta();
-        $abono = AdminContAbono::create([
-            'numero_recibo' => 'ABN-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'monto_original' => 100, 'monto_usado' => 0, 'metodo_pago' => 'transferencia',
-            'cuenta_bancaria_id' => $cuenta->id, 'referencia' => 'TRF', 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
-        ]);
-        app(PaymentLedgerBackfill::class)->run();
-        [$contabilidad, $approver] = $this->sesiones(false);   // concepto anterior
-
-        // Cobro del flujo anterior que usa $100 de saldo a favor del cliente y $500 en efectivo.
-        $r = $this->withHeaders($contabilidad)->postJson('/api/admin-contab/payments', [
-            'master_client_id' => $master->id, 'invoice_ids' => [$factura->id], 'metodo_pago' => 'efectivo', 'bank_account_id' => $cuenta->id,
-            'monto_recibido_estimado' => 500, 'monto_saldo_cliente_aplicado' => 100,
-        ])->assertStatus(201);
-        $this->remakeTenant();
-        $cobro = (int) $r->json('id');
-        $this->assertEqualsWithDelta(600.0, (float) $factura->refresh()->saldo_aplicado, 0.001);
-        $this->assertEqualsWithDelta(100.0, (float) $abono->refresh()->monto_usado, 0.001);
-        $this->sinDiferencias();
-
-        $sol = $this->withHeaders($contabilidad)->postJson("/api/admin-contab/payments/{$cobro}/anular", ['motivo' => 'Cliente equivocado'])->assertStatus(201);
-        $this->withHeaders($approver)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(200);
-
-        $this->remakeTenant();
-        $this->assertSame('anulado', AdminContPayment::findOrFail($cobro)->estado);
-        $this->assertEqualsWithDelta(0.0, (float) $factura->refresh()->saldo_aplicado, 0.001);
-        // El saldo a favor consumido vuelve al cliente (como un abono nuevo de restitución); el efectivo sale de caja.
-        $restitucion = AdminContAbono::where('master_client_id', $master->id)->where('referencia', 'like', 'Restitución por anulación%')->get();
-        $this->assertCount(1, $restitucion);
-        $this->assertEqualsWithDelta(100.0, (float) $restitucion[0]->monto_original, 0.001);
-        $this->assertEqualsWithDelta(500.0, (float) AdminContBankMovement::where('source_type', 'payment_reversal')->where('source_id', $cobro)->value('monto'), 0.001);
-        $this->sinDiferencias();
     }
 
     // ── comisión ya liquidada ──────────────────────────────────────────────────────────────────

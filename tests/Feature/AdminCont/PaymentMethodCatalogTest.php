@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
+use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPettyCashReport;
 use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Modules\VentasDiseno\Models\MasterClient;
@@ -84,12 +85,16 @@ final class PaymentMethodCatalogTest extends FeatureTestCase
         $this->assertContains('ventanilla', PaymentMethods::inmediatos());
         $this->assertNotContains('ventanilla', PaymentMethods::cajaChicaKeys());
 
-        // Sin cuenta bancaria: el abono no la pide para la forma nueva, y se rechaza una clave que no está en el catálogo.
+        // Sin cuenta bancaria: el cobro no la pide para la forma nueva, y se rechaza una clave que no está en el catálogo.
         $master = MasterClient::create(['name' => 'Cliente Pago '.uniqid()]);
-        $base = ['master_client_id' => $master->id, 'monto_original' => 100, 'referencia' => 'REF-'.uniqid()];
+        $factura = AdminContInvoice::create([
+            'numero' => 'F-'.uniqid(), 'order_id' => random_int(100000, 999999), 'master_client_id' => $master->id, 'cliente' => $master->name, 'monto' => 100, 'saldo_aplicado' => 0,
+        ]);
+        // Una forma «sin cuenta bancaria» no deja saldo a favor: se aplica completa a facturas (como retención y ajuste).
+        $base = ['master_client_id' => $master->id, 'monto_recibido' => 100, 'referencia' => 'REF-'.uniqid(), 'aplicaciones' => [['invoice_id' => $factura->id, 'monto' => 100]]];
         $c = $this->contabilidad();
-        $this->withHeaders($c)->postJson('/api/admin-contab/abonos', $base + ['metodo_pago' => 'ventanilla'])->assertCreated();
-        $this->withHeaders($c)->postJson('/api/admin-contab/abonos', $base + ['metodo_pago' => 'no_existe'])->assertStatus(422);
+        $this->withHeaders($c)->postJson('/api/admin-contab/payments/cobro', $base + ['metodo_pago' => 'ventanilla'])->assertCreated();
+        $this->withHeaders($c)->postJson('/api/admin-contab/payments/cobro', $base + ['metodo_pago' => 'no_existe'])->assertStatus(422);
     }
 
     public function test_una_forma_desactivada_no_se_ofrece_y_una_en_uso_no_se_desactiva(): void

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont\Concurrency;
 
 use App\Models\User;
-use App\Modules\AdminCont\Models\AdminContAbono;
+use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContInvoice;
@@ -45,6 +45,12 @@ class CobroConfirmacionConcurrencyTest extends FeatureTestCase
 
         /** @var list<callable(): void> $pasos */
         $pasos = [
+            // El libro de movimientos referencia cobros y facturas: va primero.
+            function (): void {
+                if ($this->masterId !== null) {
+                    AdminContPaymentMovement::where('master_client_id', $this->masterId)->delete();
+                }
+            },
             function (): void {
                 if ($this->paymentIds === []) {
                     return;
@@ -55,11 +61,6 @@ class CobroConfirmacionConcurrencyTest extends FeatureTestCase
                     $p->invoiceLines()->delete();
                     $p->delete();
                 });
-            },
-            function (): void {
-                if ($this->masterId !== null) {
-                    AdminContAbono::where('master_client_id', $this->masterId)->delete();
-                }
             },
             function (): void {
                 if ($this->masterId !== null) {
@@ -107,8 +108,9 @@ class CobroConfirmacionConcurrencyTest extends FeatureTestCase
         ]);
 
         $service = app(PaymentService::class);
-        $a = $service->register($master->id, [$factura->id], 0.0, 'transferencia', $cuenta->id, null, null, 'TRF-A', null, $actor);
-        $b = $service->register($master->id, [$factura->id], 0.0, 'transferencia', $cuenta->id, null, null, 'TRF-B', null, $actor);
+        // Dos cobros por transferencia (esperan confirmación) que apuntan a la MISMA factura de $500.
+        $a = $service->registerV2($master->id, 500.0, 'transferencia', $cuenta->id, null, null, 'TRF-A', null, [['invoice_id' => $factura->id, 'monto' => 500.0]], $actor);
+        $b = $service->registerV2($master->id, 500.0, 'transferencia', $cuenta->id, null, null, 'TRF-B', null, [['invoice_id' => $factura->id, 'monto' => 500.0]], $actor);
         $this->paymentIds = [$a->id, $b->id];
 
         $plantilla = <<<'PHP'
@@ -133,8 +135,8 @@ PHP;
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertEqualsWithDelta(500.0, (float) $factura->refresh()->saldo_aplicado, 0.001, 'La factura no puede quedar con más cobrado que su valor.');
         $this->assertSame(2, AdminContPayment::whereIn('id', $this->paymentIds)->where('estado', AdminContPayment::ESTADO_CONFIRMADO)->count());
-        $excedentes = AdminContAbono::where('master_client_id', $this->masterId)->get();
-        $this->assertCount(1, $excedentes, 'Exactamente un excedente de $500 a saldo a favor.');
-        $this->assertEqualsWithDelta(500.0, (float) $excedentes[0]->monto_original, 0.001);
+        // Con el concepto único el excedente vive en el libro: entraron $1000 (dos cobros), se aplicaron $500 a la factura y quedan $500 a favor.
+        $disponible = (float) AdminContPaymentMovement::where('master_client_id', $this->masterId)->sum('delta_disponible');
+        $this->assertEqualsWithDelta(500.0, $disponible, 0.001, 'Exactamente un excedente de $500 a saldo a favor.');
     }
 }
