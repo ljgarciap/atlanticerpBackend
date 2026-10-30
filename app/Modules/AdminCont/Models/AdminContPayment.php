@@ -59,12 +59,12 @@ class AdminContPayment extends Model
         self::METODO_RETENCION_IMPUESTOS, self::METODO_AJUSTE_CUENTA,
     ];
 
-    /** REQ-466 RN4 — estos 2 métodos nunca representan dinero entrando a una cuenta bancaria real. */
-    public const METODOS_SIN_CUENTA_BANCARIA = [self::METODO_RETENCION_IMPUESTOS, self::METODO_AJUSTE_CUENTA];
+    // Fase 14b — qué formas no piden cuenta bancaria, cuáles son inmediatas y cuáles entran a caja chica lo dice el catálogo `payment_method`
+    // (ver `PaymentMethods`); estas constantes quedan para las dos de sistema y para los reportes de ventas por método, que conservan sus columnas.
 
     /**
-     * REQ-473 RN1 — etiqueta en español para el recibo formal (PDF, sin i18n en backend). Mismos
-     * textos que `cobros.metodos.*` en el frontend (`adminContab.json`) — mantener sincronizados.
+     * Etiquetas de siempre: encabezados de los reportes de ventas por método (que conservan sus 9 columnas) y respaldo de
+     * `PaymentMethods::label()` para una clave sin entrada. Los recibos, el arqueo y la factura usan las etiquetas del catálogo.
      * @var array<string, string>
      */
     public const METODO_LABELS = [
@@ -77,19 +77,6 @@ class AdminContPayment extends Model
         self::METODO_LINK_PAGO           => 'Link de pago',
         self::METODO_RETENCION_IMPUESTOS => 'Retención de impuestos',
         self::METODO_AJUSTE_CUENTA       => 'Ajustes de cuenta',
-    ];
-
-    /**
-     * REQ-469 RN2/RN3 — Efectivo se confirma de inmediato (se cuenta físico en el momento);
-     * Retención de impuestos y Ajustes de cuenta tampoco pasan por "Esperando confirmación" porque
-     * no representan dinero entrando a una cuenta bancaria. Los 6 métodos restantes (Transferencia,
-     * Cheque, Depósito bancario, Tarjeta, Yappy, Link de pago) siempre arrancan
-     * `esperando_confirmacion` — reemplaza la regla simplificada de Batch 5 (solo `link_pago`),
-     * que era un placeholder a propósito hasta que este batch trajera el detalle real (ver docblock
-     * de la migración de creación de `payments`).
-     */
-    public const METODOS_CONFIRMACION_INMEDIATA = [
-        self::METODO_EFECTIVO, self::METODO_RETENCION_IMPUESTOS, self::METODO_AJUSTE_CUENTA,
     ];
 
     public const ESTADO_CONFIRMADO             = 'confirmado';

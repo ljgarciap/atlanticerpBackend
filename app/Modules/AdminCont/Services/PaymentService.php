@@ -193,7 +193,7 @@ final class PaymentService
      */
     public function defaultBankAccountFor(string $metodoPago): ?AdminContBankAccount
     {
-        if (in_array($metodoPago, AdminContPayment::METODOS_SIN_CUENTA_BANCARIA, true)) {
+        if (PaymentMethods::sinCuentaBancaria($metodoPago)) {
             return null;
         }
 
@@ -335,7 +335,7 @@ final class PaymentService
 
             $montoRecibido = round($totalTrasAbonoObligatorio - $montoSaldoClienteAplicado, 2);
 
-            $estadoInicial = in_array($metodoPago, AdminContPayment::METODOS_CONFIRMACION_INMEDIATA, true)
+            $estadoInicial = PaymentMethods::inmediato($metodoPago)
                 ? AdminContPayment::ESTADO_CONFIRMADO
                 : AdminContPayment::ESTADO_ESPERANDO_CONFIRMACION;
 
@@ -429,7 +429,7 @@ final class PaymentService
         User $actor,
     ): AdminContPayment {
         $monto = round($monto, 2);
-        $sinCuenta = in_array($metodoPago, AdminContPayment::METODOS_SIN_CUENTA_BANCARIA, true);
+        $sinCuenta = PaymentMethods::sinCuentaBancaria($metodoPago);
         $totalAplicado = round(array_sum(array_column($aplicaciones, 'monto')), 2);
 
         if ($totalAplicado > $monto + 0.005) {
@@ -463,7 +463,7 @@ final class PaymentService
                 }
             }
 
-            $estadoInicial = in_array($metodoPago, AdminContPayment::METODOS_CONFIRMACION_INMEDIATA, true)
+            $estadoInicial = PaymentMethods::inmediato($metodoPago)
                 ? AdminContPayment::ESTADO_CONFIRMADO
                 : AdminContPayment::ESTADO_ESPERANDO_CONFIRMACION;
 

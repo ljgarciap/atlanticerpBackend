@@ -1,6 +1,9 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\AdminCont\Models\AdminContAbono;
+use App\Modules\AdminCont\Models\AdminContPayment;
+use App\Modules\AdminCont\Models\AdminContPettyCashReport;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\CustomerReturnLine;
 use App\Modules\Compras\Models\Provider;
@@ -83,6 +86,18 @@ return [
             'label' => 'Especialidades del técnico interno',
             'usage' => [InternalTechnician::class, 'especialidad'],
             'props' => [],
+        ],
+        // Fase 14b — formas de pago de cobros, abonos y caja chica. La lógica pregunta por el comportamiento (las 3 propiedades), no por la
+        // clave; `retencion_impuestos` y `ajuste_cuenta` son de sistema (llevan su propio documento/comentario) y no cambian de propiedades.
+        'payment_method' => [
+            'label' => 'Formas de pago',
+            'usage' => [[AdminContPayment::class, 'metodo_pago'], [AdminContAbono::class, 'metodo_pago'], [AdminContPettyCashReport::class, 'forma_pago']],
+            'locked_when_system' => ['sin_cuenta_bancaria', 'inmediato', 'caja_chica'],
+            'props' => [
+                'sin_cuenta_bancaria' => ['type' => 'bool', 'default' => false],
+                'inmediato' => ['type' => 'bool', 'default' => false],
+                'caja_chica' => ['type' => 'bool', 'default' => false],
+            ],
         ],
         // Fase 7b — tipos de ticket de Servicios. La lógica pregunta por `comportamiento` (qué flujo hereda), no por la clave.
         'ticket_type' => [

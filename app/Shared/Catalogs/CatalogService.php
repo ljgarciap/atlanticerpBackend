@@ -168,9 +168,14 @@ final class CatalogService
         if ($usage === null) {
             return false;
         }
-        [$model, $column] = $usage;
+        // Fase 14b — varias columnas pueden guardar la clave (cobros, abonos y caja chica): `usage` admite una lista de pares.
+        foreach (is_array($usage[0]) ? $usage : [$usage] as [$model, $column]) {
+            if ($model::query()->where($column, $entry->key)->exists()) {
+                return true;
+            }
+        }
 
-        return $model::query()->where($column, $entry->key)->exists();
+        return false;
     }
 
     /**

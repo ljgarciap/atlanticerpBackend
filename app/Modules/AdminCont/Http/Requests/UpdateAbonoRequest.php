@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Requests;
 
+use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -29,14 +30,14 @@ class UpdateAbonoRequest extends FormRequest
     public function rules(): array
     {
         $metodo = (string) $this->input('metodo_pago');
-        $sinCuentaBancaria = in_array($metodo, AdminContPayment::METODOS_SIN_CUENTA_BANCARIA, true);
+        $sinCuentaBancaria = PaymentMethods::sinCuentaBancaria($metodo);
 
         return [
             'sub_client_id'     => ['nullable', 'integer'],
             'sales_project_id'  => ['nullable', 'integer'],
             'invoice_id'        => ['nullable', 'integer'],
             'monto_original'    => ['required', 'numeric', 'gt:0'],
-            'metodo_pago'       => ['required', Rule::in(AdminContPayment::METODOS)],
+            'metodo_pago'       => ['required', Rule::in(PaymentMethods::keys())],
             'cuenta_bancaria_id' => [Rule::requiredIf(! $sinCuentaBancaria), 'nullable', 'integer'],
             'referencia'        => ['required', 'string', 'max:255'],
             'comprobante'       => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],

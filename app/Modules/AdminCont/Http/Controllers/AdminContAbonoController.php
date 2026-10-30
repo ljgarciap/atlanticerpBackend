@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Controllers;
 
+use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\AbonoStateException;
 use App\Modules\AdminCont\Http\Requests\StoreAbonoRequest;
@@ -144,7 +145,7 @@ class AdminContAbonoController
             'estado'             => $abono->estado,
             'cliente'            => $cliente?->name,
             'concepto'           => $concepto,
-            'metodo_pago_label'  => AdminContPayment::METODO_LABELS[$abono->metodo_pago] ?? $abono->metodo_pago,
+            'metodo_pago_label'  => PaymentMethods::label($abono->metodo_pago),
             'bank_account'       => $abono->cuentaBancaria?->label(),
             'referencia'         => $abono->referencia,
             'registrado_por'     => $creator !== null ? trim("{$creator->first_name} {$creator->last_name}") : null,

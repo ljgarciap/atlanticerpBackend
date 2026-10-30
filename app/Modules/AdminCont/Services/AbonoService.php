@@ -199,7 +199,7 @@ final class AbonoService
         // bancaria, sin importar qué haya llegado en el request. Defensa en profundidad — a
         // diferencia de Payment (que confía 100% en que el frontend ya manda null), acá se
         // refuerza en el servicio porque `cuenta_bancaria_id` recién dejó de ser NOT NULL.
-        $sinCuentaBancaria = in_array($data['metodo_pago'], AdminContPayment::METODOS_SIN_CUENTA_BANCARIA, true);
+        $sinCuentaBancaria = PaymentMethods::sinCuentaBancaria($data['metodo_pago']);
 
         $this->assertPertenencia(
             (int) $data['master_client_id'], $data['sub_client_id'] ?? null, $data['sales_project_id'] ?? null, $data['invoice_id'] ?? null,
@@ -262,7 +262,7 @@ final class AbonoService
         // SCRUM-955 punto 3 — mismo criterio de register(): si el método editado queda en uno sin
         // cuenta bancaria real, nunca persistir la que haya llegado.
         $metodoFinal = $update['metodo_pago'] ?? $abono->metodo_pago;
-        if (in_array($metodoFinal, AdminContPayment::METODOS_SIN_CUENTA_BANCARIA, true)) {
+        if (PaymentMethods::sinCuentaBancaria($metodoFinal)) {
             $update['cuenta_bancaria_id'] = null;
         }
 

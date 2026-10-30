@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Requests;
 
+use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Modules\AdminCont\Models\AdminContPettyCashReport;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class StorePettyCashReportRequest extends FormRequest
         return [
             'expense_ids'   => ['required', 'array', 'min:1'],
             'expense_ids.*' => ['integer', Rule::exists('petty_cash_expenses', 'id')],
-            'forma_pago'    => ['required', 'string', Rule::in(AdminContPettyCashReport::FORMAS_PAGO)],
+            'forma_pago'    => ['required', 'string', Rule::in(PaymentMethods::cajaChicaKeys())],
         ];
     }
 }

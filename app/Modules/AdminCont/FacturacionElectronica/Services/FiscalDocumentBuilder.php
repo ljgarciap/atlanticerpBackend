@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\FacturacionElectronica\Services;
 
+use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Modules\AdminCont\FacturacionElectronica\Adapters\Msl\MslPaymentMethodMapper;
 use App\Modules\AdminCont\FacturacionElectronica\DTOs\FiscalDocument;
 use App\Modules\AdminCont\FacturacionElectronica\DTOs\FiscalDocumentItem;
@@ -381,7 +382,7 @@ final class FiscalDocumentBuilder
             $pagos[] = new FiscalPayment(
                 metodoPagoInterno: $metodo,
                 monto: $aplicado->monto_aplicado,
-                descripcion: AdminContPayment::METODO_LABELS[$metodo] ?? $metodo,
+                descripcion: PaymentMethods::label($metodo),
             );
             $totalAplicado += $aplicado->monto_aplicado;
         }

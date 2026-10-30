@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Requests;
 
+use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,12 +26,12 @@ class StorePaymentV2Request extends FormRequest
     public function rules(): array
     {
         $metodo = (string) $this->input('metodo_pago');
-        $sinCuentaBancaria = in_array($metodo, AdminContPayment::METODOS_SIN_CUENTA_BANCARIA, true);
+        $sinCuentaBancaria = PaymentMethods::sinCuentaBancaria($metodo);
 
         return [
             'master_client_id'            => ['required', 'integer'],
             'monto_recibido'              => ['required', 'numeric', 'gt:0', 'max:99999999.99'],
-            'metodo_pago'                 => ['required', Rule::in(AdminContPayment::METODOS)],
+            'metodo_pago'                 => ['required', Rule::in(PaymentMethods::keys())],
             'bank_account_id'             => [Rule::requiredIf(! $sinCuentaBancaria), 'nullable', 'integer'],
             'aplicaciones'                => ['sometimes', 'array', 'max:200'],
             'aplicaciones.*.invoice_id'   => ['required', 'integer', 'distinct'],
