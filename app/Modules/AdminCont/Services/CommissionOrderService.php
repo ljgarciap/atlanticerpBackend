@@ -58,6 +58,10 @@ final class CommissionOrderService
 
     /**
      * Tabla escalonada paramétrica (REQ-498 RN1) — nunca hardcodeada, ver `commission_tiers`.
+     *
+     * Fase 14d (3.5): el tramo se elige por su LÍMITE INFERIOR inclusivo — el de mayor `monto_minimo` que no supera el total —, no por
+     * `monto_maximo`. Con los tramos sembrados (0–20.000 y 20.001–35.000) un total de 20.000,50 no caía en ninguno y daba 0 %; ahora
+     * cae en el tramo que ya había alcanzado. `monto_maximo` queda como dato informativo de la tabla.
      */
     public function percentFor(float $total): float
     {
@@ -67,9 +71,7 @@ final class CommissionOrderService
 
         $tier = CommissionTier::query()
             ->where('monto_minimo', '<=', $total)
-            ->where(function ($q) use ($total): void {
-                $q->whereNull('monto_maximo')->orWhere('monto_maximo', '>=', $total);
-            })
+            ->orderByDesc('monto_minimo')
             ->orderBy('orden')
             ->first();
 
