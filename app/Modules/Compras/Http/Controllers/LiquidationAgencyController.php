@@ -15,7 +15,7 @@ use Illuminate\Routing\Controller;
 
 /**
  * SCRUM-210 (REQ-147, alcance reducido) — buscador + alta de agencias aduanales/de liquidación,
- * para el picker "Liquidar" del detalle de una orden Zona Libre. Mismo patrón simple que
+ * para el picker "Liquidar" del detalle de una orden de importación. Mismo patrón simple que
  * ApprovedProjectController — sin paginación, volumen esperado bajo (agencias, no órdenes).
  *
  * SCRUM-254/255/256 (REQ-191/192/193) — se agregan acá mismo (no un controller nuevo) porque

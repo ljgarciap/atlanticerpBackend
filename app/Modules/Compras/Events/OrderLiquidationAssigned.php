@@ -8,7 +8,7 @@ use App\Shared\Contracts\DomainEvent;
 
 /**
  * SCRUM-210 (REQ-147, alcance reducido) — se dispara al asignar/cambiar la agencia de
- * liquidación de una orden Zona Libre. Hoy no tiene ningún listener (el consumidor real, Bodega,
+ * liquidación de una orden de importación. Hoy no tiene ningún listener (el consumidor real, Bodega,
  * todavía no existe — ver CLAUDE.md, sprint de Bodega pendiente); el evento ya queda disponible
  * para que ese módulo lo escuche sin tener que tocar Compras de nuevo cuando se construya.
  * RN6 del ticket ("reflejarse en la tarjeta 'Nuevos pedidos' del Inicio de Bodega... asignado al

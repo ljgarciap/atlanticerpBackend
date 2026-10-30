@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Compras;
 
 use App\Models\User;
-use App\Modules\Compras\Models\BodegaZonaLibreRequest;
 use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
@@ -356,21 +355,6 @@ class ComprasHomeControllerTest extends FeatureTestCase
         $items = $response->json('data');
         $this->assertCount(1, $items);
         $this->assertSame('replacement_request', $items[0]['tipo']);
-    }
-
-    public function test_approvals_pending_incluye_zona_libre_para_quien_tiene_el_permiso(): void
-    {
-        $this->grantCompras('vendedor@atlantic.test');
-        DB::table('atlantic_auth.users')->where('email', 'vendedor@atlantic.test')
-            ->update(['extra_permissions' => json_encode(['compras.read', 'compras.zona-libre.approve'])]);
-        BodegaZonaLibreRequest::create(['order_number' => 1, 'status' => BodegaZonaLibreRequest::STATUS_PENDIENTE]);
-
-        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
-        $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/home/approvals-pending')->assertStatus(200);
-
-        $items = collect($response->json('data'));
-        $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'zona_libre'));
     }
 
     /**

@@ -307,9 +307,7 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_kpis_promedio_de_calificacion_excluye_sin_calificar(): void
     {
-        // REQ-121 Escenario 1. Total = 2 creados acá + 1 ("Zona Libre de Colón", sembrado por
-        // `ZonaLibreProviderSeeder` en TODOS los entornos, incl. testing, ver Bloque B3) — sin
-        // órdenes recibidas tampoco, así que sigue sin afectar el promedio/low_rating_count.
+        // REQ-121 Escenario 1. Total = los 2 creados acá, sin órdenes recibidas: no hay promedio ni calificaciones bajas.
         $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'A']);
         $this->makeProvider(['name' => 'B']);
@@ -319,7 +317,7 @@ class ProviderControllerTest extends FeatureTestCase
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
 
-        $response->assertJsonPath('kpis.total_providers', 3);
+        $response->assertJsonPath('kpis.total_providers', 2);
         $response->assertJsonPath('kpis.average_rating', null);
         $response->assertJsonPath('kpis.low_rating_count', 0);
     }
@@ -341,10 +339,7 @@ class ProviderControllerTest extends FeatureTestCase
             ->getJson('/api/compras/providers')
             ->assertStatus(200);
 
-        // + 'zona_libre': ZonaLibreProviderSeeder (sembrado en TODOS los entornos, incl. testing)
-        // le asigna esa categoría desde el 2026-07-30 (SCRUM-189), consistente con
-        // Provider::deriveOrigin().
-        $this->assertEqualsCanonicalizing(['Cableado', 'Catalogación', 'zona_libre'], $response->json('kpis.categories'));
+        $this->assertEqualsCanonicalizing(['Cableado', 'Catalogación'], $response->json('kpis.categories'));
     }
 
     public function test_filtro_por_categoria(): void
@@ -382,8 +377,7 @@ class ProviderControllerTest extends FeatureTestCase
     public function test_default_muestra_20_por_pagina(): void
     {
         // Política global de paginación (memory/feedback_pagination_sorting_policy.md). SCRUM-754
-        // (2026-08-18): default subió de 5 a 20. Total = 21 creados acá + 1 ("Zona Libre de
-        // Colón", sembrado en todos los entornos, ver Bloque B3) = 22.
+        // (2026-08-18): default subió de 5 a 20. Total = los 21 creados acá.
         $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         foreach (range(1, 21) as $i) {
             $this->makeProvider(['name' => "Proveedor {$i}"]);
@@ -395,14 +389,14 @@ class ProviderControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $this->assertCount(20, $response->json('data'));
-        $response->assertJsonPath('meta.total', 22);
+        $response->assertJsonPath('meta.total', 21);
         $response->assertJsonPath('meta.per_page', 20);
         $response->assertJsonPath('meta.last_page', 2);
     }
 
     public function test_per_page_all_devuelve_todos(): void
     {
-        // Total = 6 creados acá + 1 ("Zona Libre de Colón", sembrado en todos los entornos).
+        // Total = los 6 creados acá.
         $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         foreach (range(1, 6) as $i) {
             $this->makeProvider(['name' => "Proveedor {$i}"]);
@@ -413,12 +407,11 @@ class ProviderControllerTest extends FeatureTestCase
             ->getJson('/api/compras/providers?per_page=all')
             ->assertStatus(200);
 
-        $this->assertCount(7, $response->json('data'));
+        $this->assertCount(6, $response->json('data'));
     }
 
     public function test_sort_by_name_desc(): void
     {
-        // "BK INTERPRISES S.A." (sembrado en todos los entornos, ver Bloque B3 / SCRUM-1135).
         $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $this->makeProvider(['name' => 'Alfa']);
         $this->makeProvider(['name' => 'Coral']);
@@ -429,7 +422,7 @@ class ProviderControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $names = collect($response->json('data'))->pluck('name')->values()->all();
-        $this->assertSame(['Coral', 'BK INTERPRISES S.A.', 'Alfa'], $names);
+        $this->assertSame(['Coral', 'Alfa'], $names);
     }
 
     /**
@@ -555,8 +548,8 @@ class ProviderControllerTest extends FeatureTestCase
 
     public function test_pagina_2_muestra_el_resto(): void
     {
-        // Total = 21 creados acá + 1 ("Zona Libre de Colón", sembrado en todos los entornos) = 22,
-        // per_page 20 (SCRUM-754) -> página 2 tiene los 2 restantes.
+        // Total = los 21 creados acá,
+        // per_page 20 (SCRUM-754) -> página 2 tiene el restante.
         $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         foreach (range(1, 21) as $i) {
             $this->makeProvider(['name' => "Proveedor {$i}"]);
@@ -567,7 +560,7 @@ class ProviderControllerTest extends FeatureTestCase
             ->getJson('/api/compras/providers?page=2')
             ->assertStatus(200);
 
-        $this->assertCount(2, $response->json('data'));
+        $this->assertCount(1, $response->json('data'));
         $response->assertJsonPath('meta.current_page', 2);
     }
 

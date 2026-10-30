@@ -131,8 +131,7 @@ final class GoodsReceiptConfirmationService
      * `confirmed_at`, así que las 4 confirmaban la misma línea y cuadriplicaban el stock
      * (10 unidades reales → 40 en `stock_quantity`, 4 movimientos de Kardex "Entrada" idénticos
      * para un solo ingreso físico). Mismo patrón ya corregido antes en
-     * `AdjustmentRequestController::approve()/reject()` (ver docblock de
-     * `ComprasZonaLibreRequestController`): el SELECT + el chequeo de "todavía pendiente" ahora
+     * `AdjustmentRequestController::approve()/reject()`: el SELECT + el chequeo de "todavía pendiente" ahora
      * viven DENTRO de la misma transacción, contra filas re-obtenidas con `lockForUpdate()` — un
      * segundo caller (incluso sin el fix de locking de `advance()` en la misma llamada, por
      * defensa en profundidad si este método se reusa desde otro lado en el futuro) queda

@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  * tenía DemoCleanupController (Auth, removido 2026-09-17), adaptado a las FKs reales de
  * `catalog_products`: a diferencia de `users`, varias tablas de
  * Bodega/Compras usan `restrictOnDelete()` sobre `catalog_product_id`
- * (zona_libre_request_lines, replacement_requests) — si un producto UAT
+ * (replacement_requests) — si un producto UAT
  * quedó referenciado ahí, se excluye de la borrada en vez de reventar toda
  * la transacción; se reporta en `skipped_products` para que alguien lo
  * resuelva a mano si hace falta. Sin limpieza de storage — `photo_url` de

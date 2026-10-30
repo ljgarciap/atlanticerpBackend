@@ -7,7 +7,6 @@ namespace App\Console\Commands;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\RelocationRequest;
-use App\Modules\Compras\Models\BodegaZonaLibreRequest;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Console\Command;
 
@@ -35,7 +34,7 @@ final class GerenciaBackfillCorruptedApprovalsCommand extends Command
         {--dry-run : Solo reporta lo que corregiría, sin escribir}';
 
     /** @var string */
-    protected $description = 'SCRUM-161/162 — corrige registros de relocation/adjustment/general_count/zona_libre con literales de enum inválidos escritos por el GerenciaAprobacionController viejo';
+    protected $description = 'SCRUM-161/162 — corrige registros de relocation/adjustment/general_count con literales de enum inválidos escritos por el GerenciaAprobacionController viejo';
 
     public function handle(): int
     {
@@ -74,14 +73,6 @@ final class GerenciaBackfillCorruptedApprovalsCommand extends Command
             'estado',
             ['aprobado' => GeneralCountRequest::ESTADO_APROBADA, 'rechazado' => GeneralCountRequest::ESTADO_RECHAZADA],
             'CNT',
-            $dryRun,
-        );
-
-        $totalFixed += $this->fix(
-            BodegaZonaLibreRequest::class,
-            'status',
-            ['aprobado' => BodegaZonaLibreRequest::STATUS_APROBADA, 'rechazado' => BodegaZonaLibreRequest::STATUS_RECHAZADA],
-            'ZL',
             $dryRun,
         );
 

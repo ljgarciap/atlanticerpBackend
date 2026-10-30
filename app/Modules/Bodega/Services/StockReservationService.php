@@ -127,7 +127,7 @@ final class StockReservationService
         DB::transaction(function () use ($productId): void {
             // Postgres no permite FOR UPDATE combinado con una función de agregación (sum()) en
             // el mismo SELECT — se bloquean las filas primero y se arma el mapa de remanente en PHP.
-            // SCRUM-990: solo bodegas OPERATIVAS. Una fila residual de Zona Libre (solo consulta) no puede recibir reservas: el kardex del
+            // SCRUM-990: solo bodegas OPERATIVAS. Una fila residual de una bodega de solo consulta no puede recibir reservas: el kardex del
             // picking/despacho posterior fallaría y el pedido quedaría bloqueado.
             $stockRows = ProductWarehouseStock::where('catalog_product_id', $productId)
                 ->orderBy('id')

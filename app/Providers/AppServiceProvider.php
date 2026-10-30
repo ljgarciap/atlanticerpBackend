@@ -122,7 +122,6 @@ class AppServiceProvider extends ServiceProvider
         // detrás del NAT de la oficina compartirían un solo cupo. Se decodifica el bearer y se limita por usuario
         // (IP solo como respaldo si el token es inválido). nginx llega a PHP por fastcgi, así que la IP de respaldo
         // ya es la del cliente real (no hace falta trustProxies).
-        // SCRUM-990 — `zona-libre-lectura` (catálogo externo) usa el mismo limitador por usuario.
         // SCRUM-1127 — generar la versión en inglés de una orden de compra llama a la IA (de pago): tope por usuario y minuto, configurable en
         // `config/compras.php`. Mismo patrón por usuario que los limitadores de arriba.
         RateLimiter::for('oc-traduccion', static function (Request $request): Limit {

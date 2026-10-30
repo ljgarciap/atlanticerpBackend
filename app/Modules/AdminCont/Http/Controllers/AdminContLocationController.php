@@ -11,8 +11,8 @@ use App\Modules\Bodega\Models\Warehouse;
 use Illuminate\Http\JsonResponse;
 
 /**
- * SCRUM-640 (REQ-563) — combina las bodegas/exhibiciones operativas de Atlantic (App\Modules\Bodega\Models\Warehouse::query(): las 6
- * oficiales; desde SCRUM-990 Bodega Zona Libre queda fuera, es de solo consulta y su catálogo es de Lafayette), solo lectura acá — RN1: nunca un nombre distinto al de Bodega) con las ubicaciones administrativas
+ * SCRUM-640 (REQ-563) — combina las bodegas/exhibiciones operativas de Atlantic (App\Modules\Bodega\Models\Warehouse::query(): las bodegas
+ * operativas), solo lectura acá — RN1: nunca un nombre distinto al de Bodega) con las ubicaciones administrativas
  * propias de este módulo (`editable: true`). El frontend arma su key de fila como `{source}-{id}` —
  * los ids de ambas tablas NO son mutuamente exclusivos.
  */

@@ -89,8 +89,7 @@ class Provider extends Model
     /**
      * REQ-141 — `origin` ya no es un campo editable independiente en el form (SCRUM-189, no está
      * en el mockup): se deriva de `category`. "Locales" es el único origen local; el resto
-     * (Zona Libre, China, Europa, Online) es internacional — mismo criterio ya usado a propósito
-     * en `ZonaLibreProviderSeeder` (Zona Libre está en Panamá pero SÍ pasa por aduana/liquidación).
+     * (China, Europa, Online…) es internacional.
      */
     public static function deriveOrigin(?string $category): string
     {

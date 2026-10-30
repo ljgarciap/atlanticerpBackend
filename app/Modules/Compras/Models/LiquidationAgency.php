@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * SCRUM-210 (REQ-147, alcance reducido) — agencia aduanal/de liquidación para órdenes Zona Libre.
+ * SCRUM-210 (REQ-147, alcance reducido) — agencia aduanal/de liquidación para órdenes de importación.
  * Único campo obligatorio: `name`, mismo patrón que Provider (REQ-126 RN1).
  *
  * SCRUM-254 (REQ-191) — `pending_payment_amount`/`paid_amount`/`last_payment_date`/

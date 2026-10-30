@@ -13,10 +13,6 @@ use Illuminate\Database\Eloquent\Model;
  * aprobación de REQ-143, configurable en vez de hardcodeado por email). Mismo patrón que
  * App\Modules\VentasDiseno\Models\ReportSettings::current().
  *
- * `zona_libre_provider_id` (SCRUM-433, Bloque B3) — el `Provider` fijo "Zona Libre de Colón" al
- * que Bodega genera órdenes directamente, sembrado por `ZonaLibreProviderSeeder`. Mismo criterio
- * que `primary_approver_user_id`: nunca hardcodeado, siempre configurable.
- *
  * `similarity_weight_*`/`similarity_other_category_penalty`/`similarity_min_threshold` (Lote 4,
  * SCRUM-246, 2026-08-17) — pesos y umbral de la fórmula de "% de similitud" del método "Buscar en
  * catálogo" de Comparación de Referencias, ver `SubstituteSimilarityService`.
@@ -27,7 +23,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $claim_attention_days
  * @property int $critical_days_por_aprobar
  * @property float $replacement_margin_threshold
- * @property int|null $zona_libre_provider_id
  * @property float $similarity_weight_text
  * @property float $similarity_weight_price
  * @property float $similarity_weight_margin
@@ -39,7 +34,7 @@ class ComprasSettings extends Model
     /** @var list<string> */
     protected $fillable = [
         'low_rating_threshold', 'primary_approver_user_id', 'claim_attention_days', 'critical_days_por_aprobar',
-        'replacement_margin_threshold', 'zona_libre_provider_id',
+        'replacement_margin_threshold',
         'similarity_weight_text', 'similarity_weight_price', 'similarity_weight_margin',
         'similarity_other_category_penalty', 'similarity_min_threshold',
     ];
@@ -53,7 +48,6 @@ class ComprasSettings extends Model
             'claim_attention_days' => 'integer',
             'critical_days_por_aprobar' => 'integer',
             'replacement_margin_threshold' => 'float',
-            'zona_libre_provider_id' => 'integer',
             'similarity_weight_text' => 'float',
             'similarity_weight_price' => 'float',
             'similarity_weight_margin' => 'float',

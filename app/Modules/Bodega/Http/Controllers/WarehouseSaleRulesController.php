@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Invariantes que este controlador protege (la base impone además un índice único parcial y un CHECK):
  *  - siempre existe EXACTAMENTE UNA bodega de despacho por defecto, y es de venta;
- *  - una bodega de solo consulta (Zona Libre) nunca permite venta;
+ *  - una bodega de solo consulta nunca permite venta;
  *  - desactivar `permite_venta` de la bodega por defecto, o dejar el sistema sin por defecto, se rechaza con 422.
  */
 final class WarehouseSaleRulesController extends Controller

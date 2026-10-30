@@ -15,7 +15,6 @@ use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\RelocationRequest;
-use App\Modules\Compras\Models\BodegaZonaLibreRequest;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\ReplacementRequest;
 use App\Modules\Gerencia\Services\GerenciaHomeService;
@@ -29,8 +28,8 @@ use Illuminate\Support\Collection;
  * ya usa el endpoint real de decisión de ese tipo (nunca reinventa la regla de permiso) — ver
  * inventario y fuentes en el comentario de PM de SCRUM-908 en Jira.
  *
- * Para los 5 tipos que ya cubre `AprobacionGate` (purchase_order/relocation/adjustment/
- * general_count/zona_libre, ver `GerenciaHomeService::pendingApprovalsSection()`):
+ * Para los 4 tipos que ya cubre `AprobacionGate` (purchase_order/relocation/adjustment/
+ * general_count, ver `GerenciaHomeService::pendingApprovalsSection()`):
  *
  * Senior Review SCRUM-908 (corregido tras el primer commit de Backend Dev) — el diseño original
  * asumía que el permiso nativo del módulo dueño (`bodega.approve`/`compras.approve`) era un
@@ -42,14 +41,6 @@ use Illuminate\Support\Collection;
  * no es Gerencia, ver docblock de `AprobacionGate::esAprobador()`). Usar la unión ahí mostraba items a
  * usuarios que después recibían 403/422 al intentar actuar — por eso esos 4 usan SOLO
  * `$this->gate->canAct()`, sin el permiso nativo.
- *
- * `zona_libre` es la EXCEPCIÓN real (mantiene la unión, ver `zonaLibreItems()`/
- * `canActOnGateType()`): `ComprasZonaLibreRequestController::approve()` autoriza por el permiso
- * v2 del JWT (`compras.zona-libre.approve`) directamente, sin pasar por `AprobacionGate` — pero
- * `AprobacionGate::esAprobador()`/`canAct('zona_libre')` chequea ese mismo permiso vía
- * `$user->hasPermission()` (v1). Por el gap v1/v2 ya documentado en SCRUM-818, un usuario puede
- * tener el permiso real en el JWT (v2) sin tenerlo en v1 — acá sí hace falta la unión para no
- * ocultarle su propia aprobación pendiente.
  */
 final class ApprovalsPendingService
 {
@@ -88,7 +79,6 @@ final class ApprovalsPendingService
                 ->merge($this->adjustmentItems($user, $jwtPermissions))
                 ->merge($this->generalCountItems($user, $jwtPermissions)),
             'compras' => collect()
-                ->merge($this->zonaLibreItems($user, $jwtPermissions))
                 ->merge($this->purchaseOrderItems($user, $jwtPermissions))
                 ->merge($this->purchaseOrderAmountChangeItems($user, $jwtPermissions))
                 ->merge($this->replacementRequestItems($user, $jwtPermissions)),
@@ -330,27 +320,6 @@ final class ApprovalsPendingService
      * @param list<string> $jwtPermissions
      * @return Collection<int, ApprovalPendingItem>
      */
-    private function zonaLibreItems(User $user, array $jwtPermissions): Collection
-    {
-        if (! $this->canActOnGateType($user, $jwtPermissions, 'zona_libre', 'compras.zona-libre.approve')) {
-            return collect();
-        }
-
-        return BodegaZonaLibreRequest::where('status', 'pendiente')
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn (BodegaZonaLibreRequest $z): ApprovalPendingItem => new ApprovalPendingItem(
-                tipo: 'zona_libre',
-                label: 'Solicitud Zona Libre pendiente',
-                createdAt: $z->created_at,
-                detailRoute: '/bodega/ordenes-zona-libre',
-            ));
-    }
-
-    /**
-     * @param list<string> $jwtPermissions
-     * @return Collection<int, ApprovalPendingItem>
-     */
     private function purchaseOrderItems(User $user, array $jwtPermissions): Collection
     {
         if (! $this->gate->canAct($user, 'purchase_order')) {
@@ -368,16 +337,6 @@ final class ApprovalsPendingService
                 createdAt: $o->created_at,
                 detailRoute: "/compras/ordenes/{$o->id}",
             ));
-    }
-
-    /** @param list<string> $jwtPermissions */
-    private function canActOnGateType(User $user, array $jwtPermissions, string $tipo, string $nativePermission): bool
-    {
-        if (in_array('superadmin.all', $jwtPermissions, true) || in_array($nativePermission, $jwtPermissions, true)) {
-            return true;
-        }
-
-        return $this->gate->canAct($user, $tipo);
     }
 
     // ── Compras (sin AprobacionGate) ────────────────────────────────────────────────

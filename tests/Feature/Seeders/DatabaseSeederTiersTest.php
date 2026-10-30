@@ -19,7 +19,7 @@ class DatabaseSeederTiersTest extends FeatureTestCase
 {
     /** Seeders con datos del cliente anterior: sin llamador en `DatabaseSeeder` (Fase 4a); se borran con Legacy/Lafayette en la Fase 5. */
     private const CLIENT_DATA = [
-        'AdminContFiscalIdentitySeeder', 'AdminContBankAccountSeeder', 'ZonaLibreProviderSeeder', 'LafayetteLightingProviderSeeder',
+        'AdminContFiscalIdentitySeeder', 'AdminContBankAccountSeeder', 'LafayetteLightingProviderSeeder',
         'SharedFamiliesSeeder', 'CatalogUatTestDataSeeder', 'AlmacenEquivalenciaSeeder',
     ];
 

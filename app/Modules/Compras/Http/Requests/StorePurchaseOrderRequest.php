@@ -60,7 +60,6 @@ class StorePurchaseOrderRequest extends FormRequest
             'freight_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             'handling_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
             'other_cost' => ['nullable', 'numeric', 'min:0', 'max:9999999999'],
-            'modality' => ['nullable', 'string', Rule::in(['directo', 'zona_libre'])],
             'estimated_arrival_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
             'lines' => ['required', 'array', 'min:1'],

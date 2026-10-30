@@ -38,7 +38,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * REQ-128→133 (Nueva Orden, 2H) + REQ-138→149 (Ver Órdenes, 2A, sprint2). `index`/`show` sirven a
- * ambas pantallas. Recepción por línea (REQ-145), liquidación Zona Libre (REQ-147), validación de
+ * ambas pantallas. Recepción por línea (REQ-145), liquidación (REQ-147), validación de
  * documento del proveedor (REQ-148) y sincronización con Ingreso de Mercancía (REQ-150) quedan
  * diferidos — dependen de pantallas/capacidades que no existen todavía (ver docs/specs/
  * compras-proveedores-sprint2.md).
@@ -120,10 +120,6 @@ final class PurchaseOrderController extends Controller
         // REQ-152 (Logística, "⚠️ Retrasados") reusa este mismo chip=critical — mismo criterio
         // exacto, sin una segunda definición de "atraso".
         $chip = $request->query('chip');
-        if ($chip === 'zona_libre') {
-            $query->where('modality', PurchaseOrder::MODALITY_ZONA_LIBRE);
-        }
-
         // REQ-187 (SCRUM-250, hallazgo de Gerencia Test 2026-08-09) — 5 chips exactos: Todas,
         // Sin enviar, Por pagar, Pagado parcial, Pagado completo. "Sin enviar"/"Por pagar" son
         // los 2 estados en los que antes vivía un único "Pendiente": "Sin enviar" = todavía no se
@@ -540,7 +536,7 @@ final class PurchaseOrderController extends Controller
 
     /**
      * SCRUM-210 (REQ-147, alcance reducido) — asigna/cambia la agencia de liquidación de una
-     * orden Zona Libre y dispara el evento de dominio para que Bodega lo consuma (RN6 del
+     * orden de un proveedor internacional y dispara el evento de dominio para que Bodega lo consuma (RN6 del
      * ticket, "avisar a Tecnico Garantias", queda para cuando ese módulo exista — ver docblock del evento).
      * No cambia `status` — la secuencia de estados no se toca en este alcance reducido.
      */
@@ -556,8 +552,9 @@ final class PurchaseOrderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if ($order->modality !== PurchaseOrder::MODALITY_ZONA_LIBRE) {
-            return response()->json(['message' => 'Solo las órdenes de modalidad Zona Libre pueden liquidarse.'], 422);
+        // Fase 14f — la liquidación aduanal es de las importaciones: solo las órdenes de un proveedor internacional.
+        if ($order->provider?->origin !== Provider::ORIGIN_INTERNACIONAL) {
+            return response()->json(['message' => 'Solo las órdenes de un proveedor internacional pueden liquidarse.'], 422);
         }
 
         $validated = $request->validate([
@@ -612,7 +609,7 @@ final class PurchaseOrderController extends Controller
      * veces para la misma orden. El chequeo de estado + el `update()` ahora viven DENTRO de una
      * transacción, contra la fila re-obtenida con `lockForUpdate()` — mismo patrón exacto ya
      * usado en `AdjustmentRequestController::approve()/reject()` y
-     * `ComprasZonaLibreRequestController::approve()` para el mismo tipo de carrera.
+     * `PurchaseOrderController::approve()` para el mismo tipo de carrera.
      */
     public function advance(Request $request, int $id): JsonResponse
     {
@@ -1236,7 +1233,7 @@ final class PurchaseOrderController extends Controller
             // repetirlos acá.
             ...$this->formatSummary($order, $received),
             'who_pays_shipping' => $order->who_pays_shipping,
-            // SCRUM-210 (REQ-147, alcance reducido) — solo relevante para órdenes Zona Libre.
+            // SCRUM-210 (REQ-147, alcance reducido) — solo relevante para órdenes de proveedores internacionales.
             'liquidation_agency_id' => $order->liquidation_agency_id,
             'liquidation_agency_name' => $order->liquidationAgency?->name,
             // actual_arrival_date ya viene de formatSummary() (REQ-154, arriba) — no repetirlo acá.

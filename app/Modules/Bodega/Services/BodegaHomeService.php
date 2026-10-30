@@ -526,7 +526,6 @@ final class BodegaHomeService
                     'status'                  => $order->status,
                     'estimated_arrival_date'  => $order->estimated_arrival_date?->toDateString(),
                     'provider_name'           => $order->provider?->name,
-                    'is_zona_libre'           => $order->modality === PurchaseOrder::MODALITY_ZONA_LIBRE,
                 ];
             }
         }

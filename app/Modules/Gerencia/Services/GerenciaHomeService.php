@@ -11,7 +11,6 @@ use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\GeneralCountRequest;
 use App\Modules\Bodega\Models\Order as BodegaOrder;
 use App\Modules\Bodega\Models\RelocationRequest;
-use App\Modules\Compras\Models\BodegaZonaLibreRequest;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\Servicios\Models\Ticket;
@@ -48,7 +47,7 @@ final class GerenciaHomeService
     /**
      * SCRUM-908 — wrapper público de `pendingApprovalsSection()` para que
      * `App\Shared\Support\ApprovalsPendingService` reuse esta misma bandeja (purchase_order/
-     * relocation/adjustment/general_count/zona_libre, con soporte de `ReglaAprobacion`) en el
+     * relocation/adjustment/general_count, con soporte de `ReglaAprobacion`) en el
      * endpoint consolidado de Gerencia en vez de reimplementarla.
      *
      * @return array{aprobaciones: list<array<string, mixed>>, is_approver: bool, pending_total: int}
@@ -766,31 +765,10 @@ final class GerenciaHomeService
             }
         }
 
-        // ── Compras: Solicitudes Zona Libre pendientes ───────────────────────
-        if ($this->gate->canAct($user, 'zona_libre')) {
-            $zlQuery = BodegaZonaLibreRequest::where('status', 'pendiente');
-            $totalCount += $zlQuery->count();
-            $zonaLibre = (clone $zlQuery)->orderBy('created_at')->limit(20)->get();
-
-            foreach ($zonaLibre as $zl) {
-                $items->push([
-                    'id' => $zl->id,
-                    'type' => 'zona_libre',
-                    'module' => 'compras',
-                    'reference' => "ZL-{$zl->id}",
-                    'description' => 'Solicitud Zona Libre pendiente',
-                    'amount' => null,
-                    'created_at' => $zl->created_at->toIso8601String(),
-                    'can_approve' => true,
-                    'action_url' => '/bodega/ordenes-zona-libre',
-                ]);
-            }
-        }
-
         // is_approver: ¿tiene autoridad real sobre AL MENOS un tipo? (independiente de si hoy hay
         // 0 solicitudes pendientes de ese tipo — mismo criterio que la versión anterior).
         $isApprover = $items->isNotEmpty()
-            || collect(['purchase_order', 'relocation', 'adjustment', 'general_count', 'zona_libre'])
+            || collect(['purchase_order', 'relocation', 'adjustment', 'general_count'])
                 ->contains(fn (string $tipo): bool => $this->gate->canAct($user, $tipo));
 
         return [

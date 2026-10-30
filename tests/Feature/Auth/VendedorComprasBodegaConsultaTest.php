@@ -141,7 +141,7 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
         $this->conceder(['bodega.warehouses.view']);
         $h = $this->vendedor();
 
-        foreach (['/api/bodega/kardex', '/api/bodega/relocations', '/api/bodega/orders', '/api/bodega/zona-libre/requests'] as $url) {
+        foreach (['/api/bodega/kardex', '/api/bodega/relocations', '/api/bodega/orders'] as $url) {
             $this->withHeaders($h)->getJson($url)->assertStatus(403);
         }
     }

@@ -18,7 +18,7 @@ aprobación), primer y único par de tablas reales del módulo:
 
 ```sql
 reglas_aprobacion(id, tipo, activo, observaciones, created_at, updated_at)
--- tipo: purchase_order | zona_libre | general_count | adjustment | relocation — qué tipo de
+-- tipo: purchase_order | general_count | adjustment | relocation — qué tipo de
 -- solicitud puede aprobar cada regla. La matriz real (qué persona aprueba qué tipo) la carga el
 -- superadmin vía CRUD (ReglaAprobacionController) — nunca hardcodeada.
 

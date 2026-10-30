@@ -19,9 +19,6 @@ class ComprasSettingsRequest extends FormRequest
         return [
             'low_rating_threshold' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'primary_approver_user_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
-            // Fase 5a — proveedor fijo de las solicitudes de Zona Libre (antes lo escribía solo un seeder). Null = el flujo responde 422
-            // «sin proveedor configurado» hasta que se elija uno.
-            'zona_libre_provider_id' => ['sometimes', 'nullable', 'integer', 'exists:providers,id'],
             // SCRUM-257 (REQ-194) — hallazgo de QA: el umbral existía en la tabla paramétrica
             // pero nunca se expuso en Ajustes de Compras, sin forma de verificarlo ni ajustarlo.
             'claim_attention_days' => ['sometimes', 'integer', 'min:1', 'max:365'],

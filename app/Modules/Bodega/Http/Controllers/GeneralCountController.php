@@ -775,7 +775,7 @@ final class GeneralCountController extends Controller
      * SCRUM-461 (REQ-391) — un producto "cruza" si existe una `AdjustmentRequestLine` con
      * `estado=Pendiente` cuya `AdjustmentRequest.catalog_product_id` coincide, cruzando además
      * por `warehouse_id` de la línea contra la bodega del conteo (criterio definido en el ADR,
-     * para no bloquear un conteo de Bodega Central por una solicitud pendiente de Zona Libre).
+     * para no bloquear un conteo de Bodega Central por una solicitud pendiente de otra bodega).
      */
     private function crossedAdjustmentFecha(int $catalogProductId, int $warehouseId): ?string
     {

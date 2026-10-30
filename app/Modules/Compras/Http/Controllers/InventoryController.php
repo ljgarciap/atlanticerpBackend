@@ -523,7 +523,7 @@ final class InventoryController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        // SCRUM-990: una fila residual contra una bodega de solo consulta (Zona Libre) no es stock de Atlantic.
+        // SCRUM-990: una fila residual contra una bodega de solo consulta no es stock de Atlantic.
         $rows = ProductWarehouseStock::with('warehouse')
             ->where('catalog_product_id', $id)
             ->where('quantity', '<>', 0) // SCRUM-1196: también los negativos; la suma coincide con el Stock total
