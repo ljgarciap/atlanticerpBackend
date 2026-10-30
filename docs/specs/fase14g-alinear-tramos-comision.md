@@ -1,6 +1,6 @@
 # Fase 14g — Alinear los tramos de comisión de Admin & Contab y Ventas
 
-**Estado**: EN BORRADOR, pendiente de que Luis decida §5. Origen: el «Abierto» de §9 de `fase14-parametrizacion.md` (14d). No se implementa sin su «adelante».
+**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); pendiente de su «adelante con 14g». Origen: el «Abierto» de §9 de `fase14-parametrizacion.md` (14d). No se implementa sin su «adelante».
 
 ## 1. Objetivo
 Hoy hay DOS tablas de tramos de comisión con la misma escala de porcentajes (1,5 / 2 / 3 / 4 / 4,5 / 5 %) pero con los puntos de corte en lugares distintos, así que el mismo total mensual puede dar un porcentaje diferente según la pantalla. Que haya una sola regla, o que la diferencia sea una decisión consciente y visible.
@@ -32,10 +32,11 @@ Hoy hay DOS tablas de tramos de comisión con la misma escala de porcentajes (1,
 3. Los meses cerrados (snapshots y cohortes) no cambian.
 4. Test de equivalencia sobre esos bordes en ambos módulos; PHPStan, Pint de archivos propios y suites en verde.
 
-## 5. Decisiones para Luis
-1. **¿Una escala común o dos?** A (una tabla), B (dos tablas con valores iguales) o C (dejar la diferencia). Recomendado: **B** — resuelve la inconsistencia con el menor riesgo, sin tocar dos pantallas ni dos servicios.
-2. **¿Cuál es el corte correcto del 4,5 %?** 80.000 (Ventas) u 81.000/81.001 (Admin & Contab). Es una decisión de negocio sobre cuánto se paga. Recomendado: **80.000**, el que usa Ventas y el que sigue la lógica de los demás cortes (múltiplos de 5 mil / 10 mil), salvo que el Excel original de comisiones diga otra cosa.
-3. **¿El límite es inclusivo hacia arriba?** Un total exactamente igual al corte (p. ej. 20.000) ¿pasa al tramo siguiente? Hoy sí en Ventas y, desde 14d, también en Admin & Contab. Recomendado: **sí** (el total «alcanzó» el tramo).
+## 5. Decisiones de Luis (2026-10-30)
+1. **Escala**: **B — dos tablas con valores iguales**. Una migración de datos iguala los cortes de Admin & Contab a los de Ventas, solo donde siguen en el valor sembrado; lo personalizado se respeta y se avisa. ✅
+2. **Corte del 4,5 %**: **80.000** (el de Ventas). Los mínimos de Admin & Contab quedan en 0 / 20.000 / 35.000 / 60.000 / 80.000 / 120.000. ✅
+3. **Límite**: **inclusivo hacia arriba** (un total igual al corte pasa al tramo siguiente), como hoy en Ventas y, desde 14d, en Admin & Contab. ✅
+4. **Entrega**: 1 PR de backend y 1 de frontend (el aviso de escalas distintas en el modal) — propuesta, no se preguntó.
 
 ## 6. Riesgos
 - Cambiar la escala de Admin & Contab sube o baja comisiones de los meses abiertos para totales entre 80.000 y 81.000 (y en el primer peso de cada corte). Hay que avisar a Contabilidad antes de aplicar.
