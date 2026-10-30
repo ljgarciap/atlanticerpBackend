@@ -7,6 +7,7 @@ namespace Tests\Feature\Compras;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Compras\Models\Provider;
+use App\Modules\Compras\Models\PurchaseApprovalRule;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
@@ -1196,6 +1197,48 @@ class InventoryControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $providerIds = PurchaseOrder::whereIn('id', $response->json('order_ids'))->pluck('provider_id')->sort()->values()->all();
         $this->assertEqualsCanonicalizing([$providerA->id, $providerB->id], $providerIds);
+    }
+
+    /** Fase 14e — sin reglas que la requieran la orden de reposición nace «Pendiente/Por liquidar» (ya no «Por aprobar» sin que nadie deba aprobarla). */
+    public function test_generar_compra_de_familia_sin_regla_nace_sin_aprobacion(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
+        $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $product = $this->makeProduct(['reference' => 'FAM-N', 'provider_id' => $provider->id, 'stock_quantity' => 2, 'reorder_point' => 10]);
+        $family = CatalogProductFamily::create(['name' => 'Kit Sin Regla', 'is_active' => true]);
+        $family->products()->attach([$product->id]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $ids = $this->withHeaders($this->authHeaders($token))->postJson("/api/compras/families/{$family->id}/generate-purchase")->assertStatus(201)->json('order_ids');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $order = PurchaseOrder::findOrFail($ids[0]);
+        $this->assertSame(PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR, $order->status);
+        $this->assertFalse($order->requires_primary_approval);
+    }
+
+    /** Fase 14e — con una regla que la requiere, cada orden de la reposición nace «Por aprobar» y bloqueada. */
+    public function test_generar_compra_de_familia_con_regla_nace_por_aprobar_y_bloqueada(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
+        $providerA = $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $providerB = $this->makeProvider(['name' => 'Proveedor Demo B SA']);
+        $productA = $this->makeProduct(['reference' => 'FAM-RA', 'provider_id' => $providerA->id, 'stock_quantity' => 2, 'reorder_point' => 10]);
+        $productB = $this->makeProduct(['reference' => 'FAM-RB', 'provider_id' => $providerB->id, 'stock_quantity' => 2, 'reorder_point' => 10]);
+        $family = CatalogProductFamily::create(['name' => 'Kit Con Regla', 'is_active' => true]);
+        $family->products()->attach([$productA->id, $productB->id]);
+        PurchaseApprovalRule::create(['name' => 'Todo requiere', 'sort_order' => 1, 'is_active' => true, 'requires_approval' => true]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $ids = $this->withHeaders($this->authHeaders($token))->postJson("/api/compras/families/{$family->id}/generate-purchase")->assertStatus(201)->json('order_ids');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertCount(2, $ids);
+        foreach (PurchaseOrder::whereIn('id', $ids)->get() as $order) {
+            $this->assertSame(PurchaseOrder::STATUS_POR_APROBAR, $order->status);
+            $this->assertTrue($order->requires_primary_approval);
+            $this->assertTrue($order->isBlockedByPrimaryApproval());
+        }
     }
 
     // ── SCRUM-425/426 (REQ-355/356) — ficha técnica del producto ──────────────

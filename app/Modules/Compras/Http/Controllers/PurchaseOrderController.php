@@ -16,6 +16,7 @@ use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\Compras\Services\GoodsReceiptConfirmationService;
+use App\Modules\Compras\Services\PurchaseApprovalRules;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\Compras\Services\PurchaseOrderPdfService;
 use App\Modules\Compras\Services\PurchaseOrderTranslationService;
@@ -333,20 +334,10 @@ final class PurchaseOrderController extends Controller
         return $order;
     }
 
-    /**
-     * Fase 14a — evalúa las reglas de aprobación con el total a pagar ya calculado y fija `requires_primary_approval`. Al crear, también el
-     * estado inicial: «Por aprobar» si la requiere, «Pendiente/Por liquidar» si no (SCRUM-204). Al editar no se toca el estado, como antes.
-     */
+    /** Fase 14a/14e — la evaluación vive en `PurchaseApprovalRules::applyTo()` (la comparten los flujos que crean órdenes). */
     private function applyApprovalRule(PurchaseOrder $order, bool $initialStatus): void
     {
-        $order->refresh();
-        $requires = PurchaseOrder::computeRequiresPrimaryApproval($order->shipping_type, $order->who_pays_shipping, $order->payableTotal());
-
-        $changes = ['requires_primary_approval' => $requires];
-        if ($initialStatus && $requires) {
-            $changes['status'] = PurchaseOrder::STATUS_POR_APROBAR;
-        }
-        $order->update($changes);
+        app(PurchaseApprovalRules::class)->applyTo($order, $initialStatus);
     }
 
     /**

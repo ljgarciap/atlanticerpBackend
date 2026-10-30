@@ -17,6 +17,7 @@ use App\Modules\Compras\Http\Requests\UploadInventoryProductPhotoRequest;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\Compras\Services\InventoryKpiService;
+use App\Modules\Compras\Services\PurchaseApprovalRules;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Modules\VentasDiseno\Services\CatalogService;
@@ -716,7 +717,8 @@ final class InventoryController extends Controller
             foreach ($byProvider as $providerId => $providerProducts) {
                 $order = PurchaseOrder::create([
                     'provider_id' => (int) $providerId,
-                    'status' => PurchaseOrder::STATUS_POR_APROBAR,
+                    // Fase 14e: nace sin aprobación y `applyTo()` la pasa a «Por aprobar» solo si las reglas de la empresa la requieren.
+                    'status' => PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
                     'status_changed_at' => now(),
                     'modality' => PurchaseOrder::MODALITY_DIRECTO,
                     'requires_primary_approval' => false,
@@ -741,6 +743,7 @@ final class InventoryController extends Controller
                 }
 
                 $order->update(['total_amount' => $totalAmount]);
+                app(PurchaseApprovalRules::class)->applyTo($order, true);
                 $created[] = $order->id;
             }
 

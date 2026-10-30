@@ -1,6 +1,6 @@
 # Fase 14e — Reglas de aprobación también en las órdenes que se crean solas
 
-**Estado**: EN BORRADOR, pendiente de que Luis decida §5. Origen: el «Abierto» de §8 de `fase14-parametrizacion.md` (14a). No se implementa sin su «adelante».
+**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); **implementada** (§8), pendiente de mezclar. Origen: el «Abierto» de §8 de `fase14-parametrizacion.md` (14a). No se implementa sin su «adelante».
 
 ## 1. Objetivo
 Las reglas de aprobación de órdenes de compra (14a) solo se evalúan en «Nueva orden» (`PurchaseOrderController`). Otros dos flujos crean órdenes por su cuenta y se las saltan, así que una regla por monto (p. ej. «más de $5.000 requiere aprobación») no los alcanza. Que la regla valga igual en todo lo que crea una orden, salvo donde exista otro control propio.
@@ -30,11 +30,11 @@ Con la regla sembrada (aéreo pagado por la empresa) ni Insumos ni Reposición c
 5. Nueva orden y Zona Libre se comportan igual que hoy (tests existentes sin cambios).
 6. PHPStan nivel 8 limpio, suites de Compras y Servicios en verde.
 
-## 5. Decisiones para Luis
-1. **Insumos**: ¿las reglas de aprobación aplican a las órdenes internas de reserva de Servicios? Recomendado: **sí** (una regla de monto debe valer para todo lo que compra). Alternativa: eximirlas por ser de uso interno.
-2. **Reposición por familia**: ¿cambia el estado inicial de las que no requieren aprobación a `pendiente_liquidar`? Recomendado: **sí** (hoy dicen «Por aprobar» sin que nadie deba aprobarlas). Alternativa: dejarlas como están y solo evaluar la regla.
-3. **Zona Libre**: ¿se queda con su aprobación propia y sin las reglas? Recomendado: **sí** (ya hay un control antes de crear la orden; evaluar dos veces pediría aprobar dos veces).
-4. **Entrega**: 1 PR de backend (sin frontend: no hay pantalla nueva).
+## 5. Decisiones de Luis (2026-10-30)
+1. **Insumos**: las reglas de aprobación **sí aplican** a las órdenes internas de reserva. ✅
+2. **Reposición por familia**: las que no requieren aprobación **nacen `pendiente_liquidar`** (ya no «Por aprobar»). ✅
+3. **Zona Libre**: se **retira** del núcleo (Fase 14f), así que queda fuera de esta fase y no se toca aquí. ✅
+4. **Entrega**: 1 PR de backend (propuesta, sin frontend).
 
 ## 6. Riesgos
 - Una solicitud de insumo grande puede quedar esperando aprobación y retrasar la reserva de Servicios: es el efecto buscado, pero conviene avisar al Líder de Servicios (la tarjeta de la solicitud ya muestra la orden y su estado).
@@ -42,3 +42,10 @@ Con la regla sembrada (aéreo pagado por la empresa) ni Insumos ni Reposición c
 
 ## 7. No-alcance
 Frontend, nuevos permisos, evaluación al editar una orden ya creada (queda como en 14a) y recálculo en bloque de órdenes existentes.
+
+## 8. Resultado
+- **Servicio compartido**: `PurchaseApprovalRules::applyTo(order, initialStatus)` (antes un método privado de `PurchaseOrderController`) evalúa con el total a pagar y fija `requires_primary_approval`; con `initialStatus` pasa la orden a «Por aprobar» si la requiere. «Nueva orden» delega en él sin cambiar su comportamiento.
+- **Insumos** (`InsumoService::requestPurchase`) y **reposición por familia** (`InventoryController::generateFamilyPurchase`) lo llaman tras guardar líneas y total. La reposición ya nace `pendiente_liquidar` y solo pasa a «Por aprobar» (y bloqueada) si la regla lo exige.
+- **Efecto con la regla sembrada** (aéreo pagado por la empresa): ninguno en Insumos; en reposición, el estado inicial cambia a `pendiente_liquidar`.
+- **Verificación**: 3 tests nuevos (`InsumoReservaTest`, 2 en `InventoryControllerTest`); suites de Compras/Servicios afectadas en verde y PHPStan 0.
+- **Nota de pruebas**: el servicio guarda las reglas en memo por petición; un test que crea una regla después de evaluar debe llamar a `forget()` (en producción la memo se descarta sola).
