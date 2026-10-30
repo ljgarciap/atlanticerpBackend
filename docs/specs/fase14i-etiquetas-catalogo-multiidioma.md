@@ -1,6 +1,6 @@
 # Fase 14i — Etiquetas de catálogo en varios idiomas
 
-**Estado**: EN BORRADOR, pendiente de que Luis decida §5. Origen: «Abierto» de las Fases 7, 14c y 14b: «una etiqueta por entrada (idioma de la empresa); en inglés las listas muestran el texto sembrado en español». No se implementa sin su «adelante».
+**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); pendiente de su «adelante con 14i». Origen: «Abierto» de las Fases 7, 14c y 14b: «una etiqueta por entrada (idioma de la empresa); en inglés las listas muestran el texto sembrado en español». No se implementa sin su «adelante».
 
 ## 1. Objetivo
 Los catálogos por empresa (categorías de proveedor, formas de pago, tipos de ticket, etapas del pipeline, motivos, especialidades…) guardan UNA etiqueta por entrada. Un usuario con la interfaz en inglés ve esas listas en español, mientras el resto de la pantalla está en inglés. Que cada entrada pueda tener su etiqueta en cada idioma de la aplicación, con un respaldo sensato cuando falta.
@@ -28,11 +28,11 @@ Los catálogos por empresa (categorías de proveedor, formas de pago, tipos de t
 5. Las entradas existentes y sus claves no cambian; ningún dato se pierde; la migración es reversible.
 6. Tests de API (resolución por idioma y respaldo), de la fachada y del panel; PHPStan, `tsc` y suites en verde.
 
-## 5. Decisiones para Luis
-1. **Idiomas**: `es` (base) y `en`, extensibles por configuración. Recomendado: **sí**, son los de la aplicación.
-2. **Si falta la traducción**: mostrar la etiqueta base en español. Recomendado: **sí** (nunca una entrada en blanco).
-3. **Idioma de los documentos del servidor** (PDF, Excel, correos): **el del usuario que lo genera**, y el idioma por defecto de la empresa cuando no hay usuario (trabajos automáticos, correos). Alternativa: siempre el de la empresa. Recomendado: **el del usuario**, con ese respaldo.
-4. **Semilla en inglés**: cargar la traducción de las entradas que ya la tienen en la interfaz y dejar el resto vacío. Recomendado: **sí**; el resto se completa desde la pantalla.
+## 5. Decisiones de Luis (2026-10-30)
+1. **Idiomas**: `es` (base) y `en`, extensibles por configuración. ✅
+2. **Si falta la traducción**: se muestra la etiqueta base en español. ✅
+3. **Documentos del servidor** (PDF, Excel, correos): en el idioma del usuario que los genera; si no hay usuario (trabajos y correos automáticos), el idioma por defecto de la empresa. ✅
+4. **Semilla en inglés**: se carga la traducción de las entradas que ya la tienen en la interfaz; el resto queda vacío y cae a la base. ✅
 5. **Entrega**: 1 PR de backend y 1 de frontend — propuesta, no se preguntó.
 
 ## 6. Riesgos
