@@ -76,7 +76,7 @@ class UpdateFiscalSettingsRequest extends FormRequest
             'dias_credito_factura' => ['sometimes', 'integer', 'min:1', 'max:365'],
             // Batch 11 de Notas Crédito (REQ-482 RN3) — umbral de monto que dispara "pendiente de
             // aprobación de Gerencia", compartido a futuro con Facturación y Comisiones Externas.
-            'primary_approval_threshold' => ['sometimes', 'numeric', 'min:0'],
+            'credit_note_approval_threshold' => ['sometimes', 'numeric', 'min:0'],
             // Batch 18 de Arqueo de Caja (REQ-520 RN1) — ver ADR-SCRUM597-601, reconciliación
             // punto 1: valor manual hasta que Batch 20 (Caja Chica) lo reemplace por un saldo
             // calculado desde un ledger real.

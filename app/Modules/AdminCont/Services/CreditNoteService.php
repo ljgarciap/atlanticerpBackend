@@ -75,7 +75,7 @@ final class CreditNoteService
      * REQ-477 — 5 tarjetas de indicadores del mes: total acreditado, N° de notas, pendientes de
      * aprobación, devoluciones por generar, nota promedio.
      *
-     * @return array{total_acreditado: float, numero_notas: int, pendientes_aprobacion_monto: float, pendientes_aprobacion_cantidad: int, devoluciones_por_generar: int, nota_promedio: float, primary_approval_threshold: float}
+     * @return array{total_acreditado: float, numero_notas: int, pendientes_aprobacion_monto: float, pendientes_aprobacion_cantidad: int, devoluciones_por_generar: int, nota_promedio: float, credit_note_approval_threshold: float}
      */
     public function summary(): array
     {
@@ -104,7 +104,7 @@ final class CreditNoteService
             'pendientes_aprobacion_cantidad' => $pendientesAprobacionCantidad,
             'devoluciones_por_generar' => $devolucionesPorGenerar,
             'nota_promedio' => $numeroNotas > 0 ? round($totalAcreditado / $numeroNotas, 2) : 0.0,
-            'primary_approval_threshold' => $this->primaryApprovalThreshold(),
+            'credit_note_approval_threshold' => $this->creditNoteApprovalThreshold(),
         ];
     }
 
@@ -156,10 +156,10 @@ final class CreditNoteService
         };
     }
 
-    /** REQ-482 RN3 — umbral compartido, ver docblock de la migración que lo agrega a `fiscal_settings`. */
-    public function primaryApprovalThreshold(): float
+    /** REQ-482 RN3 — umbral de aprobación de notas de crédito (Fase 14d: renombrado; lo lee solo este servicio). */
+    public function creditNoteApprovalThreshold(): float
     {
-        return (float) AdminContFiscalSettings::current()->primary_approval_threshold;
+        return (float) AdminContFiscalSettings::current()->credit_note_approval_threshold;
     }
 
     /**
@@ -317,7 +317,7 @@ final class CreditNoteService
             // de esto, una anulación completa de una factura chica quedaba `aplicada` directo, sin
             // pasar por Gerencia. Alcance acotado a este método — `registerCorreccion()` (subtipo
             // `correccion`, REQ-490) ya tiene su propia regla intencional de solo-umbral.
-            $threshold = $this->primaryApprovalThreshold();
+            $threshold = $this->creditNoteApprovalThreshold();
             $estado = ($monto > $threshold || $data['tipo'] === AdminContCreditNote::TIPO_ANULACION_COMPLETA)
                 ? AdminContCreditNote::ESTADO_PENDIENTE_APROBACION
                 : AdminContCreditNote::ESTADO_APLICADA;
@@ -528,7 +528,7 @@ final class CreditNoteService
             }
 
             if ($approve) {
-                $threshold = $this->primaryApprovalThreshold();
+                $threshold = $this->creditNoteApprovalThreshold();
                 if (AdminContCreditNote::requiresComprobante($note->tipo, $note->monto, $threshold) && $note->comprobante_url === null) {
                     throw new CreditNoteStateException("La nota {$note->numero} requiere comprobante de soporte adjunto antes de poder aprobarse.");
                 }
@@ -1112,7 +1112,7 @@ final class CreditNoteService
                 ...InvoiceService::paymentBlock(),
             ],
             'monto' => $breakdown['total'],
-            'requiere_aprobacion' => $breakdown['total'] > $this->primaryApprovalThreshold(),
+            'requiere_aprobacion' => $breakdown['total'] > $this->creditNoteApprovalThreshold(),
         ];
     }
 
@@ -1128,7 +1128,7 @@ final class CreditNoteService
         $note = DB::transaction(function () use ($data, $actor): AdminContCreditNote {
             [$facturaOrigen, , $quote, $rate] = $this->correccionContext($data, lockForUpdate: true);
             $breakdown = self::correctionBreakdown($facturaOrigen, $quote, $rate);
-            $threshold = $this->primaryApprovalThreshold();
+            $threshold = $this->creditNoteApprovalThreshold();
             $pendiente = $breakdown['total'] > $threshold;
 
             $note = AdminContCreditNote::create([
