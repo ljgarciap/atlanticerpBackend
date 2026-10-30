@@ -41,3 +41,9 @@ Tamaño: 69 archivos en el backend (app/rutas/BD/config), 22 de tests y 46 del f
 
 ## 7. No-alcance
 Reglas de aprobación de órdenes (Fase 14e: Zona Libre queda fuera de ella por esta fase), aplanado de migraciones históricas y el catálogo de proveedores fuera de la categoría `zona_libre`.
+
+## 8. Resultado de 14f-1 (código)
+- **Backend**: borrados los controladores, modelos, servicio de folio, seeder y tests del flujo de solicitudes; fuera sus rutas, el ajuste `zona_libre_provider_id` (API y modelo), las aprobaciones de Gerencia, el aviso de pendientes, el origen de notificación y el valor `zona_libre` de la modalidad de la orden (el campo queda en `directo`). `liquidate`, las agencias y el reporte de importaciones pasan a depender del origen del proveedor (`internacional`); una orden de proveedor local responde 422. Sin chip ni marca `is_zona_libre`.
+- **Frontend**: fuera las dos páginas, el modal de bodegas, las rutas, el menú, el hook/API y los textos (es/en); el detalle de orden muestra la agencia para proveedores internacionales; «Nueva orden» ya no pide modalidad; el panel de Ajustes de Compras ya no pide el proveedor fijo.
+- **Se conserva a propósito hasta 14f-2** (la migración): las tablas, la columna `zona_libre_provider_id`, el permiso `compras.zona-libre.approve`, la categoría `zona_libre` (constante y entrada del catálogo) y el contrato de neutralidad. Mientras tanto no hay forma de crear datos nuevos de Zona Libre desde la aplicación.
+- **Verificación**: backend 5214 tests y PHPStan 0; frontend 247 archivos / 2969 tests y `tsc` limpio.

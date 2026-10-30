@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
         //   Núcleo neutro (este bloque): corre en TODOS los entornos; nada con nombre de empresa, persona ni sector, y ningún usuario (Fase 4d).
         //   Demo genérico (bloque de abajo): solo local/dev/testing.
         //   Datos del cliente anterior: YA NO se siembran por defecto (un tenant nuevo nace sin identidad fiscal, cuentas bancarias, proveedores ni
-        //   catálogo ajenos). Sus seeders quedan SIN LLAMADOR y con valores de ejemplo, hasta borrarse con Legacy/Lafayette en la Fase 5:
-        //   AdminContFiscalIdentity, AdminContBankAccount, ZonaLibreProvider, LafayetteLightingProvider, SharedFamilies, CatalogUatTestData, AlmacenEquivalencia.
+        //   catálogo ajenos). Sus seeders quedan SIN LLAMADOR y con valores de ejemplo, hasta borrarse:
+        //   AdminContFiscalIdentity, AdminContBankAccount, LafayetteLightingProvider, SharedFamilies, CatalogUatTestData, AlmacenEquivalencia.
         //   Se corren a mano con `php artisan db:seed --class=...`; la base de pruebas los carga vía `tests/Support/TestDatabaseSeeder`.
         // Tipo A — bootstrap obligatorio, todos los entornos
         $this->call(TenantSeeder::class);

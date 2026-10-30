@@ -235,7 +235,7 @@ final class ComprasReportsController extends Controller
      * SCRUM-268 (hallazgo de Gerencia Test, 2026-08-11) — el panel se redefine para excluir del
      * universo las órdenes que TODAVÍA no llegaron a "Ordenado" (por_aprobar/pendiente_liquidar):
      * el subtítulo del mockup lo pide explícito ("basado en órdenes Ordenado / En tránsito /
-     * Recibido"). Antes `total_imports` contaba TODA orden zona_libre del período sin importar la
+     * Recibido"). Antes `total_imports` contaba TODA orden de importación del período sin importar la
      * etapa, diluyendo el % con órdenes que ni siquiera habían arrancado el flujo de importación.
      * "Por liquidar" = universo menos liquidadas (RN del ticket: Liquidados ÷ (Liquidados + Por
      * liquidar) × 100 — mismo denominador que el universo acá, ya que universo = liquidadas ∪ por
@@ -247,7 +247,7 @@ final class ComprasReportsController extends Controller
      * nota al pie "equivalente al paso 'En aduana' completado"). Ese cambio de definición ya se
      * intentó y se revirtió a propósito el 2026-07-18 (ver docblock de `isLiquidated()`): un
      * proveedor `local` SALTA la etapa "en_aduana" en su secuencia de estados
-     * (`statusSequence()`), así que una orden Zona Libre con proveedor local nunca podría contar
+     * (`statusSequence()`), así que una orden de proveedor local nunca podría contar
      * como "Liquidada" bajo esa definición, sin importar cuánto avance — quedaría "Por liquidar"
      * para siempre. Cambiarlo de nuevo sin que el Analista/Arquitecto revise ese caso reintroduce
      * un bug ya diagnosticado, así que se mantiene la definición actual (Recibido) hasta que se
@@ -268,7 +268,7 @@ final class ComprasReportsController extends Controller
         $notStartedStatuses = [PurchaseOrder::STATUS_POR_APROBAR, PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR];
 
         $orders = PurchaseOrder::with('liquidationAgency')
-            ->where('modality', PurchaseOrder::MODALITY_ZONA_LIBRE)
+            ->whereHas('provider', fn ($q) => $q->where('origin', Provider::ORIGIN_INTERNACIONAL))
             ->whereBetween('created_at', [$period->start, $period->end])
             ->whereNotIn('status', $notStartedStatuses)
             ->get();

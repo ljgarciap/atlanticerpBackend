@@ -298,8 +298,7 @@ final class ReplacementRequestController extends Controller
      * SCRUM-818 (CA13/CA14) — Generar Orden de Compra es EXCLUSIVO de Líder de Compras, por
      * role_key (nunca por permission: Gerencia y Líder de Operaciones también tienen
      * compras.write/compras.sustitutos.manage respectivamente, pero la matriz del ticket los
-     * excluye a los dos de esta acción puntual). Mismo patrón que
-     * `BodegaZonaLibreRequestController::COMPRAS_APPROVER_ROLE_KEY`.
+     * excluye a los dos de esta acción puntual).
      */
     private const GENERATE_ORDER_ROLE_KEY = RoleKeys::LIDER_COMPRAS;
 

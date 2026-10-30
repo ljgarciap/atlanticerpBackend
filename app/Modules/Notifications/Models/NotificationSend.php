@@ -55,12 +55,6 @@ class NotificationSend extends Model
     public const SOURCE_BODEGA_ORDER_STOCK_RELEASED = 'bodega_order_stock_released';
 
     /**
-     * SCRUM-445 (REQ-375, Bloque B3 Zona Libre de Colón) — Bodega presiona "Recordar" sobre una
-     * solicitud `pendiente`, avisa al rol `lider_compras` (Lider Compras) para que la resuelva.
-     */
-    public const SOURCE_BODEGA_ZONA_LIBRE_REMINDER = 'bodega_zona_libre_reminder';
-
-    /**
      * SCRUM-684→689 Batch C (REQ-604 RN5/RN6) — Dashboard CRM, botón "Enviar recordatorios"
      * sobre el aviso de propuestas vencidas. Un send por responsable, con solo sus propios
      * proyectos vencidos — nunca contacta al cliente directamente.

@@ -8,7 +8,6 @@ use App\Modules\Bodega\Http\Controllers\BodegaInventoryController;
 use App\Modules\Bodega\Http\Controllers\BodegaReportsController;
 use App\Modules\Bodega\Http\Controllers\BodegaSettingsController;
 use App\Modules\Bodega\Http\Controllers\BodegaTeamMembersController;
-use App\Modules\Bodega\Http\Controllers\BodegaZonaLibreRequestController;
 use App\Modules\Bodega\Http\Controllers\CustomerReturnController;
 use App\Modules\Bodega\Http\Controllers\GeneralCountController;
 use App\Modules\Bodega\Http\Controllers\KardexController;
@@ -176,26 +175,6 @@ Route::prefix('warehouse-assistant-mapping')->group(function (): void {
     Route::post('/', [WarehouseAssistantMappingController::class, 'store'])->middleware('permission:bodega.write');
 });
 
-// SCRUM-433→439, 442→445 (REQ-363→369, 371→375) — Bloque B3 "Zona Libre de Colón": Bodega crea la
-// solicitud y hace seguimiento; la decisión (aprobar/rechazar) vive en Compras, ver
-// `routes/compras.php` (`zona-libre/requests`). "Ver bodegas" (REQ-437) reusa el endpoint ya
-// existente de Ver Inventario, ver `BodegaInventoryController::warehouseBreakdown` arriba — sin
-// ruta nueva.
-// SCRUM-797 — PUT agregado (revierte SCRUM-440, ver docblock del controller): gate amplio acá es
-// solo "bodega.write O compras.zona-libre.approve" (para que la Líder de Compras, que no tiene
-// bodega.write, pueda llegar al endpoint) — el gate angosto real (Líder de Bodega o Líder de
-// Compras puntual, más el guard de estado `pendiente`) vive dentro de `update()`.
-Route::prefix('zona-libre')->group(function (): void {
-    // Bodega no tiene `compras.read` (GET /compras/settings) — sin esto, 3C no puede resolver
-    // qué `provider_id` pasarle a GET /compras/products para el buscador de productos.
-    Route::get('/provider', [BodegaZonaLibreRequestController::class, 'provider'])->middleware('permission:bodega.read');
-    Route::get('/requests', [BodegaZonaLibreRequestController::class, 'index'])->middleware('permission:bodega.read');
-    Route::post('/requests', [BodegaZonaLibreRequestController::class, 'store'])->middleware('permission:bodega.write');
-    Route::get('/requests/{id}', [BodegaZonaLibreRequestController::class, 'show'])->middleware('permission:bodega.read');
-    Route::put('/requests/{id}', [BodegaZonaLibreRequestController::class, 'update'])->middleware('permission:bodega.write,compras.zona-libre.approve');
-    Route::post('/requests/{id}/remind', [BodegaZonaLibreRequestController::class, 'remind'])->middleware('permission:bodega.write');
-});
-
 // SCRUM-460→466 (REQ-390→396, Bloque B5 "Conteos generales de inventario") — ver
 // ADR-SCRUM460-466-conteos-generales.md. GET /{id} agregado más allá de la lista explícita del
 // ADR (que solo listaba GET /) porque SCRUM-461 exige el detalle de un conteo puntual con sus
@@ -225,7 +204,7 @@ Route::prefix('general-counts')->group(function (): void {
 // entrega PDF, confirmar recepción física (suma inventario), rechazar (potestad exclusiva de
 // Bodega, sin aprobación de Gerencia) y finalizar (nota de crédito simulada). Permiso estándar en
 // todas — sin permiso angosto nuevo, todas las tickets dicen "Visible para todos los perfiles de
-// Bodega" (a diferencia de Zona Libre, que sí necesitó uno para el aprobador de Compras).
+// Bodega".
 // Rutas de segmento fijo ANTES de "/{id}" por la misma razón que en "orders/"/"inventory/" arriba.
 Route::prefix('returns')->group(function (): void {
     Route::get('/', [CustomerReturnController::class, 'index'])->middleware('permission:bodega.read');

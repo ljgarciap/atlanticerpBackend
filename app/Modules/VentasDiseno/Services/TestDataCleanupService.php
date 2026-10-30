@@ -167,7 +167,6 @@ final class TestDataCleanupService
      *   - compras.replacement_requests.original_*:     restrictOnDelete
      *   - compras.replacement_requests.proposed_*:      nullOnDelete
      *   - compras.purchase_order_receipt_lines:         cascadeOnDelete
-     *   - compras.bodega_zona_libre_request_lines:      restrictOnDelete
      *   - bodega.product_warehouse_stock:               cascadeOnDelete
      *   - bodega.inventory_movements:                   sin onDelete explícito (NO ACTION — bloquea)
      *   - bodega.adjustment_requests:                   sin onDelete explícito (NO ACTION — bloquea)
@@ -184,7 +183,6 @@ final class TestDataCleanupService
         ['compras', 'replacement_requests', 'original_catalog_product_id'],
         ['compras', 'replacement_requests', 'proposed_catalog_product_id'],
         ['compras', 'purchase_order_receipt_lines', 'catalog_product_id'],
-        ['compras', 'bodega_zona_libre_request_lines', 'catalog_product_id'],
         ['bodega', 'product_warehouse_stock', 'catalog_product_id'],
         ['bodega', 'inventory_movements', 'catalog_product_id'],
         ['bodega', 'adjustment_requests', 'catalog_product_id'],

@@ -74,7 +74,7 @@ final class RelocationRequestController extends Controller
         ]);
 
         // Visual Review 2026-07-24 (CRÍTICO): el mockup nunca ofrece "Reubicar" en bodegas modo
-        // "pendiente" (sin ubicación física confirmada aún, ej. Zona Libre) — el frontend ya
+        // "pendiente" (sin ubicación física confirmada aún) — el frontend ya
         // oculta el botón ahí, pero eso no alcanza: alguien podría llamar este endpoint directo.
         $originWarehouse = Warehouse::find((int) $validated['origin_warehouse_id']);
         if ($originWarehouse?->modo_detalle === Warehouse::MODO_PENDIENTE) {
@@ -84,7 +84,7 @@ final class RelocationRequestController extends Controller
         }
 
         // Mejora SCRUM-752 (RN1, Gerencia Test 2026-08-13) — mismo criterio que arriba, ahora
-        // también como DESTINO: Zona Libre es "pendiente" (sin ubicación física), no debe recibir
+        // también como DESTINO: una bodega "pendiente" (sin ubicación física) no debe recibir
         // reubicaciones. El frontend ya la excluye del selector, pero eso no alcanza acá tampoco.
         $destinationWarehouse = Warehouse::find((int) $validated['destination_warehouse_id']);
         if ($destinationWarehouse?->modo_detalle === Warehouse::MODO_PENDIENTE) {

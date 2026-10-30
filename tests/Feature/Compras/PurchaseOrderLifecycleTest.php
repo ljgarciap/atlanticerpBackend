@@ -655,14 +655,14 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         $this->assertSame(PurchaseOrder::STATUS_EN_TRANSITO, $fromDetail['status']);
     }
 
-    // ── SCRUM-210 (REQ-147, alcance reducido) — liquidación con agencias Zona Libre ──────────
+    // ── SCRUM-210 (REQ-147) / Fase 14f — liquidación con agencias, para órdenes de proveedores internacionales ──
 
-    public function test_liquidar_orden_zona_libre_asigna_agencia_y_dispara_evento(): void
+    public function test_liquidar_orden_internacional_asigna_agencia_y_dispara_evento(): void
     {
         Event::fake([OrderLiquidationAssigned::class]);
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
-        $order = $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_ZONA_LIBRE]);
+        $order = $this->makeOrder($provider->id);
         $agency = LiquidationAgency::create(['name' => 'Agencia Aduanal Istmo']);
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
@@ -678,11 +678,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         Event::assertDispatched(OrderLiquidationAssigned::class, fn (OrderLiquidationAssigned $e): bool => $e->orderId === $order->id && $e->agencyId === $agency->id && $e->agencyName === 'Agencia Aduanal Istmo');
     }
 
-    public function test_liquidar_orden_no_zona_libre_retorna_422(): void
+    public function test_liquidar_orden_de_proveedor_local_retorna_422(): void
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
-        $provider = $this->makeProvider();
-        $order = $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_DIRECTO]);
+        $provider = $this->makeProvider(['category' => Provider::CATEGORY_LOCALES, 'origin' => Provider::ORIGIN_LOCAL]);
+        $order = $this->makeOrder($provider->id);
         $agency = LiquidationAgency::create(['name' => 'Agencia X']);
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
@@ -695,7 +695,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
         $provider = $this->makeProvider();
-        $order = $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_ZONA_LIBRE]);
+        $order = $this->makeOrder($provider->id);
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $this->withHeaders($this->authHeaders($token))
@@ -707,7 +707,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
     {
         $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
         $provider = $this->makeProvider();
-        $order = $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_ZONA_LIBRE]);
+        $order = $this->makeOrder($provider->id);
         $agency = LiquidationAgency::create(['name' => 'Agencia X']);
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
@@ -723,9 +723,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         $provider = $this->makeProvider();
         $agencyA = LiquidationAgency::create(['name' => 'Agencia A']);
         $agencyB = LiquidationAgency::create(['name' => 'Agencia B']);
-        $order = $this->makeOrder($provider->id, [
-            'modality' => PurchaseOrder::MODALITY_ZONA_LIBRE, 'liquidation_agency_id' => $agencyA->id,
-        ]);
+        $order = $this->makeOrder($provider->id, ['liquidation_agency_id' => $agencyA->id]);
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
         $response = $this->withHeaders($this->authHeaders($token))
@@ -734,21 +732,6 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
 
         $response->assertJsonPath('liquidation_agency_id', $agencyB->id);
         $response->assertJsonPath('liquidation_agency_name', 'Agencia B');
-    }
-
-    public function test_chip_zona_libre_filtra_por_modalidad(): void
-    {
-        $this->grantCompras('vendedor@atlantic.test', ['compras.read']);
-        $provider = $this->makeProvider();
-        $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_ZONA_LIBRE]);
-        $this->makeOrder($provider->id, ['modality' => PurchaseOrder::MODALITY_DIRECTO]);
-
-        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
-        $response = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/compras/orders?chip=zona_libre')
-            ->assertStatus(200);
-
-        $this->assertCount(1, $response->json('data'));
     }
 
     // ── REQ-144: editar orden solo mientras "Por aprobar" ────────────────────
@@ -773,7 +756,7 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_editar_orden_por_aprobar_actualiza_modalidad_y_lineas(): void
+    public function test_editar_orden_por_aprobar_actualiza_lineas(): void
     {
         // REQ-144 Escenario 2.
         $this->grantCompras('vendedor@atlantic.test', ['compras.edit']);
@@ -788,12 +771,11 @@ class PurchaseOrderLifecycleTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/compras/orders/{$order->id}", [
                 'provider_id' => $provider->id,
-                'modality' => PurchaseOrder::MODALITY_ZONA_LIBRE,
                 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 3]],
             ])
             ->assertStatus(200);
 
-        $response->assertJsonPath('modality', PurchaseOrder::MODALITY_ZONA_LIBRE);
+        $response->assertJsonPath('modality', PurchaseOrder::MODALITY_DIRECTO);
         $response->assertJsonPath('lines.0.quantity', 3);
         $response->assertJsonPath('total_amount', 15);
     }

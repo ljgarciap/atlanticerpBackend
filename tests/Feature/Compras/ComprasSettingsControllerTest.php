@@ -57,40 +57,6 @@ class ComprasSettingsControllerTest extends FeatureTestCase
         $response->assertJsonPath('similarity_min_threshold', 25);
     }
 
-    public function test_update_asigna_y_limpia_el_proveedor_de_zona_libre(): void
-    {
-        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.settings.configure']);
-        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
-        Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // el login suelta el tenant actual
-        $provider = Provider::create([
-            'name' => 'Proveedor Zona Libre de prueba', 'category' => Provider::CATEGORY_ZONA_LIBRE,
-            'origin' => Provider::ORIGIN_INTERNACIONAL, 'currency' => 'USD', 'is_active' => true,
-        ]);
-
-        $this->withHeaders($this->authHeaders($token))
-            ->putJson('/api/compras/settings', ['zona_libre_provider_id' => $provider->id])
-            ->assertOk()
-            ->assertJsonPath('zona_libre_provider_id', $provider->id);
-        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $this->assertSame($provider->id, ComprasSettings::current()->zona_libre_provider_id);
-
-        $this->withHeaders($this->authHeaders($token))
-            ->putJson('/api/compras/settings', ['zona_libre_provider_id' => null])
-            ->assertOk()
-            ->assertJsonPath('zona_libre_provider_id', null);
-    }
-
-    public function test_update_rechaza_un_proveedor_de_zona_libre_inexistente(): void
-    {
-        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.settings.configure']);
-        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
-
-        $this->withHeaders($this->authHeaders($token))
-            ->putJson('/api/compras/settings', ['zona_libre_provider_id' => 99999999])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('zona_libre_provider_id');
-    }
-
     public function test_update_cambia_los_pesos_de_la_formula_de_similitud(): void
     {
         $this->grantCompras('vendedor@atlantic.test', [
@@ -158,16 +124,6 @@ class ComprasSettingsControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->putJson('/api/compras/settings', ['low_rating_threshold' => 70])
             ->assertStatus(403);
-    }
-
-    public function test_zona_libre_provider_apunta_a_bk_interprises(): void
-    {
-        $settings = ComprasSettings::current();
-        $this->assertNotNull($settings->zona_libre_provider_id);
-
-        $provider = Provider::find($settings->zona_libre_provider_id);
-        $this->assertNotNull($provider);
-        $this->assertSame('BK INTERPRISES S.A.', $provider->name);
     }
 
     public function test_update_cambia_el_umbral_usado_por_el_filtro_de_proveedores(): void

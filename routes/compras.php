@@ -7,7 +7,6 @@ use App\Modules\Compras\Http\Controllers\CatalogProductSearchController;
 use App\Modules\Compras\Http\Controllers\ComprasHomeController;
 use App\Modules\Compras\Http\Controllers\ComprasReportsController;
 use App\Modules\Compras\Http\Controllers\ComprasSettingsController;
-use App\Modules\Compras\Http\Controllers\ComprasZonaLibreRequestController;
 use App\Modules\Compras\Http\Controllers\GoodsReceiptController;
 use App\Modules\Compras\Http\Controllers\GoodsReceiptInvoiceController;
 use App\Modules\Compras\Http\Controllers\InventoryController;
@@ -84,7 +83,7 @@ Route::prefix('orders')->group(function (): void {
     // negocio (avanzar una etapa) aplicada al remanente en vez de al status de la orden.
     Route::patch('/{id}/advance-remainder', [PurchaseOrderController::class, 'advanceRemainder'])->middleware('permission:compras.edit');
     Route::patch('/{id}/confirm-pending-receipts', [PurchaseOrderController::class, 'confirmPendingReceipts'])->middleware('permission:compras.edit');
-    // SCRUM-210 (REQ-147, alcance reducido) — asignar agencia de liquidación (solo Zona Libre).
+    // SCRUM-210 (REQ-147, alcance reducido) — asignar agencia de liquidación (órdenes de proveedores internacionales).
     Route::patch('/{id}/liquidate', [PurchaseOrderController::class, 'liquidate'])->middleware('permission:compras.edit');
     // REQ-136/149 — PDF real (dompdf) + envío por correo al proveedor.
     Route::get('/{id}/pdf', [PurchaseOrderController::class, 'pdf'])->middleware('permission:compras.read');
@@ -166,8 +165,7 @@ Route::prefix('replacement-requests')->group(function (): void {
     // SCRUM-818 — compras.sustitutos.manage sacado del OR a propósito: Generar Orden de Compra es
     // EXCLUSIVO de Líder de Compras (CA13/CA14 del ticket), y ese permiso también lo tiene Líder
     // de Operaciones. compras.write solo abre la puerta del gate de ruta — la exclusividad real
-    // (por role_key, no por permission) vive dentro de generateOrder(), mismo patrón que
-    // BodegaZonaLibreRequestController::COMPRAS_APPROVER_ROLE_KEY.
+    // (por role_key, no por permission) vive dentro de generateOrder().
     Route::post('/{id}/generate-order', [ReplacementRequestController::class, 'generateOrder'])->middleware('permission:compras.write');
     // REQ-182/183 — gateado por compras.edit (no ai.use), mismo criterio que la validación de
     // SCRUM-211: no forzar un permiso de AI a quien ya puede editar Compras.
@@ -178,15 +176,6 @@ Route::prefix('replacement-requests')->group(function (): void {
     // IA él mismo. Ampliar esto es decisión de AI Architect, fuera de alcance de este ticket.
     Route::post('/search', [ReplacementSearchController::class, 'store'])->middleware('permission:compras.edit,compras.sustitutos.manage');
     Route::get('/search/{jobId}', [ReplacementSearchController::class, 'show'])->middleware('permission:compras.read,compras.sustitutos.manage');
-});
-
-// SCRUM-440 (REQ-370, Bloque B3 Zona Libre de Colón) — decisión de Lider Compras sobre una solicitud
-// generada por Bodega (ver `routes/bodega.php`, prefijo `zona-libre`). Permiso angosto nuevo
-// `compras.zona-libre.approve` — a propósito NO reusa `compras.approve` (aprobación de flete
-// aéreo de Gerencia, REQ-143), ver ADR-SCRUM433-445-zona-libre-colon.md.
-Route::prefix('zona-libre/requests')->group(function (): void {
-    Route::post('/{id}/approve', [ComprasZonaLibreRequestController::class, 'approve'])->middleware('permission:compras.zona-libre.approve');
-    Route::post('/{id}/reject', [ComprasZonaLibreRequestController::class, 'reject'])->middleware('permission:compras.zona-libre.approve');
 });
 
 // SCRUM-257→261 (REQ-194→198) — Garantías y Reclamos.
@@ -215,8 +204,7 @@ Route::prefix('liquidation-agencies')->group(function (): void {
 
 // REQ-130 — buscador de productos del Catálogo filtrado por proveedor, CON costo (a diferencia
 // del buscador de Ventas & Diseño) — ver docblock de CatalogProductSearchController.
-// SCRUM-434 (Bloque B3 Zona Libre de Colón) — Bodega reusa este mismo endpoint (filtrado por el
-// `provider_id` fijo de Zona Libre) para armar su carrito de líneas, en vez de un buscador
+// Bodega reusa este mismo endpoint para armar listas de líneas de un proveedor, en vez de un buscador
 // duplicado. `bodega.read` agregado al OR de permisos (mismo mecanismo ya usado en
 // `orders/{id}` arriba, ver CheckPermission) — más simple que replicar
 // `InventoryController::resolveAccess()` acá: ese patrón existe para un caso distinto (ocultar

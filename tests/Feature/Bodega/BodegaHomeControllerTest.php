@@ -537,17 +537,16 @@ class BodegaHomeControllerTest extends FeatureTestCase
 
     // ── SCRUM-371 (REQ-301) — Por recibir (no cambia con el scope) ──────────
 
-    public function test_por_recibir_expone_ordenes_en_transito_con_distintivo_zona_libre(): void
+    public function test_por_recibir_expone_ordenes_en_transito(): void
     {
         $product = CatalogProduct::create([
             'reference' => 'REF-POR-RECIBIR', 'factory_reference' => 'FAB-777', 'name' => 'Producto colgante', 'description' => 'Producto colgante',
             'price_full' => 200, 'cost' => 120, 'stock_quantity' => 0, 'is_active' => true,
         ]);
-        $provider = Provider::create(['name' => 'ZonaLibreCorp', 'currency' => 'USD']);
+        $provider = Provider::create(['name' => 'ProveedorImportacion', 'currency' => 'USD']);
         $purchaseOrder = PurchaseOrder::create([
             'provider_id' => $provider->id, 'currency' => 'USD',
             'status' => PurchaseOrder::STATUS_EN_TRANSITO, 'status_changed_at' => now(),
-            'modality' => PurchaseOrder::MODALITY_ZONA_LIBRE,
             'estimated_arrival_date' => '2026-09-01', 'total_amount' => 500,
         ]);
         PurchaseOrderLine::create([
@@ -564,8 +563,8 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $this->assertNotNull($row);
         $this->assertSame('FAB-777', $row['factory_reference']);
         $this->assertSame(8, $row['quantity']);
-        $this->assertSame('ZonaLibreCorp', $row['provider_name']);
-        $this->assertTrue($row['is_zona_libre']);
+        $this->assertSame('ProveedorImportacion', $row['provider_name']);
+        $this->assertArrayNotHasKey('is_zona_libre', $row);
     }
 
     public function test_por_recibir_excluye_ordenes_recibidas(): void

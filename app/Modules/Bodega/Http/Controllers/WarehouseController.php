@@ -99,11 +99,11 @@ final class WarehouseController extends Controller
         $pagination = Pagination::params($request, [], 'id');
         $search = trim(QueryParams::string($request, 'search'));
 
-        // CRÍTICO real (Pre-QA SCRUM-973, 2026-09-27): con Bodega Zona Libre esta pantalla cargaba TODO el stock
+        // CRÍTICO real (Pre-QA SCRUM-973, 2026-09-27): con una bodega de catálogo grande esta pantalla cargaba TODO el stock
         // filtrado en memoria con 3 relaciones eager ANTES de paginar y moría con "Allowed memory size exhausted"
         // (500 opaco, sin traza). Se corrigió el caso sin `search`; SCRUM-996 (auditoría SCRUM-995, sitio G) cierra
         // el caso CON `search`, que seguía cargando todo el conjunto en PHP para aplicar Levenshtein
-        // (2,9-3,4 s y 200 MB de pico en Zona Libre, 78 % del límite de 256 MB): ahora el texto se resuelve en SQL
+        // (2,9-3,4 s y 200 MB de pico en esa bodega, 78 % del límite de 256 MB): ahora el texto se resuelve en SQL
         // y hay UNA sola ruta `paginate()` con las relaciones solo para la página.
         $sortByRelevance = null;
         $totals = null;
@@ -113,7 +113,7 @@ final class WarehouseController extends Controller
 
             // Un solo agregado (conteo + unidades) decide si hubo coincidencia parcial y alimenta los KPIs y el
             // paginador: antes eran `exists()` + `count()` + `sum()` + el `count()` propio del paginador (~110 ms de
-            // 4 pasadas sobre las filas de Zona Libre, medido en dev).
+            // 4 pasadas sobre las filas de esa bodega, medido en dev).
             $totals = $this->stockTotals($textQuery);
 
             if ($totals['products'] > 0) {

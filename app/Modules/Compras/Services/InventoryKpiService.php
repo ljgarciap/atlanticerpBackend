@@ -101,7 +101,7 @@ final class InventoryKpiService
     /**
      * SCRUM-991 — productos ACTIVOS con unidades (> 0) en al menos una bodega operativa de Atlantic: es la cifra que
      * coincide con lo que muestran las bodegas (Vista Bodegas, filtro por bodega). A diferencia de `total_products` (tamaño del
-     * catálogo activo, incluye los de 0 unidades), esta cuenta solo inventario real. Zona Libre/Lafayette (solo consulta) no suma
+     * catálogo activo, incluye los de 0 unidades), esta cuenta solo inventario real. Una bodega de solo consulta no suma
      * (`enBodegaOperativa()`), y los inactivos tampoco — mismo criterio que las listas, que ocultan los inactivos por defecto.
      */
     public function conStock(): int

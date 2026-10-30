@@ -21,8 +21,7 @@ use Illuminate\Database\Seeder;
  *
  * Corre en TODOS los entornos (bloque "Tipo A" de `DatabaseSeeder`, después de `CoreUserSeeder`)
  * — solo rellena si sigue NULL, nunca pisa un valor ya configurado (el aprobador se puede
- * reasignar a otra persona desde Configuración sin que un redeploy lo revierta). Mismo criterio
- * que `ZonaLibreProviderSeeder` (create/backfill-if-missing, no force-overwrite).
+ * reasignar a otra persona desde Configuración sin que un redeploy lo revierta). Es create/backfill-if-missing, no force-overwrite.
  */
 class PrimaryApproverBackfillSeeder extends Seeder
 {

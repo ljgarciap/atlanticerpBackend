@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Modules\Bodega\Http\Controllers\AdjustmentRequestController;
 use App\Modules\Bodega\Http\Controllers\GeneralCountController;
 use App\Modules\Bodega\Http\Controllers\RelocationRequestController;
-use App\Modules\Compras\Http\Controllers\ComprasZonaLibreRequestController;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Shared\Support\AprobacionGate;
 use Illuminate\Http\JsonResponse;
@@ -18,14 +17,13 @@ use Illuminate\Routing\Controller;
 /**
  * SCRUM-162 — Aprobar / Rechazar solicitudes directamente desde el panel de Gerencia.
  *
- * Tipos soportados: purchase_order, relocation, adjustment, general_count, zona_libre.
+ * Tipos soportados: purchase_order, relocation, adjustment, general_count.
  *
  * POST /api/gerencia/aprobaciones/{type}/{id}/aprobar
  * POST /api/gerencia/aprobaciones/{type}/{id}/rechazar  (acepta body: { razon?: string })
  *
  * Autorización: `AprobacionGate::canAct($user, $type)` — Gerencia (purchase_order/relocation/
- * adjustment/general_count) o el permiso real `compras.zona-libre.approve` (zona_libre), más
- * `ReglaAprobacion` activa para el tipo exacto en los 4 tipos no-PO (SCRUM-163).
+ * adjustment/general_count), más `ReglaAprobacion` activa para el tipo exacto en los 3 tipos no-PO (SCRUM-163).
  *
  * Rediseño 2026-08-26 (SCRUM-161/162, hallazgo Pre-QA v7): antes este controller duplicaba la
  * lógica de aprobar/rechazar de cada tipo con literales de enum inválidos (`'aprobado'` en vez de
@@ -43,7 +41,6 @@ final class GerenciaAprobacionController extends Controller
         'relocation'    => 'motivo_rechazo',
         'adjustment'    => 'motivo_rechazo',
         'general_count' => 'motivo_rechazo',
-        'zona_libre'    => 'rejection_reason',
     ];
 
     public function __construct(private readonly AprobacionGate $gate)
@@ -66,7 +63,6 @@ final class GerenciaAprobacionController extends Controller
             'relocation'     => app(RelocationRequestController::class)->approve($request, $id),
             'adjustment'     => app(AdjustmentRequestController::class)->approve($request, $id),
             'general_count'  => app(GeneralCountController::class)->approve($request, $id),
-            'zona_libre'     => app(ComprasZonaLibreRequestController::class)->approve($request, $id),
             default          => response()->json(['message' => 'Tipo de solicitud desconocido.'], 422),
         };
     }
@@ -102,7 +98,6 @@ final class GerenciaAprobacionController extends Controller
             'relocation'     => app(RelocationRequestController::class)->reject($request, $id),
             'adjustment'     => app(AdjustmentRequestController::class)->reject($request, $id),
             'general_count'  => app(GeneralCountController::class)->reject($request, $id),
-            'zona_libre'     => app(ComprasZonaLibreRequestController::class)->reject($request, $id),
             default          => response()->json(['message' => 'Tipo de solicitud desconocido.'], 422),
         };
     }

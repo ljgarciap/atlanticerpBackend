@@ -33,15 +33,12 @@ class MensajesDeDenegacionTest extends FeatureTestCase
         $this->assertStringContainsString('regla de aprobación', (string) $r->json('message'), 'los tipos con regla lo mencionan');
     }
 
-    public function test_orden_de_compra_no_menciona_reglas_y_zona_libre_dice_que_falta_el_permiso(): void
+    public function test_orden_de_compra_no_menciona_reglas(): void
     {
         $token = $this->loginAs(self::NO_APROBADOR, self::NO_APROBADOR, 'management');
 
         $oc = $this->withHeaders($this->authHeaders($token))->postJson('/api/gerencia/aprobaciones/purchase_order/1/rechazar')->assertStatus(403);
         $this->assertStringNotContainsString('regla de aprobación', (string) $oc->json('message'));
         $this->assertStringContainsString('aprobador configurado', (string) $oc->json('message'));
-
-        $zl = $this->withHeaders($this->authHeaders($token))->postJson('/api/gerencia/aprobaciones/zona_libre/1/aprobar')->assertStatus(403);
-        $this->assertStringContainsString('compras.zona-libre.approve', (string) $zl->json('message'));
     }
 }

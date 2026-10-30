@@ -18,7 +18,7 @@ use Illuminate\Support\Collection;
  * REQ-128→133 (Nueva Orden, 2H) + REQ-138→156 (Ver Órdenes 2A / Logística 2B, sprint2) — `status`
  * usa las 7 etapas de REQ-117. `requires_primary_approval` se calcula al crear (RN3 de REQ-118).
  *
- * `modality` (directo|zona_libre) es un eje DISTINTO de `shipping_type` — REQ-153 los trata como
+ * `modality` (hoy solo `directo`) es un eje DISTINTO de `shipping_type` — REQ-153 los trata como
  * 2 datos separados de la tarjeta de envío, no el mismo campo.
  *
  * @property int $id
@@ -90,8 +90,6 @@ class PurchaseOrder extends Model
     public const PAYS_PROVIDER = 'proveedor';
 
     public const MODALITY_DIRECTO = 'directo';
-
-    public const MODALITY_ZONA_LIBRE = 'zona_libre';
 
     /**
      * Fase 4 — Servicios, Grupo D parte 2 (REQ-274, SCRUM-344) — único valor real de
@@ -256,7 +254,7 @@ class PurchaseOrder extends Model
 
     /**
      * SCRUM-210 (REQ-147, alcance reducido) — agencia de liquidación asignada, solo aplica a
-     * órdenes Zona Libre.
+     * órdenes de proveedores internacionales.
      *
      * @return BelongsTo<LiquidationAgency, $this>
      */
@@ -415,7 +413,7 @@ class PurchaseOrder extends Model
     /**
      * REQ-141: secuencia de estados según el origen del proveedor — un proveedor local se salta
      * tránsito/aduana (RN1/Escenario 1). `pendiente_liquidar` pasaba fuera de la secuencia
-     * automática a propósito (se alcanzaba solo vía el botón "Liquidar" de Zona Libre, REQ-147) —
+     * automática a propósito (se alcanzaba solo vía el botón "Liquidar", REQ-147) —
      * realineado 2026-08-06 (hallazgo Gerencia Test, SCRUM-204): TODA orden pasa por
      * "Pendiente/Por liquidar" entre "Por aprobar" y "Ordenado", sin importar la modalidad — ver
      * `orderStatusLabel()` (frontend, `atlanticerp-frontend/src/utils/orderStatusLabel.ts`) para el
@@ -493,7 +491,7 @@ class PurchaseOrder extends Model
     /**
      * REQ-191/REQ-268 (Agencias de Liquidación / Reportes) — hallazgo de QA 2026-07-18: la
      * definición original usaba `hasReachedStage(STATUS_EN_ADUANA)`, pero un proveedor `local`
-     * SALTA esa etapa por completo (ver statusSequence()) — cualquier orden Zona Libre con
+     * SALTA esa etapa por completo (ver statusSequence()) — cualquier orden con
      * proveedor local quedaba "por_liquidar" para siempre, sin importar cuánto avanzara. El
      * criterio de aceptación real del ticket es "cuando esa orden llega a Recibido, pasa a
      * contar como Liquidada" — Recibido es el estado terminal de AMBAS secuencias (local e

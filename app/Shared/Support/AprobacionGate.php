@@ -24,14 +24,11 @@ use App\Modules\Gerencia\Models\ReglaAprobacion;
  *     una ReglaAprobacion de tipo=adjustment volvía al usuario "aprobador" de TODO, pero el gate
  *     nativo de cada controller de Bodega (`resolveApproverAccess()`) igual lo rechazaba por no ser
  *     Gerencia. Ahora esos 3 controllers consultan este mismo gate.
- *   - zona_libre: el permiso real `compras.zona-libre.approve` (Lider Compras/lider_compras, vía
- *     middleware de ruta normalmente — bypaseado cuando Gerencia delega la llamada directamente,
- *     por eso se revalida acá), O una ReglaAprobacion activa para zona_libre.
  *   - superadmin.all bypassa todo siempre (mismo criterio que cada gate nativo ya usaba).
  */
 final class AprobacionGate
 {
-    private const TIPOS_CON_OVERRIDE_REGLA = ['relocation', 'adjustment', 'general_count', 'zona_libre'];
+    private const TIPOS_CON_OVERRIDE_REGLA = ['relocation', 'adjustment', 'general_count'];
 
     public function canAct(User $user, string $tipo): bool
     {
@@ -42,7 +39,6 @@ final class AprobacionGate
         $puedeNativo = match ($tipo) {
             'purchase_order' => $this->esAprobador($user),
             'relocation', 'adjustment', 'general_count' => $this->esAprobador($user),
-            'zona_libre' => $user->hasPermission('compras.zona-libre.approve'),
             default => false,
         };
 
@@ -59,10 +55,6 @@ final class AprobacionGate
      */
     public function motivoDenegacion(string $tipo): string
     {
-        if ($tipo === 'zona_libre') {
-            return 'Falta el permiso «compras.zona-libre.approve» para decidir esta solicitud.';
-        }
-
         $alternativa = in_array($tipo, self::TIPOS_CON_OVERRIDE_REGLA, true) ? ' (o quien esté en una regla de aprobación activa para este tipo)' : '';
 
         return 'Solo el aprobador configurado o un suplente puede decidir esto'.$alternativa.'. No es un permiso que falte: pídele a un superadmin que te designe en Configuración global → Aprobadores.';
