@@ -1,6 +1,6 @@
 # Fase 14 — Reglas y catálogos configurables por empresa (2026-10-31)
 
-**Estado**: BORRADOR, pendiente de aprobación de Luis. Origen: Grupo 3 de `docs/flujos/candidatos-priorizados.md`.
+**Estado**: decisiones 1–4 tomadas por Luis (2026-10-31); pendiente su aprobación final de la spec y el orden de entrega. Origen: Grupo 3 de `docs/flujos/candidatos-priorizados.md`.
 
 ## 1. Objetivo
 Que los criterios de negocio que hoy viven en el código (cuándo una orden de compra necesita aprobación, qué formas de pago existen, qué motivos y roles se ofrecen) sean DATOS por empresa, editables por el superadmin sin desplegar. El ítem 3.1 es el único que incumple una regla dura del workspace (no hardcodear umbrales ni criterios de negocio).
@@ -17,7 +17,7 @@ Que los criterios de negocio que hoy viven en el código (cuándo una orden de c
 ## 3. Diseño propuesto
 **14a — Reglas de aprobación de compras (3.1).** Tabla `purchase_approval_rules` (`{tenant}_compras`): `name`, `sort_order`, `is_active`, condiciones opcionales (`shipping_type`, `who_pays_shipping`, `min_amount`, `max_amount`; vacío = cualquiera) y `requires_approval` (bool). Se evalúa la **primera regla activa que coincide, por orden**; si ninguna coincide, no requiere aprobación (igual que hoy para todo lo que no sea aéreo pagado por la empresa). Migración que siembra UNA regla equivalente a la actual (aéreo + paga la empresa → requiere), de modo que el comportamiento por defecto no cambia. `computeRequiresPrimaryApproval` pasa a consultar las reglas (con memo por petición, patrón `CatalogCache`). CRUD bajo `superadmin.all` (sin permiso nuevo → sin riesgo de fuga por nivel compartido) y pestaña «Reglas de aprobación» en Ajustes de Compras. Quién aprueba NO cambia (aprobador primario o suplente, Fase 12b). No se reutiliza `reglas_aprobacion` de Gerencia: modela «tipo de solicitud → aprobadores», no condiciones sobre la orden.
 
-**14b — Formas de pago (3.2).** Dominio de catálogo `payment_method` (mecanismo de la Fase 7) con propiedades `sin_cuenta_bancaria`, `inmediato` (arqueo) y `caja_chica` (aparece en caja chica). Las dos de sistema (`retencion_impuestos`, `ajuste_cuenta`) no se borran ni cambian propiedades. El sembrado depende del país del tenant (Yappy solo en Panamá, vía `config/regions.php`); un método en uso no se borra. Etiquetas del PDF y del frontend salen del catálogo. Los reportes de ventas por método pasan de una columna fija por método a columnas derivadas del catálogo (es lo más grande de la fase).
+**14b — Formas de pago (3.2).** Dominio de catálogo `payment_method` (mecanismo de la Fase 7) con propiedades `sin_cuenta_bancaria`, `inmediato` (arqueo) y `caja_chica` (aparece en caja chica). Las dos de sistema (`retencion_impuestos`, `ajuste_cuenta`) no se borran ni cambian propiedades. El sembrado depende del país del tenant (Yappy solo en Panamá, vía `config/regions.php`); un método en uso no se borra. Etiquetas del PDF y del frontend salen del catálogo. Los reportes de ventas por método NO cambian (decisión 4): conservan sus columnas actuales.
 
 **14c — Listas fijas (3.3).** Cuatro dominios nuevos: `contact_role`, `adjustment_reason`, `return_reason`, `technician_specialty`. `warranty` queda como clave de sistema (la lógica de garantías pregunta por ella); `OTRO_ESPECIFICAR` conserva su comportamiento «pide texto».
 
@@ -31,12 +31,12 @@ Panamá sin cambio visible con los datos por defecto; migraciones aditivas y rev
 - Una regla mal configurada puede dejar órdenes sin aprobación: la pantalla muestra una vista previa («con estas reglas, una orden aérea de 3.000 pagada por la empresa SÍ/NO requiere aprobación») y toda edición queda en auditoría.
 - 14b: cambiar el conjunto «inmediato» altera qué cobros entran al arqueo del día; las entradas de sistema quedan bloqueadas y la migración no cambia ningún valor actual.
 
-## 6. Decisiones de Luis (pendientes)
-1. **Monto de la regla (14a)**: ¿sobre los productos (`total_amount`) o sobre el total a pagar al proveedor (productos + envío aéreo pagado por la empresa + costos adicionales)? *Recomendado: total a pagar.*
-2. **Evaluación (14a)**: primera regla que coincide, por orden, con «sin coincidencia = no requiere aprobación». *Recomendado.*
-3. **3.4**: renombrar la clave a «umbral de notas de crédito» (recomendado) o solo cambiar la etiqueta.
-4. **Entrega**: 4 sub-fases (14a–14d), cada una con su PR por repo y su «adelante»; orden 14a, 14d, 14c, 14b (la más grande al final). *Recomendado.*
-5. **Alcance de 3.2**: ¿incluir los reportes de ventas por método dinámicos en 14b o dejarlos con las columnas actuales y solo parametrizar cobros y caja chica?
+## 6. Decisiones de Luis (2026-10-31)
+1. **Monto de la regla (14a)**: sobre el **total a pagar** al proveedor (productos + envío aéreo pagado por la empresa + costos adicionales). ✅
+2. **Evaluación (14a)**: **primera regla activa que coincide, por orden**; sin coincidencia = no requiere aprobación. ✅
+3. **3.4**: **renombrar la clave** del umbral a «umbral de notas de crédito» (migración reversible). ✅
+4. **Alcance de 3.2 (14b)**: **solo cobros y caja chica**; los reportes de ventas por método conservan sus columnas actuales. ✅
+5. **Entrega**: 4 sub-fases (14a, 14d, 14c, 14b, en ese orden), cada una con su PR por repo y su «adelante» — propuesta recomendada, no se preguntó; se ajusta si Luis indica otro orden. ⏳
 
 ## 7. No-alcance
 Quién aprueba (Fase 12b), umbral de notas de crédito como regla por monto/tipo, formas de pago por cliente, y cualquier cambio de contabilidad.
