@@ -279,6 +279,7 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('saldo-favor
 Route::middleware('permission:admin_contab.read,admin_contab.commissions_internal.view')
     ->prefix('commissions/internal')->group(function (): void {
         Route::get('/tiers', [AdminContInternalCommissionController::class, 'tiers']);
+        Route::get('/tiers/vs-sales', [AdminContInternalCommissionController::class, 'tiersVsSales']);
         // REQ-507 (Batch 15) — estado de cuenta, autorización propio-vs-ajeno verificada
         // server-side dentro del controller (un vendedor solo puede pedir el suyo), no acá.
         // `/{vendedorId}/account-statement/pdf` (no una ruta estática `/account-statement/export`
