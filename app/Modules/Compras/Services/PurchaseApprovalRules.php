@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Compras\Services;
 
 use App\Modules\Compras\Models\PurchaseApprovalRule;
+use App\Modules\Compras\Models\PurchaseOrder;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -33,6 +34,23 @@ final class PurchaseApprovalRules
         }
 
         return null;
+    }
+
+    /**
+     * Evalúa las reglas con el total a pagar YA calculado (líneas guardadas) y fija `requires_primary_approval`. Al crear (`$initialStatus`),
+     * también el estado inicial: «Por aprobar» si la requiere; si no, queda el estado con el que se creó. Al editar no toca el estado.
+     * Único punto de evaluación: lo usan «Nueva orden», los insumos de Servicios y la reposición por familia (Fase 14e).
+     */
+    public function applyTo(PurchaseOrder $order, bool $initialStatus): void
+    {
+        $order->refresh();
+        $requires = $this->requiresApproval($order->shipping_type, $order->who_pays_shipping, $order->payableTotal());
+
+        $changes = ['requires_primary_approval' => $requires];
+        if ($initialStatus && $requires) {
+            $changes['status'] = PurchaseOrder::STATUS_POR_APROBAR;
+        }
+        $order->update($changes);
     }
 
     /** @return Collection<int, PurchaseApprovalRule> */

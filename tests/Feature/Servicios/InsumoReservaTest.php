@@ -8,7 +8,9 @@ use App\Modules\Bodega\Models\InventoryMovement;
 use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Compras\Models\Provider;
+use App\Modules\Compras\Models\PurchaseApprovalRule;
 use App\Modules\Compras\Models\PurchaseOrder;
+use App\Modules\Compras\Services\PurchaseApprovalRules;
 use App\Modules\Servicios\Models\InsumoPurchaseRequest;
 use App\Modules\Servicios\Models\InsumoSetting;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
@@ -131,6 +133,34 @@ class InsumoReservaTest extends FeatureTestCase
             ->getJson("/api/compras/orders/{$order->id}")
             ->assertStatus(200)
             ->assertJsonPath('origin_module', PurchaseOrder::ORIGIN_SERVICIOS);
+    }
+
+    /** Fase 14e — las reglas de aprobación de órdenes valen también para la orden que crea una solicitud de insumo. */
+    public function test_solicitud_de_insumo_pasa_por_las_reglas_de_aprobacion(): void
+    {
+        $provider = $this->makeLocalProvider();
+        $product = $this->makeProduct(['provider_id' => $provider->id]);
+        $lider = $this->authHeaders($this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios'));
+
+        // Sin reglas que la requieran: nace directo en «Pendiente/Por liquidar», como siempre.
+        $this->withHeaders($lider)->postJson('/api/servicios/insumos', ['catalog_product_id' => $product->id, 'minimo' => 3, 'cantidad_inicial' => 10])->assertStatus(201);
+        $this->reMakeCurrent();
+        $orden = PurchaseOrder::findOrFail(InsumoPurchaseRequest::where('catalog_product_id', $product->id)->firstOrFail()->purchase_order_id);
+        $this->assertSame(PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR, $orden->status);
+        $this->assertFalse($orden->requires_primary_approval);
+
+        // Con una regla que la requiere (sin condiciones: aplica a todo): la siguiente solicitud nace «Por aprobar» y bloqueada.
+        PurchaseApprovalRule::create(['name' => 'Todo requiere', 'sort_order' => 1, 'is_active' => true, 'requires_approval' => true]);
+        app(PurchaseApprovalRules::class)->forget(); // en producción la memo vive una petición; el test reutiliza la misma app
+        $otro = $this->makeProduct(['provider_id' => $provider->id]);
+        $this->withHeaders($lider)->postJson('/api/servicios/insumos', ['catalog_product_id' => $otro->id, 'minimo' => 3, 'cantidad_inicial' => 10])->assertStatus(201);
+        $this->reMakeCurrent();
+        $pedida = InsumoPurchaseRequest::where('catalog_product_id', $otro->id)->firstOrFail();
+        $orden = PurchaseOrder::findOrFail($pedida->purchase_order_id);
+        $this->assertSame(PurchaseOrder::STATUS_POR_APROBAR, $orden->status);
+        $this->assertTrue($orden->requires_primary_approval);
+        $this->assertTrue($orden->isBlockedByPrimaryApproval());
+        $this->assertSame(InsumoPurchaseRequest::ESTADO_PENDIENTE, $pedida->estado);
     }
 
     public function test_agregar_insumo_ya_trackeado_retorna_422(): void

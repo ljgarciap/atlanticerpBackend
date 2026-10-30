@@ -9,6 +9,7 @@ use App\Modules\Bodega\Models\ProductWarehouseStock;
 use App\Modules\Bodega\Models\Warehouse;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
+use App\Modules\Compras\Services\PurchaseApprovalRules;
 use App\Modules\Servicios\Models\InsumoPurchaseRequest;
 use App\Modules\Servicios\Models\InsumoSetting;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
@@ -121,10 +122,9 @@ final class InsumoService
      * nada más) — se deriva del proveedor por defecto del producto
      * (`catalog_products.provider_id`), mismo dato que ya usa Compras para reordenar este
      * producto. `shipping_type`/`who_pays_shipping` quedan NULL a propósito — sin esos datos
-     * `PurchaseOrder::computeRequiresPrimaryApproval()` siempre da `false` (RN3/REQ-118 solo aplica a
-     * envíos aéreos pagados por Atlantic, que este flujo interno nunca captura), así que la
-     * orden nace directo en "Pendiente/Por liquidar", sin bloquear en un gate de aprobación de
-     * Gerencia que este formulario no tiene forma de satisfacer.
+     * la regla sembrada (envío aéreo pagado por la empresa) nunca coincide, así que con ella la orden nace directo en
+     * "Pendiente/Por liquidar". Fase 14e: si la empresa define una regla por monto, `PurchaseApprovalRules::applyTo()` la aplica igual
+     * que a «Nueva orden» (la orden nace «Por aprobar» y espera al aprobador configurado).
      *
      * @throws \InvalidArgumentException el producto del insumo ya no existe, o no tiene proveedor asignado
      */
@@ -165,6 +165,10 @@ final class InsumoService
                 'unit_cost' => $unitCost,
                 'subtotal' => $subtotal,
             ]);
+
+            // Fase 14e — las reglas de aprobación valen también para las órdenes que crea este flujo: si la orden la requiere (p. ej. por monto)
+            // nace «Por aprobar» y bloqueada hasta que el aprobador la apruebe; si no, sigue directo a «Pendiente/Por liquidar».
+            app(PurchaseApprovalRules::class)->applyTo($order, true);
 
             return InsumoPurchaseRequest::create([
                 'catalog_product_id' => $product->id,
