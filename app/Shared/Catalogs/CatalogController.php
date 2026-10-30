@@ -17,12 +17,12 @@ final class CatalogController extends Controller
 {
     public function __construct(private readonly CatalogService $service) {}
 
-    /** Entradas activas de un dominio. */
+    /** Entradas activas de un dominio; `label` YA viene en el idioma del usuario (Fase 14i), con respaldo a la base. */
     public function index(string $domain): JsonResponse
     {
         abort_unless(CatalogService::exists($domain), 404);
 
-        return response()->json(CatalogService::entries($domain)->map(fn (CatalogEntry $e) => $this->format($e))->values());
+        return response()->json(CatalogService::entries($domain)->map(fn (CatalogEntry $e) => $this->format($e, resolved: true))->values());
     }
 
     /** Dominios disponibles para la pantalla de administración. */
@@ -31,7 +31,7 @@ final class CatalogController extends Controller
         $out = [];
         foreach (CatalogService::domains() as $key => $def) {
             $out[] = [
-                'domain' => $key, 'label' => $def['label'], 'props' => $def['props'],
+                'domain' => $key, 'label' => $def['label'], 'props' => $def['props'], 'languages' => CatalogService::languages(),
                 // Fase 7c: lo que una entrada de sistema no puede cambiar, para que la pantalla de Ajustes lo bloquee en vez de dejar que falle al guardar.
                 'locked_when_system' => $def['locked_when_system'] ?? [],
             ];
@@ -40,7 +40,7 @@ final class CatalogController extends Controller
         return response()->json($out);
     }
 
-    /** Todas las entradas (también las inactivas) para administrar. */
+    /** Todas las entradas (también las inactivas) para administrar: `label` es la BASE y `labels` las traducciones. */
     public function all(string $domain): JsonResponse
     {
         abort_unless(CatalogService::exists($domain), 404);
@@ -52,10 +52,11 @@ final class CatalogController extends Controller
     {
         abort_unless(CatalogService::exists($domain), 404);
 
-        /** @var array{key: string, label: string, sort_order?: int, props?: array<string, mixed>} $data */
+        /** @var array{key: string, label: string, labels?: array<string, mixed>, sort_order?: int, props?: array<string, mixed>} $data */
         $data = $request->validate([
             'key' => ['required', 'string', 'max:60', 'regex:/^[a-z][a-z0-9_]*$/', Rule::unique('catalog_entries', 'key')->where('domain', $domain)],
             'label' => ['required', 'string', 'max:120'],
+            'labels' => ['sometimes', 'array'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
             'props' => ['sometimes', 'array'],
         ]);
@@ -67,9 +68,10 @@ final class CatalogController extends Controller
     {
         $entry = CatalogEntry::query()->where('domain', $domain)->findOrFail($id);
 
-        /** @var array{label?: string, sort_order?: int, is_active?: bool, props?: array<string, mixed>} $data */
+        /** @var array{label?: string, labels?: array<string, mixed>, sort_order?: int, is_active?: bool, props?: array<string, mixed>} $data */
         $data = $request->validate([
             'label' => ['sometimes', 'string', 'max:120'],
+            'labels' => ['sometimes', 'array'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
             'props' => ['sometimes', 'array'],
@@ -96,10 +98,11 @@ final class CatalogController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function format(CatalogEntry $e): array
+    private function format(CatalogEntry $e, bool $resolved = false): array
     {
         return [
-            'id' => $e->id, 'domain' => $e->domain, 'key' => $e->key, 'label' => $e->label, 'sort_order' => $e->sort_order,
+            'id' => $e->id, 'domain' => $e->domain, 'key' => $e->key,
+            'label' => $resolved ? CatalogService::labelOf($e) : $e->label, 'labels' => $e->labels ?? new \stdClass, 'sort_order' => $e->sort_order,
             'is_active' => $e->is_active, 'is_system' => $e->is_system, 'props' => $e->props ?? new \stdClass,
         ];
     }

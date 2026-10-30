@@ -28,6 +28,9 @@ final class CatalogCacheTest extends FeatureTestCase
     {
         PipelineStages::linear(); // calienta la memo
         TicketTypes::slaDias('claim');
+        // Fase 14i: la primera etiqueta resuelve el idioma (UNA consulta por petición, para el idioma por defecto de la empresa); también se calienta.
+        PipelineStages::label('proposal');
+        TicketTypes::label('claim');
 
         DB::enableQueryLog();
         for ($i = 0; $i < 50; $i++) {

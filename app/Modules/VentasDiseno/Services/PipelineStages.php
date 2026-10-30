@@ -161,7 +161,7 @@ final class PipelineStages
      */
     public static function labels(): array
     {
-        return CatalogService::entries(self::DOMAIN, onlyActive: false)->pluck('label', 'key')->map(strval(...))->all();
+        return CatalogService::labels(self::DOMAIN, onlyActive: false);
     }
 
     /**

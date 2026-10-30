@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Catalogs;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -51,7 +52,59 @@ final class CatalogService
         return $entry?->props[$prop] ?? $default;
     }
 
-    /** @param array{key: string, label: string, sort_order?: int, props?: array<string, mixed>} $data */
+    /** @return list<string> idiomas con etiqueta por entrada (el primero, `es`, es la base) */
+    public static function languages(): array
+    {
+        return array_values(array_map(strval(...), (array) config('catalogs.languages', ['es'])));
+    }
+
+    /**
+     * Fase 14i — idioma en el que se resuelven las etiquetas: el del usuario autenticado (`preferences.language`); sin usuario (trabajos y correos
+     * automáticos) o con un idioma sin soporte, el idioma por defecto de la empresa; y en último caso la base (`es`).
+     */
+    public static function currentLanguage(): string
+    {
+        $request = request();
+        $memo = $request->attributes->get('catalog.language');
+        if (is_string($memo)) {
+            return $memo;
+        }
+
+        $languages = self::languages();
+        $jwt = $request->attributes->get('jwt');
+        $userId = is_array($jwt) ? ($jwt['sub'] ?? null) : null;
+        $language = null;
+        if ($userId !== null && is_numeric($userId)) {
+            $preferences = User::query()->whereKey((int) $userId)->first(['id', 'preferences'])?->preferences;
+            $language = is_array($preferences) ? ($preferences['language'] ?? null) : null;
+        }
+        if (! is_string($language) || ! in_array($language, $languages, true)) {
+            $language = app(CatalogCache::class)->defaultLanguage();
+        }
+        $language = in_array($language, $languages, true) ? $language : $languages[0];
+        $request->attributes->set('catalog.language', $language);
+
+        return $language;
+    }
+
+    /** Etiqueta de una entrada en el idioma actual (con respaldo a la base). */
+    public static function labelOf(CatalogEntry $entry): string
+    {
+        return $entry->labelFor(self::currentLanguage());
+    }
+
+    /** @return array<string, string> clave => etiqueta en el idioma actual, en el orden del catálogo */
+    public static function labels(string $domain, bool $onlyActive = true): array
+    {
+        $out = [];
+        foreach (self::entries($domain, $onlyActive) as $entry) {
+            $out[(string) $entry->key] = self::labelOf($entry);
+        }
+
+        return $out;
+    }
+
+    /** @param array{key: string, label: string, labels?: array<string, mixed>, sort_order?: int, props?: array<string, mixed>} $data */
     public function create(string $domain, array $data): CatalogEntry
     {
         $rules = self::rulesClass($domain);
@@ -62,7 +115,7 @@ final class CatalogService
         }
 
         $entry = CatalogEntry::create([
-            'domain' => $domain, 'key' => $data['key'], 'label' => $data['label'], 'sort_order' => $sort,
+            'domain' => $domain, 'key' => $data['key'], 'label' => $data['label'], 'labels' => $this->cleanLabels($data['labels'] ?? []), 'sort_order' => $sort,
             'is_active' => true, 'is_system' => false, 'props' => $props,
         ]);
         app(CatalogCache::class)->forget();
@@ -70,7 +123,7 @@ final class CatalogService
         return $entry;
     }
 
-    /** @param array{label?: string, sort_order?: int, is_active?: bool, props?: array<string, mixed>} $data */
+    /** @param array{label?: string, labels?: array<string, mixed>, sort_order?: int, is_active?: bool, props?: array<string, mixed>} $data */
     public function update(CatalogEntry $entry, array $data): CatalogEntry
     {
         if (($data['is_active'] ?? true) === false && $entry->is_system) {
@@ -90,6 +143,9 @@ final class CatalogService
 
         if (array_key_exists('label', $data)) {
             $entry->label = $data['label'];
+        }
+        if (array_key_exists('labels', $data)) {
+            $entry->labels = $this->cleanLabels($data['labels']);
         }
         if (array_key_exists('sort_order', $data)) {
             $entry->sort_order = $data['sort_order'];
@@ -176,6 +232,34 @@ final class CatalogService
         }
 
         return false;
+    }
+
+    /**
+     * Fase 14i — traducciones por idioma. Solo idiomas configurados DISTINTOS de la base (`es` va en `label`); un texto vacío quita la traducción y la
+     * entrada vuelve al respaldo. Devuelve null si no queda ninguna.
+     *
+     * @param  array<string, mixed>  $labels
+     * @return array<string, string>|null
+     */
+    private function cleanLabels(array $labels): ?array
+    {
+        $allowed = array_slice(self::languages(), 1);
+        $clean = [];
+        foreach ($labels as $language => $text) {
+            if (! in_array($language, $allowed, true)) {
+                throw ValidationException::withMessages(["labels.{$language}" => 'Idioma no válido para este catálogo.']);
+            }
+            $text = is_string($text) ? trim($text) : '';
+            if ($text === '') {
+                continue;
+            }
+            if (mb_strlen($text) > 120) {
+                throw ValidationException::withMessages(["labels.{$language}" => 'La etiqueta no puede superar 120 caracteres.']);
+            }
+            $clean[$language] = $text;
+        }
+
+        return $clean === [] ? null : $clean;
     }
 
     /**

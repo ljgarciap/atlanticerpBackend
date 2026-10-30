@@ -21,6 +21,9 @@ use App\Modules\VentasDiseno\Models\CatalogProduct;
 | que admite. Agregar un dominio es agregar una fila aquí + sembrar sus entradas en una migración.
 */
 return [
+    // Fase 14i — idiomas con etiqueta por entrada. `es` es la BASE (`catalog_entries.label`); el resto vive en `labels`. Agregar un idioma es agregar una fila.
+    'languages' => ['es', 'en'],
+
     'domains' => [
         'provider_category' => [
             'label' => 'Categorías de proveedor',
