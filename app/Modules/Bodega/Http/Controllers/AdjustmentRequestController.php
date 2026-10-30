@@ -16,6 +16,7 @@ use App\Modules\Bodega\Services\AdjustmentEvidenceService;
 use App\Modules\Bodega\Services\KardexService;
 use App\Modules\Bodega\Services\WarehouseStockService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Shared\Catalogs\CatalogService;
 use App\Shared\Http\Pagination;
 use App\Shared\Http\QueryParams;
 use App\Shared\Services\AuditService;
@@ -177,7 +178,7 @@ final class AdjustmentRequestController extends Controller
             // responsable son nuevos, ambos opcionales — descripcion también sirve para detallar
             // cuando motivo = OTRO_ESPECIFICAR (el frontend decide si lo exige en ese caso, el
             // backend no fuerza esa dependencia entre campos).
-            'lines.*.motivo' => ['required', 'string', Rule::in(AdjustmentRequestLine::MOTIVOS)],
+            'lines.*.motivo' => ['required', 'string', Rule::in(CatalogService::keys('adjustment_reason'))],
             'lines.*.descripcion' => ['nullable', 'string', 'max:2000'],
             'lines.*.responsable' => ['nullable', 'string', 'max:255'],
             'lines.*.evidencia' => ['required', 'file', 'max:20480', 'extensions:jpg,jpeg,png,gif,webp,pdf'],

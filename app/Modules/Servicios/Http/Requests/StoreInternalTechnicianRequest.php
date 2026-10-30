@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Servicios\Http\Requests;
 
-use App\Modules\Servicios\Models\InternalTechnician;
+use App\Shared\Catalogs\CatalogService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,13 +20,10 @@ class StoreInternalTechnicianRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre'       => ['required', 'string', 'max:255'],
-            'telefono'     => ['nullable', 'string', 'max:50'],
-            'email'        => ['nullable', 'email', 'max:255'],
-            'especialidad' => ['required', 'string', Rule::in([
-                InternalTechnician::ESPECIALIDAD_GENERAL,
-                InternalTechnician::ESPECIALIDAD_WARRANTY,
-            ])],
+            'nombre' => ['required', 'string', 'max:255'],
+            'telefono' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'especialidad' => ['required', 'string', Rule::in(CatalogService::keys('technician_specialty'))],
         ];
     }
 }

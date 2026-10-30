@@ -7,6 +7,7 @@ namespace App\Modules\CRM\Http\Controllers;
 use App\Models\User;
 use App\Modules\CRM\Models\Contact;
 use App\Modules\CRM\Services\ContactService;
+use App\Shared\Catalogs\CatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -25,7 +26,7 @@ final class ContactController extends Controller
         }
 
         $validated = $request->validate([
-            'type' => ['sometimes', 'string', Rule::in(Contact::ALLOWED_TYPES)],
+            'type' => ['sometimes', 'string', Rule::in(CatalogService::keys('contact_role'))],
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
@@ -49,7 +50,7 @@ final class ContactController extends Controller
 
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:200'],
-            'tipo' => ['required', 'string', Rule::in(Contact::ALLOWED_TYPES)],
+            'tipo' => ['required', 'string', Rule::in(CatalogService::keys('contact_role'))],
             'email' => ['sometimes', 'nullable', 'email', 'max:200'],
             'telefono' => ['sometimes', 'nullable', 'string', 'max:50'],
             'empresa' => ['sometimes', 'nullable', 'string', 'max:200'],
@@ -76,7 +77,7 @@ final class ContactController extends Controller
 
         $validated = $request->validate([
             'nombre' => ['sometimes', 'string', 'max:200'],
-            'tipo' => ['sometimes', 'string', Rule::in(Contact::ALLOWED_TYPES)],
+            'tipo' => ['sometimes', 'string', Rule::in(CatalogService::keys('contact_role'))],
             'email' => ['sometimes', 'nullable', 'email', 'max:200'],
             'telefono' => ['sometimes', 'nullable', 'string', 'max:50'],
             'empresa' => ['sometimes', 'nullable', 'string', 'max:200'],

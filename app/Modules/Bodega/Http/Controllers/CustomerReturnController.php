@@ -91,7 +91,7 @@ final class CustomerReturnController extends Controller
             'items'                        => ['required', 'array', 'min:1'],
             'items.*.order_item_id'        => ['required', 'integer'],
             'items.*.qty_requested'        => ['required', 'integer', 'min:1'],
-            'items.*.reason'               => ['required', 'string', Rule::in(CustomerReturnLine::REASONS)],
+            'items.*.reason'               => ['required', 'string', Rule::in(\App\Shared\Catalogs\CatalogService::keys('return_reason'))],
             'items.*.reason_detail'        => ['nullable', 'string'],
         ]);
 
