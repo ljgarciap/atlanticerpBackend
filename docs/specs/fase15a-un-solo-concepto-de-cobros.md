@@ -1,6 +1,6 @@
 # Fase 15a — Un solo concepto de cobros
 
-**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); pendiente de su «adelante con 15a». Origen: candidato 4.1 de `docs/flujos/candidatos-priorizados.md` («`cobros_v2_activo` nace apagado y los abonos heredados siguen en el código»). No se implementa sin su «adelante»; el borrado de tablas necesita además su confirmación explícita.
+**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); «adelante con 15a» dado; **15a-1 (código) implementada** (§8), pendiente de mezclar; 15a-2 (esquema) pendiente. Origen: candidato 4.1 de `docs/flujos/candidatos-priorizados.md` («`cobros_v2_activo` nace apagado y los abonos heredados siguen en el código»). No se implementa sin su «adelante»; el borrado de tablas necesita además su confirmación explícita.
 
 ## 1. Objetivo
 Hoy conviven DOS modelos de cobros alternados por una bandera, y el que nace activo es el viejo. Dejar uno solo (el nuevo: cobro con o sin factura, aplicación decidida por el usuario, compensaciones) y retirar la bandera, los abonos heredados y la maquinaria de transición.
@@ -38,3 +38,10 @@ Hoy conviven DOS modelos de cobros alternados por una bandera, y el que nace act
 
 ## 7. No-alcance
 Cambiar cómo se calculan comisiones, notas de crédito o facturación; el modelo de compensaciones; y los candidatos 4.2 a 4.7 (cada uno su propia entrega).
+
+## 8. Resultado de 15a-1 (código)
+- **Backend**: fuera la bandera (`cobros_v2_activo`, `CobrosConfigService::v2Activo/setV2Activo`, comando `cobros:v2`, claim `cobros_v2` del JWT, `v2` de `GET /payments/config`); fuera `POST /payments` (registro ligado a facturas) con su `FormRequest` y `PaymentService::register`; fuera todo `/abonos` (controlador, rutas de cascada, recibo en PDF, adjuntos, folios, dos `FormRequest`) y los métodos de gestión de `AbonoService` (queda solo lo que el cálculo de saldo y las anulaciones aún usan para los datos antiguos). Compensaciones y `POST /payments/cobro` responden sin ningún encendido previo.
+- **Se CONSERVA** (decisión 2): `PaymentLedgerBackfill`, `PaymentLedgerVerifier`, sus comandos, los modelos de lectura de abonos y de cobros anteriores, y las ramas por cobro (`payments.cobros_v2`) que tratan los datos antiguos. Se retiran en un paso posterior, cuando todo entorno esté convertido; la columna y las tablas, en 15a-2.
+- **Frontend**: fuera `RegistrarCobroModal`, `RegistrarAbonoModal`, `AbonosPage`, `SaldoFavorPage` (y sus rutas), la sección de abonos del detalle de cobro y del estado de cuenta, las ramas por bandera del menú y de `CobrosPage` (siempre el formulario con o sin factura), el flag `cobros_v2` del tipo de sesión, los métodos y hooks de abonos y saldo a favor y sus textos.
+- **Pruebas**: se eliminaron o recortaron los tests que probaban solo la semántica del modelo anterior (abonos, saldo a favor aplicado en el registro, bandera apagada); los genéricos de cobros (recibo en PDF, historial, adjuntos, confirmación) siguen vivos mediante el adaptador `RegistraCobrosConCargaAnterior`, que traduce la carga antigua al registro nuevo; la prueba de concurrencia pasó a `registerV2`. Nuevo `UnSoloConceptoDeCobrosTest` (rutas retiradas, comando inexistente, configuración sin `v2`, login sin la bandera).
+- **Cobertura que se pierde**: las ramas de lectura de datos antiguos (anular o confirmar un cobro del modelo anterior con abonos) ya no tienen un test que cree su dato por la API; solo se ejercen vía el backfill. Es el motivo para retirarlas en cuanto no queden entornos sin convertir.

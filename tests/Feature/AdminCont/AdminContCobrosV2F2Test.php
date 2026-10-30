@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
 /**
- * SCRUM-1168 F2 — concepto nuevo de cobros, detrás de la bandera `cobros_v2_activo`: el cobro es dinero que entra (con o sin factura); lo que
+ * SCRUM-1168 F2 — concepto de cobros (desde la Fase 15a el único): el cobro es dinero que entra (con o sin factura); lo que
  * se aplica a facturas lo decide el usuario (parcial permitido) y el resto queda como saldo a favor del cliente, que solo vive en el libro.
  */
 class AdminContCobrosV2F2Test extends FeatureTestCase
@@ -40,11 +40,10 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
     }
 
     /** Inicia sesión como Contabilidad y deja la bandera del concepto nuevo como se pide. */
-    private function headers(bool $v2 = true): array
+    private function headers(): array
     {
         $token = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
         $this->remakeTenant();
-        app(CobrosConfigService::class)->setV2Activo($v2);
 
         return $this->authHeaders($token);
     }
@@ -78,42 +77,16 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
         $this->assertSame([], $r['clientes'], 'Clientes con diferencia: '.json_encode($r['clientes']));
     }
 
-    // ── bandera y guardas ──────────────────────────────────────────────────────────────────────
+    // ── configuración ──────────────────────────────────────────────────────────────────────
 
-    public function test_la_configuracion_dice_que_concepto_esta_activo_y_la_ventana_de_movimiento_reciente(): void
+    public function test_la_configuracion_dice_la_ventana_de_movimiento_reciente(): void
     {
-        $h = $this->headers(false);
-        $this->withHeaders($h)->getJson('/api/admin-contab/payments/config')->assertStatus(200)->assertJson(['v2' => false, 'compensaciones_dias_movimiento' => 30]);
+        $h = $this->headers();
+        $this->withHeaders($h)->getJson('/api/admin-contab/payments/config')->assertStatus(200)->assertExactJson(['compensaciones_dias_movimiento' => 30]);
 
         $this->remakeTenant();
-        app(CobrosConfigService::class)->setV2Activo(true);
         app(CobrosConfigService::class)->setDiasMovimientoReciente(45);
-        $this->withHeaders($h)->getJson('/api/admin-contab/payments/config')->assertStatus(200)->assertJson(['v2' => true, 'compensaciones_dias_movimiento' => 45]);
-    }
-
-    public function test_con_la_bandera_apagada_el_registro_nuevo_no_esta_disponible(): void
-    {
-        $master = MasterClient::create(['name' => 'Cliente V2 '.uniqid()]);
-        $cuenta = $this->cuenta();
-        $h = $this->headers(false);
-
-        $this->withHeaders($h)->postJson('/api/admin-contab/payments/cobro', $this->cobro($master->id, 100, 'efectivo', $cuenta->id))->assertStatus(422);
-    }
-
-    public function test_con_la_bandera_encendida_el_registro_anterior_de_cobros_y_abonos_se_bloquea(): void
-    {
-        $master  = MasterClient::create(['name' => 'Cliente V2 '.uniqid()]);
-        $factura = $this->factura($master, 300);
-        $cuenta  = $this->cuenta();
-        $h = $this->headers(true);
-
-        $this->withHeaders($h)->postJson('/api/admin-contab/payments', [
-            'master_client_id' => $master->id, 'invoice_ids' => [$factura->id], 'metodo_pago' => 'efectivo', 'bank_account_id' => $cuenta->id, 'monto_recibido_estimado' => 300,
-        ])->assertStatus(422);
-        $this->remakeTenant();
-        $this->withHeaders($h)->postJson('/api/admin-contab/abonos', [
-            'master_client_id' => $master->id, 'monto_original' => 100, 'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $cuenta->id, 'referencia' => 'TRF',
-        ])->assertStatus(422);
+        $this->withHeaders($h)->getJson('/api/admin-contab/payments/config')->assertStatus(200)->assertExactJson(['compensaciones_dias_movimiento' => 45]);
     }
 
     // ── cobro sin factura y con aplicación directa parcial ─────────────────────────────────────

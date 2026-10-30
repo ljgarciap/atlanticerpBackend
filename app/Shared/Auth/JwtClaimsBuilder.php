@@ -42,8 +42,6 @@ final class JwtClaimsBuilder
                 'approve_large_amounts' => (bool) $user->approve_large_amounts,
                 'manage_users'          => (bool) $user->manage_users,
                 'primary_approver'         => $this->isPrimaryApprover($user),
-                // SCRUM-1168 — ¿tiene este entorno el concepto nuevo de cobros? Solo para que el menú ofrezca «Compensaciones»; dato visual.
-                'cobros_v2'             => $this->cobrosV2Activo(),
             ],
             'security_level' => $user->securityLevel?->level,
         ];
@@ -77,11 +75,6 @@ final class JwtClaimsBuilder
         return PrimaryApprovers::isApprover((int) $user->id, $approverId === null ? null : (int) $approverId);
     }
 
-    /** SCRUM-1168 — bandera del concepto nuevo de cobros (`cobros_v2_activo`). Dato visual: si no se puede resolver devuelve false y no rompe el login. */
-    private function cobrosV2Activo(): bool
-    {
-        return (bool) rescue(fn () => app(\App\Modules\AdminCont\Services\CobrosConfigService::class)->v2Activo(), false);
-    }
 
     /**
      * @param array<string, mixed>|null $impersonation bloque `impersonation` (SCRUM-1158) cuando el payload es de una sesión «Ver como usuario».

@@ -21,6 +21,7 @@ use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\RegistraCobrosConCargaAnterior;
 
 /**
  * SCRUM-1168 F1 — libro de movimientos de cobros en modo sombra: se escribe en paralelo al flujo actual (que no cambia) y el verificador
@@ -28,6 +29,8 @@ use Tests\Feature\FeatureTestCase;
  */
 class AdminContCobrosLibroF1Test extends FeatureTestCase
 {
+    use RegistraCobrosConCargaAnterior;
+
     private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     protected function setUp(): void
@@ -233,58 +236,6 @@ class AdminContCobrosLibroF1Test extends FeatureTestCase
         $this->assertEqualsWithDelta(500.0, app(PaymentLedger::class)->disponibleDelCliente($master->id), 0.001, 'Los $500 que no cupieron quedan como saldo a favor.');
         $this->assertEqualsWithDelta(500.0, app(PaymentLedger::class)->aplicadoAFactura($factura->id), 0.001);
         $this->sinDiferencias();
-    }
-
-    public function test_un_abono_confirmado_entra_al_disponible_y_su_consumo_por_un_cobro_lo_baja(): void
-    {
-        $master  = MasterClient::create(['name' => 'Cliente F1 '.uniqid()]);
-        $factura = $this->factura($master, 300);
-        $cuenta  = $this->cuenta();
-        $h       = $this->headers();
-
-        $abono = $this->withHeaders($h)->postJson('/api/admin-contab/abonos', [
-            'master_client_id' => $master->id, 'monto_original' => 100, 'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $cuenta->id, 'referencia' => 'TRF-F1',
-        ])->assertStatus(201);
-        $this->remakeTenant();
-        $this->assertEqualsWithDelta(0.0, app(PaymentLedger::class)->disponibleDelCliente($master->id), 0.001, 'Por confirmar: aún no es saldo.');
-
-        $this->withHeaders($h)->postJson('/api/admin-contab/abonos/'.$abono->json('id').'/confirm')->assertStatus(200);
-        $this->remakeTenant();
-        $this->assertEqualsWithDelta(100.0, app(PaymentLedger::class)->disponibleDelCliente($master->id), 0.001);
-        $this->sinDiferencias();
-
-        // Un cobro en efectivo que usa los $100 de saldo: entra $200 y se aplican $300 → el disponible queda en 0.
-        $this->withHeaders($h)->postJson('/api/admin-contab/payments', $this->cobro($master->id, [$factura->id], 'efectivo', $cuenta->id, 200, 100))->assertStatus(201);
-        $this->remakeTenant();
-        $this->assertEqualsWithDelta(0.0, app(PaymentLedger::class)->disponibleDelCliente($master->id), 0.001);
-        $this->assertEqualsWithDelta(100.0, (float) AdminContAbono::findOrFail($abono->json('id'))->monto_usado, 0.001);
-        $this->sinDiferencias();
-    }
-
-    public function test_el_saldo_que_sale_de_notas_de_credito_no_descuadra_el_disponible_del_libro(): void
-    {
-        $master  = MasterClient::create(['name' => 'Cliente F1 '.uniqid()]);
-        $origen  = $this->factura($master, 300, 300);
-        $factura = $this->factura($master, 300);
-        $cuenta  = $this->cuenta();
-        // Saldo a favor del cliente que proviene de una nota de crédito (fuera del libro) — $100.
-        AdminContCreditNote::create([
-            'numero' => 'NC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'cliente' => $master->name,
-            'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, 'factura_origen_id' => $origen->id, 'monto' => 100, 'subtotal' => 100, 'itbms' => 0,
-            'monto_aplicado_saldo' => 0, 'monto_usado' => 0, 'motivo' => 'Saldo de nota', 'resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR,
-            'estado' => AdminContCreditNote::ESTADO_APLICADA, 'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha' => now(),
-        ]);
-        $h = $this->headers();
-
-        $this->withHeaders($h)->postJson('/api/admin-contab/payments', $this->cobro($master->id, [$factura->id], 'efectivo', $cuenta->id, 200, 100))->assertStatus(201);
-        $this->remakeTenant();
-
-        $this->assertEqualsWithDelta(0.0, app(PaymentLedger::class)->disponibleDelCliente($master->id), 0.001);
-        $this->assertEqualsWithDelta(100.0, (float) AdminContCreditNote::where('factura_origen_id', $origen->id)->value('monto_usado'), 0.001);
-        // La factura de origen se sembró a mano con saldo_aplicado = monto (no vino de un cobro ni de una nota aplicada): esa sí se excluye de la comparación.
-        $r = app(PaymentLedgerVerifier::class)->verify();
-        $this->assertSame([], array_values(array_filter($r['facturas'], fn (array $f) => $f['invoice_id'] === $factura->id)));
-        $this->assertSame([], array_values(array_filter($r['clientes'], fn (array $c) => $c['master_client_id'] === $master->id)));
     }
 
     public function test_una_falla_al_escribir_el_libro_nunca_rompe_la_operacion_real(): void

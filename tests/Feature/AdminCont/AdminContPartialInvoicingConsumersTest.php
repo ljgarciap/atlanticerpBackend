@@ -857,10 +857,9 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
 
         // Registrar el cobro completo de esa factura.
         $bankAccount = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '9310']);
-        $payment = $this->api($token, 'POST', '/api/admin-contab/payments', [
-            'master_client_id' => $card->master_client_id, 'invoice_ids' => [$parcial->id],
-            'metodo_pago' => 'efectivo', 'bank_account_id' => $bankAccount->id,
-            'monto_recibido_estimado' => $parcial->monto,
+        $payment = $this->api($token, 'POST', '/api/admin-contab/payments/cobro', [
+            'master_client_id' => $card->master_client_id, 'metodo_pago' => 'efectivo', 'bank_account_id' => $bankAccount->id,
+            'monto_recibido' => $parcial->monto, 'aplicaciones' => [['invoice_id' => $parcial->id, 'monto' => $parcial->monto]],
         ])->assertStatus(201)->json();
         $this->reTenant();
 
@@ -942,36 +941,6 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
         // "Factura de origen" (existente) no debe cambiar con este ticket.
         $this->assertSame($parcial->id, $detalle['factura_origen_id']);
         $this->assertSame($parcial->numero, $detalle['factura_origen_numero']);
-    }
-
-    /**
-     * SCRUM-933 (Registrar Abonos) — `AbonoService::invoicesForSubClient()` trae las facturas del
-     * SUB-CLIENTE correcto (con Proyecto/Cotización resueltos), y NUNCA las de otro sub-cliente
-     * (ni del mismo Cliente Master ni de otro) — caso negativo explícito, ver ADR-SCRUM933.
-     */
-    public function test_933_invoices_for_sub_client_incluye_proyecto_cotizacion_y_excluye_otros_sub_clientes(): void
-    {
-        ['root' => $root, 'entregas' => $entregas, 'card' => $card, 'quote' => $quote] = $this->familia();
-        $token = $this->token();
-        $this->facturar($token, [$entregas[0]->id], 'entrega')->assertStatus(201);
-        $parcial = $this->parcialDe($root, $entregas[0]);
-
-        // Sub-cliente ajeno — otra familia completa (otro Cliente Master, otro Sub-cliente, otra
-        // cotización), con su propia factura, para probar que NO se filtra.
-        ['entregas' => $entregasAjenas] = $this->familia();
-        $this->facturar($token, [$entregasAjenas[0]->id], 'entrega')->assertStatus(201);
-
-        $filas = collect($this->api($token, 'GET', "/api/admin-contab/abonos/cascada/facturas-por-subcliente?sub_client_id={$card->sub_client_id}")->assertStatus(200)->json('data'));
-
-        $filaPropia = $filas->firstWhere('id', $parcial->id);
-        $this->assertNotNull($filaPropia, 'La factura del sub-cliente consultado aparece en la lista.');
-        $this->assertSame($parcial->sales_project_id, $filaPropia['sales_project_id']);
-        $this->assertNotNull($filaPropia['proyecto']);
-        $this->assertSame($quote->id, $filaPropia['quote_id']);
-        $this->assertSame($quote->folio, $filaPropia['cotizacion_folio']);
-
-        // Caso negativo — ninguna factura de la familia ajena (otro sub-cliente) aparece acá.
-        $this->assertCount(1, $filas, 'Solo la factura del sub-cliente consultado, ninguna de la familia ajena.');
     }
 
     // ---------------------------------------------------------------------------------------------

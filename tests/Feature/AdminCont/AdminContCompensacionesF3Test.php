@@ -14,7 +14,6 @@ use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
 use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use App\Modules\AdminCont\Services\AccountStatementService;
-use App\Modules\AdminCont\Services\CobrosConfigService;
 use App\Modules\AdminCont\Services\PaymentLedger;
 use App\Modules\AdminCont\Services\PaymentLedgerBackfill;
 use App\Modules\AdminCont\Services\PaymentLedgerVerifier;
@@ -41,11 +40,10 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
     }
 
-    private function headers(bool $v2 = true): array
+    private function headers(): array
     {
         $token = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
         $this->remakeTenant();
-        app(CobrosConfigService::class)->setV2Activo($v2);
 
         return $this->authHeaders($token);
     }
@@ -112,12 +110,6 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
     }
 
     // ── bandera ─────────────────────────────────────────────────────────────────────────────────
-
-    public function test_con_la_bandera_apagada_las_compensaciones_no_estan_disponibles(): void
-    {
-        $h = $this->headers(false);
-        $this->withHeaders($h)->getJson('/api/admin-contab/compensaciones/clientes')->assertStatus(422);
-    }
 
     // ── lista de clientes con saldo activo ──────────────────────────────────────────────────────
 

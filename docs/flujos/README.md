@@ -28,7 +28,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 ## Prerrequisitos del entorno local (hallazgos de esta fase)
 Sin esto los flujos no corren; ninguno está en el seed demo.
 1. **Archivos**: `STORAGE_DRIVER=local` en `.env` (los archivos del pipeline, guías y adjuntos van a `s3-private`/`s3-public`; sin credenciales de S3 toda subida fallaba con 500). [E]
-2. **Cobros**: `php artisan cobros:v2 on` (por defecto apagado; con la bandera apagada `POST /admin-contab/payments/cobro` responde «todavía no está activo»). [E]
+2. **Cobros**: no requiere ningún comando previo: desde la Fase 15a el concepto de cobros (con o sin factura, `POST /admin-contab/payments/cobro`) es el único. [E]
 3. **Cuenta bancaria**: ninguna viene sembrada (Fase 4a); sin una no se registra un cobro por transferencia. [E]
 4. **Existencias**: los productos del demo tienen stock 0; el picking exige saldo (ver Compras → ingreso). [E]
 5. **Demo escaso**: 3 cotizaciones sin líneas, 0 cobros, 0 notas de crédito, 1 orden de compra. [E]

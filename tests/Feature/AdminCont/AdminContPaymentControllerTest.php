@@ -17,10 +17,13 @@ use App\Shared\Multitenancy\Tenant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\RegistraCobrosConCargaAnterior;
 
 /** Batch 5 de Admin&Cont (SCRUM-539→544, REQ-462→467) — Cobros. */
 class AdminContPaymentControllerTest extends FeatureTestCase
 {
+    use RegistraCobrosConCargaAnterior;
+
     private const CONTABILIDAD_EMAIL = 'contabilidad@test.com';
 
     private const APPROVER_EMAIL = 'gerencia3@test.com';
@@ -274,62 +277,6 @@ class AdminContPaymentControllerTest extends FeatureTestCase
             'fecha_registro' => now(),
             'fecha_confirmacion' => now(),
         ]);
-    }
-
-    public function test_register_aplica_saldo_a_favor_y_reduce_monto_recibido(): void
-    {
-        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        $this->makeAbonoNivelCliente($master->id, 500);
-        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-
-        // Efectivo (confirma de inmediato, REQ-469 RN3) — `transferencia` ya no consume el saldo a
-        // favor al registrar, ver bloque REQ-469 (RN5 diferido hasta la confirmación, Batch 7).
-        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->postJson('/api/admin-contab/payments', [
-            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
-            'monto_saldo_cliente_aplicado' => 500, 'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id,
-            'monto_recibido_estimado' => 5700,
-        ])->assertStatus(201);
-
-        $this->assertSame(5700.0, (float) $response->json('monto_recibido'));
-        $this->assertSame(500.0, (float) $response->json('saldo_favor_aplicado'));
-
-        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $abono = AdminContAbono::where('master_client_id', $master->id)->first();
-        $this->assertSame(0.0, $abono->montoDisponible());
-    }
-
-    public function test_register_saldo_favor_cubre_100_por_ciento_no_exige_cuenta_bancaria(): void
-    {
-        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        $this->makeAbonoNivelCliente($master->id, 6200);
-
-        $response = $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->postJson('/api/admin-contab/payments', [
-            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
-            'monto_saldo_cliente_aplicado' => 6200, 'metodo_pago' => 'transferencia',
-            'monto_recibido_estimado' => 0,
-        ])->assertStatus(201);
-
-        $this->assertSame(0.0, (float) $response->json('monto_recibido'));
-        $this->assertNull($response->json('bank_account_id'));
-        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        $this->assertDatabaseCount("{$slug}_admin_contab.bank_movements", 0);
-    }
-
-    /** SCRUM-902 §4.4 Escenario 8 — el backend nunca confía en el monto que mande el HTTP: si
-     *  supera el disponible real, 422 con el mensaje exacto del ticket. */
-    public function test_register_rechaza_monto_de_saldo_cliente_mayor_al_disponible(): void
-    {
-        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        $this->makeAbonoNivelCliente($master->id, 400);
-        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '2222']);
-
-        $this->withHeaders($this->authHeaders($this->loginAsContabilidad()))->postJson('/api/admin-contab/payments', [
-            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
-            'monto_saldo_cliente_aplicado' => 500, 'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id,
-            'monto_recibido_estimado' => 5700,
-        ])
-            ->assertStatus(422)
-            ->assertJson(['message' => 'El monto ingresado supera el saldo a favor disponible de $400.00.']);
     }
 
     public function test_register_sin_cuenta_bancaria_cuando_monto_es_mayor_a_cero_falla(): void
@@ -959,39 +906,6 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $this->assertStringNotContainsString('Total facturas', $html);
     }
 
-    public function test_pdf_del_recibo_muestra_saldo_a_favor_aplicado_y_total_facturas_antes(): void
-    {
-        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        $this->makeAbonoNivelCliente($master->id, 500);
-        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token = $this->loginAsContabilidad();
-
-        // Efectivo confirma de inmediato (RN3) — no hace falta el paso de confirm() para este caso.
-        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
-            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
-            'monto_saldo_cliente_aplicado' => 500, 'metodo_pago' => 'efectivo', 'bank_account_id' => $account->id,
-            'monto_recibido_estimado' => 5700,
-        ])->assertStatus(201);
-        $this->assertSame(500.0, (float) $created->json('saldo_favor_aplicado'));
-
-        $detail = $this->withHeaders($this->authHeaders($token))
-            ->getJson('/api/admin-contab/payments/'.$created->json('id'))
-            ->assertStatus(200)->json();
-        $this->assertSame(6200.0, (float) $detail['total_facturas'], 'Total de facturas ANTES de aplicar el saldo a favor.');
-
-        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $html = view(
-            'admin-cont.payment-receipt-pdf',
-            app(PaymentReceiptPdfService::class)->viewData($detail),
-        )->render();
-
-        $this->assertStringContainsString('Saldo a favor aplicado', $html);
-        $this->assertStringContainsString('Total facturas', $html);
-        $this->assertStringContainsString('6,200.00', $html, 'Total de facturas antes de aplicar el saldo a favor.');
-        $this->assertStringContainsString('500.00', $html, 'Monto de saldo a favor aplicado.');
-        $this->assertStringContainsString('5,700.00', $html, 'Total recibido final, ya con el saldo a favor aplicado.');
-    }
-
     public function test_pdf_del_recibo_nunca_muestra_la_linea_de_confirmacion(): void
     {
         ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(100);
@@ -1138,43 +1052,6 @@ class AdminContPaymentControllerTest extends FeatureTestCase
     }
 
     // ── REQ-475 — confirmación manual ────────────────────────────────────────────────────────
-
-    public function test_confirm_aplica_saldo_de_factura_saldo_favor_y_ledger_bancario(): void
-    {
-        ['master' => $master, 'invoice' => $invoice] = $this->makeClientWithInvoice(6200);
-        $abono = $this->makeAbonoNivelCliente($master->id, 500);
-        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-        $token = $this->loginAsContabilidad();
-
-        $created = $this->withHeaders($this->authHeaders($token))->postJson('/api/admin-contab/payments', [
-            'master_client_id' => $master->id, 'invoice_ids' => [$invoice->id],
-            'monto_saldo_cliente_aplicado' => 500, 'metodo_pago' => 'transferencia', 'bank_account_id' => $account->id,
-            'monto_recibido_estimado' => 5700,
-        ])->assertStatus(201);
-        $paymentId = (int) $created->json('id');
-        $this->assertSame('esperando_confirmacion', $created->json('estado'));
-
-        // El abono todavía NO se consumió — diferido hasta confirm() (RN5 de REQ-469, mismo
-        // criterio ya establecido para saldo_aplicado/bank_movements).
-        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $this->assertSame(500.0, $abono->refresh()->montoDisponible());
-
-        $response = $this->withHeaders($this->authHeaders($token))
-            ->putJson("/api/admin-contab/payments/{$paymentId}/confirm")
-            ->assertStatus(200);
-
-        $this->assertSame('confirmado', $response->json('estado'));
-        $this->assertMatchesRegularExpression('/^CONF-\d{3}$/', (string) $response->json('confirmacion.numero_confirmacion'));
-        $this->assertSame('Contabilidad Test', $response->json('confirmacion.confirmado_por'));
-
-        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $this->assertSame(6200.0, (float) $invoice->refresh()->saldo_aplicado);
-        $this->assertSame(0.0, $abono->refresh()->montoDisponible());
-        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
-        $this->assertDatabaseHas("{$slug}_admin_contab.bank_movements", [
-            'bank_account_id' => $account->id, 'tipo' => 'cobro', 'monto' => 5700,
-        ]);
-    }
 
     public function test_confirm_sobre_cobro_ya_confirmado_falla_422(): void
     {

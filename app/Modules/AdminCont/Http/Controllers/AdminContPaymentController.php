@@ -8,7 +8,6 @@ use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\InvoiceStateException;
 use App\Modules\AdminCont\Exceptions\PaymentStateException;
-use App\Modules\AdminCont\Http\Requests\StorePaymentRequest;
 use App\Modules\AdminCont\Http\Requests\StorePaymentV2Request;
 use App\Modules\AdminCont\Http\Requests\UploadPaymentRetentionAttachmentRequest;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
@@ -134,49 +133,12 @@ class AdminContPaymentController
         return response()->json($this->presentDetail($payment));
     }
 
-    /** POST /api/admin-contab/payments — REQ-464/465/466/467/468/469, registra el cobro completo. */
-    public function store(StorePaymentRequest $request): JsonResponse
-    {
-        $actor = $this->resolveUser($request);
-        if ($actor === null) {
-            return response()->json(['message' => trans('auth.unauthenticated')], 401);
-        }
-
-        // SCRUM-1168 F2 — con el concepto nuevo encendido el registro de cobros es otro (con o sin factura, aplicación decidida por el usuario);
-        // el flujo anterior se bloquea para no mezclar dos modelos de saldo.
-        if ($this->cobrosConfig->v2Activo()) {
-            return response()->json(['message' => 'El registro de cobros cambió: use el nuevo formulario de cobros (con o sin factura).'], 422);
-        }
-
-        try {
-            $payment = $this->payments->register(
-                masterClientId: (int) $request->validated('master_client_id'),
-                invoiceIds: $request->validated('invoice_ids'),
-                montoSaldoClienteAplicado: $request->montoSaldoClienteAplicado(),
-                metodoPago: (string) $request->validated('metodo_pago'),
-                bankAccountId: $request->validated('bank_account_id') !== null ? (int) $request->validated('bank_account_id') : null,
-                numeroDocumentoRetencion: $request->validated('numero_documento_retencion'),
-                comentarioAjuste: $request->validated('comentario_ajuste'),
-                referencia: $request->validated('referencia'),
-                comprobante: $request->file('comprobante'),
-                actor: $actor,
-            );
-        } catch (InvoiceStateException|PaymentStateException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($this->present($payment), 201);
-    }
-
     /** POST /api/admin-contab/payments/cobro — SCRUM-1168 F2, registra un cobro del concepto nuevo (con o sin factura). */
     public function storeV2(StorePaymentV2Request $request): JsonResponse
     {
         $actor = $this->resolveUser($request);
         if ($actor === null) {
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
-        }
-        if (! $this->cobrosConfig->v2Activo()) {
-            return response()->json(['message' => 'El nuevo registro de cobros todavía no está activo.'], 422);
         }
 
         try {
@@ -199,11 +161,10 @@ class AdminContPaymentController
         return response()->json($this->presentDetail($payment->fresh() ?? $payment), 201);
     }
 
-    /** GET /api/admin-contab/payments/config — SCRUM-1168 F2, qué concepto de cobros está activo y la ventana de «movimiento reciente». */
+    /** GET /api/admin-contab/payments/config — la ventana de «movimiento reciente» de Compensaciones. */
     public function config(): JsonResponse
     {
         return response()->json([
-            'v2'                             => $this->cobrosConfig->v2Activo(),
             'compensaciones_dias_movimiento' => $this->cobrosConfig->diasMovimientoReciente(),
         ]);
     }

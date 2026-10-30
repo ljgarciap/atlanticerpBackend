@@ -7,7 +7,6 @@ namespace App\Modules\AdminCont\Http\Controllers;
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\InvoiceStateException;
 use App\Modules\AdminCont\Exceptions\PaymentStateException;
-use App\Modules\AdminCont\Services\CobrosConfigService;
 use App\Modules\AdminCont\Services\CompensationPdfService;
 use App\Modules\AdminCont\Services\CompensationService;
 use App\Shared\Http\Pagination;
@@ -18,28 +17,18 @@ use Illuminate\Validation\Rule;
 
 /**
  * SCRUM-1168 F3 — Compensaciones: vista aparte, por cliente, para cruzar el dinero disponible (cobros a cuenta, abonos históricos, saldo de notas)
- * contra sus facturas pendientes. Solo con el concepto nuevo de cobros activo (`cobros_v2_activo`).
+ * contra sus facturas pendientes.
  */
 class AdminContCompensacionController extends Controller
 {
     public function __construct(
         private readonly CompensationService $compensations,
         private readonly CompensationPdfService $pdf,
-        private readonly CobrosConfigService $config,
     ) {}
-
-    private function inactivo(): ?JsonResponse
-    {
-        return $this->config->v2Activo() ? null : response()->json(['message' => 'Las compensaciones todavía no están activas.'], 422);
-    }
 
     /** GET /api/admin-contab/compensaciones/clientes?search=&signo=positivo|negativo&page=&per_page= */
     public function clientes(Request $request): JsonResponse
     {
-        if (($off = $this->inactivo()) !== null) {
-            return $off;
-        }
-
         $result     = $this->compensations->clientes([
             'search' => $request->query('search'),
             'signo'  => in_array($request->query('signo'), ['positivo', 'negativo'], true) ? $request->query('signo') : null,
@@ -58,19 +47,12 @@ class AdminContCompensacionController extends Controller
     /** GET /api/admin-contab/compensaciones/clientes/{masterClientId} */
     public function cliente(int $masterClientId): JsonResponse
     {
-        if (($off = $this->inactivo()) !== null) {
-            return $off;
-        }
-
         return response()->json($this->compensations->detalle($masterClientId));
     }
 
     /** POST /api/admin-contab/compensaciones/preview — cómo quedaría el cruce, sin cambiar nada. */
     public function preview(Request $request): JsonResponse
     {
-        if (($off = $this->inactivo()) !== null) {
-            return $off;
-        }
         [$masterClientId, $lines] = $this->parse($request);
 
         try {
@@ -83,9 +65,6 @@ class AdminContCompensacionController extends Controller
     /** POST /api/admin-contab/compensaciones — confirma el cruce (folio CMP-XXX). */
     public function store(Request $request): JsonResponse
     {
-        if (($off = $this->inactivo()) !== null) {
-            return $off;
-        }
         $actor = $this->resolveUser($request);
         if ($actor === null) {
             return response()->json(['message' => trans('auth.unauthenticated')], 401);

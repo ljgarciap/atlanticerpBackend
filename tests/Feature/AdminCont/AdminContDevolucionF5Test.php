@@ -9,7 +9,6 @@ use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContPaymentMovement;
-use App\Modules\AdminCont\Services\CobrosConfigService;
 use App\Modules\AdminCont\Services\PaymentLedger;
 use App\Modules\AdminCont\Services\PaymentLedgerVerifier;
 use App\Modules\VentasDiseno\Models\MasterClient;
@@ -45,7 +44,6 @@ class AdminContDevolucionF5Test extends FeatureTestCase
         $contabilidad = $this->loginAs(self::CONTABILIDAD_EMAIL, self::CONTABILIDAD_EMAIL, 'lider_admin_contab');
         $approver  = $this->loginAs(self::APPROVER_EMAIL, self::APPROVER_EMAIL, 'management');
         $this->remakeTenant();
-        app(CobrosConfigService::class)->setV2Activo(true);
 
         return [$this->authHeaders($contabilidad), $this->authHeaders($approver)];
     }
