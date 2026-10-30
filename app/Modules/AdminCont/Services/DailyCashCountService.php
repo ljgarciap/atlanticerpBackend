@@ -689,7 +689,7 @@ final class DailyCashCountService
      */
     private function paymentsConfirmedOn(string $date, ?CarbonImmutable $asOf = null)
     {
-        $immediateMethods = AdminContPayment::METODOS_CONFIRMACION_INMEDIATA;
+        $immediateMethods = PaymentMethods::inmediatos();
 
         // SCRUM-1168 F4 — un cobro anulado SIGUE contando en el día en que el dinero entró (ese arqueo, abierto o cerrado, no se reescribe); su reverso
         // entra como salida del día de la anulación (ver `reversosOn()`).

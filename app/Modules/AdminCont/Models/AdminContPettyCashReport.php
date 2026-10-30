@@ -40,11 +40,6 @@ class AdminContPettyCashReport extends Model
 
     public const FORMA_PAGO_YAPPY = 'yappy';
 
-    /** @var list<string> */
-    public const FORMAS_PAGO = [
-        self::FORMA_PAGO_TRANSFERENCIA, self::FORMA_PAGO_EFECTIVO, self::FORMA_PAGO_CHEQUE, self::FORMA_PAGO_YAPPY,
-    ];
-
     public const ESTADO_PENDIENTE_APROBACION = 'pendiente_aprobacion';
 
     public const ESTADO_FINALIZADO = 'finalizado';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Requests;
 
+use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,7 +34,7 @@ class StorePaymentRequest extends FormRequest
     public function rules(): array
     {
         $metodo = (string) $this->input('metodo_pago');
-        $sinCuentaBancaria = in_array($metodo, AdminContPayment::METODOS_SIN_CUENTA_BANCARIA, true);
+        $sinCuentaBancaria = PaymentMethods::sinCuentaBancaria($metodo);
         $montoRecibidoSeraCero = (float) $this->input('monto_recibido_estimado', 1) <= 0;
 
         return [
@@ -41,7 +42,7 @@ class StorePaymentRequest extends FormRequest
             'invoice_ids'        => ['required', 'array', 'min:1'],
             'invoice_ids.*'      => ['integer'],
             'monto_saldo_cliente_aplicado' => ['sometimes', 'numeric', 'min:0'],
-            'metodo_pago'         => ['required', Rule::in(AdminContPayment::METODOS)],
+            'metodo_pago'         => ['required', Rule::in(PaymentMethods::keys())],
             'monto_recibido_estimado' => ['required', 'numeric', 'min:0'],
             'bank_account_id'     => [
                 Rule::requiredIf(! $sinCuentaBancaria && ! $montoRecibidoSeraCero),

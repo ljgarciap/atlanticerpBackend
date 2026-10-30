@@ -48,7 +48,7 @@ final class DailyCashCountSummaryPdfService
             // cuerpo (el logo del encabezado alcanza, mismo estándar que account-statement-pdf);
             // solo el pie de página los sigue mostrando, vía footerCompanyText.
             'footerCompanyText' => PdfFooterText::forFiscal($fiscal),
-            'metodoLabels'      => AdminContPayment::METODO_LABELS,
+            'metodoLabels'      => PaymentMethods::labels(),
         ];
     }
 }

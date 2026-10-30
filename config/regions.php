@@ -10,6 +10,12 @@ declare(strict_types=1);
 return [
     'default' => 'PA',
 
+    // Fase 14b — formas de pago que solo existen en ciertos países (clave => etiqueta); el resto se siembra en todos. Una empresa de otro país
+    // que ya tenga cobros con una de ellas la conserva (la migración de sembrado mira el uso).
+    'local_payment_methods' => [
+        'PA' => ['yappy' => 'Yappy'],
+    ],
+
     'countries' => [
         'PA' => ['name' => 'Panamá',          'currency' => 'USD', 'timezone' => 'America/Panama',    'locale' => 'es-PA'],
         'CO' => ['name' => 'Colombia',        'currency' => 'COP', 'timezone' => 'America/Bogota',    'locale' => 'es-CO'],

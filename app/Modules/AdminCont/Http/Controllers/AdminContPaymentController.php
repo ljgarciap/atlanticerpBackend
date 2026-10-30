@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Controllers;
 
+use App\Modules\AdminCont\Services\PaymentMethods;
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\InvoiceStateException;
 use App\Modules\AdminCont\Exceptions\PaymentStateException;
@@ -259,7 +260,7 @@ class AdminContPaymentController
         return [
             ...$this->present($payment),
             'cliente'           => $this->payments->masterClientName($payment->master_client_id),
-            'metodo_pago_label' => AdminContPayment::METODO_LABELS[$payment->metodo_pago] ?? $payment->metodo_pago,
+            'metodo_pago_label' => PaymentMethods::label($payment->metodo_pago),
             'registrado_por'    => $creator !== null ? trim("{$creator->first_name} {$creator->last_name}") : null,
             'bank_account'      => $payment->bankAccount?->label(),
             'tiene_comprobante' => $payment->attachment !== null,
