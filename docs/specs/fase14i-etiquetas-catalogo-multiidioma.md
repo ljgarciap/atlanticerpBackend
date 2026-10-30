@@ -1,6 +1,6 @@
 # Fase 14i — Etiquetas de catálogo en varios idiomas
 
-**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); pendiente de su «adelante con 14i». Origen: «Abierto» de las Fases 7, 14c y 14b: «una etiqueta por entrada (idioma de la empresa); en inglés las listas muestran el texto sembrado en español». No se implementa sin su «adelante».
+**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); «adelante con 14i» dado; **implementada** (§8), pendiente de mezclar. Origen: «Abierto» de las Fases 7, 14c y 14b: «una etiqueta por entrada (idioma de la empresa); en inglés las listas muestran el texto sembrado en español». No se implementa sin su «adelante».
 
 ## 1. Objetivo
 Los catálogos por empresa (categorías de proveedor, formas de pago, tipos de ticket, etapas del pipeline, motivos, especialidades…) guardan UNA etiqueta por entrada. Un usuario con la interfaz en inglés ve esas listas en español, mientras el resto de la pantalla está en inglés. Que cada entrada pueda tener su etiqueta en cada idioma de la aplicación, con un respaldo sensato cuando falta.
@@ -41,3 +41,10 @@ Los catálogos por empresa (categorías de proveedor, formas de pago, tipos de t
 
 ## 7. No-alcance
 Traducir las claves, las propiedades o los nombres de los dominios; el contenido libre de los usuarios (descripciones, notas); más de dos idiomas en la interfaz; y la traducción automática con IA (existe para las órdenes de compra y no se reutiliza aquí).
+
+## 8. Resultado
+- **Migración `2026_11_08_100000`** (reversible): columna `catalog_entries.labels` (jsonb) y siembra del inglés de 54 de las 55 entradas existentes, emparejadas con las traducciones que la interfaz ya traía (formas de pago, motivos, especialidades, categorías, etapas, tipos de ticket…). Solo escribe donde `labels` está vacío. La base (`label`) no cambia.
+- **Backend**: `config/catalogs.php` `languages` (`es` base, `en`); `CatalogEntry::labelFor()`; `CatalogService::currentLanguage()` (idioma del usuario por el `sub` del JWT, una consulta por petición; sin usuario, el idioma por defecto de la empresa), `labelOf()` y `labels()`. `GET /api/catalogs/{domain}` devuelve `label` ya resuelta y `labels`; la administración devuelve la base y las traducciones y acepta `labels` por idioma (vacío = quita la traducción; idioma sin soporte o la base = 422). `GET /catalogs/domains` informa `languages`. Las fachadas (`PaymentMethods`, `TicketTypes`, `PipelineStages`) y el PDF del catálogo usan el idioma resuelto.
+- **Frontend**: Ajustes → Catálogos tiene un campo por idioma adicional (al editar y al crear); `useCatalog` incluye el idioma en la clave, así que cambiar el idioma vuelve a pedir el catálogo; los hooks no cambian.
+- **Nota**: la primera etiqueta de una petición hace UNA consulta (idioma por defecto de la empresa); el test de memo (`CatalogCacheTest`) la calienta antes de exigir cero consultas en el bucle.
+- **Verificación**: `CatalogLabelsTest` (sembrado en inglés, resolución por idioma con respaldo, administración y validación, idiomas en `domains`, fachadas con y sin usuario), 2 tests del panel; backend 5238 tests y PHPStan 0; frontend 247 archivos / 2976 tests y `tsc` limpio.

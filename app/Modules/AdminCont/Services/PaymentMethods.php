@@ -52,13 +52,13 @@ final class PaymentMethods
     {
         $entry = CatalogService::entries(self::DOMAIN, onlyActive: false)->firstWhere('key', $key);
 
-        return $entry !== null ? (string) $entry->label : (AdminContPayment::METODO_LABELS[$key] ?? $key);
+        return $entry !== null ? CatalogService::labelOf($entry) : (AdminContPayment::METODO_LABELS[$key] ?? $key);
     }
 
     /** @return array<string, string> clave => etiqueta de todas las formas (para tablas y PDF que muestran cobros históricos) */
     public static function labels(): array
     {
-        return CatalogService::entries(self::DOMAIN, onlyActive: false)->pluck('label', 'key')->map(strval(...))->all();
+        return CatalogService::labels(self::DOMAIN, onlyActive: false);
     }
 
     /** @return list<string> */

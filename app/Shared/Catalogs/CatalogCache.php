@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Catalogs;
 
+use App\Modules\Auth\Services\PreferencesService;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -26,8 +27,20 @@ final class CatalogCache
         return $this->memo[$key] ??= CatalogEntry::query()->where('domain', $domain)->orderBy('sort_order')->orderBy('label')->get();
     }
 
+    /** @var array<string, string> idioma por defecto de la empresa, por tenant */
+    private array $defaultLanguage = [];
+
+    /** Fase 14i — idioma por defecto de la empresa (ajuste de sistema `default_language`), memoizado por petición. */
+    public function defaultLanguage(): string
+    {
+        $key = Tenant::current()->slug ?? '-';
+
+        return $this->defaultLanguage[$key] ??= (string) (app(PreferencesService::class)->getSystemSettings()['default_language'] ?? 'es');
+    }
+
     public function forget(): void
     {
         $this->memo = [];
+        $this->defaultLanguage = [];
     }
 }

@@ -37,7 +37,7 @@ final class TicketTypes
     /** @return array<string, string> clave => etiqueta de los tipos activos, en el orden del catálogo */
     public static function labels(): array
     {
-        return CatalogService::entries(self::DOMAIN)->pluck('label', 'key')->map(strval(...))->all();
+        return CatalogService::labels(self::DOMAIN);
     }
 
     public static function exists(string $tipo): bool
@@ -58,7 +58,9 @@ final class TicketTypes
     /** Etiqueta del tipo, también de uno desactivado (los tickets viejos lo conservan); sin entrada, la propia clave. */
     public static function label(string $tipo): string
     {
-        return (string) (CatalogService::entries(self::DOMAIN, onlyActive: false)->firstWhere('key', $tipo)->label ?? $tipo);
+        $entry = CatalogService::entries(self::DOMAIN, onlyActive: false)->firstWhere('key', $tipo);
+
+        return $entry !== null ? CatalogService::labelOf($entry) : $tipo;
     }
 
     public static function color(?string $tipo): string

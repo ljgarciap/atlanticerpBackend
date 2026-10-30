@@ -286,7 +286,7 @@ final class CatalogPdfService
 
         $all = \App\Shared\Catalogs\CatalogService::entries('technical_spec_field', onlyActive: false);
         $known = $all->pluck('key')->map(strval(...))->all();
-        $fields = $all->filter(static fn ($e): bool => $e->is_active)->map(static fn ($e): array => ['key' => (string) $e->key, 'label' => (string) $e->label])->values()->all();
+        $fields = $all->filter(static fn ($e): bool => $e->is_active)->map(static fn ($e): array => ['key' => (string) $e->key, 'label' => \App\Shared\Catalogs\CatalogService::labelOf($e)])->values()->all();
         foreach (array_diff(array_keys($technicalSpec), $known) as $extra) {
             $fields[] = ['key' => (string) $extra, 'label' => ucfirst(str_replace('_', ' ', (string) $extra))];
         }
