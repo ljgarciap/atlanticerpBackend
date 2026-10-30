@@ -1,6 +1,6 @@
 # Fase 14 — Reglas y catálogos configurables por empresa (2026-10-31)
 
-**Estado**: spec aprobada por Luis (2026-10-31, orden 14a, 14d, 14c, 14b). **14a implementada** (§8), pendiente de mezclar. Origen: Grupo 3 de `docs/flujos/candidatos-priorizados.md`.
+**Estado**: spec aprobada por Luis (2026-10-31, orden 14a, 14d, 14c, 14b). **14a mezclada** (§8); **14d implementada** (§9), pendiente de mezclar. Origen: Grupo 3 de `docs/flujos/candidatos-priorizados.md`.
 
 ## 1. Objetivo
 Que los criterios de negocio que hoy viven en el código (cuándo una orden de compra necesita aprobación, qué formas de pago existen, qué motivos y roles se ofrecen) sean DATOS por empresa, editables por el superadmin sin desplegar. El ítem 3.1 es el único que incumple una regla dura del workspace (no hardcodear umbrales ni criterios de negocio).
@@ -49,3 +49,9 @@ Quién aprueba (Fase 12b), umbral de notas de crédito como regla por monto/tipo
 - **Frontend**: panel «Reglas de aprobación de órdenes» en Ajustes de Compras (solo superadmin) con lista, alta/edición, borrado con confirmación y vista previa.
 - **Verificación**: backend 5227 tests / 0 fallos y PHPStan 0; frontend 247 archivos / 3015 tests y `tsc` limpio; Playwright (crear una regla por monto, la vista previa nombra la regla que decide, borrar).
 - **Abierto**: el flujo de Insumos de Servicios crea órdenes sin pasar por esta evaluación (nacen sin aprobación, como antes).
+
+## 9. Resultado de 14d (umbral y tramos)
+- **3.4** — migración `2026_11_03_100000` (reversible) renombra `fiscal_settings.primary_approval_threshold` → `credit_note_approval_threshold` (el valor se conserva; el servicio pasa a `creditNoteApprovalThreshold()`; la clave del resumen de notas de crédito y del frontend cambia igual). `CreditNoteThresholdIsolationTest` demuestra que cambiar el umbral no altera qué órdenes de compra requieren aprobación (Compras decide con `purchase_approval_rules`).
+- **3.5** — al revisar el código apareció algo más que un problema de rótulos: la tabla de comisiones **internas** de Admin & Contab (sembrada 0–20.000 y 20.001–35.000…) dejaba un hueco (un total de 20.000,50 no caía en ningún tramo y daba 0 %); la de Ventas (19.999,99 / 20.000) no lo tiene. **Decisión de Luis (2026-11-01): cerrar el hueco y mostrar «desde».** `CommissionOrderService::percentFor` elige el tramo de mayor `monto_minimo` que no supera el total (límite inferior inclusivo; `monto_maximo` queda informativo); la tabla del modal rotula «Menos de X / Desde X hasta menos de Y / Desde X». El cálculo de Ventas no cambia. Test `CommissionTierLookupTest` (8 totales, incluidos los bordes y el hueco).
+- **Verificación**: ver los PR (suite completa de ambos repos, PHPStan, `tsc`).
+- **Abierto**: dos tablas de tramos con límites distintos (Admin & Contab 20.001, Ventas 20.000) para el mismo concepto; no se alinean sin decisión de negocio.

@@ -264,7 +264,7 @@ final class ArchitectCommissionService
     /** REQ-508/511 RN1 — 10% fijo por defecto en este batch (override por proyecto es REQ-514,
      *  Batch 17). Vive en `AdminContFiscalSettings.comision_externa_default_percent` (singleton
      *  ya existente de Configuración Fiscal, ver migración `2026_08_25_100008`) — nunca una
-     *  constante propia, mismo criterio ya aplicado a `primary_approval_threshold` en ese mismo
+     *  constante propia, mismo criterio ya aplicado a `credit_note_approval_threshold` en ese mismo
      *  singleton. Sin pantalla de edición propia todavía (mismo patrón que
      *  `client_billing_profiles`), editable por tinker hasta que Batch 17 traiga la UI real. */
     private function porcentajeDefault(): float
