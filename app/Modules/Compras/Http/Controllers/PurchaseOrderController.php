@@ -334,6 +334,22 @@ final class PurchaseOrderController extends Controller
     }
 
     /**
+     * Fase 14a — evalúa las reglas de aprobación con el total a pagar ya calculado y fija `requires_primary_approval`. Al crear, también el
+     * estado inicial: «Por aprobar» si la requiere, «Pendiente/Por liquidar» si no (SCRUM-204). Al editar no se toca el estado, como antes.
+     */
+    private function applyApprovalRule(PurchaseOrder $order, bool $initialStatus): void
+    {
+        $order->refresh();
+        $requires = PurchaseOrder::computeRequiresPrimaryApproval($order->shipping_type, $order->who_pays_shipping, $order->payableTotal());
+
+        $changes = ['requires_primary_approval' => $requires];
+        if ($initialStatus && $requires) {
+            $changes['status'] = PurchaseOrder::STATUS_POR_APROBAR;
+        }
+        $order->update($changes);
+    }
+
+    /**
      * SCRUM-1145 — costos adicionales opcionales (importación, flete, manejo, otros): un valor
      * vacío/ausente se persiste como NULL.
      *
@@ -376,10 +392,8 @@ final class PurchaseOrderController extends Controller
         $validated = $request->validated();
 
         $order = DB::transaction(function () use ($validated, $user): PurchaseOrder {
-            $requiresApproval = PurchaseOrder::computeRequiresPrimaryApproval(
-                $validated['shipping_type'] ?? null,
-                $validated['who_pays_shipping'] ?? null,
-            );
+            // Fase 14a: la regla puede depender del total a pagar, que solo existe cuando las líneas están guardadas; la orden se crea como
+            // «sin aprobación» y `applyApprovalRule()` lo corrige justo después de `replaceLines()` (misma transacción).
             // SCRUM-954 — no persistir who_pays_shipping/shipping_cost si el tipo de envío no es
             // Aéreo, sin importar lo que traiga el payload.
             $shippingFields = PurchaseOrder::normalizeShippingFields(
@@ -389,17 +403,14 @@ final class PurchaseOrderController extends Controller
             );
 
             // SCRUM-204 (REQ-141, 2026-08-06 — hallazgo Gerencia Test): antes toda orden nacía en
-            // "Por aprobar" sin importar si de verdad requería la aprobación de Gerencia (RN3/REQ-118)
-            // — $requiresApproval ya se calculaba arriba pero nunca se usaba para el estado
-            // inicial. Ahora solo las que la requieren nacen en "Por aprobar"; el resto arranca
+            // "Por aprobar" sin importar si de verdad requería la aprobación de Gerencia (RN3/REQ-118).
+            // Ahora solo las que la requieren nacen en "Por aprobar" (ver applyApprovalRule()); el resto arranca
             // directo en "Pendiente/Por liquidar" (misma etiqueta interna, texto derivado de
             // `modality`, derivado del lado del cliente — ver
             // `atlanticerp-frontend/src/utils/orderStatusLabel.ts`).
             $order = PurchaseOrder::create([
                 'provider_id' => $validated['provider_id'],
-                'status' => $requiresApproval
-                    ? PurchaseOrder::STATUS_POR_APROBAR
-                    : PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
+                'status' => PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
                 'status_changed_at' => now(),
                 'shipping_type' => $validated['shipping_type'] ?? null,
                 'who_pays_shipping' => $shippingFields['who_pays_shipping'],
@@ -407,13 +418,14 @@ final class PurchaseOrderController extends Controller
                 ...$this->additionalCostFields($validated),
                 'modality' => $validated['modality'] ?? PurchaseOrder::MODALITY_DIRECTO,
                 'estimated_arrival_date' => $validated['estimated_arrival_date'] ?? null,
-                'requires_primary_approval' => $requiresApproval,
+                'requires_primary_approval' => false,
                 'currency' => 'USD',
                 'notes' => $validated['notes'] ?? null,
                 'created_by' => $user->id,
             ]);
 
             $this->replaceLines($order, $validated);
+            $this->applyApprovalRule($order, true);
 
             return $order;
         });
@@ -463,10 +475,6 @@ final class PurchaseOrderController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($validated, $order): void {
-            $requiresApproval = PurchaseOrder::computeRequiresPrimaryApproval(
-                $validated['shipping_type'] ?? null,
-                $validated['who_pays_shipping'] ?? null,
-            );
             // SCRUM-954 — no persistir who_pays_shipping/shipping_cost si el tipo de envío no es
             // Aéreo, sin importar lo que traiga el payload.
             $shippingFields = PurchaseOrder::normalizeShippingFields(
@@ -482,13 +490,13 @@ final class PurchaseOrderController extends Controller
                 ...$this->additionalCostFields($validated),
                 'modality' => $validated['modality'] ?? PurchaseOrder::MODALITY_DIRECTO,
                 'estimated_arrival_date' => $validated['estimated_arrival_date'] ?? null,
-                'requires_primary_approval' => $requiresApproval,
                 'notes' => $validated['notes'] ?? null,
             ]);
 
             // Fase 13: las líneas de ajuste de un cambio de monto aprobado se conservan al editar (y suman al total).
             $order->lines()->where('is_adjustment', false)->delete();
             $this->replaceLines($order, $validated);
+            $this->applyApprovalRule($order, false);
         });
 
         // 'payments' — REQ-140 (SCRUM-203): formatSummary() ahora lee $order->payments para
