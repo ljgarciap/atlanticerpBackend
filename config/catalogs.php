@@ -1,7 +1,11 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Bodega\Models\AdjustmentRequestLine;
+use App\Modules\Bodega\Models\CustomerReturnLine;
 use App\Modules\Compras\Models\Provider;
+use App\Modules\CRM\Models\Contact;
+use App\Modules\Servicios\Models\InternalTechnician;
 use App\Modules\Servicios\Models\Ticket;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Services\PipelineStageRules;
@@ -56,6 +60,29 @@ return [
                 'categoria' => ['type' => 'enum', 'values' => ['abierta', 'ganada', 'perdida'], 'system_only' => ['ganada', 'perdida'], 'default' => 'abierta'],
                 'color' => ['type' => 'string', 'max' => 7, 'pattern' => '/^#[0-9a-fA-F]{6}$/', 'default' => null],
             ],
+        ],
+        // Fase 14c — listas que estaban fijas en el código. La lógica solo conoce las claves de SISTEMA (`is_system`: no se borran): las 4 de
+        // contacto son columnas de «proyecto» que importa el directorio, `OTRO_ESPECIFICAR`/`otra` piden texto libre, `warranty` limita qué
+        // técnico atiende un ticket de garantía. El resto es vocabulario de la empresa.
+        'contact_role' => [
+            'label' => 'Roles de contacto (CRM)',
+            'usage' => [Contact::class, 'tipo'],
+            'props' => [],
+        ],
+        'adjustment_reason' => [
+            'label' => 'Motivos de ajuste de inventario',
+            'usage' => [AdjustmentRequestLine::class, 'motivo'],
+            'props' => [],
+        ],
+        'return_reason' => [
+            'label' => 'Motivos de devolución de cliente',
+            'usage' => [CustomerReturnLine::class, 'reason'],
+            'props' => [],
+        ],
+        'technician_specialty' => [
+            'label' => 'Especialidades del técnico interno',
+            'usage' => [InternalTechnician::class, 'especialidad'],
+            'props' => [],
         ],
         // Fase 7b — tipos de ticket de Servicios. La lógica pregunta por `comportamiento` (qué flujo hereda), no por la clave.
         'ticket_type' => [
