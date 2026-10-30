@@ -1,6 +1,6 @@
 # Fase 14g — Alinear los tramos de comisión de Admin & Contab y Ventas
 
-**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); pendiente de su «adelante con 14g». Origen: el «Abierto» de §9 de `fase14-parametrizacion.md` (14d). No se implementa sin su «adelante».
+**Estado**: decisiones de §5 tomadas por Luis (2026-10-30); «adelante con 14g» dado; **implementada** (§8), pendiente de mezclar. Origen: el «Abierto» de §9 de `fase14-parametrizacion.md` (14d). No se implementa sin su «adelante».
 
 ## 1. Objetivo
 Hoy hay DOS tablas de tramos de comisión con la misma escala de porcentajes (1,5 / 2 / 3 / 4 / 4,5 / 5 %) pero con los puntos de corte en lugares distintos, así que el mismo total mensual puede dar un porcentaje diferente según la pantalla. Que haya una sola regla, o que la diferencia sea una decisión consciente y visible.
@@ -44,3 +44,9 @@ Hoy hay DOS tablas de tramos de comisión con la misma escala de porcentajes (1,
 
 ## 7. No-alcance
 Cambiar las bases de cálculo, las comisiones de cartera (`cartera_commission_tiers`), las comisiones de arquitectos o prescriptores, y el recálculo de meses cerrados.
+
+## 8. Resultado
+- **Migración de datos `2026_11_07_100000`** (reversible con la misma condición): iguala los cortes de `commission_tiers` (Admin & Contab) a 0 / 20.000 / 35.000 / 60.000 / **80.000** / 120.000 (`monto_maximo` en «.99», como Ventas) **solo si la tabla sigue exactamente en el valor sembrado**; una tabla personalizada no se toca. Los meses cerrados no se recalculan.
+- **Aviso**: `CommissionScaleComparator` y `GET /admin-contab/commissions/internal/tiers/vs-sales` (`coinciden`, `admin`, `ventas`; mismo gate de lectura que `tiers`). El modal «Tabla de comisión escalonada» muestra un aviso si las escalas difieren.
+- **Efecto**: en Admin & Contab, los totales entre 80.000 y 81.000 pasan de 4 % a 4,5 % y el primer peso de cada corte sube un tramo (p. ej. 20.000 ya da 2 %). Ventas no cambia. **Avisar a Contabilidad antes de desplegar.**
+- **Verificación**: `CommissionScalesAlignmentTest` (mismos 12 totales en ambos módulos incluidos los bordes; migración iguala y `down` restaura; tabla personalizada intacta; el endpoint avisa), tests de Admin & Contab actualizados a la escala nueva; backend 5232 tests y PHPStan 0; frontend 247 archivos / 2971 tests y `tsc` limpio.

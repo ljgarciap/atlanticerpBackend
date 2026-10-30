@@ -127,9 +127,9 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
         $this->assertSame(1.5, $service->percentFor(15000));
         $this->assertSame(2.0, $service->percentFor(20001));
-        $this->assertSame(3.0, $service->percentFor(60000));
-        $this->assertSame(4.0, $service->percentFor(81000));
-        $this->assertSame(4.5, $service->percentFor(120000));
+        $this->assertSame(4.0, $service->percentFor(60000));
+        $this->assertSame(4.5, $service->percentFor(81000)); // Fase 14g: el 4,5 % arranca en 80.000
+        $this->assertSame(5.0, $service->percentFor(120000));
         $this->assertSame(5.0, $service->percentFor(500000));
     }
 
@@ -221,9 +221,8 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         // siendo float — es solo la forma serializada de un entero exacto.
         $response->assertJsonPath('total_pedidos_mes', 25000);
         $response->assertJsonPath('vendedores_con_pedidos_mes', 1);
-        // 25000 total → tramo [20001,35000] = 2% (RN1 REQ-502, "provisional" mientras el mes no
-        // cierre). OJO: 20000.0 exacto caería en el tramo anterior (1.5%, monto_maximo=20000
-        // inclusive) — se usa 25000 a propósito para no quedar en el límite ambiguo.
+        // 25000 total → tramo [20000,34999.99] = 2% (RN1 REQ-502, "provisional" mientras el mes no
+        // cierre). Fase 14g: el límite inferior es inclusivo, así que 20000.0 exacto ya cae en este tramo.
         $vendedores = $response->json('vendedores');
         $row = collect($vendedores)->firstWhere('vendedor_id', $vendorId);
         $this->assertNotNull($row);
@@ -478,7 +477,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     {
         $token = $this->loginAsApprover();
 
-        // Cae entre los tramos [81001,120000] y [120001,∞) — un `orden` a propósito "de trámite"
+        // Cae entre los tramos [80000,119999.99] y [120000,∞) — un `orden` a propósito "de trámite"
         // (99), simulando el push-al-final que hacía el frontend antes del fix.
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/commissions/internal/tiers', [
@@ -495,7 +494,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $this->assertSame($montos->sort()->values()->all(), $montos->all(), 'La lista debe quedar ordenada por monto_minimo ascendente.');
 
         $this->assertSame(6, collect($tiers)->firstWhere('monto_minimo', 90000)['orden']);
-        $this->assertSame(7, collect($tiers)->firstWhere('monto_minimo', 120001)['orden']);
+        $this->assertSame(7, collect($tiers)->firstWhere('monto_minimo', 120000)['orden']);
     }
 
     /** Mismo fix que arriba — borrar un tramo del medio no debe dejar huecos en `orden`. */
@@ -503,7 +502,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     {
         $token = $this->loginAsApprover();
         $before = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/commissions/internal/tiers')->json();
-        $middleId = collect($before)->firstWhere('monto_minimo', 35001)['id'];
+        $middleId = collect($before)->firstWhere('monto_minimo', 35000)['id'];
 
         $this->withHeaders($this->authHeaders($token))
             ->deleteJson("/api/admin-contab/commissions/internal/tiers/{$middleId}")

@@ -11,6 +11,7 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\CommissionTier;
 use App\Modules\AdminCont\Services\CommissionExportService;
 use App\Modules\AdminCont\Services\CommissionOrderService;
+use App\Modules\AdminCont\Services\CommissionScaleComparator;
 use App\Modules\Auth\Models\Role;
 use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Support\PrimaryApprovers;
@@ -38,6 +39,12 @@ class AdminContInternalCommissionController
         return response()->json(
             CommissionTier::query()->orderBy('orden')->get(),
         );
+    }
+
+    /** GET /api/admin-contab/commissions/internal/tiers/vs-sales — Fase 14g: ¿la escala coincide con la de Ventas? (solo lectura, mismo gate que `tiers`). */
+    public function tiersVsSales(CommissionScaleComparator $comparator): JsonResponse
+    {
+        return response()->json($comparator->comparar());
     }
 
     /** POST /api/admin-contab/commissions/internal/tiers — CRUD gateado por `primary_approver_only` en routes. */
