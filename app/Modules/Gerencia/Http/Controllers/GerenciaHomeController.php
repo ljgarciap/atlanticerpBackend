@@ -7,6 +7,7 @@ namespace App\Modules\Gerencia\Http\Controllers;
 use App\Models\User;
 use App\Modules\Gerencia\Services\GerenciaHomeService;
 use App\Modules\Gerencia\Services\GerenciaReportExportService;
+use App\Modules\Gerencia\Services\SetupChecklistService;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\Auth\Models\RoleModuleVisibility;
 use App\Shared\Support\ApprovalsPendingService;
@@ -31,6 +32,12 @@ final class GerenciaHomeController extends Controller
         private readonly GerenciaReportExportService $export,
         private readonly ApprovalsPendingService $approvalsPendingService,
     ) {}
+
+    /** GET /api/gerencia/setup-checklist — Fase 16 (5.1): pasos de primera puesta en marcha pendientes/completos. */
+    public function setupChecklist(SetupChecklistService $checklist): JsonResponse
+    {
+        return response()->json($checklist->checklist());
+    }
 
     public function home(Request $request): JsonResponse
     {

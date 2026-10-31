@@ -21,6 +21,10 @@ Route::get('/home', [GerenciaHomeController::class, 'home'])
 Route::get('/home/export', [GerenciaHomeController::class, 'export'])
     ->middleware('permission:gerencia.view');
 
+// Fase 16 (5.1) — lista de verificación de primera puesta en marcha (solo lectura).
+Route::get('/setup-checklist', [GerenciaHomeController::class, 'setupChecklist'])
+    ->middleware('permission:gerencia.view');
+
 Route::get('/vendors', [GerenciaHomeController::class, 'vendors'])
     ->middleware('permission:gerencia.view');
 
