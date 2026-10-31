@@ -83,12 +83,7 @@ final class PickingService
      */
     public function startPicking(Order $order, User $actor): Order
     {
-        if (! in_array($actor->role?->key, BodegaRoles::CAN_PICK, true)) {
-            throw new OrderTransitionException(
-                'Solo el Jefe de Bodega, los Asistentes de Bodega o el Picker asignado pueden operar el flujo de picking.',
-                status: 403,
-            );
-        }
+        $this->assertCanOperatePicking($order, $actor);
 
         return DB::transaction(function () use ($order, $actor): Order {
             $locked = $this->lockOrder($order->id);
@@ -125,12 +120,7 @@ final class PickingService
      */
     public function updatePickingSheet(Order $order, array $items, User $actor): Order
     {
-        if (! in_array($actor->role?->key, BodegaRoles::CAN_PICK, true)) {
-            throw new OrderTransitionException(
-                'Solo el Jefe de Bodega, los Asistentes de Bodega o el Picker asignado pueden operar el flujo de picking.',
-                status: 403,
-            );
-        }
+        $this->assertCanOperatePicking($order, $actor);
 
         return DB::transaction(function () use ($order, $items): Order {
             $locked = $this->lockOrder($order->id);
@@ -197,12 +187,7 @@ final class PickingService
      */
     public function completePicking(Order $order, array $items, User $actor): array
     {
-        if (! in_array($actor->role?->key, BodegaRoles::CAN_PICK, true)) {
-            throw new OrderTransitionException(
-                'Solo el Jefe de Bodega, los Asistentes de Bodega o el Picker asignado pueden operar el flujo de picking.',
-                status: 403,
-            );
-        }
+        $this->assertCanOperatePicking($order, $actor);
 
         $submittedIds = collect($items)->pluck('order_item_id')->map(fn ($id) => (int) $id)->all();
 
@@ -448,5 +433,24 @@ final class PickingService
         ));
 
         return $review->fresh('items') ?? $review;
+    }
+
+    /**
+     * Fase 16 (5.4) — Jefe y Asistentes de Bodega operan el picking de cualquier pedido (también
+     * pueden reasignarlo); el Picker solo el de los pedidos que tiene asignados. Antes bastaba el
+     * rol, y un Picker no asignado podía iniciar/editar/completar el picking de otro.
+     */
+    private function assertCanOperatePicking(Order $order, User $actor): void
+    {
+        $role = $actor->role?->key;
+        $esLider = in_array($role, BodegaRoles::CAN_OPERATE, true);
+        $esPickerAsignado = $role === BodegaRoles::PICKER && $order->picker_id !== null && (int) $order->picker_id === (int) $actor->id;
+
+        if (! $esLider && ! $esPickerAsignado) {
+            throw new OrderTransitionException(
+                'Solo el Jefe de Bodega, los Asistentes de Bodega o el Picker asignado a este pedido pueden operar su picking.',
+                status: 403,
+            );
+        }
     }
 }

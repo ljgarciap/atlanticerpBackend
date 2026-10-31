@@ -171,6 +171,51 @@ class OrderPickingFlowTest extends FeatureTestCase
             ->assertJsonPath('stage', Order::STAGE_EN_PICKING);
     }
 
+    /** Fase 16 (5.4) — un Picker que NO es el asignado no opera el picking de un pedido ajeno. */
+    public function test_picker_no_asignado_no_puede_iniciar_editar_ni_completar_el_picking(): void
+    {
+        $otroId = $this->userIdByEmail('asistentebodega@test.com'); // picker_id es solo una FK a users
+        $this->grantBodegaPermissions('auxiliarbodega@test.com');
+        $token = $this->loginAs('auxiliarbodega@test.com', 'auxiliarbodega@test.com', 'auxiliar_bodega');
+
+        $this->makeCurrentTenant();
+        $pendiente = $this->makeOrder(['stage' => Order::STAGE_PICKING_PENDIENTE, 'picker_id' => $otroId]);
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/orders/{$pendiente->id}/start-picking")
+            ->assertStatus(403);
+
+        $this->makeCurrentTenant();
+        $enPicking = $this->makeOrder(['stage' => Order::STAGE_EN_PICKING, 'picker_id' => $otroId], ['qty_requested' => 5]);
+        $itemId = $enPicking->items()->first()->id;
+        $this->withHeaders($this->authHeaders($token))
+            ->patchJson("/api/bodega/orders/{$enPicking->id}/picking-sheet", ['items' => [['order_item_id' => $itemId, 'qty_picked' => 1]]])
+            ->assertStatus(403);
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/bodega/orders/{$enPicking->id}/complete-picking", ['items' => [['order_item_id' => $itemId, 'qty_picked' => 1]]])
+            ->assertStatus(403);
+
+        $this->makeCurrentTenant();
+        $this->assertSame(Order::STAGE_PICKING_PENDIENTE, $pendiente->fresh()->stage);
+        $this->assertSame(Order::STAGE_EN_PICKING, $enPicking->fresh()->stage);
+    }
+
+    /** Fase 16 (5.4) — el Jefe y los Asistentes conservan el derecho de operar el picking de cualquier pedido. */
+    public function test_lider_y_asistente_pueden_iniciar_el_picking_de_un_pedido_ajeno(): void
+    {
+        $pickerId = $this->userIdByEmail('auxiliarbodega@test.com');
+        foreach (['liderbodega@test.com' => 'lider_bodega', 'asistentebodega@test.com' => 'asistente_bodega'] as $email => $rol) {
+            $this->makeCurrentTenant();
+            $order = $this->makeOrder(['stage' => Order::STAGE_PICKING_PENDIENTE, 'picker_id' => $pickerId]);
+            $this->grantBodegaPermissions($email);
+            $token = $this->loginAs($email, $email, $rol);
+
+            $this->withHeaders($this->authHeaders($token))
+                ->postJson("/api/bodega/orders/{$order->id}/start-picking")
+                ->assertStatus(200)
+                ->assertJsonPath('stage', Order::STAGE_EN_PICKING);
+        }
+    }
+
     public function test_iniciar_picking_dos_veces_seguidas_la_segunda_falla(): void
     {
         $pickerId = $this->userIdByEmail('auxiliarbodega@test.com');
