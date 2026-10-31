@@ -36,6 +36,9 @@ class NotificationSend extends Model
     // (WarehouseAssistantMapping faltante para el vendedor). Ver OrderService::createFromApprovedQuote().
     public const SOURCE_BODEGA_ORDER_UNASSIGNED = 'bodega_order_unassigned';
 
+    /** Fase 16 (5.3) — un vendedor pide a Gerencia que pase un proyecto aprobado a Pedido. */
+    public const SOURCE_PIPELINE_ORDER_REQUEST = 'pipeline_order_request';
+
     /**
      * SCRUM-329 Oleada A / Batch A2 (REQ-318 RN2/RN3, REQ-325) — un pedido queda "sin stock" tras
      * una Revisión de Inventario (ningún hallazgo, o mixto) o una entrega parcial en Packing.

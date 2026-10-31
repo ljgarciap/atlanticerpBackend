@@ -29,6 +29,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null                                 $created_by
  * @property int|null                                 $order_approved_by
  * @property \Carbon\Carbon|null                      $order_approved_at
+ * @property int|null                                 $order_requested_by
+ * @property \Carbon\Carbon|null                      $order_requested_at
+ * @property string|null                              $order_request_note
  * @property list<int>|null                           $compartido_con
  * @property float|null                               $amount
  * @property float|null                               $worked_area_m2
@@ -150,7 +153,7 @@ class PipelineCard extends Model
     /** @var list<string> */
     protected $fillable = [
         'sales_project_id', 'stage', 'master_client_id', 'sub_client_id', 'owner_id',
-        'created_by', 'order_approved_by', 'order_approved_at', 'amount', 'worked_area_m2', 'delivery_type', 'observations',
+        'created_by', 'order_approved_by', 'order_approved_at', 'order_requested_by', 'order_requested_at', 'order_request_note', 'amount', 'worked_area_m2', 'delivery_type', 'observations',
         'stage_changed_at', 'compartido_con',
     ];
 
@@ -162,6 +165,7 @@ class PipelineCard extends Model
             'worked_area_m2'   => 'float',
             'stage_changed_at' => 'datetime',
             'order_approved_at' => 'datetime',
+            'order_requested_at' => 'datetime',
             // REQ-506 (Batch 15) — array de user_id de responsables ADICIONALES al owner_id
             // original. SCRUM-849.4 agregó la UI de asignación real (Gerencia, ver
             // PipelineController::update()/create()) y el split de comisión N-way
@@ -225,6 +229,16 @@ class PipelineCard extends Model
     public function orderApprover(): BelongsTo
     {
         return $this->belongsTo(User::class, 'order_approved_by');
+    }
+
+    /**
+     * Fase 16 (5.3) — quien pidió que se pase a Pedido.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function orderRequester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'order_requested_by');
     }
 
     /**
