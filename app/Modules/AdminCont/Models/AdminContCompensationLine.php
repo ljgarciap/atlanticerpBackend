@@ -22,7 +22,6 @@ class AdminContCompensationLine extends Model
     public const UPDATED_AT = null;
 
     public const SOURCE_COBRO        = 'cobro';
-    public const SOURCE_ABONO        = 'abono';
     public const SOURCE_NOTA_CREDITO = 'nota_credito';
 
     /** @var list<string> */

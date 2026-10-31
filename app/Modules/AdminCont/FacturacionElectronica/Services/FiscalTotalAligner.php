@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\FacturacionElectronica\Services;
 
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContInvoiceLine;
@@ -200,7 +199,6 @@ final class FiscalTotalAligner
         }
 
         $hay = AdminContPaymentInvoice::query()->where('invoice_id', $invoice->id)->exists()
-            || AdminContAbono::query()->where('invoice_id', $invoice->id)->exists()
             || AdminContCreditNote::query()->where('factura_origen_id', $invoice->id)->exists();
 
         // Movimientos de saldo y compensaciones del concepto nuevo de Cobros (SCRUM-1168): esas tablas solo existen en las ramas que ya lo incluyen.

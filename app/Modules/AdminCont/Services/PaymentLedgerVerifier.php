@@ -4,32 +4,30 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use Illuminate\Support\Facades\DB;
 
 /**
- * SCRUM-1168 F1 — verificador del libro de movimientos contra el estado real. Es la puerta de salida del modo sombra: las lecturas solo
- * pasan al libro cuando este verificador da CERO diferencias sobre todas las facturas.
+ * SCRUM-1168 F1 — verificador del libro de movimientos contra el estado real: es la comprobación de integridad del dinero (Fase 15a: el libro es la
+ * única fuente de verdad, así que debe dar CERO diferencias).
  *
  *  1. Por factura: `invoices.saldo_aplicado` debe ser lo aplicado por cobros según el libro (Σ delta_factura) más lo que aportaron las notas
  *     de crédito aplicadas (`monto_aplicado_saldo`; las notas siguen fuera del libro).
- *  2. Por cliente (informativo): el disponible del libro (Σ delta_disponible) debe ser la suma de (monto original − monto usado) de sus abonos
- *     confirmados más lo que el libro dice que sigue sin aplicar de sus cobros del concepto nuevo (ese dinero solo vive en el libro). Un cliente con diferencia indica que algún camino movió un abono sin asentarlo en el libro.
+ *  2. Por cliente (informativo): el disponible del libro (Σ delta_disponible) debe ser lo que el libro dice que sigue sin aplicar de sus cobros (el saldo de
+ *     notas de crédito vive fuera del libro y no mueve el disponible). Un cliente con diferencia indica un movimiento de dinero sin cobro de origen.
  */
 final class PaymentLedgerVerifier
 {
     private const TOLERANCIA = 0.01;
 
-    /** @return array{facturas: list<array{invoice_id: int, numero: string, saldo_aplicado: float, libro: float, notas: float, diferencia: float}>, anuladas: list<array{invoice_id: int, numero: string, libro: float}>, clientes: list<array{master_client_id: int, libro: float, abonos: float, diferencia: float}>} */
+    /** @return array{facturas: list<array{invoice_id: int, numero: string, saldo_aplicado: float, libro: float, notas: float, diferencia: float}>, anuladas: list<array{invoice_id: int, numero: string, libro: float}>, clientes: list<array{master_client_id: int, libro: float, cobros: float, diferencia: float}>} */
     public function verify(): array
     {
         $invoices   = (new AdminContInvoice())->getTable();
         $movements  = (new AdminContPaymentMovement())->getTable();
         $notes      = (new AdminContCreditNote())->getTable();
-        $abonos     = (new AdminContAbono())->getTable();
         $payments   = (new \App\Modules\AdminCont\Models\AdminContPayment())->getTable();
 
         $facturas = DB::select(
@@ -56,15 +54,14 @@ final class PaymentLedgerVerifier
         );
 
         $clientes = DB::select(
-            "SELECT c.master_client_id, COALESCE(l.libro, 0)::float AS libro, (COALESCE(a.abonos, 0) + COALESCE(v.cobros, 0))::float AS abonos
-               FROM (SELECT master_client_id FROM {$movements} UNION SELECT master_client_id FROM {$abonos} WHERE estado = ?) c
+            "SELECT c.master_client_id, COALESCE(l.libro, 0)::float AS libro, COALESCE(v.cobros, 0)::float AS cobros
+               FROM (SELECT DISTINCT master_client_id FROM {$movements}) c
                LEFT JOIN (SELECT master_client_id, SUM(delta_disponible) AS libro FROM {$movements} GROUP BY master_client_id) l ON l.master_client_id = c.master_client_id
-               LEFT JOIN (SELECT master_client_id, SUM(monto_original - monto_usado) AS abonos FROM {$abonos} WHERE estado = ? GROUP BY master_client_id) a ON a.master_client_id = c.master_client_id
                LEFT JOIN (SELECT p.master_client_id, SUM(mm.delta_disponible) AS cobros FROM {$movements} mm JOIN {$payments} p ON p.id = mm.payment_id
-                           WHERE p.cobros_v2 = TRUE GROUP BY p.master_client_id) v ON v.master_client_id = c.master_client_id
-              WHERE ABS(COALESCE(l.libro, 0) - (COALESCE(a.abonos, 0) + COALESCE(v.cobros, 0))) > ?
+                           GROUP BY p.master_client_id) v ON v.master_client_id = c.master_client_id
+              WHERE ABS(COALESCE(l.libro, 0) - COALESCE(v.cobros, 0)) > ?
               ORDER BY c.master_client_id",
-            [AdminContAbono::ESTADO_CONFIRMADO, AdminContAbono::ESTADO_CONFIRMADO, self::TOLERANCIA],
+            [self::TOLERANCIA],
         );
 
         return [
@@ -77,8 +74,8 @@ final class PaymentLedgerVerifier
                 'invoice_id' => (int) $r->invoice_id, 'numero' => (string) $r->numero, 'libro' => (float) $r->libro,
             ], $anuladas)),
             'clientes' => array_values(array_map(fn (\stdClass $r): array => [
-                'master_client_id' => (int) $r->master_client_id, 'libro' => (float) $r->libro, 'abonos' => (float) $r->abonos,
-                'diferencia' => round((float) $r->libro - (float) $r->abonos, 2),
+                'master_client_id' => (int) $r->master_client_id, 'libro' => (float) $r->libro, 'cobros' => (float) $r->cobros,
+                'diferencia' => round((float) $r->libro - (float) $r->cobros, 2),
             ], $clientes)),
         ];
     }

@@ -7,7 +7,6 @@ namespace App\Modules\AdminCont\Services;
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\InvoiceStateException;
 use App\Modules\AdminCont\Exceptions\PaymentStateException;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContInvoice;
@@ -29,7 +28,7 @@ use Illuminate\Support\Facades\DB;
 final class PaymentService
 {
     public function __construct(
-        private readonly AbonoService $abonos,
+        private readonly ClientBalanceService $clientBalance,
         private readonly AdminContPaymentFolioService $folio,
         private readonly AdminContPaymentAttachmentService $attachments,
         private readonly AdminContPaymentConfirmationFolioService $confirmationFolio,
@@ -94,7 +93,7 @@ final class PaymentService
      * (sin endpoint de cascada nuevo, ver ADR-SCRUM931) en vez de traer siempre TODAS las facturas
      * abiertas del cliente sin poder acotar a una combinación específica.
      *
-     * @return list<array{id: int, numero: string, monto: float, saldo_pendiente: float, abono_obligatorio: ?array{abono_id: int, monto: float}, neto_a_cobrar: float, sales_project_id: ?int, proyecto: ?string, quote_id: ?int, cotizacion_folio: ?string}>
+     * @return list<array{id: int, numero: string, monto: float, saldo_pendiente: float, neto_a_cobrar: float, sales_project_id: ?int, proyecto: ?string, quote_id: ?int, cotizacion_folio: ?string}>
      */
     public function openInvoicesForClient(int $masterClientId): array
     {
@@ -120,15 +119,13 @@ final class PaymentService
                 continue;
             }
 
-            $abono = $this->abonoObligatorioPreview($invoice, $pendiente);
             $quote = $orders->get($invoice->order_id)?->linkedQuote();
             $rows[] = [
                 'id'                => $invoice->id,
                 'numero'            => $invoice->numero,
                 'monto'             => $invoice->monto,
                 'saldo_pendiente'   => $pendiente,
-                'abono_obligatorio' => $abono,
-                'neto_a_cobrar'     => round($pendiente - ($abono['monto'] ?? 0.0), 2),
+                'neto_a_cobrar'     => $pendiente,
                 'sales_project_id'  => $invoice->sales_project_id,
                 'proyecto'          => $invoice->sales_project_id !== null ? $projectNames->get($invoice->sales_project_id) : null,
                 'quote_id'          => $quote?->id,
@@ -146,42 +143,20 @@ final class PaymentService
         return MasterClient::find($masterClientId)?->name;
     }
 
-    /** SCRUM-902 §4.4 — saldo a favor de nivel Cliente master disponible (abonos + notas de
-     *  crédito `saldo_favor`), fuente única compartida con Saldo a Favor de Clientes (903). */
+    /** Saldo a favor aplicable de un cliente: el de sus notas de crédito `saldo_favor` (los cobros a cuenta viven en el libro). */
     public function creditBalanceForClient(int $masterClientId): float
     {
-        return $this->abonos->saldoClienteDisponible($masterClientId);
+        return $this->clientBalance->saldoNotasDisponible($masterClientId);
     }
 
     /**
-     * Fase 13 (2.2) — desglose por nivel del saldo a favor (ver `AbonoService::desgloseSaldoCliente()`).
+     * Fase 13 (2.2) — desglose del saldo a favor (ver `ClientBalanceService::desglose()`).
      *
      * @return array{aplicable: float, a_cuenta: float, reservado: float, total: float}
      */
     public function creditBreakdownForClient(int $masterClientId): array
     {
-        return $this->abonos->desgloseSaldoCliente($masterClientId);
-    }
-
-    /**
-     * SCRUM-902 §4.2/4.3 — abono obligatorio (nivel Factura, o Proyecto ya re-asociado) que cubre
-     * esta factura, capado a lo pendiente. Si hubiera más de un abono apuntando a la misma factura
-     * (caso raro, el ticket no lo prohíbe), se consume el más antiguo primero; el resto queda
-     * disponible para un cobro futuro sobre la misma factura — nunca se pierde, solo se difiere.
-     *
-     * @return array{abono_id: int, monto: float}|null
-     */
-    private function abonoObligatorioPreview(AdminContInvoice $invoice, float $pendiente): ?array
-    {
-        $candidatos = $this->abonos->abonosObligatoriosParaFactura($invoice->id);
-        if ($candidatos === []) {
-            return null;
-        }
-
-        $primero = $candidatos[0];
-        $monto   = round(min($primero['disponible'], $pendiente), 2);
-
-        return $monto > 0 ? ['abono_id' => $primero['abono_id'], 'monto' => $monto] : null;
+        return $this->clientBalance->desglose($masterClientId);
     }
 
     /**
@@ -322,7 +297,6 @@ final class PaymentService
                 'numero_documento_retencion' => $numeroDocumentoRetencion,
                 'comentario_ajuste'          => $comentarioAjuste,
                 'estado'                     => $estadoInicial,
-                'cobros_v2'                  => true,
                 'created_by'                 => $actor->id,
             ]);
 
@@ -330,8 +304,6 @@ final class PaymentService
                 $payment->invoiceLines()->create([
                     'invoice_id'           => $a['invoice_id'],
                     'monto_aplicado'       => $a['monto'],
-                    'abono_id'             => null,
-                    'monto_abono_aplicado' => 0,
                     'fecha_aplicacion'     => $estadoInicial === AdminContPayment::ESTADO_CONFIRMADO ? now() : null,
                 ]);
             }
@@ -508,7 +480,7 @@ final class PaymentService
     /**
      * SCRUM-1168 F0 — confirmar NUNCA se rechaza por el estado de las facturas: el dinero ya entró al banco, es un hecho. Lo que
      * `register()` dejó diferido se aplica ahora **hasta donde cabe**; si entre el registro y la confirmación otro cobro o una nota de
-     * crédito dejó a una factura sin lugar (o el saldo a favor / abono que este cobro iba a usar ya lo consumió otro), lo que no se puede
+     * crédito dejó a una factura sin lugar , lo que no se puede
      * aplicar **queda como saldo a favor del cliente**, esperando la compensación, y el resultado se devuelve para mostrárselo al usuario.
      * Antes se sumaba a ciegas y la factura quedaba con más cobrado que su valor.
      *
@@ -528,7 +500,7 @@ final class PaymentService
                 throw new PaymentStateException('Este cobro ya no está esperando confirmación.');
             }
 
-            // SCRUM-1168 F1 — orden de bloqueos: cobro (arriba) → cliente → facturas por id → abonos/saldo.
+            // SCRUM-1168 F1 — orden de bloqueos: cobro (arriba) → cliente → facturas por id.
             $this->clientLock->lock($payment->master_client_id);
 
             // Las facturas se bloquean todas juntas y en orden por id (sin bloqueos cruzados entre confirmaciones simultáneas).
@@ -540,9 +512,8 @@ final class PaymentService
                 ->get()
                 ->keyBy('id');
 
-            $plan = $this->planConfirmation($payment, $invoicesLocked, bloquear: true);
+            $plan = $this->planConfirmation($payment, $invoicesLocked);
 
-            $lines = [];
             foreach ($plan['lines'] as $item) {
                 $line    = $item['line'];
                 $invoice = $item['invoice'];
@@ -554,31 +525,16 @@ final class PaymentService
                 if (abs($item['aplicable'] - (float) $line->monto_aplicado) > 0.005) {
                     $cambios['monto_aplicado'] = $item['aplicable'];
                 }
-                if (abs($item['abono_real'] - (float) $line->monto_abono_aplicado) > 0.005) {
-                    $cambios['monto_abono_aplicado'] = $item['abono_real'];
-                }
                 $line->update($cambios);
-                $lines[$line->invoice_id] = ['abono_id' => $line->abono_id, 'monto_abono' => $item['abono_real']];
             }
 
-            if (abs($plan['saldo_real'] - (float) $payment->saldo_favor_aplicado) > 0.005) {
-                $payment->update(['saldo_favor_aplicado' => $plan['saldo_real']]);
-            }
-
-            $notasConsumo = $this->concretarAbonosYSaldo($payment, $lines);
-
-            // Concepto nuevo: el excedente ya es disponible en el libro (ingreso menos lo aplicado), no hace falta un abono aparte.
-            if ($plan['excedente'] > 0.005 && ! $payment->cobros_v2) {
-                $this->abonos->registrarExcedenteDeCobro($payment, $plan['excedente']);
-            }
-
+            // El excedente (lo que ya no cabe en las facturas) queda disponible en el libro: ingreso menos lo aplicado.
             $this->registrarEnLibro(
                 $payment,
                 array_values(array_filter(array_map(
                     fn (array $item): ?array => $item['invoice'] !== null ? ['invoice' => $item['invoice'], 'monto' => $item['aplicable']] : null,
                     $plan['lines'],
                 ))),
-                $notasConsumo,
                 $actor->id,
             );
 
@@ -626,46 +582,24 @@ final class PaymentService
 
         $invoices = AdminContInvoice::query()->whereIn('id', $payment->invoiceLines->pluck('invoice_id')->all())->get()->keyBy('id');
 
-        return $this->presentAdjustments($this->planConfirmation($payment, $invoices, bloquear: false));
+        return $this->presentAdjustments($this->planConfirmation($payment, $invoices));
     }
 
     /**
-     * Reparto del dinero del cobro entre sus facturas, con el estado ACTUAL. Fondos = efectivo recibido + saldo a favor del cliente realmente
-     * disponible (hasta lo solicitado) + abonos obligatorios realmente disponibles (hasta lo solicitado). Cada factura recibe lo que cabe
+     * Reparto del dinero del cobro entre sus facturas, con el estado ACTUAL. Fondos = efectivo recibido. Cada factura recibe lo que cabe
      * (`pendiente actual`) y lo solicitado, en orden; lo que sobra es excedente. Sin carreras todo coincide con lo registrado (cero ajustes).
      *
      * @param \Illuminate\Support\Collection<int, AdminContInvoice> $invoices
-     * @return array{lines: list<array{line: \App\Modules\AdminCont\Models\AdminContPaymentInvoice, invoice: ?AdminContInvoice, solicitado: float, aplicable: float, abono_real: float}>, saldo_real: float, saldo_insuficiente: float, abono_insuficiente: float, excedente: float}
+     * @return array{lines: list<array{line: \App\Modules\AdminCont\Models\AdminContPaymentInvoice, invoice: ?AdminContInvoice, solicitado: float, aplicable: float}>, excedente: float}
      */
-    private function planConfirmation(AdminContPayment $payment, \Illuminate\Support\Collection $invoices, bool $bloquear): array
+    private function planConfirmation(AdminContPayment $payment, \Illuminate\Support\Collection $invoices): array
     {
-        $saldoSolicitado = round((float) $payment->saldo_favor_aplicado, 2);
-        $saldoReal = $saldoSolicitado > 0
-            ? min($saldoSolicitado, max(0.0, $this->abonos->saldoClienteDisponible($payment->master_client_id, $bloquear)))
-            : 0.0;
-
-        $abonoIds = $payment->invoiceLines->pluck('abono_id')->filter()->unique()->values()->all();
-        $abonosQuery = AdminContAbono::query()->whereIn('id', $abonoIds);
-        if ($bloquear) {
-            $abonosQuery->orderBy('id')->lockForUpdate();
-        }
-        $abonos = $abonosQuery->get()->keyBy('id');
-
-        $fondos = round((float) $payment->monto_recibido + $saldoReal, 2);
-        $abonoInsuficiente = 0.0;
         $items = [];
         foreach ($payment->invoiceLines->sortBy('id') as $line) {
-            $abonoReal = 0.0;
-            if ($line->abono_id !== null && (float) $line->monto_abono_aplicado > 0) {
-                $disponible = (float) ($abonos->get($line->abono_id)?->montoDisponible() ?? 0.0);
-                $abonoReal  = round(min((float) $line->monto_abono_aplicado, max(0.0, $disponible)), 2);
-                $abonoInsuficiente += (float) $line->monto_abono_aplicado - $abonoReal;
-            }
-            $fondos += $abonoReal;
-            $items[] = ['line' => $line, 'invoice' => $invoices->get($line->invoice_id), 'solicitado' => round((float) $line->monto_aplicado, 2), 'abono_real' => $abonoReal];
+            $items[] = ['line' => $line, 'invoice' => $invoices->get($line->invoice_id), 'solicitado' => round((float) $line->monto_aplicado, 2)];
         }
 
-        $restante = round($fondos, 2);
+        $restante = round((float) $payment->monto_recibido, 2);
         foreach ($items as $i => $item) {
             $invoice = $item['invoice'];
             $cabe    = $invoice === null ? 0.0 : max(0.0, round($invoice->monto - $invoice->saldo_aplicado, 2));
@@ -674,22 +608,15 @@ final class PaymentService
             $items[$i]['aplicable'] = $aplica;
         }
 
-        return [
-            'lines'              => $items,
-            'saldo_real'         => $saldoReal,
-            'saldo_insuficiente' => round($saldoSolicitado - $saldoReal, 2),
-            'abono_insuficiente' => round($abonoInsuficiente, 2),
-            'excedente'          => max(0.0, $restante),
-        ];
+        return ['lines' => $items, 'excedente' => max(0.0, $restante)];
     }
 
     /**
-     * @param array{lines: list<array{line: \App\Modules\AdminCont\Models\AdminContPaymentInvoice, invoice: ?AdminContInvoice, solicitado: float, aplicable: float, abono_real: float}>, saldo_real: float, saldo_insuficiente: float, abono_insuficiente: float, excedente: float} $plan
+     * @param array{lines: list<array{line: \App\Modules\AdminCont\Models\AdminContPaymentInvoice, invoice: ?AdminContInvoice, solicitado: float, aplicable: float}>, excedente: float} $plan
      * @return array{excedente_a_saldo_favor: float, saldo_insuficiente: float, facturas: list<array{numero: string, solicitado: float, aplicado: float}>}|null
      */
     private function presentAdjustments(array $plan): ?array
     {
-        $faltante = round($plan['saldo_insuficiente'] + $plan['abono_insuficiente'], 2);
         $facturas = [];
         foreach ($plan['lines'] as $item) {
             if (abs($item['aplicable'] - $item['solicitado']) > 0.005) {
@@ -701,74 +628,28 @@ final class PaymentService
             }
         }
 
-        if ($plan['excedente'] <= 0.005 && $faltante <= 0.005 && $facturas === []) {
+        if ($plan['excedente'] <= 0.005 && $facturas === []) {
             return null;
         }
 
         return [
             'excedente_a_saldo_favor' => round($plan['excedente'], 2),
-            'saldo_insuficiente'      => $faltante,
+            'saldo_insuficiente'      => 0.0,
             'facturas'                => $facturas,
         ];
     }
 
     /**
-     * Concreta, en el momento en que un cobro de verdad se confirma (inmediato en `register()`, o
-     * diferido en `confirm()`), los 2 efectos de saldo a favor de SCRUM-902 §4 que hasta acá solo
-     * estaban decididos/guardados: consumir cada abono obligatorio por su monto ya fijado en la
-     * línea (`AbonoService::registrarUsoObligatorio()`, que además resuelve el excedente §4.5), y
-     * consumir FIFO el saldo Cliente master aplicado (`AbonoService::aplicarSaldoCliente()`).
-     *
-     * @param array<int, array{abono_id: ?int, monto_abono: float}> $lines keyed por invoice_id
-     */
-    private function concretarAbonosYSaldo(AdminContPayment $payment, array $lines): float
-    {
-        $notasConsumo = 0.0;
-        // SCRUM-1168 F0 — si el abono o el saldo ya no alcanzan (los consumió otro cobro), el servicio de abonos lo
-        // reporta con `AbonoStateException`; acá se traduce a `PaymentStateException` (422 en el controller) y la
-        // transacción completa del cobro se revierte, en vez de dejar el cobro aplicado con saldo que no existe.
-        try {
-            foreach ($lines as $line) {
-                if ($line['abono_id'] !== null && $line['monto_abono'] > 0) {
-                    $this->abonos->registrarUsoObligatorio($line['abono_id'], $line['monto_abono']);
-                }
-            }
-
-            if ($payment->saldo_favor_aplicado > 0) {
-                $consumo      = $this->abonos->aplicarSaldoCliente($payment->master_client_id, $payment->saldo_favor_aplicado);
-                $notasConsumo = $consumo['notas'];
-            }
-        } catch (\App\Modules\AdminCont\Exceptions\AbonoStateException $e) {
-            throw new PaymentStateException($e->getMessage(), 0, $e);
-        }
-
-        return $notasConsumo;
-    }
-
-    /**
-     * SCRUM-1168 F1 — asienta en el libro (modo sombra) el cobro ya concretado: el efectivo que entró y lo aplicado a cada factura. Lo que
-     * consumió de saldo a favor de NOTAS DE CRÉDITO (que siguen fuera del libro) se compensa con una reclasificación, para que el disponible
-     * del libro no reste dinero que nunca sumó. Una falla aquí no puede tumbar el cobro: se registra en el log (ver `PaymentLedger::shadow`).
+     * Asienta en el libro el cobro ya concretado: el efectivo que entró y lo aplicado a cada factura. El libro es la fuente de verdad del dinero
+     * disponible, así que se escribe estricto (una falla tumba la operación).
      *
      * @param list<array{invoice: AdminContInvoice, monto: float}> $aplicaciones
      */
-    private function registrarEnLibro(AdminContPayment $payment, array $aplicaciones, float $notasConsumo, int $actorId): void
+    private function registrarEnLibro(AdminContPayment $payment, array $aplicaciones, int $actorId): void
     {
-        // Cobro del concepto nuevo: el libro es la fuente de verdad, se escribe estricto; en el flujo anterior es solo sombra.
-        $escribir = $payment->cobros_v2 ? fn (callable $w) => $w() : fn (callable $w) => $this->ledger->shadow($w);
-
-        $escribir(function () use ($payment, $aplicaciones, $notasConsumo, $actorId): void {
-            $this->ledger->ingreso($payment, (float) $payment->monto_recibido, \App\Modules\AdminCont\Models\AdminContPaymentMovement::ORIGEN_DIRECTA, $actorId);
-            foreach ($aplicaciones as $a) {
-                $this->ledger->aplicacion($payment, $a['invoice'], $a['monto'], \App\Modules\AdminCont\Models\AdminContPaymentMovement::ORIGEN_DIRECTA, $actorId);
-            }
-            if ($notasConsumo > 0.004) {
-                $this->ledger->reclasificacion(
-                    $payment->master_client_id, $notasConsumo,
-                    'Saldo de notas de crédito consumido por el cobro (las notas siguen fuera del libro)',
-                    $payment->id, null, $notasConsumo,
-                );
-            }
-        });
+        $this->ledger->ingreso($payment, (float) $payment->monto_recibido, AdminContPaymentMovement::ORIGEN_DIRECTA, $actorId);
+        foreach ($aplicaciones as $a) {
+            $this->ledger->aplicacion($payment, $a['invoice'], $a['monto'], AdminContPaymentMovement::ORIGEN_DIRECTA, $actorId);
+        }
     }
 }

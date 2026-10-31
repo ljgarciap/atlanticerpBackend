@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
+use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Services\InvoiceExportService;
@@ -357,33 +357,11 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->assertEquals(500.0, $response->json('results.0.monto'));
     }
 
-    /**
-     * SCRUM-902 §4.3 — una factura SIEMPRE se genera por su monto completo, sin ninguna resta,
-     * incluso cuando el proyecto tiene un abono de nivel Proyecto confirmado esperando factura:
-     * el abono se re-asocia a la factura recién creada (queda a nivel Factura desde ahí), pero la
-     * factura en sí no cambia.
-     */
-    public function test_store_genera_la_factura_completa_y_reasocia_abono_de_proyecto(): void
+    /** SCRUM-902 §4.3 — una factura SIEMPRE se genera por su monto completo, sin ninguna resta. */
+    public function test_store_genera_la_factura_completa(): void
     {
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         ['order' => $order] = $this->makeFacturableOrder($ownerId);
-        $masterClientId = $order->pipelineCard->master_client_id;
-        $salesProjectId = $order->pipelineCard->sales_project_id;
-        $bankAccount = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
-
-        $abono = AdminContAbono::create([
-            'master_client_id' => $masterClientId,
-            'sales_project_id' => $salesProjectId,
-            'monto_original' => 200,
-            'monto_usado' => 0,
-            'metodo_pago' => 'transferencia',
-            'cuenta_bancaria_id' => $bankAccount->id,
-            'referencia' => 'TRF-ABONO-1',
-            'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL),
-            'fecha_registro' => now(),
-            'fecha_confirmacion' => now(),
-        ]);
 
         $token = $this->loginAsContabilidad();
 
@@ -395,12 +373,6 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $this->assertEquals(500.0, $response->json('invoices.0.monto'));
         $this->assertEquals(0.0, $response->json('invoices.0.saldo_aplicado'));
         $this->assertEquals(500.0, $response->json('invoices.0.total_a_pagar'));
-
-        $invoiceId = $response->json('invoices.0.id');
-        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $abono = AdminContAbono::findOrFail($abono->id);
-        $this->assertEquals($invoiceId, $abono->invoice_id);
-        $this->assertSame('factura', $abono->nivelAsociacion());
     }
 
     /** REQ-445 — passthrough completo de filtros + RN4 (`total_en_tab` sin otros filtros). */
@@ -1376,40 +1348,37 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
             ->assertJsonCount(1, 'vendedores_responsables');
     }
 
-    private function makeAbono(array $attrs): AdminContAbono
+    /** Saldo a favor de un cliente: una nota de crédito con resultado `saldo_favor` aplicada (nace de una factura de origen del mismo cliente). */
+    private function makeNotaSaldoFavor(int $masterClientId, int $facturaOrigenId, float $monto): AdminContCreditNote
     {
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
-        $bank = AdminContBankAccount::first() ?? AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '1111']);
 
-        return AdminContAbono::create([
-            'monto_usado' => 0, 'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $bank->id,
-            'referencia' => 'TRF-'.uniqid(), 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
-            ...$attrs,
+        return AdminContCreditNote::create([
+            'numero' => 'NC-'.static::uniqueTestNumber(), 'master_client_id' => $masterClientId, 'cliente' => 'Cliente', 'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL,
+            'factura_origen_id' => $facturaOrigenId, 'monto' => $monto, 'subtotal' => $monto, 'itbms' => 0, 'monto_aplicado_saldo' => 0, 'monto_usado' => 0, 'motivo' => 'saldo',
+            'resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR, 'estado' => AdminContCreditNote::ESTADO_APLICADA,
+            'registrado_por' => $this->userIdByEmail(self::CONTABILIDAD_EMAIL), 'fecha' => now(),
         ]);
     }
 
-    public function test_1147_saldo_a_favor_muestra_solo_el_nivel_mas_especifico(): void
+    public function test_1147_saldo_a_favor_muestra_el_del_cliente_solo_en_las_por_cobrar(): void
     {
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsContabilidad();
-        $conFactura = $this->facturar($token, $ownerId);   // abono nivel Factura (120) + cliente (300) -> 120
-        $soloCliente = $this->facturar($token, $ownerId);  // solo abono nivel Cliente (300) -> 300
-        $sinSaldo = $this->facturar($token, $ownerId);     // ninguno -> null
+        $conSaldo = $this->facturar($token, $ownerId);     // dos notas del cliente (120 + 300) -> 420
+        $sinSaldo = $this->facturar($token, $ownerId);     // ninguna -> null
         $cobrada = $this->facturar($token, $ownerId);      // cobrada: aunque tenga saldo no se muestra
         $cobrada['invoice']->update(['saldo_aplicado' => $cobrada['invoice']->monto]);
 
         $masterOf = fn (array $f): int => (int) $f['order']->pipelineCard->master_client_id;
-        $this->makeAbono(['master_client_id' => $masterOf($conFactura), 'invoice_id' => $conFactura['invoice']->id, 'monto_original' => 120]);
-        $this->makeAbono(['master_client_id' => $masterOf($conFactura), 'monto_original' => 300]);
-        $this->makeAbono(['master_client_id' => $masterOf($soloCliente), 'monto_original' => 300]);
-        $this->makeAbono(['master_client_id' => $masterOf($cobrada), 'monto_original' => 50]);
+        $this->makeNotaSaldoFavor($masterOf($conSaldo), $conSaldo['invoice']->id, 120);
+        $this->makeNotaSaldoFavor($masterOf($conSaldo), $conSaldo['invoice']->id, 300);
+        $this->makeNotaSaldoFavor($masterOf($cobrada), $cobrada['invoice']->id, 50);
 
         $rows = collect($this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/invoices?view=plana')->assertStatus(200)->json('rows'))->keyBy('order_id');
 
-        $this->assertEquals(120.0, $rows[$conFactura['order']->id]['saldo_a_favor']);
-        $this->assertEquals(300.0, $rows[$soloCliente['order']->id]['saldo_a_favor']);
+        $this->assertEquals(420.0, $rows[$conSaldo['order']->id]['saldo_a_favor']);
         $this->assertNull($rows[$sinSaldo['order']->id]['saldo_a_favor']);
         $this->assertNull($rows[$cobrada['order']->id]['saldo_a_favor']);
     }
@@ -1419,7 +1388,7 @@ class AdminContInvoiceControllerTest extends FeatureTestCase
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $token = $this->loginAsContabilidad();
         $f = $this->facturar($token, $ownerId);
-        $this->makeAbono(['master_client_id' => (int) $f['order']->pipelineCard->master_client_id, 'monto_original' => 80]);
+        $this->makeNotaSaldoFavor((int) $f['order']->pipelineCard->master_client_id, $f['invoice']->id, 80);
 
         $groups = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/admin-contab/invoices?view=agrupado')->assertStatus(200)->json('groups');

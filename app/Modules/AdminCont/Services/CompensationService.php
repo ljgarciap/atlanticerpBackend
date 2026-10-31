@@ -6,7 +6,6 @@ namespace App\Modules\AdminCont\Services;
 
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\PaymentStateException;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContCompensation;
 use App\Modules\AdminCont\Models\AdminContCompensationLine;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
@@ -22,9 +21,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * SCRUM-1168 F3 — compensación (cruce) del dinero disponible de un cliente contra sus facturas pendientes.
  *
- * Fuentes de dinero disponible (todas del mismo cliente): COBROS del concepto nuevo con saldo sin aplicar (el libro dice cuánto), ABONOS históricos
- * confirmados con saldo (hoy «saldo libre» del cliente, sin importar a qué factura o proyecto estaban atados: la compensación solo sugiere ese vínculo)
- * y saldo de NOTAS DE CRÉDITO con resultado saldo a favor (que siguen fuera del libro; el cruce solo les descuenta lo usado, sin tocar su lógica).
+ * Fuentes de dinero disponible (todas del mismo cliente): COBROS con saldo sin aplicar (el libro dice cuánto) y saldo de NOTAS DE CRÉDITO con resultado saldo a favor (que siguen fuera del libro; el cruce solo les descuenta lo usado, sin tocar su lógica).
  *
  * El cruce se arma en pantalla (nada cambia en las facturas) y se compromete al confirmar, en una sola transacción, bajo el bloqueo del cliente.
  * Nunca aplica solo: `sugerencia()` solo PROPONE (facturas más antiguas primero; si el dinero venía atado a una factura, esa primero).
@@ -61,9 +58,6 @@ final class CompensationService
         $saldo = [];
         foreach ($this->clientBalance->remanentesPorCobro() as $r) {
             $saldo[$r['master_client_id']] = ($saldo[$r['master_client_id']] ?? 0.0) + $r['remanente'];
-        }
-        foreach (AdminContAbono::query()->where('estado', AdminContAbono::ESTADO_CONFIRMADO)->whereColumn('monto_original', '>', 'monto_usado')->get() as $a) {
-            $saldo[$a->master_client_id] = ($saldo[$a->master_client_id] ?? 0.0) + $a->montoDisponible();
         }
         foreach ($this->notasConSaldo() as $n) {
             $saldo[$n->master_client_id] = ($saldo[$n->master_client_id] ?? 0.0) + $n->montoDisponibleSaldoFavor();
@@ -184,7 +178,7 @@ final class CompensationService
         return DB::transaction(function () use ($masterClientId, $lines, $actor): AdminContCompensation {
             $this->clientLock->lock($masterClientId);
 
-            // Orden de bloqueos: cliente → facturas por id → cobros → abonos → notas, siempre por id.
+            // Orden de bloqueos: cliente → facturas por id → cobros → notas, siempre por id.
             $invoiceIds = array_values(array_unique(array_column($lines, 'invoice_id')));
             /** @var \Illuminate\Support\Collection<int, AdminContInvoice> $invoices */
             $invoices = $invoiceIds === [] ? collect() : AdminContInvoice::query()
@@ -196,8 +190,6 @@ final class CompensationService
             )));
             $payments = $ids(AdminContCompensationLine::SOURCE_COBRO) === [] ? collect() : AdminContPayment::query()
                 ->whereIn('id', $ids(AdminContCompensationLine::SOURCE_COBRO))->where('master_client_id', $masterClientId)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
-            $abonos = $ids(AdminContCompensationLine::SOURCE_ABONO) === [] ? collect() : AdminContAbono::query()
-                ->whereIn('id', $ids(AdminContCompensationLine::SOURCE_ABONO))->where('master_client_id', $masterClientId)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             $notas = $ids(AdminContCompensationLine::SOURCE_NOTA_CREDITO) === [] ? collect() : AdminContCreditNote::query()
                 ->whereIn('id', $ids(AdminContCompensationLine::SOURCE_NOTA_CREDITO))->where('master_client_id', $masterClientId)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
 
@@ -223,24 +215,18 @@ final class CompensationService
                         if ($row === null) {
                             AdminContPaymentInvoice::create([
                                 'payment_id' => $payment->id, 'invoice_id' => $invoice->id, 'monto_aplicado' => $monto,
-                                'abono_id' => null, 'monto_abono_aplicado' => 0, 'fecha_aplicacion' => now(),
+                                'fecha_aplicacion' => now(),
                             ]);
                         } else {
                             $row->update(['monto_aplicado' => round((float) $row->monto_aplicado + $monto, 2), 'fecha_aplicacion' => now()]);
                         }
-                        $this->ledger->aplicacionDeCruce($masterClientId, $invoice->id, $monto, $payment->id, null, -$monto, $compensation->id, $actor->id);
-                        break;
-
-                    case AdminContCompensationLine::SOURCE_ABONO:
-                        $abono = $abonos->get($l['source_id']);
-                        $abono->update(['monto_usado' => round((float) $abono->monto_usado + $monto, 2)]);
-                        $this->ledger->aplicacionDeCruce($masterClientId, $invoice->id, $monto, null, $abono->id, -$monto, $compensation->id, $actor->id);
+                        $this->ledger->aplicacionDeCruce($masterClientId, $invoice->id, $monto, $payment->id, -$monto, $compensation->id, $actor->id);
                         break;
 
                     default: // nota de crédito: su saldo vive en su tabla, fuera del libro (delta de disponible 0)
                         $nota = $notas->get($l['source_id']);
                         $nota->update(['monto_usado' => round((float) $nota->monto_usado + $monto, 2)]);
-                        $this->ledger->aplicacionDeCruce($masterClientId, $invoice->id, $monto, null, null, 0.0, $compensation->id, $actor->id, "Saldo de la nota {$nota->numero}");
+                        $this->ledger->aplicacionDeCruce($masterClientId, $invoice->id, $monto, null, 0.0, $compensation->id, $actor->id, "Saldo de la nota {$nota->numero}");
                         break;
                 }
 
@@ -268,7 +254,6 @@ final class CompensationService
     {
         $lines    = $c->lines;
         $payments = AdminContPayment::query()->whereIn('id', $lines->where('source_type', AdminContCompensationLine::SOURCE_COBRO)->pluck('source_id'))->pluck('numero_recibo', 'id');
-        $abonos   = AdminContAbono::query()->whereIn('id', $lines->where('source_type', AdminContCompensationLine::SOURCE_ABONO)->pluck('source_id'))->pluck('numero_recibo', 'id');
         $notas    = AdminContCreditNote::query()->whereIn('id', $lines->where('source_type', AdminContCompensationLine::SOURCE_NOTA_CREDITO)->pluck('source_id'))->pluck('numero', 'id');
         $invoices = AdminContInvoice::query()->whereIn('id', $lines->pluck('invoice_id')->unique())->pluck('numero', 'id');
         $creator  = $c->created_by !== null ? User::find($c->created_by) : null;
@@ -282,7 +267,6 @@ final class CompensationService
                 'source_type' => $l->source_type, 'source_id' => $l->source_id,
                 'fuente' => match ($l->source_type) {
                     AdminContCompensationLine::SOURCE_COBRO => 'Cobro '.($payments->get($l->source_id) ?? '#'.$l->source_id),
-                    AdminContCompensationLine::SOURCE_ABONO => 'Abono '.($abonos->get($l->source_id) ?? '#'.$l->source_id),
                     default                                  => 'Nota de crédito '.($notas->get($l->source_id) ?? '#'.$l->source_id),
                 },
                 'invoice_id' => $l->invoice_id, 'factura' => (string) ($invoices->get($l->invoice_id) ?? '#'.$l->invoice_id), 'monto' => $l->monto,
@@ -309,18 +293,6 @@ final class CompensationService
                     'referencia' => $p->referencia, 'fecha' => $p->created_at->toIso8601String(), 'disponible' => $remanentes[$p->id]['remanente'], 'factura_sugerida_id' => null,
                 ];
             }
-        }
-
-        foreach (AdminContAbono::query()->where('master_client_id', $masterClientId)->where('estado', AdminContAbono::ESTADO_CONFIRMADO)->get() as $a) {
-            if ($a->montoDisponible() <= 0.004) {
-                continue;
-            }
-            $out[] = [
-                'source_type' => AdminContCompensationLine::SOURCE_ABONO, 'source_id' => $a->id, 'etiqueta' => 'Abono '.$a->numero_recibo,
-                'referencia' => $a->referencia, 'fecha' => $a->fecha_registro->toIso8601String(), 'disponible' => $a->montoDisponible(),
-                // El abono venía atado a una factura: ya no se aplica solo, pero se sugiere esa primero.
-                'factura_sugerida_id' => $a->invoice_id,
-            ];
         }
 
         foreach ($this->notasConSaldo($masterClientId) as $n) {
@@ -506,7 +478,6 @@ final class CompensationService
         $rows = AdminContPaymentMovement::query()->where('master_client_id', $masterClientId)->orderByDesc('fecha_movimiento')->orderByDesc('id')->limit(50)->get();
 
         $payments = AdminContPayment::query()->whereIn('id', $rows->pluck('payment_id')->filter()->unique())->pluck('numero_recibo', 'id');
-        $abonos   = AdminContAbono::query()->whereIn('id', $rows->pluck('abono_id')->filter()->unique())->pluck('numero_recibo', 'id');
         $invoices = AdminContInvoice::query()->whereIn('id', $rows->pluck('invoice_id')->filter()->unique())->pluck('numero', 'id');
         $cmps     = AdminContCompensation::query()->whereIn('id', $rows->pluck('compensation_id')->filter()->unique())->pluck('folio', 'id');
         $actors   = User::query()->whereIn('id', $rows->pluck('actor_id')->filter()->unique())->get()->keyBy('id');
@@ -520,7 +491,6 @@ final class CompensationService
             'id' => $m->id, 'tipo' => $m->tipo, 'fecha' => $m->fecha_movimiento->toIso8601String(), 'monto' => $m->monto,
             'delta_disponible' => $m->delta_disponible, 'origen' => $m->origen, 'motivo' => $m->motivo,
             'cobro' => $m->payment_id !== null ? $payments->get($m->payment_id) : null,
-            'abono' => $m->abono_id !== null ? $abonos->get($m->abono_id) : null,
             'factura' => $m->invoice_id !== null ? $invoices->get($m->invoice_id) : null,
             'compensacion' => $m->compensation_id !== null ? $cmps->get($m->compensation_id) : null,
             'usuario' => $this->nombreDe($actors->get((int) $m->actor_id)),

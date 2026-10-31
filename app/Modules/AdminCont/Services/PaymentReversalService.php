@@ -6,7 +6,6 @@ namespace App\Modules\AdminCont\Services;
 
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\PaymentStateException;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
@@ -36,11 +35,10 @@ final class PaymentReversalService
 {
     public function __construct(
         private readonly ClientLock $clientLock,
-        private readonly InvoiceBalanceWriter $balance,
         private readonly PaymentLedger $ledger,
         private readonly ApplicationReversalService $applications,
         private readonly CommissionAdjustmentService $commissionAdjustments,
-        private readonly AbonoService $abonos,
+        private readonly ClientBalanceService $clientBalance,
         private readonly CompensationService $compensations,
     ) {}
 
@@ -182,7 +180,7 @@ final class PaymentReversalService
             }
         }
 
-        $saldo = $this->abonos->desgloseSaldoCliente($request->master_client_id)['total'];
+        $saldo = $this->clientBalance->desglose($request->master_client_id)['total'];
         $pendienteTotal = round(array_sum(array_column($facturas, 'pendiente')), 2);
         if ($facturas === [] || $saldo <= 0.004) {
             return null;
@@ -233,11 +231,7 @@ final class PaymentReversalService
             // Bloqueo de las facturas del cobro, siempre por id.
             $invoices = AdminContInvoice::query()->whereIn('id', $invoiceIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
 
-            if ($payment->cobros_v2) {
-                $this->anularV2($payment, $motivo, $mark);
-            } else {
-                $this->anularFlujoAnterior($payment, $invoices, $motivo, $mark);
-            }
+            $this->anularCobro($payment, $motivo, $mark);
 
             $this->revertirCaja($payment);
             $ajustes = $this->commissionAdjustments->registrarDespues($previo, $motivo, null);
@@ -250,7 +244,7 @@ final class PaymentReversalService
         return $ajustes;
     }
 
-    private function anularV2(AdminContPayment $payment, string $motivo, User $mark): void
+    private function anularCobro(AdminContPayment $payment, string $motivo, User $mark): void
     {
         $this->applications->desaplicarTodoDeCobro($payment, $motivo, $mark);
 
@@ -262,51 +256,6 @@ final class PaymentReversalService
                 'origen' => AdminContPaymentMovement::ORIGEN_SISTEMA, 'payment_id' => $payment->id, 'delta_disponible' => -$remanente,
                 'actor_id' => $mark->id, 'motivo' => $motivo,
             ]);
-        }
-    }
-
-    /**
-     * Cobro del flujo anterior: cada línea baja su factura, el abono obligatorio consumido se restituye y el saldo de nivel cliente que había usado vuelve al
-     * cliente como un abono nuevo. Los contra-movimientos del libro espejan exactamente lo que el cobro asentó (ver `PaymentService::registrarEnLibro`).
-     *
-     * @param \Illuminate\Support\Collection<int, AdminContInvoice> $invoices
-     */
-    private function anularFlujoAnterior(AdminContPayment $payment, \Illuminate\Support\Collection $invoices, string $motivo, User $mark): void
-    {
-        foreach ($payment->invoiceLines as $line) {
-            $monto = round((float) $line->monto_aplicado, 2);
-            if ($monto <= 0.004) {
-                continue;
-            }
-            $invoice = $invoices->get($line->invoice_id);
-            if ($invoice !== null) {
-                $this->balance->apply($invoice, -$monto);
-            }
-
-            // Abono obligatorio de nivel factura/proyecto que este cobro consumió: vuelve a su saldo.
-            if ($line->abono_id !== null && (float) $line->monto_abono_aplicado > 0.004) {
-                /** @var AdminContAbono|null $abono */
-                $abono = AdminContAbono::query()->whereKey($line->abono_id)->lockForUpdate()->first();
-                $abono?->update(['monto_usado' => max(0.0, round((float) $abono->monto_usado - (float) $line->monto_abono_aplicado, 2))]);
-            }
-
-            $this->ledger->shadow(fn () => $this->ledger->record([
-                'master_client_id' => $payment->master_client_id, 'tipo' => AdminContPaymentMovement::TIPO_ANULACION, 'monto' => $monto,
-                'origen' => AdminContPaymentMovement::ORIGEN_SISTEMA, 'payment_id' => $payment->id, 'invoice_id' => $line->invoice_id,
-                'delta_disponible' => $monto, 'delta_factura' => -$monto, 'actor_id' => $mark->id, 'motivo' => $motivo,
-            ]));
-        }
-
-        if ((float) $payment->saldo_favor_aplicado > 0.004) {
-            $this->abonos->registrarRestitucionPorAnulacion($payment, (float) $payment->saldo_favor_aplicado);
-        }
-
-        if ((float) $payment->monto_recibido > 0.004) {
-            $this->ledger->shadow(fn () => $this->ledger->record([
-                'master_client_id' => $payment->master_client_id, 'tipo' => AdminContPaymentMovement::TIPO_ANULACION, 'monto' => (float) $payment->monto_recibido,
-                'origen' => AdminContPaymentMovement::ORIGEN_SISTEMA, 'payment_id' => $payment->id, 'delta_disponible' => -(float) $payment->monto_recibido,
-                'actor_id' => $mark->id, 'motivo' => $motivo,
-            ]));
         }
     }
 
@@ -414,11 +363,6 @@ final class PaymentReversalService
         ];
         if ($type === AdminContCompensationLine::SOURCE_COBRO) {
             $attrs['payment_id'] = $id;
-        } elseif ($type === AdminContCompensationLine::SOURCE_ABONO) {
-            /** @var AdminContAbono $abono */
-            $abono = AdminContAbono::query()->lockForUpdate()->findOrFail($id);
-            $abono->update(['monto_usado' => round((float) $abono->monto_usado + $monto, 2)]);
-            $attrs['abono_id'] = $id;
         } else {
             // Las notas de crédito siguen fuera del libro: se descuenta su saldo y el movimiento queda solo como traza (no mueve el disponible del libro).
             /** @var AdminContCreditNote $nota */

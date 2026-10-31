@@ -29,7 +29,6 @@ use App\Modules\AdminCont\Http\Controllers\AdminContPaymentMethodSalesController
 use App\Modules\AdminCont\Http\Controllers\AdminContPettyCashController;
 use App\Modules\AdminCont\Http\Controllers\AdminContReportsController;
 use App\Modules\AdminCont\Http\Controllers\AdminContReversalController;
-use App\Modules\AdminCont\Http\Controllers\AdminContSaldoFavorController;
 use App\Modules\AdminCont\Http\Controllers\AdminContSettingsController;
 use App\Modules\Integrations\Outlook\Http\Controllers\OutlookCalendarController;
 use Illuminate\Support\Facades\Route;
@@ -242,11 +241,6 @@ Route::middleware('primary_approver_only')->prefix('notas-credito')->group(funct
     Route::put('/{creditNote}/decision', [AdminContCreditNoteController::class, 'decision'])->whereNumber('creditNote');
 });
 
-// SCRUM-903 (Saldo a Favor de Clientes, 4N) — pantalla de solo consulta, menú "Movimientos"
-// después de Registrar Abonos. Mismo gate de rol que Abonos/Cobros/Notas Crédito.
-Route::middleware('permission:admin_contab.records.manage')->prefix('saldo-favor')->group(function (): void {
-    Route::get('/', [AdminContSaldoFavorController::class, 'index']);
-});
 
 // SCRUM-575→579 (REQ-498→502) — Comisiones Internas, Batch 14 (ver
 // docs/adr/ADR-SCRUM575-579-batch14-comisiones-internas.md). CORREGIDO en Senior Review: la

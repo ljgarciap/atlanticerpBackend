@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContInvoice;
@@ -98,7 +97,6 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
         $h = $this->headers();
 
         $r = $this->withHeaders($h)->postJson('/api/admin-contab/payments/cobro', $this->cobro($master->id, 700, 'efectivo', $cuenta->id))->assertStatus(201);
-        $this->assertTrue($r->json('cobros_v2'));
         $this->assertSame('confirmado', $r->json('estado'));
         $this->assertSame([], $r->json('facturas'));
         $this->assertSame(700.0, (float) $r->json('saldo_sin_aplicar'));
@@ -106,56 +104,7 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
         $this->remakeTenant();
         $this->assertEqualsWithDelta(700.0, app(PaymentLedger::class)->disponibleDelCliente($master->id), 0.001);
         $this->assertSame(1, AdminContBankMovement::where('source_type', 'payment')->where('source_id', $r->json('id'))->count(), 'La caja se cuenta por el cobro, aplicado o no.');
-        $this->assertSame(0, AdminContAbono::where('master_client_id', $master->id)->count(), 'Ya no se crean abonos: el saldo vive en el libro.');
         $this->sinDiferencias();
-
-        // Saldo a Favor lo muestra como cobro a cuenta.
-        $filas = $this->withHeaders($h)->getJson('/api/admin-contab/saldo-favor?cliente='.urlencode($master->name))->assertStatus(200)->json('rows');
-        $this->assertCount(1, $filas);
-        $this->assertSame('Cobro a cuenta', $filas[0]['origen']);
-        $this->assertSame(700.0, (float) $filas[0]['monto_disponible']);
-    }
-
-    /** Fase 13 (2.2) — el saldo a favor de un cliente da la misma cifra en `open-invoices` (desglosada) y en el listado, y el listado expone de dónde sale. */
-    public function test_el_saldo_a_favor_cuadra_entre_open_invoices_y_el_listado_y_expone_los_origenes(): void
-    {
-        $master = MasterClient::create(['name' => 'Cliente V2 '.uniqid()]);
-        $cuenta = $this->cuenta();
-        $h = $this->headers();
-        $proyecto = \App\Modules\VentasDiseno\Models\SalesProject::create(['name' => 'Proyecto saldo '.uniqid()]);
-        $abono = fn (float $monto, ?int $proyectoId): AdminContAbono => AdminContAbono::create([
-            'master_client_id' => $master->id, 'sales_project_id' => $proyectoId, 'monto_original' => $monto, 'monto_usado' => 0,
-            'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $cuenta->id, 'referencia' => 'TRF-'.uniqid(),
-            'estado' => AdminContAbono::ESTADO_CONFIRMADO, 'registrado_por' => \App\Models\User::query()->value('id'),
-            'fecha_registro' => now(), 'fecha_confirmacion' => now(),
-        ]);
-
-        // 700 a cuenta (cobro v2) + 100 abono nivel Cliente + 50 abono reservado a un proyecto.
-        $cobro = $this->withHeaders($h)->postJson('/api/admin-contab/payments/cobro', $this->cobro($master->id, 700, 'efectivo', $cuenta->id))->assertStatus(201);
-        $this->remakeTenant();
-        $delCliente = $abono(100, null);
-        $delProyecto = $abono(50, $proyecto->id);
-
-        $oi = $this->withHeaders($h)->getJson('/api/admin-contab/payments/open-invoices?master_client_id='.$master->id)->assertStatus(200);
-        $this->assertSame(100.0, (float) $oi->json('credit_balance'), 'lo que un cobro puede aplicar de inmediato no cambia');
-        $this->assertSame(700.0, (float) $oi->json('credit_balance_cuenta'));
-        $this->assertSame(50.0, (float) $oi->json('credit_balance_reservado'));
-        $this->assertSame(850.0, (float) $oi->json('credit_balance_total'));
-
-        $this->remakeTenant();
-        $lista = $this->withHeaders($h)->getJson('/api/admin-contab/saldo-favor?cliente='.urlencode($master->name))->assertStatus(200);
-        $ind = $lista->json('indicadores');
-        $this->assertEqualsWithDelta($ind['saldo_disponible_total'], $ind['saldo_aplicable_cliente'] + $ind['saldo_a_cuenta'] + $ind['saldo_reservado'], 0.01, 'los indicadores desglosan el total sin mezclar niveles');
-        $this->remakeTenant();
-        $filas = collect($lista->json('rows'));
-        $this->assertCount(3, $filas);
-        $this->assertSame(850.0, round((float) $filas->sum('monto_disponible'), 2), 'el listado suma lo mismo que el total de open-invoices');
-
-        // cada fila dice qué es y de dónde sale (lo que la compensación exige por línea)
-        $porTipo = $filas->keyBy(fn (array $f) => $f['source_type'].':'.$f['source_id']);
-        $this->assertSame('cliente', $porTipo['cobro:'.$cobro->json('id')]['nivel']);
-        $this->assertSame('cliente', $porTipo['abono:'.$delCliente->id]['nivel']);
-        $this->assertSame('proyecto', $porTipo['abono:'.$delProyecto->id]['nivel']);
     }
 
     public function test_aplicacion_directa_parcial_aplica_lo_indicado_y_el_resto_es_saldo_a_favor(): void
@@ -240,7 +189,7 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
         $this->sinDiferencias();
     }
 
-    public function test_confirmar_un_cobro_nuevo_cuya_factura_ya_no_tiene_lugar_deja_el_excedente_en_el_libro_sin_crear_abonos(): void
+    public function test_confirmar_un_cobro_nuevo_cuya_factura_ya_no_tiene_lugar_deja_el_excedente_en_el_libro(): void
     {
         $master  = MasterClient::create(['name' => 'Cliente V2 '.uniqid()]);
         $factura = $this->factura($master, 500);
@@ -260,7 +209,6 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
         $this->remakeTenant();
         $this->assertEqualsWithDelta(500.0, (float) $factura->refresh()->saldo_aplicado, 0.001);
         $this->assertEqualsWithDelta(500.0, app(PaymentLedger::class)->remanenteDeCobro((int) $b->json('id')), 0.001);
-        $this->assertSame(0, AdminContAbono::where('master_client_id', $master->id)->count());
         $this->sinDiferencias();
     }
 
@@ -276,7 +224,7 @@ class AdminContCobrosV2F2Test extends FeatureTestCase
             'metodo_pago' => 'efectivo', 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
         ]);
         DB::table($pago->getTable())->where('id', $pago->id)->update(['created_at' => now()->subDays(60)]);   // el dinero entró hace 60 días…
-        $pago->invoiceLines()->create(['invoice_id' => $factura->id, 'monto_aplicado' => 500, 'monto_abono_aplicado' => 0, 'fecha_aplicacion' => now()]); // …y se aplicó hoy
+        $pago->invoiceLines()->create(['invoice_id' => $factura->id, 'monto_aplicado' => 500, 'fecha_aplicacion' => now()]); // …y se aplicó hoy
 
         $r = app(InvoiceService::class)->over90DaysCollectedForCurrentMonth();
 

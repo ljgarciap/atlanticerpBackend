@@ -6,7 +6,6 @@ namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\InvoiceStateException;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
@@ -15,7 +14,6 @@ use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use App\Modules\AdminCont\Services\ClientLock;
 use App\Modules\AdminCont\Services\InvoiceBalanceWriter;
 use App\Modules\AdminCont\Services\PaymentLedger;
-use App\Modules\AdminCont\Services\PaymentLedgerBackfill;
 use App\Modules\AdminCont\Services\PaymentLedgerVerifier;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Shared\Multitenancy\Tenant;
@@ -61,16 +59,6 @@ class AdminContCobrosLibroF1Test extends FeatureTestCase
         return AdminContInvoice::create([
             'numero' => 'F-'.static::uniqueTestNumber(), 'order_id' => random_int(100000, 999999),
             'master_client_id' => $master->id, 'cliente' => $master->name, 'monto' => $monto, 'saldo_aplicado' => $saldoAplicado,
-        ]);
-    }
-
-    private function abonoConfirmado(int $masterId, float $monto, float $usado = 0.0): AdminContAbono
-    {
-        return AdminContAbono::create([
-            'numero_recibo' => 'ABN-'.static::uniqueTestNumber(), 'master_client_id' => $masterId, 'monto_original' => $monto, 'monto_usado' => $usado,
-            'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF-F1',
-            'estado' => AdminContAbono::ESTADO_CONFIRMADO, 'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
-            'fecha_registro' => now(), 'fecha_confirmacion' => now(),
         ]);
     }
 
@@ -238,57 +226,7 @@ class AdminContCobrosLibroF1Test extends FeatureTestCase
         $this->sinDiferencias();
     }
 
-    public function test_una_falla_al_escribir_el_libro_nunca_rompe_la_operacion_real(): void
-    {
-        $ledger = app(PaymentLedger::class);
-        $master = MasterClient::create(['name' => 'Cliente F1 '.uniqid()]);
-
-        DB::transaction(function () use ($ledger, $master): void {
-            $factura = $this->factura($master, 100);
-            $ledger->shadow(function (): void {
-                throw new \RuntimeException('falla simulada del libro');
-            });
-            // La transacción externa sigue viva y puede seguir trabajando.
-            $factura->update(['saldo_aplicado' => 10]);
-            $this->assertEqualsWithDelta(10.0, (float) $factura->refresh()->saldo_aplicado, 0.001);
-        });
-    }
-
     // ── historial: backfill idempotente y verificador ───────────────────────────────────────────
-
-    public function test_el_backfill_copia_el_historial_sin_duplicar_y_el_verificador_da_cero(): void
-    {
-        $master  = MasterClient::create(['name' => 'Cliente F1 '.uniqid()]);
-        $factura = $this->factura($master, 500, 300);       // 300 ya cobrado por un cobro histórico
-        $this->abonoConfirmado($master->id, 200, 50);       // disponible 150
-
-        $pago = AdminContPayment::create([
-            'numero_recibo' => 'REC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'monto_recibido' => 300, 'saldo_favor_aplicado' => 0,
-            'metodo_pago' => 'efectivo', 'estado' => AdminContPayment::ESTADO_CONFIRMADO,
-        ]);
-        $pago->invoiceLines()->create(['invoice_id' => $factura->id, 'monto_aplicado' => 300, 'monto_abono_aplicado' => 0]);
-        // Un cobro «esperando confirmación»: todavía no aplicó nada, no se copia.
-        $pendiente = AdminContPayment::create([
-            'numero_recibo' => 'REC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'monto_recibido' => 200, 'saldo_favor_aplicado' => 0,
-            'metodo_pago' => 'transferencia', 'estado' => AdminContPayment::ESTADO_ESPERANDO_CONFIRMACION,
-        ]);
-        $pendiente->invoiceLines()->create(['invoice_id' => $factura->id, 'monto_aplicado' => 200, 'monto_abono_aplicado' => 0]);
-
-        $this->assertNotSame([], app(PaymentLedgerVerifier::class)->verify()['facturas'], 'Antes del backfill el libro está vacío: debe haber diferencias.');
-
-        $primera = app(PaymentLedgerBackfill::class)->run();
-        $this->assertSame(1, $primera['abonos']);
-        $this->assertSame(1, $primera['consumos']);
-        $this->assertSame(1, $primera['aplicaciones']);
-
-        $segunda = app(PaymentLedgerBackfill::class)->run();
-        $this->assertSame(['abonos' => 0, 'consumos' => 0, 'aplicaciones' => 0], $segunda, 'Idempotente: no repite nada.');
-
-        $this->assertEqualsWithDelta(150.0, app(PaymentLedger::class)->disponibleDelCliente($master->id), 0.001);
-        $this->assertEqualsWithDelta(300.0, app(PaymentLedger::class)->aplicadoAFactura($factura->id), 0.001);
-        $this->assertSame(0, AdminContPaymentMovement::where('payment_id', $pendiente->id)->count());
-        $this->sinDiferencias();
-    }
 
     public function test_el_verificador_senala_una_factura_cuyo_saldo_no_coincide_con_el_libro(): void
     {

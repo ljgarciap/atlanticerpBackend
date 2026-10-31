@@ -17,8 +17,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int      $payment_id
  * @property int      $invoice_id
  * @property float    $monto_aplicado
- * @property int|null $abono_id
- * @property float    $monto_abono_aplicado
  * @property \Carbon\Carbon|null $fecha_aplicacion
  */
 class AdminContPaymentInvoice extends Model
@@ -28,12 +26,12 @@ class AdminContPaymentInvoice extends Model
     public $timestamps = false;
 
     /** @var list<string> */
-    protected $fillable = ['payment_id', 'invoice_id', 'monto_aplicado', 'abono_id', 'monto_abono_aplicado', 'fecha_aplicacion'];
+    protected $fillable = ['payment_id', 'invoice_id', 'monto_aplicado', 'fecha_aplicacion'];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['monto_aplicado' => 'float', 'monto_abono_aplicado' => 'float', 'fecha_aplicacion' => 'datetime'];
+        return ['monto_aplicado' => 'float', 'fecha_aplicacion' => 'datetime'];
     }
 
     public function getTable(): string

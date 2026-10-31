@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContCompensation;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
@@ -15,7 +14,6 @@ use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
 use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use App\Modules\AdminCont\Services\AccountStatementService;
 use App\Modules\AdminCont\Services\PaymentLedger;
-use App\Modules\AdminCont\Services\PaymentLedgerBackfill;
 use App\Modules\AdminCont\Services\PaymentLedgerVerifier;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Shared\Multitenancy\Tenant;
@@ -75,15 +73,6 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         $this->remakeTenant();
 
         return (int) $r->json('id');
-    }
-
-    private function abonoConfirmado(int $masterId, float $monto, ?int $invoiceId = null): AdminContAbono
-    {
-        return AdminContAbono::create([
-            'numero_recibo' => 'ABN-'.static::uniqueTestNumber(), 'master_client_id' => $masterId, 'invoice_id' => $invoiceId, 'monto_original' => $monto, 'monto_usado' => 0,
-            'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF-F3', 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
-        ]);
     }
 
     private function notaConSaldo(MasterClient $master, AdminContInvoice $origen, float $monto): AdminContCreditNote
@@ -207,20 +196,6 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         $this->assertSame(0.0, (float) $vieja->refresh()->saldo_aplicado);
     }
 
-    public function test_la_sugerencia_prefiere_la_factura_a_la_que_venia_atado_un_abono(): void
-    {
-        $master = MasterClient::create(['name' => 'Cliente Atado '.uniqid()]);
-        $vieja  = $this->factura($master, 500, 0, 40);
-        $atada  = $this->factura($master, 500, 0, 5);
-        $this->abonoConfirmado($master->id, 200, $atada->id);
-        $h = $this->headers();
-
-        $d = $this->withHeaders($h)->getJson('/api/admin-contab/compensaciones/clientes/'.$master->id)->assertStatus(200);
-
-        $this->assertSame($atada->id, $d->json('sugerencia.0.invoice_id'), 'La factura original del abono va primero, aunque no sea la más antigua.');
-        $this->assertSame($atada->id, $d->json('fuentes.0.factura_sugerida_id'));
-    }
-
     // ── vista previa ────────────────────────────────────────────────────────────────────────────
 
     public function test_la_vista_previa_dice_como_quedaria_todo_sin_cambiar_nada(): void
@@ -318,36 +293,6 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         $this->sinDiferencias();
     }
 
-    public function test_confirmar_desde_un_abono_historico_descuenta_el_abono_y_aparece_en_el_estado_de_cuenta(): void
-    {
-        $master  = MasterClient::create(['name' => 'Cliente Abono '.uniqid()]);
-        $factura = $this->factura($master, 300);
-        $abono   = $this->abonoConfirmado($master->id, 200);
-        app(PaymentLedgerBackfill::class)->run();   // el historial ya está en el libro, como tras el despliegue
-        $h = $this->headers();
-
-        $r = $this->withHeaders($h)->postJson('/api/admin-contab/compensaciones', $this->cruce($master->id, [
-            ['source_type' => 'abono', 'source_id' => $abono->id, 'invoice_id' => $factura->id, 'monto' => 150],
-        ]))->assertStatus(201);
-
-        $this->remakeTenant();
-        $this->assertEqualsWithDelta(150.0, (float) $abono->refresh()->monto_usado, 0.001);
-        $this->assertEqualsWithDelta(150.0, (float) $factura->refresh()->saldo_aplicado, 0.001);
-        $this->sinDiferencias();
-
-        $movs = app(AccountStatementService::class)->detail($master->id, null, null, null)['movimientos'];
-        // SCRUM-1168: la compensación no es una fila; figura el abono (cobro) con su recibo, por lo aplicado y por lo que sigue a favor.
-        $this->assertNull(collect($movs)->firstWhere('tipo', 'compensacion'), 'Una compensación ya no es fila del Estado de Cuenta.');
-        $cobros = collect($movs)->where('tipo', 'cobro')->values();
-        $this->assertSame(200.0, round((float) $cobros->sum('credito'), 2), 'El abono figura completo, aplicado o no.');
-        $aplicado = $cobros->firstWhere('numero_factura', $factura->numero);
-        $this->assertSame(150.0, (float) $aplicado['credito']);
-        $this->assertSame($abono->numero_recibo, $aplicado['recibo']['numero_recibo']);
-        $this->assertSame('abono', $aplicado['recibo']['tipo']);
-        $this->assertSame(50.0, (float) $cobros->firstWhere('numero_factura', null)['credito'], 'Lo no aplicado es saldo a favor.');
-        $this->assertSame(100.0, (float) end($movs)['saldo'], '300 de factura menos 200 recibidos.');
-    }
-
     public function test_el_estado_de_cuenta_muestra_el_cobro_completo_y_su_saldo_a_favor_sin_filas_de_compensacion(): void
     {
         $master  = MasterClient::create(['name' => 'Cliente Estado '.uniqid()]);
@@ -426,23 +371,6 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         $this->assertSame(-200.0, $d['saldo'], 'Pagó 500, se le devolvieron 300: le quedan 200 a favor.');
     }
 
-    /** Un cobro anterior (no v2) aplicado a una factura que después se anuló también sigue figurando: el cliente pagó. */
-    public function test_un_cobro_anterior_aplicado_a_una_factura_anulada_sigue_figurando(): void
-    {
-        $master  = MasterClient::create(['name' => 'Cliente Legacy Anulada '.uniqid()]);
-        $factura = $this->factura($master, 300, 300, 10);
-        $cobro   = AdminContPayment::create([
-            'numero_recibo' => 'REC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'monto_recibido' => 300, 'saldo_favor_aplicado' => 0,
-            'metodo_pago' => 'efectivo', 'estado' => AdminContPayment::ESTADO_CONFIRMADO, 'cobros_v2' => false,
-        ]);
-        AdminContPaymentInvoice::create(['payment_id' => $cobro->id, 'invoice_id' => $factura->id, 'monto_aplicado' => 300]);
-        \Illuminate\Support\Facades\DB::table($factura->getTable())->where('id', $factura->id)->update(['anulada_at' => now()]);
-
-        $d = app(AccountStatementService::class)->detail($master->id, null, null, null);
-        $this->assertSame(300.0, round((float) collect($d['movimientos'])->where('tipo', 'cobro')->sum('credito'), 2));
-        $this->assertSame(-300.0, $d['saldo'], 'Factura 300, anulación -300, cobro -300: queda a favor lo pagado.');
-    }
-
     // ── SCRUM-1183: el pago de una factura corregida pasa al reemplazo ──────────────────────────────
 
     /** Factura de 300 pagada con un cobro v2 de 500 (300 aplicados), anulada por una corrección y con su reemplazo del monto dado. */
@@ -508,27 +436,6 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         $this->sinDiferencias();
     }
 
-    public function test_el_traslado_de_un_abono_ajusta_lo_usado_del_abono(): void
-    {
-        $master   = MasterClient::create(['name' => 'Cliente Traslado Abono '.uniqid()]);
-        $original = $this->factura($master, 300, 0, 10);
-        $abono    = $this->abonoConfirmado($master->id, 500);
-        app(PaymentLedgerBackfill::class)->run();
-        $h = $this->headers();
-        $this->withHeaders($h)->postJson('/api/admin-contab/compensaciones', $this->cruce($master->id, [
-            ['source_type' => 'abono', 'source_id' => $abono->id, 'invoice_id' => $original->id, 'monto' => 300],
-        ]))->assertStatus(201);
-        $this->remakeTenant();
-        \Illuminate\Support\Facades\DB::table($original->getTable())->where('id', $original->id)->update(['anulada_at' => now()]);
-        $reemplazo = $this->factura($master, 250);
-
-        $this->assertSame(250.0, $this->trasladar($original->refresh(), $reemplazo));
-
-        $this->assertEqualsWithDelta(250.0, (float) $abono->refresh()->monto_usado, 0.001, 'Del abono quedan usados solo los 250 que cupieron.');
-        $this->assertEqualsWithDelta(250.0, (float) $reemplazo->refresh()->saldo_aplicado, 0.001);
-        $this->sinDiferencias();
-    }
-
     public function test_el_comando_traslada_los_pagos_de_correcciones_anteriores_y_en_simulacion_no_escribe_nada(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Comando '.uniqid()]);
@@ -566,28 +473,6 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
         $anuladas = app(PaymentLedgerVerifier::class)->verify()['anuladas'];
         $this->assertSame([$original->id], array_column($anuladas, 'invoice_id'));
         $this->assertSame(300.0, $anuladas[0]['libro']);
-    }
-
-    /** Pre-QA SCRUM-1168, bloqueante 2: un cobro anterior que gastó saldo de un abono no debe contarse además del abono completo. */
-    public function test_un_cobro_anterior_que_gasto_saldo_de_un_abono_no_duplica_el_credito(): void
-    {
-        $master  = MasterClient::create(['name' => 'Cliente Abono Gastado '.uniqid()]);
-        $factura = $this->factura($master, 700, 700, 10);
-        $abono   = $this->abonoConfirmado($master->id, 1000);
-        app(PaymentLedgerBackfill::class)->run();   // el abono ya está en el libro, como tras el despliegue
-
-        // Cobro del flujo anterior: no recibió dinero propio, aplicó 700 del saldo del abono (el libro lo deja en el cobro, no en el abono).
-        $cobroViejo = AdminContPayment::create([
-            'numero_recibo' => 'REC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'monto_recibido' => 0, 'saldo_favor_aplicado' => 700,
-            'metodo_pago' => 'efectivo', 'estado' => AdminContPayment::ESTADO_CONFIRMADO, 'cobros_v2' => false,
-        ]);
-        AdminContPaymentInvoice::create(['payment_id' => $cobroViejo->id, 'invoice_id' => $factura->id, 'monto_aplicado' => 700, 'fecha_aplicacion' => now()]);
-        app(PaymentLedger::class)->aplicacion($cobroViejo, $factura, 700, AdminContPaymentMovement::ORIGEN_DIRECTA);
-
-        $d = app(AccountStatementService::class)->detail($master->id, null, null, null);
-        $this->assertSame(1000.0, round((float) collect($d['movimientos'])->where('tipo', 'cobro')->sum('credito'), 2), 'Se recibieron 1000: 700 gastados en la factura y 300 a favor, sin contar el gasto dos veces.');
-        $this->assertSame(-300.0, $d['saldo']);
-        $this->assertEqualsWithDelta(300.0, app(PaymentLedger::class)->disponibleDelCliente($master->id), 0.001, 'Coincide con el dinero disponible del libro.');
     }
 
     public function test_el_dinero_devuelto_en_efectivo_sale_como_debito_y_reduce_el_saldo_a_favor(): void

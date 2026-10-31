@@ -16,7 +16,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property string      $tipo
  * @property int|null    $payment_id
  * @property int|null    $invoice_id
- * @property int|null    $abono_id
  * @property float       $monto
  * @property float       $delta_disponible
  * @property float       $delta_factura

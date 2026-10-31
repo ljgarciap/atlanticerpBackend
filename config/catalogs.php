@@ -1,7 +1,6 @@
 <?php
 
 declare(strict_types=1);
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPettyCashReport;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
@@ -94,7 +93,7 @@ return [
         // clave; `retencion_impuestos` y `ajuste_cuenta` son de sistema (llevan su propio documento/comentario) y no cambian de propiedades.
         'payment_method' => [
             'label' => 'Formas de pago',
-            'usage' => [[AdminContPayment::class, 'metodo_pago'], [AdminContAbono::class, 'metodo_pago'], [AdminContPettyCashReport::class, 'forma_pago']],
+            'usage' => [[AdminContPayment::class, 'metodo_pago'], [AdminContPettyCashReport::class, 'forma_pago']],
             'locked_when_system' => ['sin_cuenta_bancaria', 'inmediato', 'caja_chica'],
             'props' => [
                 'sin_cuenta_bancaria' => ['type' => 'bool', 'default' => false],

@@ -32,7 +32,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string          $estado
  * @property int|null        $created_by
  * @property \Carbon\Carbon  $created_at
- * @property bool            $cobros_v2
  * @property \Carbon\Carbon|null $anulado_at
  * @property int|null        $anulado_by
  * @property string|null     $motivo_anulacion
@@ -88,7 +87,7 @@ class AdminContPayment extends Model
     protected $fillable = [
         'numero_recibo', 'master_client_id', 'monto_recibido', 'saldo_favor_aplicado', 'metodo_pago',
         'referencia', 'bank_account_id', 'numero_documento_retencion', 'comentario_ajuste', 'estado',
-        'created_by', 'cobros_v2', 'anulado_at', 'anulado_by', 'motivo_anulacion',
+        'created_by', 'anulado_at', 'anulado_by', 'motivo_anulacion',
     ];
 
     /** @return array<string, string> */
@@ -97,7 +96,6 @@ class AdminContPayment extends Model
         return [
             'monto_recibido'       => 'float',
             'saldo_favor_aplicado' => 'float',
-            'cobros_v2'            => 'boolean',
             'anulado_at'           => 'datetime',
             'created_at'           => 'datetime',
             'updated_at'           => 'datetime',

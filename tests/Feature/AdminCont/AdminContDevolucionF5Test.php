@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContPaymentMovement;
@@ -115,28 +114,6 @@ class AdminContDevolucionF5Test extends FeatureTestCase
         // Dos solicitudes pendientes sobre la misma fuente no pueden sumar más de lo disponible.
         $this->solicitar($contabilidad, $master, $cobro, 70)->assertStatus(201);
         $this->solicitar($contabilidad, $master, $cobro, 40)->assertStatus(422);
-    }
-
-    public function test_devolver_desde_un_abono_lo_consume(): void
-    {
-        $master = MasterClient::create(['name' => 'Cliente Dev '.uniqid()]);
-        [$contabilidad, $approver] = $this->sesiones();
-        $abono = AdminContAbono::create([
-            'master_client_id' => $master->id, 'monto_original' => 300, 'monto_usado' => 0, 'metodo_pago' => 'efectivo', 'referencia' => 'REF-A', 'registrado_por' => User::query()->value('id'), 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'fecha_registro' => now(), 'fecha_confirmacion' => now(),
-        ]);
-
-        $sol = $this->withHeaders($contabilidad)->post('/api/admin-contab/clientes/'.$master->id.'/devolucion', [
-            'source_type' => 'abono', 'source_id' => $abono->id, 'monto' => 120, 'bank_account_id' => $this->cuenta()->id,
-            'referencia' => 'CHK-1', 'motivo' => 'Cliente lo pidió', 'comprobante' => UploadedFile::fake()->image('c.png'),
-        ], ['Accept' => 'application/json'])->assertStatus(201);
-        $this->remakeTenant();
-
-        $this->withHeaders($approver)->putJson('/api/admin-contab/reversal-requests/'.$sol->json('id').'/decision', ['aprobar' => true])->assertStatus(200);
-        $this->remakeTenant();
-
-        $this->assertEqualsWithDelta(180.0, (float) $abono->fresh()->montoDisponible(), 0.001);
-        $this->assertSame(1, AdminContPaymentMovement::where('abono_id', $abono->id)->where('tipo', 'devolucion')->count());
     }
 
     public function test_tras_confirmar_solo_se_corrigen_referencia_y_comprobante(): void

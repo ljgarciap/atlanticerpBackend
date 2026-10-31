@@ -6,7 +6,6 @@ namespace App\Modules\AdminCont\Services;
 
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\PaymentStateException;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContCompensation;
 use App\Modules\AdminCont\Models\AdminContCompensationLine;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
@@ -48,9 +47,6 @@ final class ApplicationReversalService
         }
         if ($m->origen === AdminContPaymentMovement::ORIGEN_MIGRACION) {
             return 'Es historial anterior: se reversa anulando el cobro.';
-        }
-        if ($m->payment_id !== null && $m->origen === AdminContPaymentMovement::ORIGEN_DIRECTA && ($payment === null || ! $payment->cobros_v2)) {
-            return 'Este cobro es del flujo anterior: se reversa anulando el cobro completo.';
         }
         if ($m->payment_id !== null && $payment !== null && $payment->estado === AdminContPayment::ESTADO_ANULADO) {
             return 'El cobro está anulado.';
@@ -172,7 +168,7 @@ final class ApplicationReversalService
 
         $monto = round((float) $m->monto, 2);
 
-        // Fuente del dinero: cobro (proyección payment_invoices + libro), abono (monto_usado) o saldo de una nota (monto_usado de la nota).
+        // Fuente del dinero: cobro (proyección payment_invoices + libro) o saldo de una nota (monto_usado de la nota).
         $devuelveDisponible = true;
         if ($payment !== null) {
             $row = AdminContPaymentInvoice::query()->where('payment_id', $payment->id)->where('invoice_id', $invoice->id)->lockForUpdate()->first();
@@ -184,10 +180,6 @@ final class ApplicationReversalService
                     $row->update(['monto_aplicado' => $resto]);
                 }
             }
-        } elseif ($m->abono_id !== null) {
-            /** @var AdminContAbono $abono */
-            $abono = AdminContAbono::query()->whereKey($m->abono_id)->lockForUpdate()->firstOrFail();
-            $abono->update(['monto_usado' => max(0.0, round((float) $abono->monto_usado - $monto, 2))]);
         } else {
             $line = AdminContCompensationLine::query()
                 ->where('compensation_id', $m->compensation_id)->where('invoice_id', $m->invoice_id)
