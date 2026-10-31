@@ -1,6 +1,6 @@
 # Fase 16 — Puesta en marcha y experiencia
 
-**Estado**: BORRADOR, pendiente de las decisiones de §5. Origen: grupo 5 de `docs/flujos/candidatos-priorizados.md` (5.1–5.4). No se implementa sin su aprobación.
+**Estado**: APROBADA por Luis (2026-10-30) con las propuestas de §5 (5.1 en la aplicación, 5.3 sí, 5.4 líderes y asistentes conservan el derecho). Origen: grupo 5 de `docs/flujos/candidatos-priorizados.md` (5.1–5.4). No se implementa sin su aprobación.
 
 ## 1. Objetivo
 Que una empresa nueva llegue de «instalación vacía» a «primer cobro» sin tropezar con dependencias ocultas, y cerrar tres asperezas del flujo de Bodega y Ventas detectadas al recorrer la cadena venta→cobro.
