@@ -48,6 +48,8 @@ Route::prefix('pipeline')->group(function (): void {
     Route::get('/{id}', [PipelineController::class, 'show'])->middleware('permission:ventas_diseno.read,ventas_diseno.pipeline.read_all');
     // SCRUM-1128 — aprobación explícita "Pasar a Pedido" (única vía para generar el pedido en Bodega).
     Route::post('/{id}/pass-to-order', [PipelineController::class, 'passToOrder'])->middleware('permission:ventas_diseno.pass_to_order');
+    // Fase 16 (5.3) — el vendedor (dueño o con alcance) pide que Gerencia pase el proyecto a Pedido.
+    Route::post('/{id}/request-pass-to-order', [PipelineController::class, 'requestPassToOrder'])->middleware('permission:ventas_diseno.edit,ventas_diseno.pipeline.edit');
     Route::put('/{id}', [PipelineController::class, 'update'])->middleware('permission:ventas_diseno.edit,ventas_diseno.pipeline.edit');
     Route::patch('/{id}/stage', [PipelineController::class, 'changeStage'])->middleware('permission:ventas_diseno.edit,ventas_diseno.pipeline.edit');
     Route::post('/{id}/files', [PipelineController::class, 'uploadFile'])->middleware('permission:ventas_diseno.edit,ventas_diseno.pipeline.edit');

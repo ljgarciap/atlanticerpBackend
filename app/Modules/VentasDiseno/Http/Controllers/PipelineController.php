@@ -339,6 +339,41 @@ final class PipelineController extends Controller
         return response()->json($this->formatDetail($card, $user));
     }
 
+    /**
+     * Fase 16 (5.3) — POST /api/ventas-diseno/pipeline/{id}/request-pass-to-order {note?}. Quien tiene acceso a la tarjeta (dueño o alcance
+     * de equipo) pide que Gerencia la pase a Pedido; quien ya puede ejecutar el pase lo hace directo y no necesita pedirlo.
+     */
+    public function requestPassToOrder(Request $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $card = $this->service->findDetailed($id);
+        if ($card === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+        if (! $this->canAccess($card, $user)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        if ($this->canPassToOrder($user)) {
+            return response()->json(['message' => 'Tu rol ya puede pasar el proyecto a Pedido directamente.'], 422);
+        }
+
+        $validated = $request->validate(['note' => ['nullable', 'string', 'max:500']]);
+
+        try {
+            $card = $this->service->requestPassToOrder($card, $user, $validated['note'] ?? null);
+        } catch (AlreadyPassedToOrderException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json($this->formatDetail($card, $user));
+    }
+
     public function uploadFile(Request $request, int $id): JsonResponse
     {
         $user = $this->resolveUser($request);
@@ -565,6 +600,15 @@ final class PipelineController extends Controller
                 'name' => trim("{$card->orderApprover->first_name} {$card->orderApprover->last_name}"),
             ] : null,
             'order_approved_at' => $card->order_approved_at?->toIso8601String(),
+            // Fase 16 (5.3) — solicitud pendiente de «Pasar a Pedido» (null si no hay o si el pedido ya existe).
+            'order_request'     => $card->order_requested_at !== null && $this->orderStatus($card) === 'pending' ? [
+                'requested_by' => $card->orderRequester !== null ? [
+                    'id'   => $card->orderRequester->id,
+                    'name' => trim("{$card->orderRequester->first_name} {$card->orderRequester->last_name}"),
+                ] : null,
+                'requested_at' => $card->order_requested_at->toIso8601String(),
+                'note'         => $card->order_request_note,
+            ] : null,
         ];
     }
 
@@ -632,6 +676,11 @@ final class PipelineController extends Controller
             'can_pass_to_order'     => PipelineStages::isWon($card->stage)
                 && $this->orderStatus($card) === 'pending'
                 && $this->canPassToOrder($user),
+            // Fase 16 (5.3) — el botón «Solicitar pase a Pedido» (quien no puede ejecutarlo, sin solicitud pendiente).
+            'can_request_pass_to_order' => PipelineStages::isWon($card->stage)
+                && $this->orderStatus($card) === 'pending'
+                && $card->order_requested_at === null
+                && ! $this->canPassToOrder($user),
             'files'                 => $card->files->map(fn (PipelineCardFile $f) => $this->formatFile($f))->values(),
             // SCRUM-734 (sección 3) — id de la cotización confirmada más reciente del
             // proyecto, null si nunca hubo ninguna. Gate + destino de navegación del

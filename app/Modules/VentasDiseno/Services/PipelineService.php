@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Services;
 
 use App\Models\User;
+use App\Modules\Auth\Models\Role;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Bodega\Services\OrderService;
+use App\Modules\Notifications\Models\NotificationSend;
+use App\Modules\Notifications\Services\NotificationService;
 use App\Modules\VentasDiseno\Exceptions\AlreadyPassedToOrderException;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\PipelineCardDeliveryDate;
@@ -20,10 +24,13 @@ final class PipelineService
     private const MAX_RESULTS = 500;
 
     private const DETAIL_RELATIONS = [
-        'salesProject', 'masterClient', 'subClient', 'owner', 'creator', 'orderApprover', 'contacts', 'deliveryDates', 'files',
+        'salesProject', 'masterClient', 'subClient', 'owner', 'creator', 'orderApprover', 'orderRequester', 'contacts', 'deliveryDates', 'files',
     ];
 
-    public function __construct(private readonly OrderService $orderService) {}
+    public function __construct(
+        private readonly OrderService $orderService,
+        private readonly NotificationService $notifications,
+    ) {}
 
     public function findDetailed(int $id): ?PipelineCard
     {
@@ -250,6 +257,69 @@ final class PipelineService
             $fresh = $locked->fresh(self::DETAIL_RELATIONS);
             return $fresh;
         });
+    }
+
+    /**
+     * Fase 16 (5.3) — quien no puede ejecutar «Pasar a Pedido» (el vendedor) pide que Gerencia lo haga. No cambia el estado del pedido: solo deja
+     * la solicitud en la tarjeta y avisa a Gerencia. Una segunda solicitud sobre la misma tarjeta se rechaza (una sola pendiente).
+     */
+    public function requestPassToOrder(PipelineCard $card, User $actor, ?string $note): PipelineCard
+    {
+        $locked = DB::transaction(function () use ($card, $actor, $note): PipelineCard {
+            /** @var PipelineCard $locked */
+            $locked = PipelineCard::whereKey($card->id)->lockForUpdate()->firstOrFail();
+
+            if (! PipelineStages::isWon($locked->stage)) {
+                throw new \DomainException('Solo un proyecto en estado Aprobado puede pasar a Pedido.');
+            }
+            if ($locked->order_approved_at !== null || $locked->orders()->exists()) {
+                throw new AlreadyPassedToOrderException();
+            }
+            if ($locked->order_requested_at !== null) {
+                throw new \DomainException('Ya hay una solicitud de pase a Pedido para este proyecto.');
+            }
+
+            $locked->update([
+                'order_requested_by' => $actor->id,
+                'order_requested_at' => now(),
+                'order_request_note' => $note !== null && trim($note) !== '' ? trim($note) : null,
+            ]);
+
+            return $locked;
+        });
+
+        $this->notifyOrderRequest($locked, $actor);
+
+        /** @var PipelineCard $fresh */
+        $fresh = $locked->fresh(self::DETAIL_RELATIONS);
+
+        return $fresh;
+    }
+
+    private function notifyOrderRequest(PipelineCard $card, User $actor): void
+    {
+        $roleId = Role::where('key', RoleKeys::MANAGEMENT)->value('id');
+        /** @var list<int> $audience */
+        $audience = $roleId !== null
+            ? User::where('role_id', $roleId)->where('is_active', true)->pluck('id')->map(fn ($id) => (int) $id)->values()->all()
+            : [];
+        if ($audience === []) {
+            return;
+        }
+
+        $nombre = trim("{$actor->first_name} {$actor->last_name}");
+        $this->notifications->send(
+            audience: $audience,
+            content: [
+                'subject' => 'Solicitud para pasar un proyecto a Pedido',
+                'body'    => "{$nombre} pidió pasar a Pedido un proyecto aprobado.",
+                'cta_url' => "/ventas-diseno/pipeline?card={$card->id}",
+            ],
+            channels: [NotificationSend::CHANNEL_IN_APP],
+            source: NotificationSend::SOURCE_PIPELINE_ORDER_REQUEST,
+            sourceRef: "pipeline_card:{$card->id}",
+            createdBy: $actor->id,
+        );
     }
 
     /**
