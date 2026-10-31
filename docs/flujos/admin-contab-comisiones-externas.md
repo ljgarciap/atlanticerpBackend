@@ -31,7 +31,7 @@ Un proyecto referido por un **arquitecto** genera una comisión para él. El arq
 1. `POST …/cuenta-cobro` (archivo, 201) y `GET …/cuenta-cobro` (URL firmada que se descarga) [E]. Sin cuenta de cobro, marcar pagado → 422 [E].
 2. Con régimen `retencion_50` hace falta además `POST …/comprobante-retencion`; sin él, 422 [E]. Con otro régimen el comprobante no aplica [C].
 3. `PUT …/cuenta-pago {bank_account_id}` fija desde qué cuenta se paga [E].
-4. `POST …/mark-paid`: estado `pagada` con `fecha_pago`; el total «pagada» del arquitecto sube [E]. Registra además el movimiento de caja correspondiente [C].
+4. `POST …/mark-paid`: estado `pagada` con `fecha_pago`; el total «pagada» del arquitecto sube [E]. Registra además una **salida de caja** (`tipo = comision`, `direccion = salida`, monto = comisión + impuesto) en la cuenta de pago fijada [E]. Si no hay cuenta de pago, el movimiento se crea igual sin cuenta y aparece en Movimientos como «Sin cuenta asignada» hasta que Contabilidad o la Asistente la asignen (`PUT bank-movements/{id}/assign-account`) [C].
 5. **Ya pagada**: no se paga otra vez, ni cambia la cuenta de pago, ni se propone otro porcentaje (todo 422) [E].
 - **Recordatorio** (`POST …/remind`): avisa al correo del arquitecto; solo mientras esté pendiente de factura (pagada → 422) y exige que el arquitecto tenga correo [E][C].
 
@@ -39,5 +39,5 @@ Un proyecto referido por un **arquitecto** genera una comisión para él. El arq
 1. **La fila del proyecto y los totales del arquitecto no coinciden sin datos fiscales**: el proyecto ya muestra una comisión (34,56) pero `generada` y `pendiente` del arquitecto valen 0 hasta completar su régimen. Consistente con «no calcular sin régimen», pero sorprende a quien suma. [E]
 2. **La comisión se calcula sobre el total con impuesto incluido**, no sobre la base imponible. Es una decisión de negocio que conviene confirmar. [E]
 3. **El estado se llama `pendiente_factura_arquitecto`** en la API y la interfaz lo muestra como «pendiente de factura»; el nombre interno engaña (quien factura es el arquitecto, no la empresa). [E]
-4. **Pagar no exige que la cuenta de pago esté fijada**: el pago se registra sin cuenta aunque el campo exista. [C, por confirmar]
+4. **Pagar no exige la cuenta de pago**: es deliberado (el movimiento queda «Sin cuenta asignada»), pero deja una salida de caja sin cuenta hasta que alguien la asigne; no hay aviso. [C]
 5. **Cuenta de cobro y comprobante de retención aceptan cualquier PDF/imagen**, sin validar contra el monto ni el régimen. [C]

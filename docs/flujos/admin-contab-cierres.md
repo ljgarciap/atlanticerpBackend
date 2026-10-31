@@ -25,7 +25,7 @@ Con el concepto nuevo de cobros encendido, `POST admin-contab/abonos` responde 4
 3. `PUT petty-cash/reports/{numero}/approve|reject`: solo el aprobador; rechazar exige motivo; aprobar deja el reporte `finalizado` y no se aprueba dos veces (409) [E].
 
 ## 5. Arqueo diario de caja
-`GET cash-position/daily-count` arma el día: cobros, notas de crédito, comisiones, reversos y retenciones con sus totales; **neto = cobrado − notas − reversos** (7.957,32 − 30 − 7.257,32 = 670) [E].
+`GET cash-position/daily-count` arma el día: cobros, notas de crédito, comisiones, reversos y retenciones con sus totales; **neto = cobrado − notas de crédito − comisiones pagadas − reversos** (sin comisiones ese día: 7.957,32 − 30 − 7.257,32 = 670) [E]. Las comisiones externas pagadas el mismo día restan del neto (5 × 42,92 = 214,60 verificado el 2026-10-31) [E].
 - `PUT …/entries` anota cada movimiento y `PUT …/general-observation` la observación general (204); el vendedor 403 [E].
 - `POST …/close` cierra el arqueo (`pendiente_aprobacion`, número consecutivo): **una sola vez** (409 «ya no está abierto») y, cerrado, no se edita (422) [E].
 - `POST cash-position/history/{id}/approve` solo el aprobador; pasa a `aprobado` y no se aprueba dos veces (409) [E].
