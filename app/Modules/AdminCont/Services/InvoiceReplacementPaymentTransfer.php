@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContCompensationLine;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
@@ -74,12 +73,9 @@ final class InvoiceReplacementPaymentTransfer
 
         foreach ($vigentes as $m) {
             $monto = round((float) $m->delta_factura, 2);
-            $deNota = $m->payment_id === null && $m->abono_id === null;
-            // Las aplicaciones del historial no pasaron por el disponible (solo movieron la factura), el saldo de las notas vive fuera del libro y un cobro
-            // anterior (no v2) no lleva dinero disponible propio (su excedente es un abono): al reversarlas no devuelven disponible ni el traslado lo toma.
-            // Todo lo demás vuelve a su fuente.
-            $cobroAnterior      = $m->payment_id !== null && $cobros->get($m->payment_id)?->cobros_v2 !== true;
-            $devuelveDisponible = $m->tipo !== AdminContPaymentMovement::TIPO_HISTORICO && ! $deNota && ! $cobroAnterior;
+            $deNota = $m->payment_id === null;
+            // El saldo de las notas vive fuera del libro: al reversarlo no devuelve disponible ni el traslado lo toma. Todo lo demás vuelve a su fuente.
+            $devuelveDisponible = $m->tipo !== AdminContPaymentMovement::TIPO_HISTORICO && ! $deNota;
 
             $this->ledger->desaplicacion($m, $motivo, $actorId, $devuelveDisponible);
 
@@ -88,20 +84,16 @@ final class InvoiceReplacementPaymentTransfer
                 $this->ledger->record([
                     'master_client_id' => $m->master_client_id, 'tipo' => $m->tipo, 'monto' => $traslada,
                     'origen' => $m->tipo === AdminContPaymentMovement::TIPO_HISTORICO ? AdminContPaymentMovement::ORIGEN_MIGRACION : AdminContPaymentMovement::ORIGEN_SISTEMA,
-                    'payment_id' => $m->payment_id, 'abono_id' => $m->abono_id, 'invoice_id' => $replacement->id,
+                    'payment_id' => $m->payment_id, 'invoice_id' => $replacement->id,
                     'delta_disponible' => $devuelveDisponible ? -$traslada : 0.0, 'delta_factura' => $traslada, 'actor_id' => $actorId, 'motivo' => $motivo,
                 ]);
                 $capacidad = round($capacidad - $traslada, 2);
             }
 
-            // Lo que no cupo en el reemplazo deja de estar usado en su fuente (abono o saldo de nota): vuelve a estar disponible.
+            // Lo que no cupo en el reemplazo deja de estar usado en su fuente (saldo de nota): vuelve a estar disponible.
             $liberado = round($monto - $traslada, 2);
             if ($liberado > 0.004) {
-                if ($m->abono_id !== null && $m->payment_id === null) {
-                    /** @var AdminContAbono $abono */
-                    $abono = AdminContAbono::query()->whereKey($m->abono_id)->lockForUpdate()->firstOrFail();
-                    $abono->update(['monto_usado' => max(0.0, round((float) $abono->monto_usado - $liberado, 2))]);
-                } elseif ($deNota && $m->compensation_id !== null) {
+                if ($deNota && $m->compensation_id !== null) {
                     $line = AdminContCompensationLine::query()
                         ->where('compensation_id', $m->compensation_id)->where('invoice_id', $original->id)
                         ->where('source_type', AdminContCompensationLine::SOURCE_NOTA_CREDITO)->where('monto', $monto)->first();
@@ -130,7 +122,6 @@ final class InvoiceReplacementPaymentTransfer
             if ($trasladado > 0.004) {
                 AdminContPaymentInvoice::create([
                     'payment_id' => $paymentId, 'invoice_id' => $replacement->id, 'monto_aplicado' => $trasladado,
-                    'abono_id' => $fila->abono_id, 'monto_abono_aplicado' => min((float) $fila->monto_abono_aplicado, $trasladado),
                     'fecha_aplicacion' => $fila->fecha_aplicacion,
                 ]);
             }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
@@ -257,25 +256,6 @@ class AdminContPaymentControllerTest extends FeatureTestCase
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $this->assertDatabaseHas("{$slug}_admin_contab.bank_movements", [
             'bank_account_id' => $account->id, 'tipo' => 'cobro', 'monto' => 6200,
-        ]);
-    }
-
-    /** SCRUM-902 §4.4 — reemplaza `AdminContCustomerCreditBalance` (retirado) por un Abono nivel Cliente confirmado. */
-    private function makeAbonoNivelCliente(int $masterClientId, float $monto): AdminContAbono
-    {
-        $account = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'tipo_cuenta' => AdminContBankAccount::TIPO_CORRIENTE, 'ultimos_4_digitos' => '9999']);
-
-        return AdminContAbono::create([
-            'master_client_id' => $masterClientId,
-            'monto_original' => $monto,
-            'monto_usado' => 0,
-            'metodo_pago' => 'transferencia',
-            'cuenta_bancaria_id' => $account->id,
-            'referencia' => 'TRF-SALDO-TEST',
-            'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
-            'fecha_registro' => now(),
-            'fecha_confirmacion' => now(),
         ]);
     }
 

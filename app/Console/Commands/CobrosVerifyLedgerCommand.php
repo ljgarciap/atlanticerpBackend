@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 /**
- * SCRUM-1168 F1 — compara el libro de movimientos con `invoices.saldo_aplicado` y con el saldo de los abonos (ver `PaymentLedgerVerifier`).
+ * SCRUM-1168 F1 — compara el libro de movimientos con `invoices.saldo_aplicado` y con el origen de cada movimiento de dinero (ver `PaymentLedgerVerifier`).
  * Sale con código 1 y deja un error en el log si hay diferencias: es la señal del modo sombra. Programado cada noche.
  */
 final class CobrosVerifyLedgerCommand extends Command
@@ -43,7 +43,7 @@ final class CobrosVerifyLedgerCommand extends Command
                         $this->warn("  factura anulada {$a['numero']} (#{$a['invoice_id']}): conserva {$a['libro']} aplicado por cobros sin nota de anulación; use cobros:trasladar-pagos-correcciones");
                     }
                     foreach ($r['clientes'] as $c) {
-                        $this->warn("  cliente #{$c['master_client_id']}: disponible libro {$c['libro']} vs abonos {$c['abonos']} (dif {$c['diferencia']})");
+                        $this->warn("  cliente #{$c['master_client_id']}: disponible libro {$c['libro']} vs cobros {$c['cobros']} (dif {$c['diferencia']})");
                     }
                 }
             } finally {

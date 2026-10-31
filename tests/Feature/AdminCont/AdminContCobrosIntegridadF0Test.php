@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
-use App\Modules\AdminCont\Models\AdminContAbono;
+use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
@@ -59,16 +59,6 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         ]);
     }
 
-    private function abonoCliente(int $masterId, float $monto): AdminContAbono
-    {
-        return AdminContAbono::create([
-            'master_client_id' => $masterId, 'monto_original' => $monto, 'monto_usado' => 0, 'metodo_pago' => 'transferencia',
-            'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF-F0', 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'),
-            'fecha_registro' => now(), 'fecha_confirmacion' => now(),
-        ]);
-    }
-
     /** @return array<string, mixed> */
     private function cobro(int $masterId, array $invoiceIds, string $metodo, int $accountId, float $estimado, float $saldoCliente = 0.0): array
     {
@@ -81,10 +71,10 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
 
     // ── confirmar nunca se rechaza: lo que no cabe en la factura pasa a saldo a favor ──────────
 
-    /** @return list<AdminContAbono> */
-    private function excedentesDe(MasterClient $master): array
+    /** Disponible del libro del cliente: el excedente de un cobro (lo que no cupo en las facturas) vive aquí, ya no como un abono aparte. */
+    private function disponibleDe(MasterClient $master): float
     {
-        return AdminContAbono::where('master_client_id', $master->id)->where('referencia', 'like', 'Excedente del cobro%')->get()->all();
+        return round((float) AdminContPaymentMovement::where('master_client_id', $master->id)->sum('delta_disponible'), 2);
     }
 
     public function test_el_preview_avisa_de_la_implicacion_antes_de_confirmar_y_no_cambia_nada(): void
@@ -112,7 +102,8 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
         $this->remakeTenant();
         $this->assertSame(AdminContPayment::ESTADO_ESPERANDO_CONFIRMACION, AdminContPayment::findOrFail($b->json('id'))->estado);
         $this->assertSame(500.0, (float) $factura->refresh()->saldo_aplicado);
-        $this->assertCount(0, $this->excedentesDe($master));
+        // Solo el cobro confirmado (a) entró al libro y se aplicó completo: nada sin aplicar.
+        $this->assertSame(0.0, $this->disponibleDe($master));
 
         // Un cobro ya confirmado no tiene preview.
         $this->withHeaders($h)->getJson('/api/admin-contab/payments/'.$a->json('id').'/confirm-preview')->assertStatus(422);
@@ -132,11 +123,7 @@ class AdminContCobrosIntegridadF0Test extends FeatureTestCase
 
         $this->remakeTenant();
         $this->assertSame(500.0, (float) $factura->refresh()->saldo_aplicado);
-        $this->assertCount(0, $this->excedentesDe($master));
+        $this->assertSame(0.0, $this->disponibleDe($master));
     }
-
-    // ── el saldo a favor consumido por otro cobro no se aplica dos veces ───────────────────────
-
-    // ── el abono solo se asocia a lo del cliente ────────────────────────────────────────────────
 
 }

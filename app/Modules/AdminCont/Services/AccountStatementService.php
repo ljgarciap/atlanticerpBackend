@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Services;
 
 use App\Modules\AdminCont\Exceptions\AccountStatementException;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContClientBillingProfile;
 use App\Modules\AdminCont\Models\AdminContCompensation;
 use App\Modules\AdminCont\Models\AdminContCompensationLine;
@@ -221,7 +220,7 @@ final class AccountStatementService
                 'proyecto'              => $proyectoDe($invoice->sales_project_id),
                 'debito'                => round($invoice->monto, 2),
                 'credito'               => 0.0,
-                // SCRUM-955 punto 5 — referencia al recibo de cobro/abono asociado (columna
+                // SCRUM-955 punto 5 — referencia al recibo de cobro asociado (columna
                 // "Cobro" del Estado de Cuenta). Una fila de factura en sí no tiene recibo propio.
                 'recibo'                => null,
             ];
@@ -317,101 +316,12 @@ final class AccountStatementService
 
         // Cobros — sobre todas las facturas, anuladas incluidas: anular una factura neutraliza su débito (fila de anulación), no el dinero que el
         // cliente ya pagó (queda aplicado a ella; una corrección de datos crea el reemplazo sin pago).
-        $facturasDelAlcance = $invoices;
-        $invoicesById       = $facturasDelAlcance->keyBy('id');
-        $paymentLines = AdminContPaymentInvoice::query()
-            ->whereIn('invoice_id', $facturasDelAlcance->pluck('id'))
-            ->with('payment')
-            ->get()
-            // SCRUM-1168 — los cobros del concepto nuevo no se muestran por línea de aplicación: salen del libro (más abajo), con su monto completo.
-            ->filter(fn (AdminContPaymentInvoice $line) => $line->payment?->estado === AdminContPayment::ESTADO_CONFIRMADO && ! $line->payment->cobros_v2);
-
-        foreach ($paymentLines as $line) {
-            /** @var AdminContInvoice $invoice */
-            $invoice = $invoicesById->get($line->invoice_id);
-            $order   = $orders->get($invoice->order_id);
-            $quote   = $order?->linkedQuote();
-            $payment = $line->payment;
-            if ($payment === null) {
-                continue;
-            }
-
-            $rows[] = [
-                // SCRUM-1168 F2 — manda la fecha en que el dinero se aplicó a la factura; lo histórico (sin fecha de aplicación) conserva la del cobro.
-                'fecha'                 => ($line->fecha_aplicacion ?? $payment->created_at)->toDateString(),
-                'tipo'                  => 'cobro',
-                'numero_factura'        => $invoice->numero,
-                'invoice_id'            => $invoice->id,
-                'order_id'              => $order?->id,
-                'cotizacion_folio'      => $quote?->folio,
-                'quote_id'              => $quote?->id,
-                'guia_entrega_numero'   => null,
-                'guia_entrega_order_id' => null,
-                'nota_id'               => null,
-                'antiguedad_cartera'    => null,
-                'sales_project_id'      => $invoice->sales_project_id,
-                'proyecto'              => $proyectoDe($invoice->sales_project_id),
-                'debito'                => 0.0,
-                'credito'               => round($line->monto_aplicado, 2),
-                // SCRUM-955 punto 5 — recibo de cobro real, siempre disponible (todo AdminContPayment
-                // confirmado tiene numero_recibo, ver Batch 6). Un abono aplicado obligatoriamente a
-                // esta factura queda incluido en `monto_aplicado`/`monto_abono_aplicado` del mismo
-                // cobro (ver PaymentReceiptPdfService) — no genera una fila propia todavía; si el
-                // negocio pide distinguir "recibo de abono" acá como fila independiente, es una
-                // decisión de Arquitecto aparte (hoy no hay ningún movimiento de abono sin cobro
-                // asociado en este builder).
-                'recibo'                => $payment->numero_recibo !== null
-                    ? ['tipo' => 'cobro', 'id' => $payment->id, 'numero_recibo' => $payment->numero_recibo]
-                    : null,
-            ];
-        }
+        $invoicesById = $invoices->keyBy('id');
 
         // SCRUM-1168 — el estado muestra facturas, cobros (con su monto completo, sin importar cómo se compensaron) y saldo a favor; una compensación
-        // es solo la forma de asignar el dinero a facturas y no es una fila. Los cobros del concepto nuevo y los abonos con ingreso en el libro salen de él.
-        ['rows' => $filasDeLibro, 'abonos' => $abonosDelLibro] = $this->ledgerRows($masterClientId, $salesProjectId, $invoices, $orders, $proyectoDe);
+        // es solo la forma de asignar el dinero a facturas y no es una fila. Los cobros salen del libro.
+        $filasDeLibro = $this->ledgerRows($masterClientId, $salesProjectId, $invoices, $orders, $proyectoDe);
         array_push($rows, ...$filasDeLibro);
-
-        // Compensaciones desde un abono que el libro no reconoce como ingreso (p. ej. el excedente de un cobro anterior, creado por el sistema): siguen
-        // como fila propia, porque no hay otro lugar donde figuren. Las que salen del saldo de una nota de crédito no son fila: la nota ya acredita su
-        // monto completo en su propia fila, y repetirlo lo duplicaría.
-        $compensationLines = AdminContCompensationLine::query()
-            ->whereIn('invoice_id', $facturasDelAlcance->pluck('id'))
-            ->where('source_type', AdminContCompensationLine::SOURCE_ABONO)
-            ->whereNotIn('source_id', $abonosDelLibro)
-            ->get();
-        $compensations = AdminContCompensation::query()
-            ->whereIn('id', $compensationLines->pluck('compensation_id')->unique())
-            ->where('estado', AdminContCompensation::ESTADO_CONFIRMADO)
-            ->get()->keyBy('id');
-        foreach ($compensationLines as $cl) {
-            $compensation = $compensations->get($cl->compensation_id);
-            /** @var AdminContInvoice|null $invoice */
-            $invoice = $invoicesById->get($cl->invoice_id);
-            if ($compensation === null || $invoice === null) {
-                continue;
-            }
-            $order = $orders->get($invoice->order_id);
-            $quote = $order?->linkedQuote();
-
-            $rows[] = [
-                'fecha'                 => $compensation->confirmed_at->toDateString(),
-                'tipo'                  => 'compensacion',
-                'numero_factura'        => $invoice->numero,
-                'invoice_id'            => $invoice->id,
-                'order_id'              => $order?->id,
-                'cotizacion_folio'      => $quote?->folio,
-                'quote_id'              => $quote?->id,
-                'guia_entrega_numero'   => null,
-                'guia_entrega_order_id' => null,
-                'nota_id'               => null,
-                'antiguedad_cartera'    => null,
-                'sales_project_id'      => $invoice->sales_project_id,
-                'proyecto'              => $proyectoDe($invoice->sales_project_id),
-                'debito'                => 0.0,
-                'credito'               => round($cl->monto, 2),
-                'recibo'                => ['tipo' => 'compensacion', 'id' => $compensation->id, 'numero_recibo' => $compensation->folio],
-            ];
-        }
 
         // RN5 REQ-460 — filtro de fechas sobre la fecha de cada movimiento.
         if ($desde !== null) {
@@ -438,12 +348,11 @@ final class AccountStatementService
     /**
      * SCRUM-1168 — filas de cobro y saldo a favor a partir del libro de movimientos (`payment_movements`), una por fuente de dinero y proyecto.
      *
-     * Fuentes: cobros del concepto nuevo (`cobros_v2`, confirmados) y abonos confirmados con ingreso en el libro (`ingreso` o `historico`). Por cada una:
+     * Fuente: cada cobro confirmado con ingreso en el libro (`ingreso`). Por cada uno:
      *   - lo aplicado a facturas de un proyecto sale como crédito de ese proyecto, con la factura si es una sola;
      *   - lo que sigue sin aplicar (su saldo a favor) sale como crédito «sin proyecto», a nivel de cliente;
      *   - lo devuelto en efectivo sale como débito.
-     * La suma de los créditos de una fuente es el dinero que AtlanticERP conserva de ella. Los abonos consumidos por cobros anteriores ya figuran en esas
-     * líneas, por eso un abono histórico solo cuenta lo que el libro todavía le reconoce.
+     * La suma de los créditos de una fuente es el dinero que AtlanticERP conserva de ella.
      *
      * Con filtro de proyecto solo cuenta lo aplicado a ese proyecto: el saldo a favor y las devoluciones no pertenecen a ninguno. Lo aplicado a una
      * factura anulada también cuenta: anularla neutraliza su débito, no el dinero cobrado.
@@ -451,57 +360,39 @@ final class AccountStatementService
      * @param Collection<int, AdminContInvoice> $invoices        facturas del cliente en el alcance (con o sin filtro de proyecto), anuladas incluidas
      * @param Collection<int|string, Order>     $orders
      * @param \Closure(?int): ?string           $proyectoDe
-     * @return array{rows: list<array{fecha: string, tipo: string, numero_factura: ?string, invoice_id: ?int, order_id: ?int, cotizacion_folio: ?string, quote_id: ?int, guia_entrega_numero: ?string, guia_entrega_order_id: ?int, nota_id: ?int, antiguedad_cartera: ?string, sales_project_id: ?int, proyecto: ?string, debito: float, credito: float, recibo: ?array{tipo: string, id: int, numero_recibo: string}}>, abonos: list<int>} `abonos`: los abonos que el libro ya cubre (sus compensaciones no son fila aparte)
+     * @return list<array{fecha: string, tipo: string, numero_factura: ?string, invoice_id: ?int, order_id: ?int, cotizacion_folio: ?string, quote_id: ?int, guia_entrega_numero: ?string, guia_entrega_order_id: ?int, nota_id: ?int, antiguedad_cartera: ?string, sales_project_id: ?int, proyecto: ?string, debito: float, credito: float, recibo: ?array{tipo: string, id: int, numero_recibo: string}}>
      */
     private function ledgerRows(int $masterClientId, ?int $salesProjectId, Collection $invoices, Collection $orders, \Closure $proyectoDe): array
     {
         $movimientos = AdminContPaymentMovement::query()->where('master_client_id', $masterClientId)->orderBy('id')->get();
         if ($movimientos->isEmpty()) {
-            return ['rows' => [], 'abonos' => []];
+            return [];
         }
 
-        $esRecepcion = fn (AdminContPaymentMovement $m): bool => in_array($m->tipo, [AdminContPaymentMovement::TIPO_INGRESO, AdminContPaymentMovement::TIPO_HISTORICO], true)
-            && $m->delta_disponible > 0;
+        $esRecepcion = fn (AdminContPaymentMovement $m): bool => $m->tipo === AdminContPaymentMovement::TIPO_INGRESO && $m->delta_disponible > 0;
 
-        // Fuente de cada movimiento: el cobro si lo tiene; si no, el abono. Un movimiento sin ninguno (saldo de nota de crédito) no es de nadie.
-        $porFuente = $movimientos->filter(fn (AdminContPaymentMovement $m): bool => $m->payment_id !== null || $m->abono_id !== null)
-            ->groupBy(fn (AdminContPaymentMovement $m): string => $m->payment_id !== null ? "p{$m->payment_id}" : "a{$m->abono_id}");
+        // Fuente de cada movimiento: su cobro. Un movimiento sin cobro (saldo de nota de crédito) no es de nadie.
+        $porFuente = $movimientos->filter(fn (AdminContPaymentMovement $m): bool => $m->payment_id !== null)
+            ->groupBy(fn (AdminContPaymentMovement $m): int => (int) $m->payment_id);
 
         $payments = AdminContPayment::query()
             ->whereIn('id', $movimientos->pluck('payment_id')->filter()->unique())
-            ->where('cobros_v2', true)->where('estado', AdminContPayment::ESTADO_CONFIRMADO)
-            ->get()->keyBy('id');
-        $abonos = AdminContAbono::query()
-            ->whereIn('id', $movimientos->whereNull('payment_id')->pluck('abono_id')->filter()->unique())
-            ->where('estado', AdminContAbono::ESTADO_CONFIRMADO)
+            ->where('estado', AdminContPayment::ESTADO_CONFIRMADO)
             ->get()->keyBy('id');
 
         // Vigentes y anuladas: anular una factura neutraliza su débito, pero el efectivo cobrado sigue siendo del cliente.
         $todas = $invoices->keyBy('id');
 
-        $abonosCubiertos = [];
-        $fuentes         = [];
+        $fuentes = [];
 
-        foreach ($porFuente as $clave => $movs) {
-            $esCobro = str_starts_with((string) $clave, 'p');
-            $id      = (int) substr((string) $clave, 1);
-
+        foreach ($porFuente as $id => $movs) {
             $recepcion = $movs->filter($esRecepcion);
             if ($recepcion->isEmpty()) {
                 continue; // sin ingreso reconocido en el libro: no hay a qué fecha ni por cuánto mostrarlo
             }
-            if ($esCobro) {
-                /** @var AdminContPayment|null $fuente */
-                $fuente = $payments->get($id);
-                $recibo = $fuente?->numero_recibo !== null ? ['tipo' => 'cobro', 'id' => $id, 'numero_recibo' => $fuente->numero_recibo] : null;
-            } else {
-                /** @var AdminContAbono|null $fuente */
-                $fuente = $abonos->get($id);
-                $recibo = $fuente?->numero_recibo !== null ? ['tipo' => 'abono', 'id' => $id, 'numero_recibo' => $fuente->numero_recibo] : null;
-                if ($fuente !== null) {
-                    $abonosCubiertos[] = $id;
-                }
-            }
+            /** @var AdminContPayment|null $fuente */
+            $fuente = $payments->get($id);
+            $recibo = $fuente?->numero_recibo !== null ? ['tipo' => 'cobro', 'id' => $id, 'numero_recibo' => $fuente->numero_recibo] : null;
             if ($fuente === null) {
                 continue;
             }
@@ -531,24 +422,7 @@ final class AccountStatementService
             ];
         }
 
-        // Un cobro anterior (no v2) que gastó saldo de un abono deja su consumo en el libro sobre el cobro, no sobre el abono: el abono seguiría por su
-        // monto completo y el dinero se contaría dos veces. Se descuenta, de lo más antiguo a lo más reciente, de lo que las fuentes tienen sin aplicar.
-        $consumo = 0.0;
-        foreach ($movimientos->whereNotNull('payment_id')->groupBy('payment_id') as $paymentId => $movsCobro) {
-            if (! $payments->has($paymentId)) {
-                $consumo += max(0.0, -round((float) $movsCobro->sum('delta_disponible'), 2));
-            }
-        }
         usort($fuentes, fn (array $a, array $b): int => $a['fecha'] <=> $b['fecha']);
-        foreach ($fuentes as &$f) {
-            if ($consumo <= 0.004) {
-                break;
-            }
-            $quita          = min(max($f['sinAplicar'], 0.0), $consumo);
-            $f['sinAplicar'] = round($f['sinAplicar'] - $quita, 2);
-            $consumo         = round($consumo - $quita, 2);
-        }
-        unset($f);
 
         $rows = [];
         foreach ($fuentes as $f) {
@@ -609,7 +483,7 @@ final class AccountStatementService
             }
         }
 
-        return ['rows' => $rows, 'abonos' => array_values(array_unique($abonosCubiertos))];
+        return $rows;
     }
 
     /**

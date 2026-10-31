@@ -184,7 +184,6 @@ class AdminContPaymentController
             'numero_documento_retencion'  => $payment->numero_documento_retencion,
             'comentario_ajuste'           => $payment->comentario_ajuste,
             'estado'                      => $payment->estado,
-            'cobros_v2'                   => (bool) $payment->cobros_v2,
             'anulado_at'                  => $payment->anulado_at?->toIso8601String(),
             'motivo_anulacion'            => $payment->motivo_anulacion,
             'created_at'                  => $payment->created_at->toIso8601String(),
@@ -225,25 +224,14 @@ class AdminContPaymentController
             'registrado_por'    => $creator !== null ? trim("{$creator->first_name} {$creator->last_name}") : null,
             'bank_account'      => $payment->bankAccount?->label(),
             'tiene_comprobante' => $payment->attachment !== null,
-            // RN1 REQ-473 — total antes de aplicar cualquier saldo a favor (abono obligatorio o
-            // saldo Cliente opcional), para el recibo formal. SCRUM-902 — ya suma también el
-            // abono obligatorio de cada línea, no solo `saldo_favor_aplicado` (nivel Cliente).
-            'total_facturas'    => $payment->cobros_v2
-                ? round((float) $payment->invoiceLines->sum('monto_aplicado'), 2)
-                : round(
-                    $payment->monto_recibido + $payment->saldo_favor_aplicado
-                        + (float) $payment->invoiceLines->sum('monto_abono_aplicado'),
-                    2,
-                ),
+            // RN1 REQ-473 — total de las facturas cubiertas, para el recibo formal.
+            'total_facturas'    => round((float) $payment->invoiceLines->sum('monto_aplicado'), 2),
             // SCRUM-1168 F2 — cobro del concepto nuevo: lo que NO se aplicó a facturas es saldo a favor del cliente. Confirmado: lo que dice el
             // libro (sigue vigente aunque luego se compense); esperando confirmación: lo que quedaría tras aplicar las líneas registradas.
-            'saldo_sin_aplicar' => $payment->cobros_v2
-                ? ($payment->estado === AdminContPayment::ESTADO_CONFIRMADO
-                    ? $this->ledger->remanenteDeCobro($payment->id)
-                    : round(max(0.0, $payment->monto_recibido - (float) $payment->invoiceLines->sum('monto_aplicado')), 2))
-                : null,
-            // SCRUM-902 §4.2 — desglose visible por factura: monto original, abono obligatorio
-            // aplicado (si hubo), y neto — los 3 explícitos, no solo el resultado final. SCRUM-931
+            'saldo_sin_aplicar' => $payment->estado === AdminContPayment::ESTADO_CONFIRMADO
+                ? $this->ledger->remanenteDeCobro($payment->id)
+                : round(max(0.0, $payment->monto_recibido - (float) $payment->invoiceLines->sum('monto_aplicado')), 2),
+            // Desglose visible por factura: monto original y monto aplicado. SCRUM-931
             // agrega quote_id/cotizacion_folio/order_id/guia_entrega_* para enlazar cada factura a
             // su Cotización y Guía de Entrega desde el detalle del cobro.
             'facturas'          => $payment->invoiceLines->map(function ($l) use ($orders) {
@@ -258,7 +246,6 @@ class AdminContPaymentController
                     'invoice_id'            => $l->invoice_id,
                     'numero'                => $invoice?->numero,
                     'monto_original'        => $invoice?->monto,
-                    'monto_abono_aplicado'  => $l->monto_abono_aplicado,
                     'monto_aplicado'        => $l->monto_aplicado,
                     'quote_id'              => $quote?->id,
                     'cotizacion_folio'      => $quote?->folio,
@@ -267,10 +254,6 @@ class AdminContPaymentController
                     'guia_entrega_order_id' => $guiaOrderId,
                 ];
             })->values()->all(),
-            // SCRUM-931 — un cobro puede cubrir varias facturas, cada una con su propio abono (el
-            // pivote `payment_invoices.abono_id` es por línea, no hay uno solo "del cobro") — lista
-            // de ids únicos, nunca inventa un abono que no exista.
-            'abonos'            => $payment->invoiceLines->pluck('abono_id')->filter()->unique()->values()->all(),
             // SCRUM-931 — igual que arriba: puede haber varias notas, una o más por factura.
             'notas_credito'     => $notasCredito->map(fn (AdminContCreditNote $n) => [
                 'id'     => $n->id,

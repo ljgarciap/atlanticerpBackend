@@ -68,7 +68,7 @@ final class InvoiceService
 
     public function __construct(
         private readonly AdminContInvoiceFolioService $folio,
-        private readonly AbonoService $abonos,
+        private readonly ClientBalanceService $clientBalance,
         private readonly InvoiceBillingPlanner $planner,
         private readonly ReceptorFiscalGuard $receptorGuard,
         private readonly AuditService $audit,
@@ -544,27 +544,25 @@ final class InvoiceService
 
     /**
      * SCRUM-1147 — agrega `saldo_a_favor` (float|null) a las filas por cobrar: informativo, junto al
-     * total de la factura. Ver `AbonoService::saldoFavorPorFactura()` para la regla de nivel.
+     * total de la factura: el saldo a favor de notas de crédito del cliente (`ClientBalanceService`).
      *
      * @param list<array<string, mixed>> $rows
      * @return list<array<string, mixed>>
      */
     private function conSaldoFavor(array $rows): array
     {
-        $targets = [];
+        $clientes = [];
         foreach ($rows as $row) {
-            if ($row['cobro_estado'] === 'por_cobrar' && $row['invoice_id'] !== null) {
-                $targets[] = [
-                    'invoice_id'       => (int) $row['invoice_id'],
-                    'sales_project_id' => $row['sales_project_id'] !== null ? (int) $row['sales_project_id'] : null,
-                    'master_client_id' => $row['master_client_id'] !== null ? (int) $row['master_client_id'] : null,
-                ];
+            if ($row['cobro_estado'] === 'por_cobrar' && $row['invoice_id'] !== null && $row['master_client_id'] !== null) {
+                $clientes[] = (int) $row['master_client_id'];
             }
         }
-        $saldos = $this->abonos->saldoFavorPorFactura($targets);
+        $saldos = $this->clientBalance->saldoNotasPorCliente($clientes);
 
         return array_map(function (array $row) use ($saldos): array {
-            $row['saldo_a_favor'] = $row['invoice_id'] !== null ? ($saldos[(int) $row['invoice_id']] ?? null) : null;
+            $row['saldo_a_favor'] = ($row['cobro_estado'] === 'por_cobrar' && $row['invoice_id'] !== null && $row['master_client_id'] !== null)
+                ? ($saldos[(int) $row['master_client_id']] ?? null)
+                : null;
 
             return $row;
         }, $rows);
@@ -917,10 +915,6 @@ final class InvoiceService
             return [$invoice, $plan];
         });
         [$invoice, $plan] = $creada;
-
-        if ($invoice->sales_project_id !== null) {
-            $this->abonos->reasociarAlFacturar((int) $invoice->sales_project_id, $invoice);
-        }
 
         $invoice->setAttribute('total_a_pagar', $invoice->monto);
         // F6 — avisos del cierre (vacío en el caso normal): la respuesta de confirmar los expone.
@@ -1737,10 +1731,10 @@ final class InvoiceService
             }
         }
 
-        // SCRUM-1168 F3 — compensaciones del mes cuyo dinero salió de un abono histórico o del saldo de una nota (sin cobro asociado): cuentan en
+        // SCRUM-1168 F3 — compensaciones del mes cuyo dinero salió del saldo de una nota (sin cobro asociado): cuentan en
         // la fecha del cruce, igual que un cobro. Las que salen de un cobro ya entran arriba por su línea de aplicación.
         $compLines = AdminContCompensationLine::query()
-            ->whereIn('source_type', [AdminContCompensationLine::SOURCE_ABONO, AdminContCompensationLine::SOURCE_NOTA_CREDITO])
+            ->where('source_type', AdminContCompensationLine::SOURCE_NOTA_CREDITO)
             ->whereIn('compensation_id', AdminContCompensation::query()
                 ->where('estado', AdminContCompensation::ESTADO_CONFIRMADO)->whereBetween('confirmed_at', [$monthStart, $monthEnd])->select('id'))
             ->get();

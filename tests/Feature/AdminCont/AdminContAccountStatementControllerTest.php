@@ -12,8 +12,10 @@ use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
+use App\Modules\AdminCont\Models\AdminContPaymentMovement;
 use App\Modules\AdminCont\Services\AccountStatementPdfService;
 use App\Modules\AdminCont\Services\AccountStatementService;
+use App\Modules\AdminCont\Services\PaymentLedger;
 use App\Modules\VentasDiseno\Models\MasterClient;
 use App\Modules\VentasDiseno\Models\SalesProject;
 use App\Modules\VentasDiseno\Models\SubClient;
@@ -75,6 +77,18 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
         if ($createdAt !== null) {
             $payment->forceFill(['created_at' => $createdAt])->save();
         }
+
+        // El estado de cuenta lee el libro de movimientos: el efectivo que entró y lo aplicado a la factura.
+        $fecha = $createdAt ?? now();
+        $ledger = app(PaymentLedger::class);
+        $ledger->record([
+            'master_client_id' => $masterClientId, 'tipo' => AdminContPaymentMovement::TIPO_INGRESO, 'monto' => $montoAplicado, 'origen' => AdminContPaymentMovement::ORIGEN_DIRECTA,
+            'payment_id' => $payment->id, 'delta_disponible' => $montoAplicado, 'fecha_movimiento' => $fecha,
+        ]);
+        $ledger->record([
+            'master_client_id' => $masterClientId, 'tipo' => AdminContPaymentMovement::TIPO_APLICACION, 'monto' => $montoAplicado, 'origen' => AdminContPaymentMovement::ORIGEN_DIRECTA,
+            'payment_id' => $payment->id, 'invoice_id' => $invoice->id, 'delta_disponible' => -$montoAplicado, 'delta_factura' => $montoAplicado, 'fecha_movimiento' => $fecha,
+        ]);
 
         return $payment;
     }

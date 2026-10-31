@@ -1367,7 +1367,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
 
         $payment = AdminContPayment::create([
             'numero_recibo' => 'REC-'.static::uniqueTestNumber(), 'master_client_id' => $invoice->master_client_id, 'monto_recibido' => 107,
-            'saldo_favor_aplicado' => 0, 'metodo_pago' => 'efectivo', 'estado' => 'confirmado', 'cobros_v2' => true,
+            'saldo_favor_aplicado' => 0, 'metodo_pago' => 'efectivo', 'estado' => 'confirmado',
         ]);
         DB::transaction(function () use ($payment, $invoice): void {
             $ledger = app(PaymentLedger::class);

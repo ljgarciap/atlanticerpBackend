@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminCont;
 
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
@@ -836,7 +835,7 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
      * Cobro"), y `AdminContPaymentController::presentDetail()` expone Cotización/Guía de
      * Entrega/Abonos/Notas de Crédito del cobro (punto 2) — con datos reales, no solo "no vacío".
      */
-    public function test_931_open_invoices_y_detalle_de_cobro_incluyen_proyecto_cotizacion_guia_abonos_y_notas(): void
+    public function test_931_open_invoices_y_detalle_de_cobro_incluyen_proyecto_cotizacion_guia_y_notas(): void
     {
         ['root' => $root, 'entregas' => $entregas, 'card' => $card] = $this->familia();
         $token = $this->token();
@@ -863,14 +862,6 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
         ])->assertStatus(201)->json();
         $this->reTenant();
 
-        // Abono — el pivote payment_invoices lo referencia por línea, no hay FK directa del cobro.
-        $abono = AdminContAbono::create([
-            'master_client_id' => $card->master_client_id, 'monto_original' => 50, 'monto_usado' => 0,
-            'metodo_pago' => 'transferencia', 'cuenta_bancaria_id' => $bankAccount->id, 'referencia' => 'TRF-931-TEST',
-            'estado' => AdminContAbono::ESTADO_CONFIRMADO, 'registrado_por' => $this->ownerId(), 'fecha_registro' => now(),
-        ]);
-        \App\Modules\AdminCont\Models\AdminContPaymentInvoice::where('payment_id', $payment['id'])->update(['abono_id' => $abono->id]);
-
         // Nota de crédito — relación siempre transitiva vía factura, nunca directa al cobro.
         $nota = AdminContCreditNote::create([
             'numero' => 'NC-931-'.self::uniqueTestNumber(), 'master_client_id' => $card->master_client_id,
@@ -889,7 +880,6 @@ class AdminContPartialInvoicingConsumersTest extends FeatureTestCase
         $this->assertSame($entregas[0]->id, $filaFactura['order_id']);
         $this->assertSame("{$entregas[0]->order_number}-G", $filaFactura['guia_entrega_numero']);
         $this->assertSame($entregas[0]->id, $filaFactura['guia_entrega_order_id']);
-        $this->assertSame([$abono->id], $detalle['abonos']);
         $this->assertCount(1, $detalle['notas_credito']);
         $this->assertSame($nota->id, $detalle['notas_credito'][0]['id']);
         $this->assertSame($nota->numero, $detalle['notas_credito'][0]['numero']);

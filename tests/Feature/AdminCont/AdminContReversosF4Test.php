@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\AdminCont;
 
 use App\Models\User;
-use App\Modules\AdminCont\Models\AdminContAbono;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
 use App\Modules\AdminCont\Models\AdminContBankMovement;
 use App\Modules\AdminCont\Models\AdminContCommissionAdjustment;
@@ -19,7 +18,6 @@ use App\Modules\AdminCont\Models\AdminContPaymentReversalRequest;
 use App\Modules\AdminCont\Services\CommissionOrderService;
 use App\Modules\AdminCont\Services\DailyCashCountService;
 use App\Modules\AdminCont\Services\PaymentLedger;
-use App\Modules\AdminCont\Services\PaymentLedgerBackfill;
 use App\Modules\AdminCont\Services\PaymentLedgerVerifier;
 use App\Modules\Bodega\Models\Order;
 use App\Modules\VentasDiseno\Models\MasterClient;
@@ -169,7 +167,7 @@ class AdminContReversosF4Test extends FeatureTestCase
         $this->withHeaders($contabilidad)->postJson("/api/admin-contab/movimientos/{$historico->id}/desaplicar", ['motivo' => 'x'])->assertStatus(422);
     }
 
-    public function test_reversar_un_cruce_se_solicita_lo_decide_el_aprobador_y_restituye_las_tres_fuentes(): void
+    public function test_reversar_un_cruce_se_solicita_lo_decide_el_aprobador_y_restituye_sus_fuentes(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Cruce '.uniqid()]);
         $f1 = $this->factura($master, 300);
@@ -177,24 +175,19 @@ class AdminContReversosF4Test extends FeatureTestCase
         // Factura de origen de la nota (no se cobra más: incobrable, fuera de las pendientes).
         $origen = $this->factura($master, 100);
         $origen->update(['es_incobrable' => true]);
-        $abono = AdminContAbono::create([
-            'numero_recibo' => 'ABN-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'monto_original' => 100, 'monto_usado' => 0, 'metodo_pago' => 'transferencia',
-            'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF', 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
-        ]);
         $nota = AdminContCreditNote::create([
             'numero' => 'NC-'.static::uniqueTestNumber(), 'master_client_id' => $master->id, 'cliente' => $master->name, 'tipo' => AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL,
             'factura_origen_id' => $origen->id, 'monto' => 80, 'subtotal' => 80, 'itbms' => 0, 'monto_aplicado_saldo' => 0, 'monto_usado' => 0, 'motivo' => 'saldo',
             'resultado' => AdminContCreditNote::RESULTADO_SALDO_FAVOR, 'estado' => AdminContCreditNote::ESTADO_APLICADA,
             'registrado_por' => User::where('email', self::CONTABILIDAD_EMAIL)->value('id'), 'fecha' => now(),
         ]);
-        app(PaymentLedgerBackfill::class)->run();
         [$contabilidad, $approver] = $this->sesiones();
         $cobro = $this->cobro($contabilidad, $master, 150);
+        $cobroB = $this->cobro($contabilidad, $master, 100);
 
         $cruce = $this->withHeaders($contabilidad)->postJson('/api/admin-contab/compensaciones', ['master_client_id' => $master->id, 'lines' => [
             ['source_type' => 'cobro', 'source_id' => $cobro, 'invoice_id' => $f1->id, 'monto' => 150],
-            ['source_type' => 'abono', 'source_id' => $abono->id, 'invoice_id' => $f1->id, 'monto' => 100],
+            ['source_type' => 'cobro', 'source_id' => $cobroB, 'invoice_id' => $f1->id, 'monto' => 100],
             ['source_type' => 'nota_credito', 'source_id' => $nota->id, 'invoice_id' => $f2->id, 'monto' => 80],
         ]])->assertStatus(201);
         $this->remakeTenant();
@@ -231,7 +224,7 @@ class AdminContReversosF4Test extends FeatureTestCase
         $this->remakeTenant();
         $this->assertEqualsWithDelta(0.0, (float) $f1->refresh()->saldo_aplicado, 0.001);
         $this->assertEqualsWithDelta(0.0, (float) $f2->refresh()->saldo_aplicado, 0.001);
-        $this->assertEqualsWithDelta(0.0, (float) $abono->refresh()->monto_usado, 0.001, 'El abono recupera su saldo.');
+        $this->assertEqualsWithDelta(100.0, app(PaymentLedger::class)->remanenteDeCobro($cobroB), 0.001, 'El segundo cobro recupera su saldo.');
         $this->assertEqualsWithDelta(0.0, (float) $nota->refresh()->monto_usado, 0.001, 'La nota recupera su saldo.');
         $this->assertEqualsWithDelta(150.0, app(PaymentLedger::class)->remanenteDeCobro($cobro), 0.001);
         $comp = AdminContCompensation::findOrFail($cruce->json('id'));
@@ -255,13 +248,9 @@ class AdminContReversosF4Test extends FeatureTestCase
         $cobro1 = $this->cobro($contabilidad, $conSaldo, 300, [['invoice_id' => $f1->id, 'monto' => 300]]);
         $cobro2 = $this->cobro($contabilidad, $sinSaldo, 300, [['invoice_id' => $f2->id, 'monto' => 300]]);
 
-        // El primer cliente tiene además 120 de saldo a favor (un abono nivel Cliente).
+        // El primer cliente tiene además 120 de saldo a favor (un cobro a cuenta, sin facturas).
         $this->remakeTenant();
-        AdminContAbono::create([
-            'master_client_id' => $conSaldo->id, 'monto_original' => 120, 'monto_usado' => 0, 'metodo_pago' => 'transferencia',
-            'cuenta_bancaria_id' => $this->cuenta()->id, 'referencia' => 'TRF-'.uniqid(), 'estado' => AdminContAbono::ESTADO_CONFIRMADO,
-            'registrado_por' => User::query()->value('id'), 'fecha_registro' => now(), 'fecha_confirmacion' => now(),
-        ]);
+        $this->cobro($contabilidad, $conSaldo, 120);
 
         $anular = function (int $cobro) use ($contabilidad, $approver) {
             $sol = $this->withHeaders($contabilidad)->postJson("/api/admin-contab/payments/{$cobro}/anular", ['motivo' => 'Cobro duplicado'])->assertStatus(201);
@@ -279,7 +268,6 @@ class AdminContReversosF4Test extends FeatureTestCase
         $this->assertSame([$f1->id], array_column($sug['facturas'], 'invoice_id'));
         $this->remakeTenant();
         $this->assertEqualsWithDelta(0.0, (float) $f1->refresh()->saldo_aplicado, 0.001, 'solo se sugiere: nada se compensa solo');
-        $this->assertEqualsWithDelta(0.0, (float) AdminContAbono::where('master_client_id', $conSaldo->id)->value('monto_usado'), 0.001);
 
         // Sin saldo a favor no hay nada que sugerir.
         $this->assertNull($anular($cobro2)->json('sugerencia_compensacion'));
