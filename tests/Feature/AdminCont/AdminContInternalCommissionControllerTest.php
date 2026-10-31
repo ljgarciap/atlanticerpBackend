@@ -160,7 +160,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_estado_for_mes_cerrado_ya_cobrado_es_pagado(): void
     {
         $service = app(CommissionOrderService::class);
-        $mesPasado = CarbonImmutable::now()->subMonth()->startOfMonth();
+        $mesPasado = CarbonImmutable::now()->subMonthNoOverflow()->startOfMonth();
 
         // RN4/RN5 REQ-501: mes de cierre anterior al mes en curso + 100% cobrado → liquidada.
         $this->assertSame(
@@ -649,7 +649,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         // Mes anterior, abono parcial — sigue pendiente, debe arrastrarse.
-        $this->makeCommissionableOrder($vendorId, 6600.0, 3000.0, Carbon::now()->subMonth());
+        $this->makeCommissionableOrder($vendorId, 6600.0, 3000.0, Carbon::now()->subMonthNoOverflow());
 
         $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -667,7 +667,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         // 2 meses atrás, 100% cobrado → mes ya cerrado y ya liquidado ("pagado"), RN2 REQ-504:
         // no debe seguir arrastrándose al ver el mes actual.
-        $this->makeCommissionableOrder($vendorId, 6600.0, 6600.0, Carbon::now()->subMonths(2));
+        $this->makeCommissionableOrder($vendorId, 6600.0, 6600.0, Carbon::now()->subMonthsNoOverflow(2));
 
         $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -688,7 +688,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         $this->makeCommissionableOrder($vendorId, 10000.0, 10000.0); // mes actual, por_pagar
-        $this->makeCommissionableOrder($vendorId, 5000.0, 1000.0, Carbon::now()->subMonth()); // arrastrado, pendiente
+        $this->makeCommissionableOrder($vendorId, 5000.0, 1000.0, Carbon::now()->subMonthNoOverflow()); // arrastrado, pendiente
 
         $token = $this->loginAsContabilidad();
         $response = $this->withHeaders($this->authHeaders($token))
@@ -834,7 +834,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
     public function test_estado_de_cuenta_mes_cerrado_solo_muestra_lo_pagado(): void
     {
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $mesPasado = Carbon::now()->subMonths(2);
+        $mesPasado = Carbon::now()->subMonthsNoOverflow(2);
         // Pagado del mes cerrado.
         $this->makeCommissionableOrder($vendorId, 10000.0, 10000.0, $mesPasado);
         // Otro del MISMO mes cerrado, todavía sin cobrar — NO debe aparecer en el estado de
@@ -889,9 +889,9 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     public function test_879_job_genera_un_movimiento_de_caja_por_vendedor_y_mes_cerrado(): void
     {
-        AdminContFiscalSettings::current()->update(['arqueo_tracking_start_date' => CarbonImmutable::now()->subMonths(6)->toDateString()]);
+        AdminContFiscalSettings::current()->update(['arqueo_tracking_start_date' => CarbonImmutable::now()->subMonthsNoOverflow(6)->toDateString()]);
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
-        $mesCierre = CarbonImmutable::now()->subMonth()->startOfMonth();
+        $mesCierre = CarbonImmutable::now()->subMonthNoOverflow()->startOfMonth();
 
         // Pedido cobrado 100% cuyo mes de cierre ya pasó → comisión "pagada".
         $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, Carbon::instance($mesCierre));
@@ -914,10 +914,10 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
     public function test_879_job_no_toca_meses_anteriores_a_la_fecha_de_corte(): void
     {
-        AdminContFiscalSettings::current()->update(['arqueo_tracking_start_date' => CarbonImmutable::now()->subMonth()->startOfMonth()->toDateString()]);
+        AdminContFiscalSettings::current()->update(['arqueo_tracking_start_date' => CarbonImmutable::now()->subMonthNoOverflow()->startOfMonth()->toDateString()]);
         $vendorId = $this->userIdByEmail(self::DESIGNER_EMAIL);
         // Mes de cierre 3 meses atrás — antes del corte.
-        $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, Carbon::instance(CarbonImmutable::now()->subMonths(3)->startOfMonth()));
+        $this->makeCommissionableOrder($vendorId, 20000.0, 20000.0, Carbon::instance(CarbonImmutable::now()->subMonthsNoOverflow(3)->startOfMonth()));
 
         $this->assertSame(0, app(CommissionOrderService::class)->settleInternalCommissionsToCashLedger());
         $this->assertSame(0, AdminContBankMovement::where('source_type', AdminContBankMovement::SOURCE_INTERNAL_COMMISSION)->count());
