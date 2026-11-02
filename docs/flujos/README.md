@@ -15,7 +15,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 |---|---|---|
 | [Venta a cobro](cadena-venta-a-cobro.md) | Ventas & Diseño → Compras → Bodega → Admin & Contab | verificado de punta a punta |
 | Ventas & Diseño (clientes, arquitectos, comisiones, calendario, catálogo) | Ventas & Diseño, CRM | pendiente (11a) |
-| [Compras: órdenes, pagos, cambio de monto, reclamos y sustituciones](compras-ordenes.md) | Compras | verificado; pendiente: logística, reposición, Zona Libre, agencias de liquidación, familias, proveedores (11b) |
+| [Compras: órdenes, pagos, cambio de monto, reclamos y sustituciones](compras-ordenes.md) | Compras | verificado; pendiente: logística (vista del Líder de Operaciones) y familias de producto (11b); Zona Libre ya no existe |
 | [Bodega: ajustes, reubicaciones, conteo general y devoluciones de clientes](bodega-inventario.md) | Bodega | verificado; pendiente: mapeo de asistentes y confirmación de llegada de inventario (11c) |
 | [Admin & Contab: notas de crédito y anulaciones](admin-contab-notas-y-anulaciones.md) | Admin & Contab | verificado (notas de crédito, anulación completa, anulación de cobro); pendiente: compensaciones, abonos, incobrables, comisiones, caja chica, arqueo, tesorería (11d) |
 | [Admin & Contab: compensaciones, incobrables, caja chica y arqueo](admin-contab-cierres.md) | Admin & Contab | verificado; pendiente: tesorería y movimientos bancarios, reportes (11d) |
@@ -23,6 +23,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | [Admin & Contab: tesorería y movimientos bancarios](admin-contab-tesoreria.md) | Admin & Contab | verificado (comisión sin cuenta de pago, asignar cuenta, desactivar cuenta y saldo de bancos); pendiente: comisión de cartera, reportes (11d) |
 | [Admin & Contab: reportes e Inicio](admin-contab-reportes.md) | Admin & Contab | verificado (por cliente, libro de facturas, series, notas de crédito, Inicio y permisos) |
 | [Bodega: ubicaciones, rutas del día y Kardex](bodega-ubicaciones-rutas-kardex.md) | Bodega | verificado; Zona Libre de Bodega ya no existe (retirada en la Fase 14f-1); pendiente: mapeo de asistentes, confirmación de llegada de inventario |
+| [Compras: reposición, proveedores y agencias de liquidación](compras-reposicion-proveedores.md) | Compras ← Bodega | verificado (faltante → reposición → compra → recepción → liberación, alta y validaciones de proveedores, agencias y contactos) |
 | [Servicios: tickets](servicios-tickets.md) | Servicios | verificado (instalación, garantía con compuertas de cierre, cotización de servicio, cancelación); pendiente: técnicos externos, herramientas, insumos, hoja de reclamo, reportes (11e) |
 | [Transversales: usuarios, acceso, permisos, «Ver como usuario», niveles y notificaciones](transversales.md) | varios | verificado; pendiente: MFA, recuperación de clave por correo, perfil, departamentos, roles/módulos, reglas de aprobación y de notificación, ajustes globales, IA (11f) |
 
