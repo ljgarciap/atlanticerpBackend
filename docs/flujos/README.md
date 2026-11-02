@@ -21,6 +21,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | [Admin & Contab: compensaciones, incobrables, caja chica y arqueo](admin-contab-cierres.md) | Admin & Contab | verificado; pendiente: tesorería y movimientos bancarios, reportes (11d) |
 | [Admin & Contab: comisiones externas (arquitectos)](admin-contab-comisiones-externas.md) | Admin & Contab ← Ventas & Diseño | verificado (generación «todo o nada», datos fiscales, cambio de porcentaje, pago); pendiente: comisión de cartera, reportes (11d) |
 | [Admin & Contab: tesorería y movimientos bancarios](admin-contab-tesoreria.md) | Admin & Contab | verificado (comisión sin cuenta de pago, asignar cuenta, desactivar cuenta y saldo de bancos); pendiente: comisión de cartera, reportes (11d) |
+| [Admin & Contab: comisión de cartera +90 días](admin-contab-comision-cartera.md) | Admin & Contab | verificado (permisos, reporte, CRUD de tramos; el atraso >90 se verificó con una factura retrocedida en la base); pendiente: reportes restantes (11d) |
 | [Servicios: tickets](servicios-tickets.md) | Servicios | verificado (instalación, garantía con compuertas de cierre, cotización de servicio, cancelación); pendiente: técnicos externos, herramientas, insumos, hoja de reclamo, reportes (11e) |
 | [Transversales: usuarios, acceso, permisos, «Ver como usuario», niveles y notificaciones](transversales.md) | varios | verificado; pendiente: MFA, recuperación de clave por correo, perfil, departamentos, roles/módulos, reglas de aprobación y de notificación, ajustes globales, IA (11f) |
 
