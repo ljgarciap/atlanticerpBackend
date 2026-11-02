@@ -9,6 +9,7 @@ Continuación de [Compras: órdenes, pagos, cambio de monto, reclamos y sustituc
 Consolida lo que falta de los pedidos que hoy son un **faltante «sin stock»** (etapa asignado, ítems no encontrados) y lo agrupa por proveedor principal del producto; «Sin proveedor» queda al final [C].
 - **Cómo nace el faltante**: el picker alista 0 de un producto, `complete-picking` abre la tarjeta de revisión y el `resolve-inventory-review` con `found = false` la convierte en tarjeta **faltante** [E].
 - La fila trae `faltante` (suma de los pedidos que esperan el producto), `stock`, `unit_cost` precargado, `en_camino`, los pedidos con su cotización y los proveedores elegibles [E]. `faltante` es la suma de las cantidades de sus pedidos, también cuando hay varios faltantes del mismo producto [E].
+- Al resolverse la revisión como «no encontrado», Bodega **notifica a Compras y a Ventas & Diseño** del faltante (`InventoryReviewService::notifyShortage`) [C].
 - Los artículos libres (sin producto del catálogo) no se reponen: solo se cuentan en `custom_items_count` [E][C].
 
 ## 2. Asignar proveedor a un producto pendiente (`PUT replenishment/products/{id}/provider`)
@@ -32,8 +33,6 @@ Con una orden de compra del producto al proveedor y su ingreso confirmado, el fa
 - Alta (`compras.write`): `name` obligatorio, correo y teléfono con formato [E]. **El nombre se puede repetir** [E].
 - Situación de pago (`PUT`, `compras.edit`): `pending_payment_amount` y `paid_amount` no negativos; el resumen suma los pendientes en sus indicadores [E]. Nombre y contacto principal **no son editables** tras el alta [C].
 - **Dos conceptos de contacto**: el contacto principal (nombre, teléfono, correo de la agencia) NO figura en la lista `contacts`; esa solo trae los contactos que se agregan aparte [E]. Se pueden agregar, editar y quitar; **no se quita el único contacto que queda en la lista** (422) [E].
-
-Al resolverse la revisión como «no encontrado», Bodega **notifica a Compras y a Ventas & Diseño** del faltante (`InventoryReviewService::notifyShortage`) [C].
 
 ## Candidatos a cambio o mejora
 1. **El nombre de agencia se puede repetir** (los proveedores tienen nombre único y las agencias no). [E]
