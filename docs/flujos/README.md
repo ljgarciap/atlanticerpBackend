@@ -24,7 +24,8 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | [Admin & Contab: reportes e Inicio](admin-contab-reportes.md) | Admin & Contab | verificado (por cliente, libro de facturas, series, notas de crédito, Inicio y permisos) |
 | [Bodega: ubicaciones, rutas del día y Kardex](bodega-ubicaciones-rutas-kardex.md) | Bodega | verificado; Zona Libre de Bodega ya no existe (retirada en la Fase 14f-1); pendiente: mapeo de asistentes, confirmación de llegada de inventario |
 | [Compras: reposición, proveedores y agencias de liquidación](compras-reposicion-proveedores.md) | Compras ← Bodega | verificado (faltante → reposición → compra → recepción → liberación, alta y validaciones de proveedores, agencias y contactos) |
-| [Servicios: tickets](servicios-tickets.md) | Servicios | verificado (instalación, garantía con compuertas de cierre, cotización de servicio, cancelación); pendiente: técnicos externos, herramientas, insumos, hoja de reclamo, reportes (11e) |
+| [Servicios: tickets](servicios-tickets.md) | Servicios | verificado (instalación, garantía con compuertas de cierre, cotización de servicio, cancelación); pendiente: hoja de reclamo en detalle y reportes (11e) |
+| [Servicios: técnicos, herramientas e insumos](servicios-tecnicos-herramientas.md) | Servicios | verificado (técnicos externos e internos, herramientas con su Kardex, insumos, SLA y permisos); pendiente: hoja de reclamo en detalle, reportes (11e) |
 | [Transversales: usuarios, acceso, permisos, «Ver como usuario», niveles y notificaciones](transversales.md) | varios | verificado; pendiente: MFA, recuperación de clave por correo, perfil, departamentos, roles/módulos, reglas de aprobación y de notificación, ajustes globales, IA (11f) |
 
 ## Cierre
