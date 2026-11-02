@@ -64,4 +64,4 @@ La regla del workspace exige que los umbrales y vocabularios de negocio no vivan
 3. **Fase 14 (parametrización)**: 3.1 es la única que incumple una regla dura del workspace.
 4. **Fases 15 y 16**: cuando la operación local esté estable y se retome el despliegue.
 
-Pendiente de recorrer (no es candidato sino cobertura): comisiones externas, tesorería, ubicaciones, rutas del día, Zona Libre, logística, reposición, técnicos externos, herramientas, insumos, MFA y recuperación de clave.
+Pendiente de recorrer (no es candidato sino cobertura): ubicaciones, rutas del día, Zona Libre, logística, reposición, técnicos externos, herramientas, insumos, MFA y recuperación de clave.
