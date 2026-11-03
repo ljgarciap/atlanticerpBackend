@@ -33,7 +33,7 @@ return [
             ],
         ],
         'architect_type' => [
-            'label' => 'Tipos de arquitecto / prescriptor',
+            'label' => 'Tipos de asociado',
             'usage' => [Architect::class, 'type'],
             'props' => [],
         ],

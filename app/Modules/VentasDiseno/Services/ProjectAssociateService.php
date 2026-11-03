@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class ProjectAssociateService
 {
-    public const COMMISSION_ARCHITECT_MESSAGE = 'Este arquitecto es el «Arquitecto» de una cotización del proyecto (origina la comisión). Cámbielo primero en el campo «Arquitecto».';
+    public const COMMISSION_ARCHITECT_MESSAGE = 'Este asociado origina la comisión de una cotización del proyecto. Cámbielo primero en el campo «Asociado» de la cotización.';
 
     /** @return Collection<int, Architect> */
     public function forProject(SalesProject $project): Collection

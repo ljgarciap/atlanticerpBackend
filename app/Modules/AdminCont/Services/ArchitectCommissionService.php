@@ -656,7 +656,7 @@ final class ArchitectCommissionService
     {
         $profile = ArchitectFiscalProfile::where('architect_id', $architectId)->first();
         if ($profile === null || $profile->regimen_fiscal !== ArchitectFiscalProfile::REGIMEN_RETENCION_50) {
-            throw new ArchitectCommissionStateException('El comprobante de retención solo aplica a arquitectos con régimen "Retención del 50%".');
+            throw new ArchitectCommissionStateException('El comprobante de retención solo aplica a asociados con régimen "Retención del 50%".');
         }
 
         $existing = ArchitectCommission::where('pipeline_card_id', $pipelineCardId)->first();
@@ -833,7 +833,7 @@ final class ArchitectCommissionService
             throw new ArchitectCommissionStateException('Proyecto no encontrado.');
         }
         if ($project['estado'] !== self::ESTADO_PENDIENTE_FACTURA) {
-            throw new ArchitectCommissionStateException('Este proyecto no está en estado "Pendiente de factura del arquitecto".');
+            throw new ArchitectCommissionStateException('Este proyecto no está en estado "Pendiente cuenta de cobro".');
         }
         if ($project['porcentaje_pendiente'] !== null) {
             throw new ArchitectCommissionStateException('Hay un cambio de % pendiente de aprobación del aprobador configurado en este proyecto — resuélvelo primero.');
@@ -841,7 +841,7 @@ final class ArchitectCommissionService
 
         $profile = ArchitectFiscalProfile::where('architect_id', $project['architect_id'])->first();
         if ($profile === null) {
-            throw new ArchitectCommissionStateException('Faltan los datos fiscales del arquitecto — complétalos primero.');
+            throw new ArchitectCommissionStateException('Faltan los datos fiscales del asociado — complétalos primero.');
         }
         if ($project['cuenta_cobro_nombre_archivo'] === null) {
             throw new ArchitectCommissionStateException('Falta subir la cuenta de cobro de este proyecto.');
@@ -877,7 +877,7 @@ final class ArchitectCommissionService
                     'bank_account_id' => $commission->bank_account_id,
                     'fecha' => now()->toDateString(),
                     'tipo' => AdminContBankMovement::TIPO_COMISION,
-                    'concepto' => "Comisión arquitecto {$architect?->name} — {$project['numero_pedido']}",
+                    'concepto' => "Comisión asociado {$architect?->name} — {$project['numero_pedido']}",
                     'monto' => $montos['total'] ?? $montos['comision'],
                     'source_type' => AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION,
                     'source_id' => $commission->id,
@@ -938,7 +938,7 @@ final class ArchitectCommissionService
                 'bank_account_id' => $commission->bank_account_id,
                 'fecha' => $fechaPago->toDateString(),
                 'tipo' => AdminContBankMovement::TIPO_COMISION,
-                'concepto' => "Comisión arquitecto {$architect?->name} — {$project['numero_pedido']}",
+                'concepto' => "Comisión asociado {$architect?->name} — {$project['numero_pedido']}",
                 'monto' => $montos['total'] ?? $montos['comision'],
                 'source_type' => AdminContBankMovement::SOURCE_ARCHITECT_COMMISSION,
                 'source_id' => $commission->id,
@@ -962,12 +962,12 @@ final class ArchitectCommissionService
             throw new ArchitectCommissionStateException('Proyecto no encontrado.');
         }
         if ($project['estado'] !== self::ESTADO_PENDIENTE_FACTURA) {
-            throw new ArchitectCommissionStateException('Este proyecto no está en estado "Pendiente de factura del arquitecto".');
+            throw new ArchitectCommissionStateException('Este proyecto no está en estado "Pendiente cuenta de cobro".');
         }
 
         $architect = Architect::find($project['architect_id']);
         if ($architect === null || $architect->email === null) {
-            throw new ArchitectCommissionStateException('Este arquitecto no tiene un correo registrado en su ficha (Ventas & Diseño).');
+            throw new ArchitectCommissionStateException('Este asociado no tiene un correo registrado en su ficha (Ventas & Diseño).');
         }
 
         SendArchitectReminderEmailJob::dispatch(
