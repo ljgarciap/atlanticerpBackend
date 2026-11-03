@@ -66,12 +66,12 @@ class RolesSeedTest extends FeatureTestCase
         $this->assertSame(10, $superadmin->defaultSecurityLevel->level);
     }
 
-    public function test_gerencia_ve_los_7_modulos_con_alcance_equipo(): void
+    public function test_gerencia_ve_los_8_modulos_con_alcance_equipo(): void
     {
         $gerencia = Role::where('key', 'management')->firstOrFail();
         $rows = RoleModuleVisibility::where('role_id', $gerencia->id)->get();
 
-        $this->assertCount(7, $rows);
+        $this->assertCount(8, $rows); // los 7 de negocio + `crm` (Fase 19)
         $this->assertTrue($rows->every(fn (RoleModuleVisibility $r) => $r->can_view === RoleModuleVisibility::VIEW_FULL));
         $this->assertTrue($rows->every(fn (RoleModuleVisibility $r) => $r->can_view_team === true));
     }
@@ -87,9 +87,9 @@ class RolesSeedTest extends FeatureTestCase
         $role = Role::where('key', 'vendedor')->firstOrFail();
         $rows = RoleModuleVisibility::where('role_id', $role->id)->get();
 
-        $this->assertCount(3, $rows);
+        $this->assertCount(4, $rows); // + `crm` (Fase 19): copia la visibilidad de ventas_diseno
         $this->assertTrue($rows->every(fn (RoleModuleVisibility $r) => $r->can_view_team === false));
-        $this->assertSame(['admin_contab', 'servicios', 'ventas_diseno'], $rows->pluck('module')->sort()->values()->all());
+        $this->assertSame(['admin_contab', 'crm', 'servicios', 'ventas_diseno'], $rows->pluck('module')->sort()->values()->all());
 
         $byModule = $rows->keyBy('module');
         $this->assertSame(RoleModuleVisibility::VIEW_FULL, $byModule['servicios']->can_view);

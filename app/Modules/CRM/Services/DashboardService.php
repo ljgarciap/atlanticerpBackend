@@ -156,7 +156,7 @@ final class DashboardService
     {
         $query = Project::query();
 
-        if (! $user->canViewTeamV2('ventas_diseno')) {
+        if (! $user->canViewTeamV2('crm')) {
             $query->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $user->id));
         }
 

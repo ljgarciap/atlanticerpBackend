@@ -27,7 +27,7 @@ final class ReportsController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $isManagement = $user->canViewTeamV2('ventas_diseno');
+        $isManagement = $user->canViewTeamV2('crm');
 
         $validated = $request->validate([
             'month' => ['sometimes', 'string', 'regex:/^\d{4}-\d{2}$/'],
@@ -52,7 +52,7 @@ final class ReportsController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        $isManagement = $user->canViewTeamV2('ventas_diseno');
+        $isManagement = $user->canViewTeamV2('crm');
 
         $validated = $request->validate([
             'month' => ['sometimes', 'string', 'regex:/^\d{4}-\d{2}$/'],
@@ -193,9 +193,9 @@ final class ReportsController extends Controller
         }
 
         // Fase 3 de la auditoría de permisos (Atlantic/CLAUDE.md, 2026-08-30) — la ruta ya está
-        // gateada por `permission:ventas_diseno.view_team`, este chequeo es defensa en profundidad
+        // gateada por `permission:crm.view_team`, este chequeo es defensa en profundidad
         // (mismo criterio que el resto del proyecto, ej. AdminContInternalCommissionController).
-        if (! $user->canViewTeamV2('ventas_diseno')) {
+        if (! $user->canViewTeamV2('crm')) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 

@@ -295,13 +295,14 @@ class ProjectControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    public function test_listar_proyectos_sin_permiso_crm_write_retorna_200(): void
+    /** Fase 19 — sin la visibilidad del módulo `crm` (el nivel 1 la tiene en `crm.read` del escape hatch, pero no basta) no se entra. */
+    public function test_listar_proyectos_sin_visibilidad_del_modulo_crm_retorna_403(): void
     {
         $token = $this->createLevel1Token();
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/crm/projects')
-            ->assertStatus(200);
+            ->assertStatus(403);
     }
 
     public function test_actualizar_proyecto_sin_permiso_crm_edit_retorna_403(): void

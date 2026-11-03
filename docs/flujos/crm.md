@@ -1,19 +1,18 @@
 # Flujo: CRM propio (proyectos, actividades, contactos, documentos, tablero y reportes)
 
-El CRM es el módulo `crm` heredado, con su **propio vocabulario** (Fase 7c: etapas `lead/diseno/cotizacion/propuesta/cerrado/perdido`, tipos `diseno/cotizacion/ambos`), distinto del Pipeline de Ventas & Diseño. Marcas: **[E]** ejecutado, **[C]** leído del código (ver `README.md`). Verificado el 2026-11-03 con las cuentas demo de cada rol (`npm run e2e:flujos`, archivo `crm.spec.ts`, 8 pasos).
+El CRM es un **módulo propio (`crm`, Fase 19)** con su **propio vocabulario** (Fase 7c: etapas `lead/diseno/cotizacion/propuesta/cerrado/perdido`, tipos `diseno/cotizacion/ambos`), distinto del Pipeline de Ventas & Diseño. Marcas: **[E]** ejecutado, **[C]** leído del código (ver `README.md`). Verificado el 2026-11-03 con las cuentas demo de cada rol (`npm run e2e:flujos`, archivo `crm.spec.ts`, 8 pasos).
 
 ## Quién ve qué
 | Ruta (`/api/crm/…`) | Vendedor | Gerencia | Contabilidad | Líder de Compras | Técnico | Superadmin |
 |---|---|---|---|---|---|---|
-| `projects`, `contacts`, `dashboard/*`, `directory?type=` | sí | sí | sí | sí | sí | sí |
-| `reports/monthly` | sí | sí | sí | **no** | sí | sí |
-| `reports/team` | no | sí | sí | no | no | sí |
+| `projects`, `contacts`, `dashboard/*`, `reports/monthly`, `directory?type=` | sí | sí | **no** | **no** | **no** | sí |
+| `reports/team` | no | sí | no | no | no | sí |
 | `settings` (umbrales) | no | no | no | no | no | sí |
 
-[E] Los listados responden 200 a **todos** los roles, incluidos los que no tienen el módulo en el menú (Técnico, Líder de Compras): el control real está en qué proyectos ven (abajo) y en los permisos de escritura. `directory` exige `type` (422 sin él) [E].
+[E] **Fase 19:** todo `/api/crm/*` exige `crm.view`, la visibilidad del módulo `crm` por rol. La migración la sembró **copiando la de Ventas & Diseño** (Vendedor y Gerencia con equipo); el superadmin puede conceder el módulo a otros roles o usuarios en Ajustes, sin deploy. Los `crm.read/write/edit/delete` de cada nivel ya no bastan: un Técnico, un Líder de Compras o Contabilidad reciben **403** aunque su nivel los traiga. Las excepciones por usuario de Ventas & Diseño no se copiaron, y el alcance de Gerencia (`gerencia_scope`) no abre el CRM. `directory` exige `type` (422 sin él) [E].
 
 ## 1. Proyecto
-- **Alta** (`POST projects`): `nombre` y `tipo` (`diseno|cotizacion|ambos`) obligatorios; `etapa` opcional (nace en `lead`); valor, contacto, encargado, developer, arquitecto (texto libre), fecha de entrega, notas y `assignee_ids`. Lo puede dar de alta cualquier rol con `crm.write` — **también el Técnico** (201) [E].
+- **Alta** (`POST projects`): `nombre` y `tipo` (`diseno|cotizacion|ambos`) obligatorios; `etapa` opcional (nace en `lead`); valor, contacto, encargado, developer, arquitecto (texto libre), fecha de entrega, notas y `assignee_ids`. Lo da de alta cualquier usuario del módulo CRM con `crm.write`; sin el módulo (Técnico, Líder de Compras, Contabilidad) → 403 [E].
 - **Quién lo ve**: solo quien está **asignado** (`assignee_ids`) o ve al equipo (Gerencia, Contabilidad, superadmin) [E][C]. La autoría por sí sola no da acceso, pero **desde esta fase el creador sin alcance de equipo queda asignado automáticamente** (antes recibía 403 al abrir su propio proyecto y no aparecía en su lista). Gerencia/superadmin que crean sin responsables no se asignan [E].
 - **Quién lo edita**: el asignado y quien ve al equipo; otro vendedor, 403 [E].
 - **Baja** (`DELETE projects/{id}`): solo `crm.projects.delete`, es decir Gerencia; el dueño y el Técnico reciben 403 [E].
@@ -26,7 +25,7 @@ Valores: `lead`, `diseno`, `cotizacion`, `propuesta`, `cerrado`, `perdido`; otro
 - **Recordatorio** (`POST …/reminders`): `tipo` (incluye `cotizacion` y `diseno`), `fecha`, `nota`; nace `completado: false`; `PATCH …/toggle` lo alterna (completa y reabre) y `DELETE` lo borra (204; inexistente 404) [E].
 
 ## 4. Contactos (`/crm/contacts`)
-Directorio **global sin dueño**: todos los roles listan los mismos; alta con `nombre` y `tipo` del catálogo `contact_role`, correo/teléfono/empresa/notas opcionales; edición `PUT` [E]. La respuesta de la lista es `{stats, entries}` (no `data`). **Cualquier rol con `crm.delete` borra cualquier contacto, también el Técnico (204)** [E].
+Directorio **global sin dueño**: todos los roles listan los mismos; alta con `nombre` y `tipo` del catálogo `contact_role`, correo/teléfono/empresa/notas opcionales; edición `PUT` [E]. La respuesta de la lista es `{stats, entries}` (no `data`). **Cualquier usuario del CRM borra cualquier contacto, sea o no suyo** (otro vendedor, 204); sin el módulo, 403 [E].
 
 ## 5. Documentos del proyecto
 - **Subida** (`POST projects/{id}/documents`, multipart): `categoria` obligatoria (`cotizacion|diseno|presentacion|plano|render|ficha|modelo_3d|otro`), solo extensiones permitidas (`pdf, doc, docx, xls, xlsx, csv, ppt, pptx, imágenes, zip, dwg, rvt, obj…`; un `.exe` → 422), zona `private` por omisión [E].
@@ -42,9 +41,9 @@ Directorio **global sin dueño**: todos los roles listan los mismos; alta con `n
 
 ## Candidatos a cambio o mejora (ninguno implementado)
 1. ~~**El creador de un proyecto sin asignarse no puede abrirlo ni verlo**~~ — **resuelto en esta fase** por decisión de Luis: el creador sin alcance de equipo se asigna solo (test de regresión y el test heredado actualizado). [E]
-2. **Los permisos `crm.write/edit/delete` llegan a roles sin el módulo** (Técnico, Líder de Compras): pueden crear proyectos y el Técnico borró un contacto ajeno. Mismo patrón que el hallazgo de la Fase 2 (permisos finos de un nivel compartido no filtrados por módulo). **Impacto A.** [E]
+2. ~~**Los permisos `crm.write/edit/delete` llegan a roles sin el módulo**~~ — **resuelto en la Fase 19** (módulo `crm` propio con `crm.view` por rol). [E]
 3. **Etapas sin compuertas**: de Lead a Cerrado y de Perdido a Lead sin motivo ni aprobación, y sin relación con el Pipeline de Ventas & Diseño (dos «pipelines» que no se sincronizan). [E]
-4. **Contactos globales sin dueño ni auditoría visible**: cualquiera edita y borra el de cualquiera. [E]
+4. **Contactos globales sin dueño ni auditoría visible**: cualquiera con el CRM edita y borra el de cualquiera. [E]
 5. **Dos vocabularios paralelos**: etapas, tipos y roles de contacto del CRM (`arquitecto`, `encargado`…) ya no coinciden con el catálogo de asociados de Ventas & Diseño (Fase 17). [C]
 6. **Listas fijas en el código**: tipos de proyecto, tipos de actividad y de recordatorio y categorías de documento (solo los roles de contacto son catálogo). [C]
 7. **La lista de contactos responde otra forma** (`{stats, entries}`) que el resto de listados (`{data, meta}`). [E]

@@ -59,7 +59,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // Rutas protegidas: AuthenticateJwt se aplica a través del grupo 'api'
             // (appendToGroup en withMiddleware). EnforceRole se aplica por endpoint.
-            Route::middleware(['api', 'gerencia.scope'])->prefix('api/crm')->group(base_path('routes/crm.php'));
+            // Fase 19 — todo `/api/crm/*` exige además `crm.view` (visibilidad del módulo `crm` por rol); sin él, los `crm.write/edit/delete` del nivel no bastan.
+            Route::middleware(['api', 'gerencia.scope', 'permission:crm.view'])->prefix('api/crm')->group(base_path('routes/crm.php'));
             Route::middleware(['api', 'gerencia.scope'])->prefix('api/ventas-diseno')->group(base_path('routes/ventas-diseno.php'));
             Route::middleware('api')->prefix('api/compras')->group(base_path('routes/compras.php'));
             Route::middleware('api')->prefix('api/bodega')->group(base_path('routes/bodega.php'));

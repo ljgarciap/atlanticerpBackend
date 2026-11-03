@@ -37,17 +37,17 @@ class ModuleControllerTest extends FeatureTestCase
         $this->getJson('/api/modules')->assertStatus(401);
     }
 
-    public function test_index_cualquier_autenticado_ve_los_7_modulos_sembrados(): void
+    public function test_index_cualquier_autenticado_ve_los_8_modulos_sembrados(): void
     {
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!');
 
         $response = $this->withHeaders($this->authHeaders($token))->getJson('/api/modules');
 
         $response->assertStatus(200);
-        $this->assertCount(7, $response->json());
+        $this->assertCount(8, $response->json()); // los 7 de negocio + `crm` (Fase 19)
         $keys = collect($response->json())->pluck('key')->sort()->values()->all();
         $this->assertSame(
-            ['admin_contab', 'bodega', 'compras', 'gerencia', 'operaciones', 'servicios', 'ventas_diseno'],
+            ['admin_contab', 'bodega', 'compras', 'crm', 'gerencia', 'operaciones', 'servicios', 'ventas_diseno'],
             $keys,
         );
     }
@@ -57,7 +57,7 @@ class ModuleControllerTest extends FeatureTestCase
     public function test_module_catalog_keys_lee_la_tabla(): void
     {
         $this->assertSame(
-            ['ventas_diseno', 'compras', 'bodega', 'servicios', 'admin_contab', 'gerencia', 'operaciones'],
+            ['ventas_diseno', 'compras', 'bodega', 'servicios', 'admin_contab', 'gerencia', 'operaciones', 'crm'],
             ModuleCatalog::keys(),
         );
     }

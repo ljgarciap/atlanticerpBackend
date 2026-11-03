@@ -46,7 +46,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    public function test_get_sin_overrides_devuelve_el_default_del_rol_para_los_7_modulos(): void
+    public function test_get_sin_overrides_devuelve_el_default_del_rol_para_los_8_modulos(): void
     {
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
         $this->activateTenant();
@@ -57,7 +57,7 @@ class UserModuleVisibilityControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $modules = collect($response->json('modules'))->keyBy('module');
-        $this->assertCount(7, $modules);
+        $this->assertCount(8, $modules); // los 7 de negocio + `crm` (Fase 19)
         // vendedor (rol de vendedor@) tiene ventas_diseno full, sin equipo.
         $this->assertSame(RoleModuleVisibility::VIEW_FULL, $modules['ventas_diseno']['can_view']);
         $this->assertFalse($modules['ventas_diseno']['can_view_team']);

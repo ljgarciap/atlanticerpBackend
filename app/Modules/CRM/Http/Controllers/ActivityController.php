@@ -118,7 +118,7 @@ final class ActivityController extends Controller
         }
 
         // Non-management users can only delete their own activities
-        if (! $user->canViewTeamV2('ventas_diseno') && $activity->user_id !== $user->id) {
+        if (! $user->canViewTeamV2('crm') && $activity->user_id !== $user->id) {
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
@@ -143,7 +143,7 @@ final class ActivityController extends Controller
 
     private function canAccess(Project $project, User $user): bool
     {
-        if ($user->canViewTeamV2('ventas_diseno')) {
+        if ($user->canViewTeamV2('crm')) {
             return true;
         }
 
