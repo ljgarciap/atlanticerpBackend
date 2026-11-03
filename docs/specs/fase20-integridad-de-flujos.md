@@ -1,6 +1,6 @@
 # Fase 20 — Integridad de flujos (Servicios, Compras y Bodega)
 
-**Estado**: BORRADOR, pendiente de aprobación de Luis. Origen: los candidatos 1–4 de la cobertura de flujos del 2026-11-03 (`docs/flujos/servicios-informe-inspeccion.md`, `compras-familias.md`, `bodega-asistentes-llegadas.md`, `transversales-administracion.md`). Nada de esto se implementa sin la aprobación de §5.
+**Estado**: APROBADA por Luis (2026-11-03) con las 4 propuestas de §5 tal como están escritas (A inmutable sin excepción, B bloquear mientras haya algo en camino, C entran las unidades contadas, D defecto «sin regla» = no pide aprobación con aviso de cobertura; 1 PR por ítem y por repo, backend primero). Origen: los candidatos 1–4 de la cobertura de flujos del 2026-11-03 (`docs/flujos/servicios-informe-inspeccion.md`, `compras-familias.md`, `bodega-asistentes-llegadas.md`, `transversales-administracion.md`). Nada de esto se implementa sin la aprobación de §5.
 
 ## 1. Objetivo
 Cerrar cuatro huecos de integridad encontrados al ejecutar los flujos de punta a punta: un documento firmado que se puede modificar, una compra que se duplica, un conteo físico que no controla el inventario y una regla de aprobación que puede dejar pasar órdenes sin avisar.
