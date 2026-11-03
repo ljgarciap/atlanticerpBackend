@@ -64,4 +64,4 @@ La regla del workspace exige que los umbrales y vocabularios de negocio no vivan
 3. **Fase 14 (parametrización)**: 3.1 es la única que incumple una regla dura del workspace.
 4. **Fases 15 y 16**: cuando la operación local esté estable y se retome el despliegue.
 
-Pendiente de recorrer (no es candidato sino cobertura): logística de Compras, familias, MFA y recuperación de clave.
+Pendiente de recorrer (no es candidato sino cobertura): logística de Compras y familias. MFA y recuperación de clave ya se recorrieron: sus candidatos están en [mfa-recuperacion-clave.md](mfa-recuperacion-clave.md) (7, el más relevante: desactivar el MFA sin clave ni código).
