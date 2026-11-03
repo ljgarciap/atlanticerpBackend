@@ -1,6 +1,6 @@
 # Fase 18 — Segmentos de cliente como catálogo por empresa
 
-**Estado: BORRADOR, pendiente de aprobación de Luis.** Origen: Senior Review de 17b/17c (hallazgo 1) y respuesta de Luis (2026-11-03): el segmento «B · Arquitecto o Diseñador» pasa a un catálogo editable por empresa.
+**Estado: APROBADA e implementada (2026-11-03).** Decisiones de Luis: clave interna `b_architect_designer` se conserva; etiquetas por omisión «A · Visita directa», «B · Prescriptor», «C · Licitación», «D · Referido»; implementar ya. Origen: Senior Review de 17b/17c (hallazgo 1) y respuesta de Luis (2026-11-03): el segmento «B · Arquitecto o Diseñador» pasa a un catálogo editable por empresa.
 
 ## 1. Problema
 `sub_clients.category` (el segmento: A · WalkIn, B · Arquitecto o Diseñador, C · Licitación, D · Referido) es una **lista fija** en 5 sitios: un `enum` de BD, `Rule::in([...])` en 4 Form Requests, y las etiquetas de i18n (es/en). Nombra oficios y canales de un sector concreto y no se puede cambiar sin deploy. La lógica **nunca pregunta por un segmento concreto** (solo filtra y lista), así que es vocabulario de la empresa, igual que las categorías de producto (Fase 9a).
@@ -30,9 +30,9 @@
 4. La API rechaza (422) un segmento inexistente o desactivado en los 4 caminos.
 5. Suites completas verdes, `npm run e2e:flujos` verde y el catálogo `ventas-diseno.md` actualizado.
 
-## 5. Decisiones abiertas (para Luis)
-1. ¿Renombrar también la **clave** `b_architect_designer` → `b_prescriber` (con un `UPDATE` reversible de `sub_clients.category`)? Recomendado **no**: es un identificador; solo se toca el texto.
-2. Etiquetas por omisión de los 4 segmentos: las de la tabla son una propuesta; ¿otras?
+## 5. Decisiones (resueltas)
+1. La clave `b_architect_designer` **no se renombra** (identificador, no texto).
+2. Etiquetas por omisión: las de la tabla del §2.
 
 ## 6. Plan
 Un PR por repo: backend (config + migración + 4 requests + pruebas + contrato) y frontend (selector/filtro con el catálogo + contrato + e2e). Senior Review antes de mezclar; nada se sube sin «sube» y «mezcla #N».
