@@ -83,7 +83,7 @@ class StoreProviderRequest extends FormRequest
             if (! is_string($value) || $value === '') {
                 return;
             }
-            $exists = Provider::whereRaw('LOWER(tax_id) = ?', [mb_strtolower($value)])->exists();
+            $exists = Provider::whereRaw("UPPER(regexp_replace(tax_id, '[^0-9A-Za-z]', '', 'g')) = ?", [strtoupper((string) preg_replace('/[^0-9A-Za-z]/', '', $value))])->exists();
             if ($exists) {
                 $fail("Ya existe un proveedor con el identificador fiscal '{$value}'.");
             }

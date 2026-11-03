@@ -14,6 +14,7 @@ use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 /**
  * Grupo 3 del plan de PM — pantalla Inicio (REQ-056, 057, 059, 060). REQ-058 tiene
@@ -54,7 +55,7 @@ class HomeControllerTest extends FeatureTestCase
         $sub    = SubClient::create([
             'master_client_id' => $master->id,
             'business_name'    => 'Subcliente Test',
-            'tax_id'            => '155-0000-1-2026',
+            'tax_id'            => UniqueTaxId::next(),
         ]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => $projectName]);
 

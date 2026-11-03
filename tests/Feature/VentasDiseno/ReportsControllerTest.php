@@ -13,6 +13,7 @@ use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 /**
  * Reportes-A (REQ-071/077/078). Ver memory/project_backlog_ventas_diseno_req.md.
@@ -44,7 +45,7 @@ class ReportsControllerTest extends FeatureTestCase
         float $amount = 1000, ?string $subClientName = null,
     ): PipelineCard {
         $master  = MasterClient::create(['name' => 'Cliente Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => $subClientName ?? 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => $subClientName ?? 'Sub Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
 
         return PipelineCard::create([

@@ -84,6 +84,12 @@ final class InvoiceReceptorGuardTest extends FeatureTestCase
     {
         $pedido = $this->makePedido([['desc' => 'Producto', 'qty' => 2, 'price' => 100.0]], [[2]]);
         $sub    = SubClient::findOrFail($pedido['card']->sub_client_id);
+        // Fase 17a — un RUC por tenant: si una vuelta anterior del mismo test ya dejó este RUC en otro subcliente, se lo libera (un test
+        // que arma dos pedidos con el mismo receptor simula "el mismo cliente" en dos pasadas, no dos clientes con el mismo RUC).
+        $clave = SubClient::taxIdKey($ruc, $dv);
+        if ($clave !== null) {
+            SubClient::query()->where('tax_id_key', $clave)->where('id', '!=', $sub->id)->update(['tax_id' => '', 'tax_id_key' => null]);
+        }
         $sub->forceFill(['business_name' => $nombre, 'tax_id' => $ruc, 'tax_id_dv' => $dv])->save();
 
         return ['pedido' => $pedido, 'sub' => $sub];

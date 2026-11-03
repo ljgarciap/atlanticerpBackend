@@ -12,6 +12,7 @@ use App\Modules\VentasDiseno\Models\SubClient;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 /**
  * Grupo 5 (REQ-079 a 085). Ver memory/project_backlog_ventas_diseno_req.md.
@@ -45,7 +46,7 @@ class QuoteListControllerTest extends FeatureTestCase
     private function makeQuote(int $ownerId, array $opts = []): Quote
     {
         $master = MasterClient::create(['name' => $opts['master'] ?? 'Cliente Test']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $opts['sub'] ?? 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $opts['sub'] ?? 'Subcliente Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => $opts['project'] ?? 'Proyecto Test']);
 
         // SCRUM-723: confirmed_at (no folio) es lo que ahora decide document_status
@@ -185,7 +186,7 @@ class QuoteListControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('vendedor@atlantic.test');
 
         $master = MasterClient::create(['name' => 'Cliente Test']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote', 'amount' => 1070,
@@ -240,7 +241,7 @@ class QuoteListControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('vendedor@atlantic.test');
 
         $master = MasterClient::create(['name' => 'Cliente Borrador Test']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Borrador Test']);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote',
@@ -285,7 +286,7 @@ class QuoteListControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('vendedor@atlantic.test');
 
         $master = MasterClient::create(['name' => 'Cliente Borrador Test']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Borrador Test']);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote',
@@ -355,7 +356,7 @@ class QuoteListControllerTest extends FeatureTestCase
         $designerId = $this->userIdByEmail('vendedor@atlantic.test');
 
         $master = MasterClient::create(['name' => 'Cliente Folio Viejo Test']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Folio Viejo Test']);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote',
@@ -507,7 +508,7 @@ class QuoteListControllerTest extends FeatureTestCase
     private function assignedProjectWithManagementVersion(int $responsibleId, int $generatorId): array
     {
         $master = MasterClient::create(['name' => 'Cliente Asignado']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Asignado', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Asignado', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Asignado']);
         $base = ['master_client_id' => $master->id, 'sub_client_id' => $sub->id, 'sales_project_id' => $project->id];
 

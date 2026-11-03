@@ -93,7 +93,7 @@ class UpdateProviderRequest extends FormRequest
                 return;
             }
             $providerId = $this->route('id');
-            $exists = Provider::whereRaw('LOWER(tax_id) = ?', [mb_strtolower($value)])
+            $exists = Provider::whereRaw("UPPER(regexp_replace(tax_id, '[^0-9A-Za-z]', '', 'g')) = ?", [strtoupper((string) preg_replace('/[^0-9A-Za-z]/', '', $value))])
                 ->where('id', '!=', $providerId)
                 ->exists();
             if ($exists) {

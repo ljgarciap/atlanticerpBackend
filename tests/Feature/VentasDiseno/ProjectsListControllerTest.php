@@ -12,6 +12,7 @@ use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 /**
  * SCRUM-690/691/693 (REQ-610/611/613, Batch D). Escenarios 1-3 de REQ-610, filtros de REQ-611,
@@ -52,7 +53,7 @@ class ProjectsListControllerTest extends FeatureTestCase
         $sub    = SubClient::create([
             'master_client_id' => $master->id,
             'business_name'    => 'Subcliente Test',
-            'tax_id'            => '155-0000-1-2026',
+            'tax_id'            => UniqueTaxId::next(),
         ]);
         $project = SalesProject::create([
             'sub_client_id' => $sub->id,

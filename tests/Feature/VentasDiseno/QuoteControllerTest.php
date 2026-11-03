@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 /**
  * Cotización-A (REQ-024 a 032). Ver memory/project_backlog_ventas_diseno_req.md.
@@ -65,7 +66,7 @@ class QuoteControllerTest extends FeatureTestCase
     private function makeClientHierarchy(): array
     {
         $master = MasterClient::create(['name' => 'Cliente Test']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
 
         return ['master' => $master, 'sub' => $sub, 'project' => $project];
@@ -1038,7 +1039,7 @@ class QuoteControllerTest extends FeatureTestCase
     {
         $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $master = MasterClient::create(['name' => 'Cliente Test']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => UniqueTaxId::next()]);
         $orphanProject = SalesProject::create(['sub_client_id' => null, 'name' => 'Proyecto sin cliente']);
         $architect = Architect::create(['name' => 'Arq. Test', 'phone' => '6000-0000']);
         $contact = $sub->contacts()->create(['name' => 'Contacto Test', 'role' => 'client', 'phone' => '6111-1111']);
@@ -1269,7 +1270,7 @@ class QuoteControllerTest extends FeatureTestCase
 
         $response->assertJsonPath('master_client.id', $hierarchy['master']->id);
         $response->assertJsonPath('sub_client.id', $hierarchy['sub']->id);
-        $response->assertJsonPath('ruc', '155-0000-1-2026');
+        $response->assertJsonPath('ruc', $hierarchy['sub']->tax_id);
         $response->assertJsonPath('sales_project', null);
     }
 

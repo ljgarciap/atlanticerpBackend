@@ -130,5 +130,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Fase 17a — respaldo ante una carrera: dos altas simultáneas con la misma identificación fiscal pasan la verificación del modelo y
+        // la segunda choca con el índice único. Se responde el mismo 409 (sin el cliente existente, que la carrera no permite resolver).
+        $exceptions->render(function (\Illuminate\Database\UniqueConstraintViolationException $e, \Illuminate\Http\Request $request) {
+            if (! $request->expectsJson() || ! str_contains($e->getMessage(), 'sub_clients_tax_id_key_unique')) {
+                return null;
+            }
+
+            return response()->json(['code' => 'duplicate_tax_id', 'message' => 'Ya existe un cliente con la misma identificación fiscal. Use el existente.'], 409);
+        });
     })->create();

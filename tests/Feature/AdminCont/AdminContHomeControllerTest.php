@@ -94,7 +94,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
     private function makeCommissionableOrder(int $ownerId, float $amount): AdminContInvoice
     {
         $master = MasterClient::create(['name' => 'Cliente Comisión Inicio '.self::uniqueTestNumber()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Inicio '.self::uniqueTestNumber(), 'tax_id' => '155-0000-9-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Inicio '.self::uniqueTestNumber(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Comisión Inicio '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
@@ -299,7 +299,7 @@ class AdminContHomeControllerTest extends FeatureTestCase
         $architect = Architect::create(['name' => 'Arq. '.uniqid(), 'email' => uniqid().'@arq.test']);
         $master = MasterClient::create(['name' => 'Cliente Arq '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
-            'sales_project_id' => SalesProject::create(['sub_client_id' => SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Arq '.self::uniqueTestNumber(), 'tax_id' => '155-0000-3-'.random_int(1000, 9999)])->id, 'name' => 'Proyecto Arq '.self::uniqueTestNumber()])->id,
+            'sales_project_id' => SalesProject::create(['sub_client_id' => SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Arq '.self::uniqueTestNumber(), 'tax_id' => \Tests\Support\UniqueTaxId::next()])->id, 'name' => 'Proyecto Arq '.self::uniqueTestNumber()])->id,
             'stage' => 'approved', 'master_client_id' => $master->id, 'owner_id' => $contabilidadId, 'amount' => 1000, 'stage_changed_at' => now(),
         ]);
         ArchitectCommission::create([

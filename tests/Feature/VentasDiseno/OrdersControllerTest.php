@@ -21,6 +21,7 @@ use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 /**
  * SCRUM-703→710 (REQ-623→630, Epic CRM Batch F) — "Pedidos". Cubre: RN1 (solo Aprobado),
@@ -61,7 +62,7 @@ class OrdersControllerTest extends FeatureTestCase
     private function makeApprovedOrder(int $ownerId, array $items, string $folio = 'COT-1001'): array
     {
         $master = MasterClient::create(['name' => 'Cliente Test']);
-        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $sub    = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
 
         $card = PipelineCard::create([

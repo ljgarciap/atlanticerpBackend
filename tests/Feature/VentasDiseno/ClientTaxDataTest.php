@@ -233,10 +233,10 @@ final class ClientTaxDataTest extends FeatureTestCase
     // ─── Edición de datos fiscales ────────────────────────────────────────────────────────────────
 
     /** @return array{sub: SubClient, card: PipelineCard, order: Order, quote: Quote, rate: AdminContItbmsRate} */
-    private function subClienteConPedido(): array
+    private function subClienteConPedido(string $taxId = '155-0000-1-2026'): array
     {
         $master = MasterClient::create(['name' => 'Cliente FE '.uniqid()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Razón Vieja S.A.', 'tax_id' => '155-0000-1-2026', 'tax_id_dv' => '81']);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Razón Vieja S.A.', 'tax_id' => $taxId, 'tax_id_dv' => '81']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.uniqid()]);
         $ownerId = (int) DB::table('atlantic_auth.users')->where('email', 'contabilidad@test.com')->value('id');
         $card = PipelineCard::create([
@@ -365,7 +365,7 @@ final class ClientTaxDataTest extends FeatureTestCase
 
     public function test_los_documentos_de_otro_subcliente_no_bloquean(): void
     {
-        $otro = $this->subClienteConPedido();
+        $otro = $this->subClienteConPedido('155-0000-1-9999');
         $this->facturaDe($otro, 'certificado');
         $ctx = $this->subClienteConPedido();
 

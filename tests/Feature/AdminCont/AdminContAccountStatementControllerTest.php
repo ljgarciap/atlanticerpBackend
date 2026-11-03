@@ -46,7 +46,7 @@ class AdminContAccountStatementControllerTest extends FeatureTestCase
     private function makeClientWithProject(string $suffix = ''): array
     {
         $master = MasterClient::create(['name' => 'Cliente EC '.$suffix.uniqid(), 'default_price_type' => 'project']);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '8-'.random_int(100, 999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.$suffix.uniqid()]);
 
         return ['master' => $master, 'sub' => $sub, 'project' => $project];

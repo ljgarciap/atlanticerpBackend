@@ -784,6 +784,9 @@ final class FeReintentoTest extends FeatureTestCase
     {
         $factura->forceFill(['receptor_tipo' => '01', 'receptor_ruc' => '999-9-9999', 'receptor_dv' => '11', 'receptor_nombre' => 'RUC VIEJO', 'receptor_validado_at' => null])->save();
         $sub = \App\Modules\Bodega\Models\Order::find($factura->family_root_id)?->pipelineCard?->subClient;
+        // Fase 17a — un RUC por tenant: se libera el de una pasada anterior del mismo test (mismo cliente "corregido" dos veces).
+        \App\Modules\VentasDiseno\Models\SubClient::query()->where('tax_id_key', \App\Modules\VentasDiseno\Models\SubClient::taxIdKey('155704849-2-2021', '32'))
+            ->where('id', '!=', $sub?->id)->update(['tax_id' => '', 'tax_id_key' => null]);
         $sub?->update(['tax_id' => '155704849-2-2021', 'tax_id_dv' => '32', 'business_name' => 'DIGIFACT SERVICIOS, SOCIEDAD ANÓNIMA']);
     }
 

@@ -55,7 +55,7 @@ class QuoteResponsibleViewTest extends FeatureTestCase
         $approver     = $this->userIdByEmail(self::MARK);
 
         $master  = MasterClient::create(['name' => 'Cliente 1143 '.uniqid()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub 1143 '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub 1143 '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto 1143 '.uniqid()]);
         $card    = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'quote', 'master_client_id' => $master->id,
