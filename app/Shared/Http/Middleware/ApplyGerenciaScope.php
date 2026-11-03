@@ -32,8 +32,8 @@ class ApplyGerenciaScope
             $payload['real_role'] = $payload['role'] ?? null;
             $payload['role'] = RoleKeys::MANAGEMENT;
             // Las rutas de CRM/Ventas & Diseño ya no deciden por nombre de rol sino por permiso (Fase 1, bloque D): quien tiene el alcance de Gerencia
-            // recibe, solo en estas rutas y solo para esta petición, los permisos de rol completo que antes daba el rol `management` (incluido el CRM, Fase 19).
-            $payload['permissions'] = array_values(array_unique([...$payload['permissions'], 'platform.management', 'ventas_diseno.orders.access', 'crm.view', 'crm.view_team']));
+            // recibe, solo en estas rutas y solo para esta petición, los permisos de rol completo que antes daba el rol `management`.
+            $payload['permissions'] = array_values(array_unique([...$payload['permissions'], 'platform.management', 'ventas_diseno.orders.access']));
             $request->attributes->set('jwt', $payload);
         }
 

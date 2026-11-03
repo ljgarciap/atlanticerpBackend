@@ -26,7 +26,7 @@ Los permisos `crm.read/write/edit/delete` (+ `reports.read/export`) viven en el 
 
 ## 5. Decisiones abiertas (para Luis)
 1. **Contabilidad y Servicios**: ¿entran al CRM por defecto (sembrar su visibilidad) o solo si el superadmin se lo concede? Recomendado: **no por defecto** (privilegio mínimo); hoy usan el CRM «por accidente».
-2. Los overrides **por usuario** de Ventas & Diseño no se copian (Contabilidad tenía uno): el CRM se concede aparte. Quien tiene `gerencia_scope` (alcance de Gerencia) recibe `crm.view`/`crm.view_team` junto con los demás permisos de rol completo.
+2. Los overrides **por usuario** de Ventas & Diseño no se copian (Contabilidad tenía uno): el CRM se concede aparte. El alcance de Gerencia (`gerencia_scope`) **no** abre el CRM: quien lo necesite recibe el módulo `crm` (con `can_view_team` si debe ver al equipo) desde Ajustes.
 
 ## 6. Plan
 Backend (módulo + visibilidad + rutas + equipo + tests) y frontend (Sidebar/guardas + equivalencia + e2e) en un PR por repo, backend primero; Senior Review y Pre-QA de permisos antes de mezclar. Nada se sube sin «sube» ni se mezcla sin «mezcla #N».
