@@ -69,7 +69,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     private function makeInvoicedOrder(int $ownerId, float $monto = 500, float $saldoAplicado = 0.0): array
     {
         $master = MasterClient::create(['name' => 'Cliente Notas Crédito '.uniqid()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.uniqid()]);
         PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
@@ -239,7 +239,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     {
         $ownerId = $this->userIdByEmail(self::CONTABILIDAD_EMAIL);
         $master = MasterClient::create(['name' => 'Cliente Devolución '.uniqid()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Paso a Bodega 1']);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
@@ -791,7 +791,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     private function makeCorreccionFixture(int $ownerId): array
     {
         $master = MasterClient::create(['name' => 'Cliente Corrección '.uniqid()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Corrección '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Corrección '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Corrección '.uniqid()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
@@ -1228,7 +1228,7 @@ class AdminContCreditNoteControllerTest extends FeatureTestCase
     private function makeInvoicedOrderWithQuote(int $ownerId, string $ownerEmail, float $monto = 500, float $saldoAplicado = 0.0): array
     {
         $master = MasterClient::create(['name' => 'Cliente Notas Crédito '.uniqid()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.uniqid()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,

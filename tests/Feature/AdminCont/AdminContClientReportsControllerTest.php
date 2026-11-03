@@ -46,7 +46,7 @@ class AdminContClientReportsControllerTest extends FeatureTestCase
     private function makeClientWithProject(string $projectName): array
     {
         $master = MasterClient::create(['name' => 'Cliente Reportes '.self::uniqueTestNumber()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Reportes '.self::uniqueTestNumber(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => $projectName]);
 
         return [$master->id, $project->id];

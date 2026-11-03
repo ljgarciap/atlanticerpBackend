@@ -12,6 +12,7 @@ use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 class PipelineControllerTest extends FeatureTestCase
 {
@@ -60,7 +61,7 @@ class PipelineControllerTest extends FeatureTestCase
         $sub    = SubClient::create([
             'master_client_id' => $master->id,
             'business_name'    => 'Subcliente Test',
-            'tax_id'            => '155-0000-1-2026',
+            'tax_id'            => UniqueTaxId::next(),
         ]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test', 'tag' => $tag]);
 

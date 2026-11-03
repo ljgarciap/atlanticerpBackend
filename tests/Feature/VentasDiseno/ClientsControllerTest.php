@@ -12,6 +12,7 @@ use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 /**
  * Grupo 2 del plan de PM — pantalla Clientes (REQ-063 a REQ-070). Ver
@@ -39,7 +40,7 @@ class ClientsControllerTest extends FeatureTestCase
         return [
             'name'          => "Cliente Test {$suffix}",
             'business_name' => "Subcliente Test {$suffix}",
-            'tax_id'        => '155-0000-1-2026',
+            'tax_id'        => UniqueTaxId::next(),
             'tax_id_dv'     => '81',
             'contacts'      => [
                 ['name' => 'Ana Pérez', 'role' => 'client', 'phone' => '6000-0000'],

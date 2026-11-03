@@ -50,7 +50,7 @@ class BodegaBackfillOrderItemPricesCommandTest extends FeatureTestCase
     {
         $ownerId = $this->userIdByEmail('management@atlantic.test');
         $master  = MasterClient::create(['name' => 'Cliente Backfill '.uniqid()]);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto '.uniqid()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,

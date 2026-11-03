@@ -89,7 +89,7 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
         ?array $compartidoCon = null,
     ): AdminContInvoice {
         $master = MasterClient::create(['name' => 'Cliente Comisión '.uniqid()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión '.uniqid(), 'tax_id' => '155-0000-1-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Comisión '.uniqid()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,

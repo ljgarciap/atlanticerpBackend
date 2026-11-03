@@ -110,7 +110,7 @@ trait BodegaOrderTestHelpers
         $master = MasterClient::create(['name' => 'Cliente Status Test '.uniqid()]);
         $sub    = SubClient::create([
             'master_client_id' => $master->id, 'business_name' => 'Subcliente Status Test '.uniqid(),
-            'tax_id' => '155-0000-1-'.random_int(1000, 9999),
+            'tax_id' => \Tests\Support\UniqueTaxId::next(),
         ]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Status Test '.uniqid()]);
         $card = PipelineCard::create([

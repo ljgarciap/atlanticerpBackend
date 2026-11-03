@@ -13,6 +13,7 @@ use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
+use Tests\Support\UniqueTaxId;
 
 /**
  * SCRUM-1128 — aprobación explícita "Pasar a Pedido": el pedido en Bodega ya NO nace al aprobar la
@@ -45,7 +46,7 @@ class PipelinePassToOrderTest extends FeatureTestCase
     private function makeCard(int $ownerId, string $stage = 'approved'): PipelineCard
     {
         $master  = MasterClient::create(['name' => 'Cliente Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
 
         return PipelineCard::create([
