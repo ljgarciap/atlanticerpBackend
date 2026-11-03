@@ -14,7 +14,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | Flujo | Módulos | Estado del catálogo |
 |---|---|---|
 | [Venta a cobro](cadena-venta-a-cobro.md) | Ventas & Diseño → Compras → Bodega → Admin & Contab | verificado de punta a punta |
-| Ventas & Diseño (clientes, arquitectos, comisiones, calendario, catálogo) | Ventas & Diseño, CRM | pendiente (11a) |
+| [Ventas & Diseño: clientes, arquitectos, catálogo, calendario, Inicio y reportes](ventas-diseno.md) | Ventas & Diseño | verificado (10 pasos: acceso por rol, clientes y contactos, arquitectos y asociados, alcance Mías/Equipo, catálogo con PDF y ficha, calendario, Inicio/tablero/comisiones/proyectos, ajustes); la cotización y el pipeline siguen en la cadena venta a cobro; pendiente: CRM (leads propios) |
 | [Compras: órdenes, pagos, cambio de monto, reclamos y sustituciones](compras-ordenes.md) | Compras | verificado; pendiente: logística (vista del Líder de Operaciones) y familias de producto (11b); Zona Libre ya no existe |
 | [Bodega: ajustes, reubicaciones, conteo general y devoluciones de clientes](bodega-inventario.md) | Bodega | verificado; pendiente: mapeo de asistentes y confirmación de llegada de inventario (11c) |
 | [Admin & Contab: notas de crédito y anulaciones](admin-contab-notas-y-anulaciones.md) | Admin & Contab | verificado (notas de crédito, anulación completa, anulación de cobro); pendiente: compensaciones, abonos, incobrables, comisiones, caja chica, arqueo, tesorería (11d) |
