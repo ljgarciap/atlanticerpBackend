@@ -191,9 +191,10 @@ class RoleControllerTest extends FeatureTestCase
         // 2026_08_02_100003_grant_servicios_view_to_vendedor_disenador.php.
         // Batch 14 Admin&Cont (2026-08-25): admin_contab en VIEW_READONLY (Comisiones Internas,
         // REQ-575/577) — ver 2026_08_25_100002_grant_admin_contab_readonly_view_to_vendedor_disenador.php.
-        $this->assertCount(3, $response->json());
+        // Fase 19: además, `crm` (el módulo propio copia la visibilidad de ventas_diseno).
+        $this->assertCount(4, $response->json());
         $modules = collect($response->json())->pluck('module')->sort()->values()->all();
-        $this->assertSame(['admin_contab', 'servicios', 'ventas_diseno'], $modules);
+        $this->assertSame(['admin_contab', 'crm', 'servicios', 'ventas_diseno'], $modules);
     }
 
     public function test_update_visibility_hace_upsert_masivo(): void

@@ -278,15 +278,16 @@ class EffectivePermissionsV2Test extends FeatureTestCase
         $this->assertContains('security.users', $perms);
     }
 
-    public function test_modules_payload_incluye_los_7_modulos_con_false_por_defecto(): void
+    public function test_modules_payload_incluye_los_8_modulos_con_false_por_defecto(): void
     {
         $level = SecurityLevel::where('level', 3)->firstOrFail();
         $user = $this->makeUser(null, $level->id);
 
         $payload = $user->modulesPayload();
 
-        $this->assertCount(7, $payload);
+        $this->assertCount(8, $payload); // los 7 de negocio + `crm` (Fase 19)
         $this->assertArrayHasKey('ventas_diseno', $payload);
+        $this->assertArrayHasKey('crm', $payload);
         $this->assertSame(['view' => false, 'view_team' => false, 'edit' => false, 'approve' => false], $payload['ventas_diseno']);
     }
 
