@@ -14,7 +14,7 @@ El CRM es el módulo `crm` heredado, con su **propio vocabulario** (Fase 7c: eta
 
 ## 1. Proyecto
 - **Alta** (`POST projects`): `nombre` y `tipo` (`diseno|cotizacion|ambos`) obligatorios; `etapa` opcional (nace en `lead`); valor, contacto, encargado, developer, arquitecto (texto libre), fecha de entrega, notas y `assignee_ids`. Lo puede dar de alta cualquier rol con `crm.write` — **también el Técnico** (201) [E].
-- **Quién lo ve**: solo quien está **asignado** (`assignee_ids`) o ve al equipo (Gerencia, Contabilidad, superadmin) [E][C]. **La autoría no cuenta**: un vendedor que crea un proyecto sin asignarse recibe **403 al abrirlo** y no aparece en su lista; solo el equipo lo ve [E]. Un test heredado (`CrmPermissionMigrationTest`) lo documenta como comportamiento «de siempre».
+- **Quién lo ve**: solo quien está **asignado** (`assignee_ids`) o ve al equipo (Gerencia, Contabilidad, superadmin) [E][C]. La autoría por sí sola no da acceso, pero **desde esta fase el creador sin alcance de equipo queda asignado automáticamente** (antes recibía 403 al abrir su propio proyecto y no aparecía en su lista). Gerencia/superadmin que crean sin responsables no se asignan [E].
 - **Quién lo edita**: el asignado y quien ve al equipo; otro vendedor, 403 [E].
 - **Baja** (`DELETE projects/{id}`): solo `crm.projects.delete`, es decir Gerencia; el dueño y el Técnico reciben 403 [E].
 
@@ -41,7 +41,7 @@ Directorio **global sin dueño**: todos los roles listan los mismos; alta con `n
 - **Ajustes** (`settings`, solo superadmin): `entrega_proxima_dias` (3), `pipeline_estancado_dias` (15), `cliente_contacto_obsoleto_dias` (60), frescura (7/21 días) y topes del PDF de catálogo [E].
 
 ## Candidatos a cambio o mejora (ninguno implementado)
-1. **El creador de un proyecto sin asignarse no puede abrirlo ni verlo en su lista** (403); la UI arranca con el selector de responsables vacío. Es el comportamiento que un test heredado documenta, así que es decisión de acceso: ¿asignar al creador, o permitir ver lo propio por `created_by`? **Impacto A** (un vendedor «pierde» el proyecto que acaba de crear). [E]
+1. ~~**El creador de un proyecto sin asignarse no puede abrirlo ni verlo**~~ — **resuelto en esta fase** por decisión de Luis: el creador sin alcance de equipo se asigna solo (test de regresión y el test heredado actualizado). [E]
 2. **Los permisos `crm.write/edit/delete` llegan a roles sin el módulo** (Técnico, Líder de Compras): pueden crear proyectos y el Técnico borró un contacto ajeno. Mismo patrón que el hallazgo de la Fase 2 (permisos finos de un nivel compartido no filtrados por módulo). **Impacto A.** [E]
 3. **Etapas sin compuertas**: de Lead a Cerrado y de Perdido a Lead sin motivo ni aprobación, y sin relación con el Pipeline de Ventas & Diseño (dos «pipelines» que no se sincronizan). [E]
 4. **Contactos globales sin dueño ni auditoría visible**: cualquiera edita y borra el de cualquiera. [E]

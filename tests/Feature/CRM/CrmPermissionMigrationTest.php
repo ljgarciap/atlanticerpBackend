@@ -49,11 +49,11 @@ class CrmPermissionMigrationTest extends FeatureTestCase
             ->postJson('/api/crm/projects', ['nombre' => 'Proyecto de Lider Servicios', 'tipo' => 'diseno', 'assignee_ids' => []])
             ->assertStatus(201);
 
-        // Sin estar asignado, Lider Servicios no ve su propio proyecto en el listado — confirma que el
-        // scoping es por asignación real, no por autoría (mismo comportamiento de siempre).
+        // Fase 11 (CRM): quien crea un proyecto sin equipo queda asignado a él, así que lo ve en su listado (antes quedaba fuera de su propio
+        // proyecto). El scoping sigue siendo por asignación, no por autoría.
         $liderserviciosIndex = $this->withHeaders($this->authHeaders($tokenLiderServicios))->getJson('/api/crm/projects');
         $liderserviciosIndex->assertStatus(200);
-        $this->assertNotContains('Proyecto de Lider Servicios', collect($liderserviciosIndex->json('data'))->pluck('nombre'));
+        $this->assertContains('Proyecto de Lider Servicios', collect($liderserviciosIndex->json('data'))->pluck('nombre'));
 
         // Gerencia (management) sí lo ve, sin estar asignada — alcance de equipo.
         $gerencia1Index = $this->withHeaders($this->authHeaders($tokenGerencia))->getJson('/api/crm/projects');
