@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Http\Requests;
 
 use App\Modules\VentasDiseno\Support\ReceptorTipo;
+use App\Shared\Catalogs\CatalogService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -35,7 +36,7 @@ class StoreClientRequest extends FormRequest
             'delivery_address'      => ['nullable', 'string', 'max:255'],
             'category'              => [
                 'nullable', 'string',
-                Rule::in(['a_walkin', 'b_architect_designer', 'c_bidding', 'd_referred']),
+                Rule::in(CatalogService::keys('client_segment')),
             ],
             'contacts'              => ['required', 'array', 'min:1'],
             'contacts.*.name'       => ['required', 'string', 'max:255'],
