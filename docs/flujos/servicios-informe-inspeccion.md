@@ -34,6 +34,7 @@ Continuación de [Servicios: tickets](servicios-tickets.md) (§4 resumió el inf
 - **Nada se guarda hasta confirmar la firma**: tras los intentos fallidos el informe sigue sin existir (404) [E].
 - Con todo correcto queda `completed` con la URL de la firma, que se abre [E].
 - **Una firma confirmada no se reemplaza, ni por el Líder** (409) [E].
+- **Corregido en la Fase 20a**: un informe con la firma del cliente confirmada queda **inmutable** también desde escritorio (`PUT …/inspection-report`) y por archivo (`POST …/upload`): 409 «ya fue firmado por el cliente». Las fotos se siguen pudiendo agregar [E].
 
 ## 6. PDF y documentos
 - `GET …/inspection-report/pdf`: lo baja cualquiera que vea Servicios, solo si el informe existe (si no, 404) [E].
@@ -44,7 +45,7 @@ Continuación de [Servicios: tickets](servicios-tickets.md) (§4 resumió el inf
 (Solo documentados; ninguno se implementó.)
 1. **El consumo de materiales de la Reserva se aplica solo en el primer guardado** (`applyConsumption = isNew`): si el técnico corrige después un material o su cantidad, el Kardex no se ajusta. [C]
 2. **Guardar de nuevo como formulario borra el archivo adjunto** (`archivo_adjunto = null`), y guardar en modo archivo borra hallazgos, conclusión y seguimiento, sin aviso. [C]
-3. **Una firma confirmada en el móvil se protege solo en esa ruta**: `PUT …/inspection-report` de escritorio no comprueba `firma_cliente_imagen` y sigue pudiendo cambiar el contenido ya firmado. [C]
+3. ~~Una firma confirmada en el móvil se protege solo en esa ruta~~ — **corregido en la Fase 20a** (informe firmado inmutable). [E]
 4. **Las fotos no se pueden borrar ni reemplazar** (no hay ruta) y se pueden seguir añadiendo con el informe completado. [C]
 5. **No hay borrador**: guardar equivale a completar, y desbloquea el cierre del ticket aunque el informe esté a medias salvo la conclusión. [C]
 6. **Los formularios por tipo/subtipo están fijos en el código** (`STATIC_FIELDS_BY_TIPO`), no en un catálogo por empresa. [C]

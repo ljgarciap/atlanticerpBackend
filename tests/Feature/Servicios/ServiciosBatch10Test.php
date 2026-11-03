@@ -279,6 +279,60 @@ class ServiciosBatch10Test extends FeatureTestCase
         $this->assertSame('Cliente Original', $report->firma_cliente_nombre);
     }
 
+    /**
+     * Fase 20a — tras firmar en el móvil, ni el formulario de escritorio (PUT) ni el modo «archivo subido» (POST upload)
+     * pueden reescribir lo que el cliente firmó; las fotos siguen pudiendo agregarse y un informe sin firma se edita como siempre.
+     */
+    public function test_informe_firmado_no_se_modifica_desde_escritorio_ni_por_archivo(): void
+    {
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $headers = $this->authHeaders($token);
+
+        $this->withHeaders($headers)
+            ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/mobile", [
+                'payload' => json_encode(['conclusion' => 'Conclusión firmada.', 'firma_cliente_nombre' => 'Cliente Original']),
+                'firma_cliente_imagen' => UploadedFile::fake()->image('firma.png', 100, 60),
+            ])->assertStatus(200);
+
+        $this->withHeaders($headers)
+            ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", ['conclusion' => 'Otra conclusión.'])
+            ->assertStatus(409);
+
+        $this->withHeaders($headers)
+            ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/upload", [
+                'archivo' => UploadedFile::fake()->create('informe.pdf', 10, 'application/pdf'),
+            ])->assertStatus(409);
+
+        $this->withHeaders($headers)
+            ->post("/api/servicios/tickets/{$ticket->id}/inspection-report/photos", [
+                'categoria' => 'antes',
+                'file' => UploadedFile::fake()->image('foto.png', 100, 60),
+            ])->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $report = InspectionReport::where('ticket_id', $ticket->id)->firstOrFail();
+        $this->assertSame('Conclusión firmada.', $report->conclusion);
+        $this->assertSame('Cliente Original', $report->firma_cliente_nombre);
+        $this->assertNull($report->archivo_adjunto);
+    }
+
+    /** Fase 20a — sin firma confirmada el informe se sigue editando como hoy, y reeditarlo en otro modo no se bloquea. */
+    public function test_informe_sin_firma_se_sigue_editando(): void
+    {
+        $ticket = $this->makeTicket();
+        $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
+        $headers = $this->authHeaders($token);
+
+        $this->withHeaders($headers)
+            ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", ['conclusion' => 'Primera.'])
+            ->assertStatus(200);
+        $this->withHeaders($headers)
+            ->putJson("/api/servicios/tickets/{$ticket->id}/inspection-report", ['conclusion' => 'Segunda.'])
+            ->assertStatus(200)
+            ->assertJsonPath('conclusion', 'Segunda.');
+    }
+
     public function test_tecnico_no_asignado_no_puede_completar_informe_movil(): void
     {
         $ticket = $this->makeTicket(); // sin internal_technician_id asignado a Tecnico
