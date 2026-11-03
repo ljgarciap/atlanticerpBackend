@@ -49,4 +49,4 @@ Complementa el pedido de Bodega de [venta a cobro](cadena-venta-a-cobro.md) §5.
 5. **Rechazar pide motivo aquí y no en Compras** (cambio de monto y sustituciones): criterio distinto entre módulos. [E]
 6. **Ajuste de un solo producto por solicitud en la API** (varias líneas, un producto): el conteo general es la vía para muchos. [C]
 7. **Ids no numéricos devolvían 500 en 51 de 55 rutas de Bodega**; corregido para toda la API (backend #45). [E]
-8. **Sin ejercitar**: kardex y reportes en detalle, rutas del día, ubicaciones físicas, solicitudes de Zona Libre de Bodega, mapeo de asistentes, confirmación de llegada de inventario. [C]
+8. **Sin ejercitar**: kardex y reportes en detalle, rutas del día, ubicaciones físicas, solicitudes de Zona Libre de Bodega (el mapeo de asistentes y la confirmación de llegada están en [bodega-asistentes-llegadas.md](bodega-asistentes-llegadas.md)). [C]
