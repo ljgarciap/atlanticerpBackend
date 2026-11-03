@@ -346,7 +346,7 @@ class ProjectAssociatesTest extends FeatureTestCase
 
         $msg = (string) $this->withHeaders($this->h($token))->deleteJson("/api/ventas-diseno/pipeline/{$card->id}/associates/{$arch->id}")
             ->assertStatus(422)->json('message');
-        $this->assertStringContainsString('Arquitecto', $msg);
+        $this->assertStringContainsString('origina la comisión', $msg);
 
         // sigue vinculado, y otro asociado cualquiera sí se puede quitar
         $this->assertSame([$arch->id], $this->ids($this->withHeaders($this->h($token))->getJson("/api/ventas-diseno/pipeline/{$card->id}")->json('associates')));

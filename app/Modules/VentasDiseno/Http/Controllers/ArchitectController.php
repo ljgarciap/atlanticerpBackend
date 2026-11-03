@@ -213,7 +213,7 @@ final class ArchitectController extends Controller
         // no puede pasar a otro tipo (desaparecería de la pantalla Arquitectos y la cotización dejaría de poder guardarse).
         if (isset($validated['type']) && $validated['type'] !== $architect->type
             && Quote::withoutGlobalScopes()->where('architect_id', $architect->id)->exists()) {
-            return response()->json(['message' => 'Este arquitecto ya está asignado a cotizaciones y no puede cambiar de tipo.'], 422);
+            return response()->json(['message' => 'Este asociado ya está asignado a cotizaciones y no puede cambiar de tipo.'], 422);
         }
 
         // Editar no puede dejar a dos asociados con el mismo correo/teléfono/documento, pero solo se revisan los identificadores que CAMBIARON:

@@ -185,7 +185,7 @@ final class HomeService
                     'project'    => $card->salesProject->name,
                     'assignee'   => trim("{$card->owner->first_name} {$card->owner->last_name}"),
                     'days'       => $days,
-                    'suggestion' => 'Solicitar el contacto del arquitecto a cargo del proyecto.',
+                    'suggestion' => 'Solicitar el contacto del asociado a cargo del proyecto.',
                 ]);
             }
         }
