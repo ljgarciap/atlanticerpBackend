@@ -34,6 +34,7 @@ Cada flujo cierra con **Candidatos a cambio o mejora**: huecos, reglas rígidas,
 | [Servicios: hoja de reclamo y reportes](servicios-reclamo-reportes.md) | Servicios | verificado (hoja de reclamo, cierre del reclamo, PDF en blanco, siete reportes y biblioteca); informe de inspección y documentos en [su propio catálogo](servicios-informe-inspeccion.md) |
 | [Servicios: informe de inspección y cotización](servicios-informe-inspeccion.md) | Servicios | verificado (campos por tipo, guardado, fotos, archivo subido, informe móvil con firma, PDF y documento de cotización); sin defectos |
 | [Transversales: usuarios, acceso, permisos, «Ver como usuario», niveles y notificaciones](transversales.md) | varios | verificado; pendiente: perfil, departamentos, roles/módulos, reglas de aprobación y de notificación, ajustes globales, IA (11f) |
+| [Transversales: administración](transversales-administracion.md) | Plataforma | verificado (departamentos, roles propios y visibilidad, reglas de aprobación de compras, reglas de notificación, ajustes globales, perfil de empresa e IA); sin defectos |
 
 ## Cierre
 [Lista priorizada de candidatos](candidatos-priorizados.md): qué conviene convertir en fases, con impacto y esfuerzo.
