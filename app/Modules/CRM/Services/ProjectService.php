@@ -168,8 +168,14 @@ final class ProjectService
                 'created_by' => $user->id,
             ]);
 
-            if (! empty($data['assignee_ids'])) {
-                $project->assignees()->sync($data['assignee_ids']);
+            $asignados = array_map('intval', (array) ($data['assignee_ids'] ?? []));
+            // Fase 11 (CRM) — quien no ve al equipo solo accede a los proyectos que tiene asignados: si crea uno sin elegirse, quedaría
+            // fuera de su propio proyecto (403 al abrirlo, no aparece en su lista). Se asigna al creador; Gerencia/superadmin (equipo) no.
+            if (! in_array($user->id, $asignados, true) && ! $user->canViewTeamV2('ventas_diseno')) {
+                $asignados[] = $user->id;
+            }
+            if ($asignados !== []) {
+                $project->assignees()->sync($asignados);
             }
 
             event(new ProjectCreated(

@@ -122,6 +122,30 @@ class ProjectControllerTest extends FeatureTestCase
         $response->assertJsonPath('etapa',  'lead');
     }
 
+    /** Fase 11 (CRM) — quien no ve al equipo y crea un proyecto sin elegir responsables seguía fuera de su propio proyecto (403 al abrirlo). */
+    public function test_el_creador_sin_alcance_de_equipo_queda_asignado_a_su_proyecto(): void
+    {
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $payload = $this->projectPayload('_creador');
+        unset($payload['assignee_ids']);
+
+        $id = (int) $this->withHeaders($this->authHeaders($token))->postJson('/api/crm/projects', $payload)
+            ->assertStatus(201)->assertJsonCount(1, 'assignees')->json('id');
+
+        $this->withHeaders($this->authHeaders($token))->getJson("/api/crm/projects/{$id}")->assertStatus(200);
+        $this->withHeaders($this->authHeaders($token))->getJson('/api/crm/projects?search=creador')->assertStatus(200)->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_gerencia_que_crea_sin_responsables_no_se_asigna_el_proyecto(): void
+    {
+        $token = $this->loginAs('management@atlantic.test');
+        $payload = $this->projectPayload('_gerencia');
+        unset($payload['assignee_ids']);
+
+        $this->withHeaders($this->authHeaders($token))->postJson('/api/crm/projects', $payload)
+            ->assertStatus(201)->assertJsonCount(0, 'assignees');
+    }
+
     public function test_crear_proyecto_sin_nombre_retorna_422(): void
     {
         $token = $this->loginAs();
