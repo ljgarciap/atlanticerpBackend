@@ -47,4 +47,4 @@ Líder de Compras (`compras.write/edit`), aprobador primario configurado (`geren
 5. **El estado `por_aprobar` conserva el mismo nombre tras aprobar** (la orden aprobada sigue mostrando `por_aprobar` hasta el siguiente avance). [E]
 6. **«Aprobada» no genera nada y «rechazada» genera la orden**: el nombre de las acciones confunde. [E]
 7. **Pagos sin tope contra lo recibido**: se puede pagar el 100 % de una orden que aún no llegó. [E][C]
-8. **Sin ejercitar**: logística y envío, reposición («pendientes de reposición»), Zona Libre (solicitudes y su aprobación), agencias de liquidación, familias de producto (generar compra), proveedores (alta y cuenta bancaria), documentos de la orden y traducción. [C]
+8. **Sin ejercitar**: logística y envío, reposición («pendientes de reposición»), Zona Libre (solicitudes y su aprobación), agencias de liquidación, familias de producto (en [compras-familias.md](compras-familias.md)), proveedores (alta y cuenta bancaria), documentos de la orden y traducción. [C]
