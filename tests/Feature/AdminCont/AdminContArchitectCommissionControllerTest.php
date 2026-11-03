@@ -84,7 +84,7 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
     private function makeArchitectProject(Architect $architect, float $amount, float $totalCobrado, ?Carbon $fechaPedido = null): PipelineCard
     {
         $master = MasterClient::create(['name' => 'Cliente Externa '.uniqid()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa '.uniqid(), 'tax_id' => '155-0000-2-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa '.uniqid()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,

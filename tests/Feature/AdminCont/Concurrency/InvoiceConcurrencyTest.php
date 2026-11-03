@@ -140,7 +140,7 @@ class InvoiceConcurrencyTest extends FeatureTestCase
         $ownerId = (int) \App\Models\User::where('email', 'contabilidad@test.com')->value('id');
         $master  = MasterClient::create(['name' => 'Cliente Concurrencia 929 '.uniqid()]);
         $this->masterIdToClean = $master->id;
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Concurrencia 929 '.uniqid(), 'tax_id' => '155-9291-1-'.random_int(1000, 9999)]);
+        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Sub Concurrencia 929 '.uniqid(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Concurrencia 929']);
 
         $quote = Quote::create([

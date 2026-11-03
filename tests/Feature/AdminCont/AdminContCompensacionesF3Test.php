@@ -515,7 +515,7 @@ class AdminContCompensacionesF3Test extends FeatureTestCase
     public function test_un_cobro_repartido_entre_proyectos_muestra_cada_porcion_en_su_proyecto_y_el_filtro_deja_solo_lo_aplicado_a_ese(): void
     {
         $master = MasterClient::create(['name' => 'Cliente Proyectos '.uniqid()]);
-        $sub    = \App\Modules\VentasDiseno\Models\SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => '8-'.random_int(100, 999)]);
+        $sub    = \App\Modules\VentasDiseno\Models\SubClient::create(['master_client_id' => $master->id, 'business_name' => $master->name, 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $p1     = \App\Modules\VentasDiseno\Models\SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Uno '.uniqid()]);
         $p2     = \App\Modules\VentasDiseno\Models\SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Dos '.uniqid()]);
         $f1     = $this->factura($master, 100, 0, 30);

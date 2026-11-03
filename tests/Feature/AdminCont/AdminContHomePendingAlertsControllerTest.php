@@ -72,7 +72,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
     private function makeCommissionableOrder(int $ownerId, float $amount, CarbonImmutable $stageChangedAt): AdminContInvoice
     {
         $master = MasterClient::create(['name' => 'Cliente Comisión Pend '.self::uniqueTestNumber()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Pend '.self::uniqueTestNumber(), 'tax_id' => '155-0000-8-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Pend '.self::uniqueTestNumber(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Comisión Pend '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
@@ -107,7 +107,7 @@ class AdminContHomePendingAlertsControllerTest extends FeatureTestCase
         ]);
 
         $master = MasterClient::create(['name' => 'Cliente Externa Pend '.self::uniqueTestNumber()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa Pend '.self::uniqueTestNumber(), 'tax_id' => '155-0000-7-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa Pend '.self::uniqueTestNumber(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa Pend '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,

@@ -127,4 +127,15 @@ class SubClientTaxIdUniqueTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))->postJson('/api/compras/providers', array_merge($base, ['name' => 'Proveedor Dos', 'tax_id' => '8.123.4567']))
             ->assertStatus(422)->assertJsonValidationErrors('tax_id');
     }
+
+    public function test_el_indice_unico_respalda_la_regla_ante_una_carrera(): void
+    {
+        $existente = $this->sub('155-123-4567');
+        $maestro = MasterClient::create(['name' => 'Maestro carrera']);
+
+        // `saveQuietly` se salta la verificación del modelo, como haría una segunda petición simultánea.
+        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        (new SubClient(['master_client_id' => $maestro->id, 'business_name' => 'Carrera', 'tax_id' => '155-123-4567', 'tax_id_dv' => '12']))
+            ->forceFill(['tax_id_key' => $existente->tax_id_key])->saveQuietly();
+    }
 }

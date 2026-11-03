@@ -97,7 +97,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
     private function makeCommissionableOrder(int $ownerId, float $amount, ?Carbon $mesCierre = null): AdminContInvoice
     {
         $master = MasterClient::create(['name' => 'Cliente Comisión Reportes '.self::uniqueTestNumber()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-9-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Comisión Reportes '.self::uniqueTestNumber(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Comisión Reportes '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
@@ -124,7 +124,7 @@ class AdminContReportsControllerTest extends FeatureTestCase
         ArchitectFiscalProfile::create(['architect_id' => $architect->id, 'empresa' => 'Estudio Reportes', 'ruc' => '1-1-'.self::uniqueTestNumber(), 'regimen_fiscal' => ArchitectFiscalProfile::REGIMEN_EXENTO]);
 
         $master = MasterClient::create(['name' => 'Cliente Externa Reportes '.self::uniqueTestNumber()]);
-        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa Reportes '.self::uniqueTestNumber(), 'tax_id' => '155-0000-8-'.random_int(1000, 9999)]);
+        $sub = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Externa Reportes '.self::uniqueTestNumber(), 'tax_id' => \Tests\Support\UniqueTaxId::next()]);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Externa Reportes '.self::uniqueTestNumber()]);
         $card = PipelineCard::create([
             'sales_project_id' => $project->id, 'stage' => 'approved', 'master_client_id' => $master->id,
