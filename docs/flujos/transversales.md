@@ -40,4 +40,4 @@ Marcas: **[E]** ejecutado, **[C]** leído del código (ver `README.md`). Verific
 4. **Sin borrado de niveles ni de usuarios**: solo se desactivan (acumulan registros de prueba). [E]
 5. **El motivo de «Ver como usuario» es texto libre**; no hay lista de motivos ni aprobación de un segundo operador. [E]
 6. **Reiniciar la clave no avisa al usuario** (el correo local solo se registra en el log). [C]
-7. **Sin ejercitar**: edición del perfil, departamentos, roles y visibilidad por módulo, reglas de aprobación de Gerencia, reglas de notificación, ajustes globales y de IA, catálogos administrables (cubiertos por el humo). [C]
+7. **Sin ejercitar aquí**: departamentos, roles y visibilidad, reglas de aprobación, reglas de notificación, ajustes globales, perfil de empresa e IA están en [transversales-administracion.md](transversales-administracion.md); los catálogos administrables los cubre el humo. [C]
