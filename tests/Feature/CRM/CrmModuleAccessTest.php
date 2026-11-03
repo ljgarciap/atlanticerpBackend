@@ -30,7 +30,7 @@ final class CrmModuleAccessTest extends FeatureTestCase
         foreach (['vendedor@test.com', 'gerencia@test.com', 'superadmin@test.com'] as $con) {
             $this->assertSame(200, $this->codigo($con, '/api/crm/projects'), "{$con} entra al CRM");
         }
-        foreach (['tecnico@test.com', 'lidercompras@test.com', 'liderbodega@test.com', 'liderservicios@test.com', 'contabilidad@test.com', 'lideroperaciones@test.com'] as $sin) {
+        foreach (['tecnico@test.com', 'lidercompras@test.com', 'liderbodega@test.com', 'liderservicios@test.com', 'lideroperaciones@test.com'] as $sin) {
             $this->assertSame(403, $this->codigo($sin, '/api/crm/projects'), "{$sin} no entra al CRM aunque su nivel traiga crm.*");
         }
     }
@@ -40,6 +40,13 @@ final class CrmModuleAccessTest extends FeatureTestCase
         $this->withHeaders($this->como('tecnico@test.com'))->postJson('/api/crm/projects', ['nombre' => 'x', 'tipo' => 'diseno'])->assertStatus(403);
         $this->withHeaders($this->como('tecnico@test.com'))->postJson('/api/crm/contacts', ['nombre' => 'x', 'tipo' => 'encargado'])->assertStatus(403);
         $this->withHeaders($this->como('tecnico@test.com'))->deleteJson('/api/crm/contacts/1')->assertStatus(403);
+    }
+
+    /** Contabilidad no entra por defecto; en el entorno de pruebas tiene el alcance de Gerencia (`gerencia_scope`, concesión explícita), que sí abre el CRM. */
+    public function test_el_alcance_de_gerencia_concedido_a_una_persona_abre_el_crm(): void
+    {
+        $this->assertSame(200, $this->codigo('contabilidad@test.com', '/api/crm/projects'));
+        $this->assertSame(200, $this->codigo('contabilidad@test.com', '/api/crm/reports/team'));
     }
 
     public function test_el_equipo_sigue_siendo_de_gerencia_y_no_del_vendedor(): void
