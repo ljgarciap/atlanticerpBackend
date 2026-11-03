@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Shared\Multitenancy\TenantRegion;
 
 /** SCRUM-1002 — RUC (`155704849-2-2021`) o cédula (`8-123-456`) a validar contra la DGI. */
 class ValidateTaxIdRequest extends FormRequest
@@ -26,10 +27,10 @@ class ValidateTaxIdRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'tax_id.required' => 'Ingresa el RUC o la cédula a validar.',
-            'tax_id.min'      => 'El RUC o cédula es demasiado corto.',
-            'tax_id.max'      => 'El RUC o cédula no puede superar 100 caracteres.',
-            'tax_id.regex'    => 'El RUC o cédula solo admite letras, números y guiones.',
+            'tax_id.required' => 'Ingresa el '.(TenantRegion::country() === 'PA' ? 'RUC o la cédula' : TenantRegion::fiscalIdLabel()).' a validar.',
+            'tax_id.min'      => 'El '.TenantRegion::fiscalIdPhrase().' es demasiado corto.',
+            'tax_id.max'      => 'El '.TenantRegion::fiscalIdPhrase().' no puede superar 100 caracteres.',
+            'tax_id.regex'    => 'El '.TenantRegion::fiscalIdPhrase().' solo admite letras, números y guiones.',
         ];
     }
 }

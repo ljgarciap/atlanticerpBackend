@@ -53,7 +53,7 @@
             @if (trim($fiscal->ruc) !== '' || trim($fiscal->telefono_contacto) !== '' || trim($fiscal->correo_contacto) !== '')
                 <div class="empresa-datos">
                     @if (trim($fiscal->ruc) !== '')
-                        RUC {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? "-{$fiscal->dv}" : '' }}<br>
+                        {{ \App\Shared\Multitenancy\TenantRegion::fiscalIdLabel() }} {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? "-{$fiscal->dv}" : '' }}<br>
                     @endif
                     @if (trim($fiscal->telefono_contacto) !== '' || trim($fiscal->correo_contacto) !== '')
                         {{ collect([$fiscal->telefono_contacto, $fiscal->correo_contacto])->filter(fn ($v) => trim((string) $v) !== '')->implode(' · ') }}

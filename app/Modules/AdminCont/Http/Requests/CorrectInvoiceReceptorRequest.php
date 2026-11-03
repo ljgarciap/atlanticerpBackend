@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Shared\Multitenancy\TenantRegion;
 use App\Shared\Fiscal\TaxId\ValidTaxId;
 
 /**
@@ -45,7 +46,7 @@ class CorrectInvoiceReceptorRequest extends FormRequest
         return [
             'business_name.required' => 'La razón social es obligatoria.',
             'business_name.regex'    => 'La razón social solo admite letras, números, espacios y . , & \' ( ) / # - +.',
-            'tax_id.required'        => 'El RUC o cédula es obligatorio.',
+            'tax_id.required'        => 'El '.TenantRegion::fiscalIdPhrase().' es obligatorio.',
             'tax_id_dv.regex'        => 'El DV debe tener 1 o 2 dígitos.',
         ];
     }

@@ -47,7 +47,7 @@ final class SubClientTaxDataService
 
         if ($this->tieneDocumentosFiscales($subClient)) {
             throw new SubClientTaxDataLockedException(
-                'No se pueden editar la razón social ni el RUC/DV: este cliente ya tiene facturas o notas de crédito '
+                'No se pueden editar la razón social ni el '.\App\Shared\Multitenancy\TenantRegion::fiscalIdLabel().'/DV: este cliente ya tiene facturas o notas de crédito '
                 .'certificadas (o pendientes de certificación) ante la DGI, y el documento fiscal dejaría de coincidir con sus datos.'
             );
         }

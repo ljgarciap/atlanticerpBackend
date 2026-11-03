@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Http\Requests;
 
 use App\Modules\VentasDiseno\Support\ReceptorTipo;
+use App\Shared\Multitenancy\TenantRegion;
 use Illuminate\Foundation\Http\FormRequest;
 
 /** SCRUM-1002 — mismas reglas que el alta de SubCliente (`StoreClientSubClientRequest`). */
@@ -31,7 +32,7 @@ class UpdateSubClientTaxDataRequest extends FormRequest
             ...ReceptorTipo::mensajes(),
             'business_name.required' => 'La razón social es obligatoria.',
             'business_name.max'      => 'La razón social no puede superar 255 caracteres.',
-            'tax_id.max'             => 'El RUC o cédula no puede superar 100 caracteres.',
+            'tax_id.max'             => 'El '.TenantRegion::fiscalIdPhrase().' no puede superar 100 caracteres.',
             'tax_id_dv.regex'        => 'El DV debe tener 1 o 2 dígitos.',
         ];
     }

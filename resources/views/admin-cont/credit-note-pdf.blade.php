@@ -68,7 +68,7 @@
             <div><img class="logo" src="{{ $logoDataUri }}"><span class="brand-name">ATLANTIC</span></div>
             <div class="empresa-datos">
                 @if (trim($fiscal->nombre_comercial) !== ''){{ $fiscal->nombre_comercial }}<br>@endif
-                @if (trim($fiscal->ruc) !== '')RUC {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? "-{$fiscal->dv}" : '' }}<br>@endif
+                @if (trim($fiscal->ruc) !== ''){{ \App\Shared\Multitenancy\TenantRegion::fiscalIdLabel() }} {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? "-{$fiscal->dv}" : '' }}<br>@endif
                 {{ $fiscal->direccion_fiscal }}
             </div>
         </div>

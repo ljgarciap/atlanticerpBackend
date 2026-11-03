@@ -131,7 +131,7 @@
         <div class="info-col">
             <div><span class="info-label">Cliente:</span> {{ $quote['master_client']['name'] ?? '—' }}</div>
             <div><span class="info-label">Subcliente:</span> {{ $quote['sub_client']['business_name'] ?? '—' }}</div>
-            <div><span class="info-label">RUC:</span> {{ ($quote['sub_client']['receptor_tipo'] ?? null) === '02' ? 'Consumidor final' : (filled($quote['ruc'] ?? null) ? $quote['ruc'] : '—') }}</div>
+            <div><span class="info-label">{{ \App\Shared\Multitenancy\TenantRegion::fiscalIdLabel() }}:</span> {{ ($quote['sub_client']['receptor_tipo'] ?? null) === '02' ? 'Consumidor final' : (filled($quote['ruc'] ?? null) ? $quote['ruc'] : '—') }}</div>
             @forelse($quote['contacts'] as $contact)
                 <div>
                     <span class="info-label">Contacto:</span> {{ $contact['name'] }}

@@ -86,7 +86,7 @@
          sola vez). El guion del RUC solo si hay dígito verificador. --}}
     <div class="empresa-datos">
         @if (trim($fiscal->nombre_comercial) !== ''){{ $fiscal->nombre_comercial }}<br>@endif
-        @if (trim($fiscal->ruc) !== '')RUC {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? "-{$fiscal->dv}" : '' }}<br>@endif
+        @if (trim($fiscal->ruc) !== ''){{ \App\Shared\Multitenancy\TenantRegion::fiscalIdLabel() }} {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? "-{$fiscal->dv}" : '' }}<br>@endif
         @if (trim($fiscal->telefono_contacto) !== '')Tel. {{ $fiscal->telefono_contacto }}<br>@endif
         {{ $fiscal->direccion_fiscal }}
     </div>
@@ -99,9 +99,9 @@
             {{-- SCRUM-1003 (D2) — Consumidor Final: el PDF interno conserva el nombre real del cliente, pero ante la DGI el
                  documento se emite como CONSUMIDOR FINAL y la representación impresa fiscal (CAFE) la emite el PAC: este PDF
                  no debe presentarse como ese documento. --}}
-            <div class="empresa-datos">Consumidor final — sin RUC</div>
+            <div class="empresa-datos">Consumidor final — sin {{ \App\Shared\Multitenancy\TenantRegion::fiscalIdLabel() }}</div>
         @elseif ($detail['cliente_ruc'] ?? null)
-            <div class="empresa-datos">RUC {{ $detail['cliente_ruc'] }}</div>
+            <div class="empresa-datos">{{ \App\Shared\Multitenancy\TenantRegion::fiscalIdLabel() }} {{ $detail['cliente_ruc'] }}</div>
         @endif
         @if ($detail['cotizacion_folio'] ?? null)
             <div class="empresa-datos">Cotización {{ $detail['cotizacion_folio'] }}</div>
