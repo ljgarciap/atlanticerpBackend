@@ -264,7 +264,7 @@ class AdminContInvoiceController
         $faltantes = [];
         // SCRUM-1003 — un Consumidor Final no tiene RUC: no se exige.
         if (($detail['cliente_receptor_tipo'] ?? null) !== ReceptorTipo::CONSUMIDOR_FINAL && trim((string) ($detail['cliente_ruc'] ?? '')) === '') {
-            $faltantes[] = 'el RUC del cliente';
+            $faltantes[] = 'el '.\App\Shared\Multitenancy\TenantRegion::fiscalIdLabel().' del cliente';
         }
         if (trim((string) ($detail['vendedor'] ?? '')) === '') {
             $faltantes[] = 'el vendedor asignado a la cotización';

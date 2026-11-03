@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Support;
 
 use App\Shared\Fiscal\TaxId\ValidTaxId;
+use App\Shared\Multitenancy\TenantRegion;
 use Illuminate\Validation\Rule;
 
 /**
@@ -58,7 +59,7 @@ final class ReceptorTipo
     {
         return [
             'receptor_tipo.in'           => 'El tipo de cliente ante la DGI debe ser Contribuyente o Consumidor Final.',
-            'tax_id.required_unless'     => 'El RUC o cédula es obligatorio.',
+            'tax_id.required_unless'     => 'El '.TenantRegion::fiscalIdPhrase().' es obligatorio.',
         ];
     }
 

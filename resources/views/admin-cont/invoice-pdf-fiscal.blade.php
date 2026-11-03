@@ -88,7 +88,7 @@
                 <div class="subtitulo">{{ $doc['serie'] ?? '' }}{{ ($doc['serie'] ?? '') !== '' ? ' - ' : '' }}{{ $doc['numero'] ?? ($detail['numero_factura'] ?? '—') }}</div>
                 <div class="empresa-datos">
                     @if (trim($fiscal->nombre_comercial) !== '')<span class="empresa-nombre">{{ $fiscal->nombre_comercial }}</span><br>@endif
-                    @if (trim($fiscal->ruc) !== '')RUC {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? " DV {$fiscal->dv}" : '' }}<br>@endif
+                    @if (trim($fiscal->ruc) !== ''){{ \App\Shared\Multitenancy\TenantRegion::fiscalIdLabel() }} {{ $fiscal->ruc }}{{ trim($fiscal->dv) !== '' ? " DV {$fiscal->dv}" : '' }}<br>@endif
                     @if (trim($fiscal->telefono_contacto) !== '')Tel. {{ $fiscal->telefono_contacto }}<br>@endif
                     {{ $fiscal->direccion_fiscal }}
                 </div>
