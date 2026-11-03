@@ -19,7 +19,7 @@ final class ProjectAccess
     public static function canAccess(Project $project, User $user): bool
     {
         // Fase 2: por permiso, no por la clave del rol del JWT — el mismo `canViewTeamV2` que ya usan los controladores del CRM (Fase 3 de la auditoría).
-        if ($user->canViewTeamV2('ventas_diseno')) {
+        if ($user->canViewTeamV2('crm')) {
             return true;
         }
 

@@ -32,7 +32,7 @@ final class ContactController extends Controller
 
         $result = $this->service->list(
             $user,
-            $user->canViewTeamV2('ventas_diseno'),
+            $user->canViewTeamV2('crm'),
             (string) ($validated['type'] ?? ''),
             (string) ($validated['q'] ?? ''),
         );
@@ -123,7 +123,7 @@ final class ContactController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        if (! $user->canViewTeamV2('ventas_diseno')) {
+        if (! $user->canViewTeamV2('crm')) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 

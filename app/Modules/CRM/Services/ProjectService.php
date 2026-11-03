@@ -42,7 +42,7 @@ final class ProjectService
 
         // Visibility: management/superadmin see all; others see only assigned projects
         // SCRUM-1150 — `ventas_diseno.gerencia_scope` ve todo igual que Gerencia.
-        if (! $user->canViewTeamV2('ventas_diseno')
+        if (! $user->canViewTeamV2('crm')
             && ! in_array('ventas_diseno.gerencia_scope', $user->extra_permissions ?? [], true)) {
             $query->whereHas('assignees', fn ($q) => $q->where('user_id', $user->id));
         }

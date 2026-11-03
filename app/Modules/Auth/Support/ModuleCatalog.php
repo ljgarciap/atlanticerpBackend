@@ -37,6 +37,9 @@ final class ModuleCatalog
 
     public const OPERACIONES = 'operaciones';
 
+    /** Fase 19 — el CRM como módulo propio: su visibilidad por rol (y `crm.view`) gobierna quién entra a `/api/crm/*`. */
+    public const CRM = 'crm';
+
     /** @return list<string> */
     public static function keys(): array
     {

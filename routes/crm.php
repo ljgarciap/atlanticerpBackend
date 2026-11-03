@@ -58,11 +58,8 @@ Route::prefix('contacts')->group(function (): void {
 Route::prefix('reports')->group(function (): void {
     Route::get('/monthly/export', [ReportsController::class, 'export'])->middleware('permission:reports.export');
     Route::get('/monthly', [ReportsController::class, 'monthly'])->middleware('permission:reports.read');
-    // Fase 3 de la auditoría de permisos (Atlantic/CLAUDE.md, 2026-08-30) — reusa
-    // ventas_diseno.view_team, ya sembrado exclusivamente para management (el frontend ya trata
-    // "CRM" como parte del mismo dominio de Ventas & Diseño para efectos de visibilidad, ver
-    // Sidebar.tsx). Reemplaza el `role:superadmin,management` hardcodeado.
-    Route::middleware('permission:ventas_diseno.view_team')->group(function (): void {
+    // Fase 19 — `crm.view_team` (módulo `crm` propio, sembrado con la visibilidad que tenía `ventas_diseno`); antes `ventas_diseno.view_team`.
+    Route::middleware('permission:crm.view_team')->group(function (): void {
         Route::get('/team', [ReportsController::class, 'team'])->middleware('permission:reports.read');
     });
 });

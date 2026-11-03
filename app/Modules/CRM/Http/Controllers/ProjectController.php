@@ -218,7 +218,7 @@ final class ProjectController extends Controller
 
     private function canAccess(Project $project, User $user): bool
     {
-        if ($user->canViewTeamV2('ventas_diseno')) {
+        if ($user->canViewTeamV2('crm')) {
             return true;
         }
 
