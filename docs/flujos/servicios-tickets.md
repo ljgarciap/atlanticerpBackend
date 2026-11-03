@@ -50,4 +50,4 @@ Del reporte de un ticket a su cierre: instalaciones y garantías. Marcas: **[E]*
 4. **El subtipo "installation" es a la vez tipo y subtipo** y los subtipos de sistema conservan significado en el código (ya anotado en la Fase 7b). [C]
 5. **Instalaciones sin compuerta de cierre**: ni informe, ni cotización, ni evidencia; el SLA (7 días) no bloquea nada. [E]
 6. **Especialidades técnicas fijas** (`general`, `warranty`) en el código, no un catálogo por empresa. [C]
-7. **Sin ejercitar**: técnicos externos y su tarifa, herramientas y asignaciones, insumos y solicitudes de compra, hoja de reclamo, adjuntos, reportes e indicadores del mes, informe móvil. [C]
+7. **Sin ejercitar**: adjuntos, informe móvil (la hoja de reclamo y los reportes están en [servicios-reclamo-reportes.md](servicios-reclamo-reportes.md)). [C]
