@@ -1241,6 +1241,99 @@ class InventoryControllerTest extends FeatureTestCase
         }
     }
 
+    /** Fase 20b — solo entra lo que hace falta; lo demás se informa como omitido con su motivo. */
+    public function test_generar_compra_de_familia_compra_la_necesidad_real_y_lista_los_omitidos(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
+        $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $falta = $this->makeProduct(['reference' => 'FAM-NEC', 'provider_id' => $provider->id, 'stock_quantity' => 3, 'reorder_point' => 10]);
+        $sobra = $this->makeProduct(['reference' => 'FAM-SOB', 'provider_id' => $provider->id, 'stock_quantity' => 50, 'reorder_point' => 10]);
+        $sinReorden = $this->makeProduct(['reference' => 'FAM-SRO', 'provider_id' => $provider->id, 'stock_quantity' => 0, 'reorder_point' => 0]);
+        $sinProveedor = $this->makeProduct(['reference' => 'FAM-SPR', 'provider_id' => null, 'stock_quantity' => 0, 'reorder_point' => 10]);
+        $family = CatalogProductFamily::create(['name' => 'Kit Necesidad', 'is_active' => true]);
+        $family->products()->attach([$falta->id, $sobra->id, $sinReorden->id, $sinProveedor->id]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/families/{$family->id}/generate-purchase")
+            ->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $lineas = PurchaseOrderLine::whereIn('purchase_order_id', $response->json('order_ids'))->get();
+        $this->assertCount(1, $lineas, 'solo el producto con necesidad real entra en la orden');
+        $this->assertSame($falta->id, $lineas[0]->catalog_product_id);
+        $this->assertSame(7, (int) $lineas[0]->quantity, 'reorden 10 − existencias 3');
+
+        $motivos = collect($response->json('omitidos'))->pluck('motivo', 'product_id');
+        $this->assertSame('sin_necesidad', $motivos[$sobra->id]);
+        $this->assertSame('sin_necesidad', $motivos[$sinReorden->id], 'reorden 0 nunca genera compra (antes pedía 1 unidad)');
+        $this->assertSame('sin_proveedor', $motivos[$sinProveedor->id]);
+        $this->assertArrayNotHasKey($falta->id, $motivos->all());
+    }
+
+    /** Fase 20b — repetir «Generar compra» no duplica: lo ya pedido cuenta como «en camino». */
+    public function test_generar_compra_de_familia_repetida_no_duplica_la_orden(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
+        $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $product = $this->makeProduct(['reference' => 'FAM-REP', 'provider_id' => $provider->id, 'stock_quantity' => 2, 'reorder_point' => 10]);
+        $family = CatalogProductFamily::create(['name' => 'Kit Repetida', 'is_active' => true]);
+        $family->products()->attach([$product->id]);
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $headers = $this->authHeaders($token);
+
+        $this->withHeaders($headers)->postJson("/api/compras/families/{$family->id}/generate-purchase")->assertStatus(201);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $antes = PurchaseOrder::count();
+
+        $segunda = $this->withHeaders($headers)->postJson("/api/compras/families/{$family->id}/generate-purchase");
+        $segunda->assertStatus(422);
+        $this->assertSame('ya_en_camino', $segunda->json('omitidos.0.motivo'));
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame($antes, PurchaseOrder::count(), 'la segunda petición no crea ninguna orden');
+    }
+
+    /** Fase 20b — lo que ya viene en camino se descuenta: solo se pide la diferencia. */
+    public function test_generar_compra_de_familia_descuenta_lo_que_ya_viene_en_camino(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
+        $provider = $this->makeProvider(['name' => 'Proveedor Demo A']);
+        $product = $this->makeProduct(['reference' => 'FAM-CAM', 'provider_id' => $provider->id, 'stock_quantity' => 2, 'reorder_point' => 10]);
+        $abierta = PurchaseOrder::create([
+            'provider_id' => $provider->id, 'currency' => 'USD', 'status' => PurchaseOrder::STATUS_ORDENADO,
+            'status_changed_at' => now(), 'total_amount' => 0,
+        ]);
+        PurchaseOrderLine::create(['purchase_order_id' => $abierta->id, 'catalog_product_id' => $product->id, 'quantity' => 5, 'unit_cost' => 1, 'subtotal' => 5]);
+        $family = CatalogProductFamily::create(['name' => 'Kit En Camino', 'is_active' => true]);
+        $family->products()->attach([$product->id]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/families/{$family->id}/generate-purchase")
+            ->assertStatus(201);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $linea = PurchaseOrderLine::whereIn('purchase_order_id', $response->json('order_ids'))->firstOrFail();
+        $this->assertSame(3, (int) $linea->quantity, 'reorden 10 − existencias 2 − en camino 5');
+    }
+
+    /** Fase 20b — si ningún producto tiene proveedor se mantiene el mensaje de siempre, ahora con el desglose. */
+    public function test_generar_compra_de_familia_sin_proveedores_responde_422_con_desglose(): void
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.edit', 'compras.read']);
+        $product = $this->makeProduct(['reference' => 'FAM-NOP', 'provider_id' => null, 'stock_quantity' => 0, 'reorder_point' => 10]);
+        $family = CatalogProductFamily::create(['name' => 'Kit Sin Proveedor', 'is_active' => true]);
+        $family->products()->attach([$product->id]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/compras/families/{$family->id}/generate-purchase")
+            ->assertStatus(422)
+            ->assertJsonPath('omitidos.0.motivo', 'sin_proveedor')
+            ->assertJsonPath('message', 'La familia no tiene productos activos con proveedor asignado.');
+    }
+
     // ── SCRUM-425/426 (REQ-355/356) — ficha técnica del producto ──────────────
 
     /**
