@@ -38,4 +38,4 @@ Solo existe para tickets del tipo **reclamo** (folio `REC-AAAA-NNNN`, sin subtip
 5. **`completados-anio` cuenta tickets «resueltos» y «cerrados»** bajo el nombre «completados». [C]
 6. **Un `tipo_documento` desconocido en la biblioteca devuelve una lista vacía**, no un 422. [E]
 7. **La comisión del técnico no la ve el Líder de Servicios**, que es quien administra a los técnicos. [E]
-8. **Sin ejercitar**: el informe de inspección completo (campos, fotos, carga de archivo, informe móvil con firma), el PDF de cotización, y la pantalla de reportes en el navegador. [C]
+8. **Sin ejercitar**: la pantalla de reportes en el navegador (el informe de inspección completo y el PDF de cotización están en [servicios-informe-inspeccion.md](servicios-informe-inspeccion.md)). [C]
