@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Shared\Catalogs\CatalogService;
 use Illuminate\Validation\Rule;
 
 /**
@@ -24,7 +25,7 @@ class UpdateSubClientCategoryRequest extends FormRequest
         return [
             'category' => [
                 'nullable', 'string',
-                Rule::in(['a_walkin', 'b_architect_designer', 'c_bidding', 'd_referred']),
+                Rule::in(CatalogService::keys('client_segment')),
             ],
         ];
     }

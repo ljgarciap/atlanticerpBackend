@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\VentasDiseno\Http\Requests;
 
 use App\Modules\VentasDiseno\Support\ReceptorTipo;
+use App\Shared\Catalogs\CatalogService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,7 +26,7 @@ class StoreSubClientRequest extends FormRequest
             'delivery_address' => ['nullable', 'string', 'max:255'],
             'category'         => [
                 'nullable', 'string',
-                Rule::in(['a_walkin', 'b_architect_designer', 'c_bidding', 'd_referred']),
+                Rule::in(CatalogService::keys('client_segment')),
             ],
             // SCRUM-1011 — `true` solo desde el modal de nuevo proyecto en Diseño: ahí no se
             // está creando un Lead, así que el Subcliente nace sin su tarjeta Lead automática.

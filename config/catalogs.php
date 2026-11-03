@@ -13,6 +13,7 @@ use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Services\PipelineStageRules;
 use App\Modules\VentasDiseno\Models\Architect;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Modules\VentasDiseno\Models\SubClient;
 
 /*
 | Fase 7a — dominios de los catálogos de vocabulario por empresa (tabla `catalog_entries`). Cada dominio declara su nombre para la
@@ -35,6 +36,13 @@ return [
         'architect_type' => [
             'label' => 'Tipos de asociado',
             'usage' => [Architect::class, 'type'],
+            'props' => [],
+        ],
+        // Fase 18 — segmentos de cliente (`sub_clients.category`). La lógica nunca pregunta por un segmento concreto (solo filtra y lista): es
+        // vocabulario de la empresa. Los 4 de sistema conservan las claves históricas para no tocar datos; sus etiquetas son neutras y editables.
+        'client_segment' => [
+            'label' => 'Segmentos de cliente',
+            'usage' => [SubClient::class, 'category'],
             'props' => [],
         ],
         // Fase 9a — categorías de producto del catálogo. La lógica nunca pregunta por una categoría concreta (es vocabulario de la empresa); el
