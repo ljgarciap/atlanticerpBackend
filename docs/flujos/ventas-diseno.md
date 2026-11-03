@@ -1,4 +1,6 @@
-# Flujo: Ventas & Diseño (clientes, arquitectos, catálogo, calendario, Inicio y reportes)
+# Flujo: Ventas & Diseño (clientes, asociados, catálogo, calendario, Inicio y reportes)
+
+> **Vocabulario (Fase 17c):** lo que este catálogo llama «arquitecto» en las rutas (`/architects`, `architect_id`) se muestra como **Asociado** en pantalla, PDF y mensajes; «Arquitecto» es un tipo más del catálogo de asociados. Las rutas y campos internos no cambian. **Etiqueta de identificación (17b):** donde dice «RUC» la pantalla muestra la del país de la empresa (RUC, NIT…).
 
 Complementa la [cadena venta a cobro](cadena-venta-a-cobro.md), que ya recorre cliente mínimo → cotización → pipeline → pedido. Aquí está lo que esa cadena no toca. Marcas: **[E]** ejecutado, **[C]** leído del código (ver `README.md`). Verificado el 2026-11-03 con las cuentas demo de cada rol (`npm run e2e:flujos`, archivo `ventas-diseno.spec.ts`, 10 pasos).
 
@@ -14,14 +16,14 @@ Verificado en 16 rutas × 6 roles [E]. Dos cosas llaman la atención: **Contabil
 
 ## 1. Clientes
 - **Alta** (`POST clients`): exige cliente (`name`), subcliente (`business_name`, `tax_id`, `tax_id_dv`, `receptor_tipo`) y **al menos un contacto**. Es el alta completa; el flujo mínimo de la cadena (`master-clients` + `sub-clients`) no exige contacto [E].
-- **No hay control de duplicados**: el mismo RUC en otro cliente se acepta (201) [E].
+- **Una identificación fiscal por tenant (Fase 17a)**: el mismo número —con o sin guiones, espacios o puntos— y el mismo DV se rechaza con **409 `duplicate_tax_id`** y el cliente existente (`existing.sub_client_id`, `master_client_id`, `business_name`); el modal ofrece «Usar el existente». Otro DV se acepta; un consumidor final (sin identificación) no entra al control. Vale en los 4 caminos de alta y edición (incluida `PATCH …/tax-data`) y lo respalda un índice único en la BD [E].
 - Los clientes son **globales**: otro vendedor los lista y los abre [E]. Búsqueda por nombre; el listado trae proyectos activos/perdidos/totales y días desde el último contacto [E]. Un id inexistente o no numérico → 404 [E].
 - **Categoría** del subcliente (`PATCH …/category`): lista fija de valores (p. ej. `b_architect_designer`); otro valor → 422 [E].
 - **Datos fiscales** (`PATCH …/tax-data`): se reenvían **completos** (razón social y RUC obligatorios); parciales → 422 [E]. `POST validate-tax-id` consulta al proveedor fiscal; sin él responde 200 con `disponible: false` en vez de fallar [E].
 - **Directorio fiscal** (`GET clients/fiscal-directory`): lo leen Vendedor, Gerencia y Contabilidad; Compras recibe 403 [E].
 - **Contactos del subcliente**: rol solo `client`, `architect` u `other`; exige correo o teléfono; la edición reenvía todos los campos (un `PUT` parcial → 422); borrar → 204. **Se puede borrar el último contacto** aunque el alta exigiera uno [E].
 
-## 2. Arquitectos y asociados
+## 2. Asociados (antes «arquitectos») y vínculo con proyectos
 - **Alta** (`POST architects`): nombre, tipo (`architect`, `designer`, …) y correo, teléfono o documento; tipo inválido → 422 [E].
 - **Duplicado**: mismo correo, teléfono o documento → **409** `duplicate_exact` con el registro existente (el frontend ofrece usarlo) [E]. Es el control que sí falta en los clientes.
 - Edición in-place (`PUT`), filtro por tipo y búsqueda [E]. Quien no ve Ventas & Diseño recibe 403 [E].
@@ -58,7 +60,7 @@ Verificado en 16 rutas × 6 roles [E]. Dos cosas llaman la atención: **Contabil
 Lectura y validación de: precios (`project_discount_percent` ≤ 100…), tramos de comisión de vendedores (primer tramo desde 0, último abierto, mínimo ≤ máximo), probabilidades del Forecast (≤ 100) y umbral de margen de pedidos [E]. Las probabilidades del Forecast las **lee** cualquiera que vea Reportes, pero editarlas exige permiso (403) [E]. La auditoría registra, entre otras, la creación de tarjetas [E].
 
 ## Candidatos a cambio o mejora (ninguno implementado)
-1. **Clientes sin control de duplicados** de RUC; los arquitectos sí lo tienen (409). [E]
+1. ~~**Clientes sin control de duplicados** de RUC~~ — **resuelto en la Fase 17a** (409 `duplicate_tax_id`, índice único). [E]
 2. **Se puede borrar el último contacto** de un subcliente aunque el alta lo exija. [E]
 3. **Un cliente no se puede dar de baja ni corregir en bloque**: la API no ofrece borrado de clientes, arquitectos, tarjetas ni fichas; los datos de prueba permanecen. [C]
 4. **«Perdido» sin motivo y reversible sin aprobación**: no queda por qué se perdió ni quién lo reabrió fuera de la auditoría. [E]
