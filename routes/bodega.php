@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Route;
 // SCRUM-329 Oleada A / Batch B1 (REQ-294→304, SCRUM-363→374) — pantalla "Home de Bodega".
 Route::prefix('home')->group(function (): void {
     Route::get('/team', [BodegaHomeController::class, 'team'])->middleware('permission:bodega.read');
-    Route::get('/summary', [BodegaHomeController::class, 'summary'])->middleware('permission:bodega.read');
+    Route::get('/summary', [BodegaHomeController::class, 'summary'])->middleware(['permission:bodega.read', 'team.scope:bodega']);
     // SCRUM-171 RN2 — "Rutas de entrega del día completo", destino del botón "Ver detalle" del
     // panel Agenda de Bodega de Gerencia.
     Route::get('/rutas-dia', [BodegaHomeController::class, 'rutasDia'])->middleware('permission:bodega.read');

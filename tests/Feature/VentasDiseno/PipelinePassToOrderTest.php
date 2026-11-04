@@ -328,7 +328,9 @@ class PipelinePassToOrderTest extends FeatureTestCase
         DB::table("{$slug}_auth.users")->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode(['ventas_diseno.read'])]);
         $headers = $this->headersFor('vendedor@atlantic.test', 'Password123!', 'designer');
 
-        $ids = collect($this->withHeaders($headers)->getJson('/api/ventas-diseno/pipeline?scope=team')->assertOk()->json('data'))->pluck('id');
+        // Fase 25b: pedir el equipo sin poder verlo responde 403; sin `scope` ve solo lo propio.
+        $this->withHeaders($headers)->getJson('/api/ventas-diseno/pipeline?scope=team')->assertStatus(403);
+        $ids = collect($this->withHeaders($headers)->getJson('/api/ventas-diseno/pipeline')->assertOk()->json('data'))->pluck('id');
 
         $this->assertTrue($ids->contains($own->id));
         $this->assertFalse($ids->contains($other->id));

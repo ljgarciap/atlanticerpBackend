@@ -40,7 +40,7 @@ use Illuminate\Support\Facades\Route;
 // GET sin permission explícito: la autorización de objeto/alcance la resuelve el
 // propio PipelineController/PipelineService por usuario (mismo patrón que crm.php).
 Route::prefix('pipeline')->group(function (): void {
-    Route::get('/', [PipelineController::class, 'index'])->middleware('permission:ventas_diseno.read,ventas_diseno.pipeline.read_all');
+    Route::get('/', [PipelineController::class, 'index'])->middleware(['permission:ventas_diseno.read,ventas_diseno.pipeline.read_all', 'team.scope:pipeline']);
     // Grupo 1d (REQ-019/020/023): creación manual — hasta acá la única forma de que
     // nazca una tarjeta era la regla de Lead automático (REQ-068) al crear un cliente.
     Route::post('/', [PipelineController::class, 'store'])->middleware('permission:ventas_diseno.write,ventas_diseno.pipeline.edit');

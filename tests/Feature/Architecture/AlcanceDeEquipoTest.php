@@ -17,21 +17,19 @@ use Tests\Feature\FeatureTestCase;
 final class AlcanceDeEquipoTest extends FeatureTestCase
 {
     /**
-     * Revisadas a mano (2026-11-04): el servicio solo concede el alcance de equipo a quien `canViewTeamV2()` y, si no puede, degrada en silencio
-     * a «propio» (sin fuga); `OrdersController` ya filtra por permiso en la ruta y el calendario por módulo. Responden 200 en vez de 403: si se
-     * quiere uniformar, se agrega `team.scope` y se quita de esta lista. Los métodos sin `scope` (show, fileUrl…) están por compartir controlador.
+     * Rutas de controladores que leen `scope` pero que NO lo aplican a esa ruta, o que lo resuelven de otro modo (revisadas 2026-11-04):
+     * `OrdersController@index` (el default de Pedidos es `team` y la ruta ya filtra por permiso, SCRUM-1119) y el calendario (la regla es por
+     * módulo y el servicio degrada a «propio»); el resto comparten controlador con una ruta que sí lleva `team.scope` y no leen `scope`.
      */
     private const EXCEPCIONES = [
-        'App\\Modules\\VentasDiseno\\Http\\Controllers\\PipelineController@index',
+        'App\\Modules\\VentasDiseno\\Http\\Controllers\\OrdersController@index',
+        'App\\Modules\\VentasDiseno\\Http\\Controllers\\OrdersController@show',
+        'App\\Modules\\Integrations\\Outlook\\Http\\Controllers\\OutlookCalendarController@index',
         'App\\Modules\\VentasDiseno\\Http\\Controllers\\PipelineController@show',
         'App\\Modules\\VentasDiseno\\Http\\Controllers\\PipelineController@fileUrl',
         'App\\Modules\\VentasDiseno\\Http\\Controllers\\HomeController@vendors',
         'App\\Modules\\VentasDiseno\\Http\\Controllers\\HomeController@approvalsPending',
-        'App\\Modules\\VentasDiseno\\Http\\Controllers\\OrdersController@index',
-        'App\\Modules\\VentasDiseno\\Http\\Controllers\\OrdersController@show',
-        'App\\Modules\\Integrations\\Outlook\\Http\\Controllers\\OutlookCalendarController@index',
         'App\\Modules\\Bodega\\Http\\Controllers\\BodegaHomeController@team',
-        'App\\Modules\\Bodega\\Http\\Controllers\\BodegaHomeController@summary',
         'App\\Modules\\Bodega\\Http\\Controllers\\BodegaHomeController@rutasDia',
         'App\\Modules\\Bodega\\Http\\Controllers\\BodegaHomeController@approvalsPending',
     ];
@@ -44,12 +42,23 @@ final class AlcanceDeEquipoTest extends FeatureTestCase
                 continue;
             }
             $clave = $ruta->getActionName();
-            if (! in_array('team.scope', Route::gatherRouteMiddleware($ruta), true) && ! in_array($clave, self::EXCEPCIONES, true)) {
+            if (! $this->llevaTeamScope($ruta) && ! in_array($clave, self::EXCEPCIONES, true)) {
                 $faltan[] = $clave.' ('.$ruta->uri().')';
             }
         }
 
         $this->assertSame([], $faltan, "Rutas que leen scope sin team.scope:\n".implode("\n", $faltan));
+    }
+
+    private function llevaTeamScope(RutaLaravel $ruta): bool
+    {
+        foreach (Route::gatherRouteMiddleware($ruta) as $middleware) {
+            if (is_string($middleware) && str_starts_with($middleware, 'team.scope')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function leeScope(RutaLaravel $ruta): bool
