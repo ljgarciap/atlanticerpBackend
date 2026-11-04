@@ -19,15 +19,18 @@ Decide qué asistente recibe los pedidos nuevos de cada vendedor. Un mapeo **act
 ## 4. Llegada física: dos pasos, dos responsables
 Compras registra el ingreso (la línea queda «Por ingresar», sin mover stock) [E]. Después:
 - **Paso 1, Bodega** (`POST inventory/{producto}/confirm-arrival`, `cantidad_entregada`, permiso `bodega.write`): aviso de lo realmente contado. Producto inexistente 404; cantidad 0, negativa o ausente, 422; más de lo pedido pendiente, 422 «no puede superar lo pedido pendiente (N unidades)»; vendedor y Líder de Compras, 403 [E].
-- Con 6 de 10 contadas: responde `confirmed_quantity 6`, el inventario marca `awaiting_compras` y `confirmed_quantity`, y `pending_bodega_action` pasa a falso. **El stock no se mueve** [E].
-- Reportar de nuevo el producto da 422 «no tiene unidades "Por ingresar" pendientes de reportar»: lo reportado no se completa después [E].
-- **Paso 2, Compras** (`POST goods-receipts/lines/{id}/confirm`): factura al inventario y el stock sube [E]. Sube **10, lo ingresado por Compras**, no los 6 que contó Bodega [E].
-- El reparto es FIFO por línea, nunca más de lo que cada línea pidió [C].
+- Con 6 de 10 contadas: responde `confirmed_quantity 6`, el inventario marca `awaiting_compras` y `confirmed_quantity`, y `pending_bodega_action` pasa a falso. **El stock no se mueve** [E]. Mientras Compras no confirme, reportar de nuevo la misma línea da 422 «no tiene unidades "Por ingresar" pendientes de reportar» [E].
+- **Paso 2, Compras** (`POST goods-receipts/lines/{id}/confirm`, `…/products/{id}/confirm-pending` o al avanzar la orden a «Recibido»): factura al inventario y el stock sube [E].
+- **Fase 20c — entra lo que Bodega contó**: si Bodega reportó menos de lo registrado (6 de 10), al inventario entran **solo las 6**. La línea se parte: las 6 se confirman (Entrada de Kardex por 6, con «Bodega contó 6 de 10; 4 pendientes de llegar» en la referencia) y las 4 restantes quedan como una línea nueva «Por ingresar», **sin reporte de Bodega**, que se puede reportar y confirmar cuando lleguen. El total registrado de la orden no cambia, y el ITBMS y los prorrateos de costo se reparten proporcionalmente (el resto toma la diferencia, así la suma es exacta) [E].
+- Si Bodega no reportó nada, o contó todo, la línea se confirma completa como siempre [E].
+- **Dos confirmaciones simultáneas no duplican**: la línea se bloquea dentro de la transacción, una confirma y la otra recibe 422 «ya fue confirmada» [E].
+- El reparto del reporte de Bodega es FIFO por línea, nunca más de lo que cada línea pidió [C].
+- Avanzar la orden a «Recibido» confirma **todas** las líneas pendientes con la misma regla: una línea que Bodega contó incompleta se parte igual, así que la orden puede quedar «Recibido» con la parte no contada todavía «Por ingresar» (visible en Inventario, reportable cuando llegue); una línea sin reporte de Bodega entra completa [C].
 
 ## Candidatos a cambio o mejora
 (Solo documentados; ninguno se implementó.)
-1. **El conteo de Bodega no cuenta**: Compras confirma lo ingresado (10) aunque Bodega reportó 6; el faltante queda solo como historial. Si el aviso debe servir de control, la confirmación debería compararlos o avisar la diferencia. [E]
-2. **Una llegada reportada incompleta no se puede completar**: tras reportar 6 de 10, los 4 restantes ya no se pueden reportar (la línea queda marcada). [E]
+1. ~~El conteo de Bodega no cuenta~~ — **corregido en la Fase 20c**: entra lo contado y el resto queda por llegar. [E]
+2. ~~Una llegada reportada incompleta no se puede completar~~ — **corregido en la Fase 20c**: el resto es una línea nueva reportable. [E]
 3. **El mapeo acepta cualquier usuario**: solo valida que existan; un mapeo con un vendedor sin rol de ventas o un «asistente» que no es de Bodega se acepta, y `assistant-load` solo lista usuarios con el rol de asistente. [C]
 4. **No se puede quitar un mapeo**, solo reemplazarlo; sin mapeo activo el pedido queda sin asistente. [C]
 5. **Cambiar el mapeo no reasigna lo pendiente**: los pedidos ya creados siguen con el asistente anterior, y no hay pantalla de reasignación en lote. [E]
