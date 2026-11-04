@@ -108,6 +108,11 @@ final class CrmFase22Test extends FeatureTestCase
         $this->assertSame($vendedorId, Project::findOrFail($id)->reopened_by);
     }
 
+    public function test_no_se_puede_crear_un_proyecto_directamente_como_perdido(): void
+    {
+        $this->withHeaders($this->vendedor())->postJson('/api/crm/projects', ['nombre' => 'Nace perdido', 'tipo' => 'diseno', 'etapa' => 'perdido'])->assertStatus(422)->assertJsonValidationErrors('etapa');
+    }
+
     // ── B4 ────────────────────────────────────────────────────────────────────
 
     public function test_un_contacto_guarda_quien_lo_creo_y_solo_el_o_gerencia_lo_edita_y_borra(): void
