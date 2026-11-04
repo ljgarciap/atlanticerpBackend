@@ -21,7 +21,7 @@ class StoreProjectRequest extends FormRequest
         return [
             'nombre'         => ['required', 'string', 'max:255'],
             'tipo'           => ['required', 'string', Rule::in(['diseno', 'cotizacion', 'ambos'])],
-            'etapa'          => ['nullable', 'string', Rule::in(CrmStages::keys())],
+            'etapa'          => ['nullable', 'string', Rule::in(CrmStages::keys()), Rule::notIn(CrmStages::lost())],
             'contacto'       => ['nullable', 'string', 'max:255'],
             'email'          => ['nullable', 'email', 'max:255'],
             'celular'        => ['nullable', 'string', 'max:50'],

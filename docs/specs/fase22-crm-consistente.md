@@ -1,6 +1,6 @@
 # Fase 22 — CRM consistente (B3, B4, B5)
 
-Estado: **aprobada, en implementación**. Nace del orden recomendado tras la Fase 21 (candidatos 3, 4 y 5 de `docs/flujos/crm.md`).
+Estado: **implementada**. Nace del orden recomendado tras la Fase 21 (candidatos 3, 4 y 5 de `docs/flujos/crm.md`).
 
 ## 1. Decisiones de Luis (2026-11-04)
 - **B3**: perder exige motivo; reactivar un perdido lo decide el aprobador primario, un suplente o el superadmin, con motivo. El resto de saltos de etapa sigue libre.
@@ -27,3 +27,6 @@ Estado: **aprobada, en implementación**. Nace del orden recomendado tras la Fas
 
 ## 5. Pruebas
 Backend: motivo y 403 de reactivación, contactos (dueño/equipo/sin dueño), catálogo (etapa propia en el tablero y en reportes, no se borra una en uso). Frontend: modal de motivo, tablero con etapa propia. E2E: `crm.spec.ts` ampliado.
+
+## 6. Resultado
+Backend: suite completa 5255 tests en verde, PHPStan 0. Frontend: 249 archivos / 2940 tests, `tsc` limpio, e2e `crm.spec.ts` (8 pasos) en verde. Cierre de brecha: crear un proyecto directamente como «perdido» ya no se permite (saltaría el motivo); `PUT projects/{id}` nunca aceptó `etapa`. Informe: `docs/reviews/fase22-crm-consistente-2026-11-04.md`.
