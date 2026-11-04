@@ -57,7 +57,7 @@ final class ContactController extends Controller
             'notas' => ['sometimes', 'nullable', 'string'],
         ]);
 
-        $contact = $this->service->create($validated);
+        $contact = $this->service->create($validated, $user);
 
         return response()->json($contact, 201);
     }
@@ -75,6 +75,10 @@ final class ContactController extends Controller
             return response()->json(['message' => 'Contact not found'], 404);
         }
 
+        if (! $this->canManage($contact, $user)) {
+            return response()->json(['message' => 'Solo quien creó el contacto o quien ve al equipo puede editarlo.'], 403);
+        }
+
         $validated = $request->validate([
             'nombre' => ['sometimes', 'string', 'max:200'],
             'tipo' => ['sometimes', 'string', Rule::in(CatalogService::keys('contact_role'))],
@@ -84,7 +88,7 @@ final class ContactController extends Controller
             'notas' => ['sometimes', 'nullable', 'string'],
         ]);
 
-        $updated = $this->service->update($contact, $validated);
+        $updated = $this->service->update($contact, $validated, $user);
 
         return response()->json($updated);
     }
@@ -102,6 +106,10 @@ final class ContactController extends Controller
             return response()->json(['message' => 'Contact not found'], 404);
         }
 
+        if (! $this->canManage($contact, $user)) {
+            return response()->json(['message' => 'Solo quien creó el contacto o quien ve al equipo puede borrarlo.'], 403);
+        }
+
         $activeCount = $this->service->activeProjectCount($contact);
         if ($activeCount > 0) {
             return response()->json([
@@ -113,6 +121,12 @@ final class ContactController extends Controller
         $this->service->delete($contact);
 
         return response()->json(null, 204);
+    }
+
+    /** Fase 22 (B4): un contacto con dueño lo gestiona su creador o quien ve al equipo; uno sin dueño (anterior a la fase) lo gestiona cualquiera del CRM. */
+    private function canManage(Contact $contact, User $user): bool
+    {
+        return $contact->created_by === null || $contact->created_by === $user->id || $user->canViewTeamV2('crm');
     }
 
     /** POST /api/crm/contacts/import */

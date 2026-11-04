@@ -74,6 +74,17 @@ return [
                 'color' => ['type' => 'string', 'max' => 7, 'pattern' => '/^#[0-9a-fA-F]{6}$/', 'default' => null],
             ],
         ],
+        // Fase 22 (B5) — etapas del CRM. Mismo esquema que `pipeline_stage` pero con su propio vocabulario (no se mezcla con Ventas & Diseño).
+        'crm_stage' => [
+            'label' => 'Etapas del CRM',
+            'usage' => [\App\Modules\CRM\Models\Project::class, 'etapa'],
+            'rules' => \App\Modules\CRM\Services\CrmStageRules::class,
+            'locked_when_system' => ['sort_order', 'categoria'],
+            'props' => [
+                'categoria' => ['type' => 'enum', 'values' => ['abierta', 'ganada', 'perdida'], 'system_only' => ['ganada', 'perdida'], 'default' => 'abierta'],
+                'color' => ['type' => 'string', 'max' => 7, 'pattern' => '/^#[0-9a-fA-F]{6}$/', 'default' => null],
+            ],
+        ],
         // Fase 14c — listas que estaban fijas en el código. La lógica solo conoce las claves de SISTEMA (`is_system`: no se borran): las 4 de
         // contacto son columnas de «proyecto» que importa el directorio, `OTRO_ESPECIFICAR`/`otra` piden texto libre, `warranty` limita qué
         // técnico atiende un ticket de garantía. El resto es vocabulario de la empresa.

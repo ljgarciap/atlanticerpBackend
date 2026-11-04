@@ -151,7 +151,7 @@ final class ProjectService
             $project = Project::create([
                 'nombre' => $data['nombre'],
                 'tipo' => $data['tipo'],
-                'etapa' => $data['etapa'] ?? 'lead',
+                'etapa' => $data['etapa'] ?? CrmStages::LEAD,
                 'contacto' => $data['contacto'] ?? null,
                 'email' => $data['email'] ?? null,
                 'celular' => $data['celular'] ?? null,
@@ -242,9 +242,20 @@ final class ProjectService
         });
     }
 
-    public function changeStage(Project $project, User $user, string $newEtapa): Project
+    public function changeStage(Project $project, User $user, string $newEtapa, ?string $reason = null): Project
     {
         $oldEtapa = $project->etapa;
+
+        // Fase 22 (B3): el motivo de perder y de reactivar queda guardado con quién y cuándo (el de la pérdida se conserva al reactivar).
+        if (CrmStages::isLost($newEtapa) && ! CrmStages::isLost($oldEtapa)) {
+            $project->lost_reason = $reason;
+            $project->lost_at = now();
+            $project->lost_by = $user->id;
+        } elseif (CrmStages::isLost($oldEtapa) && ! CrmStages::isLost($newEtapa)) {
+            $project->reopened_reason = $reason;
+            $project->reopened_at = now();
+            $project->reopened_by = $user->id;
+        }
 
         $project->etapa = $newEtapa;
         $project->save();

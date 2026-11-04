@@ -12,10 +12,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 final class DashboardService
 {
-    private const OPEN_STAGES = ['lead', 'diseno', 'cotizacion', 'propuesta'];
-
-    private const CLOSED_STAGES = ['cerrado'];
-
     public function __construct(private readonly CrmSettingsService $settings) {}
 
     /** @return array<string, mixed> */
@@ -25,7 +21,7 @@ final class DashboardService
 
         // Stage counts — initialise all stages to 0, then fill from DB
         $counts = array_fill_keys(
-            ['lead', 'diseno', 'cotizacion', 'propuesta', 'cerrado', 'perdido'],
+            CrmStages::keys(),
             0
         );
 
@@ -51,15 +47,15 @@ final class DashboardService
         ];
 
         // Pipeline values — sum() always returns a numeric string/int/float, never null
-        $pipelineActivo = (float) (clone $base)->whereIn('etapa', self::OPEN_STAGES)->sum('valor');
-        $pipelineCerrado = (float) (clone $base)->whereIn('etapa', self::CLOSED_STAGES)->sum('valor');
+        $pipelineActivo = (float) (clone $base)->whereIn('etapa', CrmStages::open())->sum('valor');
+        $pipelineCerrado = (float) (clone $base)->whereIn('etapa', CrmStages::won())->sum('valor');
 
         // Alerts — SCRUM-14: QA 2026-07-05 encontró que el dashboard solo mostraba el conteo,
         // sin la lista de proyectos afectados ni el botón "Enviar recordatorios" del mock. El
         // botón del mock es 100% client-side (arma un mailto: con el resumen) — por eso acá
         // solo se expone el detalle necesario para componerlo en el frontend, sin un endpoint
         // de envío nuevo.
-        $openBase = (clone $base)->whereIn('etapa', self::OPEN_STAGES);
+        $openBase = (clone $base)->whereIn('etapa', CrmStages::open());
         $vencidosQuery = (clone $openBase)
             ->whereNotNull('fecha_entrega')
             ->whereDate('fecha_entrega', '<', now());

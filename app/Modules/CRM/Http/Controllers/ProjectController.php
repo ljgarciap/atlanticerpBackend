@@ -9,7 +9,10 @@ use App\Modules\CRM\Http\Requests\StoreProjectRequest;
 use App\Modules\CRM\Http\Requests\UpdateProjectRequest;
 use App\Modules\CRM\Models\Project;
 use App\Modules\CRM\Models\ProjectReminder;
+use App\Modules\CRM\Services\CrmStages;
 use App\Modules\CRM\Services\ProjectService;
+use App\Modules\Compras\Models\ComprasSettings;
+use App\Shared\Support\PrimaryApprovers;
 use App\Shared\Support\ParsesIdListQueryParam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -99,7 +102,7 @@ final class ProjectController extends Controller
 
         $project = $this->service->create($user, $validated);
 
-        return response()->json($this->formatDetail($project), 201);
+        return response()->json($this->formatDetail($project, $user), 201);
     }
 
     public function show(Request $request, int $id): JsonResponse
@@ -118,7 +121,7 @@ final class ProjectController extends Controller
             return response()->json(['message' => trans('auth.unauthorized')], 403);
         }
 
-        return response()->json($this->formatDetail($project));
+        return response()->json($this->formatDetail($project, $user));
     }
 
     public function update(UpdateProjectRequest $request, int $id): JsonResponse
@@ -161,7 +164,7 @@ final class ProjectController extends Controller
 
         $project = $this->service->update($project, $validated);
 
-        return response()->json($this->formatDetail($project));
+        return response()->json($this->formatDetail($project, $user));
     }
 
     public function changeStage(Request $request, int $id): JsonResponse
@@ -182,12 +185,24 @@ final class ProjectController extends Controller
 
         /** @var array{etapa: string} $validated */
         $validated = $request->validate([
-            'etapa' => ['required', 'string', Rule::in(['lead', 'diseno', 'cotizacion', 'propuesta', 'cerrado', 'perdido'])],
+            'etapa' => ['required', 'string', Rule::in(CrmStages::keys())],
         ]);
 
-        $project = $this->service->changeStage($project, $user, $validated['etapa']);
+        // Fase 22 (B3): perder exige motivo; sacar un proyecto de «perdido» exige motivo y que lo decida el aprobador, un suplente o el superadmin.
+        $target = $validated['etapa'];
+        $losing = CrmStages::isLost($target) && ! CrmStages::isLost($project->etapa);
+        $reactivating = CrmStages::isLost($project->etapa) && ! CrmStages::isLost($target);
+        if ($reactivating && ! $this->canReactivateLost($user)) {
+            return response()->json(['message' => 'Solo el aprobador configurado o un suplente puede reactivar un proyecto perdido. No es un permiso que falte: pídele a un superadmin que te designe en Configuración global → Aprobadores.'], 403);
+        }
+        $reason = null;
+        if ($losing || $reactivating) {
+            $reason = trim((string) $request->validate(['motivo' => ['required', 'string', 'min:10', 'max:1000']])['motivo']);
+        }
 
-        return response()->json($this->format($project));
+        $project = $this->service->changeStage($project, $user, $target, $reason);
+
+        return response()->json($this->format($project, $user));
     }
 
     public function destroy(int $id): JsonResponse
@@ -216,6 +231,12 @@ final class ProjectController extends Controller
         return User::find((int) $payload['sub']);
     }
 
+    private function canReactivateLost(User $user): bool
+    {
+        return $user->hasPermission('superadmin.all')
+            || PrimaryApprovers::isApprover($user->id, ComprasSettings::current()->primary_approver_user_id);
+    }
+
     private function canAccess(Project $project, User $user): bool
     {
         if ($user->canViewTeamV2('crm')) {
@@ -226,7 +247,7 @@ final class ProjectController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function format(Project $project): array
+    private function format(Project $project, ?User $viewer = null): array
     {
         $latestActivity = $project->latestActivity;
 
@@ -245,6 +266,11 @@ final class ProjectController extends Controller
             'despacho' => $project->despacho,
             'ubicacion' => $project->ubicacion,
             'etapa' => $project->etapa,
+            'lost_reason' => $project->lost_reason,
+            'lost_at' => $project->lost_at?->toIso8601String(),
+            'reopened_reason' => $project->reopened_reason,
+            'reopened_at' => $project->reopened_at?->toIso8601String(),
+            'can_reactivate' => $viewer !== null && CrmStages::isLost($project->etapa) && $this->canReactivateLost($viewer),
             'fecha_entrega' => $project->fecha_entrega?->toDateString(),
             'valor' => $project->valor,
             'notas' => $project->notas,
@@ -271,9 +297,9 @@ final class ProjectController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function formatDetail(Project $project): array
+    private function formatDetail(Project $project, User $viewer): array
     {
-        $base = $this->format($project);
+        $base = $this->format($project, $viewer);
 
         $base['reminders'] = $project->reminders
             ->map(fn (ProjectReminder $r) => [

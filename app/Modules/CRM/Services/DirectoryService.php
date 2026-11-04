@@ -74,7 +74,7 @@ final class DirectoryService
             }
 
             $map[$key]['valor_total'] += (float) ($project->valor ?? 0);
-            if ($project->etapa === 'cerrado') {
+            if (CrmStages::isWon((string) $project->etapa)) {
                 $map[$key]['valor_cerrado'] += (float) ($project->valor ?? 0);
             }
 

@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $telefono
  * @property string|null $empresa
  * @property string|null $notas
+ * @property int|null    $created_by
+ * @property int|null    $updated_by
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
@@ -33,7 +35,7 @@ class Contact extends Model
     ];
 
     /** @var list<string> */
-    protected $fillable = ['nombre', 'tipo', 'email', 'telefono', 'empresa', 'notas'];
+    protected $fillable = ['nombre', 'tipo', 'email', 'telefono', 'empresa', 'notas', 'created_by', 'updated_by'];
 
     public function getTable(): string
     {

@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\DB;
 
 final class ReportsService
 {
-    private const OPEN_STAGES = ['lead', 'diseno', 'cotizacion', 'propuesta'];
 
     private const ACTIVITY_TYPES = ['llamada', 'email', 'reunion', 'whatsapp', 'visita', 'otro'];
 
@@ -54,10 +53,10 @@ final class ReportsService
         $nuevos = (clone $baseQuery)->whereBetween('created_at', [$start, $end])->with('assignees')->get();
 
         /** @var Collection<int, Project> $cerrados */
-        $cerrados = (clone $baseQuery)->where('etapa', 'cerrado')->whereBetween('updated_at', [$start, $end])->get();
+        $cerrados = (clone $baseQuery)->whereIn('etapa', CrmStages::won())->whereBetween('updated_at', [$start, $end])->get();
 
         /** @var Collection<int, Project> $perdidos */
-        $perdidos = (clone $baseQuery)->where('etapa', 'perdido')->whereBetween('updated_at', [$start, $end])->get();
+        $perdidos = (clone $baseQuery)->whereIn('etapa', CrmStages::lost())->whereBetween('updated_at', [$start, $end])->get();
 
         $totalDecisions = $cerrados->count() + $perdidos->count();
         $tasaCierre = $totalDecisions > 0
@@ -131,7 +130,7 @@ final class ReportsService
                 ->get();
 
             /** @var array<string, int> $counts */
-            $counts = array_fill_keys(['lead', 'diseno', 'cotizacion', 'propuesta', 'cerrado', 'perdido'], 0);
+            $counts = array_fill_keys(CrmStages::keys(), 0);
             foreach ($userProjects as $p) {
                 $etapa = (string) $p->etapa;
                 if (isset($counts[$etapa])) {
@@ -140,15 +139,15 @@ final class ReportsService
             }
 
             $valorActivo = (float) $userProjects
-                ->filter(fn (Project $p): bool => in_array((string) $p->etapa, self::OPEN_STAGES, true))
+                ->filter(fn (Project $p): bool => in_array((string) $p->etapa, CrmStages::open(), true))
                 ->sum('valor');
 
             $valorCerrado = (float) $userProjects
-                ->filter(fn (Project $p): bool => $p->etapa === 'cerrado')
+                ->filter(fn (Project $p): bool => CrmStages::isWon((string) $p->etapa))
                 ->sum('valor');
 
             $vencidos = $userProjects
-                ->filter(fn (Project $p): bool => in_array((string) $p->etapa, self::OPEN_STAGES, true)
+                ->filter(fn (Project $p): bool => in_array((string) $p->etapa, CrmStages::open(), true)
                     && $p->fecha_entrega !== null
                     && $p->fecha_entrega->isPast()
                 )
@@ -261,14 +260,14 @@ final class ReportsService
 
             $cerradosBuilder = Project::query()
                 ->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $u->id))
-                ->where('etapa', 'cerrado')
+                ->whereIn('etapa', CrmStages::won())
                 ->whereBetween('updated_at', [$start, $end]);
             $cerradosCount = $cerradosBuilder->count();
             $valorCerrado = (float) $cerradosBuilder->sum('valor');
 
             $perdidosCount = Project::query()
                 ->whereHas('assignees', fn (Builder $q) => $q->where('user_id', $u->id))
-                ->where('etapa', 'perdido')
+                ->whereIn('etapa', CrmStages::lost())
                 ->whereBetween('updated_at', [$start, $end])
                 ->count();
 
