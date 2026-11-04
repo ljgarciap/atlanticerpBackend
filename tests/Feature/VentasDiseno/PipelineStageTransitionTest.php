@@ -19,6 +19,7 @@ class PipelineStageTransitionTest extends FeatureTestCase
     {
         parent::setUp();
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        \App\Shared\Support\PrimaryApprovers::forget(); // la lista de suplentes se memoriza por proceso
     }
 
     /** @param list<string> $extra */
@@ -73,7 +74,7 @@ class PipelineStageTransitionTest extends FeatureTestCase
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])
+            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost', 'motivo' => 'El cliente ya no lo necesita'])
             ->assertStatus(200)
             ->assertJsonPath('stage', 'lost');
     }
@@ -263,29 +264,97 @@ class PipelineStageTransitionTest extends FeatureTestCase
 
     public function test_reactivar_tarjeta_perdida_a_lead(): void
     {
-        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'lost');
 
-        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->withHeaders($this->authHeaders($token))
-            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lead'])
+            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lead', 'motivo' => 'El cliente volvió a escribir'])
             ->assertStatus(200)
-            ->assertJsonPath('stage', 'lead');
+            ->assertJsonPath('stage', 'lead')
+            ->assertJsonPath('reopened_reason', 'El cliente volvió a escribir');
     }
 
     public function test_tarjeta_perdida_no_puede_moverse_a_otra_etapa_que_no_sea_lead(): void
     {
-        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
         $designerId = $this->userIdByEmail('vendedor@atlantic.test');
         $card = $this->makeCard($designerId, 'lost');
 
-        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->withHeaders($this->authHeaders($token))
-            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'design'])
+            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'design', 'motivo' => 'Intento de saltar de etapa'])
             ->assertStatus(422);
+    }
+
+    // ── Fase 21 (B2): motivo al perder y reactivar con aprobación ──────────────
+
+    public function test_perder_una_tarjeta_exige_motivo_y_lo_guarda(): void
+    {
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
+        $card = $this->makeCard($designerId, 'proposal');
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
+        $url = "/api/ventas-diseno/pipeline/{$card->id}/stage";
+
+        $this->withHeaders($headers)->patchJson($url, ['stage' => 'lost'])->assertStatus(422)->assertJsonValidationErrors('motivo');
+        $this->withHeaders($headers)->patchJson($url, ['stage' => 'lost', 'motivo' => 'corto'])->assertStatus(422)->assertJsonValidationErrors('motivo');
+
+        $this->withHeaders($headers)->patchJson($url, ['stage' => 'lost', 'motivo' => '  Se fue con la competencia  '])
+            ->assertOk()->assertJsonPath('lost_reason', 'Se fue con la competencia');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $fresh = PipelineCard::findOrFail($card->id);
+        $this->assertSame($designerId, $fresh->lost_by);
+        $this->assertNotNull($fresh->lost_at);
+    }
+
+    public function test_reactivar_una_perdida_solo_lo_decide_el_aprobador_o_un_suplente(): void
+    {
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
+        $card = $this->makeCard($designerId, 'lost');
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $url = "/api/ventas-diseno/pipeline/{$card->id}/stage";
+
+        // Dueño de la tarjeta, pero no el aprobador: 403 aunque mande el motivo, y la tarjeta no cambia.
+        \App\Modules\Compras\Models\ComprasSettings::current()->update(['primary_approver_user_id' => null]);
+        $this->withHeaders($headers)->patchJson($url, ['stage' => 'lead', 'motivo' => 'Quiero retomarlo, por favor'])->assertStatus(403);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame('lost', PipelineCard::findOrFail($card->id)->stage);
+
+        // Designado suplente: puede, y pide motivo.
+        DB::table('atlantic_auth.primary_approver_substitutes')->insert(['user_id' => $designerId, 'created_at' => now(), 'updated_at' => now()]);
+        \App\Shared\Support\PrimaryApprovers::forget();
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->withHeaders($headers)->patchJson($url, ['stage' => 'lead'])->assertStatus(422)->assertJsonValidationErrors('motivo');
+        $this->withHeaders($headers)->patchJson($url, ['stage' => 'lead', 'motivo' => 'Quiero retomarlo, por favor'])
+            ->assertOk()->assertJsonPath('stage', 'lead')->assertJsonPath('reopened_reason', 'Quiero retomarlo, por favor');
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $fresh = PipelineCard::findOrFail($card->id);
+        $this->assertSame($designerId, $fresh->reopened_by);
+        $this->assertNotNull($fresh->reopened_at);
+    }
+
+    public function test_el_detalle_dice_si_quien_mira_puede_reactivar(): void
+    {
+        $this->grantVentasDisenoEdit('vendedor@atlantic.test');
+        $designerId = $this->userIdByEmail('vendedor@atlantic.test');
+        $card = $this->makeCard($designerId, 'lost');
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        \App\Modules\Compras\Models\ComprasSettings::current()->update(['primary_approver_user_id' => null]);
+
+        $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}")->assertOk()->assertJsonPath('can_reactivate', false);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        \App\Modules\Compras\Models\ComprasSettings::current()->update(['primary_approver_user_id' => $designerId]);
+        $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$card->id}")->assertOk()->assertJsonPath('can_reactivate', true);
     }
 
     public function test_cualquier_etapa_activa_puede_marcarse_perdida_sin_gate(): void
@@ -297,7 +366,7 @@ class PipelineStageTransitionTest extends FeatureTestCase
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])
+            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost', 'motivo' => 'El cliente eligió a otro proveedor'])
             ->assertStatus(200);
     }
 
@@ -315,7 +384,7 @@ class PipelineStageTransitionTest extends FeatureTestCase
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
         $this->withHeaders($this->authHeaders($token))
-            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])
+            ->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost', 'motivo' => 'Intento de perder una aprobada'])
             ->assertStatus(422)
             ->assertJson(['message' => 'Una tarjeta en Aprobado no puede marcarse como Perdido — es una etapa final.']);
     }
