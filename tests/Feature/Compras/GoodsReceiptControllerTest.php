@@ -10,6 +10,7 @@ use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\Compras\Models\PurchaseOrderReceipt;
+use App\Modules\Compras\Models\PurchaseOrderReceiptLine;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use App\Shared\Multitenancy\Tenant;
 use Illuminate\Support\Facades\DB;
@@ -721,5 +722,153 @@ class GoodsReceiptControllerTest extends FeatureTestCase
                 'lines' => [['catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'warehouse_id' => $this->warehouseId()]],
             ])
             ->assertStatus(403);
+    }
+    // ── Fase 20c — el conteo de Bodega manda sobre lo que entra al inventario ─────────────────
+
+    /**
+     * Ingreso de 10 unidades (con ITBMS y prorrateos) en una orden de 10; devuelve [headers, línea, producto, almacén, orden].
+     *
+     * @return array{0: array<string, string>, 1: int, 2: CatalogProduct, 3: int, 4: PurchaseOrder}
+     */
+    private function ingresoDeDiez(): array
+    {
+        $this->grantCompras('vendedor@atlantic.test', ['compras.read', 'compras.edit']);
+        $provider = $this->makeProvider(['origin' => Provider::ORIGIN_LOCAL]);
+        $product = $this->makeProduct();
+        $order = $this->makeOrder($provider);
+        PurchaseOrderLine::create(['purchase_order_id' => $order->id, 'catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'subtotal' => 100]);
+
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
+        $warehouseId = $this->warehouseId();
+        $receipt = $this->withHeaders($headers)->postJson('/api/compras/goods-receipts', [
+            'purchase_order_id' => $order->id,
+            'lines' => [['catalog_product_id' => $product->id, 'quantity' => 10, 'unit_cost' => 10, 'warehouse_id' => $warehouseId]],
+        ])->assertStatus(201)->json();
+
+        return [$headers, (int) $receipt['lines'][0]['id'], $product, $warehouseId, $order];
+    }
+
+    /** Simula el paso 1 de Bodega: reporta `$contadas` unidades de la línea. */
+    private function bodegaReporta(int $lineId, int $contadas): void
+    {
+        $this->reMakeCurrent();
+        PurchaseOrderReceiptLine::whereKey($lineId)->update([
+            'bodega_confirmed_at' => now(), 'bodega_confirmed_quantity' => $contadas, 'bodega_confirmed_by' => 1,
+        ]);
+    }
+
+    public function test_confirmar_linea_con_conteo_menor_de_bodega_ingresa_solo_lo_contado_y_deja_el_resto_pendiente(): void
+    {
+        [$headers, $lineId, $product, $warehouseId, $order] = $this->ingresoDeDiez();
+        $this->bodegaReporta($lineId, 6);
+
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/lines/{$lineId}/confirm")
+            ->assertStatus(200)
+            ->assertJsonPath('is_pending', false)
+            ->assertJsonPath('quantity', 6);
+
+        $this->reMakeCurrent();
+        $this->assertSame(6, (int) CatalogProduct::find($product->id)->stock_quantity, 'solo entran las 6 unidades contadas');
+        $this->assertSame(6, (int) ProductWarehouseStock::where('catalog_product_id', $product->id)->where('warehouse_id', $warehouseId)->value('quantity'));
+
+        $movimiento = InventoryMovement::where('catalog_product_id', $product->id)->firstOrFail();
+        $this->assertSame(6, $movimiento->cantidad);
+        $this->assertStringContainsString('Bodega contó 6 de 10; 4 pendientes de llegar', $movimiento->referencia_texto);
+
+        $resto = PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->whereNull('confirmed_at')->get();
+        $this->assertCount(1, $resto, 'queda una línea «Por ingresar» con lo que no llegó');
+        $this->assertSame(4, $resto[0]->quantity);
+        $this->assertNull($resto[0]->bodega_confirmed_at, 'sin reporte de Bodega: se puede reportar cuando llegue');
+        $this->assertSame($warehouseId, $resto[0]->warehouse_id);
+        $this->assertSame(
+            10,
+            (int) PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->sum('quantity'),
+            'el total registrado de la orden no cambia',
+        );
+    }
+
+    public function test_el_resto_de_una_llegada_incompleta_se_puede_reportar_y_confirmar_despues(): void
+    {
+        [$headers, $lineId, $product, $warehouseId] = $this->ingresoDeDiez();
+        $this->bodegaReporta($lineId, 6);
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/lines/{$lineId}/confirm")->assertStatus(200);
+
+        $this->reMakeCurrent();
+        $restoId = (int) PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->whereNull('confirmed_at')->value('id');
+        $this->bodegaReporta($restoId, 4);
+
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/lines/{$restoId}/confirm")->assertStatus(200);
+
+        $this->reMakeCurrent();
+        $this->assertSame(10, (int) CatalogProduct::find($product->id)->stock_quantity);
+        $this->assertSame(0, PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->whereNull('confirmed_at')->count());
+    }
+
+    public function test_confirmar_linea_sin_reporte_de_bodega_ingresa_todo_como_siempre(): void
+    {
+        [$headers, $lineId, $product] = $this->ingresoDeDiez();
+
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/lines/{$lineId}/confirm")->assertStatus(200);
+
+        $this->reMakeCurrent();
+        $this->assertSame(10, (int) CatalogProduct::find($product->id)->stock_quantity);
+        $this->assertSame(1, PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->count(), 'no se parte nada');
+    }
+
+    public function test_confirmar_linea_con_conteo_completo_de_bodega_no_la_parte(): void
+    {
+        [$headers, $lineId, $product] = $this->ingresoDeDiez();
+        $this->bodegaReporta($lineId, 10);
+
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/lines/{$lineId}/confirm")->assertStatus(200);
+
+        $this->reMakeCurrent();
+        $this->assertSame(10, (int) CatalogProduct::find($product->id)->stock_quantity);
+        $this->assertSame(1, PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->count());
+    }
+
+    public function test_el_itbms_y_los_costos_se_reparten_entre_lo_contado_y_el_resto(): void
+    {
+        [$headers, $lineId, $product] = $this->ingresoDeDiez();
+        $this->reMakeCurrent();
+        PurchaseOrderReceiptLine::whereKey($lineId)->update(['itbms_amount' => 7.00, 'freight_cost_share' => 1.00]);
+        $this->bodegaReporta($lineId, 3);
+
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/lines/{$lineId}/confirm")->assertStatus(200);
+
+        $this->reMakeCurrent();
+        $lineas = PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->orderBy('id')->get();
+        $this->assertCount(2, $lineas);
+        $this->assertSame(2.10, $lineas[0]->itbms_amount, '7,00 × 3/10');
+        $this->assertSame(4.90, $lineas[1]->itbms_amount, 'el resto toma la diferencia');
+        $this->assertSame(7.00, round($lineas->sum('itbms_amount'), 2), 'la suma es exactamente la original');
+        $this->assertSame(1.00, round($lineas->sum('freight_cost_share'), 2));
+    }
+
+    public function test_confirmar_el_producto_completo_respeta_el_conteo_de_bodega(): void
+    {
+        [$headers, $lineId, $product] = $this->ingresoDeDiez();
+        $this->bodegaReporta($lineId, 6);
+
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/products/{$product->id}/confirm-pending")
+            ->assertStatus(200)
+            ->assertJsonPath('confirmed_units', 6);
+
+        $this->reMakeCurrent();
+        $this->assertSame(6, (int) CatalogProduct::find($product->id)->stock_quantity);
+        $this->assertSame(1, PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->whereNull('confirmed_at')->count());
+    }
+
+    public function test_confirmar_dos_veces_la_misma_linea_no_duplica_el_stock(): void
+    {
+        [$headers, $lineId, $product] = $this->ingresoDeDiez();
+        $this->bodegaReporta($lineId, 6);
+
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/lines/{$lineId}/confirm")->assertStatus(200);
+        $this->withHeaders($headers)->postJson("/api/compras/goods-receipts/lines/{$lineId}/confirm")->assertStatus(422);
+
+        $this->reMakeCurrent();
+        $this->assertSame(6, (int) CatalogProduct::find($product->id)->stock_quantity);
+        $this->assertSame(1, PurchaseOrderReceiptLine::where('catalog_product_id', $product->id)->whereNull('confirmed_at')->count(), 'un solo resto, no dos');
     }
 }

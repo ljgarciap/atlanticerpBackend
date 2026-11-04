@@ -99,7 +99,7 @@ final class GoodsReceiptConfirmationService
      * El COALESCE que evitaba el bug de `stock_quantity` NULL (Pre-QA 2026-07-20, ver abajo)
      * sigue vigente, solo que ahora vive dentro de `registrar()`, no acá.
      */
-    public function confirmLine(PurchaseOrderReceiptLine $line, ?int $userId = null): void
+    public function confirmLine(PurchaseOrderReceiptLine $line, ?int $userId = null, ?string $referenciaNota = null): void
     {
         $orderId = $line->receipt?->purchase_order_id;
 
@@ -108,11 +108,67 @@ final class GoodsReceiptConfirmationService
             warehouseId: $line->warehouse_id,
             tipo: InventoryMovement::TIPO_ENTRADA,
             cantidad: $line->quantity,
-            referenciaTexto: $orderId !== null ? "Orden #{$orderId} recibida" : 'Ingreso de mercancía confirmado',
+            referenciaTexto: ($orderId !== null ? "Orden #{$orderId} recibida" : 'Ingreso de mercancía confirmado').($referenciaNota !== null ? " — {$referenciaNota}" : ''),
             referenciaEntidadTipo: 'ORDEN_COMPRA',
             referenciaEntidadId: $orderId,
             realizadoPor: $userId,
         );
+    }
+
+    /**
+     * Fase 20c (docs/specs/fase20-integridad-de-flujos.md) — confirma una línea «Por ingresar» respetando lo que Bodega contó.
+     *
+     * Si Bodega ya reportó la llegada con MENOS unidades que las registradas por Compras (`bodega_confirmed_quantity < quantity`),
+     * al inventario entran SOLO las unidades contadas: la línea se parte, la parte contada se confirma (Entrada de Kardex por esa
+     * cantidad, con la diferencia en la referencia) y el resto queda como una línea nueva «Por ingresar» que Bodega puede reportar
+     * cuando llegue. El total registrado de la orden no cambia. Si Bodega no reportó nada, o contó todo, se confirma completa como siempre.
+     *
+     * Debe llamarse DENTRO de una transacción y con la línea ya bloqueada (`lockForUpdate`) y todavía pendiente.
+     */
+    public function confirmPendingLine(PurchaseOrderReceiptLine $line, ?int $userId = null): void
+    {
+        $nota = null;
+        $contadas = $line->bodega_confirmed_quantity;
+        if ($line->bodega_confirmed_at !== null && $contadas !== null && $contadas < $line->quantity) {
+            $original = $line->quantity;
+            $this->splitUnreportedRemainder($line, $contadas);
+            $nota = 'Bodega contó '.$contadas.' de '.$original.'; '.($original - $contadas).' pendientes de llegar';
+        }
+
+        $line->update(['confirmed_at' => now()]);
+        $this->confirmLine($line, $userId, $nota);
+    }
+
+    /**
+     * Deja en `$line` solo las unidades contadas por Bodega y crea, en el mismo ingreso, una línea nueva «Por ingresar» con el resto
+     * (sin reporte de Bodega, para poder reportarla después). El ITBMS y los prorrateos de costo de la línea se reparten
+     * proporcionalmente; el resto toma la diferencia para que la suma de ambas partes sea exactamente la original.
+     */
+    private function splitUnreportedRemainder(PurchaseOrderReceiptLine $line, int $contadas): void
+    {
+        $original = $line->quantity;
+        $resto = $original - $contadas;
+
+        $remainder = $line->replicate();
+        $remainder->quantity = $resto;
+        $remainder->confirmed_at = null;
+        $remainder->bodega_confirmed_at = null;
+        $remainder->bodega_confirmed_quantity = null;
+        $remainder->bodega_confirmed_by = null;
+
+        foreach (['itbms_amount', 'import_cost_share', 'freight_cost_share', 'handling_cost_share', 'other_cost_share'] as $campo) {
+            $total = $line->{$campo};
+            if ($total === null) {
+                continue;
+            }
+            $parteContada = round($total * $contadas / $original, 2);
+            $line->{$campo} = $parteContada;
+            $remainder->{$campo} = round($total - $parteContada, 2);
+        }
+
+        $line->quantity = $contadas;
+        $line->save();
+        $remainder->save();
     }
 
     /**
@@ -148,8 +204,7 @@ final class GoodsReceiptConfirmationService
                 ->get();
 
             foreach ($lines as $line) {
-                $line->update(['confirmed_at' => now()]);
-                $this->confirmLine($line, $userId);
+                $this->confirmPendingLine($line, $userId);
             }
 
             return $lines->count();

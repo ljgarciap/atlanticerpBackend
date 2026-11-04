@@ -444,23 +444,25 @@ final class GoodsReceiptController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        /** @var PurchaseOrderReceiptLine|null $line */
-        $line = PurchaseOrderReceiptLine::find($lineId);
-        if ($line === null) {
+        if (PurchaseOrderReceiptLine::find($lineId) === null) {
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        if (! $line->isPending()) {
-            return response()->json(['message' => 'Esta línea ya fue confirmada.'], 422);
-        }
+        // Fase 20c — la línea se bloquea y se revisa DENTRO de la transacción: dos confirmaciones simultáneas ya no entran dos veces al stock.
+        $fresh = DB::transaction(function () use ($lineId, $user): ?PurchaseOrderReceiptLine {
+            /** @var PurchaseOrderReceiptLine|null $line */
+            $line = PurchaseOrderReceiptLine::query()->lockForUpdate()->find($lineId);
+            if ($line === null || ! $line->isPending()) {
+                return null;
+            }
+            $this->confirmation->confirmPendingLine($line, $user->id);
 
-        DB::transaction(function () use ($line, $user): void {
-            $line->update(['confirmed_at' => now()]);
-            $this->confirmation->confirmLine($line, $user->id);
+            return $line->fresh();
         });
 
-        /** @var PurchaseOrderReceiptLine $fresh */
-        $fresh = $line->fresh();
+        if ($fresh === null) {
+            return response()->json(['message' => 'Esta línea ya fue confirmada.'], 422);
+        }
 
         return response()->json($this->formatLine($fresh));
     }
@@ -482,20 +484,26 @@ final class GoodsReceiptController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        $lines = PurchaseOrderReceiptLine::where('catalog_product_id', $productId)
-            ->whereNull('confirmed_at')
-            ->get();
+        // Fase 20c — las líneas se leen bloqueadas dentro de la transacción (dos clics simultáneos no confirman la misma línea dos veces)
+        // y cada una entra con lo que Bodega contó, si ya reportó la llegada.
+        /** @var \Illuminate\Support\Collection<int, PurchaseOrderReceiptLine> $lines */
+        $lines = DB::transaction(function () use ($productId, $user) {
+            $lines = PurchaseOrderReceiptLine::where('catalog_product_id', $productId)
+                ->whereNull('confirmed_at')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($lines as $line) {
+                $this->confirmation->confirmPendingLine($line, $user->id);
+            }
+
+            return $lines;
+        });
 
         if ($lines->isEmpty()) {
             return response()->json(['message' => 'Este producto no tiene unidades "Por ingresar".'], 422);
         }
-
-        DB::transaction(function () use ($lines, $user): void {
-            foreach ($lines as $line) {
-                $line->update(['confirmed_at' => now()]);
-                $this->confirmation->confirmLine($line, $user->id);
-            }
-        });
 
         return response()->json([
             'confirmed_lines' => $lines->pluck('id')->values(),
