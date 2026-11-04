@@ -86,12 +86,14 @@ class ReportsControllerTest extends FeatureTestCase
         $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
 
-        $response = $this->withHeaders($this->authHeaders($token))
+        // Fase 23 (#8): ya no se degrada en silencio a "own", responde 403; sin pedirlo, sigue siendo "own".
+        $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/ventas-diseno/reports/summary?scope=team')
-            ->assertStatus(200);
+            ->assertStatus(403)->assertJsonPath('code', 'team_scope_forbidden');
 
-        // Se degrada silenciosamente a "own" — mismo patrón que Pipeline/Home.
-        $response->assertJsonPath('scope', 'own');
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/ventas-diseno/reports/summary')
+            ->assertStatus(200)->assertJsonPath('scope', 'own');
     }
 
     public function test_gerencia_puede_pedir_alcance_equipo(): void

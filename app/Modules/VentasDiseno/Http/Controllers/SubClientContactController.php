@@ -101,6 +101,11 @@ final class SubClientContactController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // Fase 23 (#2) — el alta de un subcliente exige al menos un contacto: el último no se borra (se edita o se reemplaza).
+        if ($subClient->contacts()->count() <= 1) {
+            return response()->json(['message' => 'Un cliente debe conservar al menos un contacto: agrega otro antes de borrar este.', 'code' => 'last_contact'], 422);
+        }
+
         $contact->delete();
 
         return response()->json(null, 204);

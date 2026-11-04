@@ -303,8 +303,13 @@ class ProjectsListControllerTest extends FeatureTestCase
 
         // Intento de bypass: forzar scope=team Y owner_id del manager directo en el query string,
         // sin pasar por ningún control de UI.
-        $response = $this->withHeaders($this->authHeaders($token))
+        // Fase 23 (#8): forzar scope=team sin verlo responde 403; con solo owner_id se queda en lo propio.
+        $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/projects?scope=team&owner_id={$managerId}")
+            ->assertStatus(403)->assertJsonPath('code', 'team_scope_forbidden');
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/projects?owner_id={$managerId}")
             ->assertStatus(200);
 
         $ids = collect($response->json('data'))->pluck('id');
@@ -314,8 +319,10 @@ class ProjectsListControllerTest extends FeatureTestCase
         $this->assertFalse($response->json('can_view_team'));
 
         // Mismo intento contra /export — el CSV tampoco debe filtrar por el owner_id ajeno.
+        $this->withHeaders($this->authHeaders($token))
+            ->get("/api/ventas-diseno/projects/export?scope=team&owner_id={$managerId}")->assertStatus(403);
         $csv = $this->withHeaders($this->authHeaders($token))
-            ->get("/api/ventas-diseno/projects/export?scope=team&owner_id={$managerId}");
+            ->get("/api/ventas-diseno/projects/export?owner_id={$managerId}");
         $csv->assertStatus(200);
         $content = $csv->streamedContent();
         $this->assertStringNotContainsString($theirsName, $content);
