@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Compras;
 
 use App\Modules\Auth\Models\AuditLog;
+use App\Modules\Auth\Models\GlobalSetting;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\Compras\Models\PurchaseApprovalRule;
 use App\Modules\Compras\Models\PurchaseOrder;
@@ -189,5 +190,97 @@ final class PurchaseApprovalRulesTest extends FeatureTestCase
         $no = $this->withHeaders($h)->postJson('/api/admin/purchase-approval-rules/preview', ['shipping_type' => 'maritimo', 'amount' => 3000])->assertOk();
         $this->assertFalse($no->json('requires_approval'));
         $this->assertNull($no->json('rule'));
+    }
+
+    // ── Fase 20d: reglas sin huecos ─────────────────────────────────────────────────────────────────────────────────────
+
+    /** @param array<string, mixed> $extra */
+    private function regla(array $h, string $nombre, array $extra = []): TestResponse
+    {
+        return $this->withHeaders($h)->postJson('/api/admin/purchase-approval-rules', [
+            'name' => $nombre, 'sort_order' => 50, 'is_active' => true, 'requires_approval' => true, ...$extra,
+        ]);
+    }
+
+    private function sinReglas(): void
+    {
+        $this->activarTenant();
+        PurchaseApprovalRule::query()->delete();
+    }
+
+    public function test_guardar_una_regla_que_se_solapa_con_otra_del_mismo_alcance_avisa_sin_bloquear(): void
+    {
+        $h = $this->superadmin();
+        $this->sinReglas();
+        $this->regla($h, 'Pequeñas', ['shipping_type' => 'maritimo', 'min_amount' => 0, 'max_amount' => 1000, 'requires_approval' => false])->assertCreated()->assertJsonPath('warnings', []);
+
+        $solapa = $this->regla($h, 'Medianas', ['shipping_type' => 'maritimo', 'min_amount' => 800, 'max_amount' => 3000])->assertCreated();
+        $this->assertCount(1, $solapa->json('warnings'));
+        $this->assertSame('Pequeñas', $solapa->json('warnings.0.name'));
+
+        $this->regla($h, 'Otro envío', ['shipping_type' => 'terrestre', 'min_amount' => 800, 'max_amount' => 3000])->assertCreated()->assertJsonPath('warnings', []);
+        $this->regla($h, 'Contiguas', ['shipping_type' => 'maritimo', 'min_amount' => 3001, 'max_amount' => 4000])->assertCreated()->assertJsonPath('warnings', []);
+
+        $id = $solapa->json('id');
+        $this->withHeaders($h)->putJson("/api/admin/purchase-approval-rules/{$id}", [
+            'name' => 'Medianas', 'sort_order' => 50, 'is_active' => true, 'shipping_type' => 'maritimo', 'min_amount' => 1001, 'max_amount' => 3000, 'requires_approval' => true,
+        ])->assertOk()->assertJsonPath('warnings', []);
+    }
+
+    public function test_cobertura_senala_el_hueco_de_un_rango_mal_escrito(): void
+    {
+        $h = $this->superadmin();
+        $this->sinReglas();
+        $this->regla($h, 'Bajas', ['shipping_type' => 'maritimo', 'min_amount' => 0, 'max_amount' => 999, 'requires_approval' => false])->assertCreated();
+        $this->regla($h, 'Altas', ['shipping_type' => 'maritimo', 'min_amount' => 5000])->assertCreated();
+        $this->regla($h, 'Todo terrestre', ['shipping_type' => 'terrestre'])->assertCreated();
+
+        $r = $this->withHeaders($h)->getJson('/api/admin/purchase-approval-rules/coverage')->assertOk();
+        $this->assertTrue($r->json('has_gaps'));
+        $combos = collect($r->json('combos'));
+
+        $maritimo = $combos->firstWhere('shipping_type', 'maritimo');
+        $this->assertEquals([['from' => 999.01, 'to' => 4999.99]], $maritimo['gaps']);
+        $this->assertSame([], $combos->firstWhere('shipping_type', 'terrestre')['gaps'], 'una regla sin rango cubre todo');
+        $aereo = $combos->where('shipping_type', 'aereo')->first();
+        $this->assertEquals([['from' => 0, 'to' => null]], $aereo['gaps'], 'sin ninguna regla aérea, todo el rango queda sin cubrir');
+    }
+
+    public function test_cobertura_sin_huecos_cuando_una_regla_general_lo_cubre_todo(): void
+    {
+        $h = $this->superadmin();
+        $this->sinReglas();
+        $this->regla($h, 'Todo', ['requires_approval' => false])->assertCreated();
+
+        $this->withHeaders($h)->getJson('/api/admin/purchase-approval-rules/coverage')->assertOk()->assertJsonPath('has_gaps', false);
+    }
+
+    public function test_cobertura_es_solo_del_superadmin(): void
+    {
+        $this->withHeaders($this->compras())->getJson('/api/admin/purchase-approval-rules/coverage')->assertForbidden();
+    }
+
+    public function test_ajuste_global_sin_regla_exige_aprobacion_solo_en_lo_que_ninguna_regla_cubre(): void
+    {
+        $compras = $this->compras();
+        $h = $this->superadmin();
+        $this->sinReglas();
+        $this->regla($h, 'Pequeñas', ['shipping_type' => 'maritimo', 'min_amount' => 0, 'max_amount' => 100, 'requires_approval' => false])->assertCreated();
+
+        $this->assertFalse($this->crearOrden($compras, ['shipping_type' => 'maritimo'])->assertCreated()->json('requires_primary_approval'), 'por defecto una orden sin regla no pide aprobación');
+
+        GlobalSetting::updateOrCreate(['key' => 'purchase_approval_no_rule'], ['value' => '1']);
+
+        $hueco = $this->crearOrden($compras, ['shipping_type' => 'maritimo'])->assertCreated();
+        $this->assertTrue($hueco->json('requires_primary_approval'));
+        $this->assertSame(PurchaseOrder::STATUS_POR_APROBAR, $hueco->json('status'));
+
+        $cubierta = $this->crearOrden($compras, ['shipping_type' => 'maritimo'], 1)->assertCreated();
+        $this->assertFalse($cubierta->json('requires_primary_approval'), 'una regla que coincide manda sobre el ajuste');
+
+        $preview = $this->withHeaders($h)->postJson('/api/admin/purchase-approval-rules/preview', ['shipping_type' => 'terrestre', 'amount' => 10])->assertOk();
+        $this->assertTrue($preview->json('requires_approval'));
+        $this->assertNull($preview->json('rule'));
+        $this->withHeaders($h)->getJson('/api/admin/purchase-approval-rules/coverage')->assertJsonPath('no_rule_requires_approval', true);
     }
 }

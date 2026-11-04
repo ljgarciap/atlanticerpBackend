@@ -31,7 +31,7 @@ class PurchaseApprovalRuleController extends Controller
         $rule = PurchaseApprovalRule::create($this->validated($request));
         app(PurchaseApprovalRules::class)->forget();
 
-        return response()->json($this->present($rule), 201);
+        return response()->json($this->present($rule) + ['warnings' => $this->overlapWarnings($rule)], 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -40,7 +40,9 @@ class PurchaseApprovalRuleController extends Controller
         $rule->update($this->validated($request));
         app(PurchaseApprovalRules::class)->forget();
 
-        return response()->json($this->present($rule->refresh()));
+        $rule->refresh();
+
+        return response()->json($this->present($rule) + ['warnings' => $this->overlapWarnings($rule)]);
     }
 
     public function destroy(int $id): JsonResponse
@@ -63,9 +65,92 @@ class PurchaseApprovalRuleController extends Controller
         $rule = app(PurchaseApprovalRules::class)->decide($data['shipping_type'] ?? null, $data['who_pays_shipping'] ?? null, (float) $data['amount']);
 
         return response()->json([
-            'requires_approval' => $rule?->requires_approval === true,
+            'requires_approval' => $rule === null ? app(PurchaseApprovalRules::class)->noRuleRequiresApproval() : $rule->requires_approval === true,
             'rule' => $rule === null ? null : ['id' => $rule->id, 'name' => $rule->name],
         ]);
+    }
+
+    /**
+     * Fase 20d — rangos de monto que NINGUNA regla activa cubre, por cada combinación de envío (aéreo pagado por la empresa o por el proveedor,
+     * marítimo, terrestre). Solo informa: la orden de un hueco se resuelve con `purchase_approval_no_rule`. Montos en centavos para no
+     * arrastrar errores de coma flotante; `to = null` es «sin tope».
+     */
+    public function coverage(): JsonResponse
+    {
+        $rules = PurchaseApprovalRule::query()->where('is_active', true)->get();
+        $combos = [
+            [PurchaseOrder::SHIPPING_AEREO, PurchaseOrder::PAYS_ATLANTIC],
+            [PurchaseOrder::SHIPPING_AEREO, PurchaseOrder::PAYS_PROVIDER],
+            [PurchaseOrder::SHIPPING_MARITIMO, null],
+            [PurchaseOrder::SHIPPING_TERRESTRE, null],
+        ];
+
+        $out = [];
+        foreach ($combos as [$shipping, $payer]) {
+            $ranges = [];
+            foreach ($rules as $r) {
+                if (($r->shipping_type !== null && $r->shipping_type !== $shipping) || ($r->who_pays_shipping !== null && $r->who_pays_shipping !== $payer)) {
+                    continue;
+                }
+                $ranges[] = [$r->min_amount === null ? 0 : (int) round((float) $r->min_amount * 100), $r->max_amount === null ? null : (int) round((float) $r->max_amount * 100)];
+            }
+            usort($ranges, fn (array $a, array $b): int => $a[0] <=> $b[0]);
+
+            $gaps = [];
+            $next = 0; // primer centavo aún sin cubrir
+            foreach ($ranges as [$min, $max]) {
+                if ($next === null) {
+                    break;
+                }
+                if ($min > $next) {
+                    $gaps[] = ['from' => $next / 100, 'to' => ($min - 1) / 100];
+                }
+                $next = $max === null ? null : max($next, $max + 1);
+            }
+            if ($next !== null) {
+                $gaps[] = ['from' => $next / 100, 'to' => null];
+            }
+
+            $out[] = ['shipping_type' => $shipping, 'who_pays_shipping' => $payer, 'gaps' => $gaps];
+        }
+
+        return response()->json([
+            'no_rule_requires_approval' => app(PurchaseApprovalRules::class)->noRuleRequiresApproval(),
+            'has_gaps' => collect($out)->contains(fn (array $c): bool => $c['gaps'] !== []),
+            'combos' => $out,
+        ]);
+    }
+
+    /**
+     * Fase 20d — avisos (no bloquean) de una regla activa que se solapa con otra regla activa del MISMO alcance (igual tipo de envío e igual
+     * pagador) en un rango de monto: la de menor orden gana y la otra queda sin efecto en esa franja.
+     *
+     * @return list<array{rule_id: int, name: string, message: string}>
+     */
+    private function overlapWarnings(PurchaseApprovalRule $rule): array
+    {
+        if (! $rule->is_active) {
+            return [];
+        }
+        $lo = $rule->min_amount === null ? 0.0 : (float) $rule->min_amount;
+        $hi = $rule->max_amount === null ? INF : (float) $rule->max_amount;
+
+        $warnings = [];
+        $others = PurchaseApprovalRule::query()->where('is_active', true)->where('id', '!=', $rule->id)
+            ->where('shipping_type', $rule->shipping_type)->where('who_pays_shipping', $rule->who_pays_shipping)->get();
+        foreach ($others as $o) {
+            $olo = $o->min_amount === null ? 0.0 : (float) $o->min_amount;
+            $ohi = $o->max_amount === null ? INF : (float) $o->max_amount;
+            if ($lo <= $ohi && $olo <= $hi) {
+                $warnings[] = [
+                    'rule_id' => $o->id,
+                    'name' => $o->name,
+                    'message' => "Se solapa con la regla «{$o->name}»: en los montos comunes solo aplica la de menor orden.",
+                ];
+            }
+        }
+
+        return $warnings;
     }
 
     /** @return array<string, mixed> */

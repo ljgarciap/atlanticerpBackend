@@ -45,6 +45,11 @@ final class GlobalSettingsRegistry
         'password_reset_free_per_hour' => [
             'type' => 'integer', 'min' => 0, 'max' => 100, 'default' => 5, 'group' => 'security',
         ],
+        // Fase 20d — qué pasa con una orden de compra que NINGUNA regla de aprobación cubre: 0 = no pide aprobación (comportamiento de siempre),
+        // 1 = exige aprobación. Lo lee `PurchaseApprovalRules`.
+        'purchase_approval_no_rule' => [
+            'type' => 'boolean', 'min' => 0, 'max' => 1, 'default' => 0, 'group' => 'compras',
+        ],
         // SCRUM-1158 — «Ver como usuario» (ADR-010). Los lee `App\Modules\Auth\Services\ImpersonationSettings`; ahí está el significado de cada uno.
         // Duración máxima de la sesión (minutos); el token no se renueva.
         'impersonation_max_minutes' => [
@@ -90,6 +95,9 @@ final class GlobalSettingsRegistry
 
     /** Clave de la caducidad (horas) de la contraseña temporal. */
     public const PASSWORD_RESET_EXPIRATION_HOURS = 'password_reset_expiration_hours';
+
+    /** Clave del comportamiento de una orden de compra sin regla de aprobación que la cubra (Fase 20d). */
+    public const PURCHASE_APPROVAL_NO_RULE = 'purchase_approval_no_rule';
 
     /** Clave del tope de resets individuales por hora sin contraseña del operador. */
     public const PASSWORD_RESET_FREE_PER_HOUR = 'password_reset_free_per_hour';
