@@ -26,6 +26,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string|null                  $despacho
  * @property string|null                  $ubicacion
  * @property string                       $etapa
+ * @property string|null                  $lost_reason
+ * @property \Carbon\Carbon|null          $lost_at
+ * @property int|null                     $lost_by
+ * @property string|null                  $reopened_reason
+ * @property \Carbon\Carbon|null          $reopened_at
+ * @property int|null                     $reopened_by
  * @property \Carbon\Carbon|null          $fecha_entrega
  * @property float|null                   $valor
  * @property string|null                  $notas
@@ -61,6 +67,12 @@ class Project extends Model
         'valor',
         'notas',
         'created_by',
+        'lost_reason',
+        'lost_at',
+        'lost_by',
+        'reopened_reason',
+        'reopened_at',
+        'reopened_by',
     ];
 
     /** @return array<string, string> */
@@ -70,6 +82,8 @@ class Project extends Model
             'requires_technical_study'        => 'boolean',
             'valor'         => 'float',
             'fecha_entrega' => 'date',
+            'lost_at'       => 'datetime',
+            'reopened_at'   => 'datetime',
         ];
     }
 

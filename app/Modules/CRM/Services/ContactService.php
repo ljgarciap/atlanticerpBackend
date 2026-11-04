@@ -61,18 +61,18 @@ final class ContactService
     }
 
     /** @param array<string, mixed> $data */
-    public function create(array $data): Contact
+    public function create(array $data, ?User $actor = null): Contact
     {
         /** @var Contact $contact */
-        $contact = Contact::create($data);
+        $contact = Contact::create($data + ['created_by' => $actor?->id, 'updated_by' => $actor?->id]);
 
         return $contact;
     }
 
     /** @param array<string, mixed> $data */
-    public function update(Contact $contact, array $data): Contact
+    public function update(Contact $contact, array $data, ?User $actor = null): Contact
     {
-        $contact->update($data);
+        $contact->update($data + ['updated_by' => $actor?->id]);
 
         return $contact->fresh() ?? $contact;
     }
@@ -83,11 +83,9 @@ final class ContactService
      */
     public function activeProjectCount(Contact $contact): int
     {
-        $activeStages = ['lead', 'diseno', 'cotizacion', 'propuesta'];
-
         return Project::query()
             ->where($contact->tipo, $contact->nombre)
-            ->whereIn('etapa', $activeStages)
+            ->whereIn('etapa', CrmStages::open())
             ->count();
     }
 
@@ -211,7 +209,7 @@ final class ContactService
         $areas = $matching->pluck('area')->filter()->unique()->values()->all();
         $ubicaciones = $matching->pluck('ubicacion')->filter()->unique()->values()->all();
         $valorTotal = (float) $matching->sum('valor');
-        $valorCerrado = (float) $matching->filter(fn (Project $p): bool => $p->etapa === 'cerrado')->sum('valor');
+        $valorCerrado = (float) $matching->filter(fn (Project $p): bool => CrmStages::isWon((string) $p->etapa))->sum('valor');
 
         $ultimaActividad = null;
         foreach ($matching as $p) {
@@ -237,6 +235,10 @@ final class ContactService
             'empresa' => $contact->empresa,
             'notas' => $contact->notas,
             'source' => 'contacts',
+            'created_by' => $contact->created_by,
+            'created_by_name' => $this->userName($contact->created_by),
+            'updated_by' => $contact->updated_by,
+            'updated_by_name' => $this->userName($contact->updated_by),
             'project_count' => $matching->count(),
             'areas' => array_map('strval', (array) $areas),
             'ubicaciones' => array_map('strval', (array) $ubicaciones),
@@ -246,6 +248,16 @@ final class ContactService
             'created_at' => $contact->created_at->toDateTimeString(),
             'updated_at' => $contact->updated_at->toDateTimeString(),
         ];
+    }
+
+    private function userName(?int $id): ?string
+    {
+        if ($id === null) {
+            return null;
+        }
+        $u = User::find($id);
+
+        return $u === null ? null : trim($u->first_name.' '.$u->last_name);
     }
 
     /** @return Builder<Project> */
