@@ -138,6 +138,11 @@ final class InspectionReportController extends Controller
             return response()->json(['message' => $e->getMessage()], 403);
         }
 
+        // Fase 20a — un informe firmado por el cliente es inmutable: ni el formulario ni el archivo lo reescriben.
+        if (($signed = $this->signedReportConflict($ticket)) !== null) {
+            return $signed;
+        }
+
         /** @var array{
          *   fecha_inspeccion?: ?string, hora_inicio?: ?string, hora_fin?: ?string,
          *   internal_technician_id?: ?int,
@@ -278,6 +283,11 @@ final class InspectionReportController extends Controller
             return response()->json(['message' => $e->getMessage()], 403);
         }
 
+        // Fase 20a — un informe firmado por el cliente es inmutable: ni el formulario ni el archivo lo reescriben.
+        if (($signed = $this->signedReportConflict($ticket)) !== null) {
+            return $signed;
+        }
+
         $validated = $request->validate([
             'archivo'                => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:15360'],
             'firma_tecnico_nombre'   => ['nullable', 'string', 'max:255'],
@@ -344,6 +354,21 @@ final class InspectionReportController extends Controller
             'categoria' => $photo->categoria,
             'url'       => $this->reports->presignedPhotoUrl($photo),
         ], 201);
+    }
+
+    /**
+     * Fase 20a (docs/specs/fase20-integridad-de-flujos.md) — con la firma gráfica del cliente confirmada el
+     * contenido queda congelado. Mismo criterio que la ruta móvil (SCRUM-316), ahora también para el
+     * formulario de escritorio y el modo «archivo subido». Las fotos no pasan por aquí: se siguen pudiendo agregar.
+     */
+    private function signedReportConflict(Ticket $ticket): ?JsonResponse
+    {
+        $existing = $this->reports->findByTicket($ticket);
+        if ($existing !== null && $existing->firma_cliente_imagen !== null) {
+            return response()->json(['message' => 'Este informe ya fue firmado por el cliente y no puede modificarse.'], 409);
+        }
+
+        return null;
     }
 
     /** @return array<string, mixed> */
