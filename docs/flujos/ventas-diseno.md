@@ -65,7 +65,7 @@ Lectura y validación de: precios (`project_discount_percent` ≤ 100…), tramo
 3. **Un cliente no se puede dar de baja ni corregir en bloque**: la API no ofrece borrado de clientes, arquitectos, tarjetas ni fichas; los datos de prueba permanecen. [C]
 4. ~~**«Perdido» sin motivo y reversible sin aprobación**~~ — **resuelto en la Fase 21** (motivo obligatorio y reactivación con el aprobador). [E]
 5. **El detalle del arquitecto ignora los asociados**; solo cuenta al «arquitecto de comisión». Puede confundir: un arquitecto asociado a diez proyectos muestra cero. [E][C]
-6. **Contabilidad edita y mueve tarjetas de cualquier vendedor** (también a «perdido»). **Fase 21, parcial**: quien tiene solo `pipeline.edit` (sin `ventas_diseno.edit`) ya solo edita lo que creó. Pero Contabilidad del demo no es ese caso: recibe Ventas & Diseño completo (ver, leer, escribir, editar, aprobar y ver equipo) por una visibilidad de módulo propia de su usuario, no por `pipeline.edit`; recortarlo es un cambio de configuración pendiente de decisión. [E]
+6. ~~**Contabilidad edita y mueve tarjetas de cualquier vendedor**~~ — **resuelto en la Fase 21**: Contabilidad ve todo el Pipeline y edita lo que ella crea; ya no lee el resto de Ventas & Diseño (clientes, asociados, catálogo, calendario, reportes) ni mueve tarjetas ajenas. [E]
 7. **La ficha técnica la sube cualquiera** con acceso de lectura y no se puede borrar. [E]
 8. **Pedir `scope=team` sin permiso se degrada en silencio** a lo propio; la pantalla no avisa. [E]
 9. **Los ajustes de Ventas & Diseño son solo del superadmin**: Gerencia no ve precios, tramos ni metas aunque opere el negocio. [E]

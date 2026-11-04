@@ -56,6 +56,25 @@ class UserModuleVisibilityGrantSeederTest extends FeatureTestCase
         $this->assertTrue($fila->can_view_team);
     }
 
+    public function test_el_seeder_real_no_da_a_contabilidad_ventas_completo_solo_los_permisos_angostos(): void
+    {
+        $contabilidad = User::where('email', 'contabilidad@test.com')->firstOrFail();
+        // Los tests heredan el override de binax (TestDatabaseSeeder): se retira para ver lo que deja el seeder real, solo.
+        UserModuleVisibility::where('user_id', $contabilidad->id)->where('module', 'ventas_diseno')->delete();
+        $contabilidad->update(['extra_permissions' => []]);
+
+        $this->correr(UserModuleVisibilityGrantSeeder::class);
+        $this->correr(UserModuleVisibilityGrantSeeder::class);
+
+        $contabilidad->refresh();
+        $this->assertSame(0, UserModuleVisibility::where('user_id', $contabilidad->id)->where('module', 'ventas_diseno')->count());
+        $this->assertEqualsCanonicalizing(['ventas_diseno.pipeline.read_all', 'ventas_diseno.pipeline.edit', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.client_itbms_exemption'], $contabilidad->extra_permissions);
+        $efectivos = $contabilidad->effectivePermissionsV2();
+        $this->assertNotContains('ventas_diseno.edit', $efectivos);
+        $this->assertNotContains('ventas_diseno.approve', $efectivos);
+        $this->assertContains('ventas_diseno.pipeline.edit', $efectivos);
+    }
+
     public function test_es_idempotente_no_duplica_filas(): void
     {
         $this->correr(UserModuleVisibilityGrantSeeder::class);
