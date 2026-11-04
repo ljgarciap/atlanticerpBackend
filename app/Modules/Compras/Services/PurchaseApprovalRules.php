@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Compras\Services;
 
+use App\Modules\Auth\Models\GlobalSetting;
+use App\Modules\Auth\Support\GlobalSettingsRegistry;
 use App\Modules\Compras\Models\PurchaseApprovalRule;
 use App\Modules\Compras\Models\PurchaseOrder;
 use App\Shared\Multitenancy\Tenant;
@@ -11,7 +13,7 @@ use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Fase 14a — evalúa las reglas de aprobación de órdenes de compra: la PRIMERA regla activa (por `sort_order`, luego `id`) cuyas condiciones
- * coinciden decide; si ninguna coincide, la orden no requiere aprobación. Registrada `scoped` (AppServiceProvider): las reglas se leen una
+ * coinciden decide; si ninguna coincide, decide el ajuste global `purchase_approval_no_rule` (por defecto, no requiere aprobación). Registrada `scoped` (AppServiceProvider): las reglas se leen una
  * vez por petición/job, con la clave del tenant activo; toda escritura de reglas llama a `forget()`.
  */
 final class PurchaseApprovalRules
@@ -21,7 +23,17 @@ final class PurchaseApprovalRules
 
     public function requiresApproval(?string $shippingType, ?string $whoPaysShipping, float $payableTotal): bool
     {
-        return $this->decide($shippingType, $whoPaysShipping, $payableTotal)?->requires_approval === true;
+        $rule = $this->decide($shippingType, $whoPaysShipping, $payableTotal);
+
+        return $rule === null ? $this->noRuleRequiresApproval() : $rule->requires_approval === true;
+    }
+
+    /** Fase 20d — ajuste global `purchase_approval_no_rule`: ¿una orden que ninguna regla cubre exige aprobación? (default: no). */
+    public function noRuleRequiresApproval(): bool
+    {
+        $raw = GlobalSetting::find(GlobalSettingsRegistry::PURCHASE_APPROVAL_NO_RULE)?->value;
+
+        return is_numeric($raw) ? (int) $raw === 1 : GlobalSettingsRegistry::defaultFor(GlobalSettingsRegistry::PURCHASE_APPROVAL_NO_RULE) === 1;
     }
 
     /** La regla que decide (null si ninguna coincide); sirve a la vista previa de la pantalla. */

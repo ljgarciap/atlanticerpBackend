@@ -84,6 +84,7 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     // Fase 14a — reglas de aprobación de órdenes de compra (docs/specs/fase14-parametrizacion.md); mismo permiso que módulos y roles.
     Route::get('/purchase-approval-rules',                 [PurchaseApprovalRuleController::class, 'index']);
     Route::post('/purchase-approval-rules',                [PurchaseApprovalRuleController::class, 'store']);
+    Route::get('/purchase-approval-rules/coverage',        [PurchaseApprovalRuleController::class, 'coverage']);
     Route::post('/purchase-approval-rules/preview',        [PurchaseApprovalRuleController::class, 'preview']);
     Route::put('/purchase-approval-rules/{id}',            [PurchaseApprovalRuleController::class, 'update'])->whereNumber('id');
     Route::delete('/purchase-approval-rules/{id}',         [PurchaseApprovalRuleController::class, 'destroy'])->whereNumber('id');
