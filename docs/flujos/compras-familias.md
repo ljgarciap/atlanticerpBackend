@@ -20,17 +20,19 @@ Una familia se asigna al producto con `PUT inventory/{id}` (`family_id`; `null` 
 
 ## 4. Generar compra
 `POST families/{id}/generate-purchase` (permiso `compras.edit`; vendedor, Bodega y Contabilidad, 403) [E].
-- Familia inexistente, 404; sin productos activos **con proveedor**, 422 «La familia no tiene productos activos con proveedor asignado» [E].
-- Crea **una orden por proveedor** distinto (con dos productos de proveedores distintos, dos órdenes), modalidad `directo`, moneda USD, en `pendiente_liquidar` o `por_aprobar` según las reglas de aprobación de la empresa [E][C].
-- Cantidad por línea = `punto de reorden − existencias` (con el reorden en existencias + 7, pide 7) [E]; el costo unitario es el costo total del producto [C].
-- Los productos **sin proveedor se omiten** sin avisar [C].
+- Familia inexistente, 404 [E].
+- **Fase 20b — solo se compra la necesidad real**: `punto de reorden − (existencias + en camino + por ingresar)`. Con el reorden en 0 o por debajo de las existencias no se compra nada de ese producto [E].
+- Crea **una orden por proveedor** distinto, modalidad `directo`, moneda USD, en `pendiente_liquidar` o `por_aprobar` según las reglas de aprobación de la empresa; el costo unitario es el costo total del producto [E][C].
+- La respuesta (201) trae `order_ids` y **`omitidos`**: cada producto que no se compró con su motivo, `sin_proveedor`, `sin_necesidad` o `ya_en_camino` [E].
+- Si no hay nada que comprar responde **422 con el desglose**: «La familia no tiene productos activos con proveedor asignado» cuando ninguno tiene proveedor, o «no necesita compra ahora» cuando todos están cubiertos o ya en camino [E].
+- **Repetir no duplica**: lo recién pedido cuenta como «en camino», así que la segunda petición es un 422 con `ya_en_camino` [E]. La operación corre bajo un bloqueo por familia, para que dos clics simultáneos tampoco dupliquen [C].
 
 ## Candidatos a cambio o mejora
 (Solo documentados; ninguno se implementó.)
-1. **Pide al menos 1 unidad aunque no haga falta**: un producto con reorden 0 o por encima de sus existencias entra igual con cantidad 1 (`max(1, …)`). Una familia entera con stock suficiente genera una orden de unidades sueltas. [E]
-2. **Repetir «Generar compra» crea otras órdenes iguales**: no mira las órdenes pendientes ni lo «en camino», así que un doble clic duplica la compra. [E]
-3. **Omite en silencio los productos sin proveedor**: en el demo la mayoría no tiene proveedor, y la respuesta solo trae los ids de orden, sin listar qué quedó fuera. [E][C]
-4. **Las existencias de la cuenta no distinguen el almacén**: usa `stock_quantity` total, sin descontar lo comprometido ni sumar lo que viene en camino. [C]
+1. ~~Pide al menos 1 unidad aunque no haga falta~~ — **corregido en la Fase 20b**: solo entra la necesidad real. [E]
+2. ~~Repetir «Generar compra» crea otras órdenes iguales~~ — **corregido en la Fase 20b**: lo ya pedido cuenta como «en camino». [E]
+3. ~~Omite en silencio los productos sin proveedor~~ — **corregido en la Fase 20b**: la respuesta lista `omitidos` con su motivo. [E]
+4. **Las existencias no distinguen el almacén ni descuentan lo comprometido**: usa `stock_quantity` total (sí suma lo «en camino» y «por ingresar» desde la Fase 20b). [C]
 5. **Las familias no se pueden editar, desactivar ni borrar** (ni renombrar); solo crearlas. [C]
 6. **Moneda y modalidad fijas** (USD, directo), sin elegir proveedor alterno ni fecha. [C]
 7. **Sin ejercitar**: la pantalla de Inventario en el navegador y la asignación de varios proveedores por producto.

@@ -690,6 +690,9 @@ final class InventoryController extends Controller
      * SCRUM-243 (REQ-180 Escenario 1) — genera 1 orden "Por aprobar" por proveedor distinto entre
      * los productos activos de la familia, nunca una mezclada. No incluye asignación de proyecto
      * por línea todavía (marcado "todavía no aplicado" en el propio criterio de aceptación).
+     *
+     * Fase 20b — compra solo la necesidad real (reorden − existencias − en camino − por ingresar), omite sin avisar-en-silencio:
+     * la respuesta lista `omitidos` con su motivo (`sin_proveedor`, `sin_necesidad`, `ya_en_camino`) y, si nada hace falta, es un 422.
      */
     public function generateFamilyPurchase(Request $request, int $familyId): JsonResponse
     {
@@ -703,18 +706,58 @@ final class InventoryController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        /** @var Collection<int, CatalogProduct> $products */
-        $products = $family->products()->where('is_active', true)->whereNotNull('provider_id')->get();
+        // Fase 20b (docs/specs/fase20-integridad-de-flujos.md) — solo se compra lo que hace falta de verdad: el punto de reorden
+        // menos lo que ya hay, lo que viene en camino y lo «por ingresar». Todo bajo un bloqueo por familia: dos clics a la vez no
+        // calculan la misma necesidad (la segunda petición ya ve lo «en camino» de la primera). Lo que se omite se informa con su motivo.
+        return DB::transaction(function () use ($family, $user): JsonResponse {
+            DB::select('select pg_advisory_xact_lock(?)', [2_000_000_000 + $family->id]);
 
-        if ($products->isEmpty()) {
-            return response()->json(['message' => 'La familia no tiene productos activos con proveedor asignado.'], 422);
-        }
+            /** @var Collection<int, CatalogProduct> $active */
+            $active = $family->products()->where('is_active', true)->get();
+            $activeIds = array_values($active->map(fn (CatalogProduct $p): int => $p->id)->all());
+            $enCamino = $this->inventoryKpis->enCaminoMap($activeIds);
+            $porIngresar = $this->inventoryKpis->porIngresarMap($activeIds);
 
-        $orders = DB::transaction(function () use ($products, $user): array {
-            $byProvider = $products->groupBy('provider_id');
+            $omitidos = [];
+            /** @var array<int, int> $needs product id => unidades a comprar */
+            $needs = [];
+            /** @var Collection<int, CatalogProduct> $products */
+            $products = collect();
+            foreach ($active as $product) {
+                $stock = (int) ($product->stock_quantity ?? 0);
+                $reorder = (int) ($product->reorder_point ?? 0);
+                $motivo = null;
+                if ($product->provider_id === null) {
+                    $motivo = 'sin_proveedor';
+                } elseif ($reorder - $stock <= 0) {
+                    $motivo = 'sin_necesidad';
+                } else {
+                    $need = $reorder - ($stock + ($enCamino[$product->id] ?? 0) + ($porIngresar[$product->id] ?? 0));
+                    if ($need <= 0) {
+                        $motivo = 'ya_en_camino';
+                    } else {
+                        $needs[$product->id] = $need;
+                        $products->push($product);
+                    }
+                }
+                if ($motivo !== null) {
+                    $omitidos[] = ['product_id' => $product->id, 'name' => $product->name, 'motivo' => $motivo];
+                }
+            }
+
+            if ($products->isEmpty()) {
+                $conProveedor = $active->contains(fn (CatalogProduct $p): bool => $p->provider_id !== null);
+
+                return response()->json([
+                    'message' => $conProveedor
+                        ? 'La familia no necesita compra ahora: sus productos con proveedor ya tienen lo necesario o ya hay una compra en camino.'
+                        : 'La familia no tiene productos activos con proveedor asignado.',
+                    'omitidos' => $omitidos,
+                ], 422);
+            }
+
             $created = [];
-
-            foreach ($byProvider as $providerId => $providerProducts) {
+            foreach ($products->groupBy('provider_id') as $providerId => $providerProducts) {
                 $order = PurchaseOrder::create([
                     'provider_id' => (int) $providerId,
                     // Fase 14e: nace sin aprobación y `applyTo()` la pasa a «Por aprobar» solo si las reglas de la empresa la requieren.
@@ -728,7 +771,7 @@ final class InventoryController extends Controller
 
                 $totalAmount = 0.0;
                 foreach ($providerProducts as $product) {
-                    $quantity = max(1, ($product->reorder_point ?? 0) - ($product->stock_quantity ?? 0));
+                    $quantity = $needs[$product->id];
                     $unitCost = $product->costTotal();
                     $subtotal = $unitCost * $quantity;
                     $totalAmount += $subtotal;
@@ -747,10 +790,8 @@ final class InventoryController extends Controller
                 $created[] = $order->id;
             }
 
-            return $created;
+            return response()->json(['order_ids' => $created, 'omitidos' => $omitidos], 201);
         });
-
-        return response()->json(['order_ids' => $orders], 201);
     }
 
     /**
