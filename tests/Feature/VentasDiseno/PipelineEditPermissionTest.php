@@ -37,7 +37,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     private function makeCard(string $stage): PipelineCard
     {
         $master  = MasterClient::create(['name' => 'Cliente Test']);
-        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-0000-1-2026']);
+        $sub     = SubClient::create(['master_client_id' => $master->id, 'business_name' => 'Subcliente Test', 'tax_id' => '155-'.random_int(1000, 9999999).'-'.random_int(1, 99).'-2026']);
         $project = SalesProject::create(['sub_client_id' => $sub->id, 'name' => 'Proyecto Test']);
 
         return PipelineCard::create([
@@ -85,7 +85,7 @@ class PipelineEditPermissionTest extends FeatureTestCase
     {
         $card = $this->makeCard('lead');
 
-        $this->withHeaders($this->contabilidadHeaders())->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])->assertOk();
+        $this->withHeaders($this->contabilidadHeaders())->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost', 'motivo' => 'El cliente cerró el proyecto'])->assertOk();
 
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $this->assertSame('lost', PipelineCard::find($card->id)->stage);
@@ -201,5 +201,28 @@ class PipelineEditPermissionTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
 
         $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['name' => 'Propio'])->assertOk();
+    }
+
+    // ── Fase 21 (B1): `pipeline.edit` sin `ventas_diseno.edit` solo edita lo que la persona creó ──────────────────────────────────────
+
+    public function test_con_solo_pipeline_edit_se_editan_las_tarjetas_propias_y_las_ajenas_son_de_lectura(): void
+    {
+        $email = 'liderbodega@test.com';
+        User::where('email', $email)->firstOrFail()->update(['extra_permissions' => ['ventas_diseno.pipeline.edit', 'ventas_diseno.pipeline.read_all']]);
+        $headers = $this->authHeaders($this->loginAs($email, $email, 'lider_bodega'));
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $propia = $this->makeCard('lead');
+        $propia->update(['created_by' => User::where('email', $email)->value('id')]);
+        $ajena = $this->makeCard('lead');
+        $ajena->update(['created_by' => $this->sellerId()]);
+
+        $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$propia->id}")->assertOk()->assertJsonPath('can_edit', true);
+        $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$propia->id}", ['name' => 'Mi proyecto'])->assertOk();
+
+        $this->withHeaders($headers)->getJson("/api/ventas-diseno/pipeline/{$ajena->id}")->assertOk()->assertJsonPath('can_edit', false);
+        $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$ajena->id}", ['name' => 'Ajeno'])->assertStatus(403);
+        $this->withHeaders($headers)->patchJson("/api/ventas-diseno/pipeline/{$ajena->id}/stage", ['stage' => 'lost', 'motivo' => 'No debería poder perderla'])->assertStatus(403);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
+        $this->assertSame('lead', PipelineCard::findOrFail($ajena->id)->stage);
     }
 }

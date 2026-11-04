@@ -30,10 +30,21 @@ class UserModuleVisibilityGrantSeeder extends Seeder
         'lideroperaciones@test.com' => [
             ['module' => 'admin_contab', 'can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => true],
         ],
-        // SCRUM-1150 — Contabilidad replica a Gerencia en Ventas & Diseño (ver, equipo, editar y aprobar) sin subir su nivel de seguridad.
-        'contabilidad@test.com' => [
-            ['module' => 'ventas_diseno', 'can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => true, 'can_edit' => true, 'can_approve' => true],
-        ],
+        // Fase 21 (B1) — Contabilidad YA NO recibe Ventas & Diseño completo (SCRUM-1150: «replica a Gerencia», ver/equipo/editar/aprobar): solo crea y
+        // vincula. Sus permisos angostos están en EXTRA_PERMISSIONS. Los tests que dependen del comportamiento anterior lo siembran en
+        // `Tests\Support\TestDatabaseSeeder`, no aquí.
+    ];
+
+    /**
+     * Fase 21 (B1) — permisos angostos por persona del demo, además de los grants de módulo. Se SUMAN a los que ya tenga (nunca quitan ni reemplazan).
+     * Contabilidad: ve todo el Pipeline (`pipeline.read_all`) y edita lo que crea (`pipeline.edit`, que `PipelineCard::isEditableBy` limita a las
+     * tarjetas propias cuando no hay `ventas_diseno.edit`); además corrige los datos fiscales de los clientes y los exime de ITBMS, que es su trabajo
+     * en Admin & Contab (pantalla «Clientes fiscal»).
+     *
+     * @var array<string, list<string>>
+     */
+    private const EXTRA_PERMISSIONS = [
+        'contabilidad@test.com' => ['ventas_diseno.pipeline.read_all', 'ventas_diseno.pipeline.edit', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.client_itbms_exemption'],
     ];
 
     /**
@@ -81,6 +92,19 @@ class UserModuleVisibilityGrantSeeder extends Seeder
                             'can_approve'   => $grant['can_approve'] ?? null,
                         ]);
                     }
+                }
+            }
+
+            foreach (self::EXTRA_PERMISSIONS as $email => $permissions) {
+                $user = User::where('email', $email)->first();
+                if ($user === null) {
+                    $this->command->warn("Usuario \"{$email}\" no encontrado — permisos angostos saltados.");
+                    continue;
+                }
+                $current = $user->extra_permissions ?? [];
+                $missing = array_values(array_diff($permissions, $current));
+                if ($missing !== []) {
+                    $user->update(['extra_permissions' => array_values(array_merge($current, $missing))]);
                 }
             }
 

@@ -32,7 +32,7 @@ Verificado en 16 rutas × 6 roles [E]. Dos cosas llaman la atención: **Contabil
 
 ## 3. Tarjeta de pipeline: contactos, «perdido» y quién la toca
 - Para **salir de Lead** la tarjeta necesita al menos un contacto propio (los del subcliente no cuentan); si no, 422 «Falta al menos 1 contacto antes de mover esta tarjeta desde Lead» [E].
-- **«Perdido»** se alcanza sin motivo y **se deshace** con otro cambio de etapa (`lost` → `lead`), sin aprobación [E].
+- **«Perdido»** (Fase 21) exige un `motivo` de al menos 10 caracteres, que queda en la tarjeta (`lost_reason`, `lost_at`, `lost_by`) y en la auditoría [E]. **Reactivarlo** (`lost` → `lead`) lo decide solo el aprobador primario, un suplente o un superadmin, también con motivo (`reopened_*`); el dueño de la tarjeta o Gerencia sin ser el aprobador reciben 403 [E]. El detalle trae `can_reactivate` para ofrecer el botón solo a quien puede. Arrastrar una tarjeta a o desde «Perdido» no se permite: se hace desde el detalle [C].
 - `request-pass-to-order` solo vale desde «Aprobado» (422 con el mensaje en otro caso) [E].
 - **Quién la edita**: el dueño; **Gerencia** edita la de cualquiera (200); otro vendedor recibe 403 al verla, moverla o editarla; **Contabilidad la ve y también la mueve y edita** (su permiso `pipeline.edit` le da alcance de equipo dentro del Pipeline) [E][C].
 
@@ -63,9 +63,9 @@ Lectura y validación de: precios (`project_discount_percent` ≤ 100…), tramo
 1. ~~**Clientes sin control de duplicados** de RUC~~ — **resuelto en la Fase 17a** (409 `duplicate_tax_id`, índice único). [E]
 2. **Se puede borrar el último contacto** de un subcliente aunque el alta lo exija. [E]
 3. **Un cliente no se puede dar de baja ni corregir en bloque**: la API no ofrece borrado de clientes, arquitectos, tarjetas ni fichas; los datos de prueba permanecen. [C]
-4. **«Perdido» sin motivo y reversible sin aprobación**: no queda por qué se perdió ni quién lo reabrió fuera de la auditoría. [E]
+4. ~~**«Perdido» sin motivo y reversible sin aprobación**~~ — **resuelto en la Fase 21** (motivo obligatorio y reactivación con el aprobador). [E]
 5. **El detalle del arquitecto ignora los asociados**; solo cuenta al «arquitecto de comisión». Puede confundir: un arquitecto asociado a diez proyectos muestra cero. [E][C]
-6. **Contabilidad edita y mueve tarjetas de cualquier vendedor** (también a «perdido»); el permiso se concedió para la vinculación mínima de clientes y hoy abarca todo el Pipeline. [E]
+6. ~~**Contabilidad edita y mueve tarjetas de cualquier vendedor**~~ — **resuelto en la Fase 21**: Contabilidad ve todo el Pipeline y edita lo que ella crea; ya no lee el resto de Ventas & Diseño (clientes, asociados, catálogo, calendario, reportes) ni mueve tarjetas ajenas. [E]
 7. **La ficha técnica la sube cualquiera** con acceso de lectura y no se puede borrar. [E]
 8. **Pedir `scope=team` sin permiso se degrada en silencio** a lo propio; la pantalla no avisa. [E]
 9. **Los ajustes de Ventas & Diseño son solo del superadmin**: Gerencia no ve precios, tramos ni metas aunque opere el negocio. [E]

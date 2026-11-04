@@ -37,6 +37,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float|null                               $worked_area_m2
  * @property string|null                              $delivery_type
  * @property string|null                              $observations
+ * @property string|null                              $lost_reason
+ * @property \Carbon\Carbon|null                      $lost_at
+ * @property int|null                                 $lost_by
+ * @property string|null                              $reopened_reason
+ * @property \Carbon\Carbon|null                      $reopened_at
+ * @property int|null                                 $reopened_by
  * @property \Carbon\Carbon                          $stage_changed_at
  * @property SalesProject                            $salesProject
  * @property MasterClient|null                       $masterClient
@@ -155,6 +161,7 @@ class PipelineCard extends Model
         'sales_project_id', 'stage', 'master_client_id', 'sub_client_id', 'owner_id',
         'created_by', 'order_approved_by', 'order_approved_at', 'order_requested_by', 'order_requested_at', 'order_request_note', 'amount', 'worked_area_m2', 'delivery_type', 'observations',
         'stage_changed_at', 'compartido_con',
+        'lost_reason', 'lost_at', 'lost_by', 'reopened_reason', 'reopened_at', 'reopened_by',
     ];
 
     /** @return array<string, string> */
@@ -164,6 +171,8 @@ class PipelineCard extends Model
             'amount'           => 'float',
             'worked_area_m2'   => 'float',
             'stage_changed_at' => 'datetime',
+            'lost_at'          => 'datetime',
+            'reopened_at'      => 'datetime',
             'order_approved_at' => 'datetime',
             'order_requested_at' => 'datetime',
             // REQ-506 (Batch 15) — array de user_id de responsables ADICIONALES al owner_id
@@ -306,6 +315,16 @@ class PipelineCard extends Model
             ! in_array('superadmin.all', $permissions, true)
             && ! in_array(self::EDIT_PERMISSION, $permissions, true)
             && ! in_array(self::PIPELINE_EDIT_PERMISSION, $permissions, true)
+        ) {
+            return false;
+        }
+
+        // Fase 21 (B1) — `pipeline.edit` se concedió a Contabilidad para vincular clientes y crear el «Nuevo proyecto»: con SOLO ese permiso
+        // (sin `ventas_diseno.edit` ni superadmin) edita únicamente las tarjetas que ella misma creó; las de otros vendedores son de lectura.
+        if (
+            ! in_array('superadmin.all', $permissions, true)
+            && ! in_array(self::EDIT_PERMISSION, $permissions, true)
+            && $this->created_by !== $user->id
         ) {
             return false;
         }

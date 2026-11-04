@@ -92,8 +92,12 @@ class QuoteNewVersionFromDesignTest extends FeatureTestCase
 
     private function moveTo(string $token, PipelineCard $card, string ...$stages): void
     {
+        // Fase 21 — perder y reactivar piden motivo, y reactivar lo decide el aprobador: el vendedor del test lo es.
+        $this->tenant();
+        \App\Modules\Compras\Models\ComprasSettings::current()
+            ->update(['primary_approver_user_id' => (int) DB::table('atlantic_auth.users')->where('email', self::DESIGNER)->value('id')]);
         foreach ($stages as $stage) {
-            $this->withHeaders($this->h($token))->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => $stage])->assertStatus(200);
+            $this->withHeaders($this->h($token))->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => $stage, 'motivo' => 'Motivo de prueba para el cambio'])->assertStatus(200);
         }
     }
 

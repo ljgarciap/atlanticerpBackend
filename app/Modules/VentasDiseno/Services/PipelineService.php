@@ -203,13 +203,23 @@ final class PipelineService
      * ejecutan `passToOrder()`. El lock sigue siendo necesario para que dos cambios de etapa
      * concurrentes no se pisen.
      */
-    public function changeStage(PipelineCard $card, string $targetStage): PipelineCard
+    public function changeStage(PipelineCard $card, string $targetStage, ?User $actor = null, ?string $reason = null): PipelineCard
     {
-        return DB::transaction(function () use ($card, $targetStage): PipelineCard {
+        return DB::transaction(function () use ($card, $targetStage, $actor, $reason): PipelineCard {
             /** @var PipelineCard $locked */
             $locked = PipelineCard::whereKey($card->id)->lockForUpdate()->firstOrFail();
 
-            $locked->update(['stage' => $targetStage, 'stage_changed_at' => now()]);
+            $changes = ['stage' => $targetStage, 'stage_changed_at' => now()];
+            if ($reason !== null) {
+                // Fase 21 (B2) — perder deja el motivo; reactivar deja el suyo (el motivo de la pérdida se conserva como historia).
+                if (PipelineStages::isLost($targetStage)) {
+                    $changes += ['lost_reason' => $reason, 'lost_at' => now(), 'lost_by' => $actor?->id];
+                } else {
+                    $changes += ['reopened_reason' => $reason, 'reopened_at' => now(), 'reopened_by' => $actor?->id];
+                }
+            }
+
+            $locked->update($changes);
 
             /** @var PipelineCard $fresh */
             $fresh = $locked->fresh(self::DETAIL_RELATIONS);

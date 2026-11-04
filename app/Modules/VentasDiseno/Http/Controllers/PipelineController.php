@@ -19,6 +19,7 @@ use App\Modules\VentasDiseno\Services\ProductDeliveryService;
 use App\Modules\VentasDiseno\Services\ProjectAssociateService;
 use App\Shared\Support\CircuitOpenException;
 use App\Shared\Support\ParsesIdListQueryParam;
+use App\Shared\Support\PrimaryApprovers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -271,6 +272,18 @@ final class PipelineController extends Controller
         ]);
         $targetStage = $validated['stage'];
 
+        // Fase 21 (B2) — perder una tarjeta exige un motivo guardado; reactivar una perdida lo decide el aprobador primario o un suplente
+        // (o un superadmin), también con motivo. Ambos quedan en la tarjeta y en la auditoría.
+        $reactivating = PipelineStages::isLost($card->stage) && ! PipelineStages::isLost($targetStage);
+        $losing = PipelineStages::isLost($targetStage) && ! PipelineStages::isLost($card->stage);
+        if ($reactivating && ! $this->canReactivateLost($user)) {
+            return response()->json(['message' => 'Solo el aprobador configurado o un suplente puede reactivar un proyecto perdido. No es un permiso que falte: pídele a un superadmin que te designe en Configuración global → Aprobadores.'], 403);
+        }
+        $reason = null;
+        if ($losing || $reactivating) {
+            $reason = trim((string) $request->validate(['motivo' => ['required', 'string', 'min:10', 'max:1000']])['motivo']);
+        }
+
         // REQ-018 es la única acción permitida sobre una tarjeta en "lost" — bypassea
         // isEditableBy() a propósito (que bloquea "lost" por completo) para permitir
         // justamente esa reactivación.
@@ -295,9 +308,16 @@ final class PipelineController extends Controller
             return response()->json(['message' => $gateError], 422);
         }
 
-        $card = $this->service->changeStage($card, $targetStage);
+        $card = $this->service->changeStage($card, $targetStage, $user, $reason);
 
         return response()->json($this->formatDetail($card, $user));
+    }
+
+    /** Fase 21 (B2) — quién decide reabrir un proyecto perdido: el aprobador primario (titular de Compras) o un suplente, o un superadmin. Sin titular configurado, solo el superadmin. */
+    private function canReactivateLost(User $user): bool
+    {
+        return $user->hasPermission('superadmin.all')
+            || PrimaryApprovers::isApprover($user->id, \App\Modules\Compras\Models\ComprasSettings::current()->primary_approver_user_id);
     }
 
     /**
@@ -671,6 +691,13 @@ final class PipelineController extends Controller
                 'email' => $c->email,
             ])->values(),
             'has_architect_contact' => $card->hasArchitectContact(),
+            // Fase 21 (B2) — por qué se perdió y, si se reactivó, quién lo decidió y por qué.
+            'lost_reason'           => $card->lost_reason,
+            'lost_at'               => $card->lost_at?->toIso8601String(),
+            'reopened_reason'       => $card->reopened_reason,
+            'reopened_at'           => $card->reopened_at?->toIso8601String(),
+            // Fase 21 (B2) — el botón «Reactivar» solo se ofrece a quien puede decidirlo.
+            'can_reactivate'        => PipelineStages::isLost($card->stage) && $this->canReactivateLost($user),
             'can_edit'              => $card->isEditableBy($user),
             // SCRUM-1128 — el botón "Pasar a Pedido" se muestra solo con esto en true.
             'can_pass_to_order'     => PipelineStages::isWon($card->stage)
