@@ -14,6 +14,7 @@ use App\Shared\Http\Middleware\AttributeDbChangesToUser;
 use App\Shared\Http\Middleware\AuthenticateJwt;
 use App\Shared\Http\Middleware\BlockWritesWhenImpersonating;
 use App\Shared\Http\Middleware\CheckPermission;
+use App\Modules\VentasDiseno\Http\Middleware\EnsureTeamScopeAllowed;
 use App\Shared\Http\Middleware\DenyWhenImpersonating;
 use App\Shared\Http\Middleware\EnforceRole;
 use App\Shared\Http\Middleware\SetLocaleFromHeader;
@@ -128,6 +129,8 @@ return Application::configure(basePath: dirname(__DIR__))
             // SCRUM-1158 (C6) — GET que escriben: se niegan en «Ver como usuario» hasta que pasen a POST.
             'no_impersonation' => DenyWhenImpersonating::class,
             'gerencia.scope' => ApplyGerenciaScope::class,
+            // Fase 23 (#8) — `scope=team` sin ver al equipo responde 403 en vez de degradarse a lo propio.
+            'team.scope' => EnsureTeamScopeAllowed::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

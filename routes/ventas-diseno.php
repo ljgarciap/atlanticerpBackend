@@ -76,8 +76,8 @@ Route::prefix('pipeline')->group(function (): void {
 // alcance Mías/Equipo y mismo permiso que /pipeline — no es una superficie de datos nueva, es otra
 // vista sobre PipelineCard. REQ-612/614 son 100% frontend (query params sobre /pipeline), sin ruta propia.
 Route::prefix('projects')->group(function (): void {
-    Route::get('/', [ProjectsListController::class, 'index'])->middleware('permission:ventas_diseno.read');
-    Route::get('/export', [ProjectsListController::class, 'export'])->middleware('permission:ventas_diseno.read');
+    Route::get('/', [ProjectsListController::class, 'index'])->middleware(['permission:ventas_diseno.read', 'team.scope']);
+    Route::get('/export', [ProjectsListController::class, 'export'])->middleware(['permission:ventas_diseno.read', 'team.scope']);
 });
 
 // REQ-010: buscar/crear Cliente Master y Subcliente desde el flujo de vinculación de Pipeline.
@@ -132,7 +132,7 @@ Route::prefix('dashboard')->middleware('permission:platform.management')->group(
 // desempeño/comisiones) es shell de frontend puro (sin endpoint).
 Route::prefix('home')->group(function (): void {
     Route::get('/vendors', [HomeController::class, 'vendors'])->middleware('permission:ventas_diseno.read');
-    Route::get('/summary', [HomeController::class, 'summary'])->middleware('permission:ventas_diseno.read');
+    Route::get('/summary', [HomeController::class, 'summary'])->middleware(['permission:ventas_diseno.read', 'team.scope']);
     // SCRUM-908 — tarjeta "Aprobaciones Pendientes" (hoy siempre vacía, ver docblock del controller).
     Route::get('/approvals-pending', [HomeController::class, 'approvalsPending'])->middleware('permission:ventas_diseno.read');
 });
@@ -149,7 +149,7 @@ Route::prefix('calendar')->group(function (): void {
 });
 
 Route::prefix('calendar-events')->group(function (): void {
-    Route::get('/', [CalendarEventController::class, 'index'])->middleware('permission:ventas_diseno.read');
+    Route::get('/', [CalendarEventController::class, 'index'])->middleware(['permission:ventas_diseno.read', 'team.scope']);
     Route::post('/', [CalendarEventController::class, 'store'])->middleware('permission:ventas_diseno.write');
     Route::put('/{id}', [CalendarEventController::class, 'update'])->middleware('permission:ventas_diseno.edit');
     Route::delete('/{id}', [CalendarEventController::class, 'destroy'])->middleware('permission:ventas_diseno.edit');
@@ -193,7 +193,7 @@ Route::prefix('/{quoteId}/parts')->group(function (): void {
 
 Route::prefix('quotes')->group(function () use ($quoteChildRoutes): void {
     // Grupo 5 (REQ-079 a 085) — listado con tarjetas resumen, búsqueda y filtros.
-    Route::get('/', [QuoteListController::class, 'index'])->middleware('permission:ventas_diseno.read');
+    Route::get('/', [QuoteListController::class, 'index'])->middleware(['permission:ventas_diseno.read', 'team.scope']);
     Route::post('/', [QuoteController::class, 'store'])->middleware('permission:ventas_diseno.write');
     // SCRUM-930/931/932 (rebote Gerencia 2026-09-20) — sin middleware `permission:` de ruta a
     // propósito, mismo patrón que `OrderStatusController` (ver su docblock): Cobros/Estado de
@@ -258,7 +258,7 @@ Route::prefix('pricing-settings')->group(function (): void {
 // SCRUM-944/945 — tramos de comisión escalonada de vendedores (antes hardcodeados en
 // SalesTotalsService::percentFor()). Exclusivo de superadmin (sin pantalla propia todavía, solo
 // la vista consolidada) — ver SalesCommissionTierController.
-Route::prefix('sales-commission-tiers')->middleware('permission:superadmin.all')->group(function (): void {
+Route::prefix('sales-commission-tiers')->middleware('permission:ventas_diseno.reports.configure')->group(function (): void {
     Route::get('/', [SalesCommissionTierController::class, 'index']);
     Route::put('/', [SalesCommissionTierController::class, 'replace']);
 });
@@ -292,7 +292,9 @@ Route::prefix('catalog')->group(function (): void {
     Route::get('/pdf-exports/{uuid}', [CatalogController::class, 'pdfExport'])->whereUuid('uuid')->middleware('permission:ventas_diseno.read');
     Route::get('/{id}', [CatalogController::class, 'show'])->whereNumber('id')->middleware('permission:ventas_diseno.read');
     Route::get('/{id}/technical-sheet', [CatalogController::class, 'technicalSheetUrl'])->whereNumber('id')->middleware('permission:ventas_diseno.read');
-    Route::post('/{id}/technical-sheet', [CatalogController::class, 'uploadTechnicalSheet'])->whereNumber('id')->middleware('permission:ventas_diseno.read');
+    // Fase 23 (#7): subir y borrar la ficha exige editar Ventas & Diseño (antes la subía cualquiera con lectura y no se podía borrar).
+    Route::post('/{id}/technical-sheet', [CatalogController::class, 'uploadTechnicalSheet'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
+    Route::delete('/{id}/technical-sheet', [CatalogController::class, 'deleteTechnicalSheet'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
 });
 
 // REQ-037: tab "Familias" del buscador — mismo permiso de lectura que catalog-products.
@@ -321,7 +323,7 @@ Route::prefix('sales-projects')->group(function (): void {
 
 // Grupo 4 del plan de PM — pantalla Reportes (REQ-071 a 079).
 Route::prefix('reports')->group(function (): void {
-    Route::get('/summary', [ReportsController::class, 'summary'])->middleware('permission:ventas_diseno.read');
+    Route::get('/summary', [ReportsController::class, 'summary'])->middleware(['permission:ventas_diseno.read', 'team.scope']);
 
     // REQ-072/075/076/SCRUM-146 — sección "Configuración" (Meta por vendedor +
     // umbral/meses/probabilidades). settings/GET queda abierto a ventas_diseno.read
@@ -333,7 +335,7 @@ Route::prefix('reports')->group(function (): void {
     Route::put('/settings', [ReportsConfigController::class, 'settingsUpdate'])->middleware('permission:ventas_diseno.reports.configure');
 
     // REQ-073 — panel Comisiones.
-    Route::get('/commissions', [CommissionsController::class, 'summary'])->middleware('permission:ventas_diseno.read');
+    Route::get('/commissions', [CommissionsController::class, 'summary'])->middleware(['permission:ventas_diseno.read', 'team.scope']);
     Route::patch('/commissions/{cohortId}/mark-paid', [CommissionsController::class, 'markPaid'])->middleware('permission:ventas_diseno.commissions.mark_paid');
 });
 

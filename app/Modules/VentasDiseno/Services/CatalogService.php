@@ -281,6 +281,29 @@ final class CatalogService
         return $product;
     }
 
+    /**
+     * Fase 23 (#7) — borra la ficha técnica de un producto (el archivo y las tres columnas). Devuelve false si no tenía.
+     * Primero se limpia la fila y después el archivo: si el borrado del archivo fallara, queda un huérfano registrado en el log,
+     * nunca una fila que apunte a un archivo que ya no existe.
+     */
+    public function deleteTechnicalSheet(CatalogProduct $product): bool
+    {
+        $key = $product->technical_sheet_key;
+        if ($key === null) {
+            return false;
+        }
+
+        $product->update(['technical_sheet_key' => null, 'technical_sheet_filename' => null, 'technical_sheet_uploaded_at' => null]);
+
+        try {
+            Storage::disk(self::TECHNICAL_SHEET_DISK)->delete($key);
+        } catch (\Throwable $e) {
+            Log::error('catalog_service.technical_sheet_cleanup_failed', ['disk' => self::TECHNICAL_SHEET_DISK, 'key' => $key, 'error' => $e->getMessage()]);
+        }
+
+        return true;
+    }
+
     /** REQ-618 RN2 — presigned URL de 15 min, mismo TTL que `DocumentService::PRESIGNED_URL_TTL`. */
     public function technicalSheetUrl(CatalogProduct $product): ?string
     {

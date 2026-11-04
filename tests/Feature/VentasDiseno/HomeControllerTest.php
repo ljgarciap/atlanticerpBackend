@@ -323,11 +323,15 @@ class HomeControllerTest extends FeatureTestCase
         $this->makeCard($managerId, 'proposal');
 
         $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
-        $response = $this->withHeaders($this->authHeaders($token))
+        // Fase 23 (#8): pedir «equipo» sin verlo ya no se degrada en silencio, responde 403.
+        $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/ventas-diseno/home/summary?scope=team&owner_id={$managerId}")
-            ->assertStatus(200);
+            ->assertStatus(403)->assertJsonPath('code', 'team_scope_forbidden');
 
-        // Un Diseñador nunca ve "Equipo" — owner_id no lo saca de su propio alcance.
+        // Un Diseñador nunca ve "Equipo" — owner_id solo no lo saca de su propio alcance.
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/ventas-diseno/home/summary?owner_id={$managerId}")
+            ->assertStatus(200);
         $this->assertCount(1, $response->json('final_stage'));
     }
 }

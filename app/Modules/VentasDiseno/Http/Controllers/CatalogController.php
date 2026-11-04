@@ -100,6 +100,17 @@ final class CatalogController extends Controller
         ]);
     }
 
+    /** Fase 23 (#7) — quita la ficha técnica (solo quien edita Ventas & Diseño). 204; 404 si el producto no existe o no tiene ficha. */
+    public function deleteTechnicalSheet(int $id): JsonResponse
+    {
+        $product = $this->service->findModel($id);
+        if ($product === null || ! $this->service->deleteTechnicalSheet($product)) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json(null, 204);
+    }
+
     /**
      * SCRUM-702 (REQ-622) — PDF dinámico real, generado con dompdf (ver `CatalogPdfService`)
      * `mode=completo` trae TODOS los productos activos (RN4, ignora cualquier `product_ids`
