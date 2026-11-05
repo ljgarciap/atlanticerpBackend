@@ -194,7 +194,7 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $this->assertSame(1, $response->json('mi_dia.asignados_hoy'));
     }
 
-    public function test_summary_scope_team_es_ignorado_para_quien_no_puede_ver_equipo(): void
+    public function test_summary_scope_team_responde_403_a_quien_no_puede_ver_equipo(): void
     {
         $pickerId = $this->userIdByEmail('auxiliarbodega@test.com');
         $order = $this->makeOrder(['picker_id' => $pickerId, 'stage' => Order::STAGE_ASIGNADO]);
@@ -205,9 +205,11 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $otherId = $this->userIdByEmail('asistentebodega2@test.com');
         $this->makeOrder(['assistant_id' => $otherId, 'stage' => Order::STAGE_ASIGNADO]);
 
-        $response = $this->withHeaders($this->authHeadersFor('auxiliarbodega@test.com', 'auxiliar_bodega'))
-            ->getJson('/api/bodega/home/summary?scope=team')
-            ->assertStatus(200);
+        // Fase 25b: pedir el equipo sin poder verlo ya no se degrada en silencio: 403. Sin `scope` sigue siendo «lo propio».
+        $headers = $this->authHeadersFor('auxiliarbodega@test.com', 'auxiliar_bodega');
+        $this->withHeaders($headers)->getJson('/api/bodega/home/summary?scope=team')->assertStatus(403)->assertJsonPath('code', 'team_scope_forbidden');
+
+        $response = $this->withHeaders($headers)->getJson('/api/bodega/home/summary')->assertStatus(200);
 
         $this->assertSame(1, $response->json('mi_dia.asignados_hoy'));
     }

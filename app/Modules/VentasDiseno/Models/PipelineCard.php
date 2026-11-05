@@ -76,6 +76,14 @@ class PipelineCard extends Model
         return in_array(self::PIPELINE_EDIT_PERMISSION, $user->effectivePermissionsV2(), true);
     }
 
+    /** Fase 25 — quién puede pedir el alcance de equipo en el Pipeline: ver al equipo de Ventas & Diseño, leer todo (`pipeline.read_all`) o editar (`pipeline.edit`). */
+    public static function userCanSeeTeam(User $user): bool
+    {
+        return $user->canViewTeamV2('ventas_diseno')
+            || in_array('ventas_diseno.pipeline.read_all', $user->effectivePermissionsV2(), true)
+            || self::userHasPipelineEdit($user);
+    }
+
     /**
      * Archivos que NO se pueden quitar de un proyecto Aprobado, sin excepción ni permiso que lo salte (decisión de Luis
      * 2026-10-06): los de diseño y propuesta son de solo lectura una vez aprobado (REQ-013/015, igual que la subida) y

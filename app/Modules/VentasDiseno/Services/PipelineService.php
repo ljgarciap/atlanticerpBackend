@@ -356,9 +356,7 @@ final class PipelineService
         // SCRUM-1128 — `ventas_diseno.pipeline.read_all` (Contabilidad) da el alcance de equipo SOLO para
         // leer; ninguna ruta de escritura lo consulta.
         // SCRUM-1139 — `ventas_diseno.pipeline.edit` (Contabilidad) también da el alcance de equipo: quien edita el Pipeline lo ve completo.
-        $canSeeTeam = $user->canViewTeamV2('ventas_diseno')
-            || in_array('ventas_diseno.pipeline.read_all', $user->effectivePermissionsV2(), true)
-            || PipelineCard::userHasPipelineEdit($user);
+        $canSeeTeam = PipelineCard::userCanSeeTeam($user);
         $scope      = $filters['scope'] ?? 'own';
 
         if ($scope !== 'team' || ! $canSeeTeam) {
