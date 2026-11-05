@@ -7,6 +7,7 @@ namespace App\Modules\CRM\Services;
 use App\Models\User;
 use App\Modules\CRM\Models\Project;
 use App\Modules\CRM\Models\ProjectActivity;
+use App\Shared\Catalogs\CatalogService;
 use App\Shared\Multitenancy\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,7 +17,6 @@ use Illuminate\Support\Facades\DB;
 final class ReportsService
 {
 
-    private const ACTIVITY_TYPES = ['llamada', 'email', 'reunion', 'whatsapp', 'visita', 'otro'];
 
     /**
      * @param  list<int>|null  $filterUserIds  SCRUM-854 — multi-selección (OR entre seleccionados).
@@ -77,12 +77,10 @@ final class ReportsService
         $activities = $activitiesQuery->orderByDesc('fecha')->get();
 
         /** @var array<string, int> $actByType */
-        $actByType = array_fill_keys(self::ACTIVITY_TYPES, 0);
+        $actByType = array_fill_keys(CatalogService::keys('crm_activity_type'), 0);
         foreach ($activities as $act) {
             $tipo = (string) $act->tipo;
-            if (isset($actByType[$tipo])) {
-                $actByType[$tipo]++;
-            }
+            $actByType[$tipo] = ($actByType[$tipo] ?? 0) + 1;
         }
 
         $teamBreakdown = [];

@@ -93,6 +93,28 @@ return [
             'usage' => [Contact::class, 'tipo'],
             'props' => [],
         ],
+        // Fase 25 — listas del CRM que estaban fijas en el código. La lógica nunca pregunta por una clave concreta (solo valida, lista, filtra y
+        // cuenta): es vocabulario de la empresa, sin entradas de sistema; una entrada en uso no se borra, se desactiva.
+        'crm_project_type' => [
+            'label' => 'Tipos de proyecto (CRM)',
+            'usage' => [\App\Modules\CRM\Models\Project::class, 'tipo'],
+            'props' => [],
+        ],
+        'crm_activity_type' => [
+            'label' => 'Tipos de actividad (CRM)',
+            'usage' => [\App\Modules\CRM\Models\ProjectActivity::class, 'tipo'],
+            'props' => [],
+        ],
+        'crm_reminder_type' => [
+            'label' => 'Tipos de recordatorio (CRM)',
+            'usage' => [\App\Modules\CRM\Models\ProjectReminder::class, 'tipo'],
+            'props' => [],
+        ],
+        'crm_document_category' => [
+            'label' => 'Categorías de documento (CRM)',
+            'usage' => [\App\Modules\CRM\Models\ProjectDocument::class, 'categoria'],
+            'props' => [],
+        ],
         'adjustment_reason' => [
             'label' => 'Motivos de ajuste de inventario',
             'usage' => [AdjustmentRequestLine::class, 'motivo'],

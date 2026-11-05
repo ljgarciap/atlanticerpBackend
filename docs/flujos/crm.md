@@ -25,7 +25,7 @@ Valores: `lead`, `diseno`, `cotizacion`, `propuesta`, `cerrado`, `perdido`; otro
 - **Recordatorio** (`POST …/reminders`): `tipo` (incluye `cotizacion` y `diseno`), `fecha`, `nota`; nace `completado: false`; `PATCH …/toggle` lo alterna (completa y reabre) y `DELETE` lo borra (204; inexistente 404) [E].
 
 ## 4. Contactos (`/crm/contacts`)
-Directorio **global**; cada contacto guarda quién lo creó/editó (Fase 22): todos los roles listan los mismos; alta con `nombre` y `tipo` del catálogo `contact_role`, correo/teléfono/empresa/notas opcionales; edición `PUT` [E]. La respuesta de la lista es `{stats, entries}` (no `data`). **Editar y borrar: solo su creador o quien ve al equipo** (otro vendedor, 403; un contacto sin dueño lo gestiona cualquiera del CRM); sin el módulo, 403 [E].
+Directorio **global**; cada contacto guarda quién lo creó/editó (Fase 22): todos los roles listan los mismos; alta con `nombre` y `tipo` del catálogo `contact_role`, correo/teléfono/empresa/notas opcionales; edición `PUT` [E]. La respuesta de la lista es `{data, meta}` (Fase 25; `meta` trae los totales). **Editar y borrar: solo su creador o quien ve al equipo** (otro vendedor, 403; un contacto sin dueño lo gestiona cualquiera del CRM); sin el módulo, 403 [E].
 
 ## 5. Documentos del proyecto
 - **Subida** (`POST projects/{id}/documents`, multipart): `categoria` obligatoria (`cotizacion|diseno|presentacion|plano|render|ficha|modelo_3d|otro`), solo extensiones permitidas (`pdf, doc, docx, xls, xlsx, csv, ppt, pptx, imágenes, zip, dwg, rvt, obj…`; un `.exe` → 422), zona `private` por omisión [E].
@@ -45,6 +45,6 @@ Directorio **global**; cada contacto guarda quién lo creó/editó (Fase 22): to
 3. ~~**Etapas sin compuertas**~~ — **resuelto en la Fase 22 (B3)**: perder exige motivo y reactivar un perdido solo lo decide el aprobador/suplente/superadmin, con motivo. Los demás saltos siguen libres a propósito, y el CRM no se sincroniza con el Pipeline de Ventas & Diseño. [E]
 4. ~~**Contactos globales sin dueño**~~ — **resuelto en la Fase 22 (B4)**: guardan `created_by`/`updated_by`; editar y borrar solo su creador o quien ve al equipo (los anteriores, sin dueño, los gestiona cualquiera). [E]
 5. ~~**Etapas del CRM fijas**~~ — **resuelto en la Fase 22 (B5)**: dominio de catálogo `crm_stage` (categoría abierta/ganada/perdida, etapas propias entre Lead y Cerrado). Siguen sin unificarse los tipos y roles de contacto con el catálogo de asociados de Ventas & Diseño. [C]
-6. **Listas fijas en el código**: tipos de proyecto, tipos de actividad y de recordatorio y categorías de documento (solo los roles de contacto son catálogo). [C]
-7. **La lista de contactos responde otra forma** (`{stats, entries}`) que el resto de listados (`{data, meta}`). [E]
-8. **El token del enlace público no se recupera** (correcto), pero tampoco hay forma de listar a quién se compartió ni cuántas veces se abrió desde la pantalla de documentos. [E]
+6. ~~**Listas fijas en el código**~~ — **resuelto en la Fase 25**: tipos de proyecto, de actividad y de recordatorio y categorías de documento son catálogos de la empresa (`crm_project_type`, `crm_activity_type`, `crm_reminder_type`, `crm_document_category`). [C]
+7. ~~**La lista de contactos responde otra forma**~~ — **resuelto en la Fase 25**: responde `{data, meta}`; el directorio conserva `{stats, entries}`. [E]
+8. ~~**Sin seguimiento de enlaces**~~ — **resuelto en la Fase 25**: el enlace guarda a quién se compartió (opcional) y la pantalla de «Compartir» muestra aperturas y última apertura; el token sigue sin recuperarse (correcto). [E]

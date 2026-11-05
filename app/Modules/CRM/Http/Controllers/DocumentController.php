@@ -9,12 +9,14 @@ use App\Modules\Auth\Models\GlobalSetting;
 use App\Modules\CRM\Models\Project;
 use App\Modules\CRM\Models\ProjectDocument;
 use App\Modules\CRM\Services\DocumentService;
+use App\Shared\Catalogs\CatalogService;
 use App\Shared\Support\CircuitOpenException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 
 final class DocumentController extends Controller
 {
@@ -92,7 +94,7 @@ final class DocumentController extends Controller
             // and fbx before this fix) even when explicitly whitelisted, since it
             // validates via a MIME-type round trip rather than the extension string.
             'file' => "required|file|max:{$maxKb}|extensions:{$allowedExt}",
-            'categoria' => 'required|in:cotizacion,diseno,presentacion,plano,render,ficha,modelo_3d,otro',
+            'categoria' => ['required', 'string', Rule::in(CatalogService::keys('crm_document_category'))],
             'zone' => 'sometimes|in:private,public',
         ]);
 

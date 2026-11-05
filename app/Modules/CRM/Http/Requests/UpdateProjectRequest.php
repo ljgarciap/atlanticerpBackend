@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\CRM\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Shared\Catalogs\CatalogService;
 use Illuminate\Validation\Rule;
 
 class UpdateProjectRequest extends FormRequest
@@ -19,7 +20,7 @@ class UpdateProjectRequest extends FormRequest
     {
         return [
             'nombre'         => ['sometimes', 'string', 'max:255'],
-            'tipo'           => ['sometimes', 'string', Rule::in(['diseno', 'cotizacion', 'ambos'])],
+            'tipo'           => ['sometimes', 'string', Rule::in(CatalogService::keys('crm_project_type'))],
             'contacto'       => ['nullable', 'string', 'max:255'],
             'email'          => ['nullable', 'email', 'max:255'],
             'celular'        => ['nullable', 'string', 'max:50'],

@@ -6,6 +6,7 @@ namespace App\Modules\CRM\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use App\Modules\CRM\Services\CrmStages;
+use App\Shared\Catalogs\CatalogService;
 use Illuminate\Validation\Rule;
 
 class StoreProjectRequest extends FormRequest
@@ -20,7 +21,7 @@ class StoreProjectRequest extends FormRequest
     {
         return [
             'nombre'         => ['required', 'string', 'max:255'],
-            'tipo'           => ['required', 'string', Rule::in(['diseno', 'cotizacion', 'ambos'])],
+            'tipo'           => ['required', 'string', Rule::in(CatalogService::keys('crm_project_type'))],
             'etapa'          => ['nullable', 'string', Rule::in(CrmStages::keys()), Rule::notIn(CrmStages::lost())],
             'contacto'       => ['nullable', 'string', 'max:255'],
             'email'          => ['nullable', 'email', 'max:255'],

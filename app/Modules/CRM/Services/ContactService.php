@@ -18,8 +18,8 @@ final class ContactService
      * Optionally filter by type and/or search string.
      *
      * @return array{
-     *   stats: array{total: int, total_projects: int, total_valor: float, total_cerrado: float},
-     *   entries: array<int, array<string, mixed>>
+     *   data: array<int, array<string, mixed>>,
+     *   meta: array{total: int, total_projects: int, total_valor: float, total_cerrado: float}
      * }
      */
     public function list(User $user, bool $isManagement, string $type = '', string $q = ''): array
@@ -50,13 +50,13 @@ final class ContactService
         $totalCerrado = (float) array_sum(array_column($entries, 'valor_cerrado'));
 
         return [
-            'stats' => [
+            'data' => $entries,
+            'meta' => [
                 'total' => count($entries),
                 'total_projects' => $totalProjects,
                 'total_valor' => $totalValor,
                 'total_cerrado' => $totalCerrado,
             ],
-            'entries' => $entries,
         ];
     }
 

@@ -53,8 +53,8 @@ class ContactControllerTest extends FeatureTestCase
             ->getJson('/api/crm/contacts');
 
         $response->assertStatus(200);
-        $response->assertJsonStructure(['stats', 'entries']);
-        $this->assertCount(0, $response->json('entries'));
+        $response->assertJsonStructure(['meta', 'data']);
+        $this->assertCount(0, $response->json('data'));
     }
 
     public function test_index_retorna_contactos_creados(): void
@@ -67,7 +67,7 @@ class ContactControllerTest extends FeatureTestCase
             ->getJson('/api/crm/contacts');
 
         $response->assertStatus(200);
-        $this->assertCount(2, $response->json('entries'));
+        $this->assertCount(2, $response->json('data'));
     }
 
     public function test_index_filtra_por_tipo(): void
@@ -80,8 +80,8 @@ class ContactControllerTest extends FeatureTestCase
             ->getJson('/api/crm/contacts?type=developer');
 
         $response->assertStatus(200);
-        $this->assertCount(1, $response->json('entries'));
-        $this->assertSame('developer', $response->json('entries.0.tipo'));
+        $this->assertCount(1, $response->json('data'));
+        $this->assertSame('developer', $response->json('data.0.tipo'));
     }
 
     public function test_index_filtra_por_busqueda(): void
@@ -94,8 +94,8 @@ class ContactControllerTest extends FeatureTestCase
             ->getJson('/api/crm/contacts?q=lafayette');
 
         $response->assertStatus(200);
-        $this->assertCount(1, $response->json('entries'));
-        $this->assertSame('Grupo Lafayette', $response->json('entries.0.nombre'));
+        $this->assertCount(1, $response->json('data'));
+        $this->assertSame('Grupo Lafayette', $response->json('data.0.nombre'));
     }
 
     public function test_index_rechaza_tipo_invalido(): void
@@ -117,7 +117,7 @@ class ContactControllerTest extends FeatureTestCase
             ->getJson('/api/crm/contacts?type=developer');
 
         $response->assertStatus(200);
-        $entry = $response->json('entries.0');
+        $entry = $response->json('data.0');
         $this->assertSame(1, $entry['project_count']);
         $this->assertEquals(50000.0, $entry['valor_total']);
         $this->assertSame('contacts', $entry['source']);
@@ -247,7 +247,7 @@ class ContactControllerTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/crm/contacts')
-            ->assertJsonPath('stats.total', 0);
+            ->assertJsonPath('meta.total', 0);
     }
 
     public function test_destroy_retorna_409_si_tiene_proyectos_activos(): void
@@ -324,7 +324,7 @@ class ContactControllerTest extends FeatureTestCase
         $list = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/crm/contacts?type=contacto');
 
-        $created = collect($list->json('entries'))->firstWhere('nombre', 'Contacto Import Test');
+        $created = collect($list->json('data'))->firstWhere('nombre', 'Contacto Import Test');
         $this->assertNotNull($created);
         $this->assertSame('maria@ejemplo.com', $created['email']);
         $this->assertSame('+507 6123-4567', $created['telefono']);
@@ -352,7 +352,7 @@ class ContactControllerTest extends FeatureTestCase
         $list = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/crm/contacts?type=contacto');
 
-        $updated = collect($list->json('entries'))->firstWhere('nombre', 'Contacto Import Test');
+        $updated = collect($list->json('data'))->firstWhere('nombre', 'Contacto Import Test');
         $this->assertSame('maria@ejemplo.com', $updated['email']);
         $this->assertSame('+507 6123-4567', $updated['telefono']);
     }
@@ -381,7 +381,7 @@ class ContactControllerTest extends FeatureTestCase
         $list = $this->withHeaders($this->authHeaders($token))
             ->getJson('/api/crm/contacts?type=contacto');
 
-        $contact = collect($list->json('entries'))->firstWhere('nombre', 'Contacto Import Test');
+        $contact = collect($list->json('data'))->firstWhere('nombre', 'Contacto Import Test');
         $this->assertSame('correcto@ejemplo.com', $contact['email']);
         // El teléfono sí estaba vacío, ese sí se rellena
         $this->assertSame('+507 6123-4567', $contact['telefono']);

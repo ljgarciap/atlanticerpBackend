@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\CRM\Models\Project;
 use App\Modules\CRM\Models\ProjectReminder;
+use App\Shared\Catalogs\CatalogService;
 use Illuminate\Database\Eloquent\Builder;
 
 final class DashboardService
@@ -40,11 +41,11 @@ final class DashboardService
             ->groupBy('tipo')
             ->pluck('total', 'tipo');
 
-        $countsByTipo = [
-            'diseno' => (int) ($tipoPluck->get('diseno') ?? 0),
-            'cotizacion' => (int) ($tipoPluck->get('cotizacion') ?? 0),
-            'ambos' => (int) ($tipoPluck->get('ambos') ?? 0),
-        ];
+        // Fase 25: los tipos son del catálogo de la empresa (los activos salen en cero); uno inactivo o ya desaparecido con proyectos se cuenta igual.
+        $countsByTipo = array_fill_keys(CatalogService::keys('crm_project_type'), 0);
+        foreach ($tipoPluck as $tipo => $count) {
+            $countsByTipo[(string) $tipo] = (int) $count;
+        }
 
         // Pipeline values — sum() always returns a numeric string/int/float, never null
         $pipelineActivo = (float) (clone $base)->whereIn('etapa', CrmStages::open())->sum('valor');

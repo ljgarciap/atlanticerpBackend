@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string          $token_hash
  * @property int              $document_id
  * @property int              $created_by
+ * @property string|null     $destinatario
  * @property \Carbon\Carbon  $expires_at
  * @property \Carbon\Carbon|null $revoked_at
  * @property \Carbon\Carbon|null $last_accessed_at
@@ -44,6 +45,7 @@ class ShareLink extends Model
         'token_hash',
         'document_id',
         'created_by',
+        'destinatario',
         'expires_at',
         'revoked_at',
         'last_accessed_at',
@@ -98,7 +100,7 @@ class ShareLink extends Model
      * as PasswordResetService — so the link's URL can never be recovered again
      * after this call returns; the caller must show/copy it now.
      */
-    public static function createFor(ProjectDocument $document, User $creator): self
+    public static function createFor(ProjectDocument $document, User $creator, ?string $destinatario = null): self
     {
         $setting        = SystemSetting::find('share_links_expiration_days');
         $expirationDays = $setting !== null ? (int) $setting->value : self::DEFAULT_EXPIRATION_DAYS;
@@ -109,6 +111,7 @@ class ShareLink extends Model
             'token_hash'  => self::hashToken($rawToken),
             'document_id' => $document->id,
             'created_by'  => $creator->id,
+            'destinatario' => $destinatario,
             'expires_at'  => now()->addDays($expirationDays),
         ]);
 
