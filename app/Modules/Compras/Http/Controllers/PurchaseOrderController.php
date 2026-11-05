@@ -966,9 +966,17 @@ final class PurchaseOrderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // Fase 24b — el contenedor se normaliza (mayúsculas, sin espacios ni guiones) y debe cumplir ISO 6346; el transportista no puede
+        // ser solo números. Vacío es válido (envíos sin contenedor).
+        if (is_string($request->input('container_number'))) {
+            $request->merge(['container_number' => preg_replace('/[\s\-]+/', '', strtoupper(trim($request->input('container_number'))))]);
+        }
         $validated = $request->validate([
-            'container_number' => ['nullable', 'string', 'max:100'],
-            'carrier' => ['nullable', 'string', 'max:255'],
+            'container_number' => ['nullable', 'string', 'max:100', 'regex:' . (string) config('compras.container_number_pattern')],
+            'carrier' => ['nullable', 'string', 'min:2', 'max:255', 'regex:/\D/'],
+        ], [
+            'container_number.regex' => 'El número de contenedor debe tener 4 letras y 7 números (ej. MSKU1234567).',
+            'carrier.regex' => 'El transportista no puede ser solo números.',
         ]);
 
         $order->update($validated);
@@ -978,6 +986,45 @@ final class PurchaseOrderController extends Controller
         $order->load(['provider', 'creator', 'approvedByUser', 'liquidationAgency', 'lines.catalogProduct', 'lines.salesProject', 'payments']);
 
         return response()->json($this->formatDetail($order));
+    }
+
+    /**
+     * Fase 24b — historial de cambios de contenedor y transportista, tomado de la auditoría de la orden (quién, cuándo, antes y después).
+     * No contiene montos: lo puede ver cualquier rol que entre a la logística.
+     */
+    public function shippingHistory(Request $request, int $id): JsonResponse
+    {
+        if (PurchaseOrder::find($id) === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $campos = ['container_number', 'carrier'];
+        $logs = \App\Modules\Auth\Models\AuditLog::with('user')
+            ->where('entity_type', 'purchase_order')
+            ->where('entity_id', (string) $id)
+            ->where('action', 'like', '%.updated')
+            ->orderByDesc('id')
+            ->get();
+
+        $data = [];
+        foreach ($logs as $log) {
+            $nuevos = is_array($log->new_values) ? $log->new_values : [];
+            $antes = is_array($log->old_values) ? $log->old_values : [];
+            foreach ($campos as $campo) {
+                if (! array_key_exists($campo, $nuevos)) {
+                    continue;
+                }
+                $data[] = [
+                    'field' => $campo,
+                    'old' => $antes[$campo] ?? null,
+                    'new' => $nuevos[$campo],
+                    'changed_by' => $log->user?->first_name !== null ? trim($log->user->first_name . ' ' . $log->user->last_name) : null,
+                    'changed_at' => $log->created_at->toIso8601String(),
+                ];
+            }
+        }
+
+        return response()->json(['data' => $data]);
     }
 
     /**

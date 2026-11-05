@@ -7,6 +7,7 @@ namespace App\Modules\Compras\Models;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\LogsAuditTrail;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -27,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PurchaseOrderDocument extends Model
 {
     use LogsAuditTrail;
+    use SoftDeletes;
 
     public const CATEGORY_FACTURA_COMERCIAL = 'factura_comercial';
     public const CATEGORY_DECLARACION_NACIONALIZACION = 'declaracion_nacionalizacion';
@@ -50,7 +52,7 @@ class PurchaseOrderDocument extends Model
     /** @var list<string> */
     protected $fillable = [
         'purchase_order_id', 'category', 'original_filename', 'storage_key',
-        'size_bytes', 'mime_type', 'uploaded_by',
+        'size_bytes', 'mime_type', 'uploaded_by', 'deleted_by', 'delete_reason',
     ];
 
     public function getTable(): string

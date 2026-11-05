@@ -202,8 +202,8 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
     {
         $orden = $this->orden();
         $orden->update(['total_amount' => 555]);
-        // Operaciones: compras.limited.view (no es solo logistica.view) ve los montos como antes.
-        $this->conceder(['compras.limited.view', 'compras.logistica.view']);
+        // Quien tiene compras.read (Compras) ve los montos. Operaciones (compras.limited.view) ya no: Fase 24c.
+        $this->conceder(['compras.read', 'compras.logistica.view']);
 
         $this->assertEquals(555, $this->withHeaders($this->vendedor())->getJson("/api/compras/orders/{$orden->id}")->json('total_amount'));
     }
@@ -246,8 +246,14 @@ class VendedorComprasBodegaConsultaTest extends FeatureTestCase
             ->pluck('category')->sort()->values()->all();
         $this->assertSame(['bl', 'permiso_importacion'], $vendedor, 'Factura, confirmación, declaración y "otro" traen precios.');
 
+        // Fase 24c — Operaciones ve la logística como el vendedor: solo los documentos sin precios.
         $this->conceder(['compras.limited.view', 'compras.logistica.view']);
-        $operaciones = $this->withHeaders($this->vendedor())->getJson("/api/compras/orders/{$orden->id}/documents")->assertStatus(200)->json('data');
-        $this->assertCount(6, $operaciones, 'Operaciones ve todos los documentos, como antes.');
+        $operaciones = collect($this->withHeaders($this->vendedor())->getJson("/api/compras/orders/{$orden->id}/documents")->assertStatus(200)->json('data'))
+            ->pluck('category')->sort()->values()->all();
+        $this->assertSame(['bl', 'permiso_importacion'], $operaciones);
+
+        $this->conceder(['compras.read', 'compras.logistica.view']);
+        $compras = $this->withHeaders($this->vendedor())->getJson("/api/compras/orders/{$orden->id}/documents")->assertStatus(200)->json('data');
+        $this->assertCount(6, $compras, 'Compras ve todos los documentos.');
     }
 }
