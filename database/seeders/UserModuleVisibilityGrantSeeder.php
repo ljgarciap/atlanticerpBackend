@@ -37,14 +37,14 @@ class UserModuleVisibilityGrantSeeder extends Seeder
 
     /**
      * Fase 21 (B1) — permisos angostos por persona del demo, además de los grants de módulo. Se SUMAN a los que ya tenga (nunca quitan ni reemplazan).
-     * Contabilidad: ve todo el Pipeline (`pipeline.read_all`) y edita lo que crea (`pipeline.edit`, que `PipelineCard::isEditableBy` limita a las
-     * tarjetas propias cuando no hay `ventas_diseno.edit`); además corrige los datos fiscales de los clientes y los exime de ITBMS, que es su trabajo
+     * Contabilidad: ve todo el Pipeline en SOLO LECTURA (`pipeline.read_all`; Fase 26b: ya no recibe `pipeline.edit`, no crea ni mueve tarjetas,
+     * el superadmin se lo concede por persona si lo necesita); además corrige los datos fiscales de los clientes y los exime de ITBMS, que es su trabajo
      * en Admin & Contab (pantalla «Clientes fiscal»).
      *
      * @var array<string, list<string>>
      */
     private const EXTRA_PERMISSIONS = [
-        'contabilidad@test.com' => ['ventas_diseno.pipeline.read_all', 'ventas_diseno.pipeline.edit', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.client_itbms_exemption'],
+        'contabilidad@test.com' => ['ventas_diseno.pipeline.read_all', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.client_itbms_exemption'],
     ];
 
     /**

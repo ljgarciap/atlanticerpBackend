@@ -1,6 +1,6 @@
 # Fase 26b — Contabilidad «Solo ver, no mover» en el Pipeline
 
-**Estado:** BORRADOR, pendiente de aprobación. **Decisión de Luis (2026-11-04):** Contabilidad ve el Pipeline y pasa proyectos aprobados a Pedido, pero no crea, edita ni mueve tarjetas.
+**Estado:** APROBADA (Luis eligió la opción A, 2026-11-04) e IMPLEMENTADA. **Decisión de Luis (2026-11-04):** Contabilidad ve el Pipeline y pasa proyectos aprobados a Pedido, pero no crea, edita ni mueve tarjetas.
 
 ## 1. Situación actual (verificada en el código)
 
@@ -41,3 +41,11 @@
 1. Contabilidad por defecto: lee todo el Pipeline y pasa a Pedido; toda escritura del Pipeline responde 403.
 2. Quien reciba `pipeline.edit` por concesión individual conserva el comportamiento actual.
 3. Suite completa del backend y del frontend en verde; e2e `ventas-diseno` actualizado.
+
+## 7. Resultado
+
+- Decisión de §5: **A** (sin vinculación mínima; `pipeline.edit` por concesión individual del superadmin).
+- Hecho: seeder demo sin `pipeline.edit` para Contabilidad; migración `2026_11_17_100000` (solo rol `lider_admin_contab`, idempotente); test de la migración; `PipelineEditPermissionTest` verifica además POST de tarjeta y de cliente maestro = 403 y `scope=team` = 200.
+- Desviación de §3: el fixture heredado `FixtureSpecialPermissionSeeder` **se conserva** con `pipeline.edit` (docblock actualizado): esos tests describen el comportamiento de quien reciba el permiso por concesión; el estado por defecto lo cubre el test de «sin pipeline.edit».
+- Aviso: el demo no concede `ventas_diseno.pass_to_order` a Contabilidad (solo el fixture de tests); darlo por defecto sería otra decisión.
+- Verificado: 52 tests dirigidos en verde; falta suite completa (CI).

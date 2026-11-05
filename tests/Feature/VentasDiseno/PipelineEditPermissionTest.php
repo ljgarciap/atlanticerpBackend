@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\Feature\FeatureTestCase;
 
 /**
+ * Fase 26b: el demo ya no concede `pipeline.edit` a Contabilidad («solo ver, no mover»); estos tests parten del fixture heredado de binax
+ * (`FixtureSpecialPermissionSeeder`), que sí se lo da, y prueban el comportamiento de QUIEN reciba ese permiso por concesión individual.
+ *
  * SCRUM-1139 — Contabilidad edita el Pipeline con el permiso angosto `ventas_diseno.pipeline.edit` (hermano de
  * `pipeline.read_all`, SCRUM-1128) y los proyectos Aprobados con `ventas_diseno.edit.approved`, SIN abrir ninguna otra
  * ruta de Ventas & Diseño (cotizaciones, asociados...). Sin ese permiso sigue en solo lectura.
@@ -129,6 +132,10 @@ class PipelineEditPermissionTest extends FeatureTestCase
         $this->withHeaders($headers)->putJson("/api/ventas-diseno/pipeline/{$card->id}", ['name' => 'X'])->assertStatus(403);
         $this->withHeaders($headers)->patchJson("/api/ventas-diseno/pipeline/{$card->id}/stage", ['stage' => 'lost'])->assertStatus(403);
         $this->withHeaders($headers)->postJson("/api/ventas-diseno/pipeline/{$card->id}/contacts", [])->assertStatus(403);
+        // Fase 26b: tampoco crea tarjetas ni vincula clientes; sí lee todo el Pipeline y el alcance de equipo (por `pipeline.read_all`).
+        $this->withHeaders($headers)->postJson('/api/ventas-diseno/pipeline', ['type' => 'lead', 'name' => 'X'])->assertStatus(403);
+        $this->withHeaders($headers)->postJson('/api/ventas-diseno/master-clients', ['name' => 'X'])->assertStatus(403);
+        $this->withHeaders($headers)->getJson('/api/ventas-diseno/pipeline?scope=team')->assertOk()->assertJsonFragment(['id' => $card->id]);
     }
 
     public function test_pipeline_edit_no_abre_ninguna_ruta_fuera_del_pipeline(): void
