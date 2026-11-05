@@ -93,6 +93,8 @@ Route::prefix('orders')->group(function (): void {
 
     // SCRUM-214→219 (REQ-151→156) — Logística.
     Route::patch('/{id}/shipping-info', [PurchaseOrderController::class, 'updateShippingInfo'])->middleware('permission:compras.edit');
+    // Fase 24b — historial de cambios de contenedor y transportista (sale de la auditoría).
+    Route::get('/{id}/shipping-history', [PurchaseOrderController::class, 'shippingHistory'])->middleware('permission:compras.read,bodega.read,compras.limited.view,compras.logistica.view');
 
     // SCRUM-250→253 (REQ-187→190) — Pagos a Proveedores.
     Route::prefix('{orderId}/payments')->group(function (): void {
@@ -111,6 +113,8 @@ Route::prefix('orders')->group(function (): void {
         // para esos roles (riesgo real de ban de CrowdSec, ver el ticket para el detalle).
         Route::get('/', [PurchaseOrderDocumentController::class, 'index'])->middleware('permission:compras.read,bodega.read,compras.limited.view,compras.logistica.view');
         Route::post('/', [PurchaseOrderDocumentController::class, 'store'])->middleware('permission:compras.edit');
+        // Fase 24a — baja lógica con motivo (reemplazar = subir uno nuevo de la misma categoría y quitar el anterior).
+        Route::delete('/{documentId}', [PurchaseOrderDocumentController::class, 'destroy'])->middleware('permission:compras.edit');
         // SCRUM-211 (ADR-SCRUM211) — validación con IA del documento de confirmación de proveedor.
         Route::post('/{documentId}/validate', [PurchaseOrderDocumentController::class, 'validate'])->middleware('permission:compras.edit');
         Route::get('/{documentId}/validation', [PurchaseOrderDocumentController::class, 'validation'])->middleware('permission:compras.read');

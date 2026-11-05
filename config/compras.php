@@ -27,4 +27,8 @@ return [
 
     // Generaciones de traducción por minuto y por usuario (cada una es una llamada de pago a la IA).
     'translation_per_minute' => 6,
+
+    // Fase 24b — formato del número de contenedor (ISO 6346: 4 letras + 7 dígitos). Es un estándar técnico, no un umbral de negocio.
+    // El campo puede quedar vacío (envíos aéreos o por courier sin contenedor).
+    'container_number_pattern' => '/^[A-Z]{4}\d{7}$/',
 ];

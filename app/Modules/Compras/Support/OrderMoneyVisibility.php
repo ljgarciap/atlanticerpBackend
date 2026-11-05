@@ -29,7 +29,8 @@ final class OrderMoneyVisibility
             ? array_values(array_filter($request->attributes->get('jwt')['permissions'], 'is_string'))
             : [];
 
-        return in_array('compras.logistica.view', $permissions, true)
-            && array_intersect(['superadmin.all', 'compras.read', 'compras.limited.view', 'bodega.read'], $permissions) === [];
+        // Fase 24c (decisión de Luis): Operaciones (`compras.limited.view`) ve la logística como el vendedor — sin montos.
+        return array_intersect(['compras.logistica.view', 'compras.limited.view'], $permissions) !== []
+            && array_intersect(['superadmin.all', 'compras.read', 'bodega.read'], $permissions) === [];
     }
 }

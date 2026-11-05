@@ -28,8 +28,10 @@ Cuentas usadas: Líder de Compras, Líder de Operaciones, Vendedor, Líder de Bo
 - La **confirmación del proveedor** no se adjunta mientras la orden está «Por aprobar» (422); el resto de categorías sí.
 - Al subir una confirmación se lanza sola la validación con IA contra la orden (límite por orden) [C, no ejercitada].
 
-## Candidatos a cambio o mejora (ninguno implementado)
-1. Una vez subido, un documento **no se puede borrar ni reemplazar** (no hay ruta de baja) [C].
-2. Los datos de envío no tienen validación de formato ni historial visible de quién los cambió y cuándo [C].
-3. Operaciones ve costos y montos aunque su pantalla es de logística: decisión de negocio sobre si debería verse como el vendedor.
-4. Sin ejercitar: la validación con IA de la confirmación (depende de un proveedor de IA) y el filtro por proyecto con líneas asignadas.
+## Cambios de la Fase 24 (resueltos)
+1. **Documentos**: se pueden quitar con baja lógica (`DELETE /compras/orders/{id}/documents/{docId}`, `compras.edit`, motivo ≥10 caracteres). El archivo se conserva y quedan quién y por qué; deja de contar en el checklist. La confirmación del proveedor no se quita si la orden ya tiene pagos. Reemplazar = subir uno nuevo y quitar el anterior.
+2. **Datos de envío**: el contenedor sigue el formato ISO 6346 (4 letras + 7 números; se normaliza a mayúsculas sin espacios ni guiones; vacío es válido) y el transportista no puede ser solo números. El formato vive en `config/compras.php`. `GET /compras/orders/{id}/shipping-history` muestra quién, cuándo y el valor anterior (sale de la auditoría; sin montos).
+3. **Costos**: Operaciones (`compras.limited.view`) ve la logística como el vendedor: sin montos ni costos y solo los documentos sin precios (BL y permiso de importación). Quien tiene `compras.read`, `bodega.read` o superadmin ve todo.
+
+## Candidatos pendientes
+- Sin ejercitar: la validación con IA de la confirmación (depende de un proveedor de IA) y el filtro por proyecto con líneas asignadas.

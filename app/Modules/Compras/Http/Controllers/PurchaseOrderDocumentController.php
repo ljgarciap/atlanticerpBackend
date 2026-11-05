@@ -107,6 +107,37 @@ final class PurchaseOrderDocumentController extends Controller
     }
 
     /**
+     * Fase 24a — baja lógica: el documento sale del checklist, el archivo se conserva y queda quién, cuándo y por qué.
+     * La confirmación del proveedor no se quita si la orden ya tiene pagos (es la evidencia de lo que se pagó).
+     */
+    public function destroy(Request $request, int $orderId, int $documentId): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $order = PurchaseOrder::find($orderId);
+        $document = $order === null ? null : PurchaseOrderDocument::where('purchase_order_id', $orderId)->find($documentId);
+        if ($order === null || $document === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $validated = $request->validate(['motivo' => ['required', 'string', 'min:10', 'max:500']]);
+
+        if ($document->category === PurchaseOrderDocument::CATEGORY_CONFIRMACION_PROVEEDOR && $order->payments()->exists()) {
+            return response()->json([
+                'message' => 'La confirmación del proveedor no se puede quitar: la orden ya tiene pagos registrados.',
+            ], 422);
+        }
+
+        $document->forceFill(['deleted_by' => $user->id, 'delete_reason' => $validated['motivo']])->save();
+        $document->delete();
+
+        return response()->json(['message' => 'Documento retirado.']);
+    }
+
+    /**
      * SCRUM-211 (ADR-SCRUM211) — dispara la validación con IA del documento de confirmación
      * contra la orden. Gateada por `compras.edit` (no `ai.use`) — mismo criterio que
      * ApprovedProjectController, para no forzarle un permiso de AI a quien ya puede editar
