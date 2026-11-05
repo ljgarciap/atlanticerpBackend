@@ -68,11 +68,12 @@ class UserModuleVisibilityGrantSeederTest extends FeatureTestCase
 
         $contabilidad->refresh();
         $this->assertSame(0, UserModuleVisibility::where('user_id', $contabilidad->id)->where('module', 'ventas_diseno')->count());
-        $this->assertEqualsCanonicalizing(['ventas_diseno.pipeline.read_all', 'ventas_diseno.pipeline.edit', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.client_itbms_exemption'], $contabilidad->extra_permissions);
+        $this->assertEqualsCanonicalizing(['ventas_diseno.pipeline.read_all', 'ventas_diseno.edit.client_tax_data', 'admin_contab.edit.client_itbms_exemption'], $contabilidad->extra_permissions);
         $efectivos = $contabilidad->effectivePermissionsV2();
         $this->assertNotContains('ventas_diseno.edit', $efectivos);
         $this->assertNotContains('ventas_diseno.approve', $efectivos);
-        $this->assertContains('ventas_diseno.pipeline.edit', $efectivos);
+        $this->assertContains('ventas_diseno.pipeline.read_all', $efectivos);
+        $this->assertNotContains('ventas_diseno.pipeline.edit', $efectivos); // Fase 26b: solo ver, no mover
     }
 
     public function test_es_idempotente_no_duplica_filas(): void
