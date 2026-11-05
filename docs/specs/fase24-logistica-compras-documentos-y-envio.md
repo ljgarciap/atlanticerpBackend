@@ -1,6 +1,6 @@
 # Fase 24 — Logística de Compras: documentos, datos de envío y costos (BORRADOR)
 
-Estado: **borrador, pendiente de aprobación de Luis**. No se implementa nada hasta que apruebe las decisiones de §5.
+Estado: **implementada (2026-11-05)**. Decisiones de Luis: D1 baja lógica con motivo y solo `compras.edit`; D2 contenedor ISO 6346 estricto (rechaza); D3 Operaciones sin montos; D4 no se preguntó: se entregó en un solo PR por repositorio con un commit por todo el alcance.
 Origen: candidatos 1–3 de `docs/flujos/compras-logistica.md` (cobertura de la Fase 11).
 
 ## 1. Hallazgos verificados en el código
@@ -45,3 +45,7 @@ Origen: candidatos 1–3 de `docs/flujos/compras-logistica.md` (cobertura de la 
 ## 6. Riesgos
 - 24c(b) cambia lo que ve Operaciones: revisar que no pierda datos que usa para su trabajo (cantidades, fechas) — solo se ocultarían montos.
 - La validación de contenedor puede rechazar datos ya guardados al editarlos: solo se valida al guardar un valor cambiado.
+
+## 7. Resultado
+Backend: migración `2026_11_18_100000`, `Fase24LogisticaTest` (6 tests) y 2 tests de `VendedorComprasBodegaConsultaTest` actualizados al nuevo criterio; suite completa 5276 tests sin fallos, PHPStan 0. Frontend: botón «Quitar» con motivo, historial y errores del servidor en Logística; 2949 tests, e2e `compras-logistica` 6/6.
+**Abierto**: el reemplazo no es una operación única (sube uno nuevo y quita el anterior); el historial de envío solo cubre contenedor y transportista.
