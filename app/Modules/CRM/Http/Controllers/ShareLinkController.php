@@ -73,7 +73,10 @@ final class ShareLinkController extends Controller
 
         /** @var User $user */
         /** @var ProjectDocument $document */
-        $link = ShareLink::createFor($document, $user);
+        $validated = $request->validate(['destinatario' => ['sometimes', 'nullable', 'string', 'max:120']]);
+        $destinatario = isset($validated['destinatario']) ? trim((string) $validated['destinatario']) : '';
+
+        $link = ShareLink::createFor($document, $user, $destinatario !== '' ? $destinatario : null);
 
         $this->audit->log(
             action: AuditService::CRM_SHARE_LINK_CREATED,
@@ -220,6 +223,7 @@ final class ShareLinkController extends Controller
 
         return [
             'id' => $link->id,
+            'destinatario' => $link->destinatario,
             'expires_at' => $link->expires_at->toIso8601String(),
             'revoked_at' => $link->revoked_at?->toIso8601String(),
             'access_count' => $link->access_count,

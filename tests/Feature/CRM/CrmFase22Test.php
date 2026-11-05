@@ -149,7 +149,7 @@ final class CrmFase22Test extends FeatureTestCase
     public function test_la_lista_de_contactos_muestra_quien_lo_creo(): void
     {
         $this->withHeaders($this->vendedor())->postJson('/api/crm/contacts', ['nombre' => 'Visible F22', 'tipo' => 'developer'])->assertStatus(201);
-        $fila = collect($this->withHeaders($this->gerencia())->getJson('/api/crm/contacts?q=Visible+F22')->assertOk()->json('entries'))->firstWhere('nombre', 'Visible F22');
+        $fila = collect($this->withHeaders($this->gerencia())->getJson('/api/crm/contacts?q=Visible+F22')->assertOk()->json('data'))->firstWhere('nombre', 'Visible F22');
 
         $this->assertNotNull($fila['created_by']);
         $this->assertNotEmpty($fila['created_by_name']);
