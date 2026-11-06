@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int                             $actor_id
  * @property int                             $target_id
  * @property string                          $reason
+ * @property string|null                     $reason_key
  * @property \Illuminate\Support\Carbon      $started_at
  * @property \Illuminate\Support\Carbon      $expires_at
  * @property \Illuminate\Support\Carbon|null $ended_at
