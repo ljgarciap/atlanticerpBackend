@@ -35,12 +35,12 @@ Con el concepto nuevo de cobros encendido, `POST admin-contab/abonos` responde 4
 Los tramos viven en la base (internos y de cartera), con `monto_minimo`, `monto_maximo`, `porcentaje` (0–100) y `orden`; **solo el aprobador** los crea o edita (contabilidad y otra Gerencia, 403; porcentaje > 100, 422) [E]. El resumen mensual de un vendedor aplica el tramo de su total de pedidos del mes (10.313,24 → 1,5 %) [E].
 
 ## Candidatos a cambio o mejora
-1. **Reversar una compensación no necesita aprobación, pero anular un cobro sí**, y ambos reabren la deuda. Criterio distinto para efectos equivalentes. [E]
-2. **El listado de saldo a favor no coincide con lo compensable**: mostró 50 para un cliente que podía compensar 568,38 (las notas de crédito no aparecen como filas). [E]
-3. **Una factura incobrable conserva el estado `facturada`** y el detalle sigue ofreciendo marcarla. [E]
-4. **Los abonos heredados siguen en el código** aunque ya no se aceptan: retirar las rutas y la bandera de cobros v2. [E][C]
+1. ~~**Reversar una compensación no necesita aprobación, pero anular un cobro sí**, y ambos reabren la deuda. Criterio distinto para efectos equivalentes. [E]~~ **Resuelto: Fase 13 (2.3)** (verificado 2026-11-06).
+2. ~~**El listado de saldo a favor no coincide con lo compensable**: mostró 50 para un cliente que podía compensar 568,38 (las notas de crédito no aparecen como filas). [E]~~ **Resuelto: Fase 13 (2.2)** (verificado 2026-11-06).
+3. ~~**Una factura incobrable conserva el estado `facturada`** y el detalle sigue ofreciendo marcarla. [E]~~ **Resuelto: Fase 13 (2.8)** (verificado 2026-11-06).
+4. ~~**Los abonos heredados siguen en el código** aunque ya no se aceptan: retirar las rutas y la bandera de cobros v2. [E][C]~~ **Resuelto: Fase 15a (bandera y abonos retirados)** (verificado 2026-11-06).
 5. **Las formas de pago son una lista fija con valores regionales (Yappy)**: debería ser un catálogo por empresa y país. [C]
 6. **Los tramos se muestran con límites que no son los que se aplican**: la tabla dice 0–20.000 y luego 20.001–35.000, pero el cálculo da el 2 % desde 20.000 (19.999,99 → 1,5 %; 20.000 → 2 %; 20.000,50 → 2 %), de modo que no hay hueco pero la lectura confunde; además difieren de los del manual (0–19.999,99). [E]
-7. **Un solo arqueo por día sin reapertura**: un error al anotar un movimiento no se puede corregir después del cierre sin intervención en la base. [E]
+7. ~~**Un solo arqueo por día sin reapertura**: un error al anotar un movimiento no se puede corregir después del cierre sin intervención en la base. [E]~~ **Resuelto: Fase 13 (2.10)** (verificado 2026-11-06).
 8. **Comparten umbral y aprobador** la caja chica, los arqueos y las anulaciones: si el aprobador falta, todo se detiene. [E][C]
 9. **Sin ejercitar**: comisiones externas (perfil fiscal del arquitecto, cuenta de cobro, comprobante de retención, propuesta y decisión del porcentaje, pago), tesorería y movimientos bancarios (asignar cuenta), cuentas bancarias (baja y reactivación), exención de ITBMS de un cliente, devolución de dinero al cliente y reportes. [C]
