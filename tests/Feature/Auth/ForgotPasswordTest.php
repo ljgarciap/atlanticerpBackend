@@ -54,12 +54,12 @@ class ForgotPasswordTest extends FeatureTestCase
         };
 
         [$subjectEn, $htmlEn] = $render('en');
-        $this->assertSame('Reset your password — AtlanticERP CRM', $subjectEn);
+        $this->assertSame('Reset your password — AtlanticERP', $subjectEn);
         $this->assertStringContainsString('Reset password', $htmlEn);
         $this->assertStringNotContainsString('Restablecer', $htmlEn);
 
         [$subjectEs, $htmlEs] = $render(null);
-        $this->assertSame('Restablece tu contraseña — AtlanticERP CRM', $subjectEs);
+        $this->assertSame('Restablece tu contraseña — AtlanticERP', $subjectEs);
         $this->assertStringContainsString('Restablecer contraseña', $htmlEs);
     }
 

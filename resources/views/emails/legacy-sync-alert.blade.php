@@ -26,7 +26,7 @@
             @endforeach
         </div>
         <p>Revise la pantalla de Migración. Ninguna corrida retenida se aplica sola: debe revisarse y, si corresponde, forzarse a mano.</p>
-        <div class="footer">AtlanticERP CRM · Atlantic · No responda a este correo</div>
+        <div class="footer">AtlanticERP · Atlantic · No responda a este correo</div>
     </div>
 </body>
 </html>

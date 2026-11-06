@@ -18,6 +18,11 @@ use App\Modules\CRM\Http\Controllers\NotificationRuleController;
 use App\Modules\VentasDiseno\Http\Controllers\CatalogUatTestDataCleanupController;
 use Illuminate\Support\Facades\Route;
 
+// Fase 27a (a4) — reiniciar el MFA de una persona: superadmin y Gerencia (`settings.global`). El controlador impide que Gerencia
+// reinicie el de un superadmin o el suyo propio.
+Route::post('/security/users/{userId}/mfa/reset', [SecurityAnomalyController::class, 'resetMfa'])
+    ->middleware('permission:settings.global');
+
 // Superadmin-only operations
 Route::middleware('permission:superadmin.all')->group(function (): void {
     Route::get('/export/crm',      CrmExportController::class);
@@ -49,7 +54,6 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     Route::post('/security/anomalies/{id}/confirm',   [SecurityAnomalyController::class, 'confirm']);
     Route::post('/security/anomalies/{id}/dismiss',   [SecurityAnomalyController::class, 'dismiss']);
     Route::post('/security/users/{userId}/unblock',   [SecurityAnomalyController::class, 'unblock']);
-    Route::post('/security/users/{userId}/mfa/reset', [SecurityAnomalyController::class, 'resetMfa']);
 
     // SCRUM-1158 — sesiones de «Ver como usuario»: listado para la pantalla «Sesiones de soporte» y terminación forzada de una sesión activa.
     Route::get('/security/impersonations',                  [ImpersonationAdminController::class, 'index']);

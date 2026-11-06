@@ -56,7 +56,7 @@ return [
     ],
 
     'forgot_password' => [
-        'ip_max'      => (int) env('THROTTLE_FORGOT_IP_MAX', 5),
+        'ip_max'      => (int) env('THROTTLE_FORGOT_IP_MAX', 20),
         'ip_decay'    => (int) env('THROTTLE_FORGOT_IP_DECAY', 900),
         'email_max'   => (int) env('THROTTLE_FORGOT_EMAIL_MAX', 3),
         'email_decay' => (int) env('THROTTLE_FORGOT_EMAIL_DECAY', 3600),

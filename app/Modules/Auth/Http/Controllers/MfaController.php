@@ -174,18 +174,12 @@ final class MfaController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        try {
-            $challengeUserId = $this->mfaService->verify($data['mfa_challenge_id'], $data['code']);
-        } catch (MfaThrottledException $e) {
-            return AuthThrottle::respuesta($e->retryAfter);
-        } catch (ValidationException $e) {
-            return response()->json(['message' => $e->getMessage(), 'errors' => $e->errors()], 422);
+        if (($mismatch = $this->challengeMismatch($data['mfa_challenge_id'], $user)) !== null) {
+            return $mismatch;
         }
 
-        // El challenge debe pertenecer al mismo usuario autenticado que lo generó — evita que
-        // un challenge_id ajeno (adivinado o filtrado) active MFA a nombre de otra cuenta.
-        if ($challengeUserId !== $user->id) {
-            return response()->json(['message' => trans('auth.mfa_challenge_mismatch')], 403);
+        if (($failure = $this->verifyOwnChallenge($data['mfa_challenge_id'], $data['code'], 'enable')) !== null) {
+            return $failure;
         }
 
         $this->mfaService->enableForUser($user);
@@ -193,13 +187,61 @@ final class MfaController extends Controller
         return response()->json(['mfa_enabled' => true]);
     }
 
-    /** POST /api/auth/mfa/disable — protected (JWT required) */
+    /**
+     * POST /api/auth/mfa/disable — protected (JWT + clave vigente)
+     *
+     * Fase 27a (a2): ya no basta con la sesión. Igual que `enable`, pide la clave y envía un código al correo;
+     * el MFA solo se apaga en `/mfa/disable/confirm` con ese código.
+     */
     public function disable(Request $request): JsonResponse
     {
+        $data = $request->validate(['password' => ['required', 'string']]);
         $user = $this->resolveUser($request);
 
         if ($user === null) {
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        if (! Hash::check($data['password'], $user->password_hash)) {
+            return response()->json([
+                'message' => trans('auth.password_incorrect'),
+                'errors'  => ['password' => [trans('auth.password_incorrect')]],
+            ], 422);
+        }
+
+        if (! $user->mfa_enabled) {
+            return response()->json(['message' => 'No tienes MFA activo.'], 422);
+        }
+
+        try {
+            $challengeId = $this->mfaService->generateChallenge($user);
+        } catch (MfaDeliveryException) {
+            return response()->json(['message' => trans('auth.mfa_delivery_failed')], 503);
+        }
+
+        return response()->json(['mfa_challenge_id' => $challengeId]);
+    }
+
+    /** POST /api/auth/mfa/disable/confirm — protected (JWT + código del reto) */
+    public function confirmDisable(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'mfa_challenge_id' => ['required', 'string', 'uuid'],
+            'code'             => ['required', 'string', 'digits:6'],
+        ]);
+
+        $user = $this->resolveUser($request);
+
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        if (($mismatch = $this->challengeMismatch($data['mfa_challenge_id'], $user)) !== null) {
+            return $mismatch;
+        }
+
+        if (($failure = $this->verifyOwnChallenge($data['mfa_challenge_id'], $data['code'], 'disable')) !== null) {
+            return $failure;
         }
 
         $this->mfaService->disableForUser($user);
@@ -208,6 +250,32 @@ final class MfaController extends Controller
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * El reto debe pertenecer a la sesión ANTES de validar el código (Fase 27a, a1): si no, un reto ajeno gastaba el código
+     * de su dueño. Un reto inexistente no se distingue aquí: lo rechaza la validación del código (422).
+     */
+    private function challengeMismatch(string $challengeId, User $user): ?JsonResponse
+    {
+        $owner = $this->mfaService->userIdForChallenge($challengeId);
+
+        return ($owner !== null && $owner !== $user->id)
+            ? response()->json(['message' => trans('auth.mfa_challenge_mismatch')], 403)
+            : null;
+    }
+
+    private function verifyOwnChallenge(string $challengeId, string $code, string $scope): ?JsonResponse
+    {
+        try {
+            $this->mfaService->verify($challengeId, $code, $scope);
+        } catch (MfaThrottledException $e) {
+            return AuthThrottle::respuesta($e->retryAfter);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => $e->getMessage(), 'errors' => $e->errors()], 422);
+        }
+
+        return null;
+    }
 
     private function buildTokenResponse(User $user, string $tenantSlug): JsonResponse
     {

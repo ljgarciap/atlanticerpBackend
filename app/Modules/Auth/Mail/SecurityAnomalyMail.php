@@ -24,7 +24,7 @@ final class SecurityAnomalyMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Anomalía de seguridad detectada — AtlanticERP CRM');
+        return new Envelope(subject: 'Anomalía de seguridad detectada — AtlanticERP');
     }
 
     public function content(): Content

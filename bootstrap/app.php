@@ -93,6 +93,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 Route::post('/mfa/enable', [MfaController::class, 'enable']);
                 Route::post('/mfa/enable/confirm', [MfaController::class, 'confirmEnable']);
                 Route::post('/mfa/disable', [MfaController::class, 'disable']);
+                Route::post('/mfa/disable/confirm', [MfaController::class, 'confirmDisable']);
 
                 // SCRUM-1158 — cualquier token de impersonación puede terminar su propia sesión (única escritura que el modo solo lectura permite).
                 Route::post('/impersonation/stop', [ImpersonationController::class, 'stop']);

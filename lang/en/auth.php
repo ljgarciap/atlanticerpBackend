@@ -51,10 +51,10 @@ return [
     'impersonation_not_active'     => 'There is no active "View as user" session.',
 
     'mail' => [
-        'footer' => 'AtlanticERP CRM · Atlantic · Do not reply to this email',
+        'footer' => 'AtlanticERP · Atlantic · Do not reply to this email',
         'greeting' => 'Hello, :name',
         'admin_reset' => [
-            'subject' => 'Your password was reset — AtlanticERP CRM',
+            'subject' => 'Your password was reset — AtlanticERP',
             'tag'     => 'Password reset',
             'body'    => 'An administrator reset your account password. Your temporary password is your email address and you must change it when you sign in.',
             'expires' => 'You must do it before: :date. After that the temporary password stops working and you will need to ask for another reset.',
@@ -69,7 +69,7 @@ return [
             'warning' => 'This link works once and expires in :hours hours. If it expires, ask an administrator to send you another or use “Forgot my password”.',
         ],
         'reset' => [
-            'subject' => 'Reset your password — AtlanticERP CRM',
+            'subject' => 'Reset your password — AtlanticERP',
             'tag'     => 'Reset password',
             'body'    => 'We received a request to reset your account password. Click the button to continue:',
             'button'  => 'Reset password',
@@ -77,7 +77,7 @@ return [
             'warning' => 'This link expires in 1 hour. If you did not request a password reset, ignore this email.',
         ],
         'changed' => [
-            'subject' => 'Your password was changed — AtlanticERP CRM',
+            'subject' => 'Your password was changed — AtlanticERP',
             'tag'     => 'Password changed',
             'body'    => 'Your account password was changed on :date.',
             'notme'   => 'If it was not you, tell the administrator right away.',
