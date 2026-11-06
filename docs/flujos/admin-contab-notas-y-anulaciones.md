@@ -35,10 +35,10 @@ Factura 518,38; pagos 518,38 + 50; notas: 50 + 400 (a saldo a favor), 30 (devuel
 - La factura reabre en bruto y el crédito sigue disponible: hay que **compensarlos** (`POST compensaciones`) para dejarlos en cero.
 
 ## Candidatos a cambio o mejora
-1. **`monto` obligatorio pero ignorado** en la anulación completa: confunde en la captura. [E]
-2. **El listado de saldo a favor no expone los identificadores de origen** (solo `referencia` «NC-0001»), pero compensar exige `source_type` y `source_id` por línea; no pude ejercitar la compensación sin otra fuente. [E]
-3. **`credit_balance` de `open-invoices` y `saldo-favor` no coinciden** (488,38 frente a 538,38 en el ejemplo; antes, 0 frente a 272,85): cada pantalla suma orígenes distintos. [E]
-4. **Tras anular un cobro, la factura aparece abierta por el total** aunque ya esté acreditada por notas: el neto es correcto pero la lectura bruta engaña; podría proponerse la compensación automática. [E]
+1. ~~**`monto` obligatorio pero ignorado** en la anulación completa: confunde en la captura. [E]~~ **Resuelto: Fase 13 (2.11)** (verificado 2026-11-06).
+2. ~~**El listado de saldo a favor no expone los identificadores de origen** (solo `referencia` «NC-0001»), pero compensar exige `source_type` y `source_id` por línea; no pude ejercitar la compensación sin otra fuente. [E]~~ **Resuelto: Fase 13 (2.2)** (verificado 2026-11-06).
+3. ~~**`credit_balance` de `open-invoices` y `saldo-favor` no coinciden** (488,38 frente a 538,38 en el ejemplo; antes, 0 frente a 272,85): cada pantalla suma orígenes distintos. [E]~~ **Resuelto: Fase 13 (2.2)** (verificado 2026-11-06).
+4. ~~**Tras anular un cobro, la factura aparece abierta por el total** aunque ya esté acreditada por notas: el neto es correcto pero la lectura bruta engaña; podría proponerse la compensación automática. [E]~~ **Resuelto: Fase 13 (2.4)** (verificado 2026-11-06).
 5. **El umbral de aprobación (5.000) vive en Configuración fiscal con el nombre `primary_approval_threshold`** y lo comparten notas de crédito y compras: cambiarlo en un sitio afecta al otro. [C]
-6. **Una sola cuenta aprueba todo**: si el aprobador falta no hay quien decida anulaciones ni notas; no hay suplente configurable. [E][C]
+6. ~~**Una sola cuenta aprueba todo**: si el aprobador falta no hay quien decida anulaciones ni notas; no hay suplente configurable. [E][C]~~ **Resuelto: Fase 12b (suplente configurable)** (verificado 2026-11-06).
 7. **Sin ejercitar**: nota de corrección con nueva factura (`correccion`), devolución de mercancía vinculada a Bodega, solicitud de devolución al cliente, incobrables, abonos. [C]

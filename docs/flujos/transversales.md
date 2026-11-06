@@ -34,8 +34,8 @@ Marcas: **[E]** ejecutado, **[C]** leído del código (ver `README.md`). Verific
 `GET notifications` lista las del usuario (p. ej. «El pedido … guardó su entrega en Bodega y está listo para facturar», con su enlace); `POST notifications/read-all` (200); marcar una ajena o inexistente → 404 [E]. En el demo hay **0 reglas de notificación**: los avisos del sistema salen sin reglas [E].
 
 ## Candidatos a cambio o mejora
-1. **La clave inicial es el correo del usuario**, conocida por quien lo crea y repetida al reiniciar; el cambio obligatorio la acota, pero un enlace de activación de un solo uso sería más seguro (política decidida el 2026-10-05). [E][C]
-2. **Asignar permisos adicionales sin ser superadmin responde 200 y no hace nada**: debería rechazarse (403/422) o la pantalla debería ocultar el campo. [E]
+1. ~~**La clave inicial es el correo del usuario**, conocida por quien lo crea y repetida al reiniciar; el cambio obligatorio la acota, pero un enlace de activación de un solo uso sería más seguro (política decidida el 2026-10-05). [E][C]~~ **Resuelto: Fase 12c** (verificado 2026-11-06).
+2. ~~**Asignar permisos adicionales sin ser superadmin responde 200 y no hace nada**: debería rechazarse (403/422) o la pantalla debería ocultar el campo. [E]~~ **Resuelto: Fase 12a** (verificado 2026-11-06).
 3. **Los niveles de seguridad admiten nombres repetidos**, e ignoran el número `level` pedido (asignan el siguiente libre). [E]
 4. **Sin borrado de niveles ni de usuarios**: solo se desactivan (acumulan registros de prueba). [E]
 5. **El motivo de «Ver como usuario» es texto libre**; no hay lista de motivos ni aprobación de un segundo operador. [E]
