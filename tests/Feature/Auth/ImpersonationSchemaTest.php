@@ -86,7 +86,7 @@ final class ImpersonationSchemaTest extends FeatureTestCase
             ->where('table_schema', 'atlantic_auth')->where('table_name', 'impersonation_sessions')
             ->pluck('data_type', 'column_name')->all();
 
-        foreach (['id', 'actor_id', 'target_id', 'reason', 'started_at', 'expires_at', 'ended_at', 'ended_reason', 'ended_by', 'ip_address', 'user_agent', 'request_id'] as $col) {
+        foreach (['id', 'actor_id', 'target_id', 'reason', 'reason_key', 'started_at', 'expires_at', 'ended_at', 'ended_reason', 'ended_by', 'ip_address', 'user_agent', 'request_id'] as $col) {
             $this->assertArrayHasKey($col, $columns, "falta la columna {$col}");
         }
         $this->assertSame('uuid', $columns['id']);

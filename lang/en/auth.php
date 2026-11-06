@@ -47,7 +47,10 @@ return [
     'impersonation_read_only'  => 'Read-only mode: changes are not saved while you view the application as another user.',
     'impersonation_nested'     => 'You cannot start "View as user" from a "View as user" session.',
     'impersonation_target_invalid' => 'You cannot view as this person: they must be active, not security-blocked, not a guest, not a superadmin, and not yourself.',
+    'role_without_visibility' => 'This role cannot see any module: people with it will get an empty application. Assign at least one module.',
     'impersonation_reason_short'   => 'The reason must be at least :min characters long.',
+    'impersonation_reason_unknown' => 'The selected reason does not exist or is inactive.',
+    'impersonation_reason_text_required' => 'This reason requires a written explanation.',
     'impersonation_not_active'     => 'There is no active "View as user" session.',
 
     'mail' => [

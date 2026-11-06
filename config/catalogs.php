@@ -74,6 +74,15 @@ return [
                 'color' => ['type' => 'string', 'max' => 7, 'pattern' => '/^#[0-9a-fA-F]{6}$/', 'default' => null],
             ],
         ],
+        // Fase 27b (b2) — motivos de «Ver como usuario». La lógica solo conoce `requiere_texto` (el motivo «Otro» exige explicación escrita);
+        // el resto es vocabulario de la empresa. `impersonation_sessions.reason_key` guarda la clave elegida y `reason` el texto.
+        'impersonation_reason' => [
+            'label' => 'Motivos de «Ver como usuario»',
+            'usage' => [\App\Modules\Auth\Models\ImpersonationSession::class, 'reason_key'],
+            'props' => [
+                'requiere_texto' => ['type' => 'bool', 'default' => false],
+            ],
+        ],
         // Fase 22 (B5) — etapas del CRM. Mismo esquema que `pipeline_stage` pero con su propio vocabulario (no se mezcla con Ventas & Diseño).
         'crm_stage' => [
             'label' => 'Etapas del CRM',

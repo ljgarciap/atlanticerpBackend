@@ -38,13 +38,14 @@ final class SecurityLevelService
      *
      * @param array{
      *   name: string,
+     *   level?: int,
      *   description?: string|null,
      *   permissions?: list<string>,
      * } $data
      */
     public function create(array $data): SecurityLevel
     {
-        $nextLevel = (int) (SecurityLevel::max('level') ?? 0) + 1;
+        $nextLevel = isset($data['level']) ? (int) $data['level'] : (int) (SecurityLevel::max('level') ?? 0) + 1;
 
         return SecurityLevel::create([
             'level'       => $nextLevel,

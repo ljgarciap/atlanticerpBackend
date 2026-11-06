@@ -78,7 +78,7 @@ final class ImpersonationAdminTest extends FeatureTestCase
         $row = collect($response->json('data'))->firstWhere('id', $id);
         $this->assertNotNull($row);
         $this->assertEqualsCanonicalizing(
-            ['id', 'actor', 'target', 'reason', 'started_at', 'expires_at', 'ended_at', 'ended_reason', 'status'],
+            ['id', 'actor', 'target', 'reason', 'reason_key', 'started_at', 'expires_at', 'ended_at', 'ended_reason', 'status'],
             array_keys($row),
         );
         $this->assertSame(['id' => $this->userId('superadmin@atlantic.test'), 'name' => 'Super Admin'], $row['actor']);

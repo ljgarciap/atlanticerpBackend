@@ -49,6 +49,56 @@ class SecurityLevelControllerTest extends FeatureTestCase
         $response->assertJsonPath('permissions', ['crm.read']);
     }
 
+    // ── Fase 27b (b1): nombres únicos y número de nivel respetado ──────────────
+
+    public function test_crear_nivel_con_nombre_repetido_retorna_422_sin_distinguir_mayusculas(): void
+    {
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $this->activateTenant();
+        $existente = (string) DB::table('security_levels')->orderBy('id')->value('name');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/security-levels', ['name' => mb_strtoupper($existente)])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('name');
+    }
+
+    public function test_crear_nivel_respeta_el_numero_pedido_si_esta_libre(): void
+    {
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/security-levels', ['name' => 'Nivel con numero propio', 'level' => 90])
+            ->assertStatus(201)
+            ->assertJsonPath('level', 90);
+    }
+
+    public function test_crear_nivel_con_numero_ocupado_retorna_422(): void
+    {
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/security-levels', ['name' => 'Nivel que choca', 'level' => 4])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('level');
+    }
+
+    public function test_renombrar_un_nivel_con_el_nombre_de_otro_retorna_422_pero_conservar_el_propio_es_valido(): void
+    {
+        $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $this->activateTenant();
+        $filas = DB::table('security_levels')->orderBy('id')->limit(2)->get(['id', 'name']);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/security-levels/{$filas[0]->id}", ['name' => $filas[1]->name])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('name');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/security-levels/{$filas[0]->id}", ['name' => $filas[0]->name])
+            ->assertOk();
+    }
+
     public function test_crear_nivel_sin_nombre_retorna_422(): void
     {
         $token = $this->loginAs('management@atlantic.test', 'Password123!', 'management');

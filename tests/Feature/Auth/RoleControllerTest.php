@@ -221,6 +221,34 @@ class RoleControllerTest extends FeatureTestCase
         );
     }
 
+    public function test_update_visibility_sin_ningun_modulo_visible_avisa_sin_bloquear(): void
+    {
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
+        $this->activateTenant();
+        $role  = Role::where('key', 'lider_compras')->firstOrFail();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin/roles/{$role->id}/visibility", [
+                'rows' => [['module' => 'compras', 'can_view' => RoleModuleVisibility::VIEW_NONE, 'can_view_team' => false]],
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('warnings.0.code', 'rol_sin_visibilidad');
+    }
+
+    public function test_update_visibility_con_algun_modulo_visible_no_trae_avisos(): void
+    {
+        $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');
+        $this->activateTenant();
+        $role  = Role::where('key', 'lider_compras')->firstOrFail();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin/roles/{$role->id}/visibility", [
+                'rows' => [['module' => 'compras', 'can_view' => RoleModuleVisibility::VIEW_FULL, 'can_view_team' => false]],
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('warnings', []);
+    }
+
     public function test_update_visibility_con_modulo_invalido_retorna_422(): void
     {
         $token = $this->loginAs('superadmin@atlantic.test', 'Password123!');

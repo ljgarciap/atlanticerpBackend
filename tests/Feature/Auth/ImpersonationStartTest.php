@@ -425,4 +425,54 @@ final class ImpersonationStartTest extends FeatureTestCase
             $this->assertSame('impersonation_nested', $e->errorCode);
         }
     }
+
+    // ── Fase 27b (b2): motivo como catálogo (`impersonation_reason`) ───────────────────────────────────────────
+
+    public function test_motivo_del_catalogo_sin_texto_usa_la_etiqueta_y_guarda_la_clave(): void
+    {
+        $target = $this->makeUser();
+
+        $this->start($target->id, ['reason' => null, 'reason_key' => 'soporte'])->assertStatus(201);
+
+        $this->reMakeCurrent();
+        $session = ImpersonationSession::where('target_id', $target->id)->firstOrFail();
+        $this->assertSame('soporte', $session->reason_key);
+        $this->assertSame('Soporte a la persona', $session->reason);
+        $log = AuditLog::where('action', AuditService::AUTH_IMPERSONATION_STARTED)->latest('id')->firstOrFail();
+        $this->assertSame('soporte', $log->metadata['reason_key'] ?? null);
+    }
+
+    public function test_motivo_otro_sin_texto_retorna_422_y_con_texto_lo_guarda(): void
+    {
+        $target = $this->makeUser();
+
+        $this->start($target->id, ['reason' => null, 'reason_key' => 'otro'])
+            ->assertStatus(422)->assertJsonValidationErrors('reason');
+        $this->reMakeCurrent();
+        $this->assertSame(0, ImpersonationSession::where('target_id', $target->id)->count());
+
+        $this->start($target->id, ['reason' => 'Revisar el tablero de un cliente puntual', 'reason_key' => 'otro'])->assertStatus(201);
+        $this->reMakeCurrent();
+        $session = ImpersonationSession::where('target_id', $target->id)->firstOrFail();
+        $this->assertSame('otro', $session->reason_key);
+        $this->assertSame('Revisar el tablero de un cliente puntual', $session->reason);
+    }
+
+    public function test_motivo_fuera_del_catalogo_retorna_422(): void
+    {
+        $target = $this->makeUser();
+
+        $this->start($target->id, ['reason' => self::REASON, 'reason_key' => 'inventado'])
+            ->assertStatus(422)->assertJsonValidationErrors('reason_key');
+    }
+
+    public function test_sin_clave_y_sin_texto_retorna_422_y_el_texto_libre_anterior_sigue_valiendo(): void
+    {
+        $target = $this->makeUser();
+
+        $this->start($target->id, ['reason' => null])->assertStatus(422)->assertJsonValidationErrors('reason');
+        $this->start($target->id)->assertStatus(201);
+        $this->reMakeCurrent();
+        $this->assertNull(ImpersonationSession::where('target_id', $target->id)->firstOrFail()->reason_key);
+    }
 }

@@ -47,7 +47,7 @@ class ImpersonationService
      *
      * @throws ImpersonationException|ValidationException
      */
-    public function authorizeStart(Request $request, int $targetId, string $reason): User
+    public function authorizeStart(Request $request, int $targetId, string $reason, bool $skipMinLength = false): User
     {
         $payload = $this->jwtPayload($request);
         $actorId = isset($payload['sub']) ? (int) $payload['sub'] : null;
@@ -65,7 +65,7 @@ class ImpersonationService
 
         // 3. Motivo obligatorio, con largo mínimo configurable.
         $min = $this->settings->reasonMinLength();
-        if (mb_strlen(trim($reason)) < $min) {
+        if (! $skipMinLength && mb_strlen(trim($reason)) < $min) {
             $this->audit->log(
                 action:       AuditService::AUTH_IMPERSONATION_DENIED,
                 entityType:   'user',
@@ -98,7 +98,7 @@ class ImpersonationService
      * @return array<string, mixed> cuerpo de la respuesta 201
      * @throws ImpersonationException
      */
-    public function start(Request $request, User $actor, int $targetId, string $reason): array
+    public function start(Request $request, User $actor, int $targetId, string $reason, ?string $reasonKey = null): array
     {
         $target = User::find($targetId);
         if ($target === null) {
@@ -116,6 +116,7 @@ class ImpersonationService
             'actor_id'   => $actor->id,
             'target_id'  => $target->id,
             'reason'     => trim($reason),
+            'reason_key' => $reasonKey,
             'started_at' => now(),
             'expires_at' => now()->addMinutes($minutes),
             'ip_address' => $request->ip(),
@@ -130,6 +131,7 @@ class ImpersonationService
             metadata:     [
                 'target_user_id' => $target->id,
                 'reason'         => $session->reason,
+                'reason_key'     => $session->reason_key,
                 'expires_at'     => $session->expires_at->toIso8601String(),
             ],
             actingUserId: $actor->id,

@@ -46,7 +46,7 @@ class ImpersonationSession extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'actor_id', 'target_id', 'reason', 'started_at', 'expires_at',
+        'actor_id', 'target_id', 'reason', 'reason_key', 'started_at', 'expires_at',
         'ended_at', 'ended_reason', 'ended_by', 'ip_address', 'user_agent', 'request_id',
     ];
 
