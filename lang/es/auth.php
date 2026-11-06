@@ -87,4 +87,8 @@ return [
         ],
     ],
 
+    'mfa_totp_already_active' => 'Ya usas una aplicación autenticadora. Desactiva el segundo factor para cambiar de método.',
+    'mfa_proof_required' => 'Primero confirma tu identidad con el código del método actual.',
+    'mfa_totp_code_invalid' => 'El código de la aplicación no es válido. Revisa la hora de tu teléfono e inténtalo de nuevo.',
+    'mfa_totp_not_active' => 'No tienes una aplicación autenticadora activa.',
 ];

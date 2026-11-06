@@ -48,6 +48,10 @@ use RuntimeException;
  * @property array<string, mixed> $preferences
  * @property bool $is_active
  * @property bool $mfa_enabled
+ * @property string $mfa_method 'email' | 'totp' (Fase 27c)
+ * @property string|null $mfa_totp_secret cifrado
+ * @property string|null $mfa_totp_pending_secret cifrado
+ * @property int|null $mfa_totp_last_step
  * @property Carbon|null $security_blocked_at
  * @property Carbon $created_at
  * @property Department|null $department
@@ -81,12 +85,15 @@ class User extends Authenticatable
         'preferences',
         'is_active',
         'mfa_enabled',
+        'mfa_method',
     ];
 
     /** @var list<string> */
     protected $hidden = [
         'password_hash',
         'remember_token',
+        'mfa_totp_secret',
+        'mfa_totp_pending_secret',
     ];
 
     /** @return array<string, string> */
@@ -96,6 +103,9 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'hire_date' => 'date',
             'mfa_enabled' => 'boolean',
+            'mfa_totp_secret' => 'encrypted',
+            'mfa_totp_pending_secret' => 'encrypted',
+            'mfa_totp_last_step' => 'integer',
             'password_hash' => 'hashed',
             'must_change_password' => 'boolean',
             'password_reset_at' => 'datetime',
@@ -153,6 +163,10 @@ class User extends Authenticatable
             $attributes['updated_at'],
             $attributes['password_hash'],
             $attributes['remember_token'],
+            // Fase 27c: el secreto TOTP (y el de un alta a medias) jamás va a la auditoría.
+            $attributes['mfa_totp_secret'],
+            $attributes['mfa_totp_pending_secret'],
+            $attributes['mfa_totp_last_step'],
         );
 
         return $attributes;

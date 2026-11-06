@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @property string          $id           UUID — used as challenge_id sent to client
  * @property int             $user_id
+ * @property string          $method       'email' | 'totp' (Fase 27c)
  * @property string          $code_hash    SHA-256 hex
  * @property int             $attempts
  * @property \Carbon\Carbon  $expires_at
@@ -25,7 +26,7 @@ class MfaCode extends Model
     protected $keyType = 'string';
 
     /** @var list<string> */
-    protected $fillable = ['id', 'user_id', 'code_hash', 'attempts', 'expires_at', 'used_at'];
+    protected $fillable = ['id', 'user_id', 'method', 'code_hash', 'attempts', 'expires_at', 'used_at'];
 
     /** @return array<string, string> */
     protected function casts(): array

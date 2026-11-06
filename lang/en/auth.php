@@ -87,4 +87,8 @@ return [
         ],
     ],
 
+    'mfa_totp_already_active' => 'You already use an authenticator app. Turn off the second factor to change method.',
+    'mfa_proof_required' => 'First confirm your identity with the code from your current method.',
+    'mfa_totp_code_invalid' => 'The authenticator code is not valid. Check your phone\'s clock and try again.',
+    'mfa_totp_not_active' => 'You don\'t have an authenticator app enabled.',
 ];

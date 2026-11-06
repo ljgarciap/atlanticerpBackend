@@ -68,3 +68,10 @@ Implementada en backend (`fase27b/niveles-motivos-roles`) y frontend (`fase27b/m
 - Verificado: e2e `transversales` y `transversales-administracion` (13 pasos) contra el stack local; pruebas de componente nuevas.
 - **Abierto**: la aprobación de un segundo operador para «Ver como usuario» (candidato 5, segunda mitad) no entra en la fase.
 
+## 8. Resultado de 27c (2026-11-06)
+Implementada en backend (`fase27c/totp-respaldo`) y frontend (`fase27c/totp-respaldo`). Criterios 1 a 7 de §2 cumplidos.
+- **Decisión técnica del Arquitecto (dentro del diseño aprobado)**: el RFC 6238 se implementó en `App\Shared\Auth\Totp` (~40 líneas, sin dependencias) y se comprueba contra los vectores del propio RFC; evita sumar una biblioteca a una pieza de seguridad y la verificación de compatibilidad con PHP 8.x. El QR reutiliza `QrPng` (bacon-qr-code, ya en el proyecto), así que el frontend no suma dependencias.
+- **Migración** `2026_11_21_100000_add_totp_to_auth` (aditiva y reversible): `users.mfa_method` (default `email`), `mfa_totp_secret` y `mfa_totp_pending_secret` (cifrados), `mfa_totp_last_step`; `mfa_codes.method`; tabla `mfa_backup_codes`. Se añadió el secreto **pendiente** al diseño: el método no cambia hasta confirmar con un código válido.
+- **API**: `POST auth/mfa/totp/setup`, `totp/confirm`, `proof`, `backup-codes/regenerate`; `disable`/`disable/confirm` y `verify` entienden el método; `status` informa `mfa_method` y `backup_codes_remaining`; el login responde `mfa_method`. Sin permisos nuevos (el conteo de `PermissionCatalogTest` no se mueve).
+- **Verificado**: tests nuevos `TotpTest` (vectores del RFC) y `MfaTotpTest` (22 casos: alta, secreto cifrado y ausente de respuestas y auditoría, ingreso sin correo, repetición, respaldos de un solo uso, regenerar, desactivar, reinicio, tope por usuario); frontend con pruebas de `MfaTotpSetup`, `MfaBackupRegenerate`, `MfaDisableForm` y `LoginPage`; e2e `mfa-recuperacion-clave` 8 de 8 contra el stack local.
+- **Abiertos**: ver el punto 9 de `docs/flujos/mfa-recuperacion-clave.md` (rotación de `APP_KEY`, aviso por correo al activar/desactivar, limpieza de retos, tope de `mfa/proof`).
