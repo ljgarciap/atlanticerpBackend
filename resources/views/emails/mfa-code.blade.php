@@ -22,7 +22,7 @@
         <div class="logo">ATLANTICERP</div>
         <span class="tag">Verificación en dos pasos</span>
         <h2>Hola, {{ $firstName }}</h2>
-        <p>Usa este código para iniciar sesión en AtlanticERP CRM. Ingrésalo en la pantalla de verificación:</p>
+        <p>Usa este código para iniciar sesión en AtlanticERP. Ingrésalo en la pantalla de verificación:</p>
         <div class="code-box">
             <br>
             <br>
@@ -34,7 +34,7 @@
         <div class="warning">
             ⚠️ Si no solicitaste este código, alguien intentó acceder a tu cuenta. Cambia tu contraseña inmediatamente.
         </div>
-        <div class="footer">AtlanticERP CRM · Atlantic · No compartas este código con nadie</div>
+        <div class="footer">AtlanticERP · Atlantic · No compartas este código con nadie</div>
     </div>
 </body>
 </html>

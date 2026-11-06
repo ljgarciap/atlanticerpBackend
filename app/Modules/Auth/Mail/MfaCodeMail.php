@@ -21,7 +21,7 @@ final class MfaCodeMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Tu código de verificación — AtlanticERP CRM');
+        return new Envelope(subject: 'Tu código de verificación — AtlanticERP');
     }
 
     public function content(): Content

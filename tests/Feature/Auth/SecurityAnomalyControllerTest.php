@@ -237,4 +237,47 @@ class SecurityAnomalyControllerTest extends FeatureTestCase
             ->postJson("/api/admin/security/users/{$affected->id}/mfa/reset")
             ->assertStatus(403);
     }
+
+    private function gerenciaActor(): string
+    {
+        // Gerencia sin superadmin.all: un usuario con `settings.global` por permiso adicional (mismo recurso que ImpersonationSchemaTest).
+        \Illuminate\Support\Facades\DB::table('atlantic_auth.users')
+            ->where('email', 'vendedor@atlantic.test')->update(['extra_permissions' => json_encode(['settings.global'])]);
+
+        return $this->loginAs('vendedor@atlantic.test', 'Password123!', 'vendedor');
+    }
+
+    public function test_gerencia_puede_reiniciar_el_mfa_de_otra_persona_y_se_limpian_los_topes(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $affected = $this->findUser('nivel2@atlantic.test');
+        $this->enableMfa($affected);
+        $key = 'mfa:verify:user:' . $affected->id;
+        \App\Modules\Auth\Support\AuthThrottle::reservar([$key => [1, 600]], \App\Modules\Auth\Support\AuthThrottle::CERRAR);
+
+        $token = $this->gerenciaActor();
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/admin/security/users/{$affected->id}/mfa/reset")
+            ->assertStatus(200);
+
+        $this->refreshUser($affected);
+        $this->assertFalse($affected->mfa_enabled);
+        $this->assertNull(\App\Modules\Auth\Support\AuthThrottle::reservar([$key => [1, 600]], \App\Modules\Auth\Support\AuthThrottle::CERRAR));
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Modules\Auth\Mail\MfaResetNoticeMail::class);
+    }
+
+    public function test_gerencia_no_puede_reiniciar_el_mfa_de_un_superadmin_ni_el_propio(): void
+    {
+        $super = $this->findUser('superadmin@atlantic.test');
+        $this->enableMfa($super);
+        $token = $this->gerenciaActor();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/admin/security/users/{$super->id}/mfa/reset")->assertStatus(403);
+
+        $self = $this->findUser('vendedor@atlantic.test');
+        $this->enableMfa($self);
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson("/api/admin/security/users/{$self->id}/mfa/reset")->assertStatus(403);
+    }
 }

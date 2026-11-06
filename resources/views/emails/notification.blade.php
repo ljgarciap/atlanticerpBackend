@@ -24,7 +24,7 @@
         @if($ctaHref)
             <a href="{{ $ctaHref }}" class="btn">Ver en AtlanticERP</a>
         @endif
-        <div class="footer">AtlanticERP CRM · Atlantic · No respondas a este correo</div>
+        <div class="footer">AtlanticERP · Atlantic · No respondas a este correo</div>
     </div>
 </body>
 </html>

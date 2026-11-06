@@ -420,7 +420,7 @@ class AuthThrottleTest extends FeatureTestCase
         $this->assertSame(10, $cfg['mfa_verify']['ip_max']);
         $this->assertSame(3, $cfg['mfa_resend']['max']);
         $this->assertSame(600, $cfg['mfa_resend']['decay']);
-        $this->assertSame(5, $cfg['forgot_password']['ip_max']);
+        $this->assertSame(20, $cfg['forgot_password']['ip_max']);
         $this->assertSame(900, $cfg['forgot_password']['ip_decay']);
         $this->assertSame(3, $cfg['forgot_password']['email_max']);
         $this->assertSame(3600, $cfg['forgot_password']['email_decay']);

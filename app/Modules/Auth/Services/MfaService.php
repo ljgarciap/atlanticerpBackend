@@ -69,7 +69,7 @@ final class MfaService
      * Returns the user_id on success.
      * Throws ValidationException on failure, MfaThrottledException when the per-user cap is exhausted (HTTP 429).
      */
-    public function verify(string $challengeId, string $code): int
+    public function verify(string $challengeId, string $code, string $scope = 'verify'): int
     {
         /** @var MfaCode|null $mfa */
         $mfa = MfaCode::find($challengeId);
@@ -84,7 +84,8 @@ final class MfaService
         // (por reto), este contador NO se reinicia al reenviar el código: sin él, cada reenvío daba 5 intentos nuevos y un código de
         // 6 dígitos se podía forzar. Se libera solo al vencer la ventana o con un código correcto.
         $cfg     = (array) config('throttle.mfa_verify');
-        $userKey = 'mfa:verify:user:' . $mfa->user_id;
+        // `$scope` separa el tope de la ACTIVACIÓN y de la DESACTIVACIÓN del tope de ingreso (Fase 27a): fallar al ingresar no impide activar.
+        $userKey = self::userThrottleKey($mfa->user_id, $scope);
         // El intento se RESERVA antes de comparar el código (incremento atómico: una ráfaga paralela no multiplica los intentos);
         // un código correcto lo libera más abajo.
         if (($retry = AuthThrottle::reservar([$userKey => [(int) $cfg['user_max'], (int) $cfg['user_decay']]], AuthThrottle::CERRAR)) !== null) {
@@ -159,6 +160,21 @@ final class MfaService
     {
         $user->mfa_enabled = false;
         $user->save();
+    }
+
+    /** Reinicio por un administrador: apaga el MFA y limpia los topes de errores de la persona (Fase 27a, a3). */
+    public function resetForUser(User $user): void
+    {
+        $this->disableForUser($user);
+
+        foreach (['verify', 'enable', 'disable'] as $scope) {
+            AuthThrottle::limpiar(self::userThrottleKey($user->id, $scope));
+        }
+    }
+
+    private static function userThrottleKey(int $userId, string $scope): string
+    {
+        return $scope === 'verify' ? 'mfa:verify:user:' . $userId : 'mfa:' . $scope . ':user:' . $userId;
     }
 
     public function getMfaMode(): string

@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Http\Controllers;
 
 use App\Models\User;
+use App\Modules\Auth\Mail\MfaResetNoticeMail;
 use App\Modules\Auth\Models\SecurityAnomaly;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Auth\Services\MfaService;
 use App\Shared\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Panel de superadmin del Epic 11 — Seguridad Agéntica. Ver ADR-004 punto 6-7: el job nunca
@@ -154,14 +158,29 @@ final class SecurityAnomalyController
             return response()->json(['message' => 'El usuario no tiene MFA activo.'], 422);
         }
 
-        $this->mfaService->disableForUser($user);
+        // Fase 27a (a4): Gerencia también reinicia, pero nunca el MFA de un superadmin ni el suyo propio.
+        $actorId = $this->actorId($request);
+        $actor   = $actorId !== null ? User::find($actorId) : null;
+        if (($actor === null || ! $actor->hasRole(RoleKeys::SUPERADMIN)) && ($user->hasRole(RoleKeys::SUPERADMIN) || $user->id === $actorId)) {
+            return response()->json(['message' => 'Solo un superadmin puede reiniciar el MFA de un superadmin o el propio.'], 403);
+        }
+
+        // resetForUser también limpia los topes de errores: la persona puede volver a activar sin esperar la ventana (a3).
+        $this->mfaService->resetForUser($user);
 
         $this->audit->log(
             action:       AuditService::SECURITY_MFA_RESET,
             entityType:   'user',
             entityId:     $user->id,
-            actingUserId: $this->actorId($request),
+            actingUserId: $actorId,
         );
+
+        try {
+            Mail::to($user->email)->send(new MfaResetNoticeMail($user->first_name));
+        } catch (\Throwable $e) {
+            // El aviso es informativo: si el correo falla, el reinicio ya se hizo y quedó auditado.
+            Log::warning('MFA reset notice email failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
 
         return response()->json(['message' => 'MFA reseteado.']);
     }

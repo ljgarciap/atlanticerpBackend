@@ -51,10 +51,10 @@ return [
     'impersonation_not_active'     => 'No hay una sesión de «Ver como usuario» activa.',
 
     'mail' => [
-        'footer' => 'AtlanticERP CRM · Atlantic · No respondas a este correo',
+        'footer' => 'AtlanticERP · Atlantic · No respondas a este correo',
         'greeting' => 'Hola, :name',
         'admin_reset' => [
-            'subject' => 'Tu contraseña fue restablecida — AtlanticERP CRM',
+            'subject' => 'Tu contraseña fue restablecida — AtlanticERP',
             'tag'     => 'Contraseña restablecida',
             'body'    => 'Un administrador restableció la contraseña de tu cuenta. Tu contraseña temporal es tu correo electrónico y debes cambiarla al iniciar sesión.',
             'expires' => 'Debes hacerlo antes de: :date. Pasado ese plazo la contraseña temporal deja de funcionar y tendrás que pedir otro restablecimiento.',
@@ -69,7 +69,7 @@ return [
             'warning' => 'Este enlace sirve una sola vez y vence en :hours horas. Si caduca, pide a un administrador que te envíe otro o usa «Olvidé mi contraseña».',
         ],
         'reset' => [
-            'subject' => 'Restablece tu contraseña — AtlanticERP CRM',
+            'subject' => 'Restablece tu contraseña — AtlanticERP',
             'tag'     => 'Restablecer contraseña',
             'body'    => 'Recibimos una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el botón para continuar:',
             'button'  => 'Restablecer contraseña',
@@ -77,7 +77,7 @@ return [
             'warning' => 'Este enlace expira en 1 hora. Si no solicitaste restablecer tu contraseña, ignora este correo.',
         ],
         'changed' => [
-            'subject' => 'Tu contraseña fue cambiada — AtlanticERP CRM',
+            'subject' => 'Tu contraseña fue cambiada — AtlanticERP',
             'tag'     => 'Contraseña cambiada',
             'body'    => 'La contraseña de tu cuenta fue cambiada el :date.',
             'notme'   => 'Si no fuiste tú, avisa de inmediato al administrador.',

@@ -279,19 +279,114 @@ class MfaTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    public function test_mfa_disable_desactiva_mfa(): void
+    private function enableMfaFor(string $token): void
     {
-        $token = $this->loginAs();
         [$challengeId, $code] = $this->createEnableChallenge($token);
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/auth/mfa/enable/confirm', ['mfa_challenge_id' => $challengeId, 'code' => $code])
             ->assertStatus(200);
+    }
 
-        // Then disable
+    private function setKnownCode(string $challengeId, string $code): void
+    {
+        /** @var Tenant $tenant */
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
+        $tenant->makeCurrent();
+
+        try {
+            MfaCode::where('id', $challengeId)->update(['code_hash' => hash('sha256', $code)]);
+        } finally {
+            Tenant::forgetCurrent();
+        }
+    }
+
+    public function test_mfa_disable_desactiva_mfa_con_clave_y_codigo(): void
+    {
+        $token = $this->loginAs();
+        $this->enableMfaFor($token);
+
+        $challengeId = (string) $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/auth/mfa/disable', ['password' => 'Password123!'])
+            ->assertStatus(200)
+            ->json('mfa_challenge_id');
+        $this->setKnownCode($challengeId, '111222');
+
         $this->withHeaders($this->authHeaders($token))
-            ->postJson('/api/auth/mfa/disable')
+            ->postJson('/api/auth/mfa/disable/confirm', ['mfa_challenge_id' => $challengeId, 'code' => '111222'])
             ->assertStatus(200)
             ->assertJsonPath('mfa_enabled', false);
+    }
+
+    public function test_mfa_disable_sin_clave_o_con_clave_incorrecta_no_desactiva(): void
+    {
+        $token = $this->loginAs();
+        $this->enableMfaFor($token);
+
+        $this->withHeaders($this->authHeaders($token))->postJson('/api/auth/mfa/disable')->assertStatus(422);
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/auth/mfa/disable', ['password' => 'Incorrecta1!'])->assertStatus(422);
+        $this->withHeaders($this->authHeaders($token))->getJson('/api/auth/mfa/status')->assertJsonPath('mfa_enabled', true);
+    }
+
+    public function test_mfa_disable_con_codigo_incorrecto_no_desactiva(): void
+    {
+        $token = $this->loginAs();
+        $this->enableMfaFor($token);
+
+        $challengeId = (string) $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/auth/mfa/disable', ['password' => 'Password123!'])->json('mfa_challenge_id');
+        $this->setKnownCode($challengeId, '111222');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/auth/mfa/disable/confirm', ['mfa_challenge_id' => $challengeId, 'code' => '999999'])
+            ->assertStatus(422);
+        $this->withHeaders($this->authHeaders($token))->getJson('/api/auth/mfa/status')->assertJsonPath('mfa_enabled', true);
+    }
+
+    public function test_confirmar_con_un_reto_ajeno_no_gasta_el_codigo_de_su_dueno(): void
+    {
+        $designerToken = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        [$challengeId, $code] = $this->createEnableChallenge($designerToken);
+
+        $otherToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        $this->withHeaders($this->authHeaders($otherToken))
+            ->postJson('/api/auth/mfa/enable/confirm', ['mfa_challenge_id' => $challengeId, 'code' => $code])
+            ->assertStatus(403);
+
+        // El dueño todavía puede usar su código (Fase 27a, a1).
+        $this->withHeaders($this->authHeaders($designerToken))
+            ->postJson('/api/auth/mfa/enable/confirm', ['mfa_challenge_id' => $challengeId, 'code' => $code])
+            ->assertStatus(200);
+    }
+
+    public function test_errores_al_ingresar_no_bloquean_la_activacion(): void
+    {
+        // Fase 27a (a3): el tope por usuario del ingreso y el de la activación son distintos.
+        \Illuminate\Support\Facades\Cache::flush();
+        $max = (int) config('throttle.mfa_verify.user_max');
+        $token = $this->loginAs();
+        $userId = $this->userIdOf('management@atlantic.test');
+        for ($i = 0; $i < $max; $i++) {
+            \App\Modules\Auth\Support\AuthThrottle::reservar(
+                ['mfa:verify:user:' . $userId => [$max, 600]],
+                \App\Modules\Auth\Support\AuthThrottle::CERRAR,
+            );
+        }
+
+        $this->enableMfaFor($token);
+    }
+
+    private function userIdOf(string $email): int
+    {
+        /** @var Tenant $tenant */
+        $tenant = Tenant::where('slug', 'atlantic')->firstOrFail();
+        $tenant->makeCurrent();
+
+        try {
+            return (int) User::where('email', $email)->firstOrFail()->id;
+        } finally {
+            Tenant::forgetCurrent();
+        }
     }
 
     public function test_mfa_enable_sin_autenticar_retorna_401(): void
