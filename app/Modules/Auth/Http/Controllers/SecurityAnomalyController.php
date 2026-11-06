@@ -7,6 +7,7 @@ namespace App\Modules\Auth\Http\Controllers;
 use App\Models\User;
 use App\Modules\Auth\Mail\MfaResetNoticeMail;
 use App\Modules\Auth\Models\SecurityAnomaly;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Auth\Services\MfaService;
 use App\Shared\Services\AuditService;
 use Illuminate\Http\JsonResponse;
@@ -160,7 +161,7 @@ final class SecurityAnomalyController
         // Fase 27a (a4): Gerencia también reinicia, pero nunca el MFA de un superadmin ni el suyo propio.
         $actorId = $this->actorId($request);
         $actor   = $actorId !== null ? User::find($actorId) : null;
-        if (($actor === null || ! $actor->hasRole('superadmin')) && ($user->hasRole('superadmin') || $user->id === $actorId)) {
+        if (($actor === null || ! $actor->hasRole(RoleKeys::SUPERADMIN)) && ($user->hasRole(RoleKeys::SUPERADMIN) || $user->id === $actorId)) {
             return response()->json(['message' => 'Solo un superadmin puede reiniciar el MFA de un superadmin o el propio.'], 403);
         }
 

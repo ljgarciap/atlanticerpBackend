@@ -52,3 +52,10 @@ Criterios de aceptación 27c: (1) alta completa con un código válido y 10 resp
 
 ## 5. Orden propuesto
 27a → 27b → 27c, cada una con su PR de backend y de frontend, informe de revisión en `docs/reviews/` y e2e (`mfa-recuperacion-clave.spec.ts` ampliado). 27c la más grande (varios días).
+
+## 6. Resultado de 27a (2026-11-06)
+Implementada en backend (`fase27a/mfa-arreglos`) y frontend (`fase27a/mfa-desactivar-con-clave`). Los seis cambios a1 a a6 de §2 están hechos.
+- `POST auth/mfa/disable {password}` envía el código y `POST auth/mfa/disable/confirm {mfa_challenge_id, code}` desactiva. La activación y la desactivación tienen cada una su tope de errores por usuario (claves `mfa:enable:user:` y `mfa:disable:user:`), separado del de ingreso; el reinicio por administrador limpia los tres.
+- El reinicio vive ahora bajo `settings.global` (Gerencia y superadmin). Gerencia recibe 403 al reiniciar a un superadmin o a sí misma; el aviso por correo (`MfaResetNoticeMail`) es informativo y su fallo no deshace el reinicio.
+- Verificado: suite completa del backend (5290 tests, un fallo de `RoleKeysUsageTest` por una clave de rol escrita a mano, corregido), PHPStan 0, frontend 253 archivos / 2959 tests, e2e `mfa-recuperacion-clave` 7 de 7.
+- **Abierto**: el formulario de desactivación no se vio todavía en un navegador real (solo tests de componente); 27b y 27c pendientes.
