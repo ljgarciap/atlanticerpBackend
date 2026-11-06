@@ -77,6 +77,11 @@ final class AuditService
     public const SECURITY_USER_BLOCKED      = 'security.user.blocked';
     public const SECURITY_USER_UNBLOCKED    = 'security.user.unblocked';
     public const SECURITY_MFA_RESET         = 'security.mfa.reset';
+    // Fase 27c — aplicación autenticadora. Nunca llevan el secreto ni los códigos: solo quién y cuándo.
+    public const SECURITY_MFA_TOTP_ENABLED     = 'security.mfa.totp_enabled';
+    public const SECURITY_MFA_TOTP_DISABLED    = 'security.mfa.totp_disabled';
+    public const SECURITY_MFA_BACKUP_REGENERATED = 'security.mfa.backup_regenerated';
+    public const SECURITY_MFA_BACKUP_USED      = 'security.mfa.backup_used';
 
     // ── AI — SCRUM-54, prompt injection ─────────────────────────────────────
     public const AI_PROMPT_SUSPICIOUS_PATTERN_DETECTED = 'ai.prompt.suspicious_pattern_detected';

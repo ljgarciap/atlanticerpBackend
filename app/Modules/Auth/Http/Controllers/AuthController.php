@@ -177,6 +177,15 @@ class AuthController
 
             // MFA check — happens before role selection
             if ($this->mfaService->isRequired($user)) {
+                // Fase 27c: con aplicación autenticadora no se envía ningún correo (y por eso sigue funcionando aunque el correo falle).
+                if ($this->mfaService->usesTotp($user)) {
+                    return response()->json([
+                        'requires_mfa'     => true,
+                        'mfa_challenge_id' => $this->mfaService->generateTotpChallenge($user),
+                        'mfa_method'       => MfaService::METHOD_TOTP,
+                    ]);
+                }
+
                 // R3-4: cada login correcto con MFA envía un código por correo; sin tope, 15 logins = 15 correos. Tope por usuario.
                 $sendCfg = (array) config('throttle.mfa_send');
                 if (($retry = AuthThrottle::reservar([
@@ -194,6 +203,7 @@ class AuthController
                 return response()->json([
                     'requires_mfa'     => true,
                     'mfa_challenge_id' => $challengeId,
+                    'mfa_method'       => MfaService::METHOD_EMAIL,
                 ]);
             }
 

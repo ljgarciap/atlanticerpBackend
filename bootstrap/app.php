@@ -94,6 +94,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 Route::post('/mfa/enable/confirm', [MfaController::class, 'confirmEnable']);
                 Route::post('/mfa/disable', [MfaController::class, 'disable']);
                 Route::post('/mfa/disable/confirm', [MfaController::class, 'confirmDisable']);
+                // Fase 27c — aplicación autenticadora (TOTP) y códigos de respaldo.
+                Route::post('/mfa/proof', [MfaController::class, 'proof']);
+                Route::post('/mfa/totp/setup', [MfaController::class, 'totpSetup']);
+                Route::post('/mfa/totp/confirm', [MfaController::class, 'totpConfirm']);
+                Route::post('/mfa/backup-codes/regenerate', [MfaController::class, 'regenerateBackupCodes']);
 
                 // SCRUM-1158 — cualquier token de impersonación puede terminar su propia sesión (única escritura que el modo solo lectura permite).
                 Route::post('/impersonation/stop', [ImpersonationController::class, 'stop']);
