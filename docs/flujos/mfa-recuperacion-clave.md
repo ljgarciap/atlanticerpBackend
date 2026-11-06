@@ -36,11 +36,11 @@ Continuación de [Transversales](transversales.md) (§7 «sin ejercitar»). Marc
 - En **obligatorio** todos reciben código al entrar, aunque no lo hayan activado, y `mfa/status` lo informa; al volver a opcional entran directo [E]. `disabled` solo oculta el auto-servicio: quien ya lo activó lo conserva [C].
 
 ## Candidatos a cambio o mejora
-1. **Confirmar con la sesión equivocada gasta el código**: la comprobación de pertenencia ocurre después de validar el código, que queda usado; la persona dueña del reto recibe «inválido o expirado» y debe pedir otro. Exige tener el reto y el código, así que el riesgo es bajo. [E]
-2. **Desactivar el MFA no pide clave ni código**: una sesión robada basta para quitar el segundo factor. [E]
-3. **El tope por usuario también bloquea la reactivación** y el reinicio por admin no lo limpia: tras cinco errores la persona espera 10 minutos aun con soporte de por medio. [E]
+1. ~~**Confirmar con la sesión equivocada gasta el código**: la comprobación de pertenencia ocurre después de validar el código, que queda usado; la persona dueña del reto recibe «inválido o expirado» y debe pedir otro. Exige tener el reto y el código, así que el riesgo es bajo. [E]~~ **Resuelto: Fase 27a** (el desafío ajeno ya no gasta el código).
+2. ~~**Desactivar el MFA no pide clave ni código**: una sesión robada basta para quitar el segundo factor. [E]~~ **Resuelto: Fase 27a** (desactivar pide clave y código por correo).
+3. ~~**El tope por usuario también bloquea la reactivación** y el reinicio por admin no lo limpia: tras cinco errores la persona espera 10 minutos aun con soporte de por medio. [E]~~ **Resuelto: Fase 27a** (el reinicio por admin limpia los topes y la reactivación no se bloquea por el tope de ingreso).
 4. **El segundo factor es el mismo buzón que la recuperación de clave**: quien controla el correo restablece la clave y recibe el código, así que el MFA por correo no protege contra el robo del buzón. Sin aplicación autenticadora ni códigos de respaldo; si el correo falla (503), nadie entra. [E][C]
-5. **El texto del correo de activación dice «iniciar sesión en AtlanticERP CRM»** (se reutiliza el de ingreso, y menciona un CRM que ya no existe como módulo aparte). [E]
-6. **Gerencia cambia la política global de MFA pero no reinicia el MFA de una persona**: puede volverlo obligatorio para todos sin poder ayudar a quien se quede sin acceso. [E]
-7. **Los topes de «olvidé mi contraseña» son por IP**: una oficina entera detrás de la misma IP comparte 5 solicitudes cada 15 minutos. [C]
+5. ~~**El texto del correo de activación dice «iniciar sesión en AtlanticERP CRM»** (se reutiliza el de ingreso, y menciona un CRM que ya no existe como módulo aparte). [E]~~ **Resuelto: Fase 27a** (texto del correo corregido a «AtlanticERP»).
+6. ~~**Gerencia cambia la política global de MFA pero no reinicia el MFA de una persona**: puede volverlo obligatorio para todos sin poder ayudar a quien se quede sin acceso. [E]~~ **Resuelto: Fase 27a** (Gerencia puede reiniciar el MFA de otra persona (no de superadmin ni propio), con auditoría y aviso por correo).
+7. ~~**Los topes de «olvidé mi contraseña» son por IP**: una oficina entera detrás de la misma IP comparte 5 solicitudes cada 15 minutos. [C]~~ **Resuelto: Fase 27a** (tope por IP subido a 20 cada 15 min; se conservan 3 por correo por hora).
 8. **Sin ejercitar**: la pantalla (formularios y mensajes del navegador), la caducidad real del enlace y del código (1 hora y 10 minutos) y la entrega real del correo (en local solo el log). [C]
