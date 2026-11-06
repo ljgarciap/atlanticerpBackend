@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int                             $actor_id
  * @property int                             $target_id
  * @property string                          $reason
+ * @property string|null                     $reason_key
  * @property \Illuminate\Support\Carbon      $started_at
  * @property \Illuminate\Support\Carbon      $expires_at
  * @property \Illuminate\Support\Carbon|null $ended_at
@@ -46,7 +47,7 @@ class ImpersonationSession extends Model
 
     /** @var list<string> */
     protected $fillable = [
-        'actor_id', 'target_id', 'reason', 'started_at', 'expires_at',
+        'actor_id', 'target_id', 'reason', 'reason_key', 'started_at', 'expires_at',
         'ended_at', 'ended_reason', 'ended_by', 'ip_address', 'user_agent', 'request_id',
     ];
 

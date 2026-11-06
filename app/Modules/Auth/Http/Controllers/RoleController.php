@@ -96,7 +96,16 @@ final class RoleController extends Controller
 
         $rows = $this->service->upsertVisibility($role, $data['rows']);
 
-        return response()->json($rows->map(fn (RoleModuleVisibility $v) => $this->formatVisibility($v))->values());
+        // Fase 27b (b3): un rol que no ve ningún módulo (y no es superadmin) deja a su gente con una aplicación vacía. Se avisa, no se bloquea.
+        $warnings = [];
+        if (! $role->is_superadmin && $rows->every(fn (RoleModuleVisibility $v): bool => $v->can_view === RoleModuleVisibility::VIEW_NONE)) {
+            $warnings[] = ['code' => 'rol_sin_visibilidad', 'message' => trans('auth.role_without_visibility')];
+        }
+
+        return response()->json([
+            'data'     => $rows->map(fn (RoleModuleVisibility $v) => $this->formatVisibility($v))->values(),
+            'warnings' => $warnings,
+        ]);
     }
 
     /** @return array<string, mixed> */

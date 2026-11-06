@@ -74,9 +74,10 @@ final class SecurityLevelController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        /** @var array{name: string, description?: string|null, permissions?: list<string>} $data */
+        /** @var array{name: string, level?: int, description?: string|null, permissions?: list<string>} $data */
         $data = $request->validate([
-            'name'          => ['required', 'string', 'max:100'],
+            'name'          => ['required', 'string', 'max:100', $this->uniqueName()],
+            'level'         => ['sometimes', 'integer', 'min:1', 'max:32767', $this->freeLevel()],
             'description'   => ['sometimes', 'nullable', 'string'],
             'permissions'   => ['sometimes', 'array'],
             'permissions.*' => ['string', Rule::in(PermissionCatalog::activeKeys())],
@@ -87,11 +88,34 @@ final class SecurityLevelController extends Controller
         return response()->json($this->format($level), 201);
     }
 
+    /** Fase 27b (b1): el nombre de un nivel es único (sin distinguir mayúsculas), salvo el propio nivel al editarlo. */
+    private function uniqueName(?int $ignoreId = null): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($ignoreId): void {
+            $taken = SecurityLevel::whereRaw('lower(name) = ?', [mb_strtolower(trim((string) $value))])
+                ->when($ignoreId !== null, fn ($q) => $q->where('id', '!=', $ignoreId))
+                ->exists();
+            if ($taken) {
+                $fail('Ya existe un nivel de seguridad con ese nombre.');
+            }
+        };
+    }
+
+    /** Fase 27b (b1): si se pide un número de nivel, debe estar libre (antes se ignoraba en silencio). */
+    private function freeLevel(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            if (SecurityLevel::where('level', (int) $value)->exists()) {
+                $fail('Ese número de nivel ya está ocupado.');
+            }
+        };
+    }
+
     public function update(Request $request, int $id): JsonResponse
     {
         /** @var array{name?: string, description?: string|null, permissions?: list<string>} $data */
         $data = $request->validate([
-            'name'          => ['sometimes', 'string', 'max:100'],
+            'name'          => ['sometimes', 'string', 'max:100', $this->uniqueName($id)],
             'description'   => ['sometimes', 'nullable', 'string'],
             'permissions'   => ['sometimes', 'array'],
             'permissions.*' => ['string', Rule::in(PermissionCatalog::activeKeys())],

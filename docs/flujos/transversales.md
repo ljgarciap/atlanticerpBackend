@@ -36,8 +36,8 @@ Marcas: **[E]** ejecutado, **[C]** leído del código (ver `README.md`). Verific
 ## Candidatos a cambio o mejora
 1. ~~**La clave inicial es el correo del usuario**, conocida por quien lo crea y repetida al reiniciar; el cambio obligatorio la acota, pero un enlace de activación de un solo uso sería más seguro (política decidida el 2026-10-05). [E][C]~~ **Resuelto: Fase 12c** (verificado 2026-11-06).
 2. ~~**Asignar permisos adicionales sin ser superadmin responde 200 y no hace nada**: debería rechazarse (403/422) o la pantalla debería ocultar el campo. [E]~~ **Resuelto: Fase 12a** (verificado 2026-11-06).
-3. **Los niveles de seguridad admiten nombres repetidos**, e ignoran el número `level` pedido (asignan el siguiente libre). [E]
+3. ~~**Los niveles de seguridad admiten nombres repetidos**, e ignoran el número `level` pedido (asignan el siguiente libre). [E]~~ **Resuelto: Fase 27b** (nombre único sin distinguir mayúsculas; el número pedido se respeta o se rechaza si está ocupado).
 4. **Sin borrado de niveles ni de usuarios**: solo se desactivan (acumulan registros de prueba). [E]
-5. **El motivo de «Ver como usuario» es texto libre**; no hay lista de motivos ni aprobación de un segundo operador. [E]
+5. **El motivo de «Ver como usuario» es texto libre**; no hay lista de motivos ni aprobación de un segundo operador. [E] **Parcial: Fase 27b** (lista de motivos por empresa en el catálogo `impersonation_reason`, con «Otro» + texto obligatorio; la aprobación de un segundo operador sigue abierta).
 6. **Reiniciar la clave no avisa al usuario** (el correo local solo se registra en el log). [C]
 7. **Sin ejercitar aquí**: departamentos, roles y visibilidad, reglas de aprobación, reglas de notificación, ajustes globales, perfil de empresa e IA están en [transversales-administracion.md](transversales-administracion.md); los catálogos administrables los cubre el humo. [C]

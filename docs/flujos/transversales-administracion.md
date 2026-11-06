@@ -44,5 +44,5 @@ Todo bajo `/admin/roles`, exclusivo del **superadmin**; Gerencia, 403 [E]. El li
 4. **Las reglas de aprobación se evalúan por orden de `sort_order`**; los solapes de igual alcance ya se avisan (20d) pero no se impiden. [C]
 5. **Las reglas de notificación solo cubren eventos de modelos de una lista corta** (CRM); no hay reglas para Compras, Bodega ni Servicios. [C]
 6. **Los ajustes globales son solo enteros**: no hay textos ni listas, y cada categoría de ajuste vive en una pantalla distinta (globales, de Compras, de Servicios, de Ventas). [C]
-7. **Un rol propio puede quedar sin ninguna visibilidad** (todas las filas en 0) sin avisar. [C]
+7. ~~**Un rol propio puede quedar sin ninguna visibilidad** (todas las filas en 0) sin avisar. [C]~~ **Resuelto: Fase 27b** (la respuesta trae `warnings[rol_sin_visibilidad]` y la pantalla lo muestra; no bloquea).
 8. **Sin ejercitar**: las pantallas del navegador, el aviso real de una regla de notificación (por correo o in-app) y la edición de precios de IA.

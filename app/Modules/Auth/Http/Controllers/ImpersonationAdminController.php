@@ -52,6 +52,7 @@ class ImpersonationAdminController extends Controller
                 'actor'        => ['id' => $s->actor_id, 'name' => $this->name($s->actor)],
                 'target'       => ['id' => $s->target_id, 'name' => $this->name($s->target)],
                 'reason'       => $s->reason,
+                'reason_key'   => $s->reason_key,
                 'started_at'   => $s->started_at->toIso8601String(),
                 'expires_at'   => $s->expires_at->toIso8601String(),
                 'ended_at'     => $s->ended_at?->toIso8601String(),

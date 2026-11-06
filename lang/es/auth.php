@@ -47,7 +47,10 @@ return [
     'impersonation_read_only'  => 'Modo solo lectura: no se guardan cambios mientras ves la aplicación como otro usuario.',
     'impersonation_nested'     => 'No puedes iniciar «Ver como usuario» desde una sesión de «Ver como usuario».',
     'impersonation_target_invalid' => 'No se puede ver como esta persona: debe estar activa, sin bloqueo de seguridad, no ser invitada, ni superadministradora, ni tú mismo.',
+    'role_without_visibility' => 'Este rol no ve ningún módulo: quien lo tenga entrará a una aplicación vacía. Asigna al menos un módulo.',
     'impersonation_reason_short'   => 'El motivo debe tener al menos :min caracteres.',
+    'impersonation_reason_unknown' => 'El motivo elegido no existe o está desactivado.',
+    'impersonation_reason_text_required' => 'Este motivo requiere una explicación escrita.',
     'impersonation_not_active'     => 'No hay una sesión de «Ver como usuario» activa.',
 
     'mail' => [
