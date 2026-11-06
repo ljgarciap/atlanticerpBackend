@@ -59,3 +59,12 @@ Implementada en backend (`fase27a/mfa-arreglos`) y frontend (`fase27a/mfa-desact
 - El reinicio vive ahora bajo `settings.global` (Gerencia y superadmin). Gerencia recibe 403 al reiniciar a un superadmin o a sí misma; el aviso por correo (`MfaResetNoticeMail`) es informativo y su fallo no deshace el reinicio.
 - Verificado: suite completa del backend (5290 tests, un fallo de `RoleKeysUsageTest` por una clave de rol escrita a mano, corregido), PHPStan 0, frontend 253 archivos / 2959 tests, e2e `mfa-recuperacion-clave` 7 de 7.
 - **Abierto**: el formulario de desactivación no se vio todavía en un navegador real (solo tests de componente); 27b y 27c pendientes.
+
+## 7. Resultado de 27b (2026-11-06)
+Implementada en backend (`fase27b/niveles-motivos-roles`) y frontend (`fase27b/motivos-y-avisos`).
+- **b1**: el nombre de un nivel es único sin distinguir mayúsculas (422, también al renombrar); `POST security-levels` acepta `level` y lo respeta si está libre (422 si no). Solo se valida en la petición: no hay restricción en la BD porque pudieran existir datos repetidos.
+- **b2**: dominio `impersonation_reason` (propiedad `requiere_texto`; sembrados soporte, verificar permisos, investigar incidente, auditoría y «Otro», de sistema). `POST users/{id}/impersonate` acepta `reason_key` (+ `reason`): una clave fuera del catálogo da 422; «Otro» exige texto; un motivo normal usa su etiqueta si no hay texto (sin el largo mínimo) y sin clave se conserva el texto libre de siempre. `impersonation_sessions.reason_key` (migración `2026_11_20_100000`, aditiva) se ve en el listado y en la auditoría. El modal pide elegir el motivo; sin catálogo cae al texto libre.
+- **b3**: `PUT admin/roles/{id}/visibility` responde `{data, warnings}` (antes, la lista): `warnings[rol_sin_visibilidad]` cuando ninguna fila tiene vista (no aplica a superadmin). El modal muestra el aviso y se queda abierto.
+- Verificado: e2e `transversales` y `transversales-administracion` (13 pasos) contra el stack local; pruebas de componente nuevas.
+- **Abierto**: la aprobación de un segundo operador para «Ver como usuario» (candidato 5, segunda mitad) no entra en la fase.
+
