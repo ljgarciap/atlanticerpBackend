@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Services;
 
+use App\Modules\AdminCont\Models\AdminContCreditNote;
 use App\Modules\AdminCont\Models\AdminContInvoice;
 use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPaymentInvoice;
@@ -51,7 +52,7 @@ final class PaymentMethodSalesReportService
         AdminContPayment::METODO_AJUSTE_CUENTA,
     ];
 
-    /** @return array{resumen: array{facturas_cobradas: int, base_imponible: float, itbms: float, total: float}, filas: list<PaymentMethodSalesRow>, pendientes: list<PaymentMethodSalesPendiente>} */
+    /** @return array{resumen: array{notas_credito: array{cantidad: int, base_imponible: float, itbms: float, total: float}, pendientes_total: float, total_libro: float, facturas_cobradas: int, base_imponible: float, itbms: float, total: float}, filas: list<PaymentMethodSalesRow>, pendientes: list<PaymentMethodSalesPendiente>} */
     public function report(?int $masterClientId, ?string $desde, ?string $hasta): array
     {
         $query = AdminContInvoice::query()->whereNull('anulada_at')->with('itbmsRate', 'lines');
@@ -114,8 +115,36 @@ final class PaymentMethodSalesReportService
             ])
             ->all());
 
+        // Fase 28 (grupo 1) — conciliación con el Libro de Facturas. El libro lista TODAS las facturas
+        // vigentes (cobradas o no) y las notas de crédito aplicadas (en negativo); este reporte solo las
+        // cobradas. La diferencia no es un error de redondeo: son las pendientes y las notas, que ahora se
+        // muestran aquí para que cuadre: total del libro = cobradas + pendientes + notas de crédito.
+        $notasQuery = AdminContCreditNote::query()->where('estado', AdminContCreditNote::ESTADO_APLICADA);
+        if ($masterClientId !== null) {
+            $notasQuery->where('master_client_id', $masterClientId);
+        }
+        if ($desde !== null) {
+            $notasQuery->where('fecha', '>=', $desde);
+        }
+        if ($hasta !== null) {
+            $notasQuery->where('fecha', '<=', $hasta.' 23:59:59');
+        }
+        $notas = $notasQuery->get();
+
+        $totalCobradas   = round(array_sum(array_column($filas, 'total')), 2);
+        $totalPendientes = round(array_sum(array_column($pendientesPayload, 'monto')), 2);
+        $totalNotas      = -abs(round((float) $notas->sum('monto'), 2));
+
         return [
             'resumen' => [
+                'notas_credito' => [
+                    'cantidad'       => $notas->count(),
+                    'base_imponible' => -abs(round((float) $notas->sum('subtotal'), 2)),
+                    'itbms'          => -abs(round((float) $notas->sum('itbms'), 2)),
+                    'total'          => $totalNotas,
+                ],
+                'pendientes_total'  => $totalPendientes,
+                'total_libro'       => round($totalCobradas + $totalPendientes + $totalNotas, 2),
                 'facturas_cobradas' => count($filas),
                 'base_imponible'    => round(array_sum(array_column($filas, 'base_imponible')), 2),
                 'itbms'             => round(array_sum(array_column($filas, 'itbms')), 2),

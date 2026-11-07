@@ -197,6 +197,36 @@ class AdminContInvoiceBookControllerTest extends FeatureTestCase
         $this->assertSame('Factura', $docs[0]['tipo']);
     }
 
+    public function test_fase28_tipo_desconocido_y_rango_invertido_dan_422(): void
+    {
+        $token = $this->loginAsContabilidad();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/reports/libro-facturas?tipo=boleta')->assertStatus(422);
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/reports/libro-facturas?desde=2026-05-10&hasta=2026-05-01')->assertStatus(422);
+    }
+
+    public function test_fase28_el_libro_concilia_con_ventas_por_medio_de_pago(): void
+    {
+        $rate = $this->makeRate(7.0);
+        $cobrada = $this->makeInvoiceWithRuc(107.0, $rate, '2026-06-01 09:00:00', '155-2-1');
+        $cobrada->forceFill(['saldo_aplicado' => 107.0])->save();
+        $pendiente = $this->makeInvoiceWithRuc(214.0, $rate, '2026-06-02 09:00:00', '155-2-2');
+        $this->makeCreditNote($cobrada, AdminContCreditNote::TIPO_DESCUENTO_COMERCIAL, null, 10.7, 10.0, 0.7, '2026-06-03');
+
+        $token = $this->loginAsContabilidad();
+        $url = '?desde=2026-06-01&hasta=2026-06-30';
+        $libro = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/reports/libro-facturas'.$url)->assertStatus(200)->json('resumen');
+        $medio = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/reports/ventas-medio-pago'.$url)->assertStatus(200)->json('resumen');
+
+        $this->assertEqualsWithDelta($libro['total'], $medio['total_libro'], 0.001);
+        $this->assertEqualsWithDelta(-10.7, $medio['notas_credito']['total'], 0.001);
+        $this->assertEqualsWithDelta(214.0, $medio['pendientes_total'], 0.001);
+    }
+
     public function test_resumen_neto_resta_las_notas_de_credito_no_las_suma_aparte(): void
     {
         $factura = $this->makeInvoiceWithRuc(1000.0, $this->makeRate(0.0), '2026-05-01 09:00:00', '155-1-1');
