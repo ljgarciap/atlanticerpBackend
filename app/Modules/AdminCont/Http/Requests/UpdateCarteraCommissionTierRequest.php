@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Requests;
 
+use App\Modules\AdminCont\Models\CarteraCommissionTier;
 use Illuminate\Foundation\Http\FormRequest;
 
 /** Batch 22 (SCRUM-643→647, REQ-567) — CRUD de tramos, gateado por `primary_approver_only` en routes/admin-contab.php. */
@@ -12,6 +13,20 @@ class UpdateCarteraCommissionTierRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * Fase 28: un PUT parcial con solo `monto_maximo` fallaba (`gt:monto_minimo` comparaba contra un
+     * campo ausente). Se completa con el mínimo vigente del tramo para validar contra él.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('monto_minimo')) {
+            $actual = CarteraCommissionTier::find((int) $this->route('id'));
+            if ($actual !== null) {
+                $this->merge(['monto_minimo' => $actual->monto_minimo]);
+            }
+        }
     }
 
     /** @return array<string, mixed> */

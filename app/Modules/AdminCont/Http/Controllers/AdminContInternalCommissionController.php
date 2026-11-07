@@ -50,10 +50,12 @@ class AdminContInternalCommissionController
     /** POST /api/admin-contab/commissions/internal/tiers — CRUD gateado por `primary_approver_only` en routes. */
     public function storeTier(StoreCommissionTierRequest $request): JsonResponse
     {
+        $avisos = app(\App\Modules\AdminCont\Services\CommissionTierScaleGuard::class)
+            ->check(CommissionTier::query()->get(), $request->validated(), validarOrden: false);
         $tier = CommissionTier::create($request->validated());
         $this->resequenceTiersByMontoMinimo();
 
-        return response()->json($tier->fresh(), 201);
+        return response()->json(array_merge(($tier->fresh() ?? $tier)->toArray(), ['avisos' => $avisos]), 201);
     }
 
     /** PUT /api/admin-contab/commissions/internal/tiers/{id} */
@@ -64,10 +66,13 @@ class AdminContInternalCommissionController
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        $datos = array_merge($tier->only(['monto_minimo', 'monto_maximo', 'orden']), $request->validated());
+        $avisos = app(\App\Modules\AdminCont\Services\CommissionTierScaleGuard::class)
+            ->check(CommissionTier::query()->get(), $datos, ignorarId: $tier->id, validarOrden: false);
         $tier->update($request->validated());
         $this->resequenceTiersByMontoMinimo();
 
-        return response()->json($tier->fresh());
+        return response()->json(array_merge(($tier->fresh() ?? $tier)->toArray(), ['avisos' => $avisos]));
     }
 
     /** DELETE /api/admin-contab/commissions/internal/tiers/{id} */

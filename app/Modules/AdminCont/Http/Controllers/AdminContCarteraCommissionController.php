@@ -28,9 +28,11 @@ class AdminContCarteraCommissionController
     /** POST /api/admin-contab/commissions/cartera/tiers */
     public function storeTier(StoreCarteraCommissionTierRequest $request): JsonResponse
     {
+        $avisos = app(\App\Modules\AdminCont\Services\CommissionTierScaleGuard::class)
+            ->check(CarteraCommissionTier::query()->get(), $request->validated(), validarOrden: true);
         $tier = CarteraCommissionTier::create($request->validated());
 
-        return response()->json($tier, 201);
+        return response()->json(array_merge(($tier->fresh() ?? $tier)->toArray(), ['avisos' => $avisos]), 201);
     }
 
     /** PUT /api/admin-contab/commissions/cartera/tiers/{id} */
@@ -41,9 +43,12 @@ class AdminContCarteraCommissionController
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        $datos = array_merge($tier->only(['monto_minimo', 'monto_maximo', 'orden']), $request->validated());
+        $avisos = app(\App\Modules\AdminCont\Services\CommissionTierScaleGuard::class)
+            ->check(CarteraCommissionTier::query()->get(), $datos, ignorarId: $tier->id, validarOrden: true);
         $tier->update($request->validated());
 
-        return response()->json($tier->fresh());
+        return response()->json(array_merge(($tier->fresh() ?? $tier)->toArray(), ['avisos' => $avisos]));
     }
 
     /** DELETE /api/admin-contab/commissions/cartera/tiers/{id} */

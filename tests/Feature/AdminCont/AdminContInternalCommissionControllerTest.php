@@ -454,9 +454,23 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
             ->assertStatus(403);
     }
 
+    public function test_fase28_tramo_interno_solapado_da_422(): void
+    {
+        $token = $this->loginAsApprover();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/admin-contab/commissions/internal/tiers', ['monto_minimo' => 90000, 'monto_maximo' => 100000, 'porcentaje' => 4.2, 'orden' => 99])
+            ->assertStatus(422)->assertJsonValidationErrors('monto_minimo');
+    }
+
     public function test_tier_store_por_mark(): void
     {
         $token = $this->loginAsApprover();
+
+        // Fase 28: el tramo abierto (120000 en adelante) se acota antes de agregar uno encima.
+        $abierto = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/commissions/internal/tiers')->json('5.id');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/commissions/internal/tiers/{$abierto}", ['monto_maximo' => 500000.99])->assertStatus(200);
 
         $response = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/commissions/internal/tiers', [
@@ -479,6 +493,10 @@ class AdminContInternalCommissionControllerTest extends FeatureTestCase
 
         // Cae entre los tramos [80000,119999.99] y [120000,∞) — un `orden` a propósito "de trámite"
         // (99), simulando el push-al-final que hacía el frontend antes del fix.
+        // Fase 28: se acota el tramo de 80000 para dejar sitio (sin solapes) y queda un hueco que solo avisa.
+        $quinto = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/commissions/internal/tiers')->json('4.id');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/commissions/internal/tiers/{$quinto}", ['monto_maximo' => 89999.99])->assertStatus(200);
         $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/commissions/internal/tiers', [
                 'monto_minimo' => 90000, 'monto_maximo' => 100000, 'porcentaje' => 4.2, 'orden' => 99,
