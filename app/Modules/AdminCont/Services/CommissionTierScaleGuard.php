@@ -23,9 +23,7 @@ final class CommissionTierScaleGuard
     private const EPS = 0.005;
 
     /**
-     * @template T of \App\Modules\AdminCont\Models\CommissionTier|\App\Modules\AdminCont\Models\CarteraCommissionTier
-     *
-     * @param  Collection<int, T>  $existentes
+     * @param  Collection<int, \App\Modules\AdminCont\Models\CommissionTier>|Collection<int, \App\Modules\AdminCont\Models\CarteraCommissionTier>  $existentes
      * @param  array<string, mixed>  $candidato
      * @return list<string> avisos (huecos), vacío si la escala queda continua
      *
@@ -33,6 +31,7 @@ final class CommissionTierScaleGuard
      */
     public function check(Collection $existentes, array $candidato, ?int $ignorarId = null, bool $validarOrden = false): array
     {
+        /** @var Collection<int, \App\Modules\AdminCont\Models\CommissionTier|\App\Modules\AdminCont\Models\CarteraCommissionTier> $otros */
         $otros = $existentes->reject(fn ($t) => $ignorarId !== null && (int) $t->id === $ignorarId)->values();
 
         $nuevo = [
@@ -59,7 +58,7 @@ final class CommissionTierScaleGuard
     }
 
     /**
-     * @param  Collection<int, \Illuminate\Database\Eloquent\Model>  $otros
+     * @param  Collection<int, \App\Modules\AdminCont\Models\CommissionTier|\App\Modules\AdminCont\Models\CarteraCommissionTier>  $otros
      * @param  array{min: float, max: float|null}  $nuevo
      * @return list<string>
      */
