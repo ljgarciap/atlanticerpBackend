@@ -24,7 +24,7 @@ class AdminContClientBillingProfile extends Model
     public const REGIMEN_SIN_ITBMS = 'sin_itbms';
 
     /** @var list<string> */
-    protected $fillable = ['master_client_id', 'regimen_fiscal', 'terminos_pago'];
+    protected $fillable = ['master_client_id', 'regimen_fiscal', 'terminos_pago', 'dias_credito'];
 
     public function getTable(): string
     {

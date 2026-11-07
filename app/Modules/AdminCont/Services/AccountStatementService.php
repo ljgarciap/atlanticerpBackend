@@ -493,8 +493,8 @@ final class AccountStatementService
      */
     private function contextNote(int $masterClientId, float $saldo): ?string
     {
-        $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
-        $hoy         = now();
+        $terms = new CreditTerms();
+        $hoy   = now();
 
         $masVencida = AdminContInvoice::query()
             ->where('master_client_id', $masterClientId)
@@ -502,7 +502,7 @@ final class AccountStatementService
             ->whereNull('anulada_at')
             ->where('saldo_aplicado', 0)
             ->get()
-            ->map(fn (AdminContInvoice $i): int => max(0, (int) $i->created_at->copy()->addDays($diasCredito)->diffInDays($hoy, false)))
+            ->map(fn (AdminContInvoice $i): int => max(0, (int) $terms->vencimiento($i)->diffInDays($hoy, false)))
             ->filter(fn (int $dias): bool => $dias > 90)
             ->max();
 
