@@ -1,6 +1,6 @@
 # Fase 28 — Contabilidad: cartera, tesorería, comisiones y reportes
 
-Estado: **BORRADOR** (espera aprobación de Luis). Origen: `docs/flujos/pendientes-priorizados.md`, Fase 28. Una sola fase, un PR por repositorio, con sub-entregas internas en este orden.
+Estado: **APROBADA** por Luis (2026-11-07), con las 3 propuestas de §3 aplicadas. Origen: `docs/flujos/pendientes-priorizados.md`, Fase 28. Una sola fase, un PR por repositorio, con sub-entregas internas en este orden.
 
 ## 1. Decisiones ya tomadas (2026-11-06)
 1. **Una sola fase** con los siete grupos de trabajo (la pasada de «verificar» ya está hecha en los catálogos: cierres 1, 2, 3, 4, 7 y notas 1 a 4 y 6 quedaron resueltos por las Fases 12 a 15).
@@ -17,7 +17,8 @@ Estado: **BORRADOR** (espera aprobación de Luis). Origen: `docs/flujos/pendient
 | 5 | Comisiones externas | Totales del arquitecto coherentes sin régimen (mostrar «pendiente de régimen» en lugar de 0); renombrar el estado `pendiente_factura_arquitecto` en la interfaz (y alias en la API); aviso al pagar sin cuenta de pago; validar archivos (tipo y tamaño; el cruce con el monto queda como aviso). Base de cálculo: ver §3. |
 | 6 | Umbrales y aprobadores | Ajustes separados por proceso (migración que copia el valor actual a cada uno, sin cambiar el comportamiento al desplegar) y aprobador/suplentes por proceso en la pestaña «Aprobadores». |
 
-## 3. Preguntas abiertas para Luis
+## 3. Decisiones de Luis (2026-11-07): se aplican las 3 propuestas
+(Antes eran preguntas abiertas.)
 1. **Base de la comisión externa**: hoy es el total con impuesto. Propuesta: pasar a la **base imponible** (sin impuesto) y hacerlo configurable; cambia importes, por eso lo decides tú. Alternativa: dejarlo y documentarlo.
 2. **Días de crédito de clientes existentes**: propuesta, copiar el valor global actual a todos, de modo que nada cambie hasta que alguien lo ajuste.
 3. **Reportes**: si la diferencia de 0,05 resulta ser por notas de crédito, ¿el libro debe seguir mostrándolas (sí, es un libro fiscal) y el reporte por medio de pago ganar una columna «notas de crédito» para conciliar? (propuesta: sí).
