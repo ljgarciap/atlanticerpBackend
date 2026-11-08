@@ -32,7 +32,7 @@ Tests de cada regla (tramos, vencimiento, conciliación de reportes, reasignaci�
 - Los días de crédito por cliente cambian la antigüedad de cartera de quien se ajuste; los reportes históricos se recalculan en vivo.
 
 ## 6. Resultado (2026-11-07)
-Implementada en la rama `fase28/contabilidad` de ambos repositorios (backend: 11 commits; frontend: 8). Verificación: PHPStan 0 errores; suite completa del backend 5347 tests / 0 fallos (antes de los 2 últimos commits, que se verificaron con 115 tests dirigidos); frontend `tsc` limpio y vitest 258 archivos / 2989 tests; `npm run e2e:flujos` 118 pasan (incluye 6 pasos nuevos de esta fase). Revisión de seguridad: `docs/reviews/fase28-contabilidad-2026-11-07.md`.
+Implementada en la rama `fase28/contabilidad` de ambos repositorios (backend: 12 commits; frontend: 7). Verificación: PHPStan 0 errores; suite completa del backend 5347 tests / 0 fallos (la corrida final posterior a la revisión de seguridad se registra en el PR); frontend `tsc` limpio y vitest 258 archivos / 2989 tests; `npm run e2e:flujos` 118 pasan (incluye 6 pasos nuevos de esta fase). Revisión de seguridad: `docs/reviews/fase28-contabilidad-2026-11-07.md`.
 
 | Grupo | Qué quedó |
 |---|---|
