@@ -333,11 +333,13 @@ class RelocationRequestControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_aprobar_no_siendo_aprobador_retorna_403(): void
+    public function test_aprobar_siendo_gerencia_no_designada_funciona(): void
     {
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $merma = Warehouse::where('name', 'Merma')->first();
+
+        ProductWarehouseStock::create(['catalog_product_id' => $product->id, 'warehouse_id' => $central->id, 'quantity' => 10]);
 
         $relocationRequest = RelocationRequest::create([
             'catalog_product_id' => $product->id,
@@ -360,10 +362,10 @@ class RelocationRequestControllerTest extends FeatureTestCase
         $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/relocations/{$relocationRequest->id}/approve")
-            ->assertStatus(403);
+            ->assertSuccessful(); // Fase 29: Gerencia también decide
 
         $this->reMakeCurrent();
-        $this->assertSame(RelocationRequest::ESTADO_PENDIENTE, RelocationRequest::find($relocationRequest->id)->estado);
+        $this->assertSame(RelocationRequest::ESTADO_APROBADA, RelocationRequest::find($relocationRequest->id)->estado);
     }
 
     /**

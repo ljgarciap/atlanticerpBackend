@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Shared\Support;
 
 use App\Models\User;
+use App\Modules\Auth\Support\RoleKeys;
 use App\Modules\Compras\Models\ComprasSettings;
 use App\Modules\Gerencia\Models\ReglaAprobacion;
 
@@ -38,7 +39,7 @@ final class AprobacionGate
 
         $puedeNativo = match ($tipo) {
             'purchase_order' => $this->esAprobador($user),
-            'relocation', 'adjustment', 'general_count' => $this->esAprobador($user),
+            'relocation', 'adjustment', 'general_count' => $this->esAprobador($user) || $this->esGerencia($user),
             default => false,
         };
 
@@ -55,9 +56,9 @@ final class AprobacionGate
      */
     public function motivoDenegacion(string $tipo): string
     {
-        $alternativa = in_array($tipo, self::TIPOS_CON_OVERRIDE_REGLA, true) ? ' (o quien esté en una regla de aprobación activa para este tipo)' : '';
+        $alternativa = in_array($tipo, self::TIPOS_CON_OVERRIDE_REGLA, true) ? ' (también Gerencia o quien esté en una regla de aprobación activa para este tipo)' : '';
 
-        return 'Solo el aprobador configurado o un suplente puede decidir esto'.$alternativa.'. No es un permiso que falte: pídele a un superadmin que te designe en Configuración global → Aprobadores.';
+        return 'Solo el aprobador configurado o un suplente'.$alternativa.' puede decidir esto. No es un permiso que falte: pídele a un superadmin que te designe en Configuración global → Aprobadores.';
     }
 
     /**
@@ -67,6 +68,12 @@ final class AprobacionGate
     public function tiposPermitidos(User $user, array $tipos): array
     {
         return array_values(array_filter($tipos, fn (string $tipo): bool => $this->canAct($user, $tipo)));
+    }
+
+    /** Fase 29 (decisión de Luis): Gerencia decide ajustes, reubicaciones y conteos además del aprobador designado. No aplica a órdenes de compra. */
+    private function esGerencia(User $user): bool
+    {
+        return $user->role?->key === RoleKeys::MANAGEMENT;
     }
 
     private function esAprobador(User $user): bool
