@@ -533,6 +533,11 @@ Route::prefix('settings')->group(function (): void {
 
 // SCRUM-1166 — marcar o quitar la exención de ITBMS de un cliente fiscal. Permiso angosto (Gerencia, Contabilidad y Asistente Administrativa por SpecialPermissionSeeder; superadmin la
 // pasa con `superadmin.all`); no toca el bloqueo de edición de datos fiscales de SCRUM-1002 porque solo afecta a documentos futuros.
+// Fase 28 (grupo 3) — días de crédito propios de un cliente (vacío = usa el global de Configuración Fiscal). Mismo roster de escritura que cuentas bancarias.
+Route::put('/clientes/{masterClientId}/dias-credito', [\App\Modules\AdminCont\Http\Controllers\AdminContClientCreditDaysController::class, 'update'])
+    ->middleware('permission:admin_contab.records.manage')
+    ->whereNumber('masterClientId');
+
 Route::put('/clientes/{subClientId}/exencion-itbms', [AdminContClientItbmsExemptionController::class, 'update'])
     ->middleware('permission:'.AdminContClientItbmsExemptionController::PERMISO)
     ->whereNumber('subClientId');

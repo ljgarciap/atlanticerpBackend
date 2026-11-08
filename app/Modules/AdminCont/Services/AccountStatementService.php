@@ -62,7 +62,7 @@ final class AccountStatementService
      *     pertenece a ese cliente (defensa en profundidad — el selector de proyecto del frontend
      *     ya solo ofrece los del cliente elegido).
      *
-     * @return array{master_client_id: int, cliente: string, sales_project_id: ?int, proyecto: ?string, tarifa: ?string, regimen_fiscal: string, terminos_pago: string}
+     * @return array{master_client_id: int, cliente: string, sales_project_id: ?int, proyecto: ?string, tarifa: ?string, regimen_fiscal: string, terminos_pago: string, dias_credito: int|null, dias_credito_efectivo: int}
      */
     public function generate(int $masterClientId, ?int $salesProjectId): array
     {
@@ -90,6 +90,9 @@ final class AccountStatementService
             'tarifa'           => $client->default_price_type,
             'regimen_fiscal'   => $profile->regimen_fiscal,
             'terminos_pago'    => $profile->terminos_pago,
+            // Fase 28 — días de crédito propios del cliente (null = rige el global) y los que de verdad se aplican.
+            'dias_credito'          => $profile->dias_credito,
+            'dias_credito_efectivo' => (new CreditTerms())->diasPara($client->id),
         ];
     }
 
@@ -98,7 +101,7 @@ final class AccountStatementService
      * pago + nota automática + movimientos con saldo corrido.
      *
      * @throws AccountStatementException — mismo que `generate()`.
-     * @return array{master_client_id: int, cliente: string, sales_project_id: ?int, proyecto: ?string, tarifa: ?string, regimen_fiscal: string, terminos_pago: string, saldo: float, saldo_a_favor: bool, pago_a: ?string, cuenta_pago: ?string, banco: ?string, tipo_cuenta: ?string, numero_cuenta: ?string, responsable: ?string, nota_contexto: ?string, proyectos_count: ?int, movimientos: list<array{fecha: string, tipo: string, numero_factura: ?string, invoice_id: ?int, order_id: ?int, cotizacion_folio: ?string, quote_id: ?int, guia_entrega_numero: ?string, guia_entrega_order_id: ?int, nota_id: ?int, antiguedad_cartera: ?string, sales_project_id: ?int, proyecto: ?string, debito: float, credito: float, saldo: float, recibo: ?array{tipo: string, id: int, numero_recibo: string}}>}
+     * @return array{master_client_id: int, cliente: string, sales_project_id: ?int, proyecto: ?string, tarifa: ?string, regimen_fiscal: string, terminos_pago: string, dias_credito: int|null, dias_credito_efectivo: int, saldo: float, saldo_a_favor: bool, pago_a: ?string, cuenta_pago: ?string, banco: ?string, tipo_cuenta: ?string, numero_cuenta: ?string, responsable: ?string, nota_contexto: ?string, proyectos_count: ?int, movimientos: list<array{fecha: string, tipo: string, numero_factura: ?string, invoice_id: ?int, order_id: ?int, cotizacion_folio: ?string, quote_id: ?int, guia_entrega_numero: ?string, guia_entrega_order_id: ?int, nota_id: ?int, antiguedad_cartera: ?string, sales_project_id: ?int, proyecto: ?string, debito: float, credito: float, saldo: float, recibo: ?array{tipo: string, id: int, numero_recibo: string}}>}
      */
     public function detail(int $masterClientId, ?int $salesProjectId, ?string $desde, ?string $hasta): array
     {

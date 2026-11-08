@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int         $master_client_id
  * @property string      $regimen_fiscal
  * @property string      $terminos_pago
+ * @property int|null     $dias_credito Fase 28 — null = rige el global de Configuración Fiscal
  */
 class AdminContClientBillingProfile extends Model
 {

@@ -72,4 +72,21 @@ class CreditTermsTest extends FeatureTestCase
         $this->assertSame($base[3]['cantidad'] + 1, $despues[3]['cantidad'], 'la pagada no cuenta en 91+, el abono parcial sí');
         $this->assertEqualsWithDelta($base[3]['monto'] + 50, $despues[3]['monto'], 0.001);
     }
+
+    public function test_el_endpoint_fija_y_quita_los_dias_de_credito_de_un_cliente(): void
+    {
+        $cliente = MasterClient::create(['name' => 'Cliente endpoint']);
+        $global  = (int) AdminContFiscalSettings::current()->dias_credito_factura;
+        $token   = $this->loginAs('contabilidad@test.com', 'contabilidad@test.com', 'lider_admin_contab');
+        $url     = "/api/admin-contab/clientes/{$cliente->id}/dias-credito";
+
+        $this->withHeaders($this->authHeaders($token))->putJson($url, ['dias_credito' => 60])
+            ->assertStatus(200)->assertJsonPath('dias_credito', 60)->assertJsonPath('dias_credito_efectivo', 60);
+        $this->withHeaders($this->authHeaders($token))->putJson($url, ['dias_credito' => 0])->assertStatus(422);
+        $this->withHeaders($this->authHeaders($token))->putJson($url, ['dias_credito' => null])
+            ->assertStatus(200)->assertJsonPath('dias_credito_efectivo', $global);
+
+        $vendedor = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+        $this->withHeaders($this->authHeaders($vendedor))->putJson($url, ['dias_credito' => 10])->assertStatus(403);
+    }
 }
