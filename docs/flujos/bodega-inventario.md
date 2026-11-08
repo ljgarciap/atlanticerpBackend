@@ -42,11 +42,11 @@ Complementa el pedido de Bodega de [venta a cobro](cadena-venta-a-cobro.md) §5.
 - La devolución termina cuando Admin & Contab emite la **nota de crédito de devolución de mercancía** vinculada (`devolucion_bodega_id`): queda `finalizado` con `credit_note_id` [E].
 
 ## Candidatos a cambio o mejora
-1. **Un solo aprobador para todo el inventario** (ajustes, reubicaciones, conteos): si falta, nada se autoriza; Gerencia tiene el permiso y aun así recibe 403, lo que confunde. [E][C]
-2. **El conteo aprobado conserva el estado `aprobada` tras aplicarse**: no existe un estado «aplicado»; se deduce de `aplicado_at`. [E]
+1. ~~Un solo aprobador para todo el inventario~~ — **corregido en la Fase 29**: Gerencia (rol) también decide ajustes, reubicaciones y conteos, además del aprobador designado, los suplentes y las reglas de aprobación; el 403 de los demás dice quién puede decidir. [E][C]
+2. ~~El conteo aprobado conserva `aprobada` tras aplicarse~~ — **corregido en la Fase 29**: la respuesta trae `estado_visible: aplicada` y el listado filtra con `estado=aplicada`. [E]
 3. **La cantidad recibida de una devolución puede superar la solicitada** (hasta lo entregado). [E]
 4. **Los motivos de ajuste y de devolución son listas fijas en el código**, no catálogos por empresa (como los de la Fase 7). [C]
-5. **Rechazar pide motivo aquí y no en Compras** (cambio de monto y sustituciones): criterio distinto entre módulos. [E]
+5. ~~Rechazar pide motivo aquí y no en Compras~~ — **corregido en la Fase 29** para el cambio de monto (motivo ≥ 10, auditado); las sustituciones ya lo pedían desde la Fase 12a. [E]
 6. **Ajuste de un solo producto por solicitud en la API** (varias líneas, un producto): el conteo general es la vía para muchos. [C]
 7. **Ids no numéricos devolvían 500 en 51 de 55 rutas de Bodega**; corregido para toda la API (backend #45). [E]
 8. **Sin ejercitar**: kardex y reportes en detalle, rutas del día, ubicaciones físicas, solicitudes de Zona Libre de Bodega (el mapeo de asistentes y la confirmación de llegada están en [bodega-asistentes-llegadas.md](bodega-asistentes-llegadas.md)). [C]

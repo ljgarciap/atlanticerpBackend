@@ -31,8 +31,8 @@ Compras registra el ingreso (la línea queda «Por ingresar», sin mover stock) 
 (Solo documentados; ninguno se implementó.)
 1. ~~El conteo de Bodega no cuenta~~ — **corregido en la Fase 20c**: entra lo contado y el resto queda por llegar. [E]
 2. ~~Una llegada reportada incompleta no se puede completar~~ — **corregido en la Fase 20c**: el resto es una línea nueva reportable. [E]
-3. **El mapeo acepta cualquier usuario**: solo valida que existan; un mapeo con un vendedor sin rol de ventas o un «asistente» que no es de Bodega se acepta, y `assistant-load` solo lista usuarios con el rol de asistente. [C]
-4. **No se puede quitar un mapeo**, solo reemplazarlo; sin mapeo activo el pedido queda sin asistente. [C]
-5. **Cambiar el mapeo no reasigna lo pendiente**: los pedidos ya creados siguen con el asistente anterior, y no hay pantalla de reasignación en lote. [E]
-6. **El detalle del pedido no muestra al asistente**; solo el tablero. [E]
+3. ~~El mapeo acepta cualquier usuario~~ — **corregido en la Fase 29**: el vendedor debe tener rol de ventas y el asistente rol de Asistente de Bodega (422 si no). [C]
+4. ~~No se puede quitar un mapeo~~ — **corregido en la Fase 29**: `DELETE warehouse-assistant-mapping/{id}` (solo Líder o superadmin); sin mapeo activo el pedido nuevo queda sin asistente. [C]
+5. ~~Cambiar el mapeo no reasigna lo pendiente~~ — **corregido en la Fase 29** como acción explícita: `POST warehouse-assistant-mapping/reassign-pending {seller_id}` pasa al asistente de hoy los pedidos no entregados de ese vendedor. [E]
+6. ~~El detalle del pedido no muestra al asistente~~ — **ya lo muestra** (`asistente` en el detalle y en el tablero; se verificó en la Fase 29). [C]
 7. **Sin ejercitar**: la pantalla del navegador y el evento `ArrivalConfirmedByWarehouse` (avisos a Compras).
