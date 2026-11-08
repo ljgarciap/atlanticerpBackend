@@ -38,6 +38,22 @@ final class KardexController extends Controller
             $query->where('tipo', $tipo);
         }
 
+        // Fase 29: producto exacto y rango de fechas (inclusivo). Validados: una fecha mal escrita da 422, no un listado vacío.
+        $request->validate([
+            'producto_id' => ['nullable', 'integer'],
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
+        ]);
+        if ($request->filled('producto_id')) {
+            $query->where('catalog_product_id', (int) $request->query('producto_id'));
+        }
+        if ($request->filled('desde')) {
+            $query->whereDate('created_at', '>=', (string) $request->query('desde'));
+        }
+        if ($request->filled('hasta')) {
+            $query->whereDate('created_at', '<=', (string) $request->query('hasta'));
+        }
+
         $warehouseId = $request->query('warehouse_id');
         if ($warehouseId !== null && $warehouseId !== '') {
             $query->where('warehouse_id', (int) $warehouseId);

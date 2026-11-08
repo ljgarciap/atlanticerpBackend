@@ -281,7 +281,24 @@ final class PurchaseOrderPaymentController extends Controller
             return response()->json(['message' => 'Solo el aprobador configurado puede rechazar un cambio de monto.'], 403);
         }
 
+        // Fase 29: rechazar pide motivo, como las notas de crédito, las anulaciones de cobro y las sustituciones.
+        $motivo = trim((string) $request->input('motivo', ''));
+        if (mb_strlen($motivo) < 10) {
+            return response()->json(['message' => 'Indica el motivo del rechazo (mínimo 10 caracteres).', 'errors' => ['motivo' => ['El motivo es obligatorio (mínimo 10 caracteres).']]], 422);
+        }
+
+        $pendiente = $order->pending_amount_change;
         $order->update(['pending_amount_change' => null, 'amount_change_requested_by' => null]);
+
+        app(AuditService::class)->log(
+            'compras.amount_change.rejected',
+            'purchase_orders',
+            $order->id,
+            ['pending_amount_change' => $pendiente],
+            ['pending_amount_change' => null],
+            ['motivo' => $motivo],
+            $user->id,
+        );
 
         return response()->json(['total_amount' => $order->total_amount]);
     }

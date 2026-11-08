@@ -43,8 +43,8 @@ class SecurityLevelControllerTest extends FeatureTestCase
         // 13, 14 y 15 (garantías/asistente administrativa/lider_servicios/lider_admin_contab, cada
         // uno separado para que ningún permiso fino de módulo se filtre a otro rol que comparta
         // nivel), y la genericización de identidades de la misma sesión, que agregó el 16
-        // (lider_compras, ver 2026_08_30_100004) — el siguiente número disponible pasa a ser 17.
-        $response->assertJsonPath('level', 17);
+        // (lider_compras, ver 2026_08_30_100004) — el 17 (Asistente de Bodega, Fase 29, `bodega.locations.manage`) — el siguiente número disponible pasa a ser 18.
+        $response->assertJsonPath('level', 18);
         $response->assertJsonPath('is_active', true);
         $response->assertJsonPath('permissions', ['crm.read']);
     }

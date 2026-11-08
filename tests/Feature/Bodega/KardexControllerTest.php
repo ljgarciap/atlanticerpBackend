@@ -132,4 +132,27 @@ class KardexControllerTest extends FeatureTestCase
         $response->assertStatus(200);
         $response->assertJsonPath('data.0.realizado_por', 'Sistema');
     }
+
+    /** Fase 29 — filtros por producto exacto y por rango de fechas; una fecha mal escrita da 422. */
+    public function test_filtra_por_producto_exacto_y_por_fechas(): void
+    {
+        $uno = $this->makeProduct(['name' => 'Producto uno']);
+        $dos = $this->makeProduct(['name' => 'Producto dos']);
+        $central = Warehouse::where('name', 'Bodega Central')->first();
+        $service = new KardexService();
+        $service->registrar($uno->id, $central->id, InventoryMovement::TIPO_ENTRADA, 5, 'De uno');
+        $service->registrar($dos->id, $central->id, InventoryMovement::TIPO_ENTRADA, 7, 'De dos');
+        InventoryMovement::where('referencia_texto', 'De uno')->update(['created_at' => now()->subDays(10)]);
+
+        $this->grantBodega('vendedor@atlantic.test');
+        $headers = $this->authHeaders($this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer'));
+
+        $this->withHeaders($headers)->getJson("/api/bodega/kardex?producto_id={$dos->id}")
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.referencia', 'De dos');
+        $this->withHeaders($headers)->getJson('/api/bodega/kardex?desde='.now()->subDays(2)->toDateString())
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.referencia', 'De dos');
+        $this->withHeaders($headers)->getJson('/api/bodega/kardex?hasta='.now()->subDays(5)->toDateString())
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.referencia', 'De uno');
+        $this->withHeaders($headers)->getJson('/api/bodega/kardex?desde=ayer')->assertStatus(422);
+    }
 }

@@ -121,7 +121,7 @@ class RolesSeedTest extends FeatureTestCase
         }
     }
 
-    public function test_security_level_module_permissions_tiene_67_filas(): void
+    public function test_security_level_module_permissions_tiene_74_filas(): void
     {
         // 35 filas (5 niveles × 7 módulos) desde 2026_07_22_100010 (Pre-QA CRÍTICO, SCRUM-329
         // Batch A2): se sumó el Nivel 3 "solo-Bodega" a los 4 arquetipos previos (1, 4, 8, 9).
@@ -148,7 +148,8 @@ class RolesSeedTest extends FeatureTestCase
         //   Nivel 16 "Power User — Compras"         (7 filas, clon completo del Nivel 4)
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         $count = DB::table("{$slug}_auth.security_level_module_permissions")->count();
-        $this->assertSame(67, $count);
+        // Fase 29: +7 filas del nivel propio del Asistente de Bodega (clon del nivel 3).
+        $this->assertSame(74, $count);
     }
 
     public function test_nivel_3_edita_solo_bodega_resto_solo_lectura(): void
@@ -182,7 +183,8 @@ class RolesSeedTest extends FeatureTestCase
         $transporte = Role::with('defaultSecurityLevel')->where('key', 'transporte')->firstOrFail();
         $liderBodega = Role::with('defaultSecurityLevel')->where('key', 'lider_bodega')->firstOrFail();
 
-        $this->assertSame(3, $asistente->defaultSecurityLevel->level);
+        // Fase 29: el Asistente tiene un nivel propio (17, clonado del 3) para recibir `bodega.locations.manage` sin dárselo al Auxiliar ni a Transporte.
+        $this->assertSame(17, $asistente->defaultSecurityLevel->level);
         $this->assertSame(3, $ayudante->defaultSecurityLevel->level);
         $this->assertSame(3, $transporte->defaultSecurityLevel->level);
         $this->assertSame(4, $liderBodega->defaultSecurityLevel->level, 'El Jefe de Bodega sigue en Nivel 4, sin cambios.');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Gerencia;
 
 use App\Shared\Multitenancy\Tenant;
+use App\Shared\Support\AprobacionGate;
 use App\Shared\Support\PrimaryApprovers;
 use Tests\Feature\FeatureTestCase;
 
@@ -24,13 +25,13 @@ class MensajesDeDenegacionTest extends FeatureTestCase
 
     public function test_una_gerencia_que_no_es_el_aprobador_recibe_un_mensaje_de_identidad_no_de_permiso(): void
     {
-        $token = $this->loginAs(self::NO_APROBADOR, self::NO_APROBADOR, 'management');
+        // Fase 29: Gerencia ya decide ajustes, reubicaciones y conteos; el mensaje de un tipo con regla lo dice.
+        $mensaje = app(AprobacionGate::class)->motivoDenegacion('relocation');
 
-        $r = $this->withHeaders($this->authHeaders($token))->postJson('/api/gerencia/aprobaciones/relocation/1/aprobar')->assertStatus(403);
-
-        $this->assertStringContainsString('Solo el aprobador configurado o un suplente', (string) $r->json('message'));
-        $this->assertStringContainsString('Configuración global → Aprobadores', (string) $r->json('message'));
-        $this->assertStringContainsString('regla de aprobación', (string) $r->json('message'), 'los tipos con regla lo mencionan');
+        $this->assertStringContainsString('Solo el aprobador configurado o un suplente', $mensaje);
+        $this->assertStringContainsString('Configuración global → Aprobadores', $mensaje);
+        $this->assertStringContainsString('regla de aprobación', $mensaje, 'los tipos con regla lo mencionan');
+        $this->assertStringContainsString('Gerencia', $mensaje);
     }
 
     public function test_orden_de_compra_no_menciona_reglas(): void

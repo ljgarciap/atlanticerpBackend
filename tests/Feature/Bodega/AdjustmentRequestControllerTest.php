@@ -414,7 +414,7 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
             ->assertStatus(422);
     }
 
-    public function test_aprobar_no_siendo_aprobador_retorna_403(): void
+    public function test_aprobar_siendo_gerencia_no_designada_funciona(): void
     {
         $product = $this->makeProduct();
         $central = Warehouse::where('name', 'Bodega Central')->first();
@@ -438,10 +438,10 @@ class AdjustmentRequestControllerTest extends FeatureTestCase
         $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/adjustment-requests/lines/{$line->id}/approve")
-            ->assertStatus(403);
+            ->assertSuccessful(); // Fase 29: Gerencia también decide
 
         $this->reMakeCurrent();
-        $this->assertSame(AdjustmentRequestLine::ESTADO_PENDIENTE, AdjustmentRequestLine::find($line->id)->estado);
+        $this->assertSame(AdjustmentRequestLine::ESTADO_APROBADA, AdjustmentRequestLine::find($line->id)->estado);
     }
 
     public function test_aprobar_solicitud_ya_resuelta_retorna_422(): void

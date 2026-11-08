@@ -337,8 +337,14 @@ class PurchaseOrderPaymentControllerTest extends FeatureTestCase
             ->assertStatus(403);
 
         $approverToken = $this->loginAs('management@atlantic.test', 'Password123!', 'management');
+        // Fase 29: rechazar exige motivo.
         $this->withHeaders($this->authHeaders($approverToken))
             ->patchJson("/api/compras/orders/{$order->id}/reject-amount-change")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('motivo');
+
+        $this->withHeaders($this->authHeaders($approverToken))
+            ->patchJson("/api/compras/orders/{$order->id}/reject-amount-change", ['motivo' => 'El proveedor no justificó el aumento'])
             ->assertStatus(200)
             ->assertJsonPath('total_amount', 1000);
 

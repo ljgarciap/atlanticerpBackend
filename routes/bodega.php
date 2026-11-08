@@ -73,8 +73,8 @@ Route::prefix('warehouses')->group(function (): void {
     // SCRUM-454 (REQ-384, Bloque B4) — catálogo editable de ubicaciones físicas por bodega, base
     // del chip "Espacio libre" de arriba. Ver ADR-SCRUM454-459-reubicacion-bodegas.md.
     Route::get('/{warehouseId}/locations', [WarehouseLocationController::class, 'index'])->middleware('permission:bodega.read');
-    Route::post('/{warehouseId}/locations', [WarehouseLocationController::class, 'store'])->middleware('permission:bodega.write');
-    Route::patch('/{warehouseId}/locations/{id}', [WarehouseLocationController::class, 'update'])->middleware('permission:bodega.write');
+    Route::post('/{warehouseId}/locations', [WarehouseLocationController::class, 'store'])->middleware(['permission:bodega.write', 'permission:bodega.locations.manage']);
+    Route::patch('/{warehouseId}/locations/{id}', [WarehouseLocationController::class, 'update'])->middleware(['permission:bodega.write', 'permission:bodega.locations.manage']);
 });
 
 // SCRUM-457/458/459 (REQ-387/388/389, Bloque B4 "Reubicación entre bodegas") — Bodega solicita
@@ -173,6 +173,8 @@ Route::prefix('inventory')->group(function (): void {
 Route::prefix('warehouse-assistant-mapping')->group(function (): void {
     Route::get('/', [WarehouseAssistantMappingController::class, 'index'])->middleware('permission:bodega.read');
     Route::post('/', [WarehouseAssistantMappingController::class, 'store'])->middleware('permission:bodega.write');
+    Route::post('/reassign-pending', [WarehouseAssistantMappingController::class, 'reassignPending'])->middleware('permission:bodega.write');
+    Route::delete('/{id}', [WarehouseAssistantMappingController::class, 'destroy'])->middleware('permission:bodega.write');
 });
 
 // SCRUM-460→466 (REQ-390→396, Bloque B5 "Conteos generales de inventario") — ver

@@ -948,7 +948,7 @@ class GeneralCountControllerTest extends FeatureTestCase
         $response->assertJsonPath('estado', GeneralCountRequest::ESTADO_RECHAZADA);
     }
 
-    public function test_approve_no_siendo_aprobador_retorna_403(): void
+    public function test_approve_siendo_gerencia_no_designada_funciona(): void
     {
         $central = Warehouse::where('name', 'Bodega Central')->first();
         $solicitanteId = User::where('email', 'vendedor@atlantic.test')->first()->id;
@@ -967,10 +967,10 @@ class GeneralCountControllerTest extends FeatureTestCase
         $token = $this->loginAs('nivel8@atlantic.test', 'Password123!', 'management');
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/bodega/general-counts/{$generalCount->id}/approve")
-            ->assertStatus(403);
+            ->assertSuccessful(); // Fase 29: Gerencia también decide
 
         $this->reMakeCurrent();
-        $this->assertSame(GeneralCountRequest::ESTADO_PENDIENTE_APROBACION, GeneralCountRequest::find($generalCount->id)->estado);
+        $this->assertSame(GeneralCountRequest::ESTADO_APROBADA, GeneralCountRequest::find($generalCount->id)->estado);
     }
 
     public function test_approve_conteo_no_pendiente_de_aprobacion_retorna_422(): void
@@ -1033,6 +1033,10 @@ class GeneralCountControllerTest extends FeatureTestCase
 
         $response->assertStatus(200);
         $this->assertNotNull($response->json('aplicado_at'));
+        // Fase 29: el conteo aplicado se ve como «aplicada» y se filtra con ese estado.
+        $this->assertSame('aplicada', $response->json('estado_visible'));
+        $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/general-counts?estado=aplicada')
+            ->assertOk()->assertJsonFragment(['id' => $generalCount->id]);
 
         $this->reMakeCurrent();
         $this->assertSame(13, ProductWarehouseStock::where('catalog_product_id', $productSobrante->id)->where('warehouse_id', $central->id)->value('quantity'));

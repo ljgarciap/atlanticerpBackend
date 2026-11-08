@@ -24,9 +24,9 @@ Un movimiento por cambio de existencias: fecha, producto, bodega, tipo (`Entrada
 - **La cadena de saldos es continua**: dentro de un producto y una bodega, el saldo inicial de cada movimiento es el resultante del anterior [E].
 
 ## Candidatos a cambio o mejora
-1. **No hay un permiso angosto para escribir ubicaciones**: lo tiene todo perfil con `bodega.write`, incluido el auxiliar y el repartidor, mientras que otras pantallas de Bodega usan un permiso propio. [E]
-2. **La ruta del día solo muestra lo comprometido para hoy**: un pedido atrasado (fecha de ayer, sin entregar) desaparece de la lista justo cuando más importa. [C]
-3. **La ruta no se agrupa ni se ordena por repartidor ni por hora**: solo por fecha, que es la misma para todas las filas. [C]
-4. **Las ubicaciones desactivadas se acumulan** y no hay forma de borrarlas ni de ocultarlas del listado. [E]
-5. **El Kardex no filtra por fecha ni por producto exacto** (solo por texto en referencia o nombre) y su `tipo` se filtra con la etiqueta de pantalla («Salida»), no con un código. [E][C]
-6. **El Líder de Compras ve todo Bodega** (Kardex, ubicaciones, rutas): coherente con que Compras necesita existencias, pero no está documentado como decisión. [E]
+1. ~~No hay un permiso angosto para escribir ubicaciones~~ — **corregido en la Fase 29**: crear y desactivar ubicaciones exige `bodega.write` **y** `bodega.locations.manage` (Líder y Asistente de Bodega, este último con nivel propio). [E]
+2. ~~La ruta del día solo muestra lo de hoy~~ — **corregido en la Fase 29**: incluye lo atrasado sin entregar, arriba y con `atrasado: true`. [C]
+3. **La ruta se ordena por fecha, repartidor e id** (Fase 29). No hay orden por hora porque el pedido solo guarda la fecha de entrega comprometida, no la hora. [C]
+4. ~~Las ubicaciones desactivadas se acumulan~~ — **corregido en la Fase 29**: el listado oculta las desactivadas; `?incluir_inactivas=1` las muestra. Siguen sin borrarse (historial). [E]
+5. ~~El Kardex no filtra por fecha ni por producto exacto~~ — **corregido en la Fase 29**: `producto_id`, `desde` y `hasta` (422 si la fecha es inválida). El `tipo` sigue filtrándose con la etiqueta guardada. [E][C]
+6. **El Líder de Compras ve todo Bodega** (Kardex, ubicaciones, rutas): **decisión documentada en la Fase 29** — Compras necesita ver existencias y movimientos; ver no es escribir (las escrituras exigen sus permisos propios). [E]

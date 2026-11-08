@@ -53,7 +53,10 @@ final class GeneralCountController extends Controller
             ->withCount(['lines as diferencias_count' => fn ($q) => $q->where('diferencia', '!=', 0)]);
 
         $estado = $request->query('estado');
-        if (is_string($estado) && $estado !== '' && $estado !== 'todas') {
+        if ($estado === 'aplicada') {
+            // Fase 29: «aplicada» es el estado visible de un conteo aprobado cuyo ajuste ya se realizó (`aplicado_at`).
+            $query->where('estado', GeneralCountRequest::ESTADO_APROBADA)->whereNotNull('aplicado_at');
+        } elseif (is_string($estado) && $estado !== '' && $estado !== 'todas') {
             $query->where('estado', $estado);
         }
 
@@ -724,6 +727,8 @@ final class GeneralCountController extends Controller
             'realizado_por' => $generalCountRequest->realizadoPor !== null
                 ? trim("{$generalCountRequest->realizadoPor->first_name} {$generalCountRequest->realizadoPor->last_name}") : null,
             'estado' => $generalCountRequest->estado,
+            'estado_visible' => $generalCountRequest->estado === GeneralCountRequest::ESTADO_APROBADA && $generalCountRequest->aplicado_at !== null
+                ? 'aplicada' : $generalCountRequest->estado,
             'total_productos' => $this->totalProductos($generalCountRequest),
             'diferencias_encontradas' => $this->diferenciasEncontradas($generalCountRequest),
             'fecha' => $generalCountRequest->created_at->toIso8601String(),
