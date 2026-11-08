@@ -83,4 +83,16 @@ class ProcessApproversTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($super))->getJson('/api/admin/process-approvers')->assertStatus(200)
             ->assertJsonPath('processes.caja_chica.sigue_al_primario', true);
     }
+
+    public function test_cambiar_los_aprobadores_de_un_proceso_queda_auditado_con_el_actor(): void
+    {
+        $this->configurar('arqueo', [$this->idDe(self::OTRA)]);
+
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // tras una petición HTTP el tenant queda olvidado
+        $fila = \App\Modules\Auth\Models\AuditLog::query()->where('action', 'admin_contab.process_approvers.updated')->latest('id')->first();
+        $this->assertNotNull($fila, 'debe quedar un registro de auditoría');
+        $this->assertNotNull($fila->user_id, 'con el actor que hizo el cambio');
+        $this->assertSame([$this->idDe(self::OTRA)], $fila->new_values['user_ids'] ?? null);
+        $this->assertNotNull(\Illuminate\Support\Facades\DB::table(\App\Modules\AdminCont\Services\ProcessApprovers::table())->where('process', 'arqueo')->value('created_by'));
+    }
 }

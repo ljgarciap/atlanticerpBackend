@@ -150,6 +150,18 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
         $this->assertSame($b->id, $movement->fresh()?->bank_account_id);
     }
 
+    public function test_fase28_no_se_reasigna_la_cuenta_de_un_cobro_desde_el_movimiento(): void
+    {
+        $a = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1111']);
+        $b = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '2222']);
+        $cobro = AdminContBankMovement::create(['bank_account_id' => $a->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 500]);
+        $token = $this->loginAsContabilidad();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/bank-movements/{$cobro->id}/reassign-account", ['bank_account_id' => $b->id, 'motivo' => 'Era la cuenta equivocada'])
+            ->assertStatus(422);
+    }
+
     public function test_fase28_filtros_y_pendientes_sin_cuenta(): void
     {
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);

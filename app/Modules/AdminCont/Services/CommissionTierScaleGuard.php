@@ -39,6 +39,11 @@ final class CommissionTierScaleGuard
             'max' => isset($candidato['monto_maximo']) ? (float) $candidato['monto_maximo'] : null,
         ];
 
+        // Un PUT parcial puede dejar el tramo invertido (mínimo mayor que el máximo): nunca coincidiría con ningún monto.
+        if ($nuevo['max'] !== null && $nuevo['max'] <= $nuevo['min']) {
+            throw ValidationException::withMessages(['monto_maximo' => 'El monto máximo debe ser mayor que el mínimo.']);
+        }
+
         foreach ($otros as $t) {
             $min = (float) $t->monto_minimo;
             $max = $t->monto_maximo !== null ? (float) $t->monto_maximo : null;

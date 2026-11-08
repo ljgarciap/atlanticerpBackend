@@ -16,6 +16,7 @@ use App\Shared\Http\Pagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 /**
  * SCRUM-610→611 (REQ-533→534) — Movimientos. Ledger fundacional, ver docblock de la migración de
@@ -115,40 +116,46 @@ class AdminContBankMovementController
             return $denegado;
         }
 
-        $movement = AdminContBankMovement::find($id);
-        if ($movement === null) {
-            return response()->json(['message' => 'Not found'], 404);
-        }
-        if ($movement->bank_account_id === null) {
-            return response()->json(['message' => 'El movimiento no tiene cuenta asignada: usa la asignación inicial.'], 422);
-        }
-        $nueva = (int) $request->validated('bank_account_id');
-        if ($nueva === $movement->bank_account_id) {
-            return response()->json(['message' => 'El movimiento ya está en esa cuenta.'], 422);
-        }
-        $arqueoCerrado = AdminContDailyCashCount::query()
-            ->whereDate('fecha', $movement->fecha->toDateString())
-            ->where('estado', '!=', AdminContDailyCashCount::ESTADO_ABIERTO)->exists();
-        if ($arqueoCerrado) {
-            return response()->json(['message' => 'El arqueo de la fecha del movimiento ya está cerrado: reábrelo antes de cambiar su cuenta.'], 409);
-        }
+        return DB::transaction(function () use ($request, $id): JsonResponse {
+            $movement = AdminContBankMovement::query()->lockForUpdate()->find($id);
+            if ($movement === null) {
+                return response()->json(['message' => 'Not found'], 404);
+            }
+            // Un cobro nace de su recibo (`payments.bank_account_id`): reasignar solo el movimiento los desincronizaría.
+            if ($movement->tipo === AdminContBankMovement::TIPO_COBRO) {
+                return response()->json(['message' => 'La cuenta de un cobro se corrige desde el cobro, no desde el movimiento.'], 422);
+            }
+            if ($movement->bank_account_id === null) {
+                return response()->json(['message' => 'El movimiento no tiene cuenta asignada: usa la asignación inicial.'], 422);
+            }
+            $nueva = (int) $request->validated('bank_account_id');
+            if ($nueva === $movement->bank_account_id) {
+                return response()->json(['message' => 'El movimiento ya está en esa cuenta.'], 422);
+            }
+            $arqueoCerrado = AdminContDailyCashCount::query()
+                ->whereDate('fecha', $movement->fecha->toDateString())
+                ->where('estado', '!=', AdminContDailyCashCount::ESTADO_ABIERTO)->exists();
+            if ($arqueoCerrado) {
+                return response()->json(['message' => 'El arqueo de la fecha del movimiento ya está cerrado: reábrelo antes de cambiar su cuenta.'], 409);
+            }
 
-        $anterior = $movement->bank_account_id;
-        $movement->update(['bank_account_id' => $nueva]);
+            $anterior = $movement->bank_account_id;
+            $movement->update(['bank_account_id' => $nueva]);
 
-        /** @var array{sub?: int}|null $jwt */
-        $jwt = $request->attributes->get('jwt');
-        app(AuditService::class)->log(
-            'admin_contab.bank_movement.account_reassigned',
-            'bank_movement',
-            $movement->id,
-            ['bank_account_id' => $anterior],
-            ['bank_account_id' => $nueva],
-            ['motivo' => trim((string) $request->validated('motivo')), 'tipo' => $movement->tipo, 'monto' => $movement->monto],
-            isset($jwt['sub']) ? (int) $jwt['sub'] : null,
-        );
+            /** @var array{sub?: int}|null $jwt */
+            $jwt = $request->attributes->get('jwt');
+            app(AuditService::class)->log(
+                'admin_contab.bank_movement.account_reassigned',
+                'bank_movement',
+                $movement->id,
+                ['bank_account_id' => $anterior],
+                ['bank_account_id' => $nueva],
+                ['motivo' => trim((string) $request->validated('motivo')), 'tipo' => $movement->tipo, 'monto' => $movement->monto],
+                isset($jwt['sub']) ? (int) $jwt['sub'] : null,
+            );
 
-        return response()->json($movement->fresh('bankAccount'));
+            return response()->json($movement->fresh('bankAccount'));
+        });
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Controllers;
 
 use App\Modules\AdminCont\Services\ProcessApprovers;
+use App\Shared\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,14 +34,30 @@ class ProcessApproverController
         ]);
         $ids = array_map('intval', $data['user_ids']);
 
+        /** @var array{sub?: int}|null $jwt */
+        $jwt     = $request->attributes->get('jwt');
+        $actorId = isset($jwt['sub']) ? (int) $jwt['sub'] : null;
+        $antes   = ProcessApprovers::idsOf($process);
+
         $table = ProcessApprovers::table();
-        DB::transaction(function () use ($ids, $table, $process, $request): void {
+        DB::transaction(function () use ($ids, $table, $process, $actorId): void {
             DB::table($table)->where('process', $process)->whereNotIn('user_id', $ids)->delete();
             $existentes = DB::table($table)->where('process', $process)->pluck('user_id')->map(fn ($v): int => (int) $v)->all();
             foreach (array_diff($ids, $existentes) as $userId) {
-                DB::table($table)->insert(['process' => $process, 'user_id' => $userId, 'created_by' => $request->user()?->id, 'created_at' => now(), 'updated_at' => now()]);
+                DB::table($table)->insert(['process' => $process, 'user_id' => $userId, 'created_by' => $actorId, 'created_at' => now(), 'updated_at' => now()]);
             }
         });
+
+        // Control de separación de funciones: quién cambió quiénes aprueban un proceso, y cuándo, queda en la auditoría.
+        app(AuditService::class)->log(
+            'admin_contab.process_approvers.updated',
+            'process_approvers',
+            null,
+            ['user_ids' => $antes],
+            ['user_ids' => $ids],
+            ['process' => $process],
+            $actorId,
+        );
 
         return response()->json($this->payload());
     }

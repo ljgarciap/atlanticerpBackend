@@ -390,6 +390,17 @@ class AdminContReportsControllerTest extends FeatureTestCase
             ->assertStatus(422)->assertJsonValidationErrors('orden');
     }
 
+    public function test_fase28_un_put_parcial_no_puede_invertir_un_tramo_de_cartera(): void
+    {
+        $token = $this->loginAsApprover();
+        $primero = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/commissions/cartera/tiers')->json('0');
+
+        // El primer tramo termina en 14999.99: subirle solo el mínimo por encima del máximo lo dejaría invertido.
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/commissions/cartera/tiers/{$primero['id']}", ['monto_minimo' => 99999])
+            ->assertStatus(422)->assertJsonValidationErrors('monto_maximo');
+    }
+
     public function test_get_tiers_expone_los_3_tramos_seed(): void
     {
         $token = $this->loginAsContabilidad();

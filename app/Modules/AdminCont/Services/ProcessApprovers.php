@@ -7,6 +7,7 @@ namespace App\Modules\AdminCont\Services;
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\PrimaryApprovers;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -58,8 +59,14 @@ final class ProcessApprovers
     {
         try {
             return array_values(array_map('intval', DB::table(self::table())->where('process', $process)->pluck('user_id')->all()));
-        } catch (\Throwable) {
-            return []; // tenant sin migrar
+        } catch (QueryException $e) {
+            // Solo se tolera que la tabla aún no exista (tenant sin migrar). Cualquier otro fallo propaga: fallar cerrado,
+            // nunca ensanchar el conjunto de aprobadores por un error de base de datos.
+            if ($e->getCode() === '42P01') {
+                return [];
+            }
+
+            throw $e;
         }
     }
 
