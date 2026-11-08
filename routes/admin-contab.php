@@ -97,9 +97,13 @@ Route::get('/bank-movements', [AdminContBankMovementController::class, 'index'])
     ->middleware('permission:admin_contab.read');
 
 // REQ-534 — más angosto que el resto: "Disponible para Contabilidad y Asistente Administrativa" únicamente, sin Gerencia/Gerencia.
+// Fase 28: el gate fino (operations.manage, o el aprobador/suplente como segundo asignador) vive en el controlador.
 Route::put('/bank-movements/{id}/assign-account', [AdminContBankMovementController::class, 'assignAccount'])
     ->whereNumber('id')
-    ->middleware('permission:admin_contab.operations.manage');
+    ->middleware('permission:admin_contab.read');
+Route::put('/bank-movements/{id}/reassign-account', [AdminContBankMovementController::class, 'reassignAccount'])
+    ->whereNumber('id')
+    ->middleware('permission:admin_contab.read');
 
 // SCRUM-513→518 (REQ-436→441) — Facturación, Batch 2 del cuerpo principal (ver
 // docs/architecture/admin-contab-batches.md). Mismo gate de rol estándar que Cuentas Bancarias —
