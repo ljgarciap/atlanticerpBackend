@@ -19,15 +19,17 @@ use Illuminate\Validation\Rule;
  */
 final class WarehouseLocationController extends Controller
 {
-    /** GET /api/bodega/warehouses/{warehouseId}/locations — todas (activas e inactivas). */
-    public function index(int $warehouseId): JsonResponse
+    /** GET /api/bodega/warehouses/{warehouseId}/locations — activas; con `incluir_inactivas=1`, todas. */
+    public function index(Request $request, int $warehouseId): JsonResponse
     {
         $warehouse = Warehouse::find($warehouseId);
         if ($warehouse === null) {
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // Fase 29: las desactivadas no se acumulan en el listado; `?incluir_inactivas=1` las muestra.
         $locations = WarehouseLocation::where('warehouse_id', $warehouseId)
+            ->when(! $request->boolean('incluir_inactivas'), fn ($q) => $q->where('is_active', true))
             ->orderBy('codigo')
             ->get(['id', 'warehouse_id', 'codigo', 'is_active']);
 

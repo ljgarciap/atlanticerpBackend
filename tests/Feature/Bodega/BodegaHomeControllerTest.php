@@ -808,4 +808,22 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $items = collect($response->json('data'));
         $this->assertTrue($items->contains(fn (array $i) => $i['tipo'] === 'general_count'));
     }
+
+    /** Fase 29 — la ruta del día incluye lo atrasado, arriba y marcado; lo de mañana y lo entregado no entran. */
+    public function test_ruta_del_dia_incluye_atrasados_marcados_y_arriba(): void
+    {
+        $hoy = Carbon::today();
+        $this->makeOrder(['order_number' => 'PED-HOY', 'committed_delivery_date' => $hoy]);
+        $this->makeOrder(['order_number' => 'PED-ATRASADO', 'committed_delivery_date' => $hoy->copy()->subDays(2)]);
+        $this->makeOrder(['order_number' => 'PED-MANANA', 'committed_delivery_date' => $hoy->copy()->addDay()]);
+        $this->makeOrder(['order_number' => 'PED-ENTREGADO', 'committed_delivery_date' => $hoy->copy()->subDay(), 'stage' => Order::STAGE_ENTREGADO]);
+
+        $this->grantBodegaPermissions('liderbodega@test.com', ['bodega.read']);
+        $token = $this->loginAs('liderbodega@test.com', 'liderbodega@test.com', 'lider_bodega');
+        $data = $this->withHeaders($this->authHeaders($token))->getJson('/api/bodega/home/rutas-dia')->assertOk()->json('data');
+
+        $this->assertSame(['PED-ATRASADO', 'PED-HOY'], array_column($data, 'order_number'));
+        $this->assertTrue($data[0]['atrasado']);
+        $this->assertFalse($data[1]['atrasado']);
+    }
 }

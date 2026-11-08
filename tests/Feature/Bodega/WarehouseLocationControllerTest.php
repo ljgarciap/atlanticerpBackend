@@ -30,7 +30,7 @@ class WarehouseLocationControllerTest extends FeatureTestCase
         $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
         DB::table("{$slug}_auth.users")
             ->where('email', $email)
-            ->update(['extra_permissions' => json_encode(['bodega.read', 'bodega.write'])]);
+            ->update(['extra_permissions' => json_encode(['bodega.read', 'bodega.write', 'bodega.locations.manage'])]);
     }
 
     public function test_index_lista_ubicaciones_activas_e_inactivas(): void
@@ -45,8 +45,25 @@ class WarehouseLocationControllerTest extends FeatureTestCase
         $response = $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/bodega/warehouses/{$central->id}/locations");
 
+        // Fase 29: por defecto solo las activas; `incluir_inactivas=1` muestra también las desactivadas.
         $response->assertStatus(200);
-        $response->assertJsonCount(2, 'data');
+        $response->assertJsonCount(1, 'data');
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson("/api/bodega/warehouses/{$central->id}/locations?incluir_inactivas=1")
+            ->assertOk()->assertJsonCount(2, 'data');
+    }
+
+    /** Fase 29 — escribir ubicaciones exige el permiso angosto: `bodega.write` solo ya no alcanza. */
+    public function test_escribir_ubicaciones_exige_el_permiso_angosto(): void
+    {
+        $central = Warehouse::where('name', 'Bodega Central')->first();
+        $slug = (string) Tenant::where('slug', 'atlantic')->value('slug');
+        DB::table("{$slug}_auth.users")->where('email', 'auxiliarbodega@test.com')
+            ->update(['extra_permissions' => json_encode(['bodega.read', 'bodega.write'])]);
+        $headers = $this->authHeaders($this->loginAs('auxiliarbodega@test.com', 'auxiliarbodega@test.com', 'auxiliar_bodega'));
+
+        $this->withHeaders($headers)->postJson("/api/bodega/warehouses/{$central->id}/locations", ['codigo' => 'Z-9-99'])->assertStatus(403);
+        $this->withHeaders($headers)->getJson("/api/bodega/warehouses/{$central->id}/locations")->assertOk();
     }
 
     public function test_index_bodega_inexistente_retorna_404(): void

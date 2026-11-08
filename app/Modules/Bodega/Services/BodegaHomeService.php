@@ -589,12 +589,17 @@ final class BodegaHomeService
     {
         $hoy = CarbonImmutable::today();
 
-        return Order::whereDate('committed_delivery_date', $hoy)
+        // Fase 29: lo atrasado (fecha anterior a hoy y sin entregar) entra a la ruta, arriba y marcado: es lo que más importa.
+        return Order::whereDate('committed_delivery_date', '<=', $hoy)
             ->whereNotIn('stage', [Order::STAGE_ENTREGADO])
             ->with(['pipelineCard:id,sales_project_id', 'pipelineCard.salesProject:id,name', 'courier:id,first_name,last_name'])
             ->orderBy('committed_delivery_date')
+            ->orderBy('courier_id')
+            ->orderBy('id')
             ->get()
             ->map(fn (Order $o): array => [
+                'atrasado'       => $o->committed_delivery_date !== null && $o->committed_delivery_date->lt($hoy),
+                'fecha_compromiso' => $o->committed_delivery_date?->toDateString(),
                 'id'             => $o->id,
                 'order_number'   => $o->order_number,
                 'stage'          => $o->stage,

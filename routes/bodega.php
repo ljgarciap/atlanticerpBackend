@@ -73,8 +73,8 @@ Route::prefix('warehouses')->group(function (): void {
     // SCRUM-454 (REQ-384, Bloque B4) — catálogo editable de ubicaciones físicas por bodega, base
     // del chip "Espacio libre" de arriba. Ver ADR-SCRUM454-459-reubicacion-bodegas.md.
     Route::get('/{warehouseId}/locations', [WarehouseLocationController::class, 'index'])->middleware('permission:bodega.read');
-    Route::post('/{warehouseId}/locations', [WarehouseLocationController::class, 'store'])->middleware('permission:bodega.write');
-    Route::patch('/{warehouseId}/locations/{id}', [WarehouseLocationController::class, 'update'])->middleware('permission:bodega.write');
+    Route::post('/{warehouseId}/locations', [WarehouseLocationController::class, 'store'])->middleware(['permission:bodega.write', 'permission:bodega.locations.manage']);
+    Route::patch('/{warehouseId}/locations/{id}', [WarehouseLocationController::class, 'update'])->middleware(['permission:bodega.write', 'permission:bodega.locations.manage']);
 });
 
 // SCRUM-457/458/459 (REQ-387/388/389, Bloque B4 "Reubicación entre bodegas") — Bodega solicita
