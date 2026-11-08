@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\AdminCont\Http\Controllers;
 
+use App\Modules\AdminCont\Services\ProcessApprovers;
 use App\Models\User;
 use App\Modules\AdminCont\Exceptions\PettyCashStateException;
 use App\Modules\AdminCont\Http\Requests\AddPettyCashExpenseAttachmentRequest;
@@ -390,10 +391,8 @@ class AdminContPettyCashController
             return true;
         }
 
-        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
-
         return $payload !== null && isset($payload['sub'])
-            && PrimaryApprovers::isApprover((int) $payload['sub'], $primaryApproverId);
+            && ProcessApprovers::isApprover((int) $payload['sub'], ProcessApprovers::CAJA_CHICA); // Fase 28
     }
 
     /** Batch 21 — mismo roster de rol que el grupo `role:superadmin,lider_admin_contab,

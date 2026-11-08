@@ -188,7 +188,7 @@ Route::middleware('permission:admin_contab.records.manage')->group(function (): 
     Route::post('/clientes/{masterClientId}/devolucion', [AdminContReversalController::class, 'solicitarDevolucion'])->whereNumber('masterClientId');
     Route::get('/reversal-requests', [AdminContReversalController::class, 'index']);
 });
-Route::middleware('primary_approver_only')->prefix('reversal-requests')->group(function (): void {
+Route::middleware('primary_approver_only:anulacion_cobro')->prefix('reversal-requests')->group(function (): void {
     Route::put('/{id}/decision', [AdminContReversalController::class, 'decision'])->whereNumber('id');
 });
 
@@ -241,7 +241,7 @@ Route::middleware('permission:admin_contab.records.manage')->prefix('notas-credi
 
 // Batch 13 (SCRUM-571, REQ-494 RN1) — aprobar/rechazar una nota pendiente es EXCLUSIVO de Gerencia,
 // mismo criterio que `invoices/{order}/uncollectible-decision`.
-Route::middleware('primary_approver_only')->prefix('notas-credito')->group(function (): void {
+Route::middleware('primary_approver_only:nota_credito')->prefix('notas-credito')->group(function (): void {
     Route::put('/{creditNote}/decision', [AdminContCreditNoteController::class, 'decision'])->whereNumber('creditNote');
 });
 
@@ -392,7 +392,7 @@ Route::middleware('permission:admin_contab.records.manage')
 
 // Batch 19 (SCRUM-605, REQ-528 RN2/RN4) — aprobar como Gerencia es EXCLUSIVO de Gerencia, mismo
 // criterio que `notas-credito/{id}/decision`/`invoices/{order}/uncollectible-decision`.
-Route::middleware('primary_approver_only')->prefix('cash-position/history')->group(function (): void {
+Route::middleware('primary_approver_only:arqueo')->prefix('cash-position/history')->group(function (): void {
     Route::post('/{id}/approve', [AdminContCashPositionController::class, 'approveDailyCashCount'])->whereNumber('id');
     Route::post('/{id}/reopen', [AdminContCashPositionController::class, 'reopenDailyCashCount'])->whereNumber('id');
 });
@@ -430,7 +430,7 @@ Route::middleware('permission:admin_contab.operations.manage')
     });
 
 // REQ-540 — aprobar reporte completo, exclusivo de Gerencia.
-Route::middleware('primary_approver_only')->prefix('petty-cash')->group(function (): void {
+Route::middleware('primary_approver_only:caja_chica')->prefix('petty-cash')->group(function (): void {
     Route::put('/reports/{numero}/approve', [AdminContPettyCashController::class, 'approveReport']);
     // Batch 21 (REQ-541) — rechazar línea puntual o reporte completo, exclusivo de Gerencia.
     Route::put('/expenses/{id}/reject', [AdminContPettyCashController::class, 'rejectExpense'])->whereNumber('id');

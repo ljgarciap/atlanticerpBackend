@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\AdminCont\Http\Middleware;
 
 use App\Modules\AdminCont\Models\AdminContFiscalSettings;
+use App\Modules\AdminCont\Services\ProcessApprovers;
 use App\Shared\Support\PrimaryApprovers;
 use Closure;
 use Illuminate\Http\Request;
@@ -26,7 +27,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureIsPrimaryApprover
 {
-    public function handle(Request $request, Closure $next): Response
+    /** @param string|null $process Fase 28: proceso con aprobadores propios (`primary_approver_only:caja_chica`); sin él, el aprobador primario global. */
+    public function handle(Request $request, Closure $next, ?string $process = null): Response
     {
         /** @var array{sub?: int, permissions?: mixed}|null $payload */
         $payload = $request->attributes->get('jwt');
@@ -44,9 +46,11 @@ class EnsureIsPrimaryApprover
             return $next($request);
         }
 
-        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
+        $esAprobador = $process !== null
+            ? ProcessApprovers::isApprover((int) $payload['sub'], $process)
+            : PrimaryApprovers::isApprover((int) $payload['sub'], AdminContFiscalSettings::current()->primary_approver_user_id);
 
-        if (! PrimaryApprovers::isApprover((int) $payload['sub'], $primaryApproverId)) {
+        if (! $esAprobador) {
             return response()->json(['message' => 'Esta pantalla es exclusiva del aprobador configurado.'], 403);
         }
 

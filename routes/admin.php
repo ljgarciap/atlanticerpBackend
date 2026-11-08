@@ -85,6 +85,10 @@ Route::middleware('permission:superadmin.all')->group(function (): void {
     Route::get('/primary-approver-substitutes', [PrimaryApproverSubstituteController::class, 'index']);
     Route::put('/primary-approver-substitutes', [PrimaryApproverSubstituteController::class, 'update']);
 
+    // Fase 28 — aprobadores propios por proceso de Admin & Contab (caja chica, arqueo, anulación de cobros, notas de crédito).
+    Route::get('/process-approvers', [\App\Modules\AdminCont\Http\Controllers\ProcessApproverController::class, 'index']);
+    Route::put('/process-approvers/{process}', [\App\Modules\AdminCont\Http\Controllers\ProcessApproverController::class, 'update']);
+
     // Fase 14a — reglas de aprobación de órdenes de compra (docs/specs/fase14-parametrizacion.md); mismo permiso que módulos y roles.
     Route::get('/purchase-approval-rules',                 [PurchaseApprovalRuleController::class, 'index']);
     Route::post('/purchase-approval-rules',                [PurchaseApprovalRuleController::class, 'store']);

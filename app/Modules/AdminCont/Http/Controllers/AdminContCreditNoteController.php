@@ -197,7 +197,7 @@ class AdminContCreditNoteController
         $payload = $request->attributes->get('jwt');
         $isApprover = AdminContFiscalSettings::actorEsAprobadorOSuperadmin($payload);
 
-        $result['puede_aprobar_rechazar'] = $result['puede_aprobar_rechazar'] && $isApprover;
+        $result['puede_aprobar_rechazar'] = $result['puede_aprobar_rechazar'] && \App\Modules\AdminCont\Services\ProcessApprovers::actorCan($payload, \App\Modules\AdminCont\Services\ProcessApprovers::NOTA_CREDITO); // Fase 28
         // El texto del rechazo del PAC es información de Configuración Fiscal: solo Gerencia/superadmin.
         // Se agrega acá (deny-by-default) y no en `CreditNoteService::show()`, que también consumen
         // Bodega y un job de correo sin este gate.
