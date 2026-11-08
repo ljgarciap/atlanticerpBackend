@@ -63,6 +63,9 @@ final class ArchitectCommissionService
 
     public const ESTADO_PENDIENTE_FACTURA = 'pendiente_factura_arquitecto';
 
+    /** Fase 28 — alias de API/interfaz de ESTADO_PENDIENTE_FACTURA (el filtro `estado` acepta ambos). */
+    public const ALIAS_PENDIENTE_CUENTA_COBRO = 'pendiente_cuenta_cobro';
+
     public const ESTADO_PAGADA = 'pagada';
 
     // SCRUM-866 punto 2 — "Estado de comisión" (arriba) y "Estado Cobro del cliente" (acá) eran el
@@ -273,6 +276,20 @@ final class ArchitectCommissionService
     }
 
     /**
+     * Fase 28 — comisión sobre el monto del proyecto según la base configurada
+     * (`comision_externa_base`: `total` con impuesto, el valor por defecto, o `base_imponible`, sin el
+     * ITBMS vigente). Única fuente del cálculo para el desglose, las tarjetas y los pagos.
+     */
+    private function comisionDe(float $montoProyecto, ?float $porcentaje): float
+    {
+        if (AdminContFiscalSettings::current()->comision_externa_base === 'base_imponible') {
+            $montoProyecto = $montoProyecto / (1 + ItbmsRateResolver::defaultPercentage() / 100);
+        }
+
+        return round($montoProyecto * ($porcentaje ?? $this->porcentajeDefault()) / 100, 2);
+    }
+
+    /**
      * REQ-511, RN1-RN6. `$regimenFiscal` null → impuesto/total no calculables (RN6, nunca se
      * asume "Exento" por defecto).
      *
@@ -291,7 +308,7 @@ final class ArchitectCommissionService
      */
     public function montoFor(float $montoProyecto, ?string $regimenFiscal, ?float $porcentajeOverride = null): array
     {
-        $comision = round($montoProyecto * ($porcentajeOverride ?? $this->porcentajeDefault()) / 100, 2);
+        $comision = $this->comisionDe($montoProyecto, $porcentajeOverride);
 
         $itbmsPercent = ItbmsRateResolver::defaultPercentage();
         $impuesto = match ($regimenFiscal) {
@@ -336,6 +353,9 @@ final class ArchitectCommissionService
         $mes = $filters['mes'] ?? null;
         $archId = $filters['architect_id'] ?? null;
         $estado = $filters['estado'] ?? null;
+        if ($estado === self::ALIAS_PENDIENTE_CUENTA_COBRO) {
+            $estado = self::ESTADO_PENDIENTE_FACTURA;
+        }
 
         $mesesDisponibles = $projects->pluck('fecha_pedido')->filter()
             ->unique(fn (CarbonImmutable $m) => $m->format('Y-m'))
@@ -392,9 +412,17 @@ final class ArchitectCommissionService
             $generada = 0.0;
             $pagada = 0.0;
             $pendiente = 0.0;
+            $comisionSinRegimen = 0.0;
             foreach ($enrichedProjects as $ep) {
                 if ($ep['total'] === null) {
-                    continue; // datos fiscales incompletos — mismo criterio que buildCards()
+                    // Datos fiscales incompletos — mismo criterio que buildCards(): no suma a los totales con impuesto.
+                    // Fase 28: se acumula aparte (comisión sin impuesto) para que la interfaz diga «pendiente de régimen»
+                    // en vez de mostrar 0 junto a una comisión que la fila del proyecto sí muestra.
+                    if (in_array($ep['estado'], [self::ESTADO_PAGADA, self::ESTADO_PENDIENTE_FACTURA], true)) {
+                        $comisionSinRegimen += $ep['comision'];
+                    }
+
+                    continue;
                 }
                 if ($ep['estado'] === self::ESTADO_PAGADA) {
                     $pagada += $ep['total'];
@@ -412,6 +440,8 @@ final class ArchitectCommissionService
                 'ruc' => $profile?->ruc,
                 'regimen_fiscal' => $regimen,
                 'datos_fiscales_completos' => $profile !== null,
+                'regimen_pendiente' => $profile === null && $comisionSinRegimen > 0,
+                'comision_sin_regimen' => round($comisionSinRegimen, 2),
                 'generada' => round($generada, 2),
                 'pagada' => round($pagada, 2),
                 'pendiente' => round($pendiente, 2),
@@ -452,7 +482,7 @@ final class ArchitectCommissionService
                 continue;
             }
 
-            $comision = round((float) $p['monto_proyecto'] * ($p['porcentaje_aprobado'] ?? $this->porcentajeDefault()) / 100, 2);
+            $comision = $this->comisionDe((float) $p['monto_proyecto'], $p['porcentaje_aprobado']);
             $rows->push(['fecha' => $p['fecha_pago']->toDateString(), 'monto' => $comision]);
         }
 
@@ -475,7 +505,7 @@ final class ArchitectCommissionService
 
         foreach ($projects as $p) {
             $profile = $fiscalProfiles->get($p['architect_id']);
-            $comision = round($p['monto_proyecto'] * ($p['porcentaje_aprobado'] ?? $this->porcentajeDefault()) / 100, 2);
+            $comision = $this->comisionDe((float) $p['monto_proyecto'], $p['porcentaje_aprobado']);
 
             if ($p['estado'] === self::ESTADO_AUN_NO_GENERADA) {
                 // RN4 REQ-508 — no exige datos fiscales completos, es un estimado en potencia.
@@ -538,6 +568,8 @@ final class ArchitectCommissionService
             'impuesto' => $montos['impuesto'],
             'total' => $montos['total'],
             'estado' => $p['estado'],
+            // Fase 28 — el nombre interno `pendiente_factura_arquitecto` engaña (quien factura es el asociado): alias claro para la interfaz.
+            'estado_alias' => $p['estado'] === self::ESTADO_PENDIENTE_FACTURA ? self::ALIAS_PENDIENTE_CUENTA_COBRO : $p['estado'],
             // SCRUM-866 punto 2 — "Estado" se separa en "Estado de comisión" (`estado`, sin
             // cambios) y "Estado Cobro del cliente" (este campo nuevo).
             'estado_cobro_cliente' => $p['estado_cobro_cliente'],

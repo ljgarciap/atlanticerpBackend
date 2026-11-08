@@ -246,6 +246,40 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $response->assertJsonPath('arquitectos.0.pendiente', 500);
     }
 
+    public function test_fase28_la_base_imponible_configurable_calcula_sin_el_itbms(): void
+    {
+        $service = app(ArchitectCommissionService::class);
+        $tasa = \App\Modules\AdminCont\Services\ItbmsRateResolver::defaultPercentage();
+
+        // Por defecto: sobre el total con impuesto (comportamiento de siempre).
+        $this->assertSame(3400.0, $service->montoFor(34000.0, null)['comision']);
+
+        \App\Modules\AdminCont\Models\AdminContFiscalSettings::current()->update(['comision_externa_base' => 'base_imponible']);
+
+        $this->assertSame(round(34000.0 / (1 + $tasa / 100) * 10 / 100, 2), $service->montoFor(34000.0, null)['comision']);
+    }
+
+    public function test_fase28_arquitecto_sin_regimen_expone_la_comision_pendiente_de_regimen_y_el_alias_del_estado(): void
+    {
+        $architect = $this->makeArchitect();
+        $this->makeArchitectProject($architect, 10000.0, 10000.0);
+
+        $token = $this->loginAsApprover();
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/external')
+            ->assertStatus(200);
+
+        $response->assertJsonPath('arquitectos.0.regimen_pendiente', true);
+        $response->assertJsonPath('arquitectos.0.comision_sin_regimen', 1000);
+        $response->assertJsonPath('arquitectos.0.proyectos.0.estado', 'pendiente_factura_arquitecto');
+        $response->assertJsonPath('arquitectos.0.proyectos.0.estado_alias', 'pendiente_cuenta_cobro');
+
+        // El filtro acepta el alias nuevo igual que el nombre interno.
+        $this->withHeaders($this->authHeaders($token))
+            ->getJson('/api/admin-contab/commissions/external?estado=pendiente_cuenta_cobro')
+            ->assertStatus(200)->assertJsonCount(1, 'arquitectos');
+    }
+
     public function test_arquitecto_sin_datos_fiscales_no_suma_pero_aparece_con_aviso(): void
     {
         $architect = $this->makeArchitect();
@@ -728,7 +762,8 @@ class AdminContArchitectCommissionControllerTest extends FeatureTestCase
         $this->withHeaders($this->authHeaders($token))
             ->postJson("/api/admin-contab/commissions/external/projects/{$card->id}/mark-paid")
             ->assertStatus(200)
-            ->assertJsonPath('fecha_pago', now()->toDateString());
+            ->assertJsonPath('fecha_pago', now()->toDateString())
+            ->assertJsonCount(1, 'avisos'); // Fase 28: pagar sin cuenta de pago avisa
 
         // SCRUM-879 (E-2) — marcar pagada SIN cuenta de pago igual registra el movimiento de caja,
         // con bank_account_id null (aparece en Movimientos con "Sin cuenta asignada").

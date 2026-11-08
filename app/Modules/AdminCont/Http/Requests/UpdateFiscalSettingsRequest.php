@@ -74,6 +74,7 @@ class UpdateFiscalSettingsRequest extends FormRequest
             // Batch 4 de Facturación (REQ-450) — plazo de crédito usado por "Antigüedad de
             // cartera" para calcular la fecha de vencimiento de cada factura.
             'dias_credito_factura' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'comision_externa_base' => ['sometimes', 'string', 'in:total,base_imponible'],
             // Batch 11 de Notas Crédito (REQ-482 RN3) — umbral de monto que dispara "pendiente de
             // aprobación de Gerencia", compartido a futuro con Facturación y Comisiones Externas.
             'credit_note_approval_threshold' => ['sometimes', 'numeric', 'min:0'],
