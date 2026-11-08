@@ -1253,7 +1253,7 @@ final class InvoiceService
             // SCRUM-952 — 30 días calendario ya no está hardcodeado, viene de
             // AdminContFiscalSettings::dias_credito_factura (configurable por superadmin).
             'fecha_vencimiento'     => $invoice !== null
-                ? $invoice->created_at->copy()->addDays(AdminContFiscalSettings::current()->dias_credito_factura)->toDateString()
+                ? (new CreditTerms())->vencimiento($invoice)->toDateString()
                 : null,
             'estado'                => $estado,
             'es_anulada'            => $invoice?->anulada_at !== null,
@@ -1496,8 +1496,8 @@ final class InvoiceService
      */
     public function agingBuckets(): array
     {
-        $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
-        $today       = now();
+        $terms = new CreditTerms();
+        $today = now();
 
         $ranges = [
             ['desde_dias' => 0,  'hasta_dias' => 30,   'cantidad' => 0, 'monto' => 0.0],
@@ -1509,9 +1509,13 @@ final class InvoiceService
         $invoices = AdminContInvoice::where('es_incobrable', false)->whereNull('anulada_at')->get();
 
         foreach ($invoices as $invoice) {
-            $vencimiento = $invoice->created_at->copy()->addDays($diasCredito);
+            $saldo = round($invoice->monto - $invoice->saldo_aplicado, 2);
+            // Fase 28: una factura ya pagada no es cartera: no cuenta (ni su monto ni la cantidad) en ningún tramo.
+            if ($saldo <= 0) {
+                continue;
+            }
+            $vencimiento = $terms->vencimiento($invoice);
             $diasVencido = max(0, (int) $vencimiento->diffInDays($today, false));
-            $saldo       = $invoice->monto - $invoice->saldo_aplicado;
 
             $index = array_search(AgingBucketCalculator::bucketForDays($diasVencido), AgingBucketCalculator::BUCKETS, true);
 
@@ -1542,12 +1546,12 @@ final class InvoiceService
      */
     public function cobrablesConVencimientoSigned(): Collection
     {
-        $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
-        $today       = now();
+        $terms = new CreditTerms();
+        $today = now();
 
         return AdminContInvoice::where('es_incobrable', false)->whereNull('anulada_at')->get()
-            ->map(function (AdminContInvoice $invoice) use ($diasCredito, $today): array {
-                $vencimiento = $invoice->created_at->copy()->addDays($diasCredito);
+            ->map(function (AdminContInvoice $invoice) use ($terms, $today): array {
+                $vencimiento = $terms->vencimiento($invoice);
 
                 return [
                     'invoice'           => $invoice,
@@ -1697,9 +1701,9 @@ final class InvoiceService
      */
     public function over90DaysCollectedForCurrentMonth(): array
     {
-        $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
-        $monthStart  = now()->startOfMonth();
-        $monthEnd    = now()->endOfMonth();
+        $terms      = new CreditTerms();
+        $monthStart = now()->startOfMonth();
+        $monthEnd   = now()->endOfMonth();
 
         // SCRUM-1168 F2 — manda la fecha de aplicación del dinero a la factura (lo histórico, sin ella, usa la del cobro).
         $lines = AdminContPaymentInvoice::query()
@@ -1723,7 +1727,7 @@ final class InvoiceService
             // Positivo cuando el pago llegó DESPUÉS del vencimiento (atrasado) — a diferencia de
             // `CashPositionService::diasHasta()`, acá no se invierte el signo: lo que interesa es
             // la cantidad de días de atraso en sí, no "días hasta vencer".
-            $vencimiento  = CarbonImmutable::parse($invoice->created_at)->addDays($diasCredito);
+            $vencimiento  = CarbonImmutable::instance($terms->vencimiento($invoice));
             $diasVencidos = (int) $vencimiento->diffInDays(CarbonImmutable::parse($line->fecha_aplicacion ?? $payment->created_at), false);
 
             if ($diasVencidos > 90) {
@@ -1746,7 +1750,7 @@ final class InvoiceService
             if ($invoice === null || $cmp === null) {
                 continue;
             }
-            $vencimiento = CarbonImmutable::parse($invoice->created_at)->addDays($diasCredito);
+            $vencimiento = CarbonImmutable::instance($terms->vencimiento($invoice));
             if ((int) $vencimiento->diffInDays(CarbonImmutable::parse($cmp->confirmed_at), false) > 90) {
                 $cobradoMes += $cl->monto;
             }

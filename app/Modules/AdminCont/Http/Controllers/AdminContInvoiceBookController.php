@@ -69,8 +69,13 @@ class AdminContInvoiceBookController
         // 'factura'|'nota_credito', el mismo `value` de las <option> del <select> en
         // LibroFacturasPage.tsx) — el filtro de tipo (RN2 REQ-584) nunca filtraba nada, para
         // ningún valor real que el <select> pudiera enviar.
-        $tipoParam = $request->query('tipo');
-        $tipo      = in_array($tipoParam, ['factura', 'nota_credito'], true) ? $tipoParam : null;
+        // Fase 28 — un tipo desconocido ya no se ignora en silencio (devolvía todo): 422.
+        $data = $request->validate([
+            'tipo'  => ['nullable', 'string', 'in:factura,nota_credito'],
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
+        ]);
+        $tipo = $data['tipo'] ?? null;
 
         return $this->book->documents($request->query('desde'), $request->query('hasta'), $tipo);
     }

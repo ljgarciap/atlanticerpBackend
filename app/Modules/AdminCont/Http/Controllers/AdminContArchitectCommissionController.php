@@ -295,7 +295,12 @@ class AdminContArchitectCommissionController
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['fecha_pago' => $commission->fecha_pago?->toDateString()]);
+        // Fase 28 — avisa (no bloquea) si la salida de caja quedó sin cuenta de pago: hay que asignarla en Movimientos.
+        $avisos = $commission->bank_account_id === null
+            ? ['La comisión se pagó sin cuenta de pago: la salida de caja quedó «Sin cuenta asignada» hasta que se asigne en Cuentas bancarias → Movimientos.']
+            : [];
+
+        return response()->json(['fecha_pago' => $commission->fecha_pago?->toDateString(), 'avisos' => $avisos]);
     }
 
     /** POST .../projects/{pipelineCardId}/remind — REQ-518. */

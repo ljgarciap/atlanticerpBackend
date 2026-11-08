@@ -7,6 +7,7 @@ namespace App\Modules\AdminCont\Http\Controllers;
 use App\Modules\AdminCont\Http\Requests\StoreBankAccountRequest;
 use App\Modules\AdminCont\Http\Requests\UpdateBankAccountRequest;
 use App\Modules\AdminCont\Models\AdminContBankAccount;
+use App\Modules\AdminCont\Models\AdminContBankMovement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -85,7 +86,13 @@ class AdminContBankAccountController
 
         $account->update(['activa' => false]);
 
-        return response()->json($account->fresh());
+        // Fase 28 — avisa (no bloquea) si la cuenta tiene movimientos: dejan de contar en la caja real.
+        $movimientos = AdminContBankMovement::query()->where('bank_account_id', $account->id)->count();
+        $avisos = $movimientos > 0
+            ? ["La cuenta tiene {$movimientos} movimiento(s) registrados: mientras esté desactivada no cuentan en la posición de caja real."]
+            : [];
+
+        return response()->json(array_merge(($account->fresh() ?? $account)->toArray(), ['avisos' => $avisos]));
     }
 
     public function reactivate(int $id): JsonResponse

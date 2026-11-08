@@ -14,6 +14,7 @@ use App\Modules\AdminCont\Services\CashPositionExportService;
 use App\Modules\AdminCont\Services\CashPositionService;
 use App\Modules\AdminCont\Services\DailyCashCountService;
 use App\Modules\AdminCont\Services\DailyCashCountSummaryPdfService;
+use App\Modules\AdminCont\Services\ProcessApprovers;
 use App\Modules\Auth\Support\RoleKeys;
 use App\Shared\Http\Pagination;
 use App\Shared\Support\PrimaryApprovers;
@@ -173,10 +174,7 @@ class AdminContCashPositionController
 
         // superadmin.all bypassa el gate de Gerencia (decisión de Luis, 2026-08-22) — mismo criterio
         // que EnsureIsPrimaryApprover, que ya lo aplica sobre la acción real de aprobar.
-        $primaryApproverId = AdminContFiscalSettings::current()->primary_approver_user_id;
-        $isApprover = in_array('superadmin.all', $permissions, true)
-            || ($payload !== null && isset($payload['sub']) && $primaryApproverId !== null
-                && PrimaryApprovers::isApprover((int) $payload['sub'], $primaryApproverId));
+        $isApprover = ProcessApprovers::actorCan($payload, ProcessApprovers::ARQUEO); // Fase 28: aprobadores propios del arqueo, o el primario
 
         $data['puede_aprobar'] = $data['estado'] === AdminContDailyCashCount::ESTADO_PENDIENTE_APROBACION && $isApprover;
         $data['puede_reabrir'] = $data['estado'] !== AdminContDailyCashCount::ESTADO_ABIERTO && $isApprover;

@@ -95,7 +95,7 @@ final class CashPositionService
     /** @return list<array<string, mixed>> */
     private function projectedEntradas(CarbonImmutable $today, int $windowDays): array
     {
-        $diasCredito = AdminContFiscalSettings::current()->dias_credito_factura;
+        $terms = new CreditTerms();
 
         $rows = [];
         foreach (AdminContInvoice::where('es_incobrable', false)->whereNull('anulada_at')->get() as $invoice) {
@@ -104,7 +104,7 @@ final class CashPositionService
                 continue;
             }
 
-            $vencimiento = CarbonImmutable::parse($invoice->created_at)->addDays($diasCredito);
+            $vencimiento = CarbonImmutable::instance($terms->vencimiento($invoice));
             $dias        = $this->diasHasta($vencimiento, $today);
             if (! ($dias < 0 || $dias <= $windowDays)) {
                 continue;

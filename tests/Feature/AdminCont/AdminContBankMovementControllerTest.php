@@ -108,7 +108,7 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
             ->assertJsonFragment(['bank_account_id' => $account->id]);
     }
 
-    public function test_assign_account_rechaza_a_aprobador_gerencia_no_incluido_en_req534(): void
+    public function test_fase28_el_aprobador_primario_es_segundo_asignador(): void
     {
         $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
         $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
@@ -117,7 +117,77 @@ class AdminContBankMovementControllerTest extends FeatureTestCase
 
         $this->withHeaders($this->authHeaders($token))
             ->putJson("/api/admin-contab/bank-movements/{$movement->id}/assign-account", ['bank_account_id' => $account->id])
+            ->assertStatus(200);
+    }
+
+    public function test_fase28_un_rol_sin_permiso_ni_aprobador_recibe_403(): void
+    {
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
+        $movement = AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
+
+        $token = $this->loginAs('vendedor@atlantic.test', 'Password123!', 'designer');
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/bank-movements/{$movement->id}/assign-account", ['bank_account_id' => $account->id])
             ->assertStatus(403);
+    }
+
+    public function test_fase28_reasignar_pide_motivo_audita_y_respeta_el_arqueo_cerrado(): void
+    {
+        $a = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1111']);
+        $b = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '2222']);
+        $movement = AdminContBankMovement::create(['bank_account_id' => $a->id, 'fecha' => now(), 'tipo' => 'comision', 'concepto' => 'Comisión', 'monto' => 270]);
+        $token = $this->loginAsContabilidad();
+        $url = "/api/admin-contab/bank-movements/{$movement->id}/reassign-account";
+
+        $this->withHeaders($this->authHeaders($token))->putJson($url, ['bank_account_id' => $b->id])->assertStatus(422);
+        $this->withHeaders($this->authHeaders($token))->putJson($url, ['bank_account_id' => $a->id, 'motivo' => 'Era la cuenta equivocada'])->assertStatus(422);
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson($url, ['bank_account_id' => $b->id, 'motivo' => 'La comisión salió por la otra cuenta'])
+            ->assertStatus(200)->assertJsonFragment(['bank_account_id' => $b->id]);
+        Tenant::where('slug', 'atlantic')->first()?->makeCurrent(); // tras una petición HTTP el tenant queda olvidado
+        $this->assertSame($b->id, $movement->fresh()?->bank_account_id);
+    }
+
+    public function test_fase28_no_se_reasigna_la_cuenta_de_un_cobro_desde_el_movimiento(): void
+    {
+        $a = AdminContBankAccount::create(['banco' => 'Banco Demo A', 'ultimos_4_digitos' => '1111']);
+        $b = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '2222']);
+        $cobro = AdminContBankMovement::create(['bank_account_id' => $a->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 500]);
+        $token = $this->loginAsContabilidad();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/bank-movements/{$cobro->id}/reassign-account", ['bank_account_id' => $b->id, 'motivo' => 'Era la cuenta equivocada'])
+            ->assertStatus(422);
+    }
+
+    public function test_fase28_filtros_y_pendientes_sin_cuenta(): void
+    {
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
+        AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => '2026-03-01', 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 500]);
+        AdminContBankMovement::create(['bank_account_id' => null, 'fecha' => '2026-03-02', 'tipo' => 'comision', 'concepto' => 'Sin cuenta', 'monto' => 270]);
+        AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => '2026-04-02', 'tipo' => 'devolucion', 'concepto' => 'Dev', 'monto' => 50]);
+        $token = $this->loginAsContabilidad();
+        $base = '/api/admin-contab/bank-movements';
+
+        $this->assertCount(1, $this->withHeaders($this->authHeaders($token))->getJson("{$base}?tipo=devolucion")->json('data'));
+        $this->assertCount(2, $this->withHeaders($this->authHeaders($token))->getJson("{$base}?desde=2026-03-01&hasta=2026-03-31")->json('data'));
+        $sinCuenta = $this->withHeaders($this->authHeaders($token))->getJson("{$base}?sin_cuenta=1&tipo=cobro")->assertStatus(200);
+        $this->assertCount(0, $sinCuenta->json('data'));
+        $this->assertSame(1, $sinCuenta->json('pendientes_sin_cuenta.cantidad'), 'el pendiente no depende de los filtros');
+        $this->withHeaders($this->authHeaders($token))->getJson("{$base}?tipo=otro")->assertStatus(422);
+    }
+
+    public function test_fase28_desactivar_una_cuenta_con_movimientos_avisa(): void
+    {
+        $account = AdminContBankAccount::create(['banco' => 'Banco Demo B', 'ultimos_4_digitos' => '9034']);
+        AdminContBankMovement::create(['bank_account_id' => $account->id, 'fecha' => now(), 'tipo' => 'cobro', 'concepto' => 'Cobro', 'monto' => 500]);
+        $token = $this->loginAsContabilidad();
+
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/bank-accounts/{$account->id}/deactivate")->assertStatus(200);
+        $this->assertNotEmpty($response->json('avisos'));
     }
 
     public function test_assign_account_rechaza_cuenta_inactiva(): void

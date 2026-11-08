@@ -36,6 +36,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $responsable_administracion_user_id
  * @property float $credit_note_approval_threshold
  * @property float $comision_externa_default_percent
+ * @property string $comision_externa_base 'total' | 'base_imponible'
  * @property float $petty_cash_balance
  * @property int $petty_cash_max_intentos_rechazo
  * @property int $fe_reintento_max_horas SCRUM-1019 — ventana de reenvío al PAC desde fe_emision_at
@@ -52,7 +53,7 @@ class AdminContFiscalSettings extends Model
         'correo_contacto', 'regimen_tributario',
         'pac_ambiente', 'pac_doc_factura_habilitado', 'pac_doc_nota_credito_habilitado',
         'retencion_proveedores_activa', 'dias_credito_factura', 'primary_approver_user_id',
-        'responsable_administracion_user_id', 'credit_note_approval_threshold', 'comision_externa_default_percent',
+        'responsable_administracion_user_id', 'credit_note_approval_threshold', 'comision_externa_default_percent', 'comision_externa_base',
         'petty_cash_balance', 'petty_cash_max_intentos_rechazo', 'arqueo_tracking_start_date', 'fe_reintento_max_horas',
         'fe_rechazo_notificar_user_ids',
     ];

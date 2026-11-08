@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int         $master_client_id
  * @property string      $regimen_fiscal
  * @property string      $terminos_pago
+ * @property int|null     $dias_credito Fase 28 — null = rige el global de Configuración Fiscal
  */
 class AdminContClientBillingProfile extends Model
 {
@@ -24,7 +25,7 @@ class AdminContClientBillingProfile extends Model
     public const REGIMEN_SIN_ITBMS = 'sin_itbms';
 
     /** @var list<string> */
-    protected $fillable = ['master_client_id', 'regimen_fiscal', 'terminos_pago'];
+    protected $fillable = ['master_client_id', 'regimen_fiscal', 'terminos_pago', 'dias_credito'];
 
     public function getTable(): string
     {

@@ -368,6 +368,39 @@ class AdminContReportsControllerTest extends FeatureTestCase
 
     // ------------------------------------------------------------------- CRUD de tramos ----
 
+    public function test_fase28_tramo_de_cartera_solapado_u_orden_repetido_da_422_y_un_hueco_avisa(): void
+    {
+        $token = $this->loginAsApprover();
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/admin-contab/commissions/cartera/tiers', ['monto_minimo' => 10000, 'monto_maximo' => 16000, 'porcentaje' => 1, 'orden' => 9])
+            ->assertStatus(422)->assertJsonValidationErrors('monto_minimo');
+
+        // Acota el tramo abierto y deja un hueco (30000 a 39999.99) al agregar uno que arranca en 40000.
+        $abierto = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/commissions/cartera/tiers')->json('2.id');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/commissions/cartera/tiers/{$abierto}", ['monto_maximo' => 29999.99])->assertStatus(200);
+        $response = $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/admin-contab/commissions/cartera/tiers', ['monto_minimo' => 40000, 'monto_maximo' => null, 'porcentaje' => 3, 'orden' => 4])
+            ->assertStatus(201);
+        $this->assertNotEmpty($response->json('avisos'));
+
+        $this->withHeaders($this->authHeaders($token))
+            ->postJson('/api/admin-contab/commissions/cartera/tiers', ['monto_minimo' => 30000, 'monto_maximo' => 39999.99, 'porcentaje' => 2.5, 'orden' => 4])
+            ->assertStatus(422)->assertJsonValidationErrors('orden');
+    }
+
+    public function test_fase28_un_put_parcial_no_puede_invertir_un_tramo_de_cartera(): void
+    {
+        $token = $this->loginAsApprover();
+        $primero = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/commissions/cartera/tiers')->json('0');
+
+        // El primer tramo termina en 14999.99: subirle solo el mínimo por encima del máximo lo dejaría invertido.
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/commissions/cartera/tiers/{$primero['id']}", ['monto_minimo' => 99999])
+            ->assertStatus(422)->assertJsonValidationErrors('monto_maximo');
+    }
+
     public function test_get_tiers_expone_los_3_tramos_seed(): void
     {
         $token = $this->loginAsContabilidad();
@@ -391,9 +424,14 @@ class AdminContReportsControllerTest extends FeatureTestCase
     {
         $token = $this->loginAsApprover();
 
+        // Fase 28: el tramo abierto (20000 en adelante) se acota antes de agregar uno encima.
+        $abierto = $this->withHeaders($this->authHeaders($token))->getJson('/api/admin-contab/commissions/cartera/tiers')->json('2.id');
+        $this->withHeaders($this->authHeaders($token))
+            ->putJson("/api/admin-contab/commissions/cartera/tiers/{$abierto}", ['monto_maximo' => 29999.99])->assertStatus(200);
+
         $created = $this->withHeaders($this->authHeaders($token))
             ->postJson('/api/admin-contab/commissions/cartera/tiers', ['monto_minimo' => 30000, 'monto_maximo' => null, 'porcentaje' => 3.0, 'orden' => 4])
-            ->assertStatus(201);
+            ->assertStatus(201)->assertJsonPath('avisos', []);
         $id = $created->json('id');
 
         $this->withHeaders($this->authHeaders($token))

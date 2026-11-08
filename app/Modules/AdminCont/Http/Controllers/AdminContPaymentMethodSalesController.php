@@ -64,6 +64,10 @@ class AdminContPaymentMethodSalesController
     /** @return array{resumen: array<string, mixed>, filas: list<array<string, mixed>>, pendientes: list<array<string, mixed>>} */
     private function build(Request $request): array
     {
+        $request->validate([
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
+        ]);
         $raw            = $request->query('master_client_id');
         $masterClientId = ($raw === null || $raw === '' || $raw === 'todos') ? null : (int) $raw;
 
