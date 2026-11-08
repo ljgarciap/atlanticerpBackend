@@ -24,3 +24,12 @@ Contra el código de `master`: siguen abiertos el Kardex sin filtro por fecha ni
 
 ## 4. Criterios de aceptación
 Por grupo: tests de permisos por rol y de regresión, catálogo en `docs/flujos/` actualizado (candidatos tachados con la fase), pasos nuevos en `npm run e2e:flujos`, suite completa verde y revisión de seguridad antes de mezclar. Las migraciones son aditivas y no cambian el comportamiento al desplegar.
+
+## 5. Resultado de la 29a (Bodega), 2026-11-08
+| Grupo | Hecho |
+|---|---|
+| 1 | Gerencia (rol) decide ajustes, reubicaciones y conteos además del aprobador, suplentes y reglas (`AprobacionGate`); conteo con `estado_visible: aplicada` y filtro `estado=aplicada`; rechazar un cambio de monto pide motivo (≥ 10, auditado). **No se usó `process_approvers`**: Bodega ya decidía por `AprobacionGate` (aprobador de Compras + reglas de aprobación por tipo), así que los «aprobadores por proceso» ya existían; solo faltaba Gerencia. |
+| 2 | Permiso `bodega.locations.manage` (Líder y Asistente, este con nivel propio); ruta del día con atrasados marcados; Kardex con `producto_id`, `desde`, `hasta`; ubicaciones desactivadas ocultas por defecto (`incluir_inactivas=1`). Sin orden por hora: el pedido no guarda hora. |
+| 3 | Mapeo validado por rol, `DELETE` y `reassign-pending`. El detalle del pedido ya mostraba al asistente (candidato desactualizado). |
+
+**Abierto:** el mapeo no tiene pantalla (solo API); el filtro de producto exacto del Kardex existe en la API pero la pantalla solo ofrece fechas (el buscador ya filtra por texto). Verificación: ver el informe `docs/reviews/fase29a-bodega-2026-11-08.md`.
