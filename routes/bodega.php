@@ -173,6 +173,8 @@ Route::prefix('inventory')->group(function (): void {
 Route::prefix('warehouse-assistant-mapping')->group(function (): void {
     Route::get('/', [WarehouseAssistantMappingController::class, 'index'])->middleware('permission:bodega.read');
     Route::post('/', [WarehouseAssistantMappingController::class, 'store'])->middleware('permission:bodega.write');
+    Route::post('/reassign-pending', [WarehouseAssistantMappingController::class, 'reassignPending'])->middleware('permission:bodega.write');
+    Route::delete('/{id}', [WarehouseAssistantMappingController::class, 'destroy'])->middleware('permission:bodega.write');
 });
 
 // SCRUM-460→466 (REQ-390→396, Bloque B5 "Conteos generales de inventario") — ver
