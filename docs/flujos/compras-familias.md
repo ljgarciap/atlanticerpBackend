@@ -32,7 +32,7 @@ Una familia se asigna al producto con `PUT inventory/{id}` (`family_id`; `null` 
 1. ~~Pide al menos 1 unidad aunque no haga falta~~ — **corregido en la Fase 20b**: solo entra la necesidad real. [E]
 2. ~~Repetir «Generar compra» crea otras órdenes iguales~~ — **corregido en la Fase 20b**: lo ya pedido cuenta como «en camino». [E]
 3. ~~Omite en silencio los productos sin proveedor~~ — **corregido en la Fase 20b**: la respuesta lista `omitidos` con su motivo. [E]
-4. **Las existencias no distinguen el almacén ni descuentan lo comprometido**: usa `stock_quantity` total (sí suma lo «en camino» y «por ingresar» desde la Fase 20b). [C]
-5. **Las familias no se pueden editar, desactivar ni borrar** (ni renombrar); solo crearlas. [C]
-6. **Moneda y modalidad fijas** (USD, directo), sin elegir proveedor alterno ni fecha. [C]
+4. **Las existencias descuentan lo comprometido solo en total** (sí suman lo «en camino» y «por ingresar» desde la Fase 20b). ~~No distinguían el almacén~~ — **la Fase 29b añade `stock_por_almacen`** en el detalle de la familia. [C]
+5. ~~Las familias no se pueden editar, desactivar ni renombrar~~ — **corregido en la Fase 29b**: `PATCH compras/families/{id}` (`compras.edit`) renombra (nombre único), cambia moneda, edita descripción y desactiva/reactiva; nunca se borran. [C]
+6. ~~Moneda fija~~ — **corregido en la Fase 29b**: la familia guarda su moneda y «Generar compra» la usa (por defecto USD). La modalidad de compra hoy es solo «directa»; no se ofrece otra. [C]
 7. **Sin ejercitar**: la pantalla de Inventario en el navegador y la asignación de varios proveedores por producto.

@@ -178,9 +178,9 @@ class Fase29bComprasTest extends FeatureTestCase
         $b = CatalogProductFamily::create(['name' => 'Familia B '.uniqid(), 'is_active' => true]);
 
         $this->withHeaders($this->h())->patchJson("/api/compras/families/{$b->id}", ['name' => strtolower($a->name)])->assertStatus(422);
-        $this->withHeaders($this->h())->patchJson("/api/compras/families/{$b->id}", ['name' => 'Renombrada', 'currency' => 'eur', 'modality' => 'zona_libre'])
-            ->assertStatus(200)->assertJsonPath('name', 'Renombrada')->assertJsonPath('currency', 'EUR')->assertJsonPath('modality', 'zona_libre');
-        $this->withHeaders($this->h())->patchJson("/api/compras/families/{$b->id}", ['modality' => 'aereo'])->assertStatus(422);
+        $this->withHeaders($this->h())->patchJson("/api/compras/families/{$b->id}", ['name' => 'Renombrada', 'currency' => 'eur'])
+            ->assertStatus(200)->assertJsonPath('name', 'Renombrada')->assertJsonPath('currency', 'EUR')->assertJsonPath('modality', 'directo');
+        $this->withHeaders($this->h())->patchJson("/api/compras/families/{$b->id}", ['modality' => 'aereo'])->assertStatus(422); // solo existe la modalidad directa;
 
         $this->withHeaders($this->h())->patchJson("/api/compras/families/{$b->id}", ['is_active' => false])->assertStatus(200);
         $ids = collect($this->withHeaders($this->h())->getJson('/api/compras/families')->json('data'))->pluck('id')->all();

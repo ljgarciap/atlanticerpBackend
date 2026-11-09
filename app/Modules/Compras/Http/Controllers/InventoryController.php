@@ -809,7 +809,7 @@ final class InventoryController extends Controller
     }
 
     /**
-     * Fase 29b (grupo 6) — editar, renombrar y desactivar una familia, y elegir su moneda y modalidad de compra.
+     * Fase 29b (grupo 6) — editar, renombrar y desactivar una familia, y elegir su moneda de compra.
      * Una familia nunca se borra (puede tener historial): se desactiva. Solo se aplica lo enviado.
      */
     public function updateFamily(Request $request, int $id): JsonResponse
@@ -836,7 +836,8 @@ final class InventoryController extends Controller
             }],
             'description' => ['nullable', 'string'],
             'currency'    => ['sometimes', 'string', 'size:3', 'alpha'],
-            'modality'    => ['sometimes', 'string', Rule::in([PurchaseOrder::MODALITY_DIRECTO, 'zona_libre'])],
+            // La modalidad de compra hoy es solo «directa» (Fase 14f): no se ofrece otra; el valor queda guardado en la familia.
+            'modality'    => ['sometimes', 'string', Rule::in([PurchaseOrder::MODALITY_DIRECTO])],
             'is_active'   => ['sometimes', 'boolean'],
         ]);
         if (isset($data['name'])) {

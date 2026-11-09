@@ -33,3 +33,14 @@ Por grupo: tests de permisos por rol y de regresión, catálogo en `docs/flujos/
 | 3 | Mapeo validado por rol, `DELETE` y `reassign-pending`. El detalle del pedido ya mostraba al asistente (candidato desactualizado). |
 
 **Abierto:** el mapeo no tiene pantalla (solo API); el filtro de producto exacto del Kardex existe en la API pero la pantalla solo ofrece fechas (el buscador ya filtra por texto). Verificación: ver el informe `docs/reviews/fase29a-bodega-2026-11-08.md`.
+
+## 6. Resultado de la 29b (Compras), 2026-11-08
+| Grupo | Hecho |
+|---|---|
+| 4 | `status_visible` en órdenes (`aprobada` mientras el estado real sigue en `por_aprobar`; `status` no cambia). Sustituciones: rutas `accept-substitute` / `keep-original` (alias de approve/reject), campo `decision` y textos «Aceptar sustituto» / «Mantener original». |
+| 5 | Agencias: nombre único, contacto principal editable, desactivar. Proveedores: `PATCH` parcial, control de versión (409), `incluir_inactivas`. Mínimo y múltiplo por proveedor y producto (tres columnas aditivas y opcionales), `sugerida` en reposición y respeto en «Generar compra» de familia. |
+| 6 | `PATCH families/{id}`: renombrar (único), moneda, descripción, desactivar; `stock_por_almacen` en el detalle. **La modalidad no se ofrece**: hoy solo existe la directa (Fase 14f). |
+| 7 | `POST documents/{id}/replace` atómico con motivo; historial de envío con llegada, tipo de envío, quién paga, costo y modalidad. |
+
+Tres migraciones aditivas y reversibles (`2026_11_24_10000x`). Nada cambia al desplegar: lo nuevo es opcional o por defecto igual al comportamiento anterior. Revisión de seguridad: `docs/reviews/fase29b-compras-2026-11-08.md`.
+**Abierto**: el reemplazo de documento no tiene prueba e2e (la cubre un test de feature); la validación de que los aprobadores por proceso sean usuarios activos sigue de la Fase 28.
