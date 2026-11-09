@@ -1,6 +1,6 @@
 # Fase 31 — Ventas & Diseño y administración
 
-Estado: **BORRADOR** (2026-11-09); decisiones de Luis en §3, el resto por aprobar. Origen: `docs/flujos/pendientes-priorizados.md`, Fase 31, y los catálogos `ventas-diseno.md`, `transversales-administracion.md` y `cadena-venta-a-cobro.md`. Dos entregas con un PR por repositorio cada una, backend primero.
+Estado: **APROBADA** por Luis (2026-11-09); decisiones en §3 y propuestas por defecto de §4 aceptadas. Origen: `docs/flujos/pendientes-priorizados.md`, Fase 31, y los catálogos `ventas-diseno.md`, `transversales-administracion.md` y `cadena-venta-a-cobro.md`. Dos entregas con un PR por repositorio cada una, backend primero.
 
 ## 1. Verificación previa (2026-11-09)
 Contra `master`: siguen abiertos el perfil de empresa gateado por `EnsureIsPrimaryApprover`, la falta de baja de clientes y arquitectos, las rutas de ficha técnica sin historial y el doble estado de la cotización. **«Aprobaciones pendientes» del Inicio ya no parece vacía**: `HomeController::approvalsPending` usa `ApprovalsPendingService`; se confirma al implementar y, si es así, se tacha. Lo ya resuelto se tacha en su catálogo, no se reimplementa.
@@ -35,3 +35,15 @@ Contra `master`: siguen abiertos el perfil de empresa gateado por `EnsureIsPrima
 
 ## 5. Criterios de aceptación
 Por grupo: tests de permisos por rol y de regresión, catálogo en `docs/flujos/` con candidatos tachados, pasos nuevos en `npm run e2e:flujos`, suite completa verde y revisión de seguridad antes de mezclar. Migraciones aditivas que no cambian el comportamiento al desplegar.
+
+## 6. Resultado de la 31a (Ventas), 2026-11-09
+| # | Hecho |
+|---|---|
+| 1 | `master_clients.is_active` y `architects.is_active` (migración `2026_11_26_100000`); `PATCH clients/{id}/active` y `architects/{id}/active` (`ventas_diseno.edit`); ocultos en listas y selectores salvo `incluir_inactivos=1`. |
+| 2 | El detalle del asociado suma los proyectos donde figura como asociado, con `role` por fila. |
+| 3 | `estado_visible` en el detalle y el listado de cotizaciones. |
+| 4 | `POST sub-clients/{id}/contacts/{contactId}/replace` (crea, traslada las cotizaciones vinculadas y borra el anterior); historial de la ficha técnica (`catalog_technical_sheet_versions`, ya no se borra el archivo anterior) con `GET catalog/{id}/technical-sheet/history`; prueba estructural `AlcanceMiasEquipoTest`; notas de concesiones documentadas. |
+| 5 | Calendario sin Outlook: solo documentado. |
+| — | «Aprobaciones pendientes» del Inicio de Ventas estaba vacía por diseño: ahora lista las solicitudes de pase a Pedido (también en la vista consolidada de Gerencia). |
+
+Una migración aditiva y reversible. Cambio de comportamiento: reemplazar o quitar una ficha técnica ya no borra el archivo anterior.

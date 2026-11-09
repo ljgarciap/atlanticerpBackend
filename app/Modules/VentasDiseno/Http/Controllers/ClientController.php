@@ -30,6 +30,10 @@ final class ClientController extends Controller
         }
 
         $query = MasterClient::query()->orderBy('name');
+        // Fase 31a — los clientes dados de baja no se ofrecen en los selectores.
+        if (! $request->boolean('incluir_inactivos')) {
+            $query->where('is_active', true);
+        }
 
         $search = $request->query('search');
         if (is_string($search) && $search !== '') {

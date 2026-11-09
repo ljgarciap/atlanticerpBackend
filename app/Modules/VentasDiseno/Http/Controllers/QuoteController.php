@@ -880,6 +880,8 @@ final class QuoteController extends Controller
             // desde que se definió esta regla en Grupo 5, se deja en la tabla sin
             // tocar para no hacer una migración destructiva por algo inofensivo).
             'document_status'  => $quote->documentStatus($linkedCard),
+            // Fase 31a — estado único para mostrar (los dos campos de arriba no cambian).
+            'estado_visible'   => $quote->documentStatus($linkedCard),
             'master_client'    => $quote->masterClient !== null ? [
                 'id' => $quote->masterClient->id, 'name' => $quote->masterClient->name,
             ] : null,

@@ -7,6 +7,7 @@ namespace App\Modules\VentasDiseno\Services;
 use App\Modules\Bodega\Services\OrderCommitmentService;
 use App\Modules\Compras\Services\InventoryKpiService;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
+use App\Modules\VentasDiseno\Models\CatalogTechnicalSheetVersion;
 use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Shared\Http\Pagination;
 use App\Shared\Http\QueryParams;
@@ -227,7 +228,7 @@ final class CatalogService
      * anterior — se borra la key vieja de S3 recién DESPUÉS de confirmar la escritura de la nueva
      * fila (mismo orden que evita perder el archivo si el borrado del viejo fallara antes).
      */
-    public function uploadTechnicalSheet(CatalogProduct $product, UploadedFile $file): CatalogProduct
+    public function uploadTechnicalSheet(CatalogProduct $product, UploadedFile $file, ?int $userId = null): CatalogProduct
     {
         $ext = strtolower((string) $file->getClientOriginalExtension());
         $key = 'catalog/'.$product->id.'/'.Str::uuid()->toString().($ext !== '' ? ".{$ext}" : '');
@@ -253,11 +254,11 @@ final class CatalogService
         // referenciado, nunca limpiado). `lockForUpdate()` serializa las 2 transacciones: la
         // segunda relee el `oldKey` ya actualizado por la primera y lo borra correctamente — al
         // final de la carrera sobrevive un solo archivo en S3, nunca 2.
-        DB::transaction(function () use ($product, $key, $file): void {
-            $oldKey = CatalogProduct::query()
+        DB::transaction(function () use ($product, $key, $file, $userId): void {
+            $old = CatalogProduct::query()
                 ->whereKey($product->getKey())
                 ->lockForUpdate()
-                ->value('technical_sheet_key');
+                ->first(['technical_sheet_key', 'technical_sheet_filename', 'technical_sheet_uploaded_at']);
 
             $product->update([
                 'technical_sheet_key'         => $key,
@@ -265,16 +266,17 @@ final class CatalogService
                 'technical_sheet_uploaded_at' => now(),
             ]);
 
-            if ($oldKey !== null && $oldKey !== $key) {
-                try {
-                    Storage::disk(self::TECHNICAL_SHEET_DISK)->delete($oldKey);
-                } catch (\Throwable $e) {
-                    Log::error('catalog_service.technical_sheet_cleanup_failed', [
-                        'disk'  => self::TECHNICAL_SHEET_DISK,
-                        'key'   => $oldKey,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
+            // Fase 31a — la versión que se reemplaza se conserva en el historial (su archivo ya no se borra).
+            if ($old !== null && $old->technical_sheet_key !== null && $old->technical_sheet_key !== $key) {
+                CatalogTechnicalSheetVersion::create([
+                    'catalog_product_id' => $product->id,
+                    'storage_key'        => $old->technical_sheet_key,
+                    'filename'           => $old->technical_sheet_filename,
+                    'uploaded_at'        => $old->technical_sheet_uploaded_at,
+                    'retired_at'         => now(),
+                    'retired_reason'     => 'replaced',
+                    'retired_by'         => $userId,
+                ]);
             }
         });
 
@@ -286,22 +288,49 @@ final class CatalogService
      * Primero se limpia la fila y después el archivo: si el borrado del archivo fallara, queda un huérfano registrado en el log,
      * nunca una fila que apunte a un archivo que ya no existe.
      */
-    public function deleteTechnicalSheet(CatalogProduct $product): bool
+    public function deleteTechnicalSheet(CatalogProduct $product, ?int $userId = null): bool
     {
         $key = $product->technical_sheet_key;
         if ($key === null) {
             return false;
         }
 
-        $product->update(['technical_sheet_key' => null, 'technical_sheet_filename' => null, 'technical_sheet_uploaded_at' => null]);
-
-        try {
-            Storage::disk(self::TECHNICAL_SHEET_DISK)->delete($key);
-        } catch (\Throwable $e) {
-            Log::error('catalog_service.technical_sheet_cleanup_failed', ['disk' => self::TECHNICAL_SHEET_DISK, 'key' => $key, 'error' => $e->getMessage()]);
-        }
+        // Fase 31a — quitar la ficha la pasa al historial; el archivo se conserva.
+        DB::transaction(function () use ($product, $key, $userId): void {
+            CatalogTechnicalSheetVersion::create([
+                'catalog_product_id' => $product->id,
+                'storage_key'        => $key,
+                'filename'           => $product->technical_sheet_filename,
+                'uploaded_at'        => $product->technical_sheet_uploaded_at,
+                'retired_at'         => now(),
+                'retired_reason'     => 'removed',
+                'retired_by'         => $userId,
+            ]);
+            $product->update(['technical_sheet_key' => null, 'technical_sheet_filename' => null, 'technical_sheet_uploaded_at' => null]);
+        });
 
         return true;
+    }
+
+    /**
+     * Fase 31a — versiones anteriores de la ficha (más reciente primero), con enlace temporal de 15 min.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function technicalSheetHistory(CatalogProduct $product): array
+    {
+        return array_values(CatalogTechnicalSheetVersion::query()
+            ->where('catalog_product_id', $product->id)
+            ->orderByDesc('retired_at')->orderByDesc('id')
+            ->get()
+            ->map(fn (CatalogTechnicalSheetVersion $v): array => [
+                'id'             => $v->id,
+                'filename'       => $v->filename,
+                'uploaded_at'    => $v->uploaded_at?->toIso8601String(),
+                'retired_at'     => $v->retired_at->toIso8601String(),
+                'retired_reason' => $v->retired_reason,
+                'url'            => Storage::disk(self::TECHNICAL_SHEET_DISK)->temporaryUrl($v->storage_key, now()->addMinutes(15)),
+            ])->all());
     }
 
     /** REQ-618 RN2 — presigned URL de 15 min, mismo TTL que `DocumentService::PRESIGNED_URL_TTL`. */

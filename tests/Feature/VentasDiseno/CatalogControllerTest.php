@@ -285,7 +285,7 @@ class CatalogControllerTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
-    public function test_reemplazar_ficha_tecnica_borra_la_anterior_de_s3(): void
+    public function test_reemplazar_ficha_tecnica_conserva_la_anterior_en_el_historial(): void
     {
         $this->grantVentasDisenoRead('vendedor@atlantic.test');
         $product = $this->makeProduct();
@@ -309,7 +309,7 @@ class CatalogControllerTest extends FeatureTestCase
         Tenant::where('slug', 'atlantic')->first()?->makeCurrent();
         $product->refresh();
         $this->assertNotEquals($oldKey, $product->technical_sheet_key);
-        Storage::disk('s3-private')->assertMissing($oldKey);
+        Storage::disk('s3-private')->assertExists($oldKey); // Fase 31a: la versión anterior se conserva en el historial
         Storage::disk('s3-private')->assertExists($product->technical_sheet_key);
     }
 

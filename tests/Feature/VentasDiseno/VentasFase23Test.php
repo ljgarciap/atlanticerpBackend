@@ -113,7 +113,7 @@ final class VentasFase23Test extends FeatureTestCase
         $producto->refresh();
         $this->assertNull($producto->technical_sheet_key);
         $this->assertNull($producto->technical_sheet_filename);
-        Storage::disk('s3-private')->assertMissing($key);
+        Storage::disk('s3-private')->assertExists($key); // Fase 31a: se conserva en el historial
         $this->withHeaders($v)->getJson($url)->assertStatus(404);
     }
 

@@ -10,6 +10,7 @@ use App\Modules\VentasDiseno\Models\SubClient;
 use App\Modules\VentasDiseno\Models\SubClientContact;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Routing\Controller;
 
 /**
@@ -82,6 +83,41 @@ final class SubClientContactController extends Controller
         $contact->update($validated);
 
         return response()->json($this->format($contact));
+    }
+
+    /**
+     * Fase 31a — reemplaza un contacto por otro en una sola operación (útil con el contacto único, que no se puede
+     * borrar): crea el nuevo, traslada a él las cotizaciones vinculadas al anterior y borra el anterior.
+     */
+    public function replace(StoreSubClientContactRequest $request, int $subClientId, int $contactId): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $subClient = SubClient::find($subClientId);
+        $old       = $subClient?->contacts()->find($contactId);
+        if ($subClient === null || $old === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        /** @var array{name: string, role: string, phone?: string|null, email?: string|null} $validated */
+        $validated = $request->validated();
+
+        $new = DB::transaction(function () use ($subClient, $old, $validated): SubClientContact {
+            $new = $subClient->contacts()->create($validated);
+
+            $tenant = \App\Shared\Multitenancy\Tenant::current();
+            $pivot  = $tenant !== null ? "{$tenant->slug}_ventas_diseno.quote_contacts" : 'quote_contacts';
+            DB::table($pivot)->where('sub_client_contact_id', $old->id)->update(['sub_client_contact_id' => $new->id]);
+
+            $old->delete();
+
+            return $new;
+        });
+
+        return response()->json($this->format($new), 201);
     }
 
     public function destroy(Request $request, int $subClientId, int $contactId): JsonResponse

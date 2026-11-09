@@ -492,6 +492,7 @@ final class QuoteListService
             'designer'        => $q->sales_project_id !== null ? ($designerByProject[(int) $q->sales_project_id] ?? null) : null,
             'quote_date'      => ($q->generated_at ?? $q->created_at)->toIso8601String(),
             'document_status' => $r['document_status'],
+            'estado_visible'  => $r['document_status'],
         ];
     }
 }

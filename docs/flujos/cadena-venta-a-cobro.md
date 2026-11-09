@@ -79,7 +79,7 @@ Sin proveedor fiscal (default `none`, Fase 6b) se emite un **documento interno**
 - Un recibo sin aplicar, una vez confirmado, aparece como **saldo a favor** (272,85, origen «Cobro a cuenta») en `GET admin-contab/saldo-favor` [E].
 
 ## Candidatos a cambio o mejora
-1. **Dos campos de estado en la cotización**: `status` sigue en `draft` y `document_status` pasa a `sent` al confirmar; conviven con significados distintos. [E]
+1. ~~**Dos campos de estado en la cotización**~~ — **resuelto en la Fase 31a**: la API suma `estado_visible` (igual a `document_status`) para mostrar; los dos campos internos no cambian. Texto original: ** `status` sigue en `draft` y `document_status` pasa a `sent` al confirmar; conviven con significados distintos. [E]
 2. **Roles de contacto fijos** (`client`, `architect`, `other`) en validación: es vocabulario que podría ser un catálogo por empresa (como los de la Fase 7). [C]
 3. ~~**Facturar «completo» cobra artículos no entregados sin ninguna advertencia** (`advertencias: []`), aunque exista una tarjeta faltante abierta. Es una elección permitida por diseño, pero el aviso falta. [E]~~ **Resuelto: Fase 13c (2.6)** (verificado 2026-11-06).
 4. ~~**El contador de folios no se reconcilia con las facturas existentes**: una factura insertada fuera del servicio hace que el siguiente alta falle con 500 (violación de unicidad). Relevante para importaciones y restauraciones. [E]~~ **Resuelto: Fase 13c (2.5)** (verificado 2026-11-06).

@@ -99,6 +99,7 @@ Route::prefix('sub-clients')->group(function (): void {
         Route::get('/', [SubClientContactController::class, 'index'])->middleware('permission:ventas_diseno.read');
         Route::post('/', [SubClientContactController::class, 'store'])->middleware('permission:ventas_diseno.edit');
         Route::put('/{contactId}', [SubClientContactController::class, 'update'])->middleware('permission:ventas_diseno.edit');
+        Route::post('/{contactId}/replace', [SubClientContactController::class, 'replace'])->middleware('permission:ventas_diseno.edit');
         Route::delete('/{contactId}', [SubClientContactController::class, 'destroy'])->middleware('permission:ventas_diseno.edit');
     });
 });
@@ -112,6 +113,7 @@ Route::prefix('clients')->group(function (): void {
     // SCRUM-1002 — directorio de datos fiscales (antes de `/{id}` para que no lo capture). Sin `ventas_diseno.read`: Contabilidad lo usa desde Admin&Cont.
     Route::get('/fiscal-directory', [ClientTaxDataController::class, 'directory'])->middleware('permission:ventas_diseno.edit,ventas_diseno.edit.client_tax_data,admin_contab.edit.client_itbms_exemption');
     Route::get('/{id}', [ClientsController::class, 'show'])->middleware('permission:ventas_diseno.read');
+    Route::patch('/{id}/active', [ClientsController::class, 'setActive'])->middleware('permission:ventas_diseno.edit');
     Route::get('/{id}/projects', [ClientsController::class, 'projects'])->middleware('permission:ventas_diseno.read');
     Route::post('/{id}/sub-clients', [ClientsController::class, 'storeSubClient'])->middleware('permission:ventas_diseno.write');
     Route::patch('/sub-clients/{subClientId}/category', [ClientsController::class, 'updateSubClientCategory'])->middleware('permission:ventas_diseno.edit');
@@ -295,6 +297,7 @@ Route::prefix('catalog')->group(function (): void {
     // Fase 23 (#7): subir y borrar la ficha exige editar Ventas & Diseño (antes la subía cualquiera con lectura y no se podía borrar).
     Route::post('/{id}/technical-sheet', [CatalogController::class, 'uploadTechnicalSheet'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
     Route::delete('/{id}/technical-sheet', [CatalogController::class, 'deleteTechnicalSheet'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
+    Route::get('/{id}/technical-sheet/history', [CatalogController::class, 'technicalSheetHistory'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
 });
 
 // REQ-037: tab "Familias" del buscador — mismo permiso de lectura que catalog-products.
@@ -313,6 +316,7 @@ Route::prefix('architects')->group(function (): void {
     Route::get('/{id}', [ArchitectController::class, 'show'])->whereNumber('id')->middleware('permission:ventas_diseno.read');
     // SCRUM-734 (RN8.5) — edición in-place, mismo patrón que sub-clients/{id}/contacts/{id}.
     Route::put('/{id}', [ArchitectController::class, 'update'])->middleware('permission:ventas_diseno.edit');
+    Route::patch('/{id}/active', [ArchitectController::class, 'setActive'])->whereNumber('id')->middleware('permission:ventas_diseno.edit');
 });
 
 // REQ-027: buscar/crear Proyecto (sales_project) acotado a un Subcliente, desde Cotización.
