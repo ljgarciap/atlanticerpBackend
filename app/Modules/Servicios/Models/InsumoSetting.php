@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int         $id
  * @property int         $catalog_product_id
  * @property int         $minimo
+ * @property bool        $is_active
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * @property-read CatalogProduct|null $catalogProduct
