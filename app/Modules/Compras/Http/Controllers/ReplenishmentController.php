@@ -102,6 +102,54 @@ final class ReplenishmentController extends Controller
         return $response;
     }
 
+    /**
+     * Fase 29b — cantidad mínima y múltiplo de compra de un proveedor para un producto (ambos opcionales; vacío = sin restricción).
+     * Acepta solo proveedores que ya están asociados al producto. Se pide `compras.edit`, igual que editar el proveedor de un producto.
+     */
+    public function purchaseTerms(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'provider_id'        => ['required', 'integer', 'min:1'],
+            'min_order_quantity' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+            'order_multiple'     => ['nullable', 'integer', 'min:1', 'max:1000000'],
+        ]);
+
+        $product = CatalogProduct::query()->find($id);
+        if ($product === null) {
+            return response()->json(['message' => 'Producto no encontrado.'], 404);
+        }
+        $providerId = (int) $data['provider_id'];
+        if (! $product->providers()->where('provider_id', $providerId)->exists() && $product->provider_id !== $providerId) {
+            return response()->json(['message' => 'Ese proveedor no está asociado al producto.', 'errors' => ['provider_id' => ['Ese proveedor no está asociado al producto.']]], 422);
+        }
+        if (! $product->providers()->where('provider_id', $providerId)->exists()) {
+            $product->providers()->attach($providerId);
+        }
+
+        /** @var Provider|null $previo */
+        $previo = $product->providers()->where('provider_id', $providerId)->first();
+        $antes = $previo?->getRelation('pivot');
+        $product->providers()->updateExistingPivot($providerId, [
+            'min_order_quantity' => $data['min_order_quantity'] ?? null,
+            'order_multiple'     => $data['order_multiple'] ?? null,
+        ]);
+
+        app(AuditService::class)->log(
+            action:     'compras.provider_terms.updated',
+            entityType: 'catalog_product',
+            entityId:   $product->id,
+            oldValues:  ['provider_id' => $providerId, 'min_order_quantity' => $antes?->getAttribute('min_order_quantity'), 'order_multiple' => $antes?->getAttribute('order_multiple')],
+            newValues:  ['provider_id' => $providerId, 'min_order_quantity' => $data['min_order_quantity'] ?? null, 'order_multiple' => $data['order_multiple'] ?? null],
+        );
+
+        return response()->json([
+            'catalog_product_id' => $product->id,
+            'provider_id'        => $providerId,
+            'min_order_quantity' => $data['min_order_quantity'] ?? null,
+            'order_multiple'     => $data['order_multiple'] ?? null,
+        ]);
+    }
+
     /** ¿Hoy hay pedidos «Sin stock» esperando este producto? (misma condición que `ReplenishmentService::summary()`.) */
     private function isPending(int $productId): bool
     {

@@ -159,7 +159,45 @@ class CatalogProduct extends Model
     public function providers(): BelongsToMany
     {
         return $this->belongsToMany(Provider::class, self::providersPivotTable(), 'catalog_product_id', 'provider_id')
+            ->withPivot(['min_order_quantity', 'order_multiple'])
             ->orderBy('name');
+    }
+
+    /**
+     * Fase 29b — cantidad a comprar para cubrir `$necesidad` con las condiciones del proveedor principal:
+     * al menos la mínima y redondeada hacia arriba al múltiplo. Sin condiciones (lo normal) devuelve la necesidad tal cual.
+     */
+    public function cantidadSugerida(int $necesidad): int
+    {
+        if ($necesidad <= 0 || $this->provider_id === null) {
+            return max(0, $necesidad);
+        }
+        $terminos = $this->principalPurchaseTerms();
+        $min = $terminos['min'] ?? 0;
+        $multiple = $terminos['multiple'] ?? 0;
+        $cantidad = max($necesidad, $min);
+        if ($multiple > 1) {
+            $cantidad = (int) (ceil($cantidad / $multiple) * $multiple);
+        }
+
+        return $cantidad;
+    }
+
+    /**
+     * Fase 29b — cantidad mínima y múltiplo de compra del proveedor principal (null = sin restricción).
+     *
+     * @return array{min: int|null, multiple: int|null}
+     */
+    public function principalPurchaseTerms(): array
+    {
+        $provider = $this->provider_id === null ? null : $this->providers->firstWhere('id', $this->provider_id);
+        /** @var \Illuminate\Database\Eloquent\Relations\Pivot|null $pivot */
+        $pivot = $provider?->getRelation('pivot');
+
+        return [
+            'min' => $pivot?->getAttribute('min_order_quantity') !== null ? (int) $pivot->getAttribute('min_order_quantity') : null,
+            'multiple' => $pivot?->getAttribute('order_multiple') !== null ? (int) $pivot->getAttribute('order_multiple') : null,
+        ];
     }
 
     public static function providersPivotTable(): string

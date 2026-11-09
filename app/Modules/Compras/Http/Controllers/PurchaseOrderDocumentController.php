@@ -15,6 +15,7 @@ use App\Modules\Compras\Services\PurchaseOrderDocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 
 /** REQ-155 — checklist de documentos del envío, dentro de cada tarjeta de Logística. */
@@ -135,6 +136,54 @@ final class PurchaseOrderDocumentController extends Controller
         $document->delete();
 
         return response()->json(['message' => 'Documento retirado.']);
+    }
+
+    /**
+     * Fase 29b — reemplazar un documento en UNA sola operación: sube el nuevo (misma categoría) y retira el anterior con motivo,
+     * ambos o ninguno. Antes eran dos pasos (subir y quitar), y si el segundo fallaba quedaban los dos en el checklist.
+     * Mismas reglas que quitar: la confirmación del proveedor no se reemplaza si la orden ya tiene pagos.
+     */
+    public function replace(Request $request, int $orderId, int $documentId): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $order = PurchaseOrder::find($orderId);
+        $anterior = $order === null ? null : PurchaseOrderDocument::where('purchase_order_id', $orderId)->find($documentId);
+        if ($order === null || $anterior === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'motivo' => ['required', 'string', 'min:10', 'max:500'],
+            'file'   => ['required', 'file', 'max:512000', 'extensions:pdf,doc,docx,xls,xlsx,csv,ppt,pptx,jpg,jpeg,png,gif,webp,svg,bmp,zip,rar,7z'],
+        ]);
+
+        if ($anterior->category === PurchaseOrderDocument::CATEGORY_CONFIRMACION_PROVEEDOR && $order->payments()->exists()) {
+            return response()->json([
+                'message' => 'La confirmación del proveedor no se puede reemplazar: la orden ya tiene pagos registrados.',
+            ], 422);
+        }
+
+        $nuevo = DB::transaction(function () use ($validated, $order, $anterior, $user): PurchaseOrderDocument {
+            $nuevo = $this->documents->upload($validated['file'], $order->id, $anterior->category, $user->id);
+            $anterior->forceFill(['deleted_by' => $user->id, 'delete_reason' => $validated['motivo']])->save();
+            $anterior->delete();
+
+            return $nuevo;
+        });
+
+        if ($nuevo->category === PurchaseOrderDocument::CATEGORY_CONFIRMACION_PROVEEDOR) {
+            $tenantSlug = $this->resolveTenantSlug($request);
+            if ($tenantSlug !== null && ! RateLimiter::tooManyAttempts($this->validationLimiterKey($order->id), self::VALIDATION_MAX_ATTEMPTS_PER_ORDER)) {
+                RateLimiter::hit($this->validationLimiterKey($order->id), self::VALIDATION_DECAY_SECONDS);
+                $this->dispatchValidation($nuevo->id, $order->id, $user->id, $tenantSlug);
+            }
+        }
+
+        return response()->json($this->format($nuevo), 201);
     }
 
     /**

@@ -18,11 +18,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property string       $name
  * @property string|null $description
  * @property bool          $is_active
+ * @property string        $currency
+ * @property string        $modality
  */
 class CatalogProductFamily extends Model
 {
     /** @var list<string> */
-    protected $fillable = ['name', 'description', 'is_active'];
+    protected $fillable = ['name', 'description', 'is_active', 'currency', 'modality'];
 
     /** @return array<string, string> */
     protected function casts(): array

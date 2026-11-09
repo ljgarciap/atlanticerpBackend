@@ -44,6 +44,8 @@ Route::prefix('calendar')->group(function (): void {
 Route::get('/replenishment', [ReplenishmentController::class, 'index'])->middleware('permission:compras.write'); // quien genera la orden (compras.write); sin él la pantalla no serviría
 // SCRUM-1184 (rebote) — guarda el proveedor elegido para un producto sin proveedor, para no volver a elegirlo; mismo permiso que generar la orden.
 Route::put('/replenishment/products/{id}/provider', [ReplenishmentController::class, 'assignProvider'])->whereNumber('id')->middleware('permission:compras.write');
+// Fase 29b — cantidad mínima y múltiplo de compra por proveedor y producto (opcionales).
+Route::put('/replenishment/products/{id}/purchase-terms', [ReplenishmentController::class, 'purchaseTerms'])->whereNumber('id')->middleware('permission:compras.edit');
 
 // SCRUM-183→190 (REQ-120→127) — Proveedores.
 Route::prefix('providers')->group(function (): void {
@@ -51,6 +53,8 @@ Route::prefix('providers')->group(function (): void {
     Route::post('/', [ProviderController::class, 'store'])->middleware('permission:compras.write');
     Route::get('/{id}', [ProviderController::class, 'show'])->middleware('permission:compras.read');
     Route::put('/{id}', [ProviderController::class, 'update'])->middleware('permission:compras.edit');
+    // Fase 29b — edición parcial (solo lo enviado) y desactivación; con `version` evita pisar cambios ajenos.
+    Route::patch('/{id}', [ProviderController::class, 'update'])->middleware('permission:compras.edit');
     // SCRUM-819 — mismo permiso que update() (RN10: cargar/eliminar la imagen es parte de editar
     // el proveedor, no una acción separada).
     Route::post('/{id}/bank-image', [ProviderController::class, 'uploadBankImage'])->middleware('permission:compras.edit');
@@ -115,6 +119,8 @@ Route::prefix('orders')->group(function (): void {
         Route::post('/', [PurchaseOrderDocumentController::class, 'store'])->middleware('permission:compras.edit');
         // Fase 24a — baja lógica con motivo (reemplazar = subir uno nuevo de la misma categoría y quitar el anterior).
         Route::delete('/{documentId}', [PurchaseOrderDocumentController::class, 'destroy'])->middleware('permission:compras.edit');
+        // Fase 29b — reemplazo atómico (sube el nuevo y retira el anterior con motivo).
+        Route::post('/{documentId}/replace', [PurchaseOrderDocumentController::class, 'replace'])->middleware('permission:compras.edit');
         // SCRUM-211 (ADR-SCRUM211) — validación con IA del documento de confirmación de proveedor.
         Route::post('/{documentId}/validate', [PurchaseOrderDocumentController::class, 'validate'])->middleware('permission:compras.edit');
         Route::get('/{documentId}/validation', [PurchaseOrderDocumentController::class, 'validation'])->middleware('permission:compras.read');
@@ -166,6 +172,9 @@ Route::prefix('replacement-requests')->group(function (): void {
     Route::post('/', [ReplacementRequestController::class, 'store'])->middleware('permission:compras.write,compras.sustitutos.manage,ventas_diseno.edit');
     Route::post('/{id}/approve', [ReplacementRequestController::class, 'approve'])->middleware('permission:compras.write,compras.sustitutos.manage,gerencia.view,ventas_diseno.edit');
     Route::post('/{id}/reject', [ReplacementRequestController::class, 'reject'])->middleware('permission:compras.write,compras.sustitutos.manage,gerencia.view,ventas_diseno.edit');
+    // Fase 29b — alias con nombres que no confunden: aceptar el sustituto = approve; mantener el original = reject.
+    Route::post('/{id}/accept-substitute', [ReplacementRequestController::class, 'approve'])->middleware('permission:compras.write,compras.sustitutos.manage,gerencia.view,ventas_diseno.edit');
+    Route::post('/{id}/keep-original', [ReplacementRequestController::class, 'reject'])->middleware('permission:compras.write,compras.sustitutos.manage,gerencia.view,ventas_diseno.edit');
     // SCRUM-818 — compras.sustitutos.manage sacado del OR a propósito: Generar Orden de Compra es
     // EXCLUSIVO de Líder de Compras (CA13/CA14 del ticket), y ese permiso también lo tiene Líder
     // de Operaciones. compras.write solo abre la puerta del gate de ruta — la exclusividad real
@@ -251,6 +260,8 @@ Route::get('/families', [InventoryController::class, 'families']);
 // resto de este archivo, ver CheckPermission.
 Route::post('/families', [InventoryController::class, 'storeFamily'])->middleware('permission:compras.write,compras.edit');
 Route::get('/families/{id}', [InventoryController::class, 'familyDetail']);
+// Fase 29b — editar, renombrar, desactivar y elegir moneda/modalidad (nunca se borra).
+Route::patch('/families/{id}', [InventoryController::class, 'updateFamily'])->middleware('permission:compras.edit');
 Route::post('/families/{id}/generate-purchase', [InventoryController::class, 'generateFamilyPurchase'])->middleware('permission:compras.edit');
 
 // SCRUM-220→230 (REQ-157/159/161→167/173) — Ingreso de Mercancía.
