@@ -192,8 +192,13 @@ final class InspectionReportService
      * @throws \InvalidArgumentException REQ-238 RN4 — el técnico elegido no atiende este tipo de ticket.
      * @throws \App\Shared\Support\CircuitOpenException almacenamiento S3 temporalmente no disponible (solo si $firmaClienteImagen !== null).
      */
-    public function save(Ticket $ticket, array $data, User $user, ?UploadedFile $firmaClienteImagen = null): InspectionReport
+    public function save(Ticket $ticket, array $data, User $user, ?UploadedFile $firmaClienteImagen = null, bool $borrador = false): InspectionReport
     {
+        $existente = $this->findByTicket($ticket);
+        if ($borrador && $existente !== null && $existente->estado === InspectionReport::ESTADO_COMPLETED) {
+            throw new \InvalidArgumentException('El informe ya está completado: no puede volver a borrador.');
+        }
+
         if (! empty($data['internal_technician_id'])) {
             $technician = User::find($data['internal_technician_id']);
 
@@ -211,7 +216,7 @@ final class InspectionReportService
             ? $this->uploadSignatureImage($ticket, $firmaClienteImagen)
             : null;
 
-        return $this->withUniqueRetry(fn (): InspectionReport => DB::transaction(function () use ($ticket, $data, $user, $firmaClienteImagenKey): InspectionReport {
+        return $this->withUniqueRetry(fn (): InspectionReport => DB::transaction(function () use ($ticket, $data, $user, $firmaClienteImagenKey, $borrador): InspectionReport {
             [$report, $isNew] = $this->beginUpsert($ticket, $user);
 
             $report->modo                    = InspectionReport::MODO_FORMULARIO;
@@ -224,7 +229,8 @@ final class InspectionReportService
             $report->requiere_seguimiento    = $data['requiere_seguimiento'] ?? false;
             // REQ-241 RN3 — si no requiere seguimiento, próximos_pasos nunca se guarda.
             $report->proximos_pasos          = $report->requiere_seguimiento ? ($data['proximos_pasos'] ?? null) : null;
-            $report->archivo_adjunto         = null;
+            // Fase 30: guardar como formulario ya no borra el archivo adjunto de un guardado anterior;
+            // `modo` indica cuál de los dos contenidos es el vigente.
             $report->firma_tecnico_nombre    = $this->blankToNull($data['firma_tecnico_nombre'] ?? null);
             $report->firma_cliente_nombre    = $this->blankToNull($data['firma_cliente_nombre'] ?? null);
 
@@ -232,14 +238,14 @@ final class InspectionReportService
                 $report->firma_cliente_imagen = $firmaClienteImagenKey;
             }
 
-            // RN2 (REQ-241, vía validación de la Request) — conclusión obligatoria ya garantiza que
-            // llegar acá es un guardado válido y completo.
-            $report->estado                  = InspectionReport::ESTADO_COMPLETED;
+            // RN2 (REQ-241, vía validación de la Request) — conclusión obligatoria para completar.
+            // Fase 30: con `borrador` el informe queda pendiente y no desbloquea el cierre.
+            $report->estado                  = $borrador ? InspectionReport::ESTADO_PENDING : InspectionReport::ESTADO_COMPLETED;
             $report->save();
 
             $this->replaceMaterials($report, $data['materiales'] ?? []);
 
-            return $this->finishUpsert($ticket, $report, $user, $isNew);
+            return $this->finishUpsert($ticket, $report, $user, $borrador);
         }));
     }
 
@@ -277,15 +283,8 @@ final class InspectionReportService
                 throw new \InvalidArgumentException('Adjunta un archivo para completar el informe en este modo.');
             }
 
+            // Fase 30: guardar el archivo ya no borra el formulario (hallazgos, conclusión, materiales).
             $report->modo                   = InspectionReport::MODO_ARCHIVO_SUBIDO;
-            $report->fecha_inspeccion       = null;
-            $report->hora_inicio            = null;
-            $report->hora_fin               = null;
-            $report->internal_technician_id = null;
-            $report->findings               = null;
-            $report->conclusion             = null;
-            $report->requiere_seguimiento   = false;
-            $report->proximos_pasos         = null;
 
             if ($archivo !== null) {
                 $previousKey = $report->archivo_adjunto;
@@ -317,9 +316,7 @@ final class InspectionReportService
             $report->estado               = InspectionReport::ESTADO_COMPLETED;
             $report->save();
 
-            $report->materials()->delete();
-
-            return $this->finishUpsert($ticket, $report, $user, $isNew);
+            return $this->finishUpsert($ticket, $report, $user);
         }));
     }
 
@@ -377,13 +374,17 @@ final class InspectionReportService
      * un mecanismo de "deshacer" automático para efectos de stock ya aplicados (ver
      * `GoodsReceiptConfirmationService`, que tampoco revierte una confirmación).
      */
-    private function finishUpsert(Ticket $ticket, InspectionReport $report, User $user, bool $applyConsumption): InspectionReport
+    private function finishUpsert(Ticket $ticket, InspectionReport $report, User $user, bool $borrador = false): InspectionReport
     {
         $report = $report->refresh()->load(['materials', 'photos']);
 
-        if ($applyConsumption) {
-            $this->consumeMaterialsFromReserve($report, $user);
+        // Fase 30: un borrador no consume ni desbloquea el cierre; cada guardado completo
+        // concilia el Kardex con los materiales vigentes (diferencia, nunca repetición).
+        if ($borrador) {
+            return $report;
         }
+
+        $this->consumeMaterialsFromReserve($report, $user);
 
         // REQ-218/REQ-220 — gate de cierre del ticket: `tickets.inspection_report_status` es
         // denormalizado a propósito (ver docblock de la migración de `tickets`), nada lo
@@ -436,6 +437,29 @@ final class InspectionReportService
 
             throw $e;
         }
+    }
+
+    /** Fase 30 — borra una foto (objeto y fila). */
+    public function deletePhoto(InspectionReportPhoto $photo): void
+    {
+        $key = $photo->storage_key;
+        $photo->delete();
+
+        try {
+            Storage::disk(self::DISK)->delete($key);
+        } catch (\Throwable $e) {
+            Log::error('inspection_report_service.photo_delete_failed', ['key' => $key, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /** Fase 30 — reemplaza una foto por otra de la misma categoría. */
+    public function replacePhoto(InspectionReportPhoto $photo, UploadedFile $file, int $uploadedBy): InspectionReportPhoto
+    {
+        $report = InspectionReport::findOrFail($photo->inspection_report_id);
+        $new    = $this->uploadPhoto($report, $file, $photo->categoria, $uploadedBy);
+        $this->deletePhoto($photo);
+
+        return $new;
     }
 
     public function presignedPhotoUrl(InspectionReportPhoto $photo): string
@@ -547,6 +571,9 @@ final class InspectionReportService
     {
         $reservaWarehouseId = $this->insumos->reservaWarehouseId();
 
+        // Fase 30 — cantidad vigente por insumo según los materiales actuales.
+        /** @var array<int, int> $deseado */
+        $deseado = [];
         foreach ($report->materials as $material) {
             if ($material->catalog_product_id === null) {
                 continue;
@@ -568,12 +595,35 @@ final class InspectionReportService
                 continue;
             }
 
+            $deseado[$material->catalog_product_id] = ($deseado[$material->catalog_product_id] ?? 0) + $cantidad;
+        }
+
+        // Lo ya movido en el Kardex por este informe (consumos negativos, correcciones positivas).
+        /** @var array<int, int> $aplicado */
+        $aplicado = InventoryMovement::query()
+            ->where('tipo', InventoryMovement::TIPO_CONSUMO)
+            ->where('referencia_entidad_tipo', 'SERVICIOS_INSPECTION_REPORT')
+            ->where('referencia_entidad_id', $report->id)
+            ->selectRaw('catalog_product_id, SUM(-cantidad) as neto')
+            ->groupBy('catalog_product_id')
+            ->pluck('neto', 'catalog_product_id')
+            ->map(fn ($n): int => (int) $n)
+            ->all();
+
+        foreach (array_unique([...array_keys($deseado), ...array_keys($aplicado)]) as $productId) {
+            $diferencia = ($deseado[$productId] ?? 0) - ($aplicado[$productId] ?? 0);
+            if ($diferencia === 0) {
+                continue;
+            }
+
             $this->kardex->registrar(
-                catalogProductId: $material->catalog_product_id,
+                catalogProductId: (int) $productId,
                 warehouseId: $reservaWarehouseId,
                 tipo: InventoryMovement::TIPO_CONSUMO,
-                cantidad: -$cantidad,
-                referenciaTexto: "Consumo — Informe de Inspección {$report->numero}",
+                cantidad: -$diferencia,
+                referenciaTexto: $aplicado === [] || ! isset($aplicado[$productId])
+                    ? "Consumo — Informe de Inspección {$report->numero}"
+                    : "Corrección de consumo — Informe de Inspección {$report->numero}",
                 referenciaEntidadTipo: 'SERVICIOS_INSPECTION_REPORT',
                 referenciaEntidadId: $report->id,
                 realizadoPor: $user->id,

@@ -31,7 +31,7 @@ class InsumoSetting extends Model
     use LogsAuditTrail;
 
     /** @var list<string> */
-    protected $fillable = ['catalog_product_id', 'minimo'];
+    protected $fillable = ['catalog_product_id', 'minimo', 'is_active'];
 
     /** @return array<string, string> */
     protected function casts(): array

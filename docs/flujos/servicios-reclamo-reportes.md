@@ -31,11 +31,11 @@ Solo existe para tickets del tipo **reclamo** (folio `REC-AAAA-NNNN`, sin subtip
 - Coherencia: un ticket nuevo suma 1 a su tipo en `distribucion-tipo`; una hoja completada aparece en la biblioteca con su folio, el técnico y la fecha del reclamo [E].
 
 ## Candidatos a cambio o mejora
-1. **La hoja de reclamo no condiciona el cierre**: se exige cotización aprobada pero no la hoja (un reclamo puede cerrarse sin ella), y completarla no mueve el ticket. [E][C]
-2. **Una hoja completada no se puede corregir** (ni el Líder): un diagnóstico equivocado obliga a crear otro ticket; falta una reapertura con motivo, como la del ticket. [E]
-3. **Sin borrador**: la hoja exige diagnóstico y firma desde el primer guardado. [C]
-4. **Los reportes los lee cualquiera que vea Servicios, el vendedor incluido**, con la carga por técnico (`distribucion-tecnico`); es decisión de negocio si debe ser así. [E]
-5. **`completados-anio` cuenta tickets «resueltos» y «cerrados»** bajo el nombre «completados». [C]
-6. **Un `tipo_documento` desconocido en la biblioteca devuelve una lista vacía**, no un 422. [E]
-7. **La comisión del técnico no la ve el Líder de Servicios**, que es quien administra a los técnicos. [E]
+1. ~~**La hoja de reclamo no condiciona el cierre**~~ — **Fase 30**: un reclamo exige la hoja completada. (Original:): se exige cotización aprobada pero no la hoja (un reclamo puede cerrarse sin ella), y completarla no mueve el ticket. [E][C]
+2. ~~**Una hoja completada no se puede corregir**~~ — **Fase 30**: `PATCH claim-sheet/reabrir` con motivo (≥ 10), auditado; vuelve a pendiente. (Original:) (ni el Líder): un diagnóstico equivocado obliga a crear otro ticket; falta una reapertura con motivo, como la del ticket. [E]
+3. ~~**Sin borrador**~~ — **Fase 30**: `borrador: true`. (Original:): la hoja exige diagnóstico y firma desde el primer guardado. [C]
+4. ~~**Los reportes los lee cualquiera que vea Servicios~~ — **Fase 30**: carga por técnico y comisión con permiso `servicios.reports.team` (Líder y Gerencia). (Original:) **, el vendedor incluido**, con la carga por técnico (`distribucion-tecnico`); es decisión de negocio si debe ser así. [E]
+5. ~~**`completados-anio` cuenta~~ — **Fase 30**: cada mes trae también `resueltos` y `cerrados`. (Original:) ** tickets «resueltos» y «cerrados»** bajo el nombre «completados». [C]
+6. ~~**Un `tipo_documento` desconocido~~ — **Fase 30**: 422. (Original:) ** en la biblioteca devuelve una lista vacía**, no un 422. [E]
+7. ~~**La comisión del técnico no la ve el Líder~~ — **Fase 30**: el Líder la ve. (Original:) ** de Servicios**, que es quien administra a los técnicos. [E]
 8. **Sin ejercitar**: la pantalla de reportes en el navegador (el informe de inspección completo y el PDF de cotización están en [servicios-informe-inspeccion.md](servicios-informe-inspeccion.md)). [C]

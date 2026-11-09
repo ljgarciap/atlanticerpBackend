@@ -10,6 +10,7 @@ use App\Modules\Servicios\Events\TicketStageChanged;
 use App\Modules\Servicios\Exceptions\TicketCloseBlockedException;
 use App\Modules\Servicios\Models\ClaimSheet;
 use App\Modules\Servicios\Models\ServiceQuote;
+use App\Modules\Servicios\Models\InspectionReport;
 use App\Modules\Servicios\Models\Ticket;
 use App\Modules\Servicios\Models\TicketAttachment;
 use App\Modules\Servicios\Models\TicketProduct;
@@ -217,6 +218,7 @@ final class TicketService
             ])->values()->all(),
             'estado'                     => $ticket->estado,
             'cancellation_reason'        => $ticket->cancellation_reason,
+            'technician_user_id'         => $ticket->internal_technician_id,
             'internal_technician'        => $ticket->internalTechnician === null ? null : [
                 'id'         => $ticket->internalTechnician->id,
                 'first_name' => $ticket->internalTechnician->first_name,
@@ -655,6 +657,31 @@ final class TicketService
      */
     private function assertCloseAllowed(Ticket $ticket): void
     {
+        // Fase 30 (decisión 1) — una instalación de venta previa exige informe completado y al
+        // menos una evidencia (foto o archivo adjunto del informe) para resolverse o cerrarse.
+        if (TicketTypes::is($ticket->tipo, TicketTypes::INSTALACION) && $ticket->subtipo === Ticket::SUBTIPO_INSTALLATION) {
+            $report = InspectionReport::where('ticket_id', $ticket->id)->first();
+
+            if ($report === null || $report->estado !== InspectionReport::ESTADO_COMPLETED) {
+                throw new TicketCloseBlockedException('No se puede cerrar: la instalación requiere el informe de inspección completado.');
+            }
+
+            if ($report->archivo_adjunto === null && ! $report->photos()->exists()) {
+                throw new TicketCloseBlockedException('No se puede cerrar: la instalación requiere al menos una evidencia (foto o archivo) en el informe.');
+            }
+
+            return;
+        }
+
+        // Fase 30 (decisión 3) — un reclamo exige la hoja de reclamo completada, además de la cotización aprobada.
+        if (TicketTypes::is($ticket->tipo, TicketTypes::RECLAMO)) {
+            $sheet = ClaimSheet::where('ticket_id', $ticket->id)->first();
+
+            if ($sheet === null || $sheet->estado !== ClaimSheet::ESTADO_COMPLETED) {
+                throw new TicketCloseBlockedException('No se puede cerrar: falta completar la hoja de reclamo.');
+            }
+        }
+
         if (! in_array($ticket->inspection_report_status, Ticket::INSPECTION_STATUSES_ALLOWING_CLOSE, true)) {
             throw new TicketCloseBlockedException('No se puede cerrar: falta completar el informe de inspección.');
         }
@@ -757,6 +784,7 @@ final class TicketService
             'quote_amount'              => $quoteAmount,
             'inspection_report_status'  => $ticket->inspection_report_status,
             'internal_technician_id'    => $ticket->internal_technician_id,
+            'technician_user_id'        => $ticket->internal_technician_id,
             'internal_technician'       => $ticket->internalTechnician === null ? null : [
                 'id'         => $ticket->internalTechnician->id,
                 'first_name' => $ticket->internalTechnician->first_name,

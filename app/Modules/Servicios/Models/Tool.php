@@ -54,7 +54,7 @@ class Tool extends Model
     /** @var list<string> */
     protected $fillable = [
         'nombre', 'codigo_unico', 'estado', 'assigned_to_technician_id', 'assigned_since',
-        'responsable_incidente',
+        'responsable_incidente', 'is_active',
     ];
 
     /** @return array<string, string> */

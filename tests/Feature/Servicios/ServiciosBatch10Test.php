@@ -147,15 +147,15 @@ class ServiciosBatch10Test extends FeatureTestCase
         $this->assertSame(47.06, $desglose['actitud']['monto_max']);
     }
 
-    /** RN8 — exclusivo del propio técnico o Gerencia; Lider Servicios (lider_servicios) puede CAPTURAR pero no ver el resultado. */
-    public function test_aaron_no_puede_ver_el_resultado_calculado(): void
+    /** RN8 + Fase 30 (decisión 4) — el propio técnico, Gerencia y el Líder de Servicios ven el resultado calculado. */
+    public function test_lider_puede_ver_el_resultado_calculado(): void
     {
         $id = $this->carlos()->id;
         $token = $this->loginAs(self::LIDER_SERVICIOS, self::LIDER_SERVICIOS, 'lider_servicios');
 
         $this->withHeaders($this->authHeaders($token))
             ->getJson("/api/servicios/internal-technicians/{$id}/commission")
-            ->assertStatus(403);
+            ->assertStatus(200);
     }
 
     public function test_carlos_puede_ver_su_propio_resultado(): void

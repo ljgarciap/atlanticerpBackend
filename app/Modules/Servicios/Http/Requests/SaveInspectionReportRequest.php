@@ -51,7 +51,8 @@ class SaveInspectionReportRequest extends FormRequest
             'materiales.*.catalog_product_id' => ['nullable', 'integer', 'exists:catalog_products,id'],
 
             // RN2 (REQ-241) — "El informe no se puede guardar como completado sin ella".
-            'conclusion'              => ['required', 'string'],
+            'borrador'                => ['nullable', 'boolean'],
+            'conclusion'              => [$this->boolean('borrador') ? 'nullable' : 'required', 'string'],
             'requiere_seguimiento'    => ['nullable', 'boolean'],
             // RN3 (REQ-241) — solo se captura si requiere_seguimiento=true; el resto se ignora en el servicio.
             'proximos_pasos'          => ['nullable', 'string'],
@@ -65,6 +66,9 @@ class SaveInspectionReportRequest extends FormRequest
     {
         $validator->after(function (Validator $v): void {
             // RN2 — conclusión no puede ser solo espacios.
+            if ($this->boolean('borrador')) {
+                return;
+            }
             $conclusion = $this->input('conclusion');
             if (! is_string($conclusion) || trim($conclusion) === '') {
                 $v->errors()->add('conclusion', 'La conclusión es obligatoria para completar el informe.');

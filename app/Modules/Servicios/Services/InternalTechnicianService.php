@@ -127,6 +127,7 @@ final class InternalTechnicianService
             'telefono' => $data['telefono'] ?? null,
             'email' => $data['email'] ?? null,
             'especialidad' => $data['especialidad'],
+            'user_id' => $data['user_id'] ?? null,
             'color' => $this->nextColor(),
         ]);
     }
@@ -138,12 +139,14 @@ final class InternalTechnicianService
      */
     public function update(InternalTechnician $technician, array $data): InternalTechnician
     {
-        $technician->update([
-            'nombre' => $data['nombre'],
-            'telefono' => $data['telefono'] ?? null,
-            'email' => $data['email'] ?? null,
-            'especialidad' => $data['especialidad'],
-        ]);
+        // Fase 30 — el PUT sigue reemplazando todo; el PATCH solo toca lo reenviado (`array_key_exists`).
+        $fields = [];
+        foreach (['nombre', 'telefono', 'email', 'especialidad', 'user_id'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $fields[$key] = $data[$key];
+            }
+        }
+        $technician->update($fields);
 
         return $technician;
     }

@@ -169,7 +169,7 @@ final class InternalTechnicianController extends Controller
         }
 
         $roleKey  = $user->role?->key;
-        $esGerencia = $roleKey === RoleKeys::SUPERADMIN || $roleKey === RoleKeys::MANAGEMENT;
+        $esGerencia = in_array($roleKey, [RoleKeys::SUPERADMIN, RoleKeys::MANAGEMENT, RoleKeys::LIDER_SERVICIOS], true);
         $esElMismo  = $technician->user_id !== null && $technician->user_id === $user->id;
 
         if (! $esGerencia && ! $esElMismo) {
@@ -234,6 +234,43 @@ final class InternalTechnicianController extends Controller
             'telefono'     => $technician->telefono,
             'email'        => $technician->email,
             'especialidad' => $technician->especialidad,
+            'color'        => $technician->color,
+        ]);
+    }
+
+    /**
+     * PATCH /api/servicios/internal-technicians/{id} — Fase 30: edición parcial, no borra lo no reenviado.
+     * `user_id` liga la ficha a un usuario del sistema (activo y no ligado a otra ficha).
+     */
+    public function patch(Request $request, int $id): JsonResponse
+    {
+        $technician = InternalTechnician::find($id);
+        if ($technician === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'nombre'       => ['sometimes', 'string', 'max:255'],
+            'telefono'     => ['sometimes', 'nullable', 'string', 'max:50'],
+            'email'        => ['sometimes', 'nullable', 'email', 'max:255'],
+            'especialidad' => ['sometimes', 'string', \Illuminate\Validation\Rule::in(\App\Shared\Catalogs\CatalogService::keys('technician_specialty'))],
+            'user_id'      => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        if (! empty($validated['user_id'])
+            && InternalTechnician::where('user_id', $validated['user_id'])->where('id', '!=', $technician->id)->exists()) {
+            return response()->json(['message' => 'Ese usuario ya está ligado a otra ficha de técnico.', 'errors' => ['user_id' => ['Ya ligado.']]], 422);
+        }
+
+        $technician = $this->technicians->update($technician, $validated);
+
+        return response()->json([
+            'id'           => $technician->id,
+            'nombre'       => $technician->nombre,
+            'telefono'     => $technician->telefono,
+            'email'        => $technician->email,
+            'especialidad' => $technician->especialidad,
+            'user_id'      => $technician->user_id,
             'color'        => $technician->color,
         ]);
     }

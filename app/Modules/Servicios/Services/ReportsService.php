@@ -208,18 +208,21 @@ final class ReportsService
         $targetYear  = $year ?? (int) $now->year;
         $lastMonth   = $targetYear === (int) $now->year ? (int) $now->month : 12;
 
-        /** @var Collection<int, object{mes: int|string, tipo: string, total: int|string}> $rows */
+        /** @var Collection<int, object{mes: int|string, tipo: string, estado: string, total: int|string}> $rows */
         $rows = Ticket::whereIn('estado', Ticket::ESTADOS_REQUIRING_CLOSE_GATE)
             ->whereYear('closed_at', $targetYear)
-            ->selectRaw('EXTRACT(MONTH FROM closed_at) as mes, tipo, count(*) as total')
-            ->groupByRaw('EXTRACT(MONTH FROM closed_at), tipo')
+            ->selectRaw('EXTRACT(MONTH FROM closed_at) as mes, tipo, estado, count(*) as total')
+            ->groupByRaw('EXTRACT(MONTH FROM closed_at), tipo, estado')
             ->get();
 
         /** @var array<int, array<string, int>> $byMonthType */
         $byMonthType = [];
+        /** @var array<int, array<string, int>> $byMonthEstado Fase 30: resueltos y cerrados por separado. */
+        $byMonthEstado = [];
         foreach ($rows as $row) {
             $mes = (int) $row->mes;
-            $byMonthType[$mes][(string) $row->tipo] = (int) $row->total;
+            $byMonthType[$mes][(string) $row->tipo] = ($byMonthType[$mes][(string) $row->tipo] ?? 0) + (int) $row->total;
+            $byMonthEstado[$mes][(string) $row->estado] = ($byMonthEstado[$mes][(string) $row->estado] ?? 0) + (int) $row->total;
         }
 
         $result = [];
@@ -232,7 +235,13 @@ final class ReportsService
                 $total          += $count;
             }
 
-            $result[] = ['mes' => $m, 'por_tipo' => $porTipo, 'total' => $total];
+            $result[] = [
+                'mes'      => $m,
+                'por_tipo' => $porTipo,
+                'total'    => $total,
+                'resueltos' => $byMonthEstado[$m][Ticket::ESTADO_RESOLVED] ?? 0,
+                'cerrados'  => $byMonthEstado[$m][Ticket::ESTADO_CLOSED] ?? 0,
+            ];
         }
 
         return $result;

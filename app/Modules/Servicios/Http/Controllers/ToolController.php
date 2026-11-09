@@ -170,8 +170,10 @@ final class ToolController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        $validated = $request->validate(['referencia' => ['required', 'string', 'min:3', 'max:255']]);
+
         try {
-            $result = $this->tools->receivePurchaseRequest($purchaseRequest, $user);
+            $result = $this->tools->receivePurchaseRequest($purchaseRequest, $user, $validated['referencia']);
         } catch (ToolPurchaseRequestAlreadyReceivedException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
@@ -180,6 +182,23 @@ final class ToolController extends Controller
             ...$this->tools->presentPurchaseRequest($result['purchase_request']),
             'tools' => array_map(fn (Tool $t): array => $this->tools->present($t), $result['tools']),
         ]);
+    }
+
+    /** DELETE /api/servicios/tools/{id} — Fase 30, baja (desactiva; el historial se conserva). */
+    public function destroy(int $id): JsonResponse
+    {
+        $tool = Tool::where('is_active', true)->find($id);
+        if ($tool === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        try {
+            $this->tools->deactivate($tool);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['message' => 'Herramienta dada de baja.']);
     }
 
     private function resolveUser(Request $request): ?User

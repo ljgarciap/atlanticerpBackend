@@ -71,7 +71,7 @@ Route::prefix('reportes')->group(function (): void {
     Route::get('/instalaciones-cotizadas-vs-realizadas', [ReportsController::class, 'instalacionesCotizadasVsRealizadas'])
         ->middleware('permission:servicios.read');
     Route::get('/distribucion-tipo', [ReportsController::class, 'distribucionTipo'])->middleware('permission:servicios.read');
-    Route::get('/distribucion-tecnico', [ReportsController::class, 'distribucionTecnico'])->middleware('permission:servicios.read');
+    Route::get('/distribucion-tecnico', [ReportsController::class, 'distribucionTecnico'])->middleware('permission:servicios.reports.team');
     Route::get('/completados-anio', [ReportsController::class, 'completadosAnio'])->middleware('permission:servicios.read');
     Route::get('/comision-tecnico', [ReportsController::class, 'comisionTecnico'])
         ->middleware('permission:servicios.technicians.commission.view_own');
@@ -179,6 +179,8 @@ Route::prefix('tickets')->group(function (): void {
             // POST, no PUT — REQ-243 sube un archivo real, ver docblock de InspectionReportService::save().
             Route::post('/upload', [InspectionReportController::class, 'saveArchivoMode']);
             Route::post('/photos', [InspectionReportController::class, 'storePhoto']);
+            Route::delete('/photos/{photoId}', [InspectionReportController::class, 'destroyPhoto']);
+            Route::post('/photos/{photoId}/replace', [InspectionReportController::class, 'replacePhoto']);
             // Batch 10 (REQ-251→254) — Informe móvil, un solo POST al confirmar la firma.
             Route::post('/mobile', [InspectionReportController::class, 'saveMobile']);
         });
@@ -194,6 +196,9 @@ Route::prefix('tickets')->group(function (): void {
 
         Route::put('/', [ClaimSheetController::class, 'save'])
             ->middleware('permission:servicios.claim_sheets.manage');
+        // Fase 30 — reapertura con motivo: solo quien gestiona tickets (Líder de Servicios).
+        Route::patch('/reabrir', [ClaimSheetController::class, 'reopen'])
+            ->middleware('permission:servicios.tickets.manage');
     });
 
     // Fase 4 — Servicios, Batch 11 (REQ-229→234). Cotización de Servicio. Lectura: mismo permiso
@@ -296,6 +301,9 @@ Route::prefix('internal-technicians')->group(function (): void {
     // SCRUM-1015 — editar/eliminar: mismo gate que el alta.
     Route::put('/{id}', [InternalTechnicianController::class, 'update'])
         ->middleware('permission:servicios.tickets.manage');
+    // Fase 30 — edición parcial (no borra lo no reenviado) y vínculo con un usuario.
+    Route::patch('/{id}', [InternalTechnicianController::class, 'patch'])
+        ->middleware('permission:servicios.tickets.manage');
     Route::delete('/{id}', [InternalTechnicianController::class, 'destroy'])
         ->middleware('permission:servicios.tickets.manage');
 });
@@ -321,7 +329,9 @@ Route::prefix('tools')->group(function (): void {
     Route::get('/movements', [ToolController::class, 'movements'])
         ->middleware('permission:servicios.field_ops.admin');
 
-    Route::middleware('permission:servicios.tickets.manage')->group(function (): void {
+    // Fase 30: Gerencia también corrige herramientas e insumos (`servicios.assets.manage`).
+    Route::middleware('permission:servicios.assets.manage')->group(function (): void {
+        Route::delete('/{id}', [ToolController::class, 'destroy']);
         Route::patch('/{id}/estado', [ToolController::class, 'updateEstado']);
         Route::patch('/{id}/asignacion', [ToolController::class, 'updateAsignacion']);
         Route::post('/purchase-requests', [ToolController::class, 'storePurchaseRequest']);
@@ -337,8 +347,10 @@ Route::prefix('tools')->group(function (): void {
 Route::prefix('insumos')->group(function (): void {
     Route::get('/', [InsumoController::class, 'index'])->middleware('permission:servicios.read');
 
-    Route::middleware('permission:servicios.tickets.manage')->group(function (): void {
+    Route::middleware('permission:servicios.assets.manage')->group(function (): void {
         Route::post('/', [InsumoController::class, 'store']);
+        Route::patch('/{id}', [InsumoController::class, 'update']);
+        Route::delete('/{id}', [InsumoController::class, 'destroy']);
         Route::post('/{id}/solicitar', [InsumoController::class, 'storePurchaseRequest']);
     });
 });

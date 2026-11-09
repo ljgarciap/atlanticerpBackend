@@ -103,7 +103,7 @@ final class ReportsController extends Controller
         }
 
         $roleKey = $user->role?->key;
-        $esGerencia = $roleKey === RoleKeys::SUPERADMIN || $roleKey === RoleKeys::MANAGEMENT;
+        $esGerencia = in_array($roleKey, [RoleKeys::SUPERADMIN, RoleKeys::MANAGEMENT, RoleKeys::LIDER_SERVICIOS], true);
         $esElMismo = $technician->user_id !== null && $technician->user_id === $user->id;
 
         if (! $esGerencia && ! $esElMismo) {
@@ -126,6 +126,8 @@ final class ReportsController extends Controller
     public function biblioteca(Request $request): JsonResponse
     {
         $pagination = Pagination::params($request, ['fecha'], 'fecha', 'desc');
+
+        $request->validate(['tipo_documento' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['inspection_report', 'claim_sheet'])]]);
 
         /** @var array{search?: string, tipo_documento?: string, estado?: string, per_page?: int, page?: int} $filters */
         $filters = array_filter([

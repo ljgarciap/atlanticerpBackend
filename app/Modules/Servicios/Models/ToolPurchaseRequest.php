@@ -36,7 +36,7 @@ class ToolPurchaseRequest extends Model
     public const ESTADO_RECIBIDA = 'recibida';
 
     /** @var list<string> */
-    protected $fillable = ['nombre', 'cantidad', 'estado', 'source_tool_id', 'requested_by', 'received_at'];
+    protected $fillable = ['nombre', 'cantidad', 'estado', 'source_tool_id', 'requested_by', 'received_at', 'received_reference'];
 
     /** @return array<string, string> */
     protected function casts(): array

@@ -59,7 +59,7 @@ class AppServiceProvider extends ServiceProvider
         foreach ([
             'id', 'userId', 'productId', 'documentId', 'warehouseId', 'lineId', 'orderId', 'contactId', 'projectId', 'actId', 'remId',
             'masterClientId', 'subClientId', 'attachmentId', 'itemId', 'quoteId', 'cardId', 'architectId', 'fileId', 'partId', 'cohortId',
-            'pipelineCardId', 'vendedorId', 'expenseId',
+            'pipelineCardId', 'vendedorId', 'expenseId', 'photoId',
         ] as $parametro) {
             \Illuminate\Support\Facades\Route::pattern($parametro, '[0-9]{1,18}');
         }

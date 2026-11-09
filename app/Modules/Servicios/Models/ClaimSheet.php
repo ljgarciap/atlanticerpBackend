@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $diagnostico
  * @property string|null $firma_responsable
  * @property string      $estado
+ * @property \Illuminate\Support\Carbon|null $reopened_at
+ * @property string|null  $reopened_reason
  * @property int|null    $created_by
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
@@ -65,6 +67,7 @@ class ClaimSheet extends Model
     {
         return [
             'fecha_reclamo' => 'date',
+            'reopened_at'   => 'datetime',
         ];
     }
 

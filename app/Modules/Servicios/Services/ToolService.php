@@ -30,7 +30,7 @@ final class ToolService
      */
     public function list(array $filters = []): array
     {
-        $query = Tool::query()->with($this->eagerLoads());
+        $query = Tool::query()->where('is_active', true)->with($this->eagerLoads());
 
         $search = $filters['search'] ?? null;
         if (is_string($search) && trim($search) !== '') {
@@ -221,13 +221,13 @@ final class ToolService
      * @return array{purchase_request: ToolPurchaseRequest, tools: list<Tool>}
      * @throws ToolPurchaseRequestAlreadyReceivedException
      */
-    public function receivePurchaseRequest(ToolPurchaseRequest $purchaseRequest, User $user): array
+    public function receivePurchaseRequest(ToolPurchaseRequest $purchaseRequest, User $user, ?string $referencia = null): array
     {
         if ($purchaseRequest->estado === ToolPurchaseRequest::ESTADO_RECIBIDA) {
             throw new ToolPurchaseRequestAlreadyReceivedException();
         }
 
-        return DB::transaction(function () use ($purchaseRequest, $user): array {
+        return DB::transaction(function () use ($purchaseRequest, $user, $referencia): array {
             $codes = [];
             $tools = [];
 
@@ -255,10 +255,22 @@ final class ToolService
 
             $purchaseRequest->estado      = ToolPurchaseRequest::ESTADO_RECIBIDA;
             $purchaseRequest->received_at = now();
+            $purchaseRequest->received_reference = $referencia !== null ? trim($referencia) : null;
             $purchaseRequest->save();
 
             return ['purchase_request' => $purchaseRequest->refresh(), 'tools' => $tools];
         });
+    }
+
+    /** Fase 30 — baja de una herramienta: se desactiva; no se puede mientras esté asignada a un técnico. */
+    public function deactivate(Tool $tool): void
+    {
+        if ($tool->assigned_to_technician_id !== null) {
+            throw new \InvalidArgumentException('La herramienta está asignada a un técnico: reasígnala antes de darla de baja.');
+        }
+
+        $tool->update(['is_active' => false]);
+        $tool->movements()->create(['tipo' => ToolMovement::TIPO_BAJA, 'detalle' => 'Baja de la herramienta', 'user_id' => auth()->id()]);
     }
 
     /** @return array<string, mixed> */
@@ -407,6 +419,7 @@ final class ToolService
             'source_tool_id' => $r->source_tool_id,
             'requested_by'   => $r->requested_by,
             'received_at'    => $r->received_at?->toIso8601String(),
+            'received_reference' => $r->received_reference,
             'created_at'     => $r->created_at->toIso8601String(),
         ];
     }

@@ -22,3 +22,14 @@ Contra `master`: las transiciones libres y el ticket cancelado reabrible ya los 
 
 ## 4. Criterios de aceptación
 Por grupo: tests de permisos por rol y de regresión, catálogo en `docs/flujos/` con candidatos tachados, pasos nuevos en `npm run e2e:flujos`, suite completa verde y revisión de seguridad antes de mezclar. Migraciones aditivas que no cambian el comportamiento al desplegar.
+
+## 5. Resultado de la Fase 30 (2026-11-09)
+| Grupo | Hecho |
+|---|---|
+| 1 | `technician_user_id` en la API (alias de `internal_technician_id`, que se conserva); compuerta de cierre de instalaciones de venta previa (informe completado + evidencia). Los subtipos de sistema siguen con significado en el código (documentado, ver Fase 7b). |
+| 2 | El Kardex se concilia por diferencia en cada guardado completo; formulario y archivo no se pisan; fotos con borrar/reemplazar (409 si el informe está firmado); borrador (`borrador: true`). |
+| 3 | La hoja completada es obligatoria para cerrar un reclamo; borrador y reapertura con motivo (`PATCH claim-sheet/reabrir`, auditada, migración `2026_11_25_100000`); `completados-anio` con `resueltos` y `cerrados`; `tipo_documento` desconocido → 422; permiso nuevo `servicios.reports.team` (Líder y Gerencia) y comisión visible al Líder (migración `2026_11_25_100001`). |
+| 4 | `existencia_inicial` en el alta de insumo; `PATCH`/`DELETE` de insumos y `DELETE` de herramientas (se desactivan, migración `2026_11_25_100002`); `PATCH` parcial de técnico interno con `user_id` opcional; recibir una herramienta exige `referencia`; permiso `servicios.assets.manage` (Líder y Gerencia, migración `2026_11_25_100003`). |
+
+Cuatro migraciones aditivas y reversibles. Nada cambia al desplegar salvo lo decidido: el cierre de instalaciones y reclamos exige lo nuevo, y el vendedor deja de ver carga y comisión.
+**Abierto**: el informe móvil no ofrece borrador; la ficha del técnico se liga a un usuario solo por API (sin pantalla); formularios por tipo del informe siguen fijos en el código (candidato 6 del informe); los insumos y herramientas se editan con `prompt`/`confirm` del navegador (sin modal propio).
