@@ -38,10 +38,10 @@ Continuación de [Servicios: tickets](servicios-tickets.md). Marcas: **[E]** eje
 - **SLA por tipo de ticket** (`installation`, `warranty`, `claim`, `retrofit`, en días): lo lee todo el módulo; solo Gerencia lo cambia (el Líder de Servicios recibe 403) [E].
 
 ## Candidatos a cambio o mejora
-1. **Un insumo nuevo siempre nace «bajo mínimo»**: la cantidad inicial queda como solicitud, no como existencia, así que no se puede registrar un stock que ya se tiene. [E]
-2. **Los insumos no se pueden editar ni dar de baja** (no hay rutas para cambiar el mínimo ni quitar uno). [C]
+1. ~~**Un insumo nuevo siempre nace «bajo mínimo»**~~ — **Fase 30**: `existencia_inicial` opcional entra como Entrada a la Reserva. (Original:): la cantidad inicial queda como solicitud, no como existencia, así que no se puede registrar un stock que ya se tiene. [E]
+2. ~~**Los insumos no se pueden editar ni dar de baja**~~ — **Fase 30**: `PATCH insumos/{id}` (mínimo) y `DELETE` (desactiva). (Original:) (no hay rutas para cambiar el mínimo ni quitar uno). [C]
 3. **La ficha del técnico interno no queda ligada a un usuario del sistema**: las altas manuales no crean ni vinculan usuario (`user_id` nulo), mientras que los técnicos del demo sí tienen uno; conviene aclarar cómo debe vincularse una ficha nueva (ver también el candidato 4.4 de la lista priorizada). [E]
-4. **El `PUT` completo de técnico interno borra los campos que no se reenvían** (correo, teléfono). [E]
-5. **Recibir una herramienta no se cruza con una compra real**: basta un clic del Líder de Servicios para crear las unidades; no hay orden de compra ni comprobante. [C]
-6. **Gerencia no puede corregir lo que ve**: ve herramientas e insumos pero cualquier cambio requiere al Líder de Servicios. [E]
-7. **Las herramientas no se dan de baja** (solo cambian de estado) y sus códigos únicos no se reutilizan; los datos de prueba se acumulan. [E][C]
+4. ~~**El `PUT` completo de técnico interno borra~~ — **Fase 30**: `PATCH internal-technicians/{id}` parcial. (Original:) ** los campos que no se reenvían** (correo, teléfono). [E]
+5. ~~**Recibir una herramienta no se cruza~~ — **Fase 30**: exige una `referencia` (texto) que se guarda con la recepción. (Original:) ** con una compra real**: basta un clic del Líder de Servicios para crear las unidades; no hay orden de compra ni comprobante. [C]
+6. ~~**Gerencia no puede corregir lo que ve**~~ — **Fase 30**: permiso `servicios.assets.manage` (Líder y Gerencia). (Original:): ve herramientas e insumos pero cualquier cambio requiere al Líder de Servicios. [E]
+7. ~~**Las herramientas no se dan de baja**~~ — **Fase 30**: `DELETE tools/{id}` desactiva (422 si está asignada). (Original:) (solo cambian de estado) y sus códigos únicos no se reutilizan; los datos de prueba se acumulan. [E][C]

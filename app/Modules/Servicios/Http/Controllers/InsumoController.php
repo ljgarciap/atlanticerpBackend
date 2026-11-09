@@ -35,11 +35,12 @@ final class InsumoController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
-        /** @var array{catalog_product_id: int, minimo: int, cantidad_inicial: int} $validated */
+        /** @var array{catalog_product_id: int, minimo: int, cantidad_inicial: int, existencia_inicial?: ?int} $validated */
         $validated = $request->validate([
             'catalog_product_id' => ['required', 'integer', 'exists:catalog_products,id'],
             'minimo'              => ['required', 'integer', 'min:0'],
-            'cantidad_inicial'    => ['required', 'integer', 'min:1'],
+            'cantidad_inicial'    => ['required', 'integer', 'min:0'],
+            'existencia_inicial'  => ['nullable', 'integer', 'min:0'],
         ]);
 
         try {
@@ -48,6 +49,7 @@ final class InsumoController extends Controller
                 (int) $validated['minimo'],
                 (int) $validated['cantidad_inicial'],
                 $user,
+                (int) ($validated['existencia_inicial'] ?? 0),
             );
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -57,6 +59,35 @@ final class InsumoController extends Controller
     }
 
     /** POST /api/servicios/insumos/{id}/solicitar — REQ-274. RN5 (rol): validado en la ruta. */
+    /** PATCH /api/servicios/insumos/{id} — Fase 30, corrige el mínimo. */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $setting = InsumoSetting::where('is_active', true)->find($id);
+        if ($setting === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $validated = $request->validate(['minimo' => ['required', 'integer', 'min:0']]);
+        $this->insumos->updateMinimo($setting, (int) $validated['minimo']);
+
+        $row = collect($this->insumos->list())->firstWhere('id', $setting->id);
+
+        return response()->json($row);
+    }
+
+    /** DELETE /api/servicios/insumos/{id} — Fase 30, baja (desactiva; el historial se conserva). */
+    public function destroy(int $id): JsonResponse
+    {
+        $setting = InsumoSetting::where('is_active', true)->find($id);
+        if ($setting === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $this->insumos->deactivate($setting);
+
+        return response()->json(['message' => 'Insumo dado de baja.']);
+    }
+
     public function storePurchaseRequest(Request $request, int $id): JsonResponse
     {
         $user = $this->resolveUser($request);

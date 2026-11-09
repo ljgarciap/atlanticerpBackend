@@ -38,6 +38,8 @@ class ToolMovement extends Model
 
     public const TIPO_WORN = 'worn';
 
+    public const TIPO_BAJA = 'baja';
+
     /** @var list<string> */
     protected $fillable = ['tool_id', 'tipo', 'detalle', 'user_id'];
 

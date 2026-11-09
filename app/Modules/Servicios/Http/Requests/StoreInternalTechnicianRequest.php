@@ -23,6 +23,7 @@ class StoreInternalTechnicianRequest extends FormRequest
             'nombre' => ['required', 'string', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
+            'user_id'      => ['nullable', 'integer', 'exists:users,id'],
             'especialidad' => ['required', 'string', Rule::in(CatalogService::keys('technician_specialty'))],
         ];
     }

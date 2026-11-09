@@ -43,10 +43,10 @@ Continuación de [Servicios: tickets](servicios-tickets.md) (§4 resumió el inf
 
 ## Candidatos a cambio o mejora
 (Solo documentados; ninguno se implementó.)
-1. **El consumo de materiales de la Reserva se aplica solo en el primer guardado** (`applyConsumption = isNew`): si el técnico corrige después un material o su cantidad, el Kardex no se ajusta. [C]
-2. **Guardar de nuevo como formulario borra el archivo adjunto** (`archivo_adjunto = null`), y guardar en modo archivo borra hallazgos, conclusión y seguimiento, sin aviso. [C]
+1. ~~**El consumo de materiales de la Reserva se aplica solo en el primer guardado**~~ — **Fase 30**: cada guardado completo concilia el Kardex por diferencia (Consumo / Corrección de consumo), sin repetir. (Original:) (`applyConsumption = isNew`): si el técnico corrige después un material o su cantidad, el Kardex no se ajusta. [C]
+2. ~~**Guardar de nuevo como formulario borra el archivo adjunto**~~ — **Fase 30**: ninguno de los dos modos borra el contenido del otro; `modo` indica el vigente. (Original:) (`archivo_adjunto = null`), y guardar en modo archivo borra hallazgos, conclusión y seguimiento, sin aviso. [C]
 3. ~~Una firma confirmada en el móvil se protege solo en esa ruta~~ — **corregido en la Fase 20a** (informe firmado inmutable). [E]
-4. **Las fotos no se pueden borrar ni reemplazar** (no hay ruta) y se pueden seguir añadiendo con el informe completado. [C]
-5. **No hay borrador**: guardar equivale a completar, y desbloquea el cierre del ticket aunque el informe esté a medias salvo la conclusión. [C]
+4. ~~**Las fotos no se pueden borrar ni reemplazar**~~ — **Fase 30**: `DELETE photos/{id}` y `POST photos/{id}/replace` (409 con el informe firmado). (Original:) (no hay ruta) y se pueden seguir añadiendo con el informe completado. [C]
+5. ~~**No hay borrador**~~ — **Fase 30**: `borrador: true` guarda a medias (estado `pending`, sin consumo y sin desbloquear el cierre). (Original:): guardar equivale a completar, y desbloquea el cierre del ticket aunque el informe esté a medias salvo la conclusión. [C]
 6. **Los formularios por tipo/subtipo están fijos en el código** (`STATIC_FIELDS_BY_TIPO`), no en un catálogo por empresa. [C]
 7. **Sin ejercitar**: el flujo en el navegador (modal, lienzo de firma), HEIC en fotos y el consumo de la Reserva con `catalog_product_id` real.

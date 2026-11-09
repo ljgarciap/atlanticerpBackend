@@ -67,11 +67,11 @@ final class ClaimSheetService
      * @throws ClaimSheetAccessDeniedException
      * @throws ClaimSheetLockedException
      */
-    public function save(Ticket $ticket, array $data, User $user): ClaimSheet
+    public function save(Ticket $ticket, array $data, User $user, bool $borrador = false): ClaimSheet
     {
         $this->assertCanEdit($ticket, $user);
 
-        return $this->withUniqueRetry(fn (): ClaimSheet => DB::transaction(function () use ($ticket, $data, $user): ClaimSheet {
+        return $this->withUniqueRetry(fn (): ClaimSheet => DB::transaction(function () use ($ticket, $data, $user, $borrador): ClaimSheet {
             $sheet = ClaimSheet::where('ticket_id', $ticket->id)->lockForUpdate()->first();
 
             if ($sheet !== null && $sheet->estado === ClaimSheet::ESTADO_COMPLETED) {
@@ -86,13 +86,35 @@ final class ClaimSheetService
 
             $sheet->descripcion_problema = $this->blankToNull($data['descripcion_problema'] ?? null);
             $sheet->fecha_reclamo        = isset($data['fecha_reclamo']) ? \Carbon\Carbon::parse($data['fecha_reclamo']) : null;
-            $sheet->diagnostico          = $data['diagnostico'];
-            $sheet->firma_responsable    = $data['firma_responsable'];
-            $sheet->estado               = ClaimSheet::ESTADO_COMPLETED;
+            $sheet->diagnostico          = $data['diagnostico'] ?? null;
+            $sheet->firma_responsable    = $data['firma_responsable'] ?? null;
+            $sheet->estado               = $borrador ? ClaimSheet::ESTADO_PENDING : ClaimSheet::ESTADO_COMPLETED;
             $sheet->save();
 
             return $sheet->refresh();
         }));
+    }
+
+    /**
+     * Fase 30 — reabre una hoja completada con motivo (≥ 10 caracteres) para corregirla. Queda pendiente y
+     * deja de desbloquear el cierre del reclamo hasta volver a completarse. El permiso lo exige la ruta.
+     *
+     * @throws \InvalidArgumentException si la hoja no existe o no está completada
+     */
+    public function reopen(Ticket $ticket, string $motivo, User $user): ClaimSheet
+    {
+        $sheet = ClaimSheet::where('ticket_id', $ticket->id)->first();
+
+        if ($sheet === null || $sheet->estado !== ClaimSheet::ESTADO_COMPLETED) {
+            throw new \InvalidArgumentException('Solo se puede reabrir una hoja de reclamo completada.');
+        }
+
+        $sheet->estado          = ClaimSheet::ESTADO_PENDING;
+        $sheet->reopened_at     = now();
+        $sheet->reopened_reason = trim($motivo);
+        $sheet->save();
+
+        return $sheet->refresh();
     }
 
     /**

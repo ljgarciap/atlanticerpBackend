@@ -76,12 +76,43 @@ final class ClaimSheetController extends Controller
         $validated = $request->validated();
 
         try {
-            $sheet = $this->sheets->save($ticket, $validated, $user);
+            $sheet = $this->sheets->save($ticket, $validated, $user, $request->boolean('borrador'));
         } catch (ClaimSheetAccessDeniedException $e) {
             return response()->json(['message' => $e->getMessage()], 403);
         } catch (ClaimSheetLockedException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         }
+
+        return response()->json($this->serialize($ticket, $sheet));
+    }
+
+    /** PATCH /api/servicios/tickets/{ticketId}/claim-sheet/reabrir — Fase 30, reapertura con motivo. */
+    public function reopen(Request $request, int $ticketId): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $ticket = $this->tickets->find($ticketId);
+        if ($ticket === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $validated = $request->validate(['motivo' => ['required', 'string', 'min:10', 'max:1000']]);
+
+        try {
+            $sheet = $this->sheets->reopen($ticket, $validated['motivo'], $user);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        app(AuditService::class)->log(
+            action:     'servicios.claim_sheet.reopened',
+            entityType: 'claim_sheet',
+            entityId:   $sheet->id,
+            newValues:  ['motivo' => $sheet->reopened_reason],
+        );
 
         return response()->json($this->serialize($ticket, $sheet));
     }
@@ -147,6 +178,8 @@ final class ClaimSheetController extends Controller
             'diagnostico'           => $sheet?->diagnostico,
             'firma_responsable'     => $sheet?->firma_responsable,
             'estado'                => $estado,
+            'reopened_at'           => $sheet?->reopened_at?->toIso8601String(),
+            'reopened_reason'       => $sheet?->reopened_reason,
             'created_at'            => $sheet?->created_at?->toIso8601String(),
         ];
     }

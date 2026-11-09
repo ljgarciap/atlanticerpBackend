@@ -471,12 +471,12 @@ class ReportsControllerTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
-    /** RN2 — cualquier otro usuario (ej. Lider Servicios/lider_servicios) recibe 403, nunca un objeto vacío. */
-    public function test_comision_tecnico_otro_usuario_recibe_403(): void
+    /** Fase 30 (decisión 4) — el Líder de Servicios ve la comisión; el vendedor queda cubierto en ServiciosPermissionMatrixTest. */
+    public function test_comision_tecnico_lider_puede_verla(): void
     {
         $this->withHeaders($this->authHeadersFor(self::LIDER_SERVICIOS, 'lider_servicios'))
             ->getJson('/api/servicios/reportes/comision-tecnico')
-            ->assertStatus(403);
+            ->assertStatus(200);
     }
 
     // ── REQ-286 — Biblioteca de documentos ────────────────────────────────────────────────────

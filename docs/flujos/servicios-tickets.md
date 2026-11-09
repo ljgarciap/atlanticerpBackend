@@ -44,10 +44,10 @@ Del reporte de un ticket a su cierre: instalaciones y garantías. Marcas: **[E]*
 - **Corregido en esta fase**: `PATCH …/estado {estado: cancelled}` cancelaba sin motivo; ahora responde 422 y remite a la cancelación (backend #41) [E].
 
 ## Candidatos a cambio o mejora
-1. **Las transiciones de estado son libres**: se puede ir de `reported` a `closed` sin agendar ni técnico, y volver de `closed` a `reported`. Solo `resolved`/`closed` tienen compuertas, y solo para algunos tipos. [E]
-2. **Un ticket cancelado se puede mover de estado**, es decir, reabrir sin rastro de la decisión. [E]
-3. **`internal_technician_id` recibe un id de usuario**: el nombre induce a error (y confundió esta propia prueba). [E][C]
+1. ~~**Las transiciones de estado son libres**~~ — **corregido en la Fase 12a**. (Original:): se puede ir de `reported` a `closed` sin agendar ni técnico, y volver de `closed` a `reported`. Solo `resolved`/`closed` tienen compuertas, y solo para algunos tipos. [E]
+2. ~~**Un ticket cancelado se puede mover de estado**~~ — **corregido en la Fase 12a** (reabrir con motivo). (Original:), es decir, reabrir sin rastro de la decisión. [E]
+3. ~~**`internal_technician_id` recibe un id de usuario**~~ — **Fase 30**: la API expone `technician_user_id` (y acepta el alias); el campo viejo se conserva. (Original:): el nombre induce a error (y confundió esta propia prueba). [E][C]
 4. **El subtipo "installation" es a la vez tipo y subtipo** y los subtipos de sistema conservan significado en el código (ya anotado en la Fase 7b). [C]
-5. **Instalaciones sin compuerta de cierre**: ni informe, ni cotización, ni evidencia; el SLA (7 días) no bloquea nada. [E]
+5. ~~**Instalaciones sin compuerta de cierre**~~ — **Fase 30**: una instalación de venta previa exige informe completado y al menos una evidencia (foto o archivo) para resolverse o cerrarse. (Original:): ni informe, ni cotización, ni evidencia; el SLA (7 días) no bloquea nada. [E]
 6. **Especialidades técnicas fijas** (`general`, `warranty`) en el código, no un catálogo por empresa. [C]
 7. **Sin ejercitar**: nada pendiente aquí (el informe completo y el móvil están en [servicios-informe-inspeccion.md](servicios-informe-inspeccion.md); la hoja de reclamo y los reportes están en [servicios-reclamo-reportes.md](servicios-reclamo-reportes.md)). [C]

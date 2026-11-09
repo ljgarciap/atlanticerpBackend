@@ -168,13 +168,13 @@ class ServiciosPermissionMatrixTest extends FeatureTestCase
         }
     }
 
-    // ── servicios.technicians.commission.view_own — tecnico/garantias/management, NO lider ──
+    // ── servicios.technicians.commission.view_own — tecnico/garantias/management y, desde la Fase 30, el lider ──
 
-    public function test_comision_tecnico_lider_no_puede_tecnico_si(): void
+    public function test_comision_tecnico_lider_y_tecnico_si(): void
     {
         $this->withHeaders($this->authHeaders($this->tokenFor(self::LIDER_SERVICIOS, 'lider_servicios')))
             ->getJson('/api/servicios/reportes/comision-tecnico')
-            ->assertStatus(403);
+            ->assertStatus(200);
 
         $status = $this->withHeaders($this->authHeaders($this->tokenFor(self::TECNICO, 'tecnico')))
             ->getJson('/api/servicios/reportes/comision-tecnico')

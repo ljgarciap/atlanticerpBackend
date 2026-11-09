@@ -266,14 +266,15 @@ class ToolsBatch13Part1Test extends FeatureTestCase
             ->assertStatus(403);
     }
 
-    public function test_management_no_puede_cambiar_estado(): void
+    /** Fase 30 (decisión del grupo 4) — Gerencia también corrige herramientas (`servicios.assets.manage`). */
+    public function test_management_puede_cambiar_estado(): void
     {
         $tool = $this->makeTool(['codigo_unico' => 'COD-HER-406']);
         $token = $this->loginAs(self::MANAGEMENT, self::MANAGEMENT, 'management');
 
         $this->withHeaders($this->authHeaders($token))
-            ->patchJson("/api/servicios/tools/{$tool->id}/estado", ['estado' => Tool::ESTADO_DAMAGED])
-            ->assertStatus(403);
+            ->patchJson("/api/servicios/tools/{$tool->id}/estado", ['estado' => Tool::ESTADO_WORN])
+            ->assertStatus(200);
     }
 
     // ── REQ-270 — Reasignación de "Asignado a" ────────────────────────────────────────────────
@@ -373,7 +374,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         $requestId = $create->json('id');
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/servicios/tools/purchase-requests/{$requestId}/recibir")
+            ->postJson("/api/servicios/tools/purchase-requests/{$requestId}/recibir", ['referencia' => 'FAC-0001'])
             ->assertStatus(200);
 
         $this->assertSame('recibida', $response->json('estado'));
@@ -409,11 +410,11 @@ class ToolsBatch13Part1Test extends FeatureTestCase
         $requestId = $create->json('id');
 
         $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/servicios/tools/purchase-requests/{$requestId}/recibir")
+            ->postJson("/api/servicios/tools/purchase-requests/{$requestId}/recibir", ['referencia' => 'FAC-0001'])
             ->assertStatus(200);
 
         $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/servicios/tools/purchase-requests/{$requestId}/recibir")
+            ->postJson("/api/servicios/tools/purchase-requests/{$requestId}/recibir", ['referencia' => 'FAC-0001'])
             ->assertStatus(409);
     }
 
@@ -475,7 +476,7 @@ class ToolsBatch13Part1Test extends FeatureTestCase
             ->assertStatus(201);
 
         $response = $this->withHeaders($this->authHeaders($token))
-            ->postJson("/api/servicios/tools/purchase-requests/{$create->json('id')}/recibir")
+            ->postJson("/api/servicios/tools/purchase-requests/{$create->json('id')}/recibir", ['referencia' => 'FAC-0001'])
             ->assertStatus(200);
 
         $nuevoCodigo = $response->json('tools.0.codigo_unico');

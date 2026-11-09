@@ -26,8 +26,10 @@ class SaveClaimSheetRequest extends FormRequest
         return [
             'descripcion_problema' => ['nullable', 'string'],
             'fecha_reclamo'        => ['nullable', 'date'],
-            'diagnostico'          => ['required', 'string', Rule::in(ClaimSheet::DIAGNOSTICOS)],
-            'firma_responsable'    => ['required', 'string', 'max:255'],
+            // Fase 30: con `borrador` el diagnóstico y la firma son opcionales; el borrador no completa la hoja.
+            'borrador'             => ['nullable', 'boolean'],
+            'diagnostico'          => [$this->boolean('borrador') ? 'nullable' : 'required', 'string', Rule::in(ClaimSheet::DIAGNOSTICOS)],
+            'firma_responsable'    => [$this->boolean('borrador') ? 'nullable' : 'required', 'string', 'max:255'],
         ];
     }
 }

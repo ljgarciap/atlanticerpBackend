@@ -11,6 +11,8 @@ use App\Modules\Compras\Models\PurchaseOrder;
 use App\Modules\Compras\Models\PurchaseOrderLine;
 use App\Modules\Compras\Services\PurchaseApprovalRules;
 use App\Modules\Servicios\Models\InsumoPurchaseRequest;
+use App\Modules\Bodega\Models\InventoryMovement;
+use App\Modules\Bodega\Services\KardexService;
 use App\Modules\Servicios\Models\InsumoSetting;
 use App\Modules\VentasDiseno\Models\CatalogProduct;
 use Illuminate\Support\Collection;
@@ -46,7 +48,7 @@ final class InsumoService
         $reservaId = $this->reservaWarehouseId();
 
         /** @var \Illuminate\Database\Eloquent\Collection<int, InsumoSetting> $settings */
-        $settings = InsumoSetting::query()->with('catalogProduct')->orderBy('id')->get();
+        $settings = InsumoSetting::query()->where('is_active', true)->with('catalogProduct')->orderBy('id')->get();
         if ($settings->isEmpty()) {
             return [];
         }
@@ -89,27 +91,58 @@ final class InsumoService
      *
      * @throws \InvalidArgumentException el producto ya está trackeado, o no tiene proveedor asignado
      */
-    public function addInsumo(int $catalogProductId, int $minimo, int $cantidadInicial, User $user): array
+    public function addInsumo(int $catalogProductId, int $minimo, int $cantidadInicial, User $user, int $existenciaInicial = 0): array
     {
-        return DB::transaction(function () use ($catalogProductId, $minimo, $cantidadInicial, $user): array {
-            $yaExiste = InsumoSetting::where('catalog_product_id', $catalogProductId)->lockForUpdate()->exists();
-            if ($yaExiste) {
+        return DB::transaction(function () use ($catalogProductId, $minimo, $cantidadInicial, $user, $existenciaInicial): array {
+            $existente = InsumoSetting::where('catalog_product_id', $catalogProductId)->lockForUpdate()->first();
+            if ($existente !== null && $existente->is_active) {
                 throw new \InvalidArgumentException('Este producto ya está en la lista de Insumos de Servicios.');
             }
 
-            $setting = InsumoSetting::create([
-                'catalog_product_id' => $catalogProductId,
-                'minimo' => $minimo,
-            ]);
+            // Fase 30 — un insumo dado de baja se reactiva en vez de duplicarse.
+            if ($existente !== null) {
+                $existente->update(['minimo' => $minimo, 'is_active' => true]);
+                $setting = $existente;
+            } else {
+                $setting = InsumoSetting::create(['catalog_product_id' => $catalogProductId, 'minimo' => $minimo]);
+            }
 
-            $this->requestPurchase($setting, $cantidadInicial, $user);
+            // Fase 30 — la existencia que ya se tiene entra a la Reserva como Entrada, no como solicitud.
+            if ($existenciaInicial > 0) {
+                app(KardexService::class)->registrar(
+                    catalogProductId: $catalogProductId,
+                    warehouseId: $this->reservaWarehouseId(),
+                    tipo: InventoryMovement::TIPO_ENTRADA,
+                    cantidad: $existenciaInicial,
+                    referenciaTexto: 'Existencia inicial — alta de insumo de Servicios',
+                    referenciaEntidadTipo: 'SERVICIOS_INSUMO',
+                    referenciaEntidadId: $setting->id,
+                    realizadoPor: $user->id,
+                );
+            }
 
-            return $this->formatSetting(
-                $setting->fresh(['catalogProduct']) ?? $setting,
-                0,
-                InsumoPurchaseRequest::ESTADO_PENDIENTE,
-            );
+            $estadoSolicitud = null;
+            if ($cantidadInicial > 0) {
+                $this->requestPurchase($setting, $cantidadInicial, $user);
+                $estadoSolicitud = InsumoPurchaseRequest::ESTADO_PENDIENTE;
+            }
+
+            return $this->formatSetting($setting->fresh(['catalogProduct']) ?? $setting, $existenciaInicial, $estadoSolicitud);
         });
+    }
+
+    /** Fase 30 — corrige el mínimo de un insumo. */
+    public function updateMinimo(InsumoSetting $setting, int $minimo): InsumoSetting
+    {
+        $setting->update(['minimo' => $minimo]);
+
+        return $setting->refresh();
+    }
+
+    /** Fase 30 — baja: se desactiva (tiene historial en el Kardex y en las solicitudes), nunca se borra. */
+    public function deactivate(InsumoSetting $setting): void
+    {
+        $setting->update(['is_active' => false]);
     }
 
     /**

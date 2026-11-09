@@ -24,6 +24,17 @@ class ScheduleTicketRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Fase 30 — `technician_user_id` es el nombre claro de lo que el campo guarda (un id de usuario);
+     * `internal_technician_id` sigue aceptándose como alias.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('technician_user_id') && ! $this->has('internal_technician_id')) {
+            $this->merge(['internal_technician_id' => $this->input('technician_user_id')]);
+        }
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {

@@ -155,7 +155,7 @@ final class InspectionReportController extends Controller
         $validated = $request->validated();
 
         try {
-            $report = $this->reports->save($ticket, $validated, $user);
+            $report = $this->reports->save($ticket, $validated, $user, null, $request->boolean('borrador'));
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -354,6 +354,63 @@ final class InspectionReportController extends Controller
             'categoria' => $photo->categoria,
             'url'       => $this->reports->presignedPhotoUrl($photo),
         ], 201);
+    }
+
+    /**
+     * Fase 30 — DELETE /api/servicios/tickets/{ticketId}/inspection-report/photos/{photoId}.
+     * Con `POST` + `file` en `/photos/{photoId}/replace` la foto se reemplaza. Ambas se bloquean con el informe firmado.
+     */
+    public function destroyPhoto(Request $request, int $ticketId, int $photoId): JsonResponse
+    {
+        return $this->mutatePhoto($request, $ticketId, $photoId, false);
+    }
+
+    public function replacePhoto(Request $request, int $ticketId, int $photoId): JsonResponse
+    {
+        return $this->mutatePhoto($request, $ticketId, $photoId, true);
+    }
+
+    private function mutatePhoto(Request $request, int $ticketId, int $photoId, bool $replace): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $ticket = Ticket::find($ticketId);
+        $report = $ticket !== null ? $this->reports->findByTicket($ticket) : null;
+        $photo  = $report !== null ? InspectionReportPhoto::where('inspection_report_id', $report->id)->find($photoId) : null;
+        if ($ticket === null || $report === null || $photo === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        try {
+            $this->reports->assertCanEdit($ticket, $user);
+        } catch (InspectionReportAccessDeniedException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        }
+
+        if ($report->firma_cliente_imagen !== null) {
+            return response()->json(['message' => 'Este informe ya fue firmado por el cliente y no puede modificarse.'], 409);
+        }
+
+        if (! $replace) {
+            $this->reports->deletePhoto($photo);
+
+            return response()->json(['message' => 'Foto eliminada.']);
+        }
+
+        $validated = $request->validate(['file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,heic', 'max:15360']]);
+
+        try {
+            /** @var \Illuminate\Http\UploadedFile $file */
+            $file = $validated['file'];
+            $new  = $this->reports->replacePhoto($photo, $file, $user->id);
+        } catch (CircuitOpenException) {
+            return response()->json(['message' => 'Storage service temporarily unavailable. Please try again in a few minutes.'], 503);
+        }
+
+        return response()->json(['id' => $new->id, 'categoria' => $new->categoria, 'url' => $this->reports->presignedPhotoUrl($new)]);
     }
 
     /**
