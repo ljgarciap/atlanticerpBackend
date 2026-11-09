@@ -55,8 +55,11 @@ final class ProviderController extends Controller
             return response()->json(['message' => trans('auth.unauthenticated')], 401);
         }
 
+        // Fase 29b — los desactivados no se listan salvo que se pidan (`incluir_inactivas=1`); nunca se borran.
         /** @var list<Provider> $providers */
-        $providers = Provider::where('is_active', true)->orderBy('name')->get()->all();
+        $providers = Provider::query()
+            ->when(! $request->boolean('incluir_inactivas'), fn ($q) => $q->where('is_active', true))
+            ->orderBy('name')->get()->all();
 
         $search = trim((string) $request->query('search', ''));
         $fuzzy = false;
@@ -175,6 +178,16 @@ final class ProviderController extends Controller
         }
 
         $data = $request->validated();
+        // Fase 29b — control de versión (opcional): evita que dos personas se pisen. Sin `version` el comportamiento no cambia.
+        $version = $data['version'] ?? null;
+        unset($data['version']);
+        if (is_string($version) && $version !== '' && $version !== $this->version($provider)) {
+            return response()->json([
+                'message' => 'Este proveedor cambió mientras lo editabas. Recarga para ver los cambios.',
+                'code' => 'provider_changed',
+                'current_version' => $this->version($provider),
+            ], 409);
+        }
         // REQ-141, SCRUM-189: `origin` no es input directo, se recalcula siempre a partir de la
         // categoría resultante. `array_key_exists` (no `??`) porque un `category: null` explícito
         // (vaciar el campo) es una categoría real distinta de "no la mandé" — `??` los confundiría
@@ -183,6 +196,7 @@ final class ProviderController extends Controller
             array_key_exists('category', $data) ? $data['category'] : $provider->category,
         );
         $provider->update($data);
+        $provider->refresh();
 
         return response()->json($this->format($provider, detailed: true));
     }
@@ -330,6 +344,11 @@ final class ProviderController extends Controller
         ];
     }
 
+    private function version(Provider $provider): string
+    {
+        return $provider->updated_at?->format('Y-m-d\TH:i:s.u') ?? '';
+    }
+
     /** @return array<string, mixed> */
     private function format(Provider $provider, bool $detailed = false): array
     {
@@ -342,6 +361,7 @@ final class ProviderController extends Controller
             'origin' => $provider->origin,
             'currency' => $provider->currency,
             'is_active' => $provider->is_active,
+            'version' => $this->version($provider),
             // SCRUM-186 (2026-08-06, hallazgo Gerencia Test): columna "Contacto" de la tabla
             // principal — se expone acá (no solo en el detalle) para no requerir un fetch extra
             // por fila.

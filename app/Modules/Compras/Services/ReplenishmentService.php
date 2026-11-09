@@ -116,11 +116,16 @@ final class ReplenishmentService
             }
 
             $orderRows = array_values($data['orders']);
+            $terminos = $product->principalPurchaseTerms();
             $groups[$providerKey]['products'][] = [
                 'catalog_product_id' => $productId,
                 'reference'          => (string) $product->reference,
                 'name'               => (string) ($product->name ?? $product->description ?? ''),
                 'faltante'           => $data['faltante'],
+                // Fase 29b — lo que conviene comprar según la cantidad mínima y el múltiplo del proveedor principal (opcionales).
+                'sugerida'           => $product->cantidadSugerida(max(0, $data['faltante'] - (int) ($enCamino[$productId] ?? 0))),
+                'min_order_quantity' => $terminos['min'],
+                'order_multiple'     => $terminos['multiple'],
                 'stock'              => (int) ($product->stock_quantity ?? 0),
                 // Mismo costo unitario que muestra Inventario (costo + importación + flete + manejo + otros), para precargar la línea de la orden.
                 'unit_cost'          => $product->costTotal(),

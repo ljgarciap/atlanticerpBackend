@@ -35,3 +35,7 @@ Cuentas usadas: Líder de Compras, Líder de Operaciones, Vendedor, Líder de Bo
 
 ## Candidatos pendientes
 - Sin ejercitar: la validación con IA de la confirmación (depende de un proveedor de IA) y el filtro por proyecto con líneas asignadas.
+
+## Fase 29b
+- **Reemplazo de un documento en una sola operación**: `POST orders/{id}/documents/{documentId}/replace` (`compras.edit`, archivo + motivo ≥ 10) sube el nuevo en la misma categoría y retira el anterior con su motivo, ambos o ninguno; la confirmación del proveedor no se reemplaza si la orden ya tiene pagos. [E]
+- **Historial de envío más amplio**: además del contenedor y el transportista registra llegada estimada y real, tipo de envío, quién paga, costo y modalidad (el costo se oculta a quien no ve montos). [E]

@@ -23,6 +23,7 @@ use App\Modules\VentasDiseno\Models\CatalogProductFamily;
 use App\Modules\VentasDiseno\Services\CatalogService;
 use App\Shared\Http\Pagination;
 use App\Shared\Http\QueryParams;
+use App\Shared\Services\AuditService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * SCRUM-231→244 (REQ-168→181) — Inventario. Reusa `CatalogProduct` (VentasDiseno) en vez de una
@@ -593,7 +595,9 @@ final class InventoryController extends Controller
         }
         [, $restricted, $canManage] = $access;
 
-        $families = CatalogProductFamily::where('is_active', true)
+        // Fase 29b — las desactivadas solo se listan con `incluir_inactivas=1` (para poder reactivarlas).
+        $families = CatalogProductFamily::query()
+            ->when(! $request->boolean('incluir_inactivas'), fn ($q) => $q->where('is_active', true))
             ->with(['products' => fn ($q) => $q->where('is_active', true)])
             ->orderBy('name')
             ->get();
@@ -602,6 +606,9 @@ final class InventoryController extends Controller
             'id' => $f->id,
             'name' => $f->name,
             'description' => $f->description,
+            'is_active' => $f->is_active,
+            'currency' => $f->currency,
+            'modality' => $f->modality,
             'product_count' => $f->products->count(),
             'total_value' => $restricted ? null : $f->products->sum(
                 fn (CatalogProduct $p) => $p->costTotal() * (int) ($p->stock_quantity ?? 0)
@@ -671,10 +678,14 @@ final class InventoryController extends Controller
             'id' => $family->id,
             'name' => $family->name,
             'description' => $family->description,
+            'currency' => $family->currency,
+            'modality' => $family->modality,
             'restricted' => $restricted,
             'can_manage' => $canManage,
             'total_value' => $totalValue,
             'product_count' => $products->count(),
+            // Fase 29b — existencias de toda la familia sumadas por almacén (misma fuente que el desglose de cada producto).
+            'stock_por_almacen' => $this->stockPorAlmacen($warehousesMap),
             'products' => $products->map(fn (CatalogProduct $p) => $this->format(
                 $p,
                 $porServirMap[$p->id] ?? 0,
@@ -763,15 +774,18 @@ final class InventoryController extends Controller
                     // Fase 14e: nace sin aprobación y `applyTo()` la pasa a «Por aprobar» solo si las reglas de la empresa la requieren.
                     'status' => PurchaseOrder::STATUS_PENDIENTE_LIQUIDAR,
                     'status_changed_at' => now(),
-                    'modality' => PurchaseOrder::MODALITY_DIRECTO,
+                    // Fase 29b — moneda y modalidad elegidas en la familia (por defecto USD / directo, como antes).
+                    'modality' => $family->modality,
                     'requires_primary_approval' => false,
-                    'currency' => 'USD',
+                    'currency' => $family->currency,
                     'created_by' => $user->id,
                 ]);
 
                 $totalAmount = 0.0;
                 foreach ($providerProducts as $product) {
-                    $quantity = $needs[$product->id];
+                    // Fase 29b — respeta la cantidad mínima y el múltiplo del proveedor (sin ellos, compra lo que falta).
+                    $product->loadMissing('providers');
+                    $quantity = $product->cantidadSugerida($needs[$product->id]);
                     $unitCost = $product->costTotal();
                     $subtotal = $unitCost * $quantity;
                     $totalAmount += $subtotal;
@@ -792,6 +806,82 @@ final class InventoryController extends Controller
 
             return response()->json(['order_ids' => $created, 'omitidos' => $omitidos], 201);
         });
+    }
+
+    /**
+     * Fase 29b (grupo 6) — editar, renombrar y desactivar una familia, y elegir su moneda de compra.
+     * Una familia nunca se borra (puede tener historial): se desactiva. Solo se aplica lo enviado.
+     */
+    public function updateFamily(Request $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $family = CatalogProductFamily::find($id);
+        if ($family === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $data = $request->validate([
+            'name'        => ['sometimes', 'string', 'max:255', function (string $attr, mixed $value, \Closure $fail) use ($id): void {
+                $existe = is_string($value) && CatalogProductFamily::query()
+                    ->whereRaw('lower(name) = ?', [mb_strtolower(trim($value))])->where('id', '!=', $id)->exists();
+                if (trim((string) $value) === '') {
+                    $fail('El nombre de la familia es obligatorio.');
+                } elseif ($existe) {
+                    $fail("Ya existe una familia con el nombre '{$value}'.");
+                }
+            }],
+            'description' => ['nullable', 'string'],
+            'currency'    => ['sometimes', 'string', 'size:3', 'alpha'],
+            // La modalidad de compra hoy es solo «directa» (Fase 14f): no se ofrece otra; el valor queda guardado en la familia.
+            'modality'    => ['sometimes', 'string', Rule::in([PurchaseOrder::MODALITY_DIRECTO])],
+            'is_active'   => ['sometimes', 'boolean'],
+        ]);
+        if (isset($data['name'])) {
+            $data['name'] = trim($data['name']);
+        }
+        if (isset($data['currency'])) {
+            $data['currency'] = strtoupper($data['currency']);
+        }
+
+        $antes = $family->only(array_keys($data));
+        $family->update($data);
+        app(AuditService::class)->log(
+            action:     'compras.family.updated',
+            entityType: 'catalog_product_family',
+            entityId:   $family->id,
+            oldValues:  $antes,
+            newValues:  $family->only(array_keys($data)),
+        );
+
+        return response()->json([
+            'id' => $family->id,
+            'name' => $family->name,
+            'description' => $family->description,
+            'is_active' => $family->is_active,
+            'currency' => $family->currency,
+            'modality' => $family->modality,
+        ]);
+    }
+
+    /**
+     * @param  array<int, list<array{warehouse_id: int, warehouse_name: string|null, quantity: int}>>  $warehousesMap
+     * @return list<array{warehouse_id: int, warehouse_name: string|null, quantity: int}>
+     */
+    private function stockPorAlmacen(array $warehousesMap): array
+    {
+        $totales = [];
+        foreach ($warehousesMap as $filas) {
+            foreach ($filas as $fila) {
+                $totales[$fila['warehouse_id']] ??= ['warehouse_id' => $fila['warehouse_id'], 'warehouse_name' => $fila['warehouse_name'], 'quantity' => 0];
+                $totales[$fila['warehouse_id']]['quantity'] += $fila['quantity'];
+            }
+        }
+
+        return array_values($totales);
     }
 
     /**

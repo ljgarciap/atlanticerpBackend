@@ -35,9 +35,9 @@ Con una orden de compra del producto al proveedor y su ingreso confirmado, el fa
 - **Dos conceptos de contacto**: el contacto principal (nombre, teléfono, correo de la agencia) NO figura en la lista `contacts`; esa solo trae los contactos que se agregan aparte [E]. Se pueden agregar, editar y quitar; **no se quita el único contacto que queda en la lista** (422) [E].
 
 ## Candidatos a cambio o mejora
-1. **El nombre de agencia se puede repetir** (los proveedores tienen nombre único y las agencias no). [E]
-2. **El contacto principal de la agencia no se puede editar y no cuenta como contacto de la lista**: hay dos conceptos de «contacto» y, si el principal queda desactualizado, no hay cómo corregirlo. [E]
-3. **La edición de proveedor exige reenviar todos los campos** (`PUT` completo), con lo que dos personas editando pueden pisarse entre sí. [E]
-4. **Los faltantes del mismo producto se acumulan en una sola fila**, pero la reposición no sugiere cantidad mínima ni redondeo a la presentación del proveedor: Compras compra «exactamente lo que falta». [C]
+1. ~~El nombre de agencia se puede repetir~~ — **corregido en la Fase 29b**: único sin distinguir mayúsculas (422). [E]
+2. ~~El contacto principal de la agencia no se puede editar~~ — **corregido en la Fase 29b**: `PUT liquidation-agencies/{id}` acepta nombre, contacto principal, teléfono y correo (el principal sigue sin ser parte de la lista `contacts`). [E]
+3. ~~La edición de proveedor exige reenviar todos los campos~~ — **corregido en la Fase 29b**: `PATCH providers/{id}` edita solo lo enviado y la versión (`version`, opcional) devuelve 409 si otra persona cambió el proveedor; el `PUT` completo se conserva. [E]
+4. ~~La reposición no sugiere cantidad mínima ni redondeo~~ — **corregido en la Fase 29b**: mínimo y múltiplo opcionales por proveedor y producto (`PUT replenishment/products/{id}/purchase-terms`, `compras.edit`); la fila trae `sugerida` y «Generar compra» de una familia los respeta. Vacío = sin restricción. [C]
 5. **Los productos del demo no traen proveedor** (salvo el primero): el primer pendiente de cada producto obliga a elegirlo a mano; no hay alta masiva de proveedor por familia. [E]
-6. **No hay desactivación ni baja de proveedores ni de agencias**: los de prueba se acumulan. [C]
+6. ~~No hay desactivación de proveedores ni de agencias~~ — **corregido en la Fase 29b**: se desactivan (`is_active`), no se listan salvo `incluir_inactivas=1` y una agencia desactivada no se ofrece para liquidar; nunca se borran. [C]

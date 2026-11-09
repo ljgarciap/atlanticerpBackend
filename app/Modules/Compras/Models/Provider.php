@@ -45,6 +45,7 @@ use Illuminate\Support\Collection;
  * @property string|null $bank_image_mime_type
  * @property bool $is_active
  * @property Carbon $created_at
+ * @property Carbon|null $updated_at
  */
 class Provider extends Model
 {

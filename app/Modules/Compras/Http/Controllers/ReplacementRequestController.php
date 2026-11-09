@@ -385,6 +385,13 @@ final class ReplacementRequestController extends Controller
             'sales_project_name'     => $r->salesProject?->name,
             'margin_percent'         => $r->margin_percent,
             'status'                 => $r->status,
+            // Fase 29b — «rechazada» es la que permite comprar el original: `decision` lo dice sin
+            // ambigüedad (sustituir | mantener_original); `status` no cambia.
+            'decision'               => match ($r->status) {
+                ReplacementRequest::STATUS_APROBADA => 'sustituir',
+                ReplacementRequest::STATUS_RECHAZADA => 'mantener_original',
+                default => null,
+            },
             'requested_by_name'      => $this->requesterName($r),
             'generated_order_id'     => $r->generated_order_id,
             'created_at'             => $r->created_at->toIso8601String(),

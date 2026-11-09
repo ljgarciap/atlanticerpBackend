@@ -49,6 +49,10 @@ final class LiquidationAgencyController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $query = LiquidationAgency::query()->orderBy('name');
+        // Fase 29b — las desactivadas no se ofrecen al liquidar (el historial de sus órdenes se conserva).
+        if (! $request->boolean('incluir_inactivas')) {
+            $query->where('is_active', true);
+        }
         if ($search !== '') {
             $query->where('name', 'ilike', "%{$search}%");
         }
@@ -66,7 +70,7 @@ final class LiquidationAgencyController extends Controller
         }
 
         $validated = $request->validate([
-            'name'         => ['required', 'string', 'max:255'],
+            'name'         => ['required', 'string', 'max:255', $this->uniqueName(null)],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'phone'        => ['nullable', 'string', 'max:50', 'regex:/^\+?[0-9\s-]{7,20}$/'],
             'email'        => ['nullable', 'email', 'max:255'],
@@ -95,11 +99,20 @@ final class LiquidationAgencyController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
+        // Fase 29b — además de la situación de pago (que sigue exigiéndose junta), se corrigen el nombre y el contacto
+        // principal, y se activa/desactiva. Quien solo corrige datos o solo activa no tiene que reenviar los montos.
+        $toca = $request->hasAny(['pending_payment_amount', 'paid_amount', 'last_payment_date', 'next_payment_date']);
         $validated = $request->validate([
-            'pending_payment_amount' => ['required', 'numeric', 'min:0'],
-            'paid_amount'            => ['required', 'numeric', 'min:0'],
+            'pending_payment_amount' => [$toca ? 'required' : 'sometimes', 'numeric', 'min:0'],
+            'paid_amount'            => [$toca ? 'required' : 'sometimes', 'numeric', 'min:0'],
             'last_payment_date'      => ['nullable', 'date'],
             'next_payment_date'      => ['nullable', 'date'],
+            'name'                   => ['sometimes', 'string', 'max:255', $this->uniqueName($agency->id)],
+            'contact_name'           => ['nullable', 'string', 'max:255'],
+            'phone'                  => ['nullable', 'string', 'max:50', 'regex:/^\+?[0-9\s-]{7,20}$/'],
+            'email'                  => ['nullable', 'email', 'max:255'],
+            'notes'                  => ['nullable', 'string'],
+            'is_active'              => ['sometimes', 'boolean'],
         ]);
 
         $agency->update($validated);
@@ -258,6 +271,23 @@ final class LiquidationAgencyController extends Controller
         return response()->json(null, 204);
     }
 
+    /** Fase 29b — el nombre de una agencia es único (sin distinguir mayúsculas), igual que el de un proveedor. */
+    private function uniqueName(?int $ignoreId): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($ignoreId): void {
+            if (! is_string($value) || trim($value) === '') {
+                return;
+            }
+            $existe = LiquidationAgency::query()
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($value))])
+                ->when($ignoreId !== null, fn ($q) => $q->where('id', '!=', $ignoreId))
+                ->exists();
+            if ($existe) {
+                $fail("Ya existe una agencia con el nombre '{$value}'.");
+            }
+        };
+    }
+
     /** @return array<string, mixed> */
     private function formatContact(LiquidationAgencyContact $contact): array
     {
@@ -279,6 +309,7 @@ final class LiquidationAgencyController extends Controller
             'phone'                  => $agency->phone,
             'email'                  => $agency->email,
             'notes'                  => $agency->notes,
+            'is_active'              => $agency->is_active,
             'pending_payment_amount' => (float) $agency->pending_payment_amount,
             'paid_amount'            => (float) $agency->paid_amount,
             'last_payment_date'      => $agency->last_payment_date?->format('Y-m-d'),

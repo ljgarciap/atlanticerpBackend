@@ -558,7 +558,7 @@ final class PurchaseOrderController extends Controller
         }
 
         $validated = $request->validate([
-            'agency_id' => ['required', 'integer', Rule::exists('liquidation_agencies', 'id')],
+            'agency_id' => ['required', 'integer', Rule::exists('liquidation_agencies', 'id')->where(fn ($q) => $q->where('is_active', true))],
         ]);
 
         /** @var LiquidationAgency $agency */
@@ -998,7 +998,11 @@ final class PurchaseOrderController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        $campos = ['container_number', 'carrier'];
+        // Fase 29b — además del contenedor y el transportista: llegada estimada y real, tipo de envío, quién paga, costo y modalidad.
+        $campos = ['container_number', 'carrier', 'estimated_arrival_date', 'actual_arrival_date', 'shipping_type', 'who_pays_shipping', 'shipping_cost', 'modality'];
+        if (OrderMoneyVisibility::hiddenFor($request)) {
+            $campos = array_values(array_diff($campos, ['shipping_cost']));
+        }
         $logs = \App\Modules\Auth\Models\AuditLog::with('user')
             ->where('entity_type', 'purchase_order')
             ->where('entity_id', (string) $id)
@@ -1159,6 +1163,11 @@ final class PurchaseOrderController extends Controller
             // Diseño) — ver `PurchaseOrder::ORIGIN_SERVICIOS`, único origen automático hoy.
             'origin_module' => $order->origin_module,
             'status' => $order->status,
+            // Fase 29b — una orden aprobada seguía mostrando «por_aprobar» hasta el siguiente avance:
+            // `status_visible` dice «aprobada» en ese tramo; `status` no cambia (los filtros lo usan).
+            'status_visible' => $order->status === PurchaseOrder::STATUS_POR_APROBAR && $order->approved_by !== null
+                ? 'aprobada'
+                : $order->status,
             'next_status' => $order->nextStatus(),
             'is_critical' => $order->isCritical(),
             'modality' => $order->modality,

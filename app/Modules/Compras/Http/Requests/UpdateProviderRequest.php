@@ -31,8 +31,13 @@ class UpdateProviderRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        // Fase 29b — PATCH edita solo lo enviado; PUT sigue exigiendo el formulario completo.
+        $presente = $this->isMethod('PATCH') ? 'sometimes' : 'required';
+
         return [
-            'name' => ['required', 'string', 'max:255', $this->uniqueNameRule()],
+            // Fase 29b — control de versión: si se envía y el proveedor cambió mientras tanto, el controlador responde 409.
+            'version' => ['nullable', 'string', 'max:40'],
+            'name' => [$presente, 'string', 'max:255', $this->uniqueNameRule()],
             'category' => ['nullable', 'string', Rule::in(CatalogService::keys('provider_category'))],
             // Fase 6c: solo un proveedor LOCAL usa las reglas de identificación del país de la empresa; uno del exterior trae la suya.
             'tax_id' => ['nullable', 'string', 'max:100', $this->uniqueTaxIdRule(), new ValidTaxId('tax_id_dv', fn (array $d): bool => Provider::categoryValidatesTaxId($d['category'] ?? $this->categoriaActual()))],

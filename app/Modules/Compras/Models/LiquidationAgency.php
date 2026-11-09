@@ -26,13 +26,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property numeric-string $paid_amount
  * @property \Illuminate\Support\Carbon|null $last_payment_date
  * @property \Illuminate\Support\Carbon|null $next_payment_date
+ * @property bool $is_active
  */
 class LiquidationAgency extends Model
 {
     /** @var list<string> */
     protected $fillable = [
         'name', 'contact_name', 'phone', 'email', 'notes',
-        'pending_payment_amount', 'paid_amount', 'last_payment_date', 'next_payment_date',
+        'pending_payment_amount', 'paid_amount', 'last_payment_date', 'next_payment_date', 'is_active',
     ];
 
     /** @var array<string, string> */
@@ -41,6 +42,7 @@ class LiquidationAgency extends Model
         'paid_amount'            => 'decimal:2',
         'last_payment_date'      => 'date:Y-m-d',
         'next_payment_date'      => 'date:Y-m-d',
+        'is_active'              => 'boolean',
     ];
 
     public function getTable(): string
