@@ -147,7 +147,7 @@ final class EvaluateNotificationRulesListener
         // (`NotificationMail::absoluteCtaUrl`). Sin reglas en prod hoy; si se retoma la función, el detalle por id es un trabajo propio.
         $ctaUrl = $project !== null ? '/crm/projects' : null;
 
-        $body = $project !== null ? "{$rule->name} — {$project->nombre}" : $rule->name;
+        $body = $project !== null ? "{$rule->name} — {$project->nombre}" : "{$rule->name} — {$rule->trigger_model} #{$model->getKey()}";
 
         return array_filter([
             'subject' => $rule->name,

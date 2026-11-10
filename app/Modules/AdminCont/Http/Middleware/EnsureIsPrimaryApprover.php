@@ -27,6 +27,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureIsPrimaryApprover
 {
+    public const PERFIL_EMPRESA = 'perfil_empresa';
+
     /** @param string|null $process Fase 28: proceso con aprobadores propios (`primary_approver_only:caja_chica`); sin él, el aprobador primario global. */
     public function handle(Request $request, Closure $next, ?string $process = null): Response
     {
@@ -46,7 +48,12 @@ class EnsureIsPrimaryApprover
             return $next($request);
         }
 
-        $esAprobador = $process !== null
+        // Fase 31b — el perfil de empresa también lo ve y edita Gerencia (rol), además del aprobador primario y sus suplentes.
+        if ($process === self::PERFIL_EMPRESA && in_array('platform.management', $permissions, true)) {
+            return $next($request);
+        }
+
+        $esAprobador = $process !== null && $process !== self::PERFIL_EMPRESA
             ? ProcessApprovers::isApprover((int) $payload['sub'], $process)
             : PrimaryApprovers::isApprover((int) $payload['sub'], AdminContFiscalSettings::current()->primary_approver_user_id);
 

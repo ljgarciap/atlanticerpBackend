@@ -28,21 +28,25 @@ class PurchaseApprovalRuleController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $rule = PurchaseApprovalRule::create($this->validated($request));
+        $data = $this->validated($request);
+        $this->rejectOverlap($data, null);
+        $rule = PurchaseApprovalRule::create($data);
         app(PurchaseApprovalRules::class)->forget();
 
-        return response()->json($this->present($rule) + ['warnings' => $this->overlapWarnings($rule)], 201);
+        return response()->json($this->present($rule) + ['warnings' => []], 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
     {
         $rule = PurchaseApprovalRule::findOrFail($id);
-        $rule->update($this->validated($request));
+        $data = $this->validated($request);
+        $this->rejectOverlap($data, $rule->id);
+        $rule->update($data);
         app(PurchaseApprovalRules::class)->forget();
 
         $rule->refresh();
 
-        return response()->json($this->present($rule) + ['warnings' => $this->overlapWarnings($rule)]);
+        return response()->json($this->present($rule) + ['warnings' => []]);
     }
 
     public function destroy(int $id): JsonResponse
@@ -122,35 +126,30 @@ class PurchaseApprovalRuleController extends Controller
     }
 
     /**
-     * Fase 20d — avisos (no bloquean) de una regla activa que se solapa con otra regla activa del MISMO alcance (igual tipo de envío e igual
-     * pagador) en un rango de monto: la de menor orden gana y la otra queda sin efecto en esa franja.
+     * Fase 31b — impide (422) guardar una regla activa que se solape con otra regla activa del MISMO alcance (igual tipo de envío e igual
+     * pagador) en un rango de monto; antes (Fase 20d) solo se avisaba. Una regla inactiva nunca choca.
      *
-     * @return list<array{rule_id: int, name: string, message: string}>
+     * @param array<string, mixed> $data
      */
-    private function overlapWarnings(PurchaseApprovalRule $rule): array
+    private function rejectOverlap(array $data, ?int $ignoreId): void
     {
-        if (! $rule->is_active) {
-            return [];
+        if (($data['is_active'] ?? false) !== true) {
+            return;
         }
-        $lo = $rule->min_amount === null ? 0.0 : (float) $rule->min_amount;
-        $hi = $rule->max_amount === null ? INF : (float) $rule->max_amount;
+        $lo = ($data['min_amount'] ?? null) === null ? 0.0 : (float) $data['min_amount'];
+        $hi = ($data['max_amount'] ?? null) === null ? INF : (float) $data['max_amount'];
 
-        $warnings = [];
-        $others = PurchaseApprovalRule::query()->where('is_active', true)->where('id', '!=', $rule->id)
-            ->where('shipping_type', $rule->shipping_type)->where('who_pays_shipping', $rule->who_pays_shipping)->get();
+        $others = PurchaseApprovalRule::query()->where('is_active', true)
+            ->when($ignoreId !== null, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->where('shipping_type', $data['shipping_type'] ?? null)->where('who_pays_shipping', $data['who_pays_shipping'] ?? null)->get();
         foreach ($others as $o) {
             $olo = $o->min_amount === null ? 0.0 : (float) $o->min_amount;
             $ohi = $o->max_amount === null ? INF : (float) $o->max_amount;
             if ($lo <= $ohi && $olo <= $hi) {
-                $warnings[] = [
-                    'rule_id' => $o->id,
-                    'name' => $o->name,
-                    'message' => "Se solapa con la regla «{$o->name}»: en los montos comunes solo aplica la de menor orden.",
-                ];
+                $msg = "Se solapa con la regla «{$o->name}»: ajusta los montos o desactiva una de las dos.";
+                abort(response()->json(['message' => $msg, 'errors' => ['min_amount' => [$msg]], 'regla_en_conflicto' => ['id' => $o->id, 'name' => $o->name]], 422));
             }
         }
-
-        return $warnings;
     }
 
     /** @return array<string, mixed> */

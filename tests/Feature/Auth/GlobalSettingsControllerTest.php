@@ -39,7 +39,7 @@ class GlobalSettingsControllerTest extends FeatureTestCase
             ->assertStatus(200);
 
         $keys = collect($response->json('data'))->pluck('key')->all();
-        $this->assertEqualsCanonicalizing(array_keys(GlobalSettingsRegistry::all()), $keys);
+        $this->assertEqualsCanonicalizing(array_merge(array_keys(GlobalSettingsRegistry::all()), array_keys(GlobalSettingsRegistry::textKeys())), $keys);
         $this->assertStringNotContainsString('sk-ant', (string) $response->getContent());
         $this->assertStringNotContainsString('anthropic', (string) $response->getContent());
 

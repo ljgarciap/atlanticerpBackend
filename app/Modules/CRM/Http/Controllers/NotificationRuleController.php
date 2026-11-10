@@ -104,8 +104,17 @@ final class NotificationRuleController extends Controller
             $models[$name] = $config['fields'];
         }
 
+        $modules = [];
+        $events = [];
+        foreach (NotifiableModel::REGISTRY as $name => $config) {
+            $modules[$name] = $config['modulo'];
+            $events[$name] = $config['events'];
+        }
+
         return [
             'models'    => $models,
+            'modules'   => $modules,
+            'events'    => $events,
             'operators' => NotificationRule::OPERATORS,
             'recipient_types' => [
                 NotificationRule::RECIPIENT_USER,
