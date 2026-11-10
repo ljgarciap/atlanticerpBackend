@@ -139,6 +139,20 @@ class BodegaHomeControllerTest extends FeatureTestCase
         $this->assertFalse($names->contains('Asistente Bodega Test'));
     }
 
+    // Fase 32 — la pantalla del mapeo vendedor→asistente lista vendedores por este endpoint.
+    public function test_team_members_role_vendedor_retorna_solo_vendedores(): void
+    {
+        $response = $this->withHeaders($this->authHeadersFor('liderbodega@test.com', 'lider_bodega'))
+            ->getJson('/api/bodega/team-members?role=vendedor')
+            ->assertStatus(200);
+
+        $names = collect($response->json('data'))->pluck('name');
+        $this->assertNotEmpty($names);
+        $this->assertFalse($names->contains('Asistente Bodega Test'));
+        $this->assertFalse($names->contains('Lider Bodega Test'));
+        $this->assertFalse($names->contains('Transporte Test'));
+    }
+
     // SCRUM-1142 — Picker Bodega Test (picker), Repartidor Test y "Personal de Bodega" (repartidor).
     public function test_team_members_incluye_a_carlos_joel_y_personal_de_bodega(): void
     {
