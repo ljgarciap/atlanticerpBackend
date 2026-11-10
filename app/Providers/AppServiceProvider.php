@@ -41,6 +41,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(\App\Modules\CRM\Services\CrmSettingsService::class);
         // Fase 7c: memo de las entradas de catálogo por petición/job (ver CatalogCache).
         $this->app->scoped(\App\Shared\Catalogs\CatalogCache::class);
+        // Fase 32: memo de las reglas de notificación activas por petición/job (ver NotificationRuleCache).
+        $this->app->scoped(\App\Modules\CRM\Notifications\NotificationRuleCache::class);
         // Fase 14a: memo de las reglas de aprobación de compras por petición/job.
         $this->app->scoped(\App\Modules\Compras\Services\PurchaseApprovalRules::class);
         $this->app->scoped(\App\Modules\Compras\Services\ComprasThresholds::class);
