@@ -35,6 +35,13 @@ use Illuminate\Support\Facades\Route;
 
 // SCRUM-632→637 (REQ-555→560) — Configuración Fiscal, exclusiva de Gerencia (ver
 // App\Modules\AdminCont\Http\Middleware\EnsureIsPrimaryApprover, aliased 'primary_approver_only').
+// Fase 31b — Datos de la Empresa: aprobador primario, suplentes y Gerencia (rol).
+Route::middleware('primary_approver_only:perfil_empresa')->group(function (): void {
+    Route::get('/company-profile', [AdminContCompanyProfileController::class, 'show']);
+    Route::put('/company-profile', [AdminContCompanyProfileController::class, 'update']);
+    Route::post('/company-profile/logo', [AdminContCompanyProfileController::class, 'uploadLogo']);
+});
+
 Route::middleware('primary_approver_only')->group(function (): void {
     Route::get('/fiscal-settings', [AdminContFiscalSettingsController::class, 'show']);
     Route::put('/fiscal-settings', [AdminContFiscalSettingsController::class, 'update']);
@@ -59,11 +66,6 @@ Route::middleware('primary_approver_only')->group(function (): void {
     Route::post('/itbms-rates', [AdminContItbmsRateController::class, 'store']);
     Route::put('/itbms-rates/{id}', [AdminContItbmsRateController::class, 'update'])->whereNumber('id');
     Route::delete('/itbms-rates/{id}', [AdminContItbmsRateController::class, 'destroy'])->whereNumber('id');
-
-    // SCRUM-638→642 (REQ-561→565) — Datos de la Empresa, mismo gate exclusivo de Gerencia.
-    Route::get('/company-profile', [AdminContCompanyProfileController::class, 'show']);
-    Route::put('/company-profile', [AdminContCompanyProfileController::class, 'update']);
-    Route::post('/company-profile/logo', [AdminContCompanyProfileController::class, 'uploadLogo']);
 
     Route::get('/locations', [AdminContLocationController::class, 'index']);
     Route::post('/locations', [AdminContLocationController::class, 'store']);

@@ -49,6 +49,15 @@ class UpdateNotificationRuleRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $model = $this->input('trigger_model');
             $field = $this->input('field');
+            $event = $this->input('trigger_event');
+
+            if (is_string($model) && is_string($event) && NotifiableModel::isWhitelisted($model) && ! NotifiableModel::isEventAllowed($model, $event)) {
+                $validator->errors()->add('trigger_event', "El evento [{$event}] no está disponible para el modelo [{$model}].");
+            }
+
+            if (is_string($model) && NotifiableModel::isWhitelisted($model) && ! NotifiableModel::isCrm($model) && $this->input('recipient_type') === NotificationRule::RECIPIENT_PROJECT_ASSIGNEES) {
+                $validator->errors()->add('recipient_type', 'Los asignados del proyecto solo aplican a eventos de CRM.');
+            }
 
             if (is_string($model) && is_string($field) && $field !== '' && ! NotifiableModel::isFieldAllowed($model, $field)) {
                 $validator->errors()->add('field', "El campo [{$field}] no está permitido para el modelo [{$model}].");

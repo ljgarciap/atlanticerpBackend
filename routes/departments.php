@@ -15,4 +15,5 @@ Route::middleware(['permission:platform.management', 'permission:security.users'
     Route::post('/',             [DepartmentController::class, 'store']);
     Route::put('/{id}',          [DepartmentController::class, 'update']);
     Route::patch('/{id}/status', [DepartmentController::class, 'toggleStatus']);
+    Route::post('/{id}/reassign', [DepartmentController::class, 'reassign']);
 });

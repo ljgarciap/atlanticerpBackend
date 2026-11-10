@@ -20,7 +20,7 @@ class DepartmentController extends Controller
     {
         if ($request->boolean('all')) {
             return response()->json(
-                $this->service->listAll()->map(fn (Department $d) => $this->format($d))->values()
+                $this->service->listAll($request->filled('incluir') ? (int) $request->query('incluir') : null)->map(fn (Department $d) => $this->format($d))->values()
             );
         }
 
@@ -60,6 +60,22 @@ class DepartmentController extends Controller
         return response()->json($this->format($dept));
     }
 
+    /** Fase 31b — reasigna los usuarios de un departamento a otro activo (o los deja sin departamento). */
+    public function reassign(Request $request, int $id): JsonResponse
+    {
+        $dept = $this->service->findOrFail($id);
+        $data = $request->validate([
+            'to_department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('departments', 'id')->where('is_active', true)],
+        ]);
+        $toId = isset($data['to_department_id']) ? (int) $data['to_department_id'] : null;
+        if ($toId === $dept->id) {
+            return response()->json(['message' => 'El destino debe ser otro departamento.'], 422);
+        }
+        $moved = $this->service->reassignUsers($dept, $toId);
+
+        return response()->json(['movidos' => $moved, 'department' => $this->format($dept)]);
+    }
+
     /** @return array<string, mixed> */
     private function format(Department $dept): array
     {
@@ -67,6 +83,7 @@ class DepartmentController extends Controller
             'id'        => $dept->id,
             'name'      => $dept->name,
             'is_active' => $dept->is_active,
+            'user_count' => $this->service->userCount($dept),
         ];
     }
 }

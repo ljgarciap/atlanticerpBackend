@@ -208,23 +208,26 @@ final class PurchaseApprovalRulesTest extends FeatureTestCase
         PurchaseApprovalRule::query()->delete();
     }
 
-    public function test_guardar_una_regla_que_se_solapa_con_otra_del_mismo_alcance_avisa_sin_bloquear(): void
+    public function test_guardar_una_regla_que_se_solapa_con_otra_del_mismo_alcance_se_rechaza(): void
     {
         $h = $this->superadmin();
         $this->sinReglas();
         $this->regla($h, 'Pequeñas', ['shipping_type' => 'maritimo', 'min_amount' => 0, 'max_amount' => 1000, 'requires_approval' => false])->assertCreated()->assertJsonPath('warnings', []);
 
-        $solapa = $this->regla($h, 'Medianas', ['shipping_type' => 'maritimo', 'min_amount' => 800, 'max_amount' => 3000])->assertCreated();
-        $this->assertCount(1, $solapa->json('warnings'));
-        $this->assertSame('Pequeñas', $solapa->json('warnings.0.name'));
+        // Fase 31b — antes avisaba; ahora se impide (422) y no se guarda.
+        $this->regla($h, 'Medianas', ['shipping_type' => 'maritimo', 'min_amount' => 800, 'max_amount' => 3000])
+            ->assertStatus(422)->assertJsonPath('regla_en_conflicto.name', 'Pequeñas');
+        $this->activarTenant();
+        $this->assertSame(1, PurchaseApprovalRule::query()->count());
 
         $this->regla($h, 'Otro envío', ['shipping_type' => 'terrestre', 'min_amount' => 800, 'max_amount' => 3000])->assertCreated()->assertJsonPath('warnings', []);
-        $this->regla($h, 'Contiguas', ['shipping_type' => 'maritimo', 'min_amount' => 3001, 'max_amount' => 4000])->assertCreated()->assertJsonPath('warnings', []);
+        $contigua = $this->regla($h, 'Contiguas', ['shipping_type' => 'maritimo', 'min_amount' => 1001, 'max_amount' => 4000])->assertCreated();
 
-        $id = $solapa->json('id');
-        $this->withHeaders($h)->putJson("/api/admin/purchase-approval-rules/{$id}", [
-            'name' => 'Medianas', 'sort_order' => 50, 'is_active' => true, 'shipping_type' => 'maritimo', 'min_amount' => 1001, 'max_amount' => 3000, 'requires_approval' => true,
-        ])->assertOk()->assertJsonPath('warnings', []);
+        // Editar una regla para que invada a otra también se rechaza; una inactiva nunca choca.
+        $id = $contigua->json('id');
+        $body = ['name' => 'Contiguas', 'sort_order' => 50, 'is_active' => true, 'shipping_type' => 'maritimo', 'min_amount' => 900, 'max_amount' => 4000, 'requires_approval' => true];
+        $this->withHeaders($h)->putJson("/api/admin/purchase-approval-rules/{$id}", $body)->assertStatus(422);
+        $this->withHeaders($h)->putJson("/api/admin/purchase-approval-rules/{$id}", ['is_active' => false] + $body)->assertOk();
     }
 
     public function test_cobertura_senala_el_hueco_de_un_rango_mal_escrito(): void

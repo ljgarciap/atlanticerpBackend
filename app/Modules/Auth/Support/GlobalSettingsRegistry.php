@@ -73,6 +73,41 @@ final class GlobalSettingsRegistry
     ];
 
     /**
+     * Fase 31b — ajustes de TEXTO (además de enteros). `max_length` es el largo máximo; `default` el texto cuando no hay valor guardado.
+     * Se leen con `GlobalSettingsRegistry::text()`. Sin reautenticación (no gobiernan seguridad).
+     *
+     * @var array<string, array{type: string, max_length: int, default: string, group: string}>
+     */
+    private const TEXT_KEYS = [
+        // Contacto de soporte que la empresa quiere mostrar a sus usuarios (texto libre, p. ej. correo o teléfono).
+        'support_contact' => ['type' => 'text', 'max_length' => 200, 'default' => '', 'group' => 'general'],
+    ];
+
+    /** @return array<string, array{type: string, max_length: int, default: string, group: string}> */
+    public static function textKeys(): array
+    {
+        return self::TEXT_KEYS;
+    }
+
+    /** @return array{type: string, max_length: int, default: string, group: string}|null */
+    public static function findText(string $key): ?array
+    {
+        return self::TEXT_KEYS[$key] ?? null;
+    }
+
+    /** Valor guardado de un ajuste de texto (o su default). */
+    public static function text(string $key): string
+    {
+        $meta = self::TEXT_KEYS[$key] ?? null;
+        if ($meta === null) {
+            return '';
+        }
+        $setting = \App\Modules\Auth\Models\GlobalSetting::find($key);
+
+        return $setting === null ? $meta['default'] : $setting->value;
+    }
+
+    /**
      * Ajustes cuyo cambio exige la contraseña del operador (`operator_password`, R3-6): quien los controla decide cuándo y por
      * cuánto tiempo se puede resetear contraseñas, así que un token de superadmin robado no debe poder moverlos solo.
      */

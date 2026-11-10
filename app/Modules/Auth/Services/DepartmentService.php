@@ -21,9 +21,26 @@ final class DepartmentService
     }
 
     /** @return Collection<int, Department> */
-    public function listAll(): Collection
+    public function listAll(?int $incluirId = null): Collection
     {
-        return Department::where('is_active', true)->orderBy('name')->get();
+        // Fase 31b — el selector conserva el departamento propio del usuario aunque esté desactivado.
+        return Department::where(function ($q) use ($incluirId): void {
+            $q->where('is_active', true);
+            if ($incluirId !== null) {
+                $q->orWhere('id', $incluirId);
+            }
+        })->orderBy('name')->get();
+    }
+
+    /** Fase 31b — mueve (o deja sin departamento) a los usuarios de uno; devuelve cuántos se movieron. */
+    public function reassignUsers(Department $dept, ?int $toId): int
+    {
+        return \App\Models\User::where('department_id', $dept->id)->update(['department_id' => $toId]);
+    }
+
+    public function userCount(Department $dept): int
+    {
+        return \App\Models\User::where('department_id', $dept->id)->count();
     }
 
     public function findOrFail(int $id): Department

@@ -34,11 +34,20 @@ final class GlobalSettingsController extends Controller
             $rows[] = $this->present($key, $meta, $this->currentValue($key, $meta));
         }
 
+        foreach (GlobalSettingsRegistry::textKeys() as $key => $meta) {
+            $rows[] = $this->presentText($key, $meta, GlobalSettingsRegistry::text($key));
+        }
+
         return response()->json(['data' => $rows]);
     }
 
     public function update(Request $request, string $key): JsonResponse
     {
+        $textMeta = GlobalSettingsRegistry::findText($key);
+        if ($textMeta !== null) {
+            return $this->updateText($request, $key, $textMeta);
+        }
+
         $meta = GlobalSettingsRegistry::find($key);
         if ($meta === null) {
             return response()->json(['message' => 'Not found'], 404);
@@ -73,6 +82,45 @@ final class GlobalSettingsController extends Controller
         $this->audit->log(AuditService::SETTINGS_UPDATED, 'global_setting', $key, ['value' => $old], ['value' => $new]);
 
         return response()->json($this->present($key, $meta, $new));
+    }
+
+    /** @param array{type: string, max_length: int, default: string, group: string} $meta */
+    private function updateText(Request $request, string $key, array $meta): JsonResponse
+    {
+        $data = $request->validate(['value' => ['present', 'nullable', 'string', 'max:'.$meta['max_length']]]);
+        $new = trim((string) ($data['value'] ?? ''));
+        $old = GlobalSettingsRegistry::text($key);
+
+        /** @var array{sub?: int}|null $jwt */
+        $jwt = $request->attributes->get('jwt');
+
+        GlobalSetting::updateOrCreate(
+            ['key' => $key],
+            ['value' => $new, 'updated_by' => $jwt['sub'] ?? null, 'updated_at' => now()],
+        );
+        Cache::forget(GlobalSettingsRegistry::cacheKey($key));
+
+        $this->audit->log(AuditService::SETTINGS_UPDATED, 'global_setting', $key, ['value' => $old], ['value' => $new]);
+
+        return response()->json($this->presentText($key, $meta, $new));
+    }
+
+    /**
+     * @param  array{type: string, max_length: int, default: string, group: string}  $meta
+     * @return array<string, mixed>
+     */
+    private function presentText(string $key, array $meta, string $value): array
+    {
+        return [
+            'key' => $key,
+            'value' => $value,
+            'type' => 'text',
+            'max_length' => $meta['max_length'],
+            'default' => $meta['default'],
+            'group' => $meta['group'],
+            'label_key' => GlobalSettingsRegistry::labelKey($key),
+            'requires_reauth' => false,
+        ];
     }
 
     /**
