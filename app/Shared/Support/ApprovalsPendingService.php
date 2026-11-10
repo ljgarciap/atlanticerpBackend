@@ -83,10 +83,8 @@ final class ApprovalsPendingService
                 ->merge($this->purchaseOrderAmountChangeItems($user, $jwtPermissions))
                 ->merge($this->replacementRequestItems($user, $jwtPermissions)),
             'servicios' => $this->serviceQuoteItems($user, $jwtPermissions),
-            // Ventas & Diseño no tiene ningún tipo de aprobación propio en el inventario de
-            // SCRUM-908 — endpoint existe para consistencia (los 6 módulos lo exponen), siempre
-            // vacío hasta que exista uno.
-            'ventas_diseno' => collect(),
+            // Fase 31a — Ventas & Diseño ya tiene una decisión propia: la solicitud de «Pasar a Pedido» del vendedor (Fase 16).
+            'ventas_diseno' => collect()->merge($this->passToOrderRequestItems($user, $jwtPermissions)),
             // Gerencia no tiene ningún tipo de aprobación PROPIO — agrega los de otros módulos vía
             // `crossModuleForGerencia()` (GET /api/gerencia/home/approvals-pending-all), no acá.
             'gerencia' => collect(),
@@ -117,7 +115,8 @@ final class ApprovalsPendingService
             ->merge($this->pettyCashReportItems($user, $jwtPermissions))
             ->merge($this->serviceQuoteItems($user, $jwtPermissions))
             ->merge($this->replacementRequestItems($user, $jwtPermissions))
-            ->merge($this->purchaseOrderAmountChangeItems($user, $jwtPermissions));
+            ->merge($this->purchaseOrderAmountChangeItems($user, $jwtPermissions))
+            ->merge($this->passToOrderRequestItems($user, $jwtPermissions));
 
         $delegated = collect($this->gerenciaHome->pendingApprovalsForUser($user->id)['aprobaciones'])
             ->map(fn (array $a): ApprovalPendingItem => new ApprovalPendingItem(
@@ -420,6 +419,35 @@ final class ApprovalsPendingService
                 label: 'Cotización de servicio pendiente de decisión',
                 createdAt: $q->created_at,
                 detailRoute: '/servicios/cotizaciones',
+            ));
+    }
+
+    // ── Ventas & Diseño ──────────────────────────────────────────────────────────
+
+    /**
+     * Fase 31a — solicitudes de «Pasar a Pedido» sin atender (proyecto Aprobado, solicitud hecha, sin pedido ni aprobación). Las ve
+     * quien puede ejecutar el pase (`ventas_diseno.pass_to_order`), la misma regla de la ruta de decisión.
+     *
+     * @param list<string> $jwtPermissions
+     * @return Collection<int, ApprovalPendingItem>
+     */
+    private function passToOrderRequestItems(User $user, array $jwtPermissions): Collection
+    {
+        if (! in_array('superadmin.all', $jwtPermissions, true) && ! in_array('ventas_diseno.pass_to_order', $jwtPermissions, true)) {
+            return collect();
+        }
+
+        return PipelineCard::query()
+            ->whereNotNull('order_requested_at')
+            ->whereNull('order_approved_at')
+            ->whereDoesntHave('orders')
+            ->orderBy('order_requested_at')
+            ->get()
+            ->map(fn (PipelineCard $c): ApprovalPendingItem => new ApprovalPendingItem(
+                tipo: 'pass_to_order_request',
+                label: "Solicitud de pase a Pedido pendiente — proyecto #{$c->id}",
+                createdAt: $c->order_requested_at ?? $c->created_at,
+                detailRoute: '/ventas-diseno/pipeline',
             ));
     }
 

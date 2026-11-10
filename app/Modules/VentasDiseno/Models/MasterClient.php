@@ -13,13 +13,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int         $id
  * @property string      $name
  * @property string|null $default_price_type
+ * @property bool        $is_active
  */
 class MasterClient extends Model
 {
     use LogsAuditTrail;
 
     /** @var list<string> */
-    protected $fillable = ['name', 'default_price_type'];
+    protected $fillable = ['name', 'default_price_type', 'is_active'];
 
     public function getTable(): string
     {

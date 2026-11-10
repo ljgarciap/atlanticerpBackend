@@ -54,6 +54,7 @@ final class ClientsController extends Controller
             'search'     => isset($raw['search']) ? (string) $raw['search'] : null,
             'categories' => $categories !== [] ? $categories : null,
             'stale'      => isset($raw['stale']) ? filter_var($raw['stale'], FILTER_VALIDATE_BOOLEAN) : null,
+            'incluir_inactivos' => $request->boolean('incluir_inactivos') ?: null,
         ], fn (mixed $v): bool => $v !== null);
 
         // SCRUM-754 — sin sort expuesto en esta pantalla hoy, solo per_page/page.
@@ -78,6 +79,25 @@ final class ClientsController extends Controller
         }
 
         return response()->json($this->formatDetail($client));
+    }
+
+    /** Fase 31a — baja (o reactivación) de un cliente: se desactiva, nunca se borra. */
+    public function setActive(Request $request, int $id): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        if ($user === null) {
+            return response()->json(['message' => trans('auth.unauthenticated')], 401);
+        }
+
+        $client = MasterClient::find($id);
+        if ($client === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        $client->update(['is_active' => (bool) $data['is_active']]);
+
+        return response()->json(['id' => $client->id, 'is_active' => $client->is_active]);
     }
 
     public function projects(Request $request, int $id): JsonResponse
@@ -200,6 +220,7 @@ final class ClientsController extends Controller
             'id'                 => $client->id,
             'name'               => $client->name,
             'default_price_type' => $client->default_price_type,
+            'is_active'          => $client->is_active,
             'sub_clients'        => $client->subClients->map(fn (SubClient $s) => $this->formatSubClient($s))->values(),
         ];
     }

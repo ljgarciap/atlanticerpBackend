@@ -11,6 +11,7 @@ use App\Modules\VentasDiseno\Models\Architect;
 use App\Modules\VentasDiseno\Services\AssociateDuplicateFinder;
 use App\Modules\VentasDiseno\Models\PipelineCard;
 use App\Modules\VentasDiseno\Models\Quote;
+use App\Modules\VentasDiseno\Models\SalesProject;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,10 @@ final class ArchitectController extends Controller
 
         $subClientId = $request->query('sub_client_id');
         $query = Architect::query()->orderBy('name');
+        // Fase 31a — los asociados dados de baja quedan ocultos salvo `incluir_inactivos=1`.
+        if (! $request->boolean('incluir_inactivos')) {
+            $query->where('is_active', true);
+        }
 
         // SCRUM-1121 — `type` ausente = solo arquitectos (lo que siempre devolvió este endpoint: pantalla Arquitectos y comisiones de
         // Admin&Cont no deben ver de repente contratistas); `all` = toda la base de asociados; o un tipo puntual.
@@ -117,10 +122,17 @@ final class ArchitectController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        $salesProjectIds = Quote::where('architect_id', $id)
+        $commissionIds = Quote::where('architect_id', $id)
             ->whereNotNull('sales_project_id')
             ->pluck('sales_project_id')
             ->unique();
+
+        // Fase 31a — también cuentan los proyectos donde figura como asociado (sin ser el de comisión).
+        $associateIds = SalesProject::query()
+            ->whereHas('associates', fn ($q) => $q->where('architects.id', $id))
+            ->pluck('id');
+
+        $salesProjectIds = $commissionIds->merge($associateIds)->unique()->values();
 
         $cards = PipelineCard::with(['subClient', 'salesProject'])
             ->whereIn('sales_project_id', $salesProjectIds)
@@ -136,6 +148,7 @@ final class ArchitectController extends Controller
                 'project'    => ['id' => $c->salesProject->id, 'name' => $c->salesProject->name],
                 'stage'      => $c->stage,
                 'amount'     => $c->amount,
+                'role'       => $commissionIds->contains($c->sales_project_id) ? 'comision' : 'asociado',
             ])->values(),
         ]));
     }
@@ -249,12 +262,27 @@ final class ArchitectController extends Controller
         return $n !== '' && $n !== $normalize($current) ? (string) $new : null;
     }
 
+    /** Fase 31a — baja (o reactivación) de un asociado: se desactiva, nunca se borra. */
+    public function setActive(Request $request, int $id): JsonResponse
+    {
+        $architect = Architect::find($id);
+        if ($architect === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        $data = $request->validate(['is_active' => ['required', 'boolean']]);
+        $architect->update(['is_active' => (bool) $data['is_active']]);
+
+        return response()->json(['id' => $architect->id, 'is_active' => $architect->is_active]);
+    }
+
     /** @return array<string, mixed> */
     private function format(Architect $architect): array
     {
         return [
             'id' => $architect->id, 'type' => $architect->type, 'name' => $architect->name,
             'phone' => $architect->phone, 'email' => $architect->email, 'document' => $architect->document,
+            'is_active' => $architect->is_active,
         ];
     }
 

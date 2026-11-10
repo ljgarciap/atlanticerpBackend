@@ -90,7 +90,7 @@ final class CatalogController extends Controller
 
         /** @var \Illuminate\Http\UploadedFile $file */
         $file = $request->file('file');
-        $this->service->uploadTechnicalSheet($product, $file);
+        $this->service->uploadTechnicalSheet($product, $file, $this->actorId($request));
 
         return response()->json([
             'id'                          => $product->id,
@@ -101,14 +101,33 @@ final class CatalogController extends Controller
     }
 
     /** Fase 23 (#7) — quita la ficha técnica (solo quien edita Ventas & Diseño). 204; 404 si el producto no existe o no tiene ficha. */
-    public function deleteTechnicalSheet(int $id): JsonResponse
+    public function deleteTechnicalSheet(Request $request, int $id): JsonResponse
     {
         $product = $this->service->findModel($id);
-        if ($product === null || ! $this->service->deleteTechnicalSheet($product)) {
+        if ($product === null || ! $this->service->deleteTechnicalSheet($product, $this->actorId($request))) {
             return response()->json(['message' => 'Not found'], 404);
         }
 
         return response()->json(null, 204);
+    }
+
+    /** Fase 31a — historial de versiones de la ficha técnica (reemplazadas o quitadas). */
+    public function technicalSheetHistory(int $id): JsonResponse
+    {
+        $product = $this->service->findModel($id);
+        if ($product === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json(['data' => $this->service->technicalSheetHistory($product)]);
+    }
+
+    private function actorId(Request $request): ?int
+    {
+        /** @var array{sub?: int}|null $payload */
+        $payload = $request->attributes->get('jwt');
+
+        return isset($payload['sub']) ? (int) $payload['sub'] : null;
     }
 
     /**

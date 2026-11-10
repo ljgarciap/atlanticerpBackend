@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $phone
  * @property string|null $email
  * @property string|null $document
+ * @property bool        $is_active
  * @property int|null    $created_by
  * @property SubClient|null $subClient
  */
@@ -38,7 +39,7 @@ class Architect extends Model
     public const TYPES = ['architect', 'designer', 'contractor', 'engineer', 'consultant', 'other'];
 
     /** @var list<string> */
-    protected $fillable = ['sub_client_id', 'type', 'name', 'phone', 'email', 'document', 'created_by'];
+    protected $fillable = ['sub_client_id', 'type', 'name', 'phone', 'email', 'document', 'created_by', 'is_active'];
 
     /** @return BelongsTo<SubClient, $this> */
     public function subClient(): BelongsTo

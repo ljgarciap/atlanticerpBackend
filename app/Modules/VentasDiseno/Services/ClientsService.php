@@ -29,13 +29,18 @@ final class ClientsService
      * agregado, así que la paginación se aplica AL FINAL, sobre el array ya filtrado por
      * search/categories/stale — mismo patrón que `CatalogService::list()`.
      *
-     * @param array{search?: string, categories?: array<int, string>, stale?: bool} $filters
+     * @param array{search?: string, categories?: array<int, string>, stale?: bool, incluir_inactivos?: bool} $filters
      * @param array{per_page: int, page: int} $pagination
      * @return array{data: list<array<string, mixed>>, meta: array{total: int, per_page: int, current_page: int, last_page: int}}
      */
     public function list(array $filters = [], array $pagination = ['per_page' => 20, 'page' => 1]): array
     {
         $query = MasterClient::with(['subClients']);
+
+        // Fase 31a — los clientes dados de baja quedan ocultos salvo que se pidan.
+        if (empty($filters['incluir_inactivos'])) {
+            $query->where('is_active', true);
+        }
 
         if (! empty($filters['search'])) {
             $term = $filters['search'];
@@ -92,6 +97,7 @@ final class ClientsService
             'id'                 => $client->id,
             'name'               => $client->name,
             'default_price_type' => $client->default_price_type,
+            'is_active'          => $client->is_active,
             'categories'         => $client->subClients->pluck('category')->filter()->unique()->values(),
             'active_projects'    => $cards->whereIn('stage', PipelineStages::open())->count(),
             'lost_projects'      => $cards->whereIn('stage', PipelineStages::lost())->count(),
