@@ -83,6 +83,30 @@ final class InternalTechnicianController extends Controller
         return response()->json(['data' => $this->settings->slaSettings()]);
     }
 
+    /**
+     * GET /api/servicios/internal-technicians/linkable-users?ficha_id= — Fase 32: usuarios activos con rol de técnico
+     * que no están ligados a otra ficha (la de `ficha_id` conserva el suyo). Alimenta el selector «Usuario vinculado».
+     */
+    public function linkableUsers(Request $request): JsonResponse
+    {
+        $fichaId = $request->query('ficha_id');
+        $ligados = InternalTechnician::query()
+            ->whereNotNull('user_id')
+            ->when(is_numeric($fichaId), fn ($q) => $q->where('id', '!=', (int) $fichaId))
+            ->pluck('user_id');
+
+        $users = User::query()
+            ->where('is_active', true)
+            ->whereHas('role', fn ($q) => $q->whereIn('key', [RoleKeys::TECNICO, RoleKeys::TECNICO_GARANTIAS]))
+            ->whereNotIn('id', $ligados)
+            ->orderBy('first_name')
+            ->get()
+            ->map(fn (User $u) => ['id' => $u->id, 'name' => trim("{$u->first_name} {$u->last_name}")])
+            ->values();
+
+        return response()->json(['data' => $users]);
+    }
+
     /** GET /api/servicios/internal-technicians/{id}/visitas-hoy — REQ-257. */
     public function visitsToday(int $id): JsonResponse
     {
