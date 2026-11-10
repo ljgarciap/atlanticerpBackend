@@ -38,11 +38,11 @@ Todo bajo `/admin/roles`, exclusivo del **superadmin**; Gerencia, 403 [E]. El li
 
 ## Candidatos a cambio o mejora
 (Solo documentados; ninguno se implementó.)
-1. **El perfil de empresa es del aprobador primario, no de Gerencia**: otra cuenta de Gerencia no puede ni leerlo. Si el aprobador falta, nadie lo edita salvo el suplente. [E]
-2. **Departamentos: sin borrar ni reasignar**; el selector (`all=1`) esconde los desactivados, así que un usuario que ya pertenece a uno desactivado no lo ve en su ficha. [E][C]
+1. ~~**El perfil de empresa es del aprobador primario, no de Gerencia**~~ — **resuelto: Fase 31b** (lo leen y editan también Gerencia, el aprobador y sus suplentes). Original: otra cuenta de Gerencia no puede ni leerlo. Si el aprobador falta, nadie lo edita salvo el suplente. [E]
+2. ~~**Departamentos: sin borrar ni reasignar**~~ — **resuelto: Fase 31b** (`POST departments/{id}/reassign`, `user_count`, `?all=1&incluir=ID`; nunca se borran). Original: el selector (`all=1`) esconde los desactivados, así que un usuario que ya pertenece a uno desactivado no lo ve en su ficha. [E][C]
 3. ~~Una regla de aprobación inactiva o fuera de rango deja pasar sin aprobación sin avisar~~ — **corregido en la Fase 20d**: la pantalla y `coverage` señalan los huecos y `purchase_approval_no_rule` permite exigir aprobación en ellos (por defecto sigue sin pedirla). [E][C]
-4. **Las reglas de aprobación se evalúan por orden de `sort_order`**; los solapes de igual alcance ya se avisan (20d) pero no se impiden. [C]
-5. **Las reglas de notificación solo cubren eventos de modelos de una lista corta** (CRM); no hay reglas para Compras, Bodega ni Servicios. [C]
-6. **Los ajustes globales son solo enteros**: no hay textos ni listas, y cada categoría de ajuste vive en una pantalla distinta (globales, de Compras, de Servicios, de Ventas). [C]
+4. ~~**Los solapes de igual alcance de las reglas de aprobación solo se avisaban**~~ — **resuelto: Fase 31b** (422 con `regla_en_conflicto`; una regla inactiva nunca choca). Las reglas se siguen evaluando por `sort_order`. [C]
+5. ~~**Las reglas de notificación solo cubrían CRM**~~ — **resuelto: Fase 31b** (Compras: orden creada/actualizada y sustitución creada; Bodega: pedido creado/actualizado y devolución creada; Servicios: ticket creado/actualizado e informe de inspección actualizado; «asignados del proyecto» solo en CRM). [C]
+6. **Ajustes globales**: ya admiten **texto** (Fase 31b; clave `support_contact`, sin lector aún); las listas no se hicieron y cada categoría de ajuste sigue en su propia pantalla (globales, Compras, Servicios, Ventas). [C]
 7. ~~**Un rol propio puede quedar sin ninguna visibilidad** (todas las filas en 0) sin avisar. [C]~~ **Resuelto: Fase 27b** (la respuesta trae `warnings[rol_sin_visibilidad]` y la pantalla lo muestra; no bloquea).
 8. **Sin ejercitar**: las pantallas del navegador, el aviso real de una regla de notificación (por correo o in-app) y la edición de precios de IA.

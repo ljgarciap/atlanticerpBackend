@@ -47,3 +47,16 @@ Por grupo: tests de permisos por rol y de regresión, catálogo en `docs/flujos/
 | — | «Aprobaciones pendientes» del Inicio de Ventas estaba vacía por diseño: ahora lista las solicitudes de pase a Pedido (también en la vista consolidada de Gerencia). |
 
 Una migración aditiva y reversible. Cambio de comportamiento: reemplazar o quitar una ficha técnica ya no borra el archivo anterior.
+
+## 7. Resultado de la 31b (Administración), 2026-11-10
+| # | Hecho |
+|---|---|
+| 6 | `company-profile` (ver, editar, logo) con `primary_approver_only:perfil_empresa`: aprobador primario, suplentes, Gerencia (`platform.management`) y superadmin. La configuración fiscal sigue solo del aprobador. |
+| 7 | `POST departments/{id}/reassign` (a otro activo o a ninguno; 422 si el destino es el mismo o está inactivo), `user_count` en la lista, `GET departments?all=1&incluir=ID` conserva el departamento propio aunque esté desactivado. Pantalla: botón «Reasignar usuarios». |
+| 8 | Guardar una regla de aprobación activa que se solape con otra activa del mismo alcance → 422 (`regla_en_conflicto`). Las que ya estaban solapadas no se tocan; la pantalla ya mostraba el 422. |
+| 9 | `NotifiableModel::REGISTRY` suma módulo y eventos: Compras (`PurchaseOrder` creada/actualizada, `ReplacementRequest` creada), Bodega (`Order` creado/actualizado, `CustomerReturn` creada), Servicios (`Ticket` creado/actualizado, `InspectionReport` actualizado). Evento fuera de la lista → 422; «asignados del proyecto» solo en CRM. |
+| 10 | Ajustes globales de **texto** (`type: text`, `max_length`, sin reautenticación) junto a los enteros; clave inicial `support_contact`. Las listas no se hicieron (propuesta por defecto: solo texto). |
+
+Sin migraciones. Cambios de comportamiento: las reglas de aprobación solapadas ya no se guardan; Gerencia ve el perfil de empresa.
+**Abierto**: `support_contact` aún no lo muestra ninguna pantalla; las notificaciones de Compras/Bodega/Servicios no se probaron por correo real; el ítem 5 de la 31a/31b sobre reglas de notificación usa la fuente `crm_rule` en los envíos; sin e2e nuevo; el botón de reasignar usa la lista completa de departamentos activos.
+
