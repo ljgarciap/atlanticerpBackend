@@ -44,6 +44,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon|null                      $reopened_at
  * @property int|null                                 $reopened_by
  * @property \Carbon\Carbon                          $stage_changed_at
+ * @property \Carbon\Carbon                          $created_at
  * @property SalesProject                            $salesProject
  * @property MasterClient|null                       $masterClient
  * @property SubClient|null                          $subClient
