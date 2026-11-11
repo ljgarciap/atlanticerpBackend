@@ -210,7 +210,9 @@ class Fase30ServiciosTest extends FeatureTestCase
 
         $this->withHeaders($h)->patchJson($hoja.'/reabrir', ['motivo' => 'corto'])->assertStatus(422);
         $this->withHeaders($h)->patchJson($hoja.'/reabrir', ['motivo' => 'El diagnóstico estaba equivocado'])->assertStatus(200)
-            ->assertJsonPath('estado', 'pending')->assertJsonPath('reopened_reason', 'El diagnóstico estaba equivocado');
+            ->assertJsonPath('estado', 'pending')->assertJsonPath('reopened_reason', 'El diagnóstico estaba equivocado')
+            // Fase 32: queda quién la reabrió.
+            ->assertJson(fn (\Illuminate\Testing\Fluent\AssertableJson $j) => $j->where('reopened_by', fn ($v) => is_string($v) && $v !== '')->etc());
         $this->withHeaders($h)->patchJson($est, ['estado' => Ticket::ESTADO_RESOLVED])->assertStatus(422);
 
         $this->withHeaders($h)->putJson($hoja, ['diagnostico' => ClaimSheet::DIAGNOSTICOS[0], 'firma_responsable' => 'Corregida'])->assertStatus(200);

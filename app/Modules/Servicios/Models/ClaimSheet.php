@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string      $estado
  * @property \Illuminate\Support\Carbon|null $reopened_at
  * @property string|null  $reopened_reason
+ * @property int|null     $reopened_by_user_id
  * @property int|null    $created_by
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at

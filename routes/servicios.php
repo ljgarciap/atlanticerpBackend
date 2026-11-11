@@ -279,6 +279,10 @@ Route::prefix('internal-technicians')->group(function (): void {
     Route::patch('/sla-settings', [InternalTechnicianController::class, 'updateSlaSettings'])
         ->middleware('permission:servicios.settings.configure');
 
+    // Fase 32 — usuarios con rol de técnico que se pueden ligar a una ficha (activos y sin otra ficha).
+    Route::get('/linkable-users', [InternalTechnicianController::class, 'linkableUsers'])
+        ->middleware('permission:servicios.tickets.manage');
+
     Route::get('/{id}/visitas-hoy', [InternalTechnicianController::class, 'visitsToday'])
         ->middleware('permission:servicios.read');
 

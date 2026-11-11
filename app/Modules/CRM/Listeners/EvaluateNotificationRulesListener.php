@@ -11,6 +11,7 @@ use App\Modules\CRM\Models\Project;
 use App\Modules\CRM\Models\ProjectActivity;
 use App\Modules\CRM\Models\ProjectDocument;
 use App\Modules\CRM\Notifications\ConditionEvaluator;
+use App\Modules\CRM\Notifications\NotificationRuleCache;
 use App\Modules\Notifications\Models\NotificationSend;
 use App\Modules\Notifications\Services\NotificationService;
 use Illuminate\Database\Eloquent\Model;
@@ -30,12 +31,7 @@ final class EvaluateNotificationRulesListener
 
     public function handle(ModelChangeDetected $event): void
     {
-        $rules = NotificationRule::query()
-            ->where('is_active', true)
-            ->where('trigger_type', NotificationRule::TRIGGER_MODEL_EVENT)
-            ->where('trigger_model', $event->modelName)
-            ->where('trigger_event', $event->event)
-            ->get();
+        $rules = app(NotificationRuleCache::class)->activeFor($event->modelName, $event->event);
 
         if ($rules->isEmpty()) {
             return;

@@ -112,6 +112,7 @@ final class ClaimSheetService
         $sheet->estado          = ClaimSheet::ESTADO_PENDING;
         $sheet->reopened_at     = now();
         $sheet->reopened_reason = trim($motivo);
+        $sheet->reopened_by_user_id = $user->id;
         $sheet->save();
 
         return $sheet->refresh();

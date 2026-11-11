@@ -42,4 +42,25 @@ final class RegisterController extends Controller
             Tenant::forgetCurrent();
         }
     }
+
+    /**
+     * GET /api/auth/support-contact — público (Fase 32). Muestra en el ingreso el contacto de soporte que Gerencia
+     * configuró en Ajustes globales (`support_contact`). Solo ese texto: nada más de la empresa sale sin sesión.
+     */
+    public function supportContact(Request $request): JsonResponse
+    {
+        $tenant = $this->tenantResolver->resolve($request);
+
+        if ($tenant === null) {
+            return response()->json(['data' => ['support_contact' => '']]);
+        }
+
+        $tenant->makeCurrent();
+
+        try {
+            return response()->json(['data' => ['support_contact' => \App\Modules\Auth\Support\GlobalSettingsRegistry::text('support_contact')]]);
+        } finally {
+            Tenant::forgetCurrent();
+        }
+    }
 }

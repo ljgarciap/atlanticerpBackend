@@ -96,5 +96,7 @@ final class BodegaRoles
         'asistente_bodega' => self::ASISTENTE_BODEGA,
         'courier' => self::COURIER,
         'picker' => self::PICKER,
+        // Fase 32: la pantalla del mapeo vendedor→asistente necesita listar a los vendedores.
+        'vendedor' => RoleKeys::VENDEDOR,
     ];
 }

@@ -111,7 +111,7 @@ final class ClaimSheetController extends Controller
             action:     'servicios.claim_sheet.reopened',
             entityType: 'claim_sheet',
             entityId:   $sheet->id,
-            newValues:  ['motivo' => $sheet->reopened_reason],
+            newValues:  ['motivo' => $sheet->reopened_reason, 'reabierta_por' => $user->id],
         );
 
         return response()->json($this->serialize($ticket, $sheet));
@@ -180,6 +180,9 @@ final class ClaimSheetController extends Controller
             'estado'                => $estado,
             'reopened_at'           => $sheet?->reopened_at?->toIso8601String(),
             'reopened_reason'       => $sheet?->reopened_reason,
+            'reopened_by'           => $sheet?->reopened_by_user_id !== null
+                ? ($this->userName((int) $sheet->reopened_by_user_id))
+                : null,
             'created_at'            => $sheet?->created_at?->toIso8601String(),
         ];
     }
@@ -194,5 +197,12 @@ final class ClaimSheetController extends Controller
         }
 
         return User::find((int) $payload['sub']);
+    }
+
+    private function userName(int $id): ?string
+    {
+        $u = User::find($id);
+
+        return $u === null ? null : trim("{$u->first_name} {$u->last_name}");
     }
 }

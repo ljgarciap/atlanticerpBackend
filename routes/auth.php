@@ -15,3 +15,4 @@ Route::post('/reset-password',         [ForgotPasswordController::class, 'reset'
 Route::post('/mfa/verify',             [MfaController::class,           'verify']);
 Route::post('/mfa/resend',             [MfaController::class,           'resend']);
 Route::get('/departments',             [RegisterController::class,      'departments']);
+Route::get('/support-contact',         [RegisterController::class,      'supportContact']);

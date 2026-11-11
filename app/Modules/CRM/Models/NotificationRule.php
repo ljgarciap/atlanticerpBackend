@@ -57,6 +57,14 @@ class NotificationRule extends Model
         'created_by',
     ];
 
+    protected static function booted(): void
+    {
+        // Fase 32: una regla nueva, editada o borrada invalida el memo de reglas activas de esta petición.
+        $forget = static fn () => app(\App\Modules\CRM\Notifications\NotificationRuleCache::class)->forget();
+        static::saved($forget);
+        static::deleted($forget);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

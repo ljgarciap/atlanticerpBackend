@@ -32,10 +32,30 @@ final class DepartmentService
         })->orderBy('name')->get();
     }
 
-    /** Fase 31b — mueve (o deja sin departamento) a los usuarios de uno; devuelve cuántos se movieron. */
+    /**
+     * Fase 31b — mueve (o deja sin departamento) a los usuarios de uno; devuelve cuántos se movieron.
+     * Fase 32 — deja una entrada de auditoría POR USUARIO (departamento anterior y nuevo; el autor lo pone `AuditService`).
+     */
     public function reassignUsers(Department $dept, ?int $toId): int
     {
-        return \App\Models\User::where('department_id', $dept->id)->update(['department_id' => $toId]);
+        $audit = app(\App\Shared\Services\AuditService::class);
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($dept, $toId, $audit): int {
+            $users = \App\Models\User::where('department_id', $dept->id)->get(['id']);
+            \App\Models\User::whereIn('id', $users->pluck('id'))->update(['department_id' => $toId]);
+
+            foreach ($users as $user) {
+                $audit->log(
+                    action:     'auth.user.department_reassigned',
+                    entityType: 'user',
+                    entityId:   $user->id,
+                    oldValues:  ['department_id' => $dept->id],
+                    newValues:  ['department_id' => $toId],
+                );
+            }
+
+            return $users->count();
+        });
     }
 
     public function userCount(Department $dept): int
