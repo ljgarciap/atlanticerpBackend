@@ -1,6 +1,6 @@
 # Fase 33b — Migrar `zod` 3 → 4 (aviso de severidad alta)
 
-Estado: **borrador para aprobar (2026-11-19).** Nada se implementa sin el «adelante» de Luis.
+Estado: **implementada en local (2026-11-19), decisión A de Luis; PR del frontend pendiente de subir.**
 
 ## Por qué
 `npm audit` (producción) marca `zod` 3.25.76 como **alta**; el arreglo exige `zod` 4.x (cambio mayor).
@@ -36,3 +36,11 @@ sale en rojo cada lunes.
 ## Criterios de aceptación
 - `infra/audit.sh --strict` del frontend sin altas ni críticas (queda `react-router` moderada → 33c opcional).
 - Mismos mensajes de validación visibles que antes; suite y humo en verde.
+
+## Resultado (2026-11-19)
+- Riesgo 1 resuelto: `@hookform/resolvers` 7.0.7 declara soporte para `zod` 3.25 y 4; se subió junto con `zod` 4.6.7.
+- Solo 6 archivos necesitaron cambios (no los 19): `invalid_type_error` → `error` (3 paneles), y los formularios con `z.coerce`/`z.preprocess` pasan a `useForm<Entrada, unknown, Salida>` porque en zod 4 la entrada de esos campos es `unknown`; el `pipe` de porcentaje usa `transform(Number)` en vez de `coerce`.
+- Verificado: `tsc` limpio, vitest 265 archivos / 3017 tests, `infra/audit.sh --strict` del frontend sin altas (salida 0; quedan 2 moderadas de `react-router`), y Playwright contra `localhost:8092`: login y «olvidé mi contraseña» muestran «Email inválido» como antes.
+- No ejecutado: `npm run e2e:humo` ni recorrido de cada formulario de Compras/Ajustes en navegador.
+- Abierto: el comentario de `ProviderFormDrawer` sobre `refine` que se salta con `invalid_type` describe el comportamiento de zod 3; en zod 4 puede mostrarse más de un mensaje a la vez (no empeora nada; los tests lo cubren).
+- 33c opcional: `react-router-dom` 6 → 7 (2 moderadas).
