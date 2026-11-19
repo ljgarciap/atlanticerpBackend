@@ -36,8 +36,8 @@ Un proyecto referido por un **arquitecto** genera una comisión para él. El arq
 - **Recordatorio** (`POST …/remind`): avisa al correo del arquitecto; solo mientras esté pendiente de factura (pagada → 422) y exige que el arquitecto tenga correo [E][C].
 
 ## Candidatos a cambio o mejora
-1. **La fila del proyecto y los totales del arquitecto no coinciden sin datos fiscales**: el proyecto ya muestra una comisión (34,56) pero `generada` y `pendiente` del arquitecto valen 0 hasta completar su régimen. Consistente con «no calcular sin régimen», pero sorprende a quien suma. [E]
-2. **La comisión se calcula sobre el total con impuesto incluido**, no sobre la base imponible. Es una decisión de negocio que conviene confirmar. [E]
-3. **El estado se llama `pendiente_factura_arquitecto`** en la API y la interfaz lo muestra como «pendiente de factura»; el nombre interno engaña (quien factura es el arquitecto, no la empresa). [E]
-4. **Pagar no exige la cuenta de pago**: es deliberado (el movimiento queda «Sin cuenta asignada»), pero deja una salida de caja sin cuenta hasta que alguien la asigne; no hay aviso. [C]
-5. **Cuenta de cobro y comprobante de retención aceptan cualquier PDF/imagen**, sin validar contra el monto ni el régimen. [C]
+1. ~~**La fila del proyecto y los totales del arquitecto no coinciden sin datos fiscales**: el proyecto ya muestra una comisión (34,56) pero `generada` y `pendiente` del arquitecto valen 0 hasta completar su régimen. Consistente con «no calcular sin régimen», pero sorprende a quien suma. [E]~~ **Parcial: Fase 28 (`regimen_pendiente`/`comision_sin_regimen` avisan)**
+2. ~~**La comisión se calcula sobre el total con impuesto incluido**, no sobre la base imponible. Es una decisión de negocio que conviene confirmar. [E]~~ **Parcial: Fase 28 (ajuste `comision_externa_base`, NO activado: cambia importes no pagados; decisión de negocio de Luis)**
+3. ~~**El estado se llama `pendiente_factura_arquitecto`** en la API y la interfaz lo muestra como «pendiente de factura»; el nombre interno engaña (quien factura es el arquitecto, no la empresa). [E]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): alias `pendiente_cuenta_cobro`**
+4. ~~**Pagar no exige la cuenta de pago**: es deliberado (el movimiento queda «Sin cuenta asignada»), pero deja una salida de caja sin cuenta hasta que alguien la asigne; no hay aviso. [C]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): `avisos` al pagar sin cuenta**
+5. ~~**Cuenta de cobro y comprobante de retención aceptan cualquier PDF/imagen**, sin validar contra el monto ni el régimen. [C]~~ **Descartado: Fase 28 (validar contra el monto exige leer el documento; ya se valida tipo y tamaño)**

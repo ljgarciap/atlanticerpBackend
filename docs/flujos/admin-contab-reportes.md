@@ -25,8 +25,8 @@ Una fila por factura y por nota de crédito, con RUC, cliente, base, porcentaje,
 - `home/resumen-mes`: `total_cobrado_mes` suma el cobro; incluye cuentas al día, cartera por cobrar (con los incobrables excluidos aparte) y ventas de ayer [E].
 
 ## Candidatos a cambio o mejora
-1. **Dos reportes con el mismo total difieren en base e impuesto**: con 5.356,64 de total, el libro de facturas da base 5.006,14 e ITBMS 350,50 y el de ventas por medio de pago 5.006,19 y 350,45 (0,05 de diferencia; la causa no se investigó, las notas de crédito son la sospecha). Quien concilie con ambos verá descuadres. [E]
-2. **Un `tipo` desconocido en el libro de facturas se ignora en silencio** y devuelve todo, en vez de 422 como hacen las series con `periodo`. [E][C]
+1. ~~**Dos reportes con el mismo total difieren en base e impuesto**: con 5.356,64 de total, el libro de facturas da base 5.006,14 e ITBMS 350,50 y el de ventas por medio de pago 5.006,19 y 350,45 (0,05 de diferencia; la causa no se investigó, las notas de crédito son la sospecha). Quien concilie con ambos verá descuadres. [E]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): el 0,05 eran pendientes y notas de crédito; el resumen trae `total_libro`**
+2. ~~**Un `tipo` desconocido en el libro de facturas se ignora en silencio** y devuelve todo, en vez de 422 como hacen las series con `periodo`. [E][C]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): `tipo` desconocido da 422**
 3. **El reporte por cliente exige elegir un cliente a mano** (si no, `sin_cliente`); el `todos` existe en la API pero la combinación con Excel solo descarga si hay filas. [C]
 4. **Las series no permiten un rango propio**: solo cuatro períodos fijos, sin fechas; el libro y los por cliente sí aceptan fechas. [C]
 5. **`notas-credito` y la comisión de cartera ignoran el período del selector** por diseño (RN de los requerimientos), lo que puede confundir en una pantalla que sí lo muestra. [C]

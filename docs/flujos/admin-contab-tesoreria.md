@@ -34,8 +34,8 @@ Verificado en `admin-contab-cuentas-bancarias.spec.ts` [E].
 - Candidatos nuevos: las cuentas no se pueden borrar y no se valida que dos repitan banco y últimos 4 dígitos; Gerencia edita cuentas pero no asigna la de un movimiento.
 
 ## Candidatos a cambio o mejora
-1. **Desactivar una cuenta con movimientos hace «reaparecer» dinero** en la posición de caja (y haría desaparecer los cobros). Es coherente con «solo cuentas activas», pero un cierre de cuenta legítimo (el banco se cerró) cambia el saldo histórico sin aviso. [E]
-2. **Una asignación equivocada no se corrige**: asignada la cuenta, ni Contabilidad puede cambiarla (422). [E]
-3. **Una salida sin cuenta no genera aviso ni pendiente visible** más allá de la fila «Sin cuenta asignada»; nadie recibe una notificación para completarla. [C]
-4. **El listado de movimientos no filtra por tipo, fecha ni «sin cuenta»**; ordena solo por fecha, así que un orden estable y un filtro «pendientes de asignar» ayudarían a la tarea que el permiso angosto existe para hacer. [E]
-5. **Ni Gerencia ni el aprobador primario pueden asignar** (carve-out deliberado de REQ-534); si Contabilidad no está, la salida queda sin cuenta. [E]
+1. ~~**Desactivar una cuenta con movimientos hace «reaparecer» dinero** en la posición de caja (y haría desaparecer los cobros). Es coherente con «solo cuentas activas», pero un cierre de cuenta legítimo (el banco se cerró) cambia el saldo histórico sin aviso. [E]~~ **Parcial: Fase 28 (aviso al desactivar una cuenta con movimientos)**
+2. ~~**Una asignación equivocada no se corrige**: asignada la cuenta, ni Contabilidad puede cambiarla (422). [E]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): `reassign-account` con motivo**
+3. ~~**Una salida sin cuenta no genera aviso ni pendiente visible** más allá de la fila «Sin cuenta asignada»; nadie recibe una notificación para completarla. [C]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): `pendientes_sin_cuenta`**
+4. ~~**El listado de movimientos no filtra por tipo, fecha ni «sin cuenta»**; ordena solo por fecha, así que un orden estable y un filtro «pendientes de asignar» ayudarían a la tarea que el permiso angosto existe para hacer. [E]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): filtros `tipo/desde/hasta/sin_cuenta`**
+5. ~~**Ni Gerencia ni el aprobador primario pueden asignar** (carve-out deliberado de REQ-534); si Contabilidad no está, la salida queda sin cuenta. [E]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): el aprobador primario o su suplente es segundo asignador**
