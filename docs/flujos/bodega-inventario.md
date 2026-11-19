@@ -44,7 +44,7 @@ Complementa el pedido de Bodega de [venta a cobro](cadena-venta-a-cobro.md) §5.
 ## Candidatos a cambio o mejora
 1. ~~Un solo aprobador para todo el inventario~~ — **corregido en la Fase 29**: Gerencia (rol) también decide ajustes, reubicaciones y conteos, además del aprobador designado, los suplentes y las reglas de aprobación; el 403 de los demás dice quién puede decidir. [E][C]
 2. ~~El conteo aprobado conserva `aprobada` tras aplicarse~~ — **corregido en la Fase 29**: la respuesta trae `estado_visible: aplicada` y el listado filtra con `estado=aplicada`. [E]
-3. **La cantidad recibida de una devolución puede superar la solicitada** (hasta lo entregado). [E]
+3. ~~**La cantidad recibida de una devolución puede superar la solicitada** (hasta lo entregado). [E]~~ **Resuelto: Fase 13a (2.9), lo recibido no puede superar lo solicitado (422)**
 4. **Los motivos de ajuste y de devolución son listas fijas en el código**, no catálogos por empresa (como los de la Fase 7). [C]
 5. ~~Rechazar pide motivo aquí y no en Compras~~ — **corregido en la Fase 29** para el cambio de monto (motivo ≥ 10, auditado); las sustituciones ya lo pedían desde la Fase 12a. [E]
 6. **Ajuste de un solo producto por solicitud en la API** (varias líneas, un producto): el conteo general es la vía para muchos. [C]
