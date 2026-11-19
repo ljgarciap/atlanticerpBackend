@@ -23,9 +23,9 @@ Una línea de cobro confirmado cuenta si su atraso > 90: `fecha de aplicación �
 - **No se valida el solapamiento ni el `orden` repetido**: un tramo que cubre lo mismo que otro, con el mismo orden, se acepta (201). Gana el primero por `orden`; con órdenes iguales el desempate no está definido [E][C].
 
 ## Candidatos a cambio o mejora
-1. **Los tramos pueden solaparse, repetir `orden` o dejar huecos** sin ningún aviso: el porcentaje aplicado depende de un desempate no definido. Convendría validar continuidad al guardar. [E]
-2. **Hueco de 0,01 entre tramos**: el límite superior es 14.999,99 y el siguiente empieza en 15.000; un cobrado intermedio (p. ej. 14.999,995 por redondeo) no cae en ninguno y la comisión sería 0. [C]
-3. **Una factura ya pagada sigue contándose en el tramo «91+ días» de la cartera** (cantidad 1, monto 0), así que «cantidad» mezcla facturas con y sin saldo. [E]
-4. **El atraso se mide contra la fecha de la factura**, no contra una fecha de vencimiento acordada con el cliente; renegociar un plazo no lo cambia. [C]
-5. **Los días de crédito son globales** (uno solo para todos los clientes). [C]
+1. ~~**Los tramos pueden solaparse, repetir `orden` o dejar huecos** sin ningún aviso: el porcentaje aplicado depende de un desempate no definido. Convendría validar continuidad al guardar. [E]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): validador de tramos, solape y `orden` repetido dan 422**
+2. ~~**Hueco de 0,01 entre tramos**: el límite superior es 14.999,99 y el siguiente empieza en 15.000; un cobrado intermedio (p. ej. 14.999,995 por redondeo) no cae en ninguno y la comisión sería 0. [C]~~ **Parcial: Fase 28 (los huecos solo avisan, no bloquean, a propósito)**
+3. ~~**Una factura ya pagada sigue contándose en el tramo «91+ días» de la cartera** (cantidad 1, monto 0), así que «cantidad» mezcla facturas con y sin saldo. [E]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19)**
+4. ~~**El atraso se mide contra la fecha de la factura**, no contra una fecha de vencimiento acordada con el cliente; renegociar un plazo no lo cambia. [C]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): `CreditTerms` es la única fórmula de vencimiento**
+5. ~~**Los días de crédito son globales** (uno solo para todos los clientes). [C]~~ **Resuelto: Fase 28 (verificado contra la spec 2026-11-19): `dias_credito` por cliente**
 6. **Los tramos de cartera comparten el patrón y los problemas de presentación de los tramos internos** (ver cierres, candidato 6): límites mostrados distintos de los aplicados. [C]

@@ -40,11 +40,11 @@ Líder de Compras (`compras.write/edit`), aprobador primario configurado (`geren
 - **El mismo vendedor que la reportó la aprobó** (200) con el margen sobre el mínimo [E].
 
 ## Candidatos a cambio o mejora
-1. **La regla de aprobación está fija en el código** (aéreo + paga la empresa). Es un criterio de negocio; por la regla del workspace debería ser parametrizable (tipo de envío, monto, quién paga). [C]
-2. **El cambio de monto altera `total_amount` sin tocar las líneas** (siguen sumando el valor anterior), así que el total deja de reconciliar con el detalle. [E]
-3. **Rechazar no pide motivo** (cambio de monto y sustitución), a diferencia de las notas de crédito, las anulaciones de cobro y la cancelación de tickets. [E]
-4. **Separación de funciones**: el solicitante puede aprobar su propia sustitución. [E]
+1. ~~**La regla de aprobación está fija en el código** (aéreo + paga la empresa). Es un criterio de negocio; por la regla del workspace debería ser parametrizable (tipo de envío, monto, quién paga). [C]~~ **Resuelto: la regla vive en `purchase_approval_rules` (CRUD, Fase 31b impide solapes); verificado contra el código 2026-11-19**
+2. ~~**El cambio de monto altera `total_amount` sin tocar las líneas** (siguen sumando el valor anterior), así que el total deja de reconciliar con el detalle. [E]~~ **Resuelto: Fase 13a (2.1), línea de ajuste `is_adjustment`**
+3. ~~**Rechazar no pide motivo** (cambio de monto y sustitución), a diferencia de las notas de crédito, las anulaciones de cobro y la cancelación de tickets. [E]~~ **Resuelto: Fase 12a (sustitución exige `motivo_rechazo`) y Fase 29a (cambio de monto)**
+4. ~~**Separación de funciones**: el solicitante puede aprobar su propia sustitución. [E]~~ **Resuelto: Fase 12a (quien reportó una sustitución no la decide)**
 5. ~~El estado `por_aprobar` conserva el mismo nombre tras aprobar~~ — **corregido en la Fase 29b**: la API trae `status_visible` (`aprobada` mientras el estado real sigue en `por_aprobar`); `status` no cambia. [E]
 6. ~~«Aprobada» no genera nada y «rechazada» genera la orden~~ — **corregido en la Fase 29b**: acciones `accept-substitute` / `keep-original` (alias de approve/reject) y el campo `decision` (`sustituir` | `mantener_original`); en pantalla «Aceptar sustituto» / «Mantener original». [E]
-7. **Pagos sin tope contra lo recibido**: se puede pagar el 100 % de una orden que aún no llegó. [E][C]
+7. ~~**Pagos sin tope contra lo recibido**: se puede pagar el 100 % de una orden que aún no llegó. [E][C]~~ **Parcial: Fase 13a (2.7), aviso `pago_supera_recibido` + auditoría, no bloquea por decisión de Luis**
 8. **Sin ejercitar**: logística y envío, reposición («pendientes de reposición»), Zona Libre (solicitudes y su aprobación), agencias de liquidación, familias de producto (en [compras-familias.md](compras-familias.md)), proveedores (alta y cuenta bancaria), documentos de la orden y traducción. [C]
