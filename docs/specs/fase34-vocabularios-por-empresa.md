@@ -1,6 +1,6 @@
 # Fase 34 — Vocabularios fijos → catálogos por empresa
 
-Estado: **borrador para aprobar (2026-11-19).** Nada se implementa sin el «adelante» de Luis.
+Estado: **decisiones tomadas (2026-11-19); falta el «adelante» de Luis para implementar 34a.**
 
 ## Origen
 La pasada de «verificar» (2026-11-19) tachó lo resuelto por las Fases 12–32. Lo que sigue abierto de verdad
@@ -19,11 +19,11 @@ y es de la misma naturaleza que la Fase 7 (listas fijas en el código que cada e
 Mecanismo disponible: `catalog_entries` + `config/catalogs.php` (dominios, `usage`/`usage_json`, props tipadas,
 entradas de sistema que no se borran), fachadas con memo `CatalogCache`, hooks `useCatalog*` en el frontend.
 
-## Decisiones de Luis (en pregunta, sin responder)
-1. **Alcance**: ¿los 7 de una vez, o por bloques? Propuesta: **34a** motivos (1–3, bajo riesgo), **34b** formas de pago y especialidades (5–6), **34c** roles de contacto (4) e informe de inspección (7, el más grande).
-2. **Formas de pago por país**: ¿catálogo único por empresa (la empresa quita Yappy si no aplica) o con propiedad `paises` que filtre según la región de la empresa (Fase 6)?
-3. **Informe de inspección (7)**: ¿catálogo completo de campos por tipo (editable) o solo etiquetas/obligatoriedad de los campos de sistema? Lo primero es varios días.
-4. **Roles de contacto (4)**: `architect` tiene lógica de negocio. Propuesta: queda como entrada de sistema con propiedad `comportamiento`, igual que `ticket_type`.
+## Decisiones de Luis (2026-11-19)
+1. **Alcance: por bloques** — 34a motivos (1–3), 34b formas de pago y especialidades (5–6), 34c roles de contacto (4) e informe de inspección (7). Un PR por repositorio por bloque.
+2. **Formas de pago: con propiedad `paises`** que filtra según la región de la empresa (Fase 6); Yappy solo aparece en Panamá.
+3. **Informe de inspección: solo etiquetas y obligatoriedad** de los campos de sistema (no campos nuevos por tipo).
+4. **Roles de contacto** (propuesta del Arquitecto, sin objeción): `architect` queda como entrada de sistema con propiedad `comportamiento`, como `ticket_type`.
 
 ## Criterios de aceptación (por bloque)
 - Cero lista fija en el código para el vocabulario migrado (lectura por fachada + memo).
