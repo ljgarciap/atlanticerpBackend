@@ -1,6 +1,6 @@
 # Fase 34 — Vocabularios fijos → catálogos por empresa
 
-Estado: **decisiones tomadas (2026-11-19); falta el «adelante» de Luis para implementar 34a.**
+Estado: **34a implementada (2026-11-19). CORRECCIÓN DE ALCANCE: al empezar se verificó contra el código y 5 de los 7 vocabularios ya son catálogos (ver §Verificación al implementar).**
 
 ## Origen
 La pasada de «verificar» (2026-11-19) tachó lo resuelto por las Fases 12–32. Lo que sigue abierto de verdad
@@ -33,3 +33,27 @@ entradas de sistema que no se borran), fachadas con memo `CatalogCache`, hooks `
 
 ## Fuera de alcance
 Correo real, `digifact`, DIAN y AWS (decisiones de fondo de Luis).
+
+## Verificación al implementar 34a (2026-11-19) — la tabla de «Origen» estaba desfasada
+Al abrir el código para 34a, la tabla de arriba resultó **errónea en 5 de 7 filas** (se armó leyendo constantes que siguen existiendo
+como claves de siembra, no su uso). Las Fases 14b/14c ya los habían migrado, con sus dominios en `config/catalogs.php`:
+
+| # | Vocabulario | Estado real |
+|---|---|---|
+| 1 | Motivos de ajuste | **Ya catálogo** (`adjustment_reason`, Fase 14c) |
+| 2 | Motivos de devolución | **Ya catálogo** (`return_reason`, Fase 14c) |
+| 3 | Motivos de faltante en picking | **Abierto → hecho en 34a** (`shortage_reason`) |
+| 4 | Roles de contacto | **Ya catálogo** (`contact_role`, 14c; `DirectoryService::ALLOWED_TYPES` es otra lista, del directorio) |
+| 5 | Formas de pago | **Ya catálogo** (`payment_method`, 14b, con propiedades de comportamiento; falta solo la propiedad `paises`) |
+| 6 | Especialidades de técnico | **Ya catálogo** (`technician_specialty`, 14c) |
+| 7 | Informe de inspección | **Abierto** (`STATIC_FIELDS_BY_TIPO` sigue fijo) |
+
+**Alcance real que queda de la Fase 34**: 34a (motivo de faltante, hecho), 34b' (propiedad `paises` en `payment_method` para que Yappy solo
+aparezca en Panamá) y 34c' (etiquetas/obligatoriedad del informe de inspección). Las decisiones de Luis siguen válidas.
+
+## 34a — resultado
+- Dominio `shortage_reason` (`config/catalogs.php`), sembrado por `2026_11_28_100000_seed_shortage_reason_catalog` con las claves y el orden de
+  siempre (más cualquier otro valor ya guardado). De sistema: `sin_stock` (reposición y liberación de pedidos) y `otra` (texto libre, se guarda como `otra:<texto>`).
+- `OrderItem::SHORTAGE_REASONS` y 4 constantes sin lógica retiradas; `register-delivery` valida `items.*.motivo` contra el catálogo activo (422 si no existe).
+- Frontend: `useShortageReasons` (`useFixedLists`), el selector de `RegisterDeliveryModal` y el motivo del detalle del pedido leen el catálogo con respaldo.
+- Tests: `ShortageReasonCatalogTest` (3), regresión de `DeliveryFlowTest`/`FixedListCatalogsTest`/`ReplenishmentControllerTest`; frontend 265 archivos / 3017 tests.

@@ -210,7 +210,7 @@ class ReplenishmentControllerTest extends FeatureTestCase
 
         $sinStock = $this->makeOrder();
         $this->addItem($sinStock, $product->id, 2);
-        $this->addItem($sinStock, $otherReason->id, 2, ['shortage_reason' => OrderItem::SHORTAGE_DANADO]);
+        $this->addItem($sinStock, $otherReason->id, 2, ['shortage_reason' => 'danado']);
         $this->addItem($sinStock, $found->id, 2, ['found_at_location' => true]);
         $this->addItem($sinStock, $delivered->id, 2, ['qty_delivered' => 2]);
         $this->addItem($sinStock, null, 3); // ítem personalizado: no se puede ordenar por catálogo
