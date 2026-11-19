@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Shared\Catalogs;
 
 use App\Models\User;
+use App\Shared\Multitenancy\Tenant;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -29,8 +30,16 @@ final class CatalogService
     public static function entries(string $domain, bool $onlyActive = true): Collection
     {
         $all = app(CatalogCache::class)->entries($domain);
+        if (! $onlyActive) {
+            return $all;
+        }
 
-        return $onlyActive ? $all->filter(static fn (CatalogEntry $e): bool => $e->is_active)->values() : $all;
+        // Fase 34b — un dominio con la propiedad `paises` solo OFRECE las entradas de la región de la empresa (lista vacía = todos los países).
+        // Lo ya guardado se sigue resolviendo (`onlyActive: false`).
+        $country = isset(self::domains()[$domain]['props']['paises']) ? Tenant::current()?->country : null;
+
+        return $all->filter(static fn (CatalogEntry $e): bool => $e->is_active
+            && ($country === null || ($e->props['paises'] ?? []) === [] || in_array($country, (array) $e->props['paises'], true)))->values();
     }
 
     /** @return list<string> claves activas del dominio (para reglas `in:`) */
@@ -281,7 +290,8 @@ final class CatalogService
                     && (! isset($def['pattern']) || preg_match($def['pattern'], $value) === 1),
                 'int' => is_int($value) && $value >= ($def['min'] ?? PHP_INT_MIN) && $value <= ($def['max'] ?? PHP_INT_MAX),
                 'list' => is_array($value) && array_is_list($value) && count($value) <= ($def['max'] ?? 50)
-                    && array_filter($value, static fn ($v): bool => ! is_string($v) || $v === '' || mb_strlen($v) > 60) === [],
+                    && array_filter($value, static fn ($v): bool => ! is_string($v) || $v === '' || mb_strlen($v) > 60) === []
+                    && (! isset($def['values_from_config']) || array_diff($value, array_keys((array) config($def['values_from_config']))) === []),
                 default => false,
             };
             if (! $ok) {

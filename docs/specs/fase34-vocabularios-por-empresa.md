@@ -57,3 +57,11 @@ aparezca en Panamá) y 34c' (etiquetas/obligatoriedad del informe de inspección
 - `OrderItem::SHORTAGE_REASONS` y 4 constantes sin lógica retiradas; `register-delivery` valida `items.*.motivo` contra el catálogo activo (422 si no existe).
 - Frontend: `useShortageReasons` (`useFixedLists`), el selector de `RegisterDeliveryModal` y el motivo del detalle del pedido leen el catálogo con respaldo.
 - Tests: `ShortageReasonCatalogTest` (3), regresión de `DeliveryFlowTest`/`FixedListCatalogsTest`/`ReplenishmentControllerTest`; frontend 265 archivos / 3017 tests.
+
+## 34b — resultado
+- Propiedad `paises` en el dominio `payment_method` (lista de códigos de `config/regions.php`, validados; vacía = todos). `CatalogService::entries()` solo OFRECE las
+  entradas de la región de la empresa en cualquier dominio que declare `paises`; lo histórico (`onlyActive: false`, etiquetas de cobros ya hechos) no se filtra.
+- Migración `2026_11_28_200000`: `yappy` → `paises = ['PA']` (reversible).
+- Frontend: etiqueta de la propiedad en Ajustes → Catálogos (es/en); los selectores ya leen el catálogo filtrado.
+- Tests: `PaymentMethodCountriesTest` (2); backend 5412 tests, PHPStan 0; frontend 265 archivos / 3017 tests.
+- **Abierto**: los reportes «ventas por medio de pago» y «cobros por cliente» tienen una columna fija de Yappy (históricos); el respaldo `usePaymentMethods` del frontend conserva Yappy.
