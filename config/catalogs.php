@@ -5,6 +5,7 @@ use App\Modules\AdminCont\Models\AdminContPayment;
 use App\Modules\AdminCont\Models\AdminContPettyCashReport;
 use App\Modules\Bodega\Models\AdjustmentRequestLine;
 use App\Modules\Bodega\Models\CustomerReturnLine;
+use App\Modules\Bodega\Models\OrderItem;
 use App\Modules\Compras\Models\Provider;
 use App\Modules\CRM\Models\Contact;
 use App\Modules\Servicios\Models\InternalTechnician;
@@ -132,6 +133,13 @@ return [
         'return_reason' => [
             'label' => 'Motivos de devolución de cliente',
             'usage' => [CustomerReturnLine::class, 'reason'],
+            'props' => [],
+        ],
+        // Fase 34a — motivos de faltante al entregar un pedido. La lógica solo conoce `sin_stock` (reposición/liberación) y `otra` (texto libre),
+        // ambas de sistema; «otra» se guarda como `otra:<texto>`.
+        'shortage_reason' => [
+            'label' => 'Motivos de faltante en entregas',
+            'usage' => [OrderItem::class, 'shortage_reason'],
             'props' => [],
         ],
         'technician_specialty' => [

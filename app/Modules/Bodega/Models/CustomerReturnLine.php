@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * devoluciones de pedidos creados antes de este fix (ver `bodega:backfill-order-item-prices`).
  * Alimenta el monto sugerido de Nota de Crédito (REQ-491).
  *
- * `reason` — catálogo fijo (REQ-418), mismo patrón que `OrderItem::SHORTAGE_REASONS`/
+ * `reason` — catálogo fijo (REQ-418), mismo patrón que los motivos de faltante de `OrderItem`/
  * `setShortageReason()`: "otra" persiste el texto libre embebido como `"otra:<texto>"`.
  *
  * @property int         $id

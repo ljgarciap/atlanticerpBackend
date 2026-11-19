@@ -53,33 +53,13 @@ class OrderItem extends Model
     use LogsAuditTrail;
 
     /**
-     * SCRUM-329 Oleada A / Batch A2 (REQ-324 RN1) — catálogo fijo de motivos de faltante,
-     * capturado en `shortage_reason`. "Otra" exige texto libre — como la columna es un solo
-     * string, se persiste como `"otra:<texto>"` (ver `setShortageReason()`), sin agregar una
-     * columna nueva para esto (no es un umbral/margen de negocio parametrizable, es un catálogo
-     * fijo de motivos operativos — no aplica la regla de "tabla paramétrica").
+     * Motivos de faltante (`shortage_reason`) — Fase 34a: catálogo por empresa (dominio `shortage_reason`). La lógica solo conoce 2
+     * claves de SISTEMA: `sin_stock` (alimenta la reposición y la liberación de pedidos al llegar stock) y `otra` (pide texto libre).
+     * Como la columna es un solo string, «otra» persiste el texto como `"otra:<texto>"` (ver `setShortageReason()`).
      */
     public const SHORTAGE_SIN_STOCK = 'sin_stock';
 
-    public const SHORTAGE_NO_ENCONTRADO = 'no_encontrado';
-
-    public const SHORTAGE_DANADO = 'danado';
-
-    public const SHORTAGE_RESERVADO_OTRO_PEDIDO = 'reservado_otro_pedido';
-
-    public const SHORTAGE_REFERENCIA_EQUIVOCADA = 'referencia_equivocada';
-
     public const SHORTAGE_OTRA = 'otra';
-
-    /** @var list<string> */
-    public const SHORTAGE_REASONS = [
-        self::SHORTAGE_SIN_STOCK,
-        self::SHORTAGE_NO_ENCONTRADO,
-        self::SHORTAGE_DANADO,
-        self::SHORTAGE_RESERVADO_OTRO_PEDIDO,
-        self::SHORTAGE_REFERENCIA_EQUIVOCADA,
-        self::SHORTAGE_OTRA,
-    ];
 
     /** @var list<string> */
     protected $fillable = [

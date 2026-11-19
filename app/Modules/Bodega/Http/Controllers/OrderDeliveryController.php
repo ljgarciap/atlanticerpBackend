@@ -10,10 +10,12 @@ use App\Modules\Bodega\Models\Order;
 use App\Modules\Bodega\Models\OrderDocument;
 use App\Modules\Bodega\Services\DeliveryService;
 use App\Modules\Bodega\Services\OrderDocumentService;
+use App\Shared\Catalogs\CatalogService;
 use App\Shared\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 
 /**
  * SCRUM-329 Oleada A / Batch A2 — Packing -> Por despachar -> Despachado -> Entregado
@@ -39,7 +41,7 @@ final class OrderDeliveryController extends Controller
             'items'                          => ['required', 'array', 'min:1'],
             'items.*.order_item_id'          => ['required', 'integer'],
             'items.*.qty_delivered'          => ['required', 'integer', 'min:0'],
-            'items.*.motivo'                 => ['nullable', 'string'],
+            'items.*.motivo'                 => ['nullable', 'string', Rule::in(CatalogService::keys('shortage_reason'))],
             // SCRUM-1148 — `shortage_reason` es varchar(255) y guarda `otra:<texto>` (5 caracteres de prefijo): el texto libre
             // máximo es 250. Sin tope, uno más largo devolvía 500.
             'items.*.motivo_detalle'         => ['nullable', 'string', 'max:250'],
