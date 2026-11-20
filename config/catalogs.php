@@ -157,6 +157,8 @@ return [
                 'sin_cuenta_bancaria' => ['type' => 'bool', 'default' => false],
                 'inmediato' => ['type' => 'bool', 'default' => false],
                 'caja_chica' => ['type' => 'bool', 'default' => false],
+                // Fase 34b — países donde se ofrece (códigos de `config/regions.php`); vacío = todos. Una forma ya usada en otro país se sigue mostrando en lo histórico.
+                'paises' => ['type' => 'list', 'max' => 20, 'values_from_config' => 'regions.countries', 'default' => []],
             ],
         ],
         // Fase 7b — tipos de ticket de Servicios. La lógica pregunta por `comportamiento` (qué flujo hereda), no por la clave.
