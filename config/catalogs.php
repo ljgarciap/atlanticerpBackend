@@ -135,6 +135,15 @@ return [
             'usage' => [CustomerReturnLine::class, 'reason'],
             'props' => [],
         ],
+        // Fase 34c — campos de sistema del informe de inspección. SOLO se editan la etiqueta y la obligatoriedad: la estructura (qué campos lleva cada tipo
+        // de ticket, su tipo de control y sus opciones) sigue en el código. `fixed_set`: el conjunto es fijo (sin altas ni bajas; todas las entradas son de sistema).
+        'inspection_field' => [
+            'label' => 'Campos del informe de inspección',
+            'fixed_set' => true,
+            'props' => [
+                'obligatorio' => ['type' => 'bool', 'default' => false],
+            ],
+        ],
         // Fase 34a — motivos de faltante al entregar un pedido. La lógica solo conoce `sin_stock` (reposición/liberación) y `otra` (texto libre),
         // ambas de sistema; «otra» se guarda como `otra:<texto>`.
         'shortage_reason' => [

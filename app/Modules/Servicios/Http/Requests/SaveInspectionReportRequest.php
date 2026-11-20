@@ -32,6 +32,7 @@ class SaveInspectionReportRequest extends FormRequest
 
             'findings'                     => ['nullable', 'array'],
             'findings.*.label'              => ['required_with:findings', 'string', 'max:255'],
+            'findings.*.key'                => ['nullable', 'string', 'max:60'],
             'findings.*.value'              => ['nullable', 'string'],
             'findings.*.ticket_product_id'  => ['nullable', 'integer'],
             'findings.*.is_additional'      => ['nullable', 'boolean'],

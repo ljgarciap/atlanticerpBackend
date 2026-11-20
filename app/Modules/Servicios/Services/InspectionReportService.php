@@ -14,6 +14,7 @@ use App\Modules\Servicios\Models\InspectionReport;
 use App\Modules\Servicios\Models\InspectionReportMaterial;
 use App\Modules\Servicios\Models\InspectionReportPhoto;
 use App\Modules\Servicios\Models\Ticket;
+use App\Shared\Catalogs\CatalogService;
 use App\Shared\Multitenancy\Tenant;
 use App\Shared\Support\CircuitBreaker;
 use Illuminate\Http\UploadedFile;
@@ -86,6 +87,42 @@ final class InspectionReportService
         ],
     ];
 
+    /** Fase 34c — catálogo por empresa con la etiqueta y la obligatoriedad de cada campo de sistema (la estructura sigue fija en el código). */
+    public const FIELD_DOMAIN = 'inspection_field';
+
+    /**
+     * Claves y etiquetas de siempre de TODOS los campos de sistema (estáticos y por producto): siembra del catálogo `inspection_field` y respaldo
+     * de la etiqueta si falta la entrada.
+     *
+     * @return array<string, string>
+     */
+    public static function defaultFieldLabels(): array
+    {
+        $labels = [];
+        foreach ([...array_merge(...array_values(self::STATIC_FIELDS_BY_TIPO)), ...self::RETROFIT_PRODUCT_FIELDS, ...self::NON_RETROFIT_PRODUCT_FIELDS] as $field) {
+            $labels[$field['key']] = $field['label'];
+        }
+
+        return $labels;
+    }
+
+    /**
+     * Aplica el catálogo de la empresa: etiqueta en el idioma actual y `obligatorio`.
+     *
+     * @param  list<array{key: string, label: string, type: string, options: list<string>|null, quote_recommendation: bool}>  $template
+     * @return list<array{key: string, label: string, type: string, options: list<string>|null, quote_recommendation: bool, obligatorio: bool}>
+     */
+    private function withCatalog(array $template): array
+    {
+        $entries = CatalogService::entries(self::FIELD_DOMAIN, onlyActive: false)->keyBy('key');
+
+        return array_values(array_map(static function (array $f) use ($entries): array {
+            $entry = $entries->get($f['key']);
+
+            return [...$f, 'label' => $entry !== null ? CatalogService::labelOf($entry) : $f['label'], 'obligatorio' => ($entry?->props['obligatorio'] ?? false) === true];
+        }, $template));
+    }
+
     public function __construct(
         private readonly InspectionReportFolioService $folios,
         private readonly TechnicianSpecialtyService $specialty,
@@ -103,7 +140,7 @@ final class InspectionReportService
      * REQ-239 — catálogo de campos dinámicos para este ticket, usado por el frontend para
      * renderizar el formulario y por `save()` para tagear `is_quote_recommendation`.
      *
-     * @return list<array{key: string, label: string, type: string, options: list<string>|null, quote_recommendation: bool, ticket_product_id: int|null}>
+     * @return list<array{key: string, label: string, type: string, options: list<string>|null, quote_recommendation: bool, obligatorio: bool, ticket_product_id: int|null}>
      */
     public function fieldsForTicket(Ticket $ticket): array
     {
@@ -114,7 +151,7 @@ final class InspectionReportService
 
             $fields = [];
             foreach ($products as $product) {
-                foreach ($template as $field) {
+                foreach ($this->withCatalog($template) as $field) {
                     $fields[] = $field + ['ticket_product_id' => $product->id];
                 }
             }
@@ -126,7 +163,7 @@ final class InspectionReportService
         $byTipoSubtipo = $ticket->subtipo !== null ? self::STATIC_FIELDS_BY_TIPO["{$comportamiento}:{$ticket->subtipo}"] ?? null : null;
         $template       = $byTipoSubtipo ?? self::STATIC_FIELDS_BY_TIPO[$comportamiento] ?? [];
 
-        return array_values(array_map(static fn (array $f): array => $f + ['ticket_product_id' => null], $template));
+        return array_values(array_map(static fn (array $f): array => $f + ['ticket_product_id' => null], $this->withCatalog($template)));
     }
 
     /**
@@ -224,7 +261,7 @@ final class InspectionReportService
             $report->hora_inicio             = $data['hora_inicio'] ?? null;
             $report->hora_fin                = $data['hora_fin'] ?? null;
             $report->internal_technician_id  = $data['internal_technician_id'] ?? null;
-            $report->findings                = $this->normalizeFindings($ticket, $data['findings'] ?? []);
+            $report->findings                = $this->normalizeFindings($ticket, $data['findings'] ?? [], $borrador);
             $report->conclusion              = $data['conclusion'] ?? null;
             $report->requiere_seguimiento    = $data['requiere_seguimiento'] ?? false;
             // REQ-241 RN3 — si no requiere seguimiento, próximos_pasos nunca se guarda.
@@ -477,10 +514,15 @@ final class InspectionReportService
     }
 
     /**
-     * @param list<array{label: string, value: ?string, ticket_product_id?: ?int, is_additional?: bool}> $incoming
-     * @return list<array{label: string, value: string, ticket_product_id: ?int, is_additional: bool, is_quote_recommendation: bool}>
+     * Fase 34c — el hallazgo se empareja con el campo de sistema por su `key` (la etiqueta es editable por empresa); sin `key` (clientes
+     * antiguos o informes ya guardados) se empareja por etiqueta. Al COMPLETAR (no en borrador) los campos marcados `obligatorio` en el
+     * catálogo deben traer valor.
+     *
+     * @param list<array{label: string, value: ?string, key?: ?string, ticket_product_id?: ?int, is_additional?: bool}> $incoming
+     * @return list<array{label: string, key: ?string, value: string, ticket_product_id: ?int, is_additional: bool, is_quote_recommendation: bool}>
+     * @throws \InvalidArgumentException falta un campo obligatorio al completar.
      */
-    private function normalizeFindings(Ticket $ticket, array $incoming): array
+    private function normalizeFindings(Ticket $ticket, array $incoming, bool $borrador = false): array
     {
         $catalog = $this->fieldsForTicket($ticket);
 
@@ -497,11 +539,13 @@ final class InspectionReportService
 
             $ticketProductId = $entry['ticket_product_id'] ?? null;
             $isQuoteRecommendation = false;
+            $key = null;
 
             if (! $isAdditional) {
                 $match = null;
                 foreach ($catalog as $field) {
-                    if ($field['label'] === $entry['label'] && $field['ticket_product_id'] === $ticketProductId) {
+                    $same = isset($entry['key']) && $entry['key'] !== '' ? $field['key'] === $entry['key'] : $field['label'] === $entry['label'];
+                    if ($same && $field['ticket_product_id'] === $ticketProductId) {
                         $match = $field;
                         break;
                     }
@@ -517,16 +561,36 @@ final class InspectionReportService
                     ]);
                 } else {
                     $isQuoteRecommendation = $match['quote_recommendation'];
+                    $key = $match['key'];
                 }
             }
 
             $normalized[] = [
                 'label'                   => $entry['label'],
+                'key'                     => $key,
                 'value'                   => $value,
                 'ticket_product_id'       => $ticketProductId,
                 'is_additional'           => $isAdditional,
                 'is_quote_recommendation' => $isQuoteRecommendation,
             ];
+        }
+
+        if (! $borrador) {
+            foreach ($catalog as $field) {
+                if (! $field['obligatorio']) {
+                    continue;
+                }
+                $filled = false;
+                foreach ($normalized as $n) {
+                    if (! $n['is_additional'] && $n['key'] === $field['key'] && $n['ticket_product_id'] === $field['ticket_product_id'] && $n['value'] !== '') {
+                        $filled = true;
+                        break;
+                    }
+                }
+                if (! $filled) {
+                    throw new \InvalidArgumentException("Falta completar el campo obligatorio: {$field['label']}.");
+                }
+            }
         }
 
         return $normalized;

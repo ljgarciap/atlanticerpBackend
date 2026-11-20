@@ -65,3 +65,14 @@ aparezca en Panamá) y 34c' (etiquetas/obligatoriedad del informe de inspección
 - Frontend: etiqueta de la propiedad en Ajustes → Catálogos (es/en); los selectores ya leen el catálogo filtrado.
 - Tests: `PaymentMethodCountriesTest` (2); backend 5412 tests, PHPStan 0; frontend 265 archivos / 3017 tests.
 - **Abierto**: los reportes «ventas por medio de pago» y «cobros por cliente» tienen una columna fija de Yappy (históricos); el respaldo `usePaymentMethods` del frontend conserva Yappy.
+
+## 34c — resultado (Fase 34 COMPLETA)
+- Dominio `inspection_field` (`fixed_set`: sin altas ni bajas) con una entrada de sistema por cada campo del informe (18; `InspectionReportService::defaultFieldLabels()`),
+  sembrado por `2026_11_28_300000`. Propiedades editables: etiqueta (es/en) y `obligatorio` (por omisión falso = cero cambio). Qué campos lleva cada tipo de ticket, su
+  control y sus opciones siguen en el código (decisión de Luis: solo etiquetas y obligatoriedad).
+- `fieldsForTicket` devuelve la etiqueta de la empresa y `obligatorio`. Los hallazgos guardan y envían su `key` y se emparejan por ella (sin `key`, por etiqueta: informes
+  ya guardados); al completar (no en borrador) un campo obligatorio vacío → 422. `POST /admin/catalogs/inspection_field` → 422.
+- Frontend: modal de escritorio y página móvil mandan `key` y marcan `*` el obligatorio; el panel de Catálogos oculta el alta en dominios `fixed_set`.
+- Tests: `InspectionFieldCatalogTest` (4) + 1 de frontend; backend 5416 tests, PHPStan 0; frontend 265 archivos / 3018. Lección: un test propio con vocabulario del sector
+  anterior rompe el contrato de neutralidad (lo vio la suite completa): redactar con términos neutros desde el primer commit.
+- **Abierto**: las opciones de los selectores («Defecto de fábrica»…) siguen fijas; los informes viejos sin `key` se emparejan por etiqueta (si la empresa la renombra antes de re-guardarlos se muestran como hallazgo adicional).
