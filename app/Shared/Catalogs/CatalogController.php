@@ -34,6 +34,8 @@ final class CatalogController extends Controller
                 'domain' => $key, 'label' => $def['label'], 'props' => $def['props'], 'languages' => CatalogService::languages(),
                 // Fase 7c: lo que una entrada de sistema no puede cambiar, para que la pantalla de Ajustes lo bloquee en vez de dejar que falle al guardar.
                 'locked_when_system' => $def['locked_when_system'] ?? [],
+                // Fase 34c: dominio de conjunto fijo (solo se editan las entradas que trae; sin altas).
+                'fixed_set' => $def['fixed_set'] ?? false,
             ];
         }
 
@@ -51,6 +53,9 @@ final class CatalogController extends Controller
     public function store(Request $request, string $domain): JsonResponse
     {
         abort_unless(CatalogService::exists($domain), 404);
+        if ((CatalogService::domains()[$domain]['fixed_set'] ?? false) === true) {
+            return response()->json(['message' => 'Este catálogo tiene un conjunto fijo de entradas: solo se pueden editar las existentes.'], 422);
+        }
 
         /** @var array{key: string, label: string, labels?: array<string, mixed>, sort_order?: int, props?: array<string, mixed>} $data */
         $data = $request->validate([
